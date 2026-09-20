@@ -54,6 +54,7 @@
 
   /* Verktøy */
   .tools{max-width:1380px;margin:0 auto;padding:16px 24px 0;display:flex;flex-wrap:wrap;gap:8px}
+  .tools[hidden]{display:none}
   button{font:inherit;cursor:pointer}
   .tools button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;font-weight:600;font-size:14px}
   .tools button:hover{border-color:var(--ink)}
@@ -344,7 +345,7 @@
     <p>Deretter spilles resten av sesongen 4000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Europa, Ned og fordelingen i Brann-boksen er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
     <p>Cupvinneren får også en plass i Europa, men den cupfinalen spilles etter at serien er ferdig, så den er ikke med her. Går plassen til et lag som allerede er kvalifisert gjennom tabellen, kan 5. plass få Europa.</p>
     <p>Knappene som fyller inn resten av kampene ("Brann vinner alt", "Brann taper alt", "Simuler tomme kamper") bruker alle én tilfeldig, statistisk normal sesong: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
-    <p>Form viser hvor godt laget spiller nå, fra 0 til 10, der 5 er et gjennomsnittslag i Eliteserien.</p>
+    <p>Form viser hvor godt laget spiller nå, fra 0 til 10, der 5 er et gjennomsnittslag i Eliteserien. Formen reagerer sterkere jo lengre en rekke med strake seire eller tap varer, siden markedet selv reagerer sterkere på rekker enn på spredte enkeltresultater.</p>
     <hr>
     <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
     <table class="mt" id="modelTbl"></table>
@@ -1650,6 +1651,11 @@ async function boot(){
     console.error('Klarte ikke hente kampdata', err);
     document.getElementById('verdict').innerHTML =
       `<div class="line">Kunne ikke laste kampdata.</div><div class="sub">${err.message}. Prøv å laste siden på nytt.</div>`;
+    // Ingen kampdata betyr ingenting for knappene og "Spilt siden sist" å
+    // virke på — skjul dem heller enn å vise kontroller uten funksjon over
+    // den eneste teksten som faktisk betyr noe her.
+    document.querySelector('.recent').hidden = true;
+    document.querySelector('.tools').hidden = true;
     return;
   }
 
