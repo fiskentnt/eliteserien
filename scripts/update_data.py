@@ -89,7 +89,7 @@ def build(merged):
         group = by_round[round_no]
         if not any(r["hg"] is None for r in group):
             continue  # runden er ferdigspilt, ikke ta den med
-        group.sort(key=lambda r: (r["date"], r["home"]))
+        group.sort(key=lambda r: (r["date"], r.get("time") or "", r["home"]))
         fixtures_out.append({
             "round": round_no,
             "when": month_range_label([r["date"] for r in group]),

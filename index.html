@@ -20,25 +20,25 @@
   body{overflow-x:hidden} /* siden skal aldri få vannrett scroll; .tblwrap har sin egen, ønskede scroll */
   body{padding-bottom:env(safe-area-inset-bottom,0px)}
 
-  /* Topp */
-  .top{background:var(--brann);color:#fff;padding:calc(22px + env(safe-area-inset-top,0px)) 24px 0;position:relative;overflow:hidden}
-  .top::after{content:"";position:absolute;inset:auto 0 0 0;height:10px;background:repeating-linear-gradient(90deg,var(--brann-deep) 0 28px,var(--brann) 28px 56px)}
-  .top-in{max-width:1380px;margin:0 auto;padding-bottom:34px;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end}
-  h1{margin:0;font:800 clamp(34px,5.2vw,58px)/.92 var(--cond);letter-spacing:-.01em}
-  h1 small{display:block;font:600 clamp(17px,2vw,22px)/1.2 var(--cond);opacity:.85;margin-top:8px;letter-spacing:.01em}
-  .stamp{margin:12px 0 0;display:inline-block;background:rgba(0,0,0,.18);color:#fff;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600}
-  .lede{max-width:64ch;margin:14px 0 0;color:#ffe3e5;font-size:15px}
-  .status{background:#fff;color:var(--ink);border-radius:10px;padding:16px 18px;min-width:280px;max-width:420px;box-shadow:0 10px 30px -12px rgba(60,0,4,.55)}
-  .status .pos{font:800 44px/1 var(--cond);color:var(--brann)}
-  .status .pos span{font-size:20px;color:var(--ink);font-weight:600;margin-left:6px}
-  .status .line{margin-top:8px;font-weight:600}
-  .status .sub{color:var(--muted);font-size:13px;margin-top:6px}
+  /* Topp — kompakt: maks ca 180px på PC, se .top-in/.status under */
+  .top{background:var(--brann);color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 24px 0;position:relative;overflow:hidden}
+  .top::after{content:"";position:absolute;inset:auto 0 0 0;height:5px;background:repeating-linear-gradient(90deg,var(--brann-deep) 0 16px,var(--brann) 16px 32px)}
+  .top-in{max-width:1380px;margin:0 auto;padding-bottom:10px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}
+  .titlerow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  h1{margin:0;font:800 clamp(24px,3.2vw,30px)/1 var(--cond);letter-spacing:-.01em}
+  .subtitle{font:600 clamp(13px,1.4vw,15px)/1.2 var(--cond);opacity:.85;letter-spacing:.01em}
+  .subline{margin:5px 0 0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:12.5px}
+  .stamp{display:inline-block;background:rgba(0,0,0,.18);color:#fff;border-radius:999px;padding:2px 9px;font-weight:600;white-space:nowrap}
+  .lede{color:#ffe3e5}
+  .status{background:#fff;color:var(--ink);border-radius:10px;padding:10px 14px;min-width:250px;max-width:420px;box-shadow:0 10px 30px -12px rgba(60,0,4,.55)}
+  .status .posline{font:700 14.5px/1.3 var(--body);color:var(--ink)}
+  .status .posline b{font:800 17px/1 var(--cond);color:var(--brann);margin-right:2px}
 
-  /* Siste resultater */
-  .recent{max-width:1380px;margin:0 auto;padding:18px 24px 0}
-  .recent h2{font:700 20px/1 var(--cond);margin:0 0 10px}
-  .chips{display:flex;flex-wrap:wrap;gap:8px}
-  .chip{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:8px;font-size:14px}
+  /* Siste resultater — én rad, skrolles sidelengs i stedet for å brytes */
+  .recent{max-width:1380px;margin:0 auto;padding:10px 24px 0}
+  .recent h2{font:700 15px/1 var(--cond);margin:0 0 6px}
+  .chips{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:8px;padding-bottom:4px;-webkit-overflow-scrolling:touch}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:8px;font-size:14px;flex:0 0 auto}
   .chip .d{color:var(--muted);font-size:12px}
   .chip .s{font:700 18px/1 var(--cond);background:var(--ink);color:#fff;border-radius:4px;padding:3px 7px}
 
@@ -130,15 +130,20 @@
   td.odds{font-size:13px;color:var(--muted);text-align:right;min-width:44px}
   td.odds.hot{color:var(--ink);font-weight:700}
   tr.brann td.odds{color:var(--brann)}
-  /* Status: Brann-sannsynligheter */
-  .odds-box{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
-  .odds-row{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
-  .odds-row strong{display:block;font:800 22px/1 var(--cond);color:var(--ink)}
+  /* Status: Brann-sannsynligheter — tallrekke + smal stripe (maks 30px) */
+  .odds-box{margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
+  .odds-row{display:flex;gap:10px;flex-wrap:wrap;font-size:10.5px;color:var(--muted)}
+  .odds-row strong{display:block;font:800 15px/1 var(--cond);color:var(--ink)}
   .odds-row .n strong{color:var(--brann)}
-  .hist{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;align-items:end;height:42px;margin-top:10px}
-  .hist i{display:block;background:#e3c3c6;border-radius:2px 2px 0 0;min-height:1px}
+  .hist{display:grid;grid-template-columns:repeat(16,1fr);gap:1px;align-items:end;height:20px;margin-top:6px}
+  .hist i{display:block;background:#e3c3c6;border-radius:1px 1px 0 0;min-height:1px}
   .hist i.eu{background:#8cc3b3}.hist i.q{background:#e8c374}.hist i.n{background:#c98a90}
-  .hist-l{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;font-size:10px;color:var(--muted);text-align:center;margin-top:2px}
+  .hist-l{display:none} /* aksetallene tar for mye plass i den smale stripen — samme info står i title på hver stolpe */
+  @media (max-width:640px){
+    .status{cursor:pointer}
+    .status .hist{display:none}
+    .status.expanded .hist{display:grid}
+  }
   /* Kampsannsynlighet */
   /* Slik fungerer det */
   details.howitworks{max-width:1380px;margin:0 auto 32px;padding:0 24px}
@@ -178,13 +183,14 @@
   .round{margin-top:14px}
   .round h3{margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;font:700 17px/1.2 var(--cond);border-bottom:2px solid var(--ink);padding-bottom:4px}
   .round h3 .when{font:500 13px var(--body);color:var(--muted)}
-  .match{display:grid;grid-template-columns:36px minmax(0,1fr) 40px 8px 40px minmax(0,1fr) auto;align-items:center;gap:6px;padding:6px 6px;border-bottom:1px solid var(--line-soft);border-radius:6px;max-width:100%}
+  .dayhead{margin:10px 0 2px;font:700 12.5px/1.2 var(--cond);color:var(--muted)}
+  .dayhead:first-of-type{margin-top:6px}
+  .match{display:grid;grid-template-columns:30px minmax(0,1fr) 40px 8px 40px minmax(0,1fr) auto;align-items:center;gap:6px;padding:6px 6px;border-bottom:1px solid var(--line-soft);border-radius:6px;max-width:100%}
   .match .home{text-align:right}
   .match .away{text-align:left}
   .match .home,.match .away{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-  .match .when{display:flex;flex-direction:column;align-items:center;gap:1px;font-size:10px;line-height:1.3;color:var(--muted);white-space:nowrap}
+  .match .when{text-align:center;font-size:11.5px;line-height:1;white-space:nowrap}
   .match .when .t{font-weight:700;color:var(--ink)}
-  .match.played .when{color:#9aa2a6}
   .match.played .when .t{color:#8a9296}
   .match.brann{background:var(--brann-soft)}
   .match .b{color:var(--brann);font-weight:700}
@@ -209,7 +215,7 @@
   .quick button.x{color:var(--muted)}
   @media (max-width:520px){
     .match{grid-template-columns:minmax(0,1fr) 40px 8px 40px minmax(0,1fr);row-gap:4px}
-    .match .when{grid-column:1 / -1;order:-1;flex-direction:row;justify-content:center;gap:6px;width:auto}
+    .match .when{grid-column:1 / -1;order:-1;text-align:center}
     .quick{grid-column:1 / -1;justify-content:center;margin-left:0}
     .match.played .done{grid-column:1 / -1;width:auto;margin-left:0}
   }
@@ -220,9 +226,8 @@
 <header class="top">
   <div class="top-in">
     <div>
-      <h1>Eliteserien 2026<small>Tabellkalkulator med Brann i sentrum</small></h1>
-      <p class="stamp"></p>
-      <p class="lede">Fyll inn resultater eller trykk H, U og B. Tabell og sannsynligheter regnes ut fortløpende.</p>
+      <div class="titlerow"><h1>Eliteserien 2026</h1><span class="subtitle">Tabellkalkulator med Brann i sentrum</span></div>
+      <p class="subline"><span class="stamp"></span><span class="lede">Fyll inn resultater eller trykk H, U og B. Tabell og sannsynligheter regnes ut fortløpende.</span></p>
     </div>
     <div class="status" id="verdict" aria-live="polite"></div>
   </div>
@@ -311,11 +316,6 @@ function dateNoLong(iso){
   const d = new Date(iso+'T12:00:00Z');
   return `${d.getUTCDate()}. ${NO_MONTH[d.getUTCMonth()]}`;
 }
-// "søn 20.9" — dag og dato til klokkeslett-blokken foran hver kamp
-function whenShort(iso){
-  const d = new Date(iso+'T12:00:00Z');
-  return `${NO_WEEKDAY[d.getUTCDay()].slice(0,3)} ${d.getUTCDate()}.${d.getUTCMonth()+1}`;
-}
 
 // ---- Data hentet fra data/matches.json, data/fixtures.json, data/model.json
 // og data/odds_upcoming.json (fylles av boot()) ----
@@ -325,13 +325,16 @@ let ODDS_UP = {}, ODDS_FETCHED_AT = null; // odds for kommende kamper, nøkkel "
 const RATES = {};
 
 // ---- Form: lagstyrkene følger resultatene i scenariet ----
-// Elo-lignende oppdatering (k funnet ved rullerende evaluering mot fasit): et
-// resultat bedre enn ventet løfter et lags angreps- og hjemme/borte-styrke (og
-// senker motstanderens forsvarsstyrke) med k ganger avviket mellom faktiske og
-// forventede mål. mu og hjemmefordelen H holdes faste — bare de fire
-// lagspesifikke styrkene (att/con/ha/hc) oppdateres, akkurat som i
-// odds-kalibreringen i Python (isolate_global).
-const FORM_K = 0.01;
+// Elo-lignende oppdatering: et resultat bedre enn ventet løfter et lags
+// angreps- og hjemme/borte-styrke (og senker motstanderens forsvarsstyrke)
+// med k ganger avviket mellom faktiske og forventede mål. mu og
+// hjemmefordelen H holdes faste — bare de fire lagspesifikke styrkene
+// (att/con/ha/hc) oppdateres, akkurat som i odds-kalibreringen i Python
+// (isolate_global). k=0,015 er markedets eget beste anslag: hvor mye
+// sluttoddsen for et lags NESTE kamp faktisk flytter seg etter et resultat,
+// målt direkte per kamp (ikke glattet) mot 14 sesonger historiske odds
+// (NOR.csv 2012-2026, 7054 lag-kamp-observasjoner, 95% KI [0,0100, 0,0209]).
+const FORM_K = 0.015;
 let LIVE = null; // {att,con,ha,hc} i TI-indeksrekkefølge — kopi av MODEL, oppdatert av alle låste resultater i inneværende scenario
 
 const roundsEl = document.getElementById('rounds');
@@ -347,9 +350,16 @@ function updateStickyFit(){
   panel.classList.toggle('sticky-fit', fits);
 }
 window.addEventListener('resize', updateStickyFit);
-// Korte lagnavn der kampradene blir trange
-const SHORT_NAME = {"Kristiansund":"KBK","Sarpsborg 08":"Sarpsborg"};
+// Korte lagnavn der kampradene blir trange (kolonnen med klokkeslett + H/U/B
+// tar en del av bredden, så lange navn må forkortes for å unngå at CSS
+// klipper dem med "...")
+const SHORT_NAME = {
+  "Kristiansund":"KBK", "Sarpsborg 08":"Sarpsborg", "Bodø/Glimt":"Glimt",
+  "Rosenborg":"RBK", "Fredrikstad":"FFK", "Vålerenga":"VIF",
+  "Lillestrøm":"LSK", "KFUM Oslo":"KFUM", "Sandefjord":"SFK", "Aalesund":"AaFK",
+};
 const shortTeam = t => SHORT_NAME[t] || t;
+const capFirst = s => s.charAt(0).toUpperCase()+s.slice(1);
 
 function parse(v){ if(v===''||v==null) return null; const n=parseInt(v,10); return Number.isFinite(n)&&n>=0?n:null; }
 
@@ -603,6 +613,10 @@ document.getElementById('homeAll').onclick=()=>{ matches.filter(m=>m.hg==null||m
 document.getElementById('drawAll').onclick=()=>{ matches.filter(m=>m.hg==null||m.ag==null).forEach(m=>setMatch(m,0,0)); render(); };
 document.getElementById('reset').onclick=()=>{ matches.forEach(m=>setMatch(m,null,null)); render(); };
 document.getElementById('autoFillToggle').addEventListener('change',()=>{ updateAutoFill(); render(); });
+// På mobil er fordelingsstripen skjult til man trykker på Brann-boksen (se
+// .status.expanded i CSS) — klassen ligger på #verdict selv, som render()
+// aldri bytter ut (bare innerHTML), så den overlever nye render()-kall.
+document.getElementById('verdict').addEventListener('click', ()=> document.getElementById('verdict').classList.toggle('expanded'));
 // Valgt knapp lyser rødt. Nullstill slår av markeringen.
 document.querySelectorAll('.tools button:not(.share)').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.tools button:not(.share)').forEach(x=>{ x.classList.remove('on'); x.setAttribute('aria-pressed','false'); });
@@ -742,9 +756,10 @@ function render(){
     line2 = `${brann.pts} poeng, ${brann.left} kamper igjen`;
     line2Title = [verdictTxt, sub, 'Sjekken regner tomme kamper som tap for Brann og seier for alle andre. Sier den «sikret», er det sikkert.'].filter(Boolean).join(' ');
   }
+  // Plass og poeng/kamper igjen (eller sluttresultatet) på én linje, kompakt.
+  const posLine = seasonDone ? `<b>${pos}.</b> plass — ${line2}` : `<b>${pos}.</b> plass, ${line2}`;
   document.getElementById('verdict').innerHTML=
-    `<div class="pos">${pos}.<span>plass for Brann</span></div>
-     <div class="line"${line2Title?` title="${line2Title}"`:''}>${line2}</div>
+    `<div class="posline"${line2Title?` title="${line2Title}"`:''}>${posLine}</div>
      <div class="odds-box"><div id="odds"></div></div>`;
   fillOdds(); scheduleMC();
   updateStickyFit();
@@ -857,12 +872,24 @@ async function boot(){
   FIXTURES_IN.forEach((r,ri)=>{
     const d = document.createElement('div'); d.className='round';
     d.innerHTML = `<h3><span>Runde ${r.round}</span><span class="when">${r.when}</span></h3>`;
-    r.matches.forEach((m,mi)=>{
+    // Sortert etter avspark, ikke etter rekkefølgen i data/fixtures.json (som
+    // bare er sortert på dato+lagnavn) — ellers havner f.eks. en 14:30-kamp
+    // etter 17:00-kamper bare fordi hjemmelaget kommer seinere alfabetisk.
+    const sorted = [...r.matches].sort((a,b)=>
+      a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'') || a.home.localeCompare(b.home,'no'));
+    let lastDate = null;
+    sorted.forEach((m,mi)=>{
+      if(m.date !== lastDate){
+        lastDate = m.date;
+        const dh = document.createElement('div'); dh.className='dayhead';
+        dh.textContent = capFirst(formatDateNo(m.date));
+        d.appendChild(dh);
+      }
       if(m.played){
         const row=document.createElement('div');
         row.className='match played'+(isBrann(m)?' brann':'');
         row.title=`Spilt ${formatDateNo(m.date)}, ligger i tabellen`;
-        row.innerHTML=`<span class="when"><span class="d">${whenShort(m.date)}</span>${m.time?`<span class="t">${m.time}</span>`:''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">Spilt ${shortDateNo(m.date)}</span>`;
+        row.innerHTML=`<span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">Spilt ${shortDateNo(m.date)}</span>`;
         d.appendChild(row);
         return;
       }
@@ -871,7 +898,7 @@ async function boot(){
       const isB = isBrann(m);
       const row = document.createElement('div'); row.className='match'+(isB?' brann':''); row.dataset.id=id;
       row.innerHTML = `
-        <span class="when"><span class="d">${whenShort(m.date)}</span>${m.time?`<span class="t">${m.time}</span>`:''}</span>
+        <span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span>
         <span class="home ${m.home==="Brann"?"b":""}">${shortTeam(m.home)}</span>
         <input inputmode="numeric" data-side="h" aria-label="${m.home} mål">
         <span class="colon">-</span>
