@@ -517,8 +517,13 @@ function outcome(lh,la){ let H=0,U=0,B=0;
 // Form (0-10): et lags forventede poeng per kamp mot en tenkt SNITTLAG (ingen
 // hjemmefordel for noen av dem, mu+att/con rett fra att/con-arrayene), minus
 // samme tall regnet ut for alle 16 lag og snittet — så 5 er nøyaktig
-// ligasnittet uansett hvor mye modellen har beveget seg totalt. *5 og
-// klipping til [0,10] gir den ønskede boks-skalaen.
+// ligasnittet uansett hvor mye modellen har beveget seg totalt. FORM_SPAN=3
+// (ikke 5): med 5 endte de fleste lagene i rødt eller grønt (7 av 16 under 4,
+// bare 4 i gult, i en kontroll mot ekte data), fordi selv en vanlig, klar
+// tabelltopp/-bunn gir et avvik som *5 nesten metter [0,10]-skalaen. *3 gir
+// en jevnere spredning (typisk 3 under 4, 10 i gult, 3 over 6) og beholder
+// takhøyde til virkelig ekstreme sesonger.
+const FORM_SPAN = 3;
 function neutralExpPts(att_i,con_i){
   const lh=Math.exp(MODEL.mu+att_i), la=Math.exp(MODEL.mu+con_i);
   const pr=outcome(lh,la);
@@ -527,7 +532,7 @@ function neutralExpPts(att_i,con_i){
 function formScores(attArr,conArr){
   const epm=attArr.map((a,i)=>neutralExpPts(a,conArr[i]));
   const avg=epm.reduce((x,y)=>x+y,0)/epm.length;
-  return epm.map(e=>Math.min(10,Math.max(0, 5+(e-avg)*5)));
+  return epm.map(e=>Math.min(10,Math.max(0, 5+(e-avg)*FORM_SPAN)));
 }
 
 function stateRate(state,home,away){
@@ -897,8 +902,19 @@ async function updateAutoFill(){
   await fillToDate();
 }
 
-document.getElementById('brannLose').onclick=async ()=>{ matches.filter(isBrann).forEach(m=> m.home==="Brann"?setMatch(m,0,1):setMatch(m,1,0)); await simulateEmpty(); render(); };
-document.getElementById('brannWin').onclick=async ()=>{ matches.filter(isBrann).forEach(m=> m.home==="Brann"?setMatch(m,1,0):setMatch(m,0,1)); await simulateEmpty(); render(); };
+// Tvunget resultat (Brann-knappene): modellens forventede resultat (predict,
+// samme avrundede tall som resten av siden — blandet med odds der de finnes),
+// justert MINST mulig til en vinner: står resultatet allerede slik vinneren
+// skal ha det, røres det ikke; ellers løftes vinnerens mål til ett mer enn
+// taperens (2-2 og hjemmelaget skal vinne blir 3-2, ikke 1-0).
+function forcedScoreline(home,away,homeWins){
+  let [hg,ag]=predict(home,away);
+  if(homeWins){ if(hg<=ag) hg=ag+1; }
+  else { if(ag<=hg) ag=hg+1; }
+  return [hg,ag];
+}
+document.getElementById('brannLose').onclick=async ()=>{ matches.filter(isBrann).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home!=="Brann"); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
+document.getElementById('brannWin').onclick=async ()=>{ matches.filter(isBrann).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home==="Brann"); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
 document.getElementById('simRest').onclick=async ()=>{ await simulateEmpty(); render(); };
 document.getElementById('reset').onclick=()=>{ matches.forEach(m=>setMatch(m,null,null)); render(); };
 document.getElementById('autoFillToggle').addEventListener('change',async ()=>{ await updateAutoFill(); render(); });
@@ -1040,8 +1056,8 @@ function deriveScenario(){
   const brannMatches=matches.filter(isBrann);
   let brann=null;
   if(brannMatches.length && brannMatches.every(m=>m.hg!=null&&m.ag!=null)){
-    const isWin = m => m.home==="Brann" ? (m.hg===1&&m.ag===0) : (m.hg===0&&m.ag===1);
-    const isLose = m => m.home==="Brann" ? (m.hg===0&&m.ag===1) : (m.hg===1&&m.ag===0);
+    const isWin = m => m.home==="Brann" ? m.hg>m.ag : m.ag>m.hg;
+    const isLose = m => m.home==="Brann" ? m.hg<m.ag : m.ag<m.hg;
     if(brannMatches.every(isWin)) brann='win';
     else if(brannMatches.every(isLose)) brann='lose';
   }
