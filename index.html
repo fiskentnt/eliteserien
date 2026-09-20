@@ -28,7 +28,8 @@
   h1{margin:0;font:800 clamp(24px,3.2vw,30px)/1 var(--cond);letter-spacing:-.01em}
   .subtitle{font:600 clamp(13px,1.4vw,15px)/1.2 var(--cond);opacity:.85;letter-spacing:.01em}
   .subline{margin:5px 0 0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:12.5px}
-  .stamp{display:inline-block;background:rgba(0,0,0,.18);color:#fff;border-radius:999px;padding:2px 9px;font-weight:600;white-space:nowrap}
+  .stamp{display:inline-block;background:rgba(0,0,0,.18);color:#fff;border-radius:999px;padding:2px 9px;font-weight:600}
+  .stamp .warn{color:#ffb4bb}
   .lede{color:#ffe3e5}
   .status{background:#fff;color:var(--ink);border-radius:10px;padding:10px 14px;min-width:250px;max-width:420px;box-shadow:0 10px 30px -12px rgba(60,0,4,.55)}
   .status .posline{font:700 14.5px/1.3 var(--body);color:var(--ink)}
@@ -183,6 +184,10 @@
   .round{margin-top:14px}
   .round h3{margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;font:700 17px/1.2 var(--cond);border-bottom:2px solid var(--ink);padding-bottom:4px}
   .round h3 .when{font:500 13px var(--body);color:var(--muted)}
+  /* Runde 12 (utsatt fra juli): diskret markert så plasseringen mellom runde 24 og 25 ikke ser ut som en feil */
+  .round.moved{background:var(--q-soft);border:1px dashed #d9b872;border-radius:8px;padding:8px 10px 4px;margin-top:18px}
+  .round.moved h3{border-bottom-color:#d9b872}
+  .moved-note{margin:0 0 8px;font-size:12px;color:#8a6a1f}
   .dayhead{margin:10px 0 2px;font:700 12.5px/1.2 var(--cond);color:var(--muted)}
   .dayhead:first-of-type{margin-top:6px}
   .match{display:grid;grid-template-columns:30px minmax(0,1fr) 40px 8px 40px minmax(0,1fr) auto;align-items:center;gap:6px;padding:6px 6px;border-bottom:1px solid var(--line-soft);border-radius:6px;max-width:100%}
@@ -315,6 +320,30 @@ function shortDateNo(iso){
 function dateNoLong(iso){
   const d = new Date(iso+'T12:00:00Z');
   return `${d.getUTCDate()}. ${NO_MONTH[d.getUTCMonth()]}`;
+}
+
+// ---- Norsk klokketid (Europe/Oslo, DST-riktig) for "sist sjekket"-stempelet
+// og oddstidspunktet — begge kommer som UTC-tidsstempler (fra GitHub sitt API
+// og fra data/odds_upcoming.json) og må vises i norsk lokaltid, ikke UTC. ----
+const _OSLO_FMT = new Intl.DateTimeFormat('en-US', {timeZone:'Europe/Oslo', weekday:'short', day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit', hourCycle:'h23'});
+const _WD_EN_TO_IDX = {Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
+function osloParts(d){
+  const parts = _OSLO_FMT.formatToParts(d);
+  const get = t => parts.find(p=>p.type===t).value;
+  return { weekday:_WD_EN_TO_IDX[get('weekday')], day:+get('day'), month:+get('month'), hour:+get('hour'), minute:+get('minute') };
+}
+// "søndag 20.9 kl. 21.14"
+function formatOsloDT(d){
+  const p = osloParts(d);
+  return `${NO_WEEKDAY[p.weekday]} ${p.day}.${p.month} kl. ${String(p.hour).padStart(2,'0')}.${String(p.minute).padStart(2,'0')}`;
+}
+// Kampdag = fredag til mandag (samme dager som update-data.yml sjekker hver
+// time). Terskel for "for lenge siden" er strengere på kampdager.
+const isMatchDayOslo = w => w===5||w===6||w===0||w===1;
+function checkIsStale(lastCheckDate){
+  const hoursSince = (Date.now()-lastCheckDate.getTime())/3600000;
+  const threshold = isMatchDayOslo(osloParts(new Date()).weekday) ? 3 : 24;
+  return hoursSince > threshold;
 }
 
 // ---- Data hentet fra data/matches.json, data/fixtures.json, data/model.json
@@ -794,6 +823,26 @@ document.getElementById('share').addEventListener('click',async e=>{
   btn.classList.add('done'); setTimeout(()=>{btn.textContent='Del scenario';btn.classList.remove('done');},2500);
 });
 
+// Henter tidspunkt og status for siste kjøring av update-data.yml fra GitHub
+// sitt åpne API (ingen nøkkel trengs) og legger det til i stempelet. Kjøres
+// uavhengig av resten av boot() (venter ikke på svar) — svarer ikke GitHub,
+// vises bare datoteksten som allerede står der, uten feilmelding (fanget av
+// catch under).
+async function updateCheckStamp(){
+  try{
+    const res = await fetch('https://api.github.com/repos/fiskentnt/eliteserien/actions/workflows/update-data.yml/runs?per_page=1');
+    if(!res.ok) return;
+    const data = await res.json();
+    const run = data.workflow_runs && data.workflow_runs[0];
+    if(!run) return;
+    const t = new Date(run.updated_at || run.created_at);
+    const failed = run.conclusion === 'failure';
+    const warn = failed || checkIsStale(t);
+    const clause = failed ? `Siste automatiske sjekk feilet ${formatOsloDT(t)}.` : `Sist sjekket ${formatOsloDT(t)}.`;
+    document.querySelector('.stamp').insertAdjacentHTML('beforeend', ` ${warn ? `<span class="warn">${clause}</span>` : clause}`);
+  }catch(_){ /* GitHub-API-et svarte ikke — stempelet viser bare datoen, som før */ }
+}
+
 // ---- Bootstrap: hent data-filene, bygg alt, render ----
 // Modellen (lagstyrker) og odds for kommende kamper er ferdig beregnet av
 // Python-scriptene i scripts/ og lest inn her — ingen tilpasning skjer i
@@ -853,7 +902,7 @@ async function boot(){
   // Odds for kommende kamper (The Odds API, allerede avvigget av Python)
   ODDS_UP = {};
   (ODDS_UP_IN.matches||[]).forEach(o=>{ ODDS_UP[o.home+"|"+o.away] = o; });
-  ODDS_FETCHED_AT = ODDS_UP_IN.fetched_at ? formatDateNo(ODDS_UP_IN.fetched_at.slice(0,10))+' kl. '+ODDS_UP_IN.fetched_at.slice(11,16) : 'ukjent tidspunkt';
+  ODDS_FETCHED_AT = ODDS_UP_IN.fetched_at ? formatOsloDT(new Date(ODDS_UP_IN.fetched_at)) : 'ukjent tidspunkt';
 
   // Siste resultater: de 5 ferskeste spilte kampene
   const recent = [...MATCHES].sort((x,y)=>x.date.localeCompare(y.date)).slice(-5);
@@ -862,9 +911,14 @@ async function boot(){
     return `<div class="chip"><span class="d">${shortDateNo(m.date)}</span><span${b(m.home)}>${m.home}</span><span class="s">${m.hg}-${m.ag}</span><span${b(m.away)}>${m.away}</span></div>`;
   }).join('');
 
-  // Stempel: dato for siste kamp som er lagt inn
+  // Stempel: dato for siste kamp som er lagt inn, pluss (asynkront, se
+  // updateCheckStamp) tidspunktet for siste automatiske sjekk. Tooltip viser
+  // når oddsen sist ble hentet.
   const last = [...MATCHES].sort((x,y)=>x.date.localeCompare(y.date)).at(-1);
-  document.querySelector('.stamp').textContent = `Alle kamper til og med ${formatDateNo(last.date)} er lagt inn.`;
+  const stampEl = document.querySelector('.stamp');
+  stampEl.textContent = `Alle kamper til og med ${formatDateNo(last.date)} er lagt inn.`;
+  stampEl.title = ODDS_FETCHED_AT !== 'ukjent tidspunkt' ? `Odds hentet ${ODDS_FETCHED_AT}.` : '';
+  updateCheckStamp();
 
   // "Slik fungerer det": de to første avsnittene har tall som må stemme med
   // faktisk vekt/halveringstid (fra fase A: uendret, men holdt dynamisk i tilfelle).
@@ -881,7 +935,13 @@ async function boot(){
   const hiddenRounds = document.createElement('div'); hiddenRounds.hidden = true; hiddenRounds.id = 'hiddenRounds';
   FIXTURES_IN.forEach((r,ri)=>{
     const d = document.createElement('div'); d.className='round';
-    d.innerHTML = `<h3><span>Runde ${r.round}</span><span class="when">${r.when}</span></h3>`;
+    // Runde 12 ble flyttet fra juli til oktober og havner derfor mellom runde
+    // 24 og 25 i kronologisk rekkefølge — merkes tydelig så det ikke ser ut
+    // som en feil for de som ikke vet det ble utsatt.
+    const isMoved12 = r.round===12;
+    if(isMoved12) d.className += ' moved';
+    d.innerHTML = `<h3><span>Runde ${r.round}${isMoved12?' (utsatt)':''}</span><span class="when">${r.when}</span></h3>`
+      + (isMoved12 ? `<p class="moved-note">Opprinnelig 12. juli, flyttet til 24. og 25. oktober.</p>` : '');
     // Sortert etter avspark, ikke etter rekkefølgen i data/fixtures.json (som
     // bare er sortert på dato+lagnavn) — ellers havner f.eks. en 14:30-kamp
     // etter 17:00-kamper bare fordi hjemmelaget kommer seinere alfabetisk.
