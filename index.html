@@ -599,6 +599,10 @@ function computeLiveState(){
   const state={att,con,ha,hc};
   // Rekke-sporing starter fra ekte resultater (ikke fra 0 her), slik at en
   // scenario-forlengelse av en pågående ekte rekke fortsetter den riktig.
+  // Eksponeres til slutt som TI-indekserte arrays (streakLen/streakRes på
+  // state) -- Workeren trenger nøyaktig DENNE starttilstanden for at Monte
+  // Carlo-simuleringen og "typisk sesong" skal fortsette samme rekke som
+  // Form-kolonnen viser, ikke starte en ny rekke-telling fra null.
   const streakLen={}, streakRes={};
   TEAMS.forEach(t=>{ const s=trailingStreak(STATS[t].form); streakLen[t]=s.len; streakRes[t]=s.res; });
   matches.filter(m=>m.hg!=null&&m.ag!=null).sort((x,y)=>x.date.localeCompare(y.date)).forEach(m=>{
@@ -613,6 +617,8 @@ function computeLiveState(){
     att[h]+=kH*rh; ha[h]+=kH*rh; con[a]+=kH*rh; hc[a]-=kH*rh;
     att[a]+=kA*ra; ha[a]-=kA*ra; con[h]+=kA*ra; hc[h]+=kA*ra;
   });
+  state.streakLen = TEAMS.map(t=>streakLen[t]);
+  state.streakRes = TEAMS.map(t=>streakRes[t]==='W'?1:streakRes[t]==='L'?-1:0); // 0=ingen/uavgjort, 1=W, -1=L (strukturklonbart tall, ikke streng/null)
   return state;
 }
 function refreshLiveState(){ LIVE=computeLiveState(); for(const k in RATES) delete RATES[k]; }
@@ -889,20 +895,34 @@ function runBadges(d){
   postMessage({runId:d.runId, mode:'badges', badges:out});
 }
 
-// ---- Europa/Ned/Brann-boksen: 4000 "hot" simulerte sesonger (uendret metode). ----
+// Rekke-forsterket k, delt mellom Workeren og hovedtråden (samme formel som
+// kFor() der): et lags k økes med streakBonus per PÅFØLGENDE like resultat
+// (W eller U, ikke uavgjort), til et tak på streakCap steg. baseK er FORM_K.
+function streakKFor(baseK, len, bonus, cap){
+  var m = len<cap ? len : cap;
+  return baseK*(1+bonus*(m-1));
+}
+// ---- Europa/Ned/Brann-boksen: 4000 "hot" simulerte sesonger. Rekke-
+// forsterkningen (streakBonus/streakCap/streakLen/streakRes, samme regel som
+// Form-kolonnen) må nullstilles til STARTtilstanden (d.streakLen/d.streakRes)
+// for HVER av de N simulerte sesongene -- en rekke i sesong 37 skal ikke
+// arve rekken fra sesong 36. ----
 function runProb(d){
   var mu=d.mu, H=d.H, k=d.k, P0=d.P0, G0=d.G0, F0=d.F0, open=d.open, N=d.N, runId=d.runId;
+  var streakBonus=d.streakBonus, streakCap=d.streakCap;
   var n = P0.length;
   var rnd = mulberry32((Math.random()*4294967296)>>>0);
   function poisSample(l){ var L=Math.exp(-l), x=0, p=rnd(); while(p>L){ x++; p*=rnd(); } return x; }
   var cnt=[]; for(var i=0;i<n;i++) cnt.push(new Float64Array(n));
   var P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
   var attS=new Float64Array(n), conS=new Float64Array(n), haS=new Float64Array(n), hcS=new Float64Array(n);
+  var streakLenS=new Int32Array(n), streakResS=new Int8Array(n);
   var ord=[]; for(var i2=0;i2<n;i2++) ord.push(i2);
   var REPORT_AT=1000;
   for(var s=1;s<=N;s++){
     P.set(P0); G.set(G0); F.set(F0);
     attS.set(d.att); conS.set(d.con); haS.set(d.ha); hcS.set(d.hc);
+    streakLenS.set(d.streakLen); streakResS.set(d.streakRes);
     for(var j=0;j<open.length;j++){
       var h=open[j][0], a=open[j][1];
       var eh=mu+H+attS[h]+haS[h]+conS[a]-hcS[a], ea=mu+attS[a]-haS[a]+conS[h]+hcS[h];
@@ -912,8 +932,14 @@ function runProb(d){
       G[h]+=x-y; G[a]+=y-x; F[h]+=x; F[a]+=y;
       if(x>y) P[h]+=3; else if(x<y) P[a]+=3; else { P[h]++; P[a]++; }
       var rh=x-lh, ra=y-la;
-      attS[h]+=k*rh; haS[h]+=k*rh; conS[a]+=k*rh; hcS[a]-=k*rh;
-      attS[a]+=k*ra; haS[a]-=k*ra; conS[h]+=k*ra; hcS[h]+=k*ra;
+      var resH = x>y?1:(x<y?-1:0), resA = x<y?1:(x>y?-1:0);
+      streakLenS[h] = (resH!==0 && streakResS[h]===resH) ? streakLenS[h]+1 : (resH===0?0:1);
+      streakResS[h] = resH;
+      streakLenS[a] = (resA!==0 && streakResS[a]===resA) ? streakLenS[a]+1 : (resA===0?0:1);
+      streakResS[a] = resA;
+      var kH=streakKFor(k, streakLenS[h], streakBonus, streakCap), kA=streakKFor(k, streakLenS[a], streakBonus, streakCap);
+      attS[h]+=kH*rh; haS[h]+=kH*rh; conS[a]+=kH*rh; hcS[a]-=kH*rh;
+      attS[a]+=kA*ra; haS[a]-=kA*ra; conS[h]+=kA*ra; hcS[h]+=kA*ra;
     }
     for(var i3=0;i3<n;i3++) R[i3]=rnd();
     ord.sort(function(p,q){ return P[q]-P[p] || G[q]-G[p] || F[q]-F[p] || R[q]-R[p]; });
@@ -944,6 +970,7 @@ function runProb(d){
 // under 10% sjanse, uansett om sesongen til slutt godtas.
 function runTypical(d){
   var mu=d.mu, H=d.H, k=d.k, att0=d.att, con0=d.con, ha0=d.ha, hc0=d.hc;
+  var streakBonus=d.streakBonus, streakCap=d.streakCap, streakLen0=d.streakLen, streakRes0=d.streakRes;
   var open=d.open, runId=d.runId;
   var rnd = mulberry32(d.seed);
   function poisSample(l){ var L=Math.exp(-l), x=0, p=rnd(); while(p>L){ x++; p*=rnd(); } return x; }
@@ -979,6 +1006,7 @@ function runTypical(d){
 
   for(var attempt=0; attempt<MAX_ATTEMPTS; attempt++){
     var att=att0.slice(), con=con0.slice(), ha=ha0.slice(), hc=hc0.slice();
+    var streakLen=streakLen0.slice(), streakRes=streakRes0.slice();
     var G=new Uint8Array(m*2);
     var actualTotal=0, actualByRound=new Float64Array(nr);
     for(var j=0;j<m;j++){
@@ -997,8 +1025,14 @@ function runTypical(d){
       G[j*2]=x; G[j*2+1]=y;
       if(catP<0.30){ actualTotal++; actualByRound[roundIdxArr[j]]++; }
       var rh=x-lh, ra=y-la;
-      att[h]+=k*rh; ha[h]+=k*rh; con[a]+=k*rh; hc[a]-=k*rh;
-      att[a]+=k*ra; ha[a]-=k*ra; con[h]+=k*ra; hc[h]+=k*ra;
+      var resH = x>y?1:(x<y?-1:0), resA = x<y?1:(x>y?-1:0);
+      streakLen[h] = (resH!==0 && streakRes[h]===resH) ? streakLen[h]+1 : (resH===0?0:1);
+      streakRes[h] = resH;
+      streakLen[a] = (resA!==0 && streakRes[a]===resA) ? streakLen[a]+1 : (resA===0?0:1);
+      streakRes[a] = resA;
+      var kH=streakKFor(k, streakLen[h], streakBonus, streakCap), kA=streakKFor(k, streakLen[a], streakBonus, streakCap);
+      att[h]+=kH*rh; ha[h]+=kH*rh; con[a]+=kH*rh; hc[a]-=kH*rh;
+      att[a]+=kA*ra; ha[a]-=kA*ra; con[h]+=kA*ra; hc[h]+=kA*ra;
     }
     var diffTotal=Math.abs(actualTotal-expTotal);
     var violation=Math.max(0, diffTotal-tolTotal);
@@ -1072,6 +1106,8 @@ function runMCAsync(N){
   mcRunId++;
   getWorker().postMessage({
     runId:mcRunId, mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+    streakBonus:STREAK_BONUS, streakCap:STREAK_CAP,
+    streakLen:Array.from(LIVE.streakLen), streakRes:Array.from(LIVE.streakRes),
     att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, N
   });
@@ -1132,6 +1168,8 @@ function simulateTypicalAsync(open, forcedSeed){
     getWorker().postMessage({
       mode:'typical', runId, seed,
       mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+      streakBonus:STREAK_BONUS, streakCap:STREAK_CAP,
+      streakLen:Array.from(LIVE.streakLen), streakRes:Array.from(LIVE.streakRes),
       att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
       open: openData
     });
