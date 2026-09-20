@@ -335,6 +335,11 @@ function dateNoLong(iso){
   const d = new Date(iso+'T12:00:00Z');
   return `${d.getUTCDate()}. ${NO_MONTH[d.getUTCMonth()]}`;
 }
+// "søndag 20.9" — ukedag og kort dato, brukt i stempelet sitt "siste resultat"
+function weekdayShortDate(iso){
+  const d = new Date(iso+'T12:00:00Z');
+  return `${NO_WEEKDAY[d.getUTCDay()]} ${d.getUTCDate()}.${d.getUTCMonth()+1}`;
+}
 
 // ---- Norsk klokketid (Europe/Oslo, DST-riktig) for "sist sjekket"-stempelet
 // og oddstidspunktet — begge kommer som UTC-tidsstempler (fra GitHub sitt API
@@ -1054,7 +1059,16 @@ async function boot(){
   // når oddsen sist ble hentet.
   const last = [...MATCHES].sort((x,y)=>x.date.localeCompare(y.date)).at(-1);
   const stampEl = document.querySelector('.stamp');
-  stampEl.textContent = `Alle kamper til og med ${formatDateNo(last.date)} er lagt inn.`;
+  // "Til og med"-formen er bare riktig når ALLE kampene den dagen faktisk er
+  // inne — ellers (f.eks. bare én av fem søndagskamper ferdig) sier den
+  // hvilket resultat som faktisk er det siste, i stedet for å antyde at hele
+  // dagen er ferdig. En runde som er 100% ferdigspilt er allerede utelatt
+  // fra FIXTURES_IN (se update_data.py), så fravær av dagens dato der
+  // betyr "ferdig" like riktig som å finne den og se played:true overalt.
+  const dayComplete = FIXTURES_IN.every(r => r.matches.every(m => m.date !== last.date || m.played));
+  stampEl.textContent = dayComplete
+    ? `Alle kamper til og med ${formatDateNo(last.date)} er lagt inn.`
+    : `Siste resultat: ${last.home} ${last.hg}-${last.ag} ${last.away}, ${weekdayShortDate(last.date)}.`;
   stampEl.title = ODDS_FETCHED_AT !== 'ukjent tidspunkt' ? `Odds hentet ${ODDS_FETCHED_AT}.` : '';
   updateCheckStamp(FIXTURES_IN);
   updateOddsQuotaNote();
