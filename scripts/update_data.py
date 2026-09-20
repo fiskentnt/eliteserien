@@ -64,7 +64,7 @@ def reconcile(ffk_rows, espn_rows, log=lambda s: None):
             log(f"ADVARSEL: uenighet for {pair} runde {r['round']}: "
                 f"ffksupporter={hg}-{ag} ESPN={espn['hg']}-{espn['ag']} — bruker ffksupporter")
 
-        merged.append({"date": r["date"], "round": r["round"], "home": r["home"],
+        merged.append({"date": r["date"], "time": r.get("time"), "round": r["round"], "home": r["home"],
                         "away": r["away"], "hg": hg, "ag": ag, "src": src if hg is not None else None})
     return merged
 
@@ -72,7 +72,7 @@ def reconcile(ffk_rows, espn_rows, log=lambda s: None):
 def build(merged):
     matches = [r for r in merged if r["hg"] is not None]
     matches.sort(key=lambda r: (r["date"], r["round"], r["home"]))
-    matches_out = [{"date": r["date"], "round": r["round"], "home": r["home"],
+    matches_out = [{"date": r["date"], "time": r.get("time"), "round": r["round"], "home": r["home"],
                      "away": r["away"], "hg": r["hg"], "ag": r["ag"]} for r in matches]
 
     by_round = {}
@@ -94,7 +94,7 @@ def build(merged):
             "round": round_no,
             "when": month_range_label([r["date"] for r in group]),
             "matches": [
-                {"home": r["home"], "away": r["away"], "date": r["date"],
+                {"home": r["home"], "away": r["away"], "date": r["date"], "time": r.get("time"),
                  "played": r["hg"] is not None, "hg": r["hg"], "ag": r["ag"]}
                 for r in group
             ],

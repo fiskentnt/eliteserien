@@ -116,6 +116,7 @@ def parse_page(html, source_slug):
         if not date_td["datetime"]:
             continue
         date = date_td["datetime"][:10]
+        kickoff = date_td["datetime"][11:16]  # HH:MM, norsk lokaltid (siden datetime-attributtet har norsk UTC-offset)
         round_no = int(round_td["text"].strip())
         if len(teams_td["hrefs"]) != 2:
             raise ValueError(f"Uventet antall lag-lenker i rad ({source_slug}, runde {round_no}): {teams_td['hrefs']}")
@@ -133,7 +134,7 @@ def parse_page(html, source_slug):
             if not m:
                 raise ValueError(f"Klarte ikke tolke resultat ({source_slug}, runde {round_no}): {text!r}")
             hg, ag = int(m.group(1)), int(m.group(2))
-        out.append({"date": date, "round": round_no, "home": home, "away": away, "hg": hg, "ag": ag})
+        out.append({"date": date, "time": kickoff, "round": round_no, "home": home, "away": away, "hg": hg, "ag": ag})
     return out
 
 
