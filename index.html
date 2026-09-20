@@ -260,8 +260,6 @@
   <button id="brannWin" title="Fyller Brann-kampene med seier til Brann og resten med en typisk sesong">Brann vinner alt</button>
   <button id="brannLose" title="Fyller Brann-kampene med tap for Brann og resten med en typisk sesong">Brann taper alt</button>
   <button id="simRest" title="Fyller alle tomme kamper med én typisk sesong">Simuler tomme kamper</button>
-  <button id="homeAll" title="Fyller alle tomme kamper med hjemmeseier 1-0">Hjemmeseier i tomme kamper</button>
-  <button id="drawAll" title="Fyller alle tomme kamper med uavgjort 0-0">Uavgjort i tomme kamper</button>
   <button class="ghost" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
   <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
 </div>
@@ -709,8 +707,6 @@ function updateAutoFill(){
 document.getElementById('brannLose').onclick=()=>{ matches.filter(isBrann).forEach(m=> m.home==="Brann"?setMatch(m,0,1):setMatch(m,1,0)); simulateEmpty(); render(); };
 document.getElementById('brannWin').onclick=()=>{ matches.filter(isBrann).forEach(m=> m.home==="Brann"?setMatch(m,1,0):setMatch(m,0,1)); simulateEmpty(); render(); };
 document.getElementById('simRest').onclick=()=>{ simulateEmpty(); render(); };
-document.getElementById('homeAll').onclick=()=>{ matches.filter(m=>m.hg==null||m.ag==null).forEach(m=>setMatch(m,1,0)); render(); };
-document.getElementById('drawAll').onclick=()=>{ matches.filter(m=>m.hg==null||m.ag==null).forEach(m=>setMatch(m,0,0)); render(); };
 document.getElementById('reset').onclick=()=>{ matches.forEach(m=>setMatch(m,null,null)); render(); };
 document.getElementById('autoFillToggle').addEventListener('change',()=>{ updateAutoFill(); render(); });
 // På mobil er fordelingsstripen skjult til man trykker på Brann-boksen (se
@@ -787,10 +783,8 @@ function deriveScenario(){
   }
   const others=matches.filter(m=>!isBrann(m));
   let other=null;
-  if(others.length && others.every(m=>m.hg!=null&&m.ag!=null)){
-    if(others.every(m=>m.sim)) other='typical';
-    else if(others.every(m=>!m.sim && m.hg===1 && m.ag===0)) other='home';
-    else if(others.every(m=>!m.sim && m.hg===0 && m.ag===0)) other='draw';
+  if(others.length && others.every(m=>m.hg!=null&&m.ag!=null) && others.every(m=>m.sim)){
+    other='typical';
   }
   return {brann,other};
 }
@@ -805,14 +799,11 @@ function updateToolButtons(){
   mark('brannWin', brann==='win', 'on');
   mark('brannLose', brann==='lose', 'on');
   mark('simRest', other==='typical', 'on-other');
-  mark('homeAll', other==='home', 'on-other');
-  mark('drawAll', other==='draw', 'on-other');
 
   const parts=[];
   if(brann==='win') parts.push('Scenario: Brann vinner alt.');
   else if(brann==='lose') parts.push('Scenario: Brann taper alt.');
-  const otherLabel={typical:'typisk sesong', home:'hjemmeseier i alle', draw:'uavgjort i alle'}[other];
-  if(otherLabel) parts.push(`Andre kamper: ${otherLabel}.`);
+  if(other==='typical') parts.push('Andre kamper: typisk sesong.');
   const line=document.getElementById('scenarioLine');
   if(parts.length){ line.textContent=parts.join(' '); line.hidden=false; }
   else line.hidden=true;
