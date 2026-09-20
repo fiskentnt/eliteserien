@@ -166,6 +166,8 @@
   }
 
   /* Kamper */
+  .autofill{display:flex;align-items:center;gap:7px;padding:0 16px 12px;font-size:13.5px;color:var(--muted);cursor:pointer;user-select:none}
+  .autofill input{margin:0;cursor:pointer}
   .rounds{padding:0 16px 16px}
   .showAll{display:block;margin:4px 16px 16px;width:calc(100% - 32px);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:10px;font-weight:600;font-size:14px}
   .showAll:hover{border-color:var(--ink)}
@@ -259,6 +261,9 @@
 
   <section class="panel">
     <h2>Gjenstående kamper <span class="count" id="fxInfo"></span></h2>
+    <label class="autofill" title="Fyller automatisk ut andre kamper fram til datoen for din seneste egne kamp, med en typisk utvikling. Skru av for å se tabellen med bare dine egne resultater.">
+      <input type="checkbox" id="autoFillToggle" checked> Fyll ut andre kamper til samme dato
+    </label>
     <div class="rounds" id="rounds"></div>
     <button class="showAll" id="showAllRounds" hidden>Vis alle runder</button>
   </section>
@@ -291,6 +296,10 @@ function formatDateNo(iso){
 function shortDateNo(iso){
   const d = new Date(iso+'T12:00:00Z');
   return `${d.getUTCDate()}. ${NO_MONTH[d.getUTCMonth()].slice(0,3)}`;
+}
+function dateNoLong(iso){
+  const d = new Date(iso+'T12:00:00Z');
+  return `${d.getUTCDate()}. ${NO_MONTH[d.getUTCMonth()]}`;
 }
 
 // ---- Data hentet fra data/matches.json, data/fixtures.json, data/model.json
@@ -411,9 +420,12 @@ function fillOdds(){
 function scheduleMC(){ clearTimeout(mcTimer); mcTimer=setTimeout(()=>{ lastMC=runMC(4000); fillOdds(); },120); }
 
 function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
-function simulateEmpty(){
-  matches.filter(m=>m.sim).forEach(m=>setMatch(m,null,null));
-  const open=matches.filter(m=>m.hg==null||m.ag==null); if(!open.length) return;
+// Fyller de gitte kampene med én "typisk" utvikling: simulerer mange ganger og
+// velger den der alle lags poengsum (blant de simulerte kampene) ligger nærmest
+// forventet snitt. Brukes både av "Simuler tomme kamper" (hele resten) og av
+// "samme dato"-utfyllingen (bare kampene til og med en gitt dato).
+function simulateTypical(open){
+  if(!open.length) return;
   const rnd=mulberry32((Math.random()*4294967296)>>>0), N=3000, n=TEAMS.length;
   const rates=open.map(m=>rateFor(m.home,m.away)), hi=open.map(m=>TI[m.home]), ai=open.map(m=>TI[m.away]);
   const pois=l=>{ const L=Math.exp(-l); let k=0,p=rnd(); while(p>L){k++;p*=rnd();} return k; };
@@ -429,6 +441,36 @@ function simulateEmpty(){
   for(let s=0;s<N;s++){ let e=0; for(let t=0;t<n;t++){ const d=PTS[s*n+t]-E[t]; e+=d*d; } if(e<bestErr){bestErr=e;best=s;} }
   open.forEach((m,j)=>setMatch(m,G[(best*open.length+j)*2],G[(best*open.length+j)*2+1],true,true));
 }
+// "Åpen" for automatisk utfylling betyr helt tom (verken hjemme- eller bortemål
+// satt) — en kamp der bare det ene feltet er fylt ut er midt i redigering (du
+// har nettopp skrevet det ene tallet) og skal aldri overskrives automatisk.
+const isEmpty = m => m.hg==null && m.ag==null;
+function simulateEmpty(){
+  matches.filter(m=>m.sim).forEach(m=>setMatch(m,null,null));
+  simulateTypical(matches.filter(isEmpty));
+}
+
+// ---- "Tabell på samme tidspunkt": fyller automatisk ut andre kamper til og
+// med datoen for din seneste egne, FERDIG utfylte (begge mål satt) kamp. ----
+function latestOwnDate(){
+  let max=null;
+  matches.forEach(m=>{ if(m.hg!=null && m.ag!=null && !m.sim && (max===null || m.date>max)) max=m.date; });
+  return max;
+}
+function fillToDate(){
+  matches.filter(m=>m.sim).forEach(m=>setMatch(m,null,null));
+  const targetDate=latestOwnDate();
+  if(!targetDate) return;
+  simulateTypical(matches.filter(m=>isEmpty(m) && m.date<=targetDate));
+}
+function updateAutoFill(){
+  const toggle=document.getElementById('autoFillToggle');
+  if(!toggle || !toggle.checked){
+    matches.filter(m=>m.sim).forEach(m=>setMatch(m,null,null));
+    return;
+  }
+  fillToDate();
+}
 
 document.getElementById('brannLose').onclick=()=>{ matches.filter(isBrann).forEach(m=> m.home==="Brann"?setMatch(m,0,1):setMatch(m,1,0)); simulateEmpty(); render(); };
 document.getElementById('brannWin').onclick=()=>{ matches.filter(isBrann).forEach(m=> m.home==="Brann"?setMatch(m,1,0):setMatch(m,0,1)); simulateEmpty(); render(); };
@@ -436,6 +478,7 @@ document.getElementById('simRest').onclick=()=>{ simulateEmpty(); render(); };
 document.getElementById('homeAll').onclick=()=>{ matches.filter(m=>m.hg==null||m.ag==null).forEach(m=>setMatch(m,1,0)); render(); };
 document.getElementById('drawAll').onclick=()=>{ matches.filter(m=>m.hg==null||m.ag==null).forEach(m=>setMatch(m,0,0)); render(); };
 document.getElementById('reset').onclick=()=>{ matches.forEach(m=>setMatch(m,null,null)); render(); };
+document.getElementById('autoFillToggle').addEventListener('change',()=>{ updateAutoFill(); render(); });
 // Valgt knapp lyser rødt. Nullstill slår av markeringen.
 document.querySelectorAll('.tools button:not(.share)').forEach(b=>b.addEventListener('click',()=>{
   document.querySelectorAll('.tools button:not(.share)').forEach(x=>{ x.classList.remove('on'); x.setAttribute('aria-pressed','false'); });
@@ -446,6 +489,7 @@ roundsEl.addEventListener('input',e=>{
   if(e.target.tagName!=='INPUT') return;
   const row=e.target.closest('.match'); const m=matches.find(x=>x.id===row.dataset.id);
   setMatch(m, parse(row.querySelector('[data-side=h]').value), parse(row.querySelector('[data-side=a]').value), false);
+  updateAutoFill();
   render();
 });
 roundsEl.addEventListener('click',e=>{
@@ -453,6 +497,7 @@ roundsEl.addEventListener('click',e=>{
   const row=b.closest('.match'); const m=matches.find(x=>x.id===row.dataset.id);
   const q=b.dataset.q;
   if(q==='H') setMatch(m,1,0); else if(q==='U') setMatch(m,0,0); else if(q==='B') setMatch(m,0,1); else setMatch(m,null,null);
+  updateAutoFill();
   render();
 });
 
@@ -502,7 +547,14 @@ function render(){
       <td class="hide-s">${formHtml(r.name)}</td><td class="odds p3 hide-m"></td><td class="odds ned"></td><td class="reach">${bar}</td>`;
     tb.appendChild(tr);
   });
-  document.getElementById('tblInfo').textContent = played? `${played} kamper lagt inn` : `etter ${formatDateNo(MATCHES[MATCHES.length-1].date)}`;
+  const asOfDate = latestOwnDate();
+  if(asOfDate){
+    const brannBase = BASE.find(b=>b[0]==='Brann')[1];
+    const brannGames = brannBase + matches.filter(m=>(m.home==='Brann'||m.away==='Brann') && m.hg!=null && m.date<=asOfDate).length;
+    document.getElementById('tblInfo').textContent = `etter ${dateNoLong(asOfDate)} (Brann ${brannGames} kamper)`;
+  } else {
+    document.getElementById('tblInfo').textContent = played? `${played} kamper lagt inn` : `etter ${formatDateNo(MATCHES[MATCHES.length-1].date)}`;
+  }
   document.getElementById('fxInfo').textContent = `${matches.length-played} av ${matches.length} uten resultat`;
 
   matches.forEach(m=>{
@@ -678,7 +730,7 @@ async function boot(){
         return;
       }
       const id = `m${r.round}_${mi}`;
-      matches.push({id, round:r.round, home:m.home, away:m.away, hg:null, ag:null});
+      matches.push({id, round:r.round, date:m.date, home:m.home, away:m.away, hg:null, ag:null});
       const isB = isBrann(m);
       const row = document.createElement('div'); row.className='match'+(isB?' brann':''); row.dataset.id=id;
       row.innerHTML = `
@@ -694,12 +746,15 @@ async function boot(){
   });
   const showAllBtn = document.getElementById('showAllRounds');
   if(hiddenRounds.children.length){
-    roundsEl.after(hiddenRounds);
+    // Må være INNI #rounds (ikke bare etter), ellers bobler ikke input/klikk-
+    // hendelser fra de skjulte rundene opp til roundsEl sine lyttere.
+    roundsEl.appendChild(hiddenRounds);
     showAllBtn.hidden = false;
     showAllBtn.onclick = () => { hiddenRounds.hidden = false; showAllBtn.hidden = true; };
   }
 
   applyScenario();
+  updateAutoFill();
   fillProb();
   render();
   setTimeout(()=>document.body.classList.remove('intro'),1600);
