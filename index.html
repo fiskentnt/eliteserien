@@ -31,10 +31,26 @@
        --accent* er sidens EGEN, faste fargeidentitet (fokusring,
        avkrysningsboks, og universelle semantiske farger som nedrykk-merket
        og tapskvadratet i Siste 5) -- UAVHENGIG av hvilket lag som følges.
-       --top-bg/--top-bg-deep ER themet (i motsetning til --accent): et helt
-       flatt rødt felt i full høyde leses som skrikende mot en mørk side på en
-       måte en liten rød knapp ikke gjør, så mørk modus dempes egen. */
-    --top-bg:#c4111d; --top-bg-deep:#8d0a13;
+       --top-bg* ER themet OG dynamisk (satt av JS, se applyTeamColors()):
+       toppbanneret følger nå det valgte lagets klubbfarge, ikke lenger fast
+       Brann-rødt. -l/-d er lys/mørk-modus-varianten (mørk modus dempes --
+       et helt flatt, metta felt i full høyde leser "skrikende" mot en mørk
+       side på en måte en liten farget knapp ikke gjør), og
+       --top-bg/-deep/-text/-pill/-warn/-toggle-border/-toggle-bg er de
+       themede aliasene (samme mønster som --team-text). Tekstfargen
+       (tittel, undertittel, stempel) velges PER LAG i lys modus -- mørk
+       ink mot lyse klubbfarger (Glimt gult, Start gyllent) -- mens mørk
+       modus alltid er trygg med hvit tekst (se scratchpad/banner_colors.py
+       fra utviklingen: alle 16 lags dempede bannerfarge har minst 6:1
+       kontrast mot hvitt). */
+    --top-bg-l:#c5111d; --top-bg-deep-l:#8e0c15; --top-text-l:#ffffff;
+    --top-pill-l:rgba(0,0,0,.18); --top-warn-l:#ffd6da;
+    --top-toggle-border-l:rgba(255,255,255,.4); --top-toggle-bg-l:rgba(255,255,255,.12); --top-toggle-hover-l:rgba(255,255,255,.24);
+    --top-label-l:rgba(255,255,255,.85);
+    --top-bg-d:#63181d; --top-bg-deep-d:#471115;
+    --top-bg: var(--top-bg-l); --top-bg-deep: var(--top-bg-deep-l); --top-text: var(--top-text-l);
+    --top-pill: var(--top-pill-l); --top-warn: var(--top-warn-l); --top-label: var(--top-label-l);
+    --top-toggle-border: var(--top-toggle-border-l); --top-toggle-bg: var(--top-toggle-bg-l); --top-toggle-hover: var(--top-toggle-hover-l);
     --accent:#c4111d; --accent-deep:#8d0a13; --accent-soft:#fdecee; --accent-text:#c4111d;
     --formbox-red-bg:#c4111d;
     --eu:#1d7a63; --eu-soft:#e2f1ec; --eu-text:#1d7a63;
@@ -75,7 +91,9 @@
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
       --bg:#15181a; --panel:#1f2426; --ink:#eef0f1; --muted:#9aa3a8; --line:#454d53; --line-soft:#343b40;
-      --top-bg:#62181d; --top-bg-deep:#451115;
+      --top-bg: var(--top-bg-d); --top-bg-deep: var(--top-bg-deep-d);
+      --top-text:#ffffff; --top-pill:rgba(0,0,0,.18); --top-warn:#ffd6da; --top-label:rgba(255,255,255,.85);
+      --top-toggle-border:rgba(255,255,255,.4); --top-toggle-bg:rgba(255,255,255,.12); --top-toggle-hover:rgba(255,255,255,.24);
       --accent-soft:rgba(255,107,116,.12); --accent-text:#ff6b74; --formbox-red-bg:#d1272f;
       --eu-soft:rgba(79,211,171,.14); --eu-text:#4fd3ab;
       --q-soft:rgba(224,173,74,.12); --q-text:#e0ad4a; --q-border:#6b5220; --q-note:#caa059;
@@ -92,7 +110,9 @@
   }
   :root[data-theme="dark"]{
     --bg:#15181a; --panel:#1f2426; --ink:#eef0f1; --muted:#9aa3a8; --line:#454d53; --line-soft:#343b40;
-    --top-bg:#62181d; --top-bg-deep:#451115;
+    --top-bg: var(--top-bg-d); --top-bg-deep: var(--top-bg-deep-d);
+    --top-text:#ffffff; --top-pill:rgba(0,0,0,.18); --top-warn:#ffd6da; --top-label:rgba(255,255,255,.85);
+    --top-toggle-border:rgba(255,255,255,.4); --top-toggle-bg:rgba(255,255,255,.12); --top-toggle-hover:rgba(255,255,255,.24);
     --accent-soft:rgba(255,107,116,.12); --accent-text:#ff6b74; --formbox-red-bg:#d1272f;
     --eu-soft:rgba(79,211,171,.14); --eu-text:#4fd3ab;
     --q-soft:rgba(224,173,74,.12); --q-text:#e0ad4a; --q-border:#6b5220; --q-note:#caa059;
@@ -125,7 +145,7 @@
      stempelet la seg ulikt i Chrome (stablet) og Firefox (side om side) i
      samme flex-rad, og heller enn å style-låse et bestemt utfall er den
      enkleste, mest robuste rettingen å fjerne den ekstra linja helt. */
-  .top{background:var(--top-bg);color:#fff;padding:calc(24px + env(safe-area-inset-top,0px)) 24px 0;position:relative;overflow:hidden}
+  .top{background:var(--top-bg);color:var(--top-text);padding:calc(24px + env(safe-area-inset-top,0px)) 24px 0;position:relative;overflow:hidden}
   .top::after{content:"";position:absolute;inset:auto 0 0 0;height:2px;opacity:.55;background:repeating-linear-gradient(90deg,var(--top-bg-deep) 0 16px,var(--top-bg) 16px 32px)}
   .top-in{max-width:1380px;margin:0 auto;padding-bottom:24px;padding-right:44px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start}
   /* Tema-knapp: sol/måne-ikon øverst til høyre i det røde feltet. Absolutt
@@ -134,8 +154,8 @@
      .top-in stables i én kolonne på mobil. Bare ETT av ikonene vises av
      gangen -- CSS alene, styrt av data-theme/systeminnstilling (samme kilde
      som fargevariablene), ikke av JS som må endre klasser. */
-  .theme-toggle{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:24px;width:34px;height:34px;border-radius:50%;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.12);color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;z-index:1}
-  .theme-toggle:hover{background:rgba(255,255,255,.24)}
+  .theme-toggle{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:24px;width:34px;height:34px;border-radius:50%;border:1px solid var(--top-toggle-border);background:var(--top-toggle-bg);color:var(--top-text);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;z-index:1}
+  .theme-toggle:hover{background:var(--top-toggle-hover)}
   .theme-toggle svg{width:18px;height:18px;display:block}
   .theme-toggle .icon-moon{display:none}
   :root[data-theme="dark"] .theme-toggle .icon-sun{display:none}
@@ -149,12 +169,16 @@
   h1{margin:0;font:800 clamp(24px,3.2vw,30px)/1 var(--cond);letter-spacing:-.01em}
   .subtitle{font:600 clamp(13px,1.4vw,15px)/1.2 var(--cond);opacity:.85;letter-spacing:.01em}
   .subline{margin:8px 0 0;font-size:12.5px}
-  .stamp{display:inline-block;background:rgba(0,0,0,.18);color:#fff;border-radius:999px;padding:2px 9px;font-weight:600}
-  .stamp .warn{color:#ffb4bb}
-  .team-picker{margin-top:12px;display:flex;align-items:center;gap:9px;font-size:13px;color:#ffe3e5;flex-wrap:wrap}
+  .stamp{display:inline-block;background:var(--top-pill);color:var(--top-text);border-radius:999px;padding:2px 9px;font-weight:600}
+  .stamp .warn{color:var(--top-warn)}
+  .team-picker{margin-top:12px;display:flex;align-items:center;gap:9px;font-size:13px;color:var(--top-label);flex-wrap:wrap}
   .team-picker select{font:inherit;font-weight:700;color:#15191c;background:#fff;border:none;border-radius:999px;padding:6px 30px 6px 14px;cursor:pointer}
-  .status{background:var(--panel);color:var(--ink);border-radius:10px;padding:14px 16px;min-width:250px;max-width:420px;box-shadow:0 10px 30px -12px rgba(60,0,4,.55);border-left:6px solid var(--team-fill)}
-  .status .teamname-lg{display:block;font:800 clamp(18px,2vw,22px)/1.1 var(--cond);color:var(--team-text);margin:0 0 6px}
+  /* Lagboksen har ingen egen lagfarge lenger -- banneret bak den bærer nå
+     den identiteten, så boksen skal bare stå nøytralt fram mot et banner i
+     en hvilken som helst klubbfarge (se --top-bg). Skyggen var før tonet
+     mot Brann-rødt (rgba(60,0,4,...)), en annen antakelse samme feil. */
+  .status{background:var(--panel);color:var(--ink);border-radius:10px;padding:14px 16px;min-width:250px;max-width:420px;box-shadow:0 10px 30px -12px rgba(0,0,0,.4)}
+  .status .teamname-lg{display:block;font:800 clamp(18px,2vw,22px)/1.1 var(--cond);color:var(--ink);margin:0 0 6px}
   .status .posline{font:700 14.5px/1.3 var(--body);color:var(--ink)}
   .status .posline b{font:800 17px/1 var(--cond);color:var(--ink);margin-right:2px}
 
@@ -680,24 +704,45 @@ let tableSort = null; // null = standings-rekkefølge, ellers {key:'form', dir:1
 // se scratchpad-scriptet fra utviklingen av mørk modus for metoden.
 // fill/deep/fillText er unthemet (samme "fyll med hvit/mørk tekst"-mønster
 // som --accent), textLight/textDark byttes med temaet (se --team-text).
+// topDark/topDeepDark er fill/deep dempet for toppbanneret i mørk modus
+// (samme lysstyrke/metnings-forhold som Brann sin opprinnelige, håndlagde
+// demping: L×0,573, S×0,722, samme fargetone) -- se
+// scratchpad/banner_colors.py. Alle 16 består ≥6:1 kontrast mot hvit tekst
+// dempet, så banneret bruker ALLTID hvit tekst i mørk modus, uansett lag
+// (bare lys modus trenger å velge mørk ink for de lyseste fargene, se
+// fillText og TOP_TEXT_SCHEME).
 const TEAM_COLORS = {
-  "Aalesund": {fill:"#e6700f", deep:"#a6510b", fillText:"#15191c", textLight:"#b6590c", textDark:"#e6700f"},
-  "Bodø/Glimt": {fill:"#f0b400", deep:"#ad8200", fillText:"#15191c", textLight:"#946f00", textDark:"#f0b400"},
-  "Brann": {fill:"#c5111d", deep:"#8e0c15", fillText:"#ffffff", textLight:"#c5111d", textDark:"#f04c57"},
-  "Fredrikstad": {fill:"#e64c19", deep:"#a63712", fillText:"#15191c", textLight:"#ca4316", textDark:"#e85a2b"},
-  "HamKam": {fill:"#6cab3f", deep:"#4e7b2d", fillText:"#15191c", textLight:"#507e2f", textDark:"#6cab3f"},
-  "KFUM Oslo": {fill:"#901d3c", deep:"#68152b", fillText:"#ffffff", textLight:"#901d3c", textDark:"#de5d80"},
-  "Kristiansund": {fill:"#2fadda", deep:"#1d7fa2", fillText:"#15191c", textLight:"#1c7a9c", textDark:"#2fadda"},
-  "Lillestrøm": {fill:"#a39e1f", deep:"#757216", fillText:"#15191c", textLight:"#787417", textDark:"#a39e1f"},
-  "Molde": {fill:"#1942e6", deep:"#1230a6", fillText:"#ffffff", textLight:"#1942e6", textDark:"#6c86ef"},
-  "Rosenborg": {fill:"#2a2e32", deep:"#1e2124", fillText:"#ffffff", textLight:"#2a2e32", textDark:"#808a94"},
-  "Sandefjord": {fill:"#1852aa", deep:"#113b7a", fillText:"#ffffff", textLight:"#1852aa", textDark:"#4c89e6"},
-  "Sarpsborg 08": {fill:"#35728d", deep:"#265266", fillText:"#ffffff", textLight:"#35728d", textDark:"#4390b2"},
-  "Start": {fill:"#a3660a", deep:"#754907", fillText:"#ffffff", textLight:"#a3660a", textDark:"#c0780c"},
-  "Tromsø": {fill:"#d23754", deep:"#9c233a", fillText:"#ffffff", textLight:"#d23754", textDark:"#db6178"},
-  "Vålerenga": {fill:"#6245d3", deep:"#4027a3", fillText:"#ffffff", textLight:"#6245d3", textDark:"#8c76df"},
-  "Viking": {fill:"#161f4b", deep:"#101636", fillText:"#ffffff", textLight:"#161f4b", textDark:"#7586d7"},
+  "Aalesund": {fill:"#e6700f", deep:"#a6510b", fillText:"#15191c", textLight:"#b6590c", textDark:"#e6700f", topDark:"#73421a", topDeepDark:"#533013"},
+  "Bodø/Glimt": {fill:"#f0b400", deep:"#ad8200", fillText:"#15191c", textLight:"#946f00", textDark:"#f0b400", topDark:"#765e13", topDeepDark:"#55440e"},
+  "Brann": {fill:"#c5111d", deep:"#8e0c15", fillText:"#ffffff", textLight:"#c5111d", textDark:"#f04c57", topDark:"#63181d", topDeepDark:"#471115"},
+  "Fredrikstad": {fill:"#e64c19", deep:"#a63712", fillText:"#15191c", textLight:"#ca4316", textDark:"#e85a2b", topDark:"#73341f", topDeepDark:"#532516"},
+  "HamKam": {fill:"#6cab3f", deep:"#4e7b2d", fillText:"#15191c", textLight:"#507e2f", textDark:"#6cab3f", topDark:"#3f592d", topDeepDark:"#2e4020"},
+  "KFUM Oslo": {fill:"#901d3c", deep:"#68152b", fillText:"#ffffff", textLight:"#901d3c", textDark:"#de5d80", topDark:"#491a27", topDeepDark:"#35131c"},
+  "Kristiansund": {fill:"#2fadda", deep:"#1d7fa2", fillText:"#15191c", textLight:"#1c7a9c", textDark:"#2fadda", topDark:"#265e72", topDeepDark:"#1b4452"},
+  "Lillestrøm": {fill:"#a39e1f", deep:"#757216", fillText:"#15191c", textLight:"#787417", textDark:"#a39e1f", topDark:"#53511c", topDeepDark:"#3b3a14"},
+  "Molde": {fill:"#1942e6", deep:"#1230a6", fillText:"#ffffff", textLight:"#1942e6", textDark:"#6c86ef", topDark:"#1f3073", topDeepDark:"#162353"},
+  "Rosenborg": {fill:"#2a2e32", deep:"#1e2124", fillText:"#ffffff", textLight:"#2a2e32", textDark:"#808a94", topDark:"#191a1c", topDeepDark:"#121314"},
+  "Sandefjord": {fill:"#1852aa", deep:"#113b7a", fillText:"#ffffff", textLight:"#1852aa", textDark:"#4c89e6", topDark:"#193156", topDeepDark:"#12233e"},
+  "Sarpsborg 08": {fill:"#35728d", deep:"#265266", fillText:"#ffffff", textLight:"#35728d", textDark:"#4390b2", topDark:"#253f4a", topDeepDark:"#1b2d35"},
+  "Start": {fill:"#a3660a", deep:"#754907", fillText:"#ffffff", textLight:"#a3660a", textDark:"#c0780c", topDark:"#513812", topDeepDark:"#3a280d"},
+  "Tromsø": {fill:"#d23754", deep:"#9c233a", fillText:"#ffffff", textLight:"#d23754", textDark:"#db6178", topDark:"#6f2936", topDeepDark:"#501e27"},
+  "Vålerenga": {fill:"#6245d3", deep:"#4027a3", fillText:"#ffffff", textLight:"#6245d3", textDark:"#8c76df", topDark:"#3b2c74", topDeepDark:"#2b2054"},
+  "Viking": {fill:"#161f4b", deep:"#101636", fillText:"#ffffff", textLight:"#161f4b", textDark:"#7586d7", topDark:"#111527", topDeepDark:"#0c0f1c"},
 };
+// Uten valgt lag (item 3): banneret får en nøytral mørk grå i stedet for et
+// tilfeldig/forrige lags farge, i begge temaer -- se
+// scratchpad/banner_colors.py for kontrollen (hvit tekst >10:1 begge steder).
+const NEUTRAL_TOP = {fill:"#3a3f44", deep:"#262a2e", fillText:"#ffffff", topDark:"#222426", topDeepDark:"#16181a"};
+// Stempelets pillbakgrunn, "advarsel"-farge, tema-knappens ring/bakgrunn og
+// "Følg laget ditt"-etikettens farge følger samme todeling som selve
+// tekstfargen (fillText) -- se scratchpad/banner_colors.py for hvorfor disse
+// konkrete verdiene (0,45 hvit-overlegg / mørk varselrød for lyse
+// bannerfarger, 0,18 sort-overlegg / lys rosa varselfarge ellers), begge
+// kontrollert til minst 4,5:1 mot den faktiske pillbakgrunnen for ALLE 16
+// lag. Mørk modus trenger ikke dette valget (se TEAM_COLORS-kommentaren) --
+// den bruker alltid TOP_WHITE_TEXT sine faste verdier, satt direkte i CSS.
+const TOP_WHITE_TEXT = {text:'#ffffff', pill:'rgba(0,0,0,.18)', warn:'#ffd6da', label:'rgba(255,255,255,.85)', toggleBorder:'rgba(255,255,255,.4)', toggleBg:'rgba(255,255,255,.12)', toggleHover:'rgba(255,255,255,.24)'};
+const TOP_DARK_TEXT = {text:'#15191c', pill:'rgba(255,255,255,.45)', warn:'#7a0c02', label:'rgba(21,25,28,.75)', toggleBorder:'rgba(21,25,28,.35)', toggleBg:'rgba(21,25,28,.10)', toggleHover:'rgba(21,25,28,.18)'};
 
 // Laget du følger: huskes i localStorage og legges i delingslenken (se
 // encodeScenario/applyScenario). '' betyr eksplisitt "ingen lag" -- skilt
@@ -711,19 +756,39 @@ function hexToRgbStr(hex){
 }
 function applyTeamColors(){
   const c = TEAM_COLORS[SELECTED_TEAM];
-  if(!c) return; // ingen lag valgt -- ingen .followed-elementer finnes uansett, variablene er ubrukt
+  if(c){
+    const root = document.documentElement.style;
+    root.setProperty('--team-fill', c.fill);
+    root.setProperty('--team-deep', c.deep);
+    root.setProperty('--team-fill-text', c.fillText);
+    root.setProperty('--team-text-light', c.textLight);
+    root.setProperty('--team-text-dark', c.textDark);
+    // Markeringens bakgrunn: en svak, gjennomsiktig vask av lagets egen farge
+    // (lav alfa over --panel/--bg) i stedet for en fast rosa -- se
+    // --team-soft-light/-dark i :root for hvorfor alfa (0,08/0,12 -- hentet
+    // fra de gamle, Brann-tilpassede faste verdiene den erstattet).
+    root.setProperty('--team-soft-light', `rgba(${hexToRgbStr(c.fill)},.08)`);
+    root.setProperty('--team-soft-dark', `rgba(${hexToRgbStr(c.textDark)},.12)`);
+  }
+  // Toppbanneret trenger EGNE verdier uansett om et lag er valgt eller ikke
+  // (--team-* over er bare brukt av .followed-elementer, som ikke finnes
+  // uten valgt lag) -- se NEUTRAL_TOP.
+  applyTopColors(c || NEUTRAL_TOP);
+}
+function applyTopColors(c){
   const root = document.documentElement.style;
-  root.setProperty('--team-fill', c.fill);
-  root.setProperty('--team-deep', c.deep);
-  root.setProperty('--team-fill-text', c.fillText);
-  root.setProperty('--team-text-light', c.textLight);
-  root.setProperty('--team-text-dark', c.textDark);
-  // Markeringens bakgrunn: en svak, gjennomsiktig vask av lagets egen farge
-  // (lav alfa over --panel/--bg) i stedet for en fast rosa -- se
-  // --team-soft-light/-dark i :root for hvorfor alfa (0,08/0,12 -- hentet
-  // fra de gamle, Brann-tilpassede faste verdiene den erstattet).
-  root.setProperty('--team-soft-light', `rgba(${hexToRgbStr(c.fill)},.08)`);
-  root.setProperty('--team-soft-dark', `rgba(${hexToRgbStr(c.textDark)},.12)`);
+  const scheme = c.fillText==='#15191c' ? TOP_DARK_TEXT : TOP_WHITE_TEXT;
+  root.setProperty('--top-bg-l', c.fill);
+  root.setProperty('--top-bg-deep-l', c.deep);
+  root.setProperty('--top-bg-d', c.topDark);
+  root.setProperty('--top-bg-deep-d', c.topDeepDark);
+  root.setProperty('--top-text-l', scheme.text);
+  root.setProperty('--top-pill-l', scheme.pill);
+  root.setProperty('--top-warn-l', scheme.warn);
+  root.setProperty('--top-label-l', scheme.label);
+  root.setProperty('--top-toggle-border-l', scheme.toggleBorder);
+  root.setProperty('--top-toggle-bg-l', scheme.toggleBg);
+  root.setProperty('--top-toggle-hover-l', scheme.toggleHover);
 }
 applyTeamColors();
 
