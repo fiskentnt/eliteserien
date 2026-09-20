@@ -49,7 +49,8 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/odds_upcoming.json data/odds.json data/model.json data/odds_quota.json
+          git add data/odds_upcoming.json data/odds.json data/model.json
+          [ -f data/odds_quota.json ] && git add data/odds_quota.json
           [ -f data/odds_captured.json ] && git add data/odds_captured.json
           if git diff --cached --quiet; then
             echo "Ingen endringer i odds."
