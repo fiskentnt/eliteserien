@@ -17,6 +17,9 @@ import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).parent))
+from oddslib import devig
+
 USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
 SPORT = "soccer_norway_eliteserien"
 BASE = f"https://api.the-odds-api.com/v4/sports/{SPORT}/odds/"
@@ -43,11 +46,6 @@ NAME_MAP = {
     "Sarpsborg FK": "Sarpsborg 08", "Tromso": "Tromsø", "Vålerenga": "Vålerenga",
     "Viking FK": "Viking",
 }
-
-def devig(h, d, a):
-    ih, idn, ia = 1/h, 1/d, 1/a
-    s = ih + idn + ia
-    return ih/s, idn/s, ia/s
 
 def fetch_odds(api_key, log):
     url = f"{BASE}?apiKey={api_key}&regions=eu&markets=h2h&oddsFormat=decimal"

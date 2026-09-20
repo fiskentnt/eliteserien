@@ -17,6 +17,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+sys.path.insert(0, str(Path(__file__).parent))
+from oddslib import devig
+
 USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
 CSV_URL = "https://football-data.co.uk/new/NOR.csv"
 ROOT = Path(__file__).parent.parent
@@ -33,11 +36,6 @@ class RateLimited(Exception):
 NAME_MAP = {"Bodo/Glimt": "Bodø/Glimt", "Lillestrom": "Lillestrøm",
             "Tromso": "Tromsø", "Valerenga": "Vålerenga"}
 def norm(name): return NAME_MAP.get(name, name)
-
-def devig(h, d, a):
-    ih, idn, ia = 1/h, 1/d, 1/a
-    s = ih + idn + ia
-    return ih/s, idn/s, ia/s
 
 def fetch(etag=None, log=lambda s: None):
     req = urllib.request.Request(CSV_URL, headers={"User-Agent": USER_AGENT})
