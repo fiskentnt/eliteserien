@@ -17,7 +17,12 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--body);font-variant-numeric:tabular-nums}
-  body{overflow-x:hidden} /* siden skal aldri få vannrett scroll; .tblwrap har sin egen, ønskede scroll */
+  /* overflow-x:clip, ikke hidden: hidden/auto/scroll på en ANESTOR av et
+     position:sticky-element gjør ancestoren til element sitt eget scroll-
+     og containing-block, som bryter stickyen (mest merkbart i Firefox).
+     clip gir samme visuelle resultat (aldri vannrett scroll på siden; .tblwrap
+     har sin egen, ønskede scroll) uten den bivirkningen. */
+  body{overflow-x:clip}
   body{padding-bottom:env(safe-area-inset-bottom,0px)}
 
   /* Topp — kompakt: maks ca 180px på PC, se .top-in/.status under */
@@ -58,11 +63,14 @@
   /* Layout */
   .wrap{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(360px,1fr);gap:20px;padding:16px 24px 48px;max-width:1380px;margin:0 auto;align-items:start}
   @media (max-width:1180px){.wrap{grid-template-columns:1fr}}
-  /* Tabellen blir stående (sticky) mens du blar i kamplisten ved siden av, på PC */
-  /* Sticky bare når HELE tabellpanelet faktisk får plass i vinduet (styrt av
-     JS, se updateStickyFit()) — ellers vanlig sideskrolling, slik at bunnen
-     av tabellen (siste lag, fargeforklaring, kilder) alltid er nåbar. */
-  @media (min-width:1181px){.wrap > .panel:first-child.sticky-fit{position:sticky;top:16px}}
+  /* Tabellen blir stående (sticky) mens du blar i kamplisten ved siden av, på
+     PC over 1180px. top settes dynamisk av JS (updateStickyFit()) til
+     min(16px, vindushøyde - tabellhøyde - 16px): en kort tabell fester seg
+     16px fra toppen med en gang, en tabell høyere enn vinduet scroller til
+     bunnen (med forklaringen) er synlig og låses først da. Ingen sticky på
+     mobil, og ingen sticky i det hele tatt når kamplisten er kortere enn
+     tabellen (styrt av .sticky-enabled-klassen fra JS, ikke her). */
+  @media (min-width:1181px){.wrap > .panel:first-child.sticky-enabled{position:sticky}}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .panel > h2{font:700 22px/1 var(--cond);margin:0;padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
   .panel > h2 .count{font:500 14px var(--body);color:var(--muted)}
@@ -385,16 +393,33 @@ let LIVE = null; // {att,con,ha,hc} i TI-indeksrekkefølge — kopi av MODEL, op
 const roundsEl = document.getElementById('rounds');
 const isBrann = m => m.home==="Brann"||m.away==="Brann";
 
-// Sticky tabell bare når hele panelet faktisk får plass i vinduet (900px bredde
-// og oppover — @media-regelen begrenser videre til desktop). Ellers vanlig
-// sideskrolling, så bunnen av tabellen alltid er nåbar.
+// Dynamisk sticky top: top = min(16px, vindushøyde - tabellhøyde - 16px).
+// Kort tabell -> top=16px (fester seg rett under vindustoppen med en gang).
+// Tabell høyere enn vinduet -> negativ top, så siden må scrolles til bunnen
+// av tabellen (med forklaringen) er synlig 16px over vindubunnen, FØR den
+// låser seg — heller enn å låse toppen med en gang og la bunnen aldri bli
+// synlig. Ingen sticky i det hele tatt når kamplisten (nabokolonnen) er
+// kortere enn tabellen, siden det da ikke er noe å scrolle forbi. Under
+// 1181px styres ingenting her — @media-regelen slår sticky helt av på mobil.
 function updateStickyFit(){
   const panel = document.querySelector('.wrap > .panel:first-child');
-  if(!panel) return;
-  const fits = panel.offsetHeight <= window.innerHeight - 32;
-  panel.classList.toggle('sticky-fit', fits);
+  const sibling = document.querySelector('.wrap > .panel:nth-child(2)');
+  if(!panel || !sibling) return;
+  if(window.innerWidth < 1181 || sibling.offsetHeight < panel.offsetHeight){
+    panel.classList.remove('sticky-enabled');
+    panel.style.top = '';
+    return;
+  }
+  panel.classList.add('sticky-enabled');
+  panel.style.top = Math.min(16, window.innerHeight - panel.offsetHeight - 16) + 'px';
 }
 window.addEventListener('resize', updateStickyFit);
+// Fanger opp høydeendringer som ikke kommer fra render() eller vindu-resize
+// (f.eks. "Vis alle runder", eller en skrifttype som lastes sent). Begge
+// panelene finnes allerede i det statiske markup-et (bare innholdet fylles
+// av JS), så vi kan observere dem med en gang.
+const _stickyObserver = new ResizeObserver(()=>updateStickyFit());
+document.querySelectorAll('.wrap > .panel').forEach(p=>_stickyObserver.observe(p));
 // Korte lagnavn der kampradene blir trange (kolonnen med klokkeslett + H/U/B
 // tar en del av bredden, så lange navn må forkortes for å unngå at CSS
 // klipper dem med "...")
