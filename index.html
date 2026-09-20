@@ -1126,13 +1126,23 @@ async function updateAutoFill(){
 
 // Tvunget resultat (Brann-knappene): modellens forventede resultat (predict,
 // samme avrundede tall som resten av siden — blandet med odds der de finnes),
-// justert MINST mulig til en vinner: står resultatet allerede slik vinneren
-// skal ha det, røres det ikke; ellers løftes vinnerens mål til ett mer enn
-// taperens (2-2 og hjemmelaget skal vinne blir 3-2, ikke 1-0).
+// forskjøvet til et KLART resultat, ikke minimalt justert: vinneren får ett
+// mål mer enn forventet, taperen ett mindre (minimum 0). Mot en underdog gir
+// det minst to måls forskjell (forventningen i vinnerens favør pluss
+// forskjyvningen), ellers minst ett. Sikring: er vinneren likevel ikke størst
+// etter forskyvningen (kan skje når vinneren egentlig var storfavoritt til å
+// TAPE, altså tvinges til et resultat mot egen forventning), løftes vinnerens
+// mål til ett mer enn taperens — knappen skal alltid faktisk gi den vinneren
+// som er bedt om, aldri det motsatte.
 function forcedScoreline(home,away,homeWins){
   let [hg,ag]=predict(home,away);
-  if(homeWins){ if(hg<=ag) hg=ag+1; }
-  else { if(ag<=hg) ag=hg+1; }
+  if(homeWins){
+    hg=hg+1; ag=Math.max(0,ag-1);
+    if(hg<=ag) hg=ag+1;
+  } else {
+    ag=ag+1; hg=Math.max(0,hg-1);
+    if(ag<=hg) ag=hg+1;
+  }
   return [hg,ag];
 }
 document.getElementById('brannLose').onclick=async ()=>{ matches.filter(isBrann).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home!=="Brann"); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
