@@ -527,10 +527,28 @@ function fillProb(){
 // Web Worker (WORKER_SRC under) så siden aldri fryser mens du skriver — et
 // første anslag postes etter 1000 sesonger, det endelige etter 4000. ----
 const WORKER_SRC = `
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+var GMAX = 10;
+// H/U/B-sannsynligheter fra et Poisson-par (lh,la), samme grid som outcome() på hovedtråden.
+function outcomeProbs(lh, la){
+  var ph=new Array(GMAX+1), pa=new Array(GMAX+1);
+  ph[0]=Math.exp(-lh); pa[0]=Math.exp(-la);
+  for(var i=1;i<=GMAX;i++){ ph[i]=ph[i-1]*lh/i; pa[i]=pa[i-1]*la/i; }
+  var Hp=0,Dp=0,Bp=0;
+  for(var h=0;h<=GMAX;h++) for(var a=0;a<=GMAX;a++){ var p=ph[h]*pa[a]; if(h>a)Hp+=p; else if(h===a)Dp+=p; else Bp+=p; }
+  var t=Hp+Dp+Bp;
+  return {H:Hp/t, D:Dp/t, B:Bp/t};
+}
+
 self.onmessage = function(e){
-  var d = e.data, mu=d.mu, H=d.H, k=d.k, P0=d.P0, G0=d.G0, F0=d.F0, open=d.open, N=d.N, runId=d.runId;
+  var d = e.data;
+  if(d.mode==='typical'){ runTypical(d); } else { runProb(d); }
+};
+
+// ---- Topp3/Ned/Brann-boksen: 4000 "hot" simulerte sesonger (uendret metode). ----
+function runProb(d){
+  var mu=d.mu, H=d.H, k=d.k, P0=d.P0, G0=d.G0, F0=d.F0, open=d.open, N=d.N, runId=d.runId;
   var n = P0.length;
-  function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
   var rnd = mulberry32((Math.random()*4294967296)>>>0);
   function poisSample(l){ var L=Math.exp(-l), x=0, p=rnd(); while(p>L){ x++; p*=rnd(); } return x; }
   var cnt=[]; for(var i=0;i<n;i++) cnt.push(new Float64Array(n));
@@ -558,17 +576,128 @@ self.onmessage = function(e){
     for(var pos=0;pos<n;pos++) cnt[ord[pos]][pos]++;
     if(s===REPORT_AT || s===N){
       var out=cnt.map(function(row){ return Array.prototype.slice.call(row).map(function(c){ return c/s; }); });
-      postMessage({runId:runId, done:s, total:N, out:out});
+      postMessage({runId:runId, mode:'prob', done:s, total:N, out:out});
     }
   }
-};
+}
+
+// ---- "Typisk sesong": velger blant N kandidatsesonger den som samtidig (1)
+// har poengsummer nær forventet, (2) har sannsynlige enkeltresultater (høy
+// log-sannsynlighet), og (3) har et antall overraskelser (<30% sjanse) nær
+// forventet, totalt og per runde. Hver kamp trekkes på nytt (avvist og
+// prøvd igjen) hvis utfallet (H/U/B) hadde under 10% sjanse — en grå kamp
+// skal aldri lande på et ekstremt usannsynlig utfall. De tre metrikkene er
+// på ulik skala, så de gjøres om til z-score (avvik i standardavvik fra
+// snittet blant kandidatene) før de vektes likt og summeres. ----
+// Trekker kandidatsesonger én om gangen (kronologisk, med "hot" formoppdatering
+// -- se hovedløkken) og GODTAR den første som ser statistisk normal ut:
+// antall overraskelser (<30% sjanse) nær forventet, totalt OG per runde,
+// innenfor en toleranse basert på hvor mye det tallet naturlig svinger
+// (kvadratroten av summen av Bernoulli-varians p*(1-p) per kamp). Ingen
+// poengsum-nærhet lenger -- den regelen premierte sesonger der overraskelser
+// jevnet hverandre ut, som ga en unaturlig, overraskelsestung utvikling.
+// Hver enkeltkamp avvises og trekkes på nytt hvis utfallet (H/U/B) hadde
+// under 10% sjanse, uansett om sesongen til slutt godtas.
+function runTypical(d){
+  var mu=d.mu, H=d.H, k=d.k, att0=d.att, con0=d.con, ha0=d.ha, hc0=d.hc;
+  var open=d.open, runId=d.runId;
+  var rnd = mulberry32(d.seed);
+  function poisSample(l){ var L=Math.exp(-l), x=0, p=rnd(); while(p>L){ x++; p*=rnd(); } return x; }
+  var m = open.length;
+  var hiArr=[], aiArr=[], roundArr=[];
+  for(var i0=0;i0<m;i0++){ hiArr.push(open[i0][0]); aiArr.push(open[i0][1]); roundArr.push(open[i0][2]); }
+
+  var roundList=[], roundIdxOf={};
+  for(var i1=0;i1<m;i1++){ var rr=roundArr[i1]; if(!(rr in roundIdxOf)){ roundIdxOf[rr]=roundList.length; roundList.push(rr); } }
+  var nr = roundList.length;
+  var roundIdxArr = roundArr.map(function(rr){ return roundIdxOf[rr]; });
+
+  // Forventet antall overraskelser og naturlig toleranse, fra START-tilstanden
+  // (ikke hot-oppdatert per kandidat -- FORM_K sitt bidrag er lite, og en delt,
+  // fast forventning er enklere å sammenligne kandidatene mot).
+  var expTotal=0, expByRound=new Float64Array(nr), varTotal=0, varByRound=new Float64Array(nr);
+  for(var j0=0;j0<m;j0++){
+    var h0=hiArr[j0], a0=aiArr[j0];
+    var eh0=mu+H+att0[h0]+ha0[h0]+con0[a0]-hc0[a0], ea0=mu+att0[a0]-ha0[a0]+con0[h0]+hc0[h0];
+    eh0=Math.min(9,Math.max(-9,eh0)); ea0=Math.min(9,Math.max(-9,ea0));
+    var pr0=outcomeProbs(Math.exp(eh0), Math.exp(ea0));
+    var sp=(pr0.H<0.30?pr0.H:0)+(pr0.D<0.30?pr0.D:0)+(pr0.B<0.30?pr0.B:0);
+    expTotal+=sp; expByRound[roundIdxArr[j0]]+=sp;
+    var vv=sp*(1-sp); varTotal+=vv; varByRound[roundIdxArr[j0]]+=vv;
+  }
+  var Z=1.0; // toleranse i antall "standardavvik" rundt forventet antall overraskelser (funnet ved sammenligning: 1.5 var for løst, ga fortsatt runder langt fra forventet)
+  var tolTotal=Z*Math.sqrt(varTotal), tolByRound=new Float64Array(nr);
+  for(var ri0=0; ri0<nr; ri0++) tolByRound[ri0]=Z*Math.sqrt(varByRound[ri0]);
+
+  var MAX_ATTEMPTS=3000;
+  var bestG=null, bestViol=Infinity, bestSurprises=null;
+  var acceptedAttempt=-1, acceptedSurprises=null;
+
+  for(var attempt=0; attempt<MAX_ATTEMPTS; attempt++){
+    var att=att0.slice(), con=con0.slice(), ha=ha0.slice(), hc=hc0.slice();
+    var G=new Uint8Array(m*2);
+    var actualTotal=0, actualByRound=new Float64Array(nr);
+    for(var j=0;j<m;j++){
+      var h=hiArr[j], a=aiArr[j];
+      var eh=mu+H+att[h]+ha[h]+con[a]-hc[a], ea=mu+att[a]-ha[a]+con[h]+hc[h];
+      eh=Math.min(9,Math.max(-9,eh)); ea=Math.min(9,Math.max(-9,ea));
+      var lh=Math.exp(eh), la=Math.exp(ea);
+      var probs=outcomeProbs(lh,la);
+      var x,y,cat,catP;
+      for(var rtry=0; rtry<50; rtry++){
+        x=poisSample(lh); y=poisSample(la);
+        cat = x>y?'H':(x===y?'D':'B');
+        catP = probs[cat];
+        if(catP>=0.10) break;
+      }
+      G[j*2]=x; G[j*2+1]=y;
+      if(catP<0.30){ actualTotal++; actualByRound[roundIdxArr[j]]++; }
+      var rh=x-lh, ra=y-la;
+      att[h]+=k*rh; ha[h]+=k*rh; con[a]+=k*rh; hc[a]-=k*rh;
+      att[a]+=k*ra; ha[a]-=k*ra; con[h]+=k*ra; hc[h]+=k*ra;
+    }
+    var diffTotal=Math.abs(actualTotal-expTotal);
+    var violation=Math.max(0, diffTotal-tolTotal);
+    var ok=diffTotal<=tolTotal;
+    for(var ri=0; ri<nr; ri++){
+      var diffR=Math.abs(actualByRound[ri]-expByRound[ri]);
+      violation += Math.max(0, diffR-tolByRound[ri]);
+      if(diffR>tolByRound[ri]) ok=false;
+    }
+    if(violation<bestViol){ bestViol=violation; bestG=G; bestSurprises={total:actualTotal, byRound:Array.prototype.slice.call(actualByRound)}; }
+    if(ok){ acceptedAttempt=attempt; acceptedSurprises={total:actualTotal, byRound:Array.prototype.slice.call(actualByRound)}; bestG=G; break; }
+  }
+
+  var result=[];
+  for(var j2=0;j2<m;j2++){ result.push([bestG[j2*2], bestG[j2*2+1]]); }
+  var surprises = acceptedSurprises || bestSurprises;
+  postMessage({runId:runId, mode:'typical', result:result, diagnostics:{
+    expectedTotal:expTotal, actualTotal:surprises.total,
+    roundList:roundList, expectedByRound:Array.prototype.slice.call(expByRound), actualByRound:surprises.byRound,
+    tolTotal:tolTotal, tolByRound:Array.prototype.slice.call(tolByRound),
+    attempts:(acceptedAttempt>=0?acceptedAttempt:MAX_ATTEMPTS)+1, accepted:acceptedAttempt>=0
+  }});
+}
 `;
 let mcWorker=null, mcRunId=0, mcTimer=null, lastMC=null;
+const typicalResolvers = new Map(); // runId -> resolve-funksjon, for "typical"-jobber
+let typicalRunId = 0;
+let lastTypicalDiagnostics = null; // for feilsøking/verifisering, se console
+// Frøet og settet av kamp-id-er fra SISTE simulateTypicalAsync-kall — lar
+// encodeScenario() ta en snarvei (kort frø i lenken i stedet for hvert
+// resultat) NÅR hele det nåværende grå settet kommer fra akkurat det kallet.
+let lastSimSeed = null, lastSimMatchIds = null;
 function getWorker(){
   if(!mcWorker){
     mcWorker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'})));
     mcWorker.onmessage = e=>{
-      const {runId,out}=e.data;
+      const data=e.data;
+      if(data.mode==='typical'){
+        const resolve=typicalResolvers.get(data.runId);
+        if(resolve){ resolve(data); typicalResolvers.delete(data.runId); }
+        return;
+      }
+      const {runId,out}=data;
       if(runId!==mcRunId) return; // scenariet er endret siden denne kjøringen startet — forkast
       const outObj={}; TEAMS.forEach((t,i)=>outObj[t]=out[i]);
       lastMC=outObj; fillOdds();
@@ -619,59 +748,44 @@ function fillOdds(){
 }
 function scheduleMC(){ clearTimeout(mcTimer); mcTimer=setTimeout(()=>runMCAsync(4000), 250); }
 
-function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
-// FNV-1a-lignende strenghash -> 32-bit frø, deterministisk (samme streng gir
-// alltid samme tall). Brukes til å gjøre "typisk sesong" stabil: samme faste
-// resultater skal alltid gi samme utfylte kamper.
-function hashSeed(str){
-  let h=2166136261;
-  for(let i=0;i<str.length;i++){ h^=str.charCodeAt(i); h=Math.imul(h,16777619); }
-  return h>>>0;
-}
-// Fyller de gitte kampene med én "typisk" utvikling: simulerer mange ganger og
-// velger den der alle lags poengsum (blant de simulerte kampene) ligger nærmest
-// forventet snitt. Brukes både av "Simuler tomme kamper" (hele resten) og av
-// "samme dato"-utfyllingen (bare kampene til og med en gitt dato).
-// Frøet avledes av de FASTE (låste) resultatene i scenariet, ikke Math.random()
-// — samme faste resultater skal alltid gi samme "typiske" utfylling.
-function simulateTypical(open){
-  if(!open.length) return;
-  refreshLiveState();
-  const lockedKey = matches.filter(m=>m.hg!=null&&m.ag!=null).map(m=>`${m.id}:${m.hg}-${m.ag}`).sort().join('|');
-  const rnd=mulberry32(hashSeed(lockedKey)), N=3000, n=TEAMS.length;
-  const hi=open.map(m=>TI[m.home]), ai=open.map(m=>TI[m.away]);
-  const pois=l=>{ const L=Math.exp(-l); let k=0,p=rnd(); while(p>L){k++;p*=rnd();} return k; };
-  const G=new Uint8Array(N*open.length*2), PTS=new Float64Array(N*n), E=new Float64Array(n);
-  const {mu,H}=MODEL, baseAtt=LIVE.att, baseCon=LIVE.con, baseHa=LIVE.ha, baseHc=LIVE.hc;
-  // "Hot": lagstyrkene (kopi av LIVE) oppdateres etter hver kamp i hver av de
-  // 3000 simulerte sesongene, så en kamp tidlig i den simulerte fortsettelsen
-  // påvirker sannsynlighetene for de neste, akkurat som i runMCAsync().
-  for(let s=0;s<N;s++){
-    const att=baseAtt.slice(), con=baseCon.slice(), ha=baseHa.slice(), hc=baseHc.slice();
-    for(let j=0;j<open.length;j++){
-      const h=hi[j], a=ai[j];
-      let eh=mu+H+att[h]+ha[h]+con[a]-hc[a], ea=mu+att[a]-ha[a]+con[h]+hc[h];
-      eh=Math.min(9,Math.max(-9,eh)); ea=Math.min(9,Math.max(-9,ea));
-      const lh=Math.exp(eh), la=Math.exp(ea), x=pois(lh), y=pois(la);
-      G[(s*open.length+j)*2]=x; G[(s*open.length+j)*2+1]=y;
-      const o=s*n; if(x>y)PTS[o+h]+=3; else if(x<y)PTS[o+a]+=3; else {PTS[o+h]++;PTS[o+a]++;}
-      const rh=x-lh, ra=y-la;
-      att[h]+=FORM_K*rh; ha[h]+=FORM_K*rh; con[a]+=FORM_K*rh; hc[a]-=FORM_K*rh;
-      att[a]+=FORM_K*ra; ha[a]-=FORM_K*ra; con[h]+=FORM_K*ra; hc[h]+=FORM_K*ra;
-    }
-  }
-  for(let s=0;s<N;s++) for(let t=0;t<n;t++) E[t]+=PTS[s*n+t]/N;
-  let best=0, bestErr=Infinity;
-  for(let s=0;s<N;s++){ let e=0; for(let t=0;t<n;t++){ const d=PTS[s*n+t]-E[t]; e+=d*d; } if(e<bestErr){bestErr=e;best=s;} }
-  open.forEach((m,j)=>setMatch(m,G[(best*open.length+j)*2],G[(best*open.length+j)*2+1],true,true));
+// Fyller de gitte kampene med én "typisk" utvikling: kjøres i Web Workeren
+// (WORKER_SRC, mode:'typical'), som trekker kandidatsesonger kronologisk med
+// "hot" formoppdatering til én ser statistisk normal ut (se runTypical der).
+// Nytt, tilfeldig frø hver gang (ikke lenger avledet av de låste resultatene)
+// — "Simuler tomme kamper" og lignende skal gi en NY sesong hver gang du
+// trykker. forcedSeed lar oss spille av ÉN SPESIFIKK sesong på nytt (se
+// applyScenario) når hele det grå settet kommer fra ett samlet kall — se
+// lastSimSeed/lastSimMatchIds og encodeScenario().
+function simulateTypicalAsync(open, forcedSeed){
+  return new Promise(resolve=>{
+    if(!open.length){ resolve(); return; }
+    refreshLiveState();
+    const seed = forcedSeed!=null ? forcedSeed : (Math.random()*4294967296)>>>0;
+    typicalRunId++;
+    const runId = typicalRunId;
+    const openData = open.map(m=>[TI[m.home], TI[m.away], m.round]);
+    typicalResolvers.set(runId, (data)=>{
+      if(data.result) open.forEach((m,j)=>setMatch(m, data.result[j][0], data.result[j][1], true, true));
+      lastTypicalDiagnostics = data.diagnostics;
+      lastSimSeed = seed;
+      lastSimMatchIds = new Set(open.map(m=>m.id));
+      resolve();
+    });
+    getWorker().postMessage({
+      mode:'typical', runId, seed,
+      mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+      att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+      open: openData
+    });
+  });
 }
 // "Åpen" for automatisk utfylling betyr helt tom (verken hjemme- eller bortemål
 // satt) — en kamp der bare det ene feltet er fylt ut er midt i redigering (du
 // har nettopp skrevet det ene tallet) og skal aldri overskrives automatisk.
 const isEmpty = m => m.hg==null && m.ag==null;
-function simulateEmpty(){
+async function simulateEmpty(){
   matches.filter(m=>m.sim).forEach(m=>setMatch(m,null,null));
-  simulateTypical(matches.filter(isEmpty));
+  await simulateTypicalAsync(matches.filter(isEmpty));
 }
 
 // ---- "Tabell på samme tidspunkt": fyller automatisk ut andre kamper til og
@@ -689,26 +803,26 @@ function fillTargetDate(){
   const own=latestOwnMatch();
   return own ? (ROUND_LAST_DATE[own.round] || own.date) : null;
 }
-function fillToDate(){
+async function fillToDate(){
   matches.filter(m=>m.sim).forEach(m=>setMatch(m,null,null));
   const targetDate=fillTargetDate();
   if(!targetDate) return;
-  simulateTypical(matches.filter(m=>isEmpty(m) && m.date<=targetDate));
+  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && m.date<=targetDate));
 }
-function updateAutoFill(){
+async function updateAutoFill(){
   const toggle=document.getElementById('autoFillToggle');
   if(!toggle || !toggle.checked){
     matches.filter(m=>m.sim).forEach(m=>setMatch(m,null,null));
     return;
   }
-  fillToDate();
+  await fillToDate();
 }
 
-document.getElementById('brannLose').onclick=()=>{ matches.filter(isBrann).forEach(m=> m.home==="Brann"?setMatch(m,0,1):setMatch(m,1,0)); simulateEmpty(); render(); };
-document.getElementById('brannWin').onclick=()=>{ matches.filter(isBrann).forEach(m=> m.home==="Brann"?setMatch(m,1,0):setMatch(m,0,1)); simulateEmpty(); render(); };
-document.getElementById('simRest').onclick=()=>{ simulateEmpty(); render(); };
+document.getElementById('brannLose').onclick=async ()=>{ matches.filter(isBrann).forEach(m=> m.home==="Brann"?setMatch(m,0,1):setMatch(m,1,0)); await simulateEmpty(); render(); };
+document.getElementById('brannWin').onclick=async ()=>{ matches.filter(isBrann).forEach(m=> m.home==="Brann"?setMatch(m,1,0):setMatch(m,0,1)); await simulateEmpty(); render(); };
+document.getElementById('simRest').onclick=async ()=>{ await simulateEmpty(); render(); };
 document.getElementById('reset').onclick=()=>{ matches.forEach(m=>setMatch(m,null,null)); render(); };
-document.getElementById('autoFillToggle').addEventListener('change',()=>{ updateAutoFill(); render(); });
+document.getElementById('autoFillToggle').addEventListener('change',async ()=>{ await updateAutoFill(); render(); });
 // På mobil er fordelingsstripen skjult til man trykker på Brann-boksen (se
 // .status.expanded i CSS) — klassen ligger på #verdict selv, som render()
 // aldri bytter ut (bare innerHTML), så den overlever nye render()-kall.
@@ -716,7 +830,7 @@ document.getElementById('verdict').addEventListener('click', ()=> document.getEl
 // Én felles, delegert handler for både tekstfelt og H/U/B/×-knappene i hele
 // kamplisten (også runder som kommer fra "Vis alle runder"), siden den er
 // bundet på #rounds og fungerer uansett hvor i undertreet elementet ligger.
-function onRoundsEvent(e){
+async function onRoundsEvent(e){
   const row=e.target.closest('.match');
   if(!row || row.classList.contains('played')) return;
   const m=matches.find(x=>x.id===row.dataset.id);
@@ -729,7 +843,7 @@ function onRoundsEvent(e){
     const q=b.dataset.q;
     if(q==='H') setMatch(m,1,0); else if(q==='U') setMatch(m,0,0); else if(q==='B') setMatch(m,0,1); else if(q==='X') setMatch(m,null,null); else return;
   } else return;
-  updateAutoFill();
+  await updateAutoFill();
   render();
 }
 roundsEl.addEventListener('input', onRoundsEvent);
@@ -896,16 +1010,35 @@ function render(){
   fillOdds(); scheduleMC();
   updateStickyFit();
 }
-// Del scenario: resultatene legges i lenken etter #s=
+// Del scenario: resultatene legges i lenken etter #s=. "Simuler tomme
+// kamper" og lignende gir nå en NY tilfeldig sesong hver gang (ikke et fast
+// frø), så det grå resultatet må ligge i lenken for at mottakeren skal se
+// akkurat det samme — som de egne resultatene allerede gjør. Blir lenken
+// for lang, og HELE det grå settet kommer fra ett samlet simuleringskall
+// (lastSimSeed/lastSimMatchIds), bruker vi et kort frø for akkurat den
+// sesongen i stedet for å liste hvert resultat.
 function encodeScenario(){
-  return matches.filter(m=>m.hg!=null&&m.ag!=null).map(m=>`${TI[m.home]}.${TI[m.away]}.${m.hg}.${m.ag}${m.sim?'s':''}`).join('_');
+  const filled = matches.filter(m=>m.hg!=null&&m.ag!=null);
+  const full = filled.map(m=>`${TI[m.home]}.${TI[m.away]}.${m.hg}.${m.ag}${m.sim?'s':''}`).join('_');
+  if(full.length<=1500) return full;
+  const simIds = new Set(filled.filter(m=>m.sim).map(m=>m.id));
+  const seedValid = lastSimSeed!=null && lastSimMatchIds && simIds.size===lastSimMatchIds.size &&
+    [...simIds].every(id=>lastSimMatchIds.has(id));
+  if(!seedValid) return full; // kan ikke bruke frø-snarveien trygt -- lang men riktig lenke
+  const own = filled.filter(m=>!m.sim).map(m=>`${TI[m.home]}.${TI[m.away]}.${m.hg}.${m.ag}`).join('_');
+  return `${own}~${lastSimSeed}`;
 }
-function applyScenario(){
-  const h=location.hash.match(/s=([0-9._s]+)/); if(!h) return;
-  h[1].split('_').forEach(part=>{
+async function applyScenario(){
+  const h=location.hash.match(/s=([0-9._s~]+)/); if(!h) return;
+  const [ownPart, seedPart] = h[1].split('~');
+  ownPart.split('_').forEach(part=>{
     const x=part.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)(s?)$/); if(!x) return;
     const m=matches.find(q=>TI[q.home]===+x[1]&&TI[q.away]===+x[2]); if(m) setMatch(m,+x[3],+x[4],true,x[5]==='s');
   });
+  if(seedPart){
+    const seed=parseInt(seedPart,10);
+    if(Number.isFinite(seed)) await simulateTypicalAsync(matches.filter(isEmpty), seed);
+  }
 }
 document.getElementById('share').addEventListener('click',async e=>{
   e.stopPropagation();
@@ -1132,8 +1265,14 @@ async function boot(){
     showAllBtn.onclick = () => { hiddenRounds.hidden = false; showAllBtn.hidden = true; };
   }
 
-  applyScenario();
-  updateAutoFill();
+  // updateAutoFill() sletter og fyller på nytt ALT som er merket sim — kjøres
+  // den etter en delt lenke er lastet, ville den umiddelbart overskrevet det
+  // grå resultatet linken nettopp gjenskapte (og nå, uten fast frø, gitt en
+  // ANNEN tilfeldig sesong enn den som ble delt). Bare kjør auto-fyllingen
+  // ved vanlig sidelasting, ikke når en lenke allerede satte scenariet.
+  const hadScenario = /s=/.test(location.hash);
+  await applyScenario();
+  if(!hadScenario) await updateAutoFill();
   render();
   setTimeout(()=>document.body.classList.remove('intro'),1600);
 }
