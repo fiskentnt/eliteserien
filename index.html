@@ -23,16 +23,19 @@
 <style>
   :root{
     --bg:#e7eaea; --panel:#ffffff; --ink:#15191c; --muted:#5d666c; --line:#d6dbdb; --line-soft:#e8ecec;
-    /* --brann/--brann-deep/--eu/--q er faste fyllfarger (knapper, sterke ruter)
-       -- samme verdi i lyst og mørkt, alltid parret med hvit tekst, se
+    /* --accent/--accent-deep/--eu/--q er faste fyllfarger (knapper, sterke
+       ruter) -- samme verdi i lyst og mørkt, alltid parret med hvit tekst, se
        kontrollen i scratchpad-scriptet som validerte hele paletten mot WCAG AA.
        --*-text er samme farge brukt som SKRIFT mot --panel/--bg, og lysnes i
        mørk modus siden en mørk rødfarge mot en mørk bakgrunn ikke er lesbar.
-       --top-bg/--top-bg-deep ER themet (i motsetning til --brann): et helt
+       --accent* er sidens EGEN, faste fargeidentitet (fokusring,
+       avkrysningsboks, og universelle semantiske farger som nedrykk-merket
+       og tapskvadratet i Siste 5) -- UAVHENGIG av hvilket lag som følges.
+       --top-bg/--top-bg-deep ER themet (i motsetning til --accent): et helt
        flatt rødt felt i full høyde leses som skrikende mot en mørk side på en
        måte en liten rød knapp ikke gjør, så mørk modus dempes egen. */
     --top-bg:#c4111d; --top-bg-deep:#8d0a13;
-    --brann:#c4111d; --brann-deep:#8d0a13; --brann-soft:#fdecee; --brann-text:#c4111d;
+    --accent:#c4111d; --accent-deep:#8d0a13; --accent-soft:#fdecee; --accent-text:#c4111d;
     --formbox-red-bg:#c4111d;
     --eu:#1d7a63; --eu-soft:#e2f1ec; --eu-text:#1d7a63;
     --q:#cf951a; --q-soft:#fbf1dc; --q-text:#9a6c08; --q-border:#d9b872; --q-note:#8a6a1f;
@@ -47,6 +50,15 @@
     --played-bg:#f1f3f3; --played-fg:#8a9296; --played-score-bg:#dde2e3; --played-score-fg:#6f787c;
     --ned-row-a:#f4f5f5; --ned-row-b:#fafbfb;
     --hist-flat:#e3c3c6; --hist-eu:#8cc3b3; --hist-q:#e8c374; --hist-n:#c98a90;
+    /* --team*: DYNAMISK, satt av JS (applyTeamColors()) fra TEAM_COLORS ut
+       fra valgt lag. --team-fill/-deep/-fill-text er unthemet (samme "fyll
+       med hvit/mørk tekst"-logikk som --accent), --team-text-light/-dark
+       byttes akkurat som --eu-text/--q-text. Standardverdiene her er bare et
+       fall-tilbake før boot() har satt de ekte -- Brann sine farger, siden
+       Brann er standardvalget. */
+    --team-fill:#c4111d; --team-deep:#8d0a13; --team-fill-text:#ffffff;
+    --team-text-light:#c4111d; --team-text-dark:#ff6b74;
+    --team-text: var(--team-text-light);
     --cond:"Barlow Condensed","Arial Narrow","Roboto Condensed",system-ui,sans-serif;
     --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
@@ -62,10 +74,11 @@
     :root:not([data-theme="light"]){
       --bg:#15181a; --panel:#1f2426; --ink:#eef0f1; --muted:#9aa3a8; --line:#454d53; --line-soft:#343b40;
       --top-bg:#62181d; --top-bg-deep:#451115;
-      --brann-soft:rgba(255,107,116,.12); --brann-text:#ff6b74; --formbox-red-bg:#d1272f;
+      --accent-soft:rgba(255,107,116,.12); --accent-text:#ff6b74; --formbox-red-bg:#d1272f;
       --eu-soft:rgba(79,211,171,.14); --eu-text:#4fd3ab;
       --q-soft:rgba(224,173,74,.12); --q-text:#e0ad4a; --q-border:#6b5220; --q-note:#caa059;
       --ned:#8b939a;
+      --team-text: var(--team-text-dark);
       --highlight-bg:#262c30;
       --strong-bg:#3a4247; --strong-fg:#eef0f1; --strong-bg-hover:#4a5359;
       --cut-line:#484f51;
@@ -78,10 +91,11 @@
   :root[data-theme="dark"]{
     --bg:#15181a; --panel:#1f2426; --ink:#eef0f1; --muted:#9aa3a8; --line:#454d53; --line-soft:#343b40;
     --top-bg:#62181d; --top-bg-deep:#451115;
-    --brann-soft:rgba(255,107,116,.12); --brann-text:#ff6b74; --formbox-red-bg:#d1272f;
+    --accent-soft:rgba(255,107,116,.12); --accent-text:#ff6b74; --formbox-red-bg:#d1272f;
     --eu-soft:rgba(79,211,171,.14); --eu-text:#4fd3ab;
     --q-soft:rgba(224,173,74,.12); --q-text:#e0ad4a; --q-border:#6b5220; --q-note:#caa059;
     --ned:#8b939a;
+    --team-text: var(--team-text-dark);
     --highlight-bg:#262c30;
     --strong-bg:#3a4247; --strong-fg:#eef0f1; --strong-bg-hover:#4a5359;
     --cut-line:#484f51;
@@ -102,10 +116,16 @@
   body{overflow-x:clip}
   body{padding-bottom:env(safe-area-inset-bottom,0px)}
 
-  /* Topp — kompakt: maks ca 180px på PC, se .top-in/.status under */
-  .top{background:var(--top-bg);color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 24px 0;position:relative;overflow:hidden}
-  .top::after{content:"";position:absolute;inset:auto 0 0 0;height:5px;background:repeating-linear-gradient(90deg,var(--top-bg-deep) 0 16px,var(--top-bg) 16px 32px)}
-  .top-in{max-width:1380px;margin:0 auto;padding-bottom:10px;padding-right:44px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}
+  /* Topp — kompakt: maks ca 180px på PC, se .top-in/.status under. Jevn luft
+     over og under (24px begge veier på .top-in), i stedet for den tidligere
+     asymmetriske paddingen (0 nederst på .top selv, bare 10px på .top-in) --
+     se også at ingressen ("Fyll inn resultater...") er fjernet: den og
+     stempelet la seg ulikt i Chrome (stablet) og Firefox (side om side) i
+     samme flex-rad, og heller enn å style-låse et bestemt utfall er den
+     enkleste, mest robuste rettingen å fjerne den ekstra linja helt. */
+  .top{background:var(--top-bg);color:#fff;padding:calc(24px + env(safe-area-inset-top,0px)) 24px 0;position:relative;overflow:hidden}
+  .top::after{content:"";position:absolute;inset:auto 0 0 0;height:2px;opacity:.55;background:repeating-linear-gradient(90deg,var(--top-bg-deep) 0 16px,var(--top-bg) 16px 32px)}
+  .top-in{max-width:1380px;margin:0 auto;padding-bottom:24px;padding-right:44px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start}
   /* Tema-knapp: sol/måne-ikon øverst til høyre i det røde feltet. Absolutt
      posisjonert i .top (ikke en del av .top-in-gridden), så den blir stående
      øverst i hjørnet uansett skjermbredde i stedet for å bli dyttet ned når
@@ -126,13 +146,15 @@
   .titlerow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
   h1{margin:0;font:800 clamp(24px,3.2vw,30px)/1 var(--cond);letter-spacing:-.01em}
   .subtitle{font:600 clamp(13px,1.4vw,15px)/1.2 var(--cond);opacity:.85;letter-spacing:.01em}
-  .subline{margin:5px 0 0;display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;font-size:12.5px}
+  .subline{margin:8px 0 0;font-size:12.5px}
   .stamp{display:inline-block;background:rgba(0,0,0,.18);color:#fff;border-radius:999px;padding:2px 9px;font-weight:600}
   .stamp .warn{color:#ffb4bb}
-  .lede{color:#ffe3e5}
-  .status{background:var(--panel);color:var(--ink);border-radius:10px;padding:10px 14px;min-width:250px;max-width:420px;box-shadow:0 10px 30px -12px rgba(60,0,4,.55)}
+  .team-picker{margin-top:12px;display:flex;align-items:center;gap:9px;font-size:13px;color:#ffe3e5;flex-wrap:wrap}
+  .team-picker select{font:inherit;font-weight:700;color:#15191c;background:#fff;border:none;border-radius:999px;padding:6px 30px 6px 14px;cursor:pointer}
+  .status{background:var(--panel);color:var(--ink);border-radius:10px;padding:14px 16px;min-width:250px;max-width:420px;box-shadow:0 10px 30px -12px rgba(60,0,4,.55);border-left:6px solid var(--team-fill)}
+  .status .teamname-lg{display:block;font:800 clamp(18px,2vw,22px)/1.1 var(--cond);color:var(--team-text);margin:0 0 6px}
   .status .posline{font:700 14.5px/1.3 var(--body);color:var(--ink)}
-  .status .posline b{font:800 17px/1 var(--cond);color:var(--brann-text);margin-right:2px}
+  .status .posline b{font:800 17px/1 var(--cond);color:var(--ink);margin-right:2px}
 
   /* Verktøy */
   .tools{max-width:1380px;margin:0 auto;padding:16px 24px 0;display:flex;flex-wrap:wrap;gap:8px}
@@ -142,17 +164,18 @@
   .tools button:hover{border-color:var(--ink)}
   .tools button:disabled{color:var(--muted);cursor:default}
   .tools button:disabled:hover{border-color:var(--line)}
-  /* Brann-knappene (et "scenario") lyser rødt; de andre fyllingsknappene
-     ("andre kamper") får en egen, nøytral markering — se deriveScenario(). */
-  .tools button.on{background:var(--brann);border-color:var(--brann);color:#fff}
-  .tools button.on:hover{background:var(--brann-deep);border-color:var(--brann-deep)}
+  /* Knappene for valgt lag (et "scenario") lyser i lagets egen farge; de
+     andre fyllingsknappene ("andre kamper") får en egen, nøytral markering
+     — se deriveScenario(). */
+  .tools button.on{background:var(--team-fill);border-color:var(--team-fill);color:var(--team-fill-text)}
+  .tools button.on:hover{background:var(--team-deep);border-color:var(--team-deep)}
   .tools button.on-other{background:var(--strong-bg);border-color:var(--strong-bg);color:var(--strong-fg)}
   .tools button.on-other:hover{background:var(--strong-bg-hover);border-color:var(--strong-bg-hover)}
   .tools button.reset{margin-left:8px;border:none;background:transparent;color:var(--muted);font-weight:500;font-size:13px;padding:7px 10px}
   .tools button.reset:hover{color:var(--ink);text-decoration:underline}
   .tools button.share{margin-left:auto;background:var(--strong-bg);border-color:var(--strong-bg);color:var(--strong-fg)}
   .tools button.share.done{background:var(--eu);border-color:var(--eu);color:#fff}
-  button:focus-visible,input:focus-visible{outline:2px solid var(--brann);outline-offset:2px}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
   /* Layout */
   .wrap{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(360px,1fr);gap:20px;padding:16px 24px 48px;max-width:1380px;margin:0 auto;align-items:start}
@@ -202,12 +225,12 @@
   td.team{font-weight:500}
   td.pts{font:800 19px/1 var(--cond);padding-right:12px}
   td.gd{color:var(--muted)}
-  tr.brann td{background:var(--highlight-bg)}
-  tr.brann td.team{color:var(--brann-text);font-weight:700}
-  tr.brann td.pts{color:var(--brann-text)}
+  tr.followed td{background:var(--highlight-bg)}
+  tr.followed td.team{color:var(--team-text);font-weight:700}
+  tr.followed td.pts{color:var(--team-text)}
   tr.cut td{border-bottom:2px dashed var(--cut-line)}
   .diff{font-size:11.5px;margin-left:6px;font-weight:600}
-  .diff.up{color:var(--eu-text)}.diff.down{color:var(--brann-text)}
+  .diff.up{color:var(--eu-text)}.diff.down{color:var(--accent-text)}
 
   /* Merker: matematisk avgjort (task 3a) */
   .badge{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font:700 10px/1.7 var(--body);letter-spacing:.02em;vertical-align:middle;white-space:nowrap}
@@ -215,7 +238,7 @@
   .badge.champ{background:var(--q);color:#3a2c05}
   .badge.europe{background:var(--eu-soft);color:var(--eu-text)}
   .badge.safe{background:var(--line-soft);color:var(--muted)}
-  .badge.relegated{background:var(--brann-soft);color:var(--brann-text)}
+  .badge.relegated{background:var(--accent-soft);color:var(--accent-text)}
 
   /* Team-navn: klikkbart, åpner formgrafen */
   .teamname{cursor:pointer}
@@ -241,15 +264,15 @@
   /* Form og sannsynligheter */
   .form{display:inline-flex;gap:2px;vertical-align:middle}
   .form b{width:9px;height:9px;border-radius:2px;display:inline-block}
-  .form .W{background:var(--eu)} .form .D{background:#b3babd} .form .L{background:var(--brann-text)}
+  .form .W{background:var(--eu)} .form .D{background:#b3babd} .form .L{background:var(--accent-text)}
   td.odds{font-size:13px;color:var(--muted);text-align:right;min-width:44px}
   td.odds.hot{color:var(--ink);font-weight:700}
-  tr.brann td.odds{color:var(--brann-text)}
-  /* Status: Brann-sannsynligheter — tallrekke + smal stripe (maks 30px) */
+  tr.followed td.odds{color:var(--team-text)}
+  /* Status: sannsynligheter for det fulgte laget — tallrekke + smal stripe (maks 30px) */
   .odds-box{margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
   .odds-row{display:flex;gap:10px;flex-wrap:wrap;font-size:10.5px;color:var(--muted)}
   .odds-row strong{display:block;font:800 15px/1 var(--cond);color:var(--ink)}
-  .odds-row .n strong{color:var(--brann-text)}
+  .odds-row .n strong{color:var(--accent-text)}
   .odds-row.flat{font-size:12.5px;color:var(--ink)}
   .hist{display:grid;grid-template-columns:repeat(16,1fr);gap:1px;align-items:end;height:20px;margin-top:6px}
   .hist i{display:block;background:var(--hist-flat);border-radius:1px 1px 0 0;min-height:1px}
@@ -285,7 +308,7 @@
   .modal h3{margin:0 4px 2px;font:700 20px/1.2 var(--cond)}
   .modal-sub{margin:0 4px 14px;color:var(--muted);font-size:13px}
   #formChart svg{width:100%;height:auto;display:block}
-  .fc-zone.red{fill:var(--brann-soft)}
+  .fc-zone.red{fill:var(--accent-soft)}
   .fc-zone.yellow{fill:var(--q-soft)}
   .fc-zone.green{fill:var(--eu-soft)}
   .fc-line{fill:none;stroke:var(--ink);stroke-width:2}
@@ -307,7 +330,7 @@
   /* Kamper */
   .autofill{display:flex;align-items:center;gap:7px;padding:0 16px 12px;font-size:13.5px;color:var(--muted);cursor:pointer;user-select:none}
   .autofill.active{color:var(--ink)}
-  .autofill input{margin:0;cursor:pointer;accent-color:var(--brann)}
+  .autofill input{margin:0;cursor:pointer;accent-color:var(--accent)}
   .rounds{padding:0 16px 16px}
   .showAll{display:block;margin:4px 16px 16px;width:calc(100% - 32px);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:10px;font-weight:600;font-size:14px}
   .showAll:hover{border-color:var(--ink)}
@@ -321,7 +344,11 @@
   }
   .round{margin-top:14px}
   .round h3{margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;font:700 17px/1.2 var(--cond);border-bottom:2px solid var(--ink);padding-bottom:4px}
+  .round h3 .when-row{display:flex;align-items:baseline;gap:10px}
   .round h3 .when{font:500 13px var(--body);color:var(--muted)}
+  .round h3 .round-sim{font:600 12px var(--body);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:3px 11px;cursor:pointer}
+  .round h3 .round-sim[hidden]{display:none}
+  .round h3 .round-sim:hover{border-color:var(--ink)}
   /* Runde 12 (utsatt fra juli): diskret markert så plasseringen mellom runde 24 og 25 ikke ser ut som en feil */
   .round.moved{background:var(--q-soft);border:1px dashed var(--q-border);border-radius:8px;padding:8px 10px 4px;margin-top:18px}
   .round.moved h3{border-bottom-color:var(--q-border)}
@@ -335,11 +362,11 @@
   .match .when{text-align:center;font-size:10.5px;line-height:1;white-space:nowrap}
   .match .when .t{font-weight:700;color:var(--ink)}
   .match.played .when .t{color:var(--played-fg)}
-  .match.brann{background:var(--highlight-bg)}
-  .match .b{color:var(--brann-text);font-weight:700}
+  .match.followed{background:var(--highlight-bg)}
+  .match .followed-name{color:var(--team-text);font-weight:700}
   .match input{width:40px;height:34px;text-align:center;font:700 19px/1 var(--cond);border:1px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--ink);padding:0}
   .match input.set{background:var(--strong-bg);color:var(--strong-fg);border-color:var(--strong-bg)}
-  .match.brann input.set{background:var(--brann);border-color:var(--brann);color:#fff}
+  .match.followed input.set{background:var(--team-fill);border-color:var(--team-fill);color:var(--team-fill-text)}
   .match input.set.sim{background:var(--sim-bg);color:var(--ink);border-color:var(--sim-border);font-style:italic}
   @media (max-width:760px){th.hide-m,td.hide-m{display:none}}
   .match .colon{text-align:center;color:var(--muted);font-weight:700}
@@ -350,7 +377,7 @@
   .quick .q{display:flex;flex-direction:column;align-items:center;gap:2px;width:25px}
   .quick .pct{font:500 10.5px/1 var(--body);letter-spacing:-.01em;color:var(--muted);height:11px;white-space:nowrap}
   .quick .pct.best{color:var(--ink);font-weight:700}
-  .quick .pct.odds{color:var(--brann-text);font-weight:700;font-size:10px;letter-spacing:.02em}
+  .quick .pct.odds{color:var(--accent-text);font-weight:700;font-size:10px;letter-spacing:.02em}
   .match.locked .quick .pct{visibility:hidden}
   .quick button{padding:4px 0;font-size:12.5px;width:28px;border:1px solid var(--line);background:var(--panel);border-radius:5px;font-weight:600;color:var(--ink)}
   .quick button:hover{border-color:var(--ink)}
@@ -373,18 +400,21 @@
   </button>
   <div class="top-in">
     <div>
-      <div class="titlerow"><h1>Eliteserien 2026</h1><span class="subtitle">Tabellkalkulator med Brann i sentrum</span></div>
-      <p class="subline"><span class="stamp"></span><span class="lede">Fyll inn resultater eller trykk H, U og B. Tabell og sannsynligheter regnes ut fortløpende.</span></p>
+      <div class="titlerow"><h1>Eliteserien 2026</h1><span class="subtitle">Tabellkalkulator for Eliteserien</span></div>
+      <p class="subline"><span class="stamp"></span></p>
+      <div class="team-picker">
+        <label for="teamSelect">Følg laget ditt</label>
+        <select id="teamSelect"><option value="">Ingen</option></select>
+      </div>
     </div>
-    <div class="status" id="verdict" aria-live="polite"></div>
+    <div class="status" id="verdict" aria-live="polite" hidden></div>
   </div>
 </header>
 
 <div class="tools">
-  <button id="brannWin" title="Fyller Brann-kampene med seier til Brann og resten med en typisk sesong">Brann vinner alt</button>
-  <button id="brannLose" title="Fyller Brann-kampene med tap for Brann og resten med en typisk sesong">Brann taper alt</button>
+  <button id="followWin"></button>
+  <button id="followLose"></button>
   <button id="simRest" title="Fyller alle tomme kamper med én typisk sesong">Simuler tomme kamper</button>
-  <button id="simNextRound" title="Fyller kampene i neste runde med et trukket resultat, som i en typisk sesong. Resultatene vises i grått og kan overskrives.">Simuler neste runde</button>
   <button class="reset" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
   <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
 </div>
@@ -439,9 +469,9 @@
     <h3>Slik regnes sannsynlighetene</h3>
     <p id="howP1"></p>
     <p id="howP2"></p>
-    <p>Deretter spilles resten av sesongen 4000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Europa, Ned og fordelingen i Brann-boksen er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
+    <p>Deretter spilles resten av sesongen 4000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Europa, Ned og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
     <p>Cupvinneren får også en plass i Europa, men den cupfinalen spilles etter at serien er ferdig, så den er ikke med her. Går plassen til et lag som allerede er kvalifisert gjennom tabellen, kan 5. plass få Europa.</p>
-    <p>Knappene som fyller inn resten av kampene ("Brann vinner alt", "Brann taper alt", "Simuler tomme kamper") bruker alle én tilfeldig, statistisk normal sesong: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
+    <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner alt", "...taper alt", "Simuler tomme kamper", og knappen i hver runde) bruker alle én tilfeldig, statistisk normal sesong: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
     <p>Form viser hvor godt laget spiller nå, fra 0 til 10, der 5 er et gjennomsnittslag i Eliteserien. Formen reagerer sterkere jo lengre en rekke med strake seire eller tap varer, siden markedet selv reagerer sterkere på rekker enn på spredte enkeltresultater.</p>
     <hr>
     <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
@@ -632,8 +662,52 @@ function trailingStreak(formArr){
 let LIVE = null; // {att,con,ha,hc} i TI-indeksrekkefølge — kopi av MODEL, oppdatert av alle låste resultater i inneværende scenario
 let tableSort = null; // null = standings-rekkefølge, ellers {key:'form', dir:1|-1}
 
+// Klubbfarger for alle 16 lag (hovedfarge, ingen logoer). Spredt over
+// fargesirkelen for innbyrdes skille (flere lag deler faktisk klubbfarge-
+// familie, f.eks. fire røde og seks blå), og hver variant kontrollert mot
+// WCAG AA (4,5:1 for tekst mot panel i begge temaer, 3:1 for fyll+tekst) --
+// se scratchpad-scriptet fra utviklingen av mørk modus for metoden.
+// fill/deep/fillText er unthemet (samme "fyll med hvit/mørk tekst"-mønster
+// som --accent), textLight/textDark byttes med temaet (se --team-text).
+const TEAM_COLORS = {
+  "Aalesund": {fill:"#e6700f", deep:"#a6510b", fillText:"#15191c", textLight:"#b6590c", textDark:"#e6700f"},
+  "Bodø/Glimt": {fill:"#f0b400", deep:"#ad8200", fillText:"#15191c", textLight:"#946f00", textDark:"#f0b400"},
+  "Brann": {fill:"#c5111d", deep:"#8e0c15", fillText:"#ffffff", textLight:"#c5111d", textDark:"#f04c57"},
+  "Fredrikstad": {fill:"#e64c19", deep:"#a63712", fillText:"#15191c", textLight:"#ca4316", textDark:"#e85a2b"},
+  "HamKam": {fill:"#6cab3f", deep:"#4e7b2d", fillText:"#15191c", textLight:"#507e2f", textDark:"#6cab3f"},
+  "KFUM Oslo": {fill:"#901d3c", deep:"#68152b", fillText:"#ffffff", textLight:"#901d3c", textDark:"#de5d80"},
+  "Kristiansund": {fill:"#2fadda", deep:"#1d7fa2", fillText:"#15191c", textLight:"#1c7a9c", textDark:"#2fadda"},
+  "Lillestrøm": {fill:"#a39e1f", deep:"#757216", fillText:"#15191c", textLight:"#787417", textDark:"#a39e1f"},
+  "Molde": {fill:"#1942e6", deep:"#1230a6", fillText:"#ffffff", textLight:"#1942e6", textDark:"#6c86ef"},
+  "Rosenborg": {fill:"#2a2e32", deep:"#1e2124", fillText:"#ffffff", textLight:"#2a2e32", textDark:"#808a94"},
+  "Sandefjord": {fill:"#1852aa", deep:"#113b7a", fillText:"#ffffff", textLight:"#1852aa", textDark:"#4c89e6"},
+  "Sarpsborg 08": {fill:"#35728d", deep:"#265266", fillText:"#ffffff", textLight:"#35728d", textDark:"#4390b2"},
+  "Start": {fill:"#a3660a", deep:"#754907", fillText:"#ffffff", textLight:"#a3660a", textDark:"#c0780c"},
+  "Tromsø": {fill:"#d23754", deep:"#9c233a", fillText:"#ffffff", textLight:"#d23754", textDark:"#db6178"},
+  "Vålerenga": {fill:"#6245d3", deep:"#4027a3", fillText:"#ffffff", textLight:"#6245d3", textDark:"#8c76df"},
+  "Viking": {fill:"#161f4b", deep:"#101636", fillText:"#ffffff", textLight:"#161f4b", textDark:"#7586d7"},
+};
+
+// Laget du følger: huskes i localStorage og legges i delingslenken (se
+// encodeScenario/applyScenario). '' betyr eksplisitt "ingen lag" -- skilt
+// fra "aldri valgt" (localStorage-nøkkelen mangler helt) siden Brann bare
+// er standard i DET tilfellet, ikke hvis noen aktivt har valgt bort et lag.
+let SELECTED_TEAM = localStorage.getItem('followTeam');
+if(SELECTED_TEAM===null) SELECTED_TEAM = 'Brann';
+function applyTeamColors(){
+  const c = TEAM_COLORS[SELECTED_TEAM];
+  if(!c) return; // ingen lag valgt -- ingen .followed-elementer finnes uansett, variablene er ubrukt
+  const root = document.documentElement.style;
+  root.setProperty('--team-fill', c.fill);
+  root.setProperty('--team-deep', c.deep);
+  root.setProperty('--team-fill-text', c.fillText);
+  root.setProperty('--team-text-light', c.textLight);
+  root.setProperty('--team-text-dark', c.textDark);
+}
+applyTeamColors();
+
 const roundsEl = document.getElementById('rounds');
-const isBrann = m => m.home==="Brann"||m.away==="Brann";
+const isFollowedMatch = m => SELECTED_TEAM!=='' && (m.home===SELECTED_TEAM||m.away===SELECTED_TEAM);
 
 // Dynamisk "følg med"-topp: top = min(16px, vindushøyde - tabellhøyde - 16px).
 // Kort tabell -> top=16px (fester seg rett under vindustoppen med en gang).
@@ -845,7 +919,7 @@ function fillProb(){
   });
 }
 
-// ---- Europa/Ned/Brann-boksen: 4000 simulerte sesonger, "hot" (lagstyrkene
+// ---- Europa/Ned/lagboksen: 4000 simulerte sesonger, "hot" (lagstyrkene
 // oppdateres etter hver simulerte kamp i hver sesong, se FORM_K). Kjøres i en
 // Web Worker (WORKER_SRC under) så siden aldri fryser mens du skriver — et
 // første anslag postes etter 1000 sesonger, det endelige etter 4000. ----
@@ -1125,7 +1199,7 @@ function applyDrift(arr, base, i, delta, cap){
 // Samme absolutte mål-tak som hovedtråden (MAX_LAMBDA_LOG der) -- se
 // kommentaren ved den definisjonen.
 var MAX_LAMBDA_LOG = Math.log(6);
-// ---- Europa/Ned/Brann-boksen: 4000 "hot" simulerte sesonger. Rekke-
+// ---- Europa/Ned/lagboksen: 4000 "hot" simulerte sesonger. Rekke-
 // forsterkningen (streakBonus/streakCap/streakLen/streakRes, samme regel som
 // Form-kolonnen) må nullstilles til STARTtilstanden (d.streakLen/d.streakRes)
 // for HVER av de N simulerte sesongene -- en rekke i sesong 37 skal ikke
@@ -1329,15 +1403,16 @@ function fillOdds(){
     a.textContent=pctTxt(top); a.classList.toggle('hot',top>=0.5);
     b.textContent=pctTxt(ned); b.classList.toggle('hot',ned>=0.5);
   });
-  const box=document.getElementById('odds'); if(!box) return;
-  const d=lastMC['Brann'], mx=Math.max(...d);
+  const box=document.getElementById('odds'); if(!box || !SELECTED_TEAM) return;
+  const d=lastMC[SELECTED_TEAM]; if(!d) return;
+  const mx=Math.max(...d);
   const gull=d[0], europa=d[0]+d[1]+d[2]+d[3], kvalik=d[13], nedrykk=d[14]+d[15];
   const midtP=d.slice(4,13).reduce((x,y)=>x+y,0);
   // Når verken gull, Europa, kvalik eller nedrykk er reelle muligheter (alle
   // under 1%) sier de fire tallene ingenting — vis heller én forklarende
   // linje enn en rad med fire "<1 %"-verdier.
   const row = (gull<0.01 && europa<0.01 && kvalik<0.01 && nedrykk<0.01)
-    ? `<div class="odds-row flat" title="Sannsynlighet for sluttplassering, ut fra modellen">Ingenting er i spill: Brann ender mellom 5. og 13. plass i ${Math.round(midtP*100)} av 100 simuleringer.</div>`
+    ? `<div class="odds-row flat" title="Sannsynlighet for sluttplassering, ut fra modellen">Ingenting er i spill: ${SELECTED_TEAM} ender mellom 5. og 13. plass i ${Math.round(midtP*100)} av 100 simuleringer.</div>`
     : `<div class="odds-row" title="Sannsynlighet for sluttplassering, ut fra modellen">
       ${gull>0.01?`<span><strong>${pctTxt(gull)}</strong>Gull</span>`:''}
       <span><strong>${pctTxt(europa)}</strong>Europa</span>
@@ -1397,36 +1472,40 @@ async function simulateEmpty(){
   await simulateTypicalAsync(matches.filter(isEmpty));
 }
 
-// "Simuler neste runde": samme trekk-mekanikk som "Simuler tomme kamper",
-// men begrenset til ÉN runde av gangen -- den første som fortsatt har
-// uspilte kamper. Ingenting nullstilles her (i motsetning til
-// simulateEmpty over), så tidligere simulerte runder står urørt: LIVE-
-// tilstanden (se refreshLiveState() i simulateTypicalAsync og i render())
-// bygges alltid fra ALLE resultater i matches, også de grå, så neste klikk
-// automatisk fortsetter formoppdateringen fra runden som nettopp ble fylt.
-function firstOpenRound(){
-  const empty = matches.filter(isEmpty);
-  if(!empty.length) return null;
-  // Kronologisk, ikke etter rundenummer: runde 12 er flyttet til 24.-25.
-  // oktober og kommer altså etter runde 23 og 24 i faktisk spilledato (se
-  // samme resonnement ved "moved"-merkingen av runde 12 i kamplisten).
-  return empty.reduce((a,b)=> a.date<b.date ? a : b).round;
+// "Simuler runden": samme trekk-mekanikk som "Simuler tomme kamper", men
+// begrenset til ÉN runde av gangen -- knappen står i selve runden (til
+// høyre for datoen), ikke i verktøylinja, så brukeren velger runde direkte
+// i stedet for å gå gjennom dem i rekkefølge. Fyller bare de TOMME kampene
+// i runden (rører ikke alt som allerede er satt, verken grått eller eget),
+// med mindre det er et "på nytt"-klikk (se resim under), som først nullstiller
+// runden. LIVE-tilstanden (refreshLiveState() i simulateTypicalAsync/render())
+// bygges alltid fra ALLE resultater i matches, også de grå, så en runde som
+// simuleres etter en annen fortsetter formoppdateringen riktig.
+// Tilstand per runde, brukt til å vise/skjule/tekste knappen (updateRoundSimButtons,
+// kalt fra render()): "simulate" har fortsatt tomme kamper i runden (uansett
+// om noen ANDRE av rundens kamper allerede er satt), "resimulate" er HELT
+// fylt med simulerte (grå) resultater -- ingen egne -- så et nytt klikk gir
+// en fersk sesong for hele runden. Alt annet (spilt i virkeligheten, eller
+// fylt inn av brukeren selv) får ingen knapp.
+function roundButtonState(roundNum){
+  const roundMatches = matches.filter(m=>m.round===roundNum);
+  if(!roundMatches.length) return null; // ingen redigerbare kamper igjen i runden -- spilt
+  if(roundMatches.some(isEmpty)) return 'simulate';
+  if(roundMatches.every(m=>m.sim)) return 'resimulate';
+  return null; // alt satt, og minst én er fylt inn av brukeren selv
 }
-async function simulateNextRound(){
-  const round = firstOpenRound();
-  if(round==null) return;
-  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && m.round===round));
+async function simulateRound(roundNum, resim){
+  if(resim) matches.filter(m=>m.round===roundNum && m.sim).forEach(m=>setMatch(m,null,null));
+  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && m.round===roundNum));
 }
-function updateSimNextRoundButton(){
-  const btn = document.getElementById('simNextRound');
-  const round = firstOpenRound();
-  if(round==null){
-    btn.textContent = 'Alle runder fylt ut';
-    btn.disabled = true;
-  } else {
-    btn.textContent = `Simuler runde ${round}`;
-    btn.disabled = false;
-  }
+function updateRoundSimButtons(){
+  document.querySelectorAll('.round-sim').forEach(btn=>{
+    const round = +btn.dataset.round;
+    const state = roundButtonState(round);
+    btn.hidden = state===null;
+    if(state==='simulate') btn.textContent = 'Simuler runden';
+    else if(state==='resimulate') btn.textContent = 'Simuler på nytt';
+  });
 }
 
 // ---- "Tabell på samme tidspunkt": fyller automatisk ut andre kamper til og
@@ -1459,7 +1538,7 @@ async function updateAutoFill(){
   await fillToDate();
 }
 
-// Tvunget resultat (Brann-knappene): modellens forventede resultat (predict,
+// Tvunget resultat ("<lag> vinner/taper alt"): modellens forventede resultat (predict,
 // samme avrundede tall som resten av siden — blandet med odds der de finnes),
 // forskjøvet til et KLART resultat, ikke minimalt justert: vinneren får ett
 // mål mer enn forventet, taperen ett mindre (minimum 0). Mot en underdog gir
@@ -1480,13 +1559,25 @@ function forcedScoreline(home,away,homeWins){
   }
   return [hg,ag];
 }
-document.getElementById('brannLose').onclick=async ()=>{ matches.filter(isBrann).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home!=="Brann"); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
-document.getElementById('brannWin').onclick=async ()=>{ matches.filter(isBrann).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home==="Brann"); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
+document.getElementById('followLose').onclick=async ()=>{ matches.filter(isFollowedMatch).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home!==SELECTED_TEAM); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
+document.getElementById('followWin').onclick=async ()=>{ matches.filter(isFollowedMatch).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home===SELECTED_TEAM); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
 document.getElementById('simRest').onclick=async ()=>{ await simulateEmpty(); render(); };
-document.getElementById('simNextRound').onclick=async ()=>{ await simulateNextRound(); render(); };
+roundsEl.addEventListener('click', async e=>{
+  const btn=e.target.closest('.round-sim'); if(!btn) return;
+  const round=+btn.dataset.round, state=roundButtonState(round);
+  if(state===null) return;
+  await simulateRound(round, state==='resimulate');
+  render();
+});
 document.getElementById('reset').onclick=()=>{ matches.forEach(m=>setMatch(m,null,null)); render(); };
 document.getElementById('autoFillToggle').addEventListener('change',async ()=>{ await updateAutoFill(); render(); });
-// På mobil er fordelingsstripen skjult til man trykker på Brann-boksen (se
+document.getElementById('teamSelect').addEventListener('change', e=>{
+  SELECTED_TEAM = e.target.value;
+  try{ localStorage.setItem('followTeam', SELECTED_TEAM); }catch(err){}
+  applyTeamColors();
+  render();
+});
+// På mobil er fordelingsstripen skjult til man trykker på lagboksen (se
 // .status.expanded i CSS) — klassen ligger på #verdict selv, som render()
 // aldri bytter ut (bare innerHTML), så den overlever nye render()-kall.
 document.getElementById('verdict').addEventListener('click', ()=> document.getElementById('verdict').classList.toggle('expanded'));
@@ -1570,7 +1661,7 @@ function renderModelTbl(){
   TEAMS.forEach(t=>{ const i=TI[t], S=STATS[t];
     const hf=Math.exp(mu+H+att[i]+ha[i]), hm=Math.exp(mu+con[i]+hc[i]);
     const bf=Math.exp(mu+att[i]-ha[i]), bm=Math.exp(mu+H+con[i]-hc[i]);
-    h+=`<tr${t==='Brann'?' style="background:var(--highlight-bg)"':''}><td class="team">${t}</td><td>${formHtml(t)}</td>
+    h+=`<tr${t===SELECTED_TEAM?' style="background:var(--highlight-bg)"':''}><td class="team">${t}</td><td>${formHtml(t)}</td>
       <td>${f2(S.h[1]/S.h[0])}</td><td>${S.h[2]}-${S.h[3]}</td><td>${f2(S.b[1]/S.b[0])}</td><td>${S.b[2]}-${S.b[3]}</td>
       <td>${f1(hf)}-${f1(hm)}</td><td>${f1(bf)}-${f1(bm)}</td></tr>`; });
   document.getElementById('modelTbl').innerHTML=h+'</tbody>';
@@ -1642,39 +1733,50 @@ function closeFormModal(){ document.getElementById('formModalBackdrop').hidden=t
 // ---- Knappene: to uavhengige, rent datadrevne tilstander (ikke "hvilken
 // knapp ble sist klikket", som lett kommer ut av synk med manuelle
 // redigeringer). Regnes ut på nytt hver render() direkte fra matches. ----
-// "Scenario" = Branns egen skjebne (bare de dedikerte Brann-knappene).
-// "Andre kamper" = utfyllingsmåten for alt som IKKE er en Brann-kamp.
+// "Scenario" = det fulgte lagets egen skjebne (bare de to dedikerte
+// knappene, skjult uten et fulgt lag -- se updateToolButtons). "Andre
+// kamper" = utfyllingsmåten for alt som IKKE er en kamp for det fulgte
+// laget (uten et fulgt lag: rett og slett alle kamper).
 function deriveScenario(){
-  const brannMatches=matches.filter(isBrann);
-  let brann=null;
-  if(brannMatches.length && brannMatches.every(m=>m.hg!=null&&m.ag!=null)){
-    const isWin = m => m.home==="Brann" ? m.hg>m.ag : m.ag>m.hg;
-    const isLose = m => m.home==="Brann" ? m.hg<m.ag : m.ag<m.hg;
-    if(brannMatches.every(isWin)) brann='win';
-    else if(brannMatches.every(isLose)) brann='lose';
+  const followedMatches=matches.filter(isFollowedMatch);
+  let followed=null;
+  if(followedMatches.length && followedMatches.every(m=>m.hg!=null&&m.ag!=null)){
+    const isWin = m => m.home===SELECTED_TEAM ? m.hg>m.ag : m.ag>m.hg;
+    const isLose = m => m.home===SELECTED_TEAM ? m.hg<m.ag : m.ag<m.hg;
+    if(followedMatches.every(isWin)) followed='win';
+    else if(followedMatches.every(isLose)) followed='lose';
   }
-  const others=matches.filter(m=>!isBrann(m));
+  const others=matches.filter(m=>!isFollowedMatch(m));
   let other=null;
   if(others.length && others.every(m=>m.hg!=null&&m.ag!=null) && others.every(m=>m.sim)){
     other='typical';
   }
-  return {brann,other};
+  return {followed,other};
 }
 function updateToolButtons(){
-  const {brann,other}=deriveScenario();
+  const {followed,other}=deriveScenario();
   const mark=(id,active,cls)=>{
     const b=document.getElementById(id);
     b.classList.toggle('on', active&&cls==='on');
     b.classList.toggle('on-other', active&&cls==='on-other');
     b.setAttribute('aria-pressed', active?'true':'false');
   };
-  mark('brannWin', brann==='win', 'on');
-  mark('brannLose', brann==='lose', 'on');
+  const hasTeam = SELECTED_TEAM!=='';
+  const winBtn=document.getElementById('followWin'), loseBtn=document.getElementById('followLose');
+  winBtn.hidden = loseBtn.hidden = !hasTeam;
+  if(hasTeam){
+    winBtn.textContent = `${SELECTED_TEAM} vinner alt`;
+    loseBtn.textContent = `${SELECTED_TEAM} taper alt`;
+    winBtn.title = `Fyller ${SELECTED_TEAM}-kampene med seier til ${SELECTED_TEAM} og resten med en typisk sesong`;
+    loseBtn.title = `Fyller ${SELECTED_TEAM}-kampene med tap for ${SELECTED_TEAM} og resten med en typisk sesong`;
+  }
+  mark('followWin', followed==='win', 'on');
+  mark('followLose', followed==='lose', 'on');
   mark('simRest', other==='typical', 'on-other');
 
   const parts=[];
-  if(brann==='win') parts.push('Scenario: Brann vinner alt.');
-  else if(brann==='lose') parts.push('Scenario: Brann taper alt.');
+  if(followed==='win') parts.push(`Scenario: ${SELECTED_TEAM} vinner alt.`);
+  else if(followed==='lose') parts.push(`Scenario: ${SELECTED_TEAM} taper alt.`);
   if(other==='typical') parts.push('Andre kamper: typisk sesong.');
   const line=document.getElementById('scenarioLine');
   if(parts.length){ line.textContent=parts.join(' '); line.hidden=false; }
@@ -1685,9 +1787,8 @@ function render(){
   renderModelTbl();
   fillProb();
   updateToolButtons();
-  updateSimNextRoundButton();
+  updateRoundSimButtons();
   const {rows,played}=compute();
-  const brann=rows.find(r=>r.name==='Brann');
 
   // Badge (matematisk avgjort) og Form regnes ut fra "rows" i standings-
   // rekkefølge (pos = ekte tabellplassering), FØR en eventuell Form-sortering
@@ -1712,7 +1813,7 @@ function render(){
   displayRows.forEach(r=>{
     const pos=r.pos; const tr=document.createElement('tr');
     tr.dataset.team=r.name;
-    tr.className=[pos<=4?'eu':'',pos===14?'playoff':'',pos>=15?'ned':'',r.name==='Brann'?'brann':'',(pos===4||pos===13)?'cut':''].join(' ').trim();
+    tr.className=[pos<=4?'eu':'',pos===14?'playoff':'',pos>=15?'ned':'',r.name===SELECTED_TEAM?'followed':'',(pos===4||pos===13)?'cut':''].join(' ').trim();
     const mv=basePos[r.name]-pos;
     const diff = mv===0?'':`<span class="diff ${mv>0?'up':'down'}">${mv>0?'▲':'▼'}${Math.abs(mv)}</span>`;
     const posTitle = EURO_TITLES[pos]||'';
@@ -1751,36 +1852,46 @@ function render(){
     });
   });
 
-  // Brann: verste fall ut fra det som er lagt inn (tomme kamper: Brann taper, alle andre vinner sine)
-  const pos=rows.indexOf(brann)+1;
-  // Likt på poeng regnes mot Brann, unntatt når begge er ferdigspilt: da avgjør målforskjell og scorede mål
-  const canPass=rows.filter(r=>r.name!=='Brann' && (r.max > brann.pts || (r.max===brann.pts && (r.left>0 || brann.left>0 || rows.indexOf(r)<pos-1)))).length;
-  const worst=canPass+1;
-  let verdictTxt, sub='';
-  if(worst<=13){ verdictTxt=`Sikret ny kontrakt. Dårligst mulige plassering er ${worst}.`; sub='Ingen kombinasjon av gjenstående resultater kan sende Brann under 13. plass.'; }
-  else if(worst===14){ verdictTxt='Kan ikke rykke ned direkte, men kan fortsatt havne på kvalikplass.'; }
-  else { verdictTxt='Kan fortsatt rykke ned.'; sub=`${canPass} lag kan i teorien ende foran eller likt med Brann, så Brann kan ende så lavt som ${Math.min(worst,16)}. plass.`; }
-
-  // Linje to: poeng/kamper igjen som standard, eller sluttresultatet når sesongen
-  // er ferdig i dette scenariet. Den matematiske sikker/usikker-vurderingen vises
-  // ikke lenger direkte — den er tooltip på linja i stedet.
-  const seasonDone = played===matches.length;
-  let line2, line2Title;
-  if(seasonDone){
-    line2 = pos<=4 ? 'Sesongen er ferdig i dette scenariet: Brann tar europaplass.'
-      : pos<=13 ? 'Sesongen er ferdig i dette scenariet: Brann har ny kontrakt.'
-      : pos===14 ? 'Sesongen er ferdig i dette scenariet: Brann må spille kvalik.'
-      : 'Sesongen er ferdig i dette scenariet: Brann rykker ned.';
-    line2Title = '';
+  // Lagboksen finnes bare når et lag er fulgt (item 2f) -- resten av denne
+  // blokken bruker SELECTED_TEAM overalt der det tidligere sto "Brann".
+  const followed = SELECTED_TEAM ? rows.find(r=>r.name===SELECTED_TEAM) : null;
+  const verdictEl = document.getElementById('verdict');
+  if(!followed){
+    verdictEl.hidden = true;
   } else {
-    line2 = `${brann.pts} poeng, ${brann.left} kamper igjen`;
-    line2Title = [verdictTxt, sub, 'Sjekken regner tomme kamper som tap for Brann og seier for alle andre. Sier den «sikret», er det sikkert.'].filter(Boolean).join(' ');
+    verdictEl.hidden = false;
+    // Verste fall ut fra det som er lagt inn (tomme kamper: laget taper, alle andre vinner sine)
+    const pos=rows.indexOf(followed)+1;
+    // Likt på poeng regnes mot laget, unntatt når begge er ferdigspilt: da avgjør målforskjell og scorede mål
+    const canPass=rows.filter(r=>r.name!==SELECTED_TEAM && (r.max > followed.pts || (r.max===followed.pts && (r.left>0 || followed.left>0 || rows.indexOf(r)<pos-1)))).length;
+    const worst=canPass+1;
+    let verdictTxt, sub='';
+    if(worst<=13){ verdictTxt=`Sikret ny kontrakt. Dårligst mulige plassering er ${worst}.`; sub=`Ingen kombinasjon av gjenstående resultater kan sende ${SELECTED_TEAM} under 13. plass.`; }
+    else if(worst===14){ verdictTxt='Kan ikke rykke ned direkte, men kan fortsatt havne på kvalikplass.'; }
+    else { verdictTxt='Kan fortsatt rykke ned.'; sub=`${canPass} lag kan i teorien ende foran eller likt med ${SELECTED_TEAM}, så ${SELECTED_TEAM} kan ende så lavt som ${Math.min(worst,16)}. plass.`; }
+
+    // Linje to: poeng/kamper igjen som standard, eller sluttresultatet når sesongen
+    // er ferdig i dette scenariet. Den matematiske sikker/usikker-vurderingen vises
+    // ikke lenger direkte — den er tooltip på linja i stedet.
+    const seasonDone = played===matches.length;
+    let line2, line2Title;
+    if(seasonDone){
+      line2 = pos<=4 ? `Sesongen er ferdig i dette scenariet: ${SELECTED_TEAM} tar europaplass.`
+        : pos<=13 ? `Sesongen er ferdig i dette scenariet: ${SELECTED_TEAM} har ny kontrakt.`
+        : pos===14 ? `Sesongen er ferdig i dette scenariet: ${SELECTED_TEAM} må spille kvalik.`
+        : `Sesongen er ferdig i dette scenariet: ${SELECTED_TEAM} rykker ned.`;
+      line2Title = '';
+    } else {
+      line2 = `${followed.pts} poeng, ${followed.left} kamper igjen`;
+      line2Title = [verdictTxt, sub, `Sjekken regner tomme kamper som tap for ${SELECTED_TEAM} og seier for alle andre. Sier den «sikret», er det sikkert.`].filter(Boolean).join(' ');
+    }
+    // Lagnavn øverst på egen linje (item 2b), så plass og poeng/kamper igjen (eller sluttresultatet).
+    const posLine = seasonDone ? `<b>${pos}.</b> plass — ${line2}` : `<b>${pos}.</b> plass, ${line2}`;
+    verdictEl.innerHTML=
+      `<span class="teamname-lg">${SELECTED_TEAM}</span>
+       <div class="posline"${line2Title?` title="${line2Title}"`:''}>${posLine}</div>
+       <div class="odds-box"><div id="odds"></div></div>`;
   }
-  // Plass og poeng/kamper igjen (eller sluttresultatet) på én linje, kompakt.
-  const posLine = seasonDone ? `<b>${pos}.</b> plass — ${line2}` : `<b>${pos}.</b> plass, ${line2}`;
-  document.getElementById('verdict').innerHTML=
-    `<div class="posline"${line2Title?` title="${line2Title}"`:''}>${posLine}</div>
-     <div class="odds-box"><div id="odds"></div></div>`;
   fillOdds(); scheduleMC();
   updateFollowFit();
 }
@@ -1817,7 +1928,12 @@ async function applyScenario(){
 document.getElementById('share').addEventListener('click',async e=>{
   e.stopPropagation();
   const code=encodeScenario();
-  const url=location.href.split('#')[0]+(code?'#s='+code:'');
+  // team= tas alltid med (også tomt, for "ingen lag"), så lenken alltid
+  // gjenskaper lagvalget -- se hashTeam-parsingen i boot() for hvordan en
+  // GAMMEL lenke uten team= i stedet faller tilbake på mottakerens egen
+  // localStorage/Brann-standard.
+  const hashParts=[code?'s='+code:'', 'team='+encodeURIComponent(SELECTED_TEAM)].filter(Boolean);
+  const url=location.href.split('#')[0]+'#'+hashParts.join('&');
   history.replaceState(null,'',url);
   const btn=document.getElementById('share');
   try{ await navigator.clipboard.writeText(url); btn.textContent='Lenke kopiert'; }
@@ -1915,6 +2031,24 @@ async function boot(){
   )].sort((a,b)=>a.localeCompare(b,'no'));
   TI = {}; TEAMS.forEach((t,i)=>TI[t]=i);
 
+  // "Følg laget ditt": fylles her (må vente på TEAMS). En delingslenke sitt
+  // team=-felt (se encodeScenario/applyScenario) vinner over localStorage --
+  // parses HER, synkront, ikke i den async applyScenario() lenger nede, så
+  // nedtrekksboksen og fargene er riktige FØR første render(), ikke bare
+  // etter en ekstra async runde.
+  const hashTeam = location.hash.match(/[#&]team=([^&]*)/);
+  if(hashTeam){
+    const t = decodeURIComponent(hashTeam[1]);
+    if(t==='' || TEAMS.includes(t)) SELECTED_TEAM = t;
+  }
+  const teamSelect = document.getElementById('teamSelect');
+  TEAMS.forEach(t=>{
+    const opt=document.createElement('option'); opt.value=t; opt.textContent=t;
+    teamSelect.appendChild(opt);
+  });
+  teamSelect.value = SELECTED_TEAM;
+  applyTeamColors();
+
   // Grunntabell: aggregert fra alle spilte kamper. Samme form som før: [navn,K,V,U,T,mål for,mål mot]
   const agg = {}; TEAMS.forEach(t=>agg[t]=[t,0,0,0,0,0,0]);
   MATCHES.forEach(m=>{
@@ -1979,7 +2113,7 @@ async function boot(){
     const d = document.createElement('div'); d.className='round';
     roundMatches.forEach(m=>{
       const row=document.createElement('div');
-      row.className='match played'+(isBrann(m)?' brann':'');
+      row.className='match played'+(isFollowedMatch(m)?' followed':'');
       row.title=`Spilt ${formatDateNo(m.date)}, ligger i tabellen`;
       row.innerHTML=`<span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">${shortDateNo(m.date)}</span>`;
       d.appendChild(row);
@@ -2022,7 +2156,7 @@ async function boot(){
     // som en feil for de som ikke vet det ble utsatt.
     const isMoved12 = r.round===12;
     if(isMoved12) d.className += ' moved';
-    d.innerHTML = `<h3><span>Runde ${r.round}${isMoved12?' (utsatt)':''}</span><span class="when">${r.when}</span></h3>`
+    d.innerHTML = `<h3><span>Runde ${r.round}${isMoved12?' (utsatt)':''}</span><span class="when-row"><span class="when">${r.when}</span><button class="round-sim" data-round="${r.round}" hidden></button></span></h3>`
       + (isMoved12 ? `<p class="moved-note">Opprinnelig 12. juli, flyttet til 24. og 25. oktober.</p>` : '');
     // Sortert etter avspark, ikke etter rekkefølgen i data/fixtures.json (som
     // bare er sortert på dato+lagnavn) — ellers havner f.eks. en 14:30-kamp
@@ -2039,7 +2173,7 @@ async function boot(){
       }
       if(m.played){
         const row=document.createElement('div');
-        row.className='match played'+(isBrann(m)?' brann':'');
+        row.className='match played'+(isFollowedMatch(m)?' followed':'');
         row.title=`Spilt ${formatDateNo(m.date)}, ligger i tabellen`;
         row.innerHTML=`<span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">Spilt ${shortDateNo(m.date)}</span>`;
         d.appendChild(row);
@@ -2047,15 +2181,15 @@ async function boot(){
       }
       const id = `m${r.round}_${mi}`;
       matches.push({id, round:r.round, date:m.date, home:m.home, away:m.away, hg:null, ag:null});
-      const isB = isBrann(m);
-      const row = document.createElement('div'); row.className='match'+(isB?' brann':''); row.dataset.id=id;
+      const isF = isFollowedMatch(m);
+      const row = document.createElement('div'); row.className='match'+(isF?' followed':''); row.dataset.id=id;
       row.innerHTML = `
         <span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span>
-        <span class="home ${m.home==="Brann"?"b":""}">${shortTeam(m.home)}</span>
+        <span class="home ${m.home===SELECTED_TEAM?"followed-name":""}">${shortTeam(m.home)}</span>
         <input inputmode="numeric" data-side="h" aria-label="${m.home} mål">
         <span class="colon">-</span>
         <input inputmode="numeric" data-side="a" aria-label="${m.away} mål">
-        <span class="away ${m.away==="Brann"?"b":""}">${shortTeam(m.away)}</span>
+        <span class="away ${m.away===SELECTED_TEAM?"followed-name":""}">${shortTeam(m.away)}</span>
         <span class="quick"><span class="q"><button data-q="H" title="Hjemmeseier 1-0">H</button><i class="pct" data-o="H"></i></span><span class="q"><button data-q="U" title="Uavgjort 0-0">U</button><i class="pct" data-o="U"></i></span><span class="q"><button data-q="B" title="Borteseier 0-1">B</button><i class="pct" data-o="B"></i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src"></i></span></span>`;
       d.appendChild(row);
     });
