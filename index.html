@@ -67,14 +67,17 @@
   /* Layout */
   .wrap{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(360px,1fr);gap:20px;padding:16px 24px 48px;max-width:1380px;margin:0 auto;align-items:start}
   @media (max-width:1180px){.wrap{grid-template-columns:1fr}}
-  /* Tabellen blir stående (sticky) mens du blar i kamplisten ved siden av, på
-     PC over 1180px. top settes dynamisk av JS (updateStickyFit()) til
+  /* Tabellen blir stående (samme CSS-mekanisme som "sticky", men elementene
+     har bevisst ANDRE navn enn "sticky"/"fixed"/"float"/"pin" — de ordene
+     fanges av cosmetic-filtre i uBlock Origins Annoyances-lister og slår av
+     posisjoneringen) mens du blar i kamplisten ved siden av, på PC over
+     1180px. top settes dynamisk av JS (updateFollowFit()) til
      min(16px, vindushøyde - tabellhøyde - 16px): en kort tabell fester seg
      16px fra toppen med en gang, en tabell høyere enn vinduet scroller til
-     bunnen (med forklaringen) er synlig og låses først da. Ingen sticky på
-     mobil, og ingen sticky i det hele tatt når kamplisten er kortere enn
-     tabellen (styrt av .sticky-enabled-klassen fra JS, ikke her). */
-  @media (min-width:1181px){.wrap > .panel:first-child.sticky-enabled{position:sticky}}
+     bunnen (med forklaringen) er synlig og låses først da. Ingen effekt på
+     mobil, og ingen effekt i det hele tatt når kamplisten er kortere enn
+     tabellen (styrt av .panel-follow-klassen fra JS, ikke her). */
+  @media (min-width:1181px){.wrap > .panel:first-child.panel-follow{position:sticky}}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .panel > h2{font:700 22px/1 var(--cond);margin:0;padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
   .panel > h2 .count{font:500 14px var(--body);color:var(--muted)}
@@ -226,7 +229,7 @@
   .quick .pct{font:500 10.5px/1 var(--body);letter-spacing:-.01em;color:#98a0a4;height:11px;white-space:nowrap}
   .quick .pct.best{color:var(--ink);font-weight:700}
   .quick .pct.odds{color:var(--brann);font-weight:700;font-size:10px;letter-spacing:.02em}
-  .match.fixed .quick .pct{visibility:hidden}
+  .match.locked .quick .pct{visibility:hidden}
   .quick button{padding:4px 0;font-size:12.5px;width:28px;border:1px solid var(--line);background:#fff;border-radius:5px;font-weight:600;color:var(--ink)}
   .quick button:hover{border-color:var(--ink)}
   .quick button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
@@ -402,33 +405,35 @@ let LIVE = null; // {att,con,ha,hc} i TI-indeksrekkefølge — kopi av MODEL, op
 const roundsEl = document.getElementById('rounds');
 const isBrann = m => m.home==="Brann"||m.away==="Brann";
 
-// Dynamisk sticky top: top = min(16px, vindushøyde - tabellhøyde - 16px).
+// Dynamisk "følg med"-topp: top = min(16px, vindushøyde - tabellhøyde - 16px).
 // Kort tabell -> top=16px (fester seg rett under vindustoppen med en gang).
 // Tabell høyere enn vinduet -> negativ top, så siden må scrolles til bunnen
 // av tabellen (med forklaringen) er synlig 16px over vindubunnen, FØR den
 // låser seg — heller enn å låse toppen med en gang og la bunnen aldri bli
-// synlig. Ingen sticky i det hele tatt når kamplisten (nabokolonnen) er
+// synlig. Ingen effekt i det hele tatt når kamplisten (nabokolonnen) er
 // kortere enn tabellen, siden det da ikke er noe å scrolle forbi. Under
-// 1181px styres ingenting her — @media-regelen slår sticky helt av på mobil.
-function updateStickyFit(){
+// 1181px styres ingenting her — @media-regelen slår funksjonen helt av på
+// mobil. Navngivningen unngår bevisst "sticky"/"fixed"/"float"/"pin" (se
+// CSS-kommentaren over @media-regelen).
+function updateFollowFit(){
   const panel = document.querySelector('.wrap > .panel:first-child');
   const sibling = document.querySelector('.wrap > .panel:nth-child(2)');
   if(!panel || !sibling) return;
   if(window.innerWidth < 1181 || sibling.offsetHeight < panel.offsetHeight){
-    panel.classList.remove('sticky-enabled');
+    panel.classList.remove('panel-follow');
     panel.style.top = '';
     return;
   }
-  panel.classList.add('sticky-enabled');
+  panel.classList.add('panel-follow');
   panel.style.top = Math.min(16, window.innerHeight - panel.offsetHeight - 16) + 'px';
 }
-window.addEventListener('resize', updateStickyFit);
+window.addEventListener('resize', updateFollowFit);
 // Fanger opp høydeendringer som ikke kommer fra render() eller vindu-resize
 // (f.eks. "Vis alle runder", eller en skrifttype som lastes sent). Begge
 // panelene finnes allerede i det statiske markup-et (bare innholdet fylles
 // av JS), så vi kan observere dem med en gang.
-const _stickyObserver = new ResizeObserver(()=>updateStickyFit());
-document.querySelectorAll('.wrap > .panel').forEach(p=>_stickyObserver.observe(p));
+const _followObserver = new ResizeObserver(()=>updateFollowFit());
+document.querySelectorAll('.wrap > .panel').forEach(p=>_followObserver.observe(p));
 // Korte lagnavn der kampradene blir trange (kolonnen med klokkeslett + H/U/B
 // tar en del av bredden, så lange navn må forkortes for å unngå at CSS
 // klipper dem med "...")
@@ -970,7 +975,7 @@ function render(){
     const row=document.querySelector(`.match[data-id="${m.id}"]`);
     const set=m.hg!=null&&m.ag!=null;
     row.querySelectorAll('input').forEach(i=>{i.classList.toggle('set',set); i.classList.toggle('sim',set&&!!m.sim);});
-    row.classList.toggle('fixed', set&&!m.sim);
+    row.classList.toggle('locked', set&&!m.sim);
     row.querySelectorAll('.quick button').forEach(b=>{
       const q=b.dataset.q;
       b.classList.toggle('on', set && ((q==='H'&&m.hg>m.ag)||(q==='U'&&m.hg===m.ag)||(q==='B'&&m.hg<m.ag)));
@@ -1008,7 +1013,7 @@ function render(){
     `<div class="posline"${line2Title?` title="${line2Title}"`:''}>${posLine}</div>
      <div class="odds-box"><div id="odds"></div></div>`;
   fillOdds(); scheduleMC();
-  updateStickyFit();
+  updateFollowFit();
 }
 // Del scenario: resultatene legges i lenken etter #s=. "Simuler tomme
 // kamper" og lignende gir nå en NY tilfeldig sesong hver gang (ikke et fast
