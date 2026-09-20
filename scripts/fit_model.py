@@ -7,6 +7,19 @@ Vekt og halveringstid er valgt via rullerende out-of-sample-evaluering
 (log loss på utfall, Poisson-NLL på mål, RPS på målforskjell): vekt 40,
 halveringstid 35 dager for både mål og odds. Se undersøkelsen i samtalen
 som førte fram til disse tallene.
+
+l1/l2 (ridge-straff på henholdsvis att/con og ha/hc) ble satt til 16/48
+(8x de opprinnelige 2/6) etter en egen undersøkelse av at simulerte
+sesonger fikk urealistisk stor målforskjell (opptil ±1400, mot ekte
+sesongers ±60-70) sammenlignet med NOR.csv 2012-2026. Testet 1x-20x på
+rullerende log loss/Poisson-NLL for enkeltkamper OG på målforskjell-
+fordelingen i simulerte sesonger: begge pekte uavhengig av hverandre på
+rundt 8x som optimum -- svakere gir dårligere enkeltkamp-treffsikkerhet
+(mindre regularisert, mer overtilpasset), sterkere begynner å viske ut
+reelle styrkeforskjeller. Ved 8x falt simulert målforskjell til 15,9,
+nesten nøyaktig likt de faktiske 15,9 for de samme sesongene, og log
+loss/Poisson-NLL var samtidig de BESTE observerte (1,0008/3,0897, mot
+1,0040/3,1086 ved 1x) -- ikke en avveining, samme retning på begge mål.
 """
 import json
 import sys
@@ -19,7 +32,7 @@ import fit_fast
 ROOT = Path(__file__).parent.parent
 ODDS_WEIGHT = 40.0
 HALF_LIFE_DAYS = 35.0
-L1, L2 = 2.0, 6.0
+L1, L2 = 16.0, 48.0
 
 WATCH_TEAMS = ["Brann", "Bodø/Glimt"]  # logges før/etter hver tilpasning, til overvåking av kjøringene
 
