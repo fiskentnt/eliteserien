@@ -133,7 +133,8 @@
   td.formcol{padding-right:10px}
   .formbox{display:inline-block;min-width:30px;padding:2px 7px;border-radius:5px;font:700 13px/1.3 var(--cond);text-align:center;color:#fff}
   .formbox.red{background:var(--brann)}
-  .formbox.yellow{background:var(--q);color:#3a2c05}
+  .formbox.orange{background:#dd7a22}
+  .formbox.lightgreen{background:#7fb9a8;color:#0d3327}
   .formbox.green{background:var(--eu)}
 
   .legend{padding:12px 16px;color:var(--muted);font-size:13px;display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line)}
@@ -430,6 +431,35 @@ const RATES = {};
 // målt direkte per kamp (ikke glattet) mot 14 sesonger historiske odds
 // (NOR.csv 2012-2026, 7054 lag-kamp-observasjoner, 95% KI [0,0100, 0,0209]).
 const FORM_K = 0.015;
+// Rekke-forsterkning: k=0,015 er kalibrert mot GJENNOMSNITTLIG enkeltkamp-
+// reaksjon, men undersøkelse mot NOR.csv 2012-2026 (77 fullstendige rekker på
+// fem eller flere strake seire/tap, alle Eliteserien-sesonger) viste at
+// markedets lagstyrke flytter seg 2,77 ganger så mye over en slik rekke som
+// k=0,015 gir (2,16x for taperekker, 3,45x for vinnerrekker) — Brann kunne
+// tape ti strake med klar margin og knapt bevege seg. En flat høyere k retter
+// opp rekker, men gjør enkeltkamper verre (rullerende log-loss +0,0056 ved
+// k*2,5); en rampe som bare forsterker PÅFØLGENDE resultater i samme retning
+// treffer rekke-målet uten den kostnaden. Bonus 0,60 per ekstra steg (tak 5)
+// er valgt: nær markedets faktiske reaksjon (1,11x av de samme 77 rekkene)
+// og blant de beste på rullerende log-loss (-0,0030) — flat multiplikator er
+// forkastet nettopp fordi den gjør enkeltkamp-treffsikkerheten dårligere. Bare
+// de to STEDENE som driver det synlige Form-tallet direkte (computeLiveState,
+// teamFormHistory) bruker rampen — Monte Carlo-simuleringen i Workeren er en
+// egen, allerede kalibrert prosess og røres ikke i denne omgangen.
+const STREAK_BONUS = 0.6, STREAK_CAP = 5;
+function kFor(streakLen){ return FORM_K*(1+STREAK_BONUS*(Math.min(streakLen,STREAK_CAP)-1)); }
+// Starttilstand for rekke-sporing: et lags NÅVÆRENDE strake W/L-rekke fra
+// ekte resultater (STATS[t].form, kronologisk), FØR eventuelle scenario-
+// eller sesong-kamper legges til oppå. En uavgjort nullstiller rekken.
+function trailingStreak(formArr){
+  const n=formArr.length;
+  if(n===0) return {len:0, res:null};
+  const last=formArr[n-1];
+  if(last==='D') return {len:0, res:null};
+  let len=1;
+  for(let i=n-2;i>=0 && formArr[i]===last;i--) len++;
+  return {len, res:last};
+}
 let LIVE = null; // {att,con,ha,hc} i TI-indeksrekkefølge — kopi av MODEL, oppdatert av alle låste resultater i inneværende scenario
 let tableSort = null; // null = standings-rekkefølge, ellers {key:'form', dir:1|-1}
 
@@ -555,11 +585,21 @@ function computeLiveState(){
   const att=new Float64Array(n), con=new Float64Array(n), ha=new Float64Array(n), hc=new Float64Array(n);
   TEAMS.forEach((t,i)=>{ const mi=MTI[t]; att[i]=MODEL.att[mi]; con[i]=MODEL.con[mi]; ha[i]=MODEL.ha[mi]; hc[i]=MODEL.hc[mi]; });
   const state={att,con,ha,hc};
+  // Rekke-sporing starter fra ekte resultater (ikke fra 0 her), slik at en
+  // scenario-forlengelse av en pågående ekte rekke fortsetter den riktig.
+  const streakLen={}, streakRes={};
+  TEAMS.forEach(t=>{ const s=trailingStreak(STATS[t].form); streakLen[t]=s.len; streakRes[t]=s.res; });
   matches.filter(m=>m.hg!=null&&m.ag!=null).sort((x,y)=>x.date.localeCompare(y.date)).forEach(m=>{
     const h=TI[m.home], a=TI[m.away], [lh,la]=stateRate(state,m.home,m.away);
     const rh=m.hg-lh, ra=m.ag-la;
-    att[h]+=FORM_K*rh; ha[h]+=FORM_K*rh; con[a]+=FORM_K*rh; hc[a]-=FORM_K*rh;
-    att[a]+=FORM_K*ra; ha[a]-=FORM_K*ra; con[h]+=FORM_K*ra; hc[h]+=FORM_K*ra;
+    const resH=m.hg>m.ag?'W':m.hg<m.ag?'L':'D', resA=m.hg<m.ag?'W':m.hg>m.ag?'L':'D';
+    streakLen[m.home]=(resH!=='D'&&streakRes[m.home]===resH)?streakLen[m.home]+1:(resH==='D'?0:1);
+    streakRes[m.home]=resH==='D'?null:resH;
+    streakLen[m.away]=(resA!=='D'&&streakRes[m.away]===resA)?streakLen[m.away]+1:(resA==='D'?0:1);
+    streakRes[m.away]=resA==='D'?null:resA;
+    const kH=kFor(streakLen[m.home]), kA=kFor(streakLen[m.away]);
+    att[h]+=kH*rh; ha[h]+=kH*rh; con[a]+=kH*rh; hc[a]-=kH*rh;
+    att[a]+=kA*ra; ha[a]-=kA*ra; con[h]+=kA*ra; hc[h]+=kA*ra;
   });
   return state;
 }
@@ -1254,11 +1294,18 @@ function teamFormHistory(team){
   TEAMS.forEach((t,i)=>{ const mi=MTI[t]; att[i]=MODEL.att[mi]; con[i]=MODEL.con[mi]; ha[i]=MODEL.ha[mi]; hc[i]=MODEL.hc[mi]; });
   const state={att,con,ha,hc};
   const points=[];
+  const streakLen={}, streakRes={}; TEAMS.forEach(t=>{ streakLen[t]=0; streakRes[t]=null; });
   [...MATCHES].sort((x,y)=>x.date.localeCompare(y.date)).forEach(m=>{
     const h=TI[m.home], a=TI[m.away], [lh,la]=stateRate(state,m.home,m.away);
     const rh=m.hg-lh, ra=m.ag-la;
-    att[h]+=FORM_K*rh; ha[h]+=FORM_K*rh; con[a]+=FORM_K*rh; hc[a]-=FORM_K*rh;
-    att[a]+=FORM_K*ra; ha[a]-=FORM_K*ra; con[h]+=FORM_K*ra; hc[h]+=FORM_K*ra;
+    const resH=m.hg>m.ag?'W':m.hg<m.ag?'L':'D', resA=m.hg<m.ag?'W':m.hg>m.ag?'L':'D';
+    streakLen[m.home]=(resH!=='D'&&streakRes[m.home]===resH)?streakLen[m.home]+1:(resH==='D'?0:1);
+    streakRes[m.home]=resH==='D'?null:resH;
+    streakLen[m.away]=(resA!=='D'&&streakRes[m.away]===resA)?streakLen[m.away]+1:(resA==='D'?0:1);
+    streakRes[m.away]=resA==='D'?null:resA;
+    const kH=kFor(streakLen[m.home]), kA=kFor(streakLen[m.away]);
+    att[h]+=kH*rh; ha[h]+=kH*rh; con[a]+=kH*rh; hc[a]-=kH*rh;
+    att[a]+=kA*ra; ha[a]-=kA*ra; con[h]+=kA*ra; hc[h]+=kA*ra;
     if(m.home===team || m.away===team){
       const scores=formScores(Array.from(att),Array.from(con));
       points.push({date:m.date, score:scores[TI[team]]});
@@ -1369,7 +1416,7 @@ function render(){
     const mv=basePos[r.name]-pos;
     const diff = mv===0?'':`<span class="diff ${mv>0?'up':'down'}">${mv>0?'▲':'▼'}${Math.abs(mv)}</span>`;
     const posTitle = EURO_TITLES[pos]||'';
-    const formCls = r.form<4?'red':r.form>6?'green':'yellow';
+    const formCls = r.form<4.0?'red':r.form<5.5?'orange':r.form<6.5?'lightgreen':'green';
     const changeTxt = r.formChange>=0.05?`Opp ${r.formChange.toFixed(1)} siden forrige modelloppdatering.`
       : r.formChange<=-0.05?`Ned ${Math.abs(r.formChange).toFixed(1)} siden forrige modelloppdatering.`
       : 'Uendret siden forrige modelloppdatering.';
