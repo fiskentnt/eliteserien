@@ -1,0 +1,128 @@
+"""Henter odds for kommende Eliteserien-kamper fra The Odds API.
+
+Skriver data/odds_upcoming.json (levende snapshot, brukt direkte i index.html
+for kommende kamper) og bygger data/odds_captured.json — vår egen historikk av
+siste odds før avspark, fanget opp automatisk når en kamp går fra "kommende"
+til "spilt" mellom to kjøringer. odds_captured.json er reserve-kilden for
+kalibrering når football-data.co.uk ikke har lagt ut sluttodds for kampen
+ennå (se merge_odds.py).
+
+Nøkkel: ODDS_API_KEY (miljøvariabel, satt fra secrets i workflowen / .env lokalt).
+"""
+import json
+import os
+import sys
+import urllib.request
+import urllib.error
+from datetime import datetime, timezone
+from pathlib import Path
+
+USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
+SPORT = "soccer_norway_eliteserien"
+BASE = f"https://api.the-odds-api.com/v4/sports/{SPORT}/odds/"
+ROOT = Path(__file__).parent.parent
+UPCOMING_PATH = ROOT / "data" / "odds_upcoming.json"
+CAPTURED_PATH = ROOT / "data" / "odds_captured.json"
+MATCHES_PATH = ROOT / "data" / "matches.json"
+
+# The Odds API sine lagnavn -> navnene i index.html (fra /v4/sports/.../participants)
+NAME_MAP = {
+    "Aalesund": "Aalesund", "Bodø/Glimt": "Bodø/Glimt", "Fredrikstad FK": "Fredrikstad",
+    "HamKam": "HamKam", "IK Start": "Start", "KFUM": "KFUM Oslo",
+    "Kristiansund BK": "Kristiansund", "Lillestrom": "Lillestrøm", "Molde": "Molde",
+    "Rosenborg": "Rosenborg", "SK Brann": "Brann", "Sandefjord": "Sandefjord",
+    "Sarpsborg FK": "Sarpsborg 08", "Tromso": "Tromsø", "Vålerenga": "Vålerenga",
+    "Viking FK": "Viking",
+}
+
+def devig(h, d, a):
+    ih, idn, ia = 1/h, 1/d, 1/a
+    s = ih + idn + ia
+    return ih/s, idn/s, ia/s
+
+def fetch_odds(api_key, log):
+    url = f"{BASE}?apiKey={api_key}&regions=eu&markets=h2h&oddsFormat=decimal"
+    req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"})
+    with urllib.request.urlopen(req, timeout=30) as resp:
+        remaining = resp.headers.get("x-requests-remaining")
+        data = json.loads(resp.read().decode("utf-8"))
+    log(f"The Odds API: {len(data)} kamper, {remaining} kreditter igjen denne måneden.")
+    return data
+
+def parse(raw):
+    out = []
+    for m in raw:
+        home = NAME_MAP.get(m["home_team"])
+        away = NAME_MAP.get(m["away_team"])
+        if not home or not away:
+            continue
+        H, D, A, n = [], [], [], 0
+        for bm in m["bookmakers"]:
+            mk = next((x for x in bm["markets"] if x["key"] == "h2h"), None)
+            if not mk:
+                continue
+            outc = {o["name"]: o["price"] for o in mk["outcomes"]}
+            if m["home_team"] in outc and m["away_team"] in outc and "Draw" in outc:
+                H.append(outc[m["home_team"]]); D.append(outc["Draw"]); A.append(outc[m["away_team"]])
+                n += 1
+        if n == 0:
+            continue
+        avgH, avgD, avgA = sum(H)/n, sum(D)/n, sum(A)/n
+        h, d, a = devig(avgH, avgD, avgA)
+        out.append({
+            "home": home, "away": away, "commence_time": m["commence_time"],
+            "H": round(h, 4), "D": round(d, 4), "A": round(a, 4), "n_bookmakers": n,
+        })
+    return out
+
+def main():
+    log = lambda s: print(s, file=sys.stderr)
+    api_key = os.environ.get("ODDS_API_KEY")
+    if not api_key:
+        log("ADVARSEL: ODDS_API_KEY er ikke satt, hopper over henting.")
+        return
+
+    existing_upcoming = json.loads(UPCOMING_PATH.read_text(encoding="utf-8")) if UPCOMING_PATH.exists() else {"matches": []}
+    captured = json.loads(CAPTURED_PATH.read_text(encoding="utf-8")) if CAPTURED_PATH.exists() else {"matches": []}
+    played_keys = set()
+    if MATCHES_PATH.exists():
+        played = json.loads(MATCHES_PATH.read_text(encoding="utf-8"))
+        played_keys = {(m["home"], m["away"]) for m in played}
+
+    # Fang opp siste kjente odds for kamper som har gått fra "kommende" til "spilt"
+    # siden forrige kjøring, inn i vår egen historikk.
+    captured_keys = {(m["home"], m["away"]) for m in captured["matches"]}
+    newly_captured = 0
+    for m in existing_upcoming.get("matches", []):
+        key = (m["home"], m["away"])
+        if key in played_keys and key not in captured_keys:
+            captured["matches"].append({k: v for k, v in m.items() if k != "commence_time"} | {"date": m["commence_time"][:10]})
+            newly_captured += 1
+    if newly_captured:
+        log(f"Fanget opp siste odds før avspark for {newly_captured} nylig spilte kamper.")
+        CAPTURED_PATH.parent.mkdir(exist_ok=True)
+        CAPTURED_PATH.write_text(json.dumps(captured, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+    try:
+        raw = fetch_odds(api_key, log)
+    except Exception as e:
+        log(f"ADVARSEL: klarte ikke hente fra The Odds API ({e}), beholder eksisterende data/odds_upcoming.json")
+        return
+
+    matches = parse(raw)
+    # Ikke overskriv gode data med tomme, med mindre alle de gamle kampene nå er spilt
+    # (da er en tom liste riktig, ikke en feil).
+    old_still_unplayed = [m for m in existing_upcoming.get("matches", []) if (m["home"], m["away"]) not in played_keys]
+    if not matches and old_still_unplayed:
+        log("ADVARSEL: The Odds API ga 0 kamper, men det finnes fortsatt uspilte kamper vi hadde odds for — beholder eksisterende data.")
+        return
+
+    UPCOMING_PATH.parent.mkdir(exist_ok=True)
+    UPCOMING_PATH.write_text(json.dumps({
+        "fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "matches": matches,
+    }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    log(f"Skrev {len(matches)} kommende kamper med odds til data/odds_upcoming.json.")
+
+if __name__ == "__main__":
+    main()

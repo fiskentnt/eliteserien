@@ -1,0 +1,37 @@
+name: Oppdater kampdata
+
+on:
+  schedule:
+    # Hver time fredag til og med mandag (UTC). Dag-felt: 5=fre,6=lør,0=søn,1=man.
+    - cron: "7 * * * 5,6,0,1"
+    # Én gang i døgnet tirsdag til torsdag (UTC).
+    - cron: "7 6 * * 2,3,4"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Kjør oppdateringsscript (kamper, sluttodds og modell)
+        run: python3 scripts/update_data.py
+
+      - name: Committer og pusher hvis noe endret seg
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/matches.json data/fixtures.json data/odds_fd.json data/odds.json data/model.json
+          if git diff --cached --quiet; then
+            echo "Ingen endringer i kampdata."
+          else
+            git commit -m "Oppdater kampdata $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          fi

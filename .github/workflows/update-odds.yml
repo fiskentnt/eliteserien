@@ -1,0 +1,38 @@
+name: Oppdater odds for kommende kamper
+
+on:
+  schedule:
+    # Kl. 08 og 16 UTC hver dag.
+    - cron: "13 8 * * *"
+    - cron: "13 16 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: update-data
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Hent kommende odds, slå sammen kilder og tilpass modellen på nytt
+        env:
+          ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
+        run: python3 scripts/update_odds.py
+
+      - name: Committer og pusher hvis noe endret seg
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/odds_upcoming.json data/odds_captured.json data/odds.json data/model.json
+          if git diff --cached --quiet; then
+            echo "Ingen endringer i odds."
+          else
+            git commit -m "Oppdater kommende odds $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          fi
