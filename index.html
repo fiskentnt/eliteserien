@@ -32,6 +32,7 @@
   .status .pos span{font-size:20px;color:var(--ink);font-weight:600;margin-left:6px}
   .status .line{margin-top:8px;font-weight:600}
   .status .sub{color:var(--muted);font-size:13px;margin-top:6px}
+  .status .plain{color:var(--ink);font-size:13px;font-weight:600;margin-top:8px}
 
   /* Siste resultater */
   .recent{max-width:1380px;margin:0 auto;padding:18px 24px 0}
@@ -56,6 +57,8 @@
   /* Layout */
   .wrap{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(360px,1fr);gap:20px;padding:16px 24px 48px;max-width:1380px;margin:0 auto;align-items:start}
   @media (max-width:1180px){.wrap{grid-template-columns:1fr}}
+  /* Tabellen blir stående (sticky) mens du blar i kamplisten ved siden av, på PC */
+  @media (min-width:1181px){.wrap > .panel:first-child{position:sticky;top:16px}}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .panel > h2{font:700 22px/1 var(--cond);margin:0;padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
   .panel > h2 .count{font:500 14px var(--body);color:var(--muted)}
@@ -91,9 +94,10 @@
   .diff{font-size:11.5px;margin-left:6px;font-weight:600}
   .diff.up{color:var(--eu)}.diff.down{color:var(--brann)}
 
-  /* Rekkevidde-stripe */
-  th.reach,td.reach{width:24%;min-width:130px;text-align:left;padding-right:14px}
+  /* Maks mulig-stripe */
+  th.reach,td.reach{width:24%;min-width:150px;text-align:left;padding-right:28px}
   .bar{position:relative;height:16px}
+  .bar .maxnum{position:absolute;top:-1px;font:600 10.5px/1 var(--body);color:var(--ink);white-space:nowrap;transform:translateX(6px)}
   .bar .track{position:absolute;left:0;right:0;top:7px;height:2px;background:var(--line-soft)}
   .bar .span{position:absolute;top:6px;height:4px;border-radius:2px;background:#aab3b6;transform-origin:left center}
   .bar .dot{position:absolute;top:2px;width:12px;height:12px;border-radius:50%;background:var(--ink);transform:translateX(-6px);border:2px solid #fff;box-shadow:0 0 0 1px var(--ink)}
@@ -114,9 +118,6 @@
   .legend .eu i{background:var(--eu)}
   .legend .q i{background:var(--q)}
   .legend .n i{background:repeating-linear-gradient(135deg,var(--ned) 0 2px,transparent 2px 4px);border:1px solid var(--ned)}
-  .legend .r i{width:22px;height:4px;border-radius:2px;background:#aab3b6;position:relative}
-  .legend .r i::after{content:"";position:absolute;left:-3px;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--ink)}
-  .legend .g i{width:0;height:14px;border-left:1.5px dashed var(--brann);border-radius:0}
   .note{padding:10px 16px 14px;color:var(--muted);font-size:13px}
   /* Form og sannsynligheter */
   .form{display:inline-flex;gap:2px;vertical-align:middle}
@@ -135,11 +136,16 @@
   .hist i.eu{background:#8cc3b3}.hist i.q{background:#e8c374}.hist i.n{background:#c98a90}
   .hist-l{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;font-size:10px;color:var(--muted);text-align:center;margin-top:2px}
   /* Kampsannsynlighet */
-  /* Modellpanel */
-  details.model{border-top:1px solid var(--line)}
-  details.model summary{cursor:pointer;padding:12px 16px;font:700 18px/1 var(--cond)}
-  details.model .in{padding:0 16px 16px;overflow-x:auto}
-  details.model p{font-size:13px;color:var(--muted);margin:0 0 10px;max-width:70ch}
+  /* Slik fungerer det */
+  details.howitworks{max-width:1380px;margin:0 auto 32px;padding:0 24px}
+  details.howitworks summary{cursor:pointer;padding:14px 16px;font:700 20px/1 var(--cond);background:var(--panel);border:1px solid var(--line);border-radius:10px}
+  details.howitworks[open] summary{border-radius:10px 10px 0 0;border-bottom:none}
+  details.howitworks .in{background:var(--panel);border:1px solid var(--line);border-top:none;border-radius:0 0 10px 10px;padding:4px 20px 18px}
+  details.howitworks h3{font:700 16px/1 var(--cond);margin:16px 0 8px}
+  details.howitworks p{font-size:14px;line-height:1.55;color:var(--ink);margin:0 0 12px;max-width:72ch}
+  details.howitworks hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+  details.howitworks .note{padding:0 0 12px;font-size:13px}
+  @media (max-width:640px){details.howitworks{padding:0 16px}}
   table.mt th,table.mt td{padding:5px 6px;font-size:13px}
   table.mt thead th{border-bottom:2px solid var(--ink)}
   table.mt td{border-bottom:1px solid var(--line-soft)}
@@ -161,6 +167,8 @@
 
   /* Kamper */
   .rounds{padding:0 16px 16px}
+  .showAll{display:block;margin:4px 16px 16px;width:calc(100% - 32px);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:10px;font-weight:600;font-size:14px}
+  .showAll:hover{border-color:var(--ink)}
   .round{margin-top:14px}
   .round h3{margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;font:700 17px/1.2 var(--cond);border-bottom:2px solid var(--ink);padding-bottom:4px}
   .round h3 .when{font:500 13px var(--body);color:var(--muted)}
@@ -174,9 +182,6 @@
   .match input.set{background:var(--ink);color:#fff;border-color:var(--ink)}
   .match.brann input.set{background:var(--brann);border-color:var(--brann)}
   .match input.set.sim{background:#e3e7e8;color:var(--ink);border-color:#c3cacc;font-style:italic}
-  .toolnote{max-width:1380px;margin:0 auto;padding:8px 24px 0;color:var(--muted);font-size:13px}
-  .toolnote em{font-style:italic;background:#e3e7e8;border:1px solid #c3cacc;border-radius:4px;padding:0 5px;color:var(--ink);font-weight:700}
-  @media (max-width:640px){.toolnote{padding-left:16px;padding-right:16px}}
   @media (max-width:760px){th.hide-m,td.hide-m{display:none}}
   .match .colon{text-align:center;color:var(--muted);font-weight:700}
   .match.played{background:#f1f3f3;color:#8a9296}
@@ -206,7 +211,7 @@
     <div>
       <h1>Eliteserien 2026<small>Tabellkalkulator med Brann i sentrum</small></h1>
       <p class="stamp"></p>
-      <p class="lede">Skriv inn resultat i kampene som gjenstår, eller trykk H, U eller B (1-0, 0-0, 0-1). Kamper du lar stå tomme, telles ikke. Tabellen oppdateres automatisk med nye resultater.</p>
+      <p class="lede">Fyll inn resultater eller trykk H, U og B. Tabell og sannsynligheter regnes ut fortløpende.</p>
     </div>
     <div class="status" id="verdict" aria-live="polite"></div>
   </div>
@@ -218,15 +223,14 @@
 </section>
 
 <div class="tools">
-  <button id="brannWin">Brann vinner alt</button>
-  <button id="brannLose">Brann taper alt</button>
-  <button id="simRest">Simuler tomme kamper</button>
-  <button id="homeAll">Hjemmeseier i tomme kamper</button>
-  <button id="drawAll">Uavgjort i tomme kamper</button>
-  <button class="ghost" id="reset">Nullstill</button>
-  <button class="share" id="share">Del scenario</button>
+  <button id="brannWin" title="Fyller Brann-kampene med seier til Brann og resten med en typisk sesong">Brann vinner alt</button>
+  <button id="brannLose" title="Fyller Brann-kampene med tap for Brann og resten med en typisk sesong">Brann taper alt</button>
+  <button id="simRest" title="Fyller alle tomme kamper med én typisk sesong">Simuler tomme kamper</button>
+  <button id="homeAll" title="Fyller alle tomme kamper med hjemmeseier 1-0">Hjemmeseier i tomme kamper</button>
+  <button id="drawAll" title="Fyller alle tomme kamper med uavgjort 0-0">Uavgjort i tomme kamper</button>
+  <button class="ghost" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
+  <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
 </div>
-<p class="toolnote">Brann-knappene fyller også resten av kampene med en typisk sesong: siden simulerer 3000 sesonger og velger den der alle lag havner nærmest sin forventede poengsum. Modellen bygger på alle 163 seriekampene i år: hver klubb har egen angreps- og forsvarsstyrke hjemme og borte, og nyere kamper teller mer enn gamle, så formen slår inn. Simulerte resultater vises i grått, som <em>2</em>, og kan overskrives. Tallene under H, U og B er sjansen for hvert utfall, med det mest sannsynlige i svart. Der bookmakerne har lagt ut odds, merket <b style="color:var(--brann)">odds</b>, veier oddsen 70 prosent og modellen 30. Prosentene kommer fra 4000 simuleringer av resten av sesongen, der kampene du har fylt inn selv står fast.</p>
 
 <div class="wrap">
   <section class="panel">
@@ -240,7 +244,7 @@
           <th class="hide-s" title="Siste fem seriekamper, eldst til venstre">Form</th>
           <th class="hide-m" title="Sannsynlighet for topp 3">Topp 3</th>
           <th title="Sannsynlighet for plass 15 eller 16">Ned</th>
-          <th class="reach" title="Poeng nå og høyest mulige sluttsum">Rekkevidde<div class="scale" id="scale"></div></th>
+          <th class="reach" title="Poeng nå og høyest mulige sluttsum">Maks mulig<div class="scale" id="scale"></div></th>
         </tr></thead>
         <tbody></tbody>
       </table>
@@ -249,24 +253,30 @@
       <span class="eu"><i></i>Europa (1 til 3)</span>
       <span class="q"><i></i>Kvalik (14)</span>
       <span class="n"><i></i>Nedrykk (15 og 16)</span>
-      <span class="r"><i></i>Poeng nå til maks mulig</span>
-      <span class="g"><i></i>Branns poeng nå</span>
     </div>
-    <div class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn. Runde 12 ble flyttet fra juli til 24. og 25. oktober. Kilder: kampdata hentes automatisk fra ffksupporter.net og ESPN (ffksupporter er fasit ved uenighet). Sluttodds fra football-data.co.uk, kommende odds fra The Odds API — begge automatisk.</div>
-    <details class="model">
-      <summary>Slik regner modellen</summary>
-      <div class="in">
-        <p id="modelDesc"></p>
-        <table class="mt" id="modelTbl"></table>
-      </div>
-    </details>
+    <div class="note">Prikk: poeng nå. Strek: poeng laget kan ende på ved å vinne resten. Rød linje: Branns poeng nå. Kilder: ffksupporter.net, ESPN, football-data.co.uk og The Odds API — alt hentet automatisk.</div>
   </section>
 
   <section class="panel">
     <h2>Gjenstående kamper <span class="count" id="fxInfo"></span></h2>
     <div class="rounds" id="rounds"></div>
+    <button class="showAll" id="showAllRounds" hidden>Vis alle runder</button>
   </section>
 </div>
+
+<details class="howitworks">
+  <summary>Slik fungerer det</summary>
+  <div class="in">
+    <h3>Slik regnes sannsynlighetene</h3>
+    <p id="howP1"></p>
+    <p id="howP2"></p>
+    <p>Deretter spilles resten av sesongen 4000 ganger med tilfeldige resultater etter disse sannsynlighetene. Topp 3, Ned og fordelingen i Brann-boksen er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
+    <p>Knappene "Brann vinner alt" og "Brann taper alt" fyller resten med én typisk sesong: den av 3000 simulerte sesonger der alle lag havner nærmest sin forventede poengsum.</p>
+    <hr>
+    <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
+    <table class="mt" id="modelTbl"></table>
+  </div>
+</details>
 
 <script>
 // ---- Statiske hjelpetabeller (ikke avledet fra kampdata) ----
@@ -292,6 +302,9 @@ const RATES = {};
 
 const roundsEl = document.getElementById('rounds');
 const isBrann = m => m.home==="Brann"||m.away==="Brann";
+// Korte lagnavn der kampradene blir trange
+const SHORT_NAME = {"Kristiansund":"KBK","Sarpsborg 08":"Sarpsborg"};
+const shortTeam = t => SHORT_NAME[t] || t;
 
 function parse(v){ if(v===''||v==null) return null; const n=parseInt(v,10); return Number.isFinite(n)&&n>=0?n:null; }
 
@@ -385,13 +398,14 @@ function fillOdds(){
     b.textContent=pctTxt(ned); b.classList.toggle('hot',ned>=0.5);
   });
   const box=document.getElementById('odds'); if(!box) return;
-  const d=lastMC['Brann'], mx=Math.max(...d);
-  box.innerHTML=`<div class="odds-row">
+  const d=lastMC['Brann'], mx=Math.max(...d), nedP=d[14]+d[15];
+  box.innerHTML=`<div class="odds-row" title="Sannsynlighet for sluttplassering, ut fra modellen">
       <span><strong>${pctTxt(d[0]+d[1]+d[2])}</strong>topp 3</span>
       <span><strong>${pctTxt(d.slice(3,13).reduce((x,y)=>x+y,0))}</strong>4 til 13</span>
       <span><strong>${pctTxt(d[13])}</strong>kvalik</span>
-      <span class="n"><strong>${pctTxt(d[14]+d[15])}</strong>nedrykk</span></div>
-    <div class="hist" aria-hidden="true">${d.map((v,i)=>`<i class="${i<3?'eu':i===13?'q':i>=14?'n':''}" style="height:${(v/mx*100).toFixed(1)}%" title="${i+1}. plass: ${pctTxt(v)}"></i>`).join('')}</div>
+      <span class="n"><strong>${pctTxt(nedP)}</strong>nedrykk</span></div>
+    ${nedP<0.01?`<div class="plain">Nedrykk er matematisk mulig.</div>`:''}
+    <div class="hist" aria-hidden="true" title="Sannsynlighet for sluttplassering, ut fra modellen">${d.map((v,i)=>`<i class="${i<3?'eu':i===13?'q':i>=14?'n':''}" style="height:${(v/mx*100).toFixed(1)}%" title="${i+1}. plass: ${pctTxt(v)}"></i>`).join('')}</div>
     <div class="hist-l">${d.map((v,i)=>`<span>${i+1}</span>`).join('')}</div>`;
 }
 function scheduleMC(){ clearTimeout(mcTimer); mcTimer=setTimeout(()=>{ lastMC=runMC(4000); fillOdds(); },120); }
@@ -480,7 +494,8 @@ function render(){
       <div class="track"></div>
       <div class="span" style="left:${pct(r.pts)}%;width:${(pct(r.max)-pct(r.pts)).toFixed(2)}%"></div>
       <div class="guide" style="left:${pct(brann.pts)}%"></div>
-      <div class="dot" style="left:${pct(r.pts)}%"></div></div>`;
+      <div class="dot" style="left:${pct(r.pts)}%"></div>
+      <span class="maxnum" style="left:${pct(r.max)}%">${r.max}</span></div>`;
     tr.innerHTML=`<td class="pos">${pos}</td><td class="team">${r.name}${diff}</td><td class="hide-s">${r.p}</td>
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
       <td class="gd">${r.gd>0?'+':''}${r.gd}</td><td class="pts">${r.pts}</td>
@@ -517,12 +532,11 @@ function render(){
       : pos===14 ? 'Sesongen er ferdig i dette scenariet: Brann må spille kvalik.'
       : 'Sesongen er ferdig i dette scenariet: Brann rykker ned.';
   }
+  const explainTitle=[sub,'Sjekken regner tomme kamper som tap for Brann og seier for alle andre. Sier den «sikret», er det sikkert.'].filter(Boolean).join(' ');
   document.getElementById('verdict').innerHTML=
     `<div class="pos">${pos}.<span>plass for Brann</span></div>
-     <div class="line">${brann.pts} poeng, ${brann.left} kamper igjen. ${verdictTxt}</div>
-     ${sub?`<div class="sub">${sub}</div>`:''}
-     <div class="sub">Sjekken regner tomme kamper som tap for Brann og seier for alle andre. Sier den "sikret", er det sikkert.</div>
-     <div class="odds-box"><div class="sub" style="margin:0 0 6px">Sannsynlighet for sluttplassering, ut fra modellen</div><div id="odds"></div></div>`;
+     <div class="line" title="${explainTitle}">${brann.pts} poeng, ${brann.left} kamper igjen. ${verdictTxt}</div>
+     <div class="odds-box"><div id="odds"></div></div>`;
   fillOdds(); scheduleMC();
 }
 // Del scenario: resultatene legges i lenken etter #s=
@@ -640,15 +654,18 @@ async function boot(){
   const last = [...MATCHES].sort((x,y)=>x.date.localeCompare(y.date)).at(-1);
   document.querySelector('.stamp').textContent = `Alle kamper til og med ${formatDateNo(last.date)} er lagt inn.`;
 
-  document.querySelector('.toolnote').innerHTML = `Brann-knappene fyller også resten av kampene med en typisk sesong: siden simulerer 3000 sesonger og velger den der alle lag havner nærmest sin forventede poengsum. Modellen bygger på alle ${MATCHES.length} seriekampene i år: hver klubb har egen angreps- og forsvarsstyrke hjemme og borte, og nyere kamper teller mer enn gamle, så formen slår inn. Simulerte resultater vises i grått, som <em>2</em>, og kan overskrives. Tallene under H, U og B er sjansen for hvert utfall, med det mest sannsynlige i svart. Der bookmakerne har lagt ut odds, merket <b style="color:var(--brann)">odds</b>, veier oddsen 70 prosent og modellen 30. Prosentene kommer fra 4000 simuleringer av resten av sesongen, der kampene du har fylt inn selv står fast.`;
-
+  // "Slik fungerer det": de to første avsnittene har tall som må stemme med
+  // faktisk vekt/halveringstid (fra fase A: uendret, men holdt dynamisk i tilfelle).
   const hlWeeks = Math.round(MODEL.meta.half_life_days/7);
-  document.getElementById('modelDesc').textContent = `Hvert mål i hver av de ${MATCHES.length} kampene brukes. Modellen finner en angreps- og en forsvarsstyrke per lag, med eget tillegg hjemme og borte, pluss en felles hjemmefordel — trukket fra faktiske mål alene. Lagstyrkene justeres i tillegg mot sluttodds (${MODEL.meta.n_odds_matches} av ${MATCHES.length} kamper har odds), så de også treffer markedets vurdering av hvert lag. En kamp for ${hlWeeks} uker siden teller halvparten så mye som en kamp i dag. Kolonnene til høyre viser forventede mål scoret og sluppet inn mot et gjennomsnittslag.`;
+  document.getElementById('howP1').textContent = `Hvert lag får en angreps- og en forsvarsstyrke, hjemme og borte. Styrkene er beregnet fra alle kampene i sesongen: målene og sluttoddsen fra spillmarkedet. Nyere kamper teller mest, og en kamp for ${hlWeeks} uker siden teller halvparten så mye som en kamp i dag.`;
+  document.getElementById('howP2').textContent = `For hver kamp som gjenstår, gir styrkene forventede mål for hvert lag, og av dem regnes sjansen for hjemmeseier, uavgjort og borteseier. Der spillselskapene har lagt ut odds, blandes de inn med ${Math.round(ODDS_W*100)} prosent vekt.`;
 
   // Gjenstående kamper, gruppert per runde. Kamper som allerede er spilt innad i en runde
   // som ikke er ferdig, vises gråtonet og legges ikke i den redigerbare listen.
+  // De to neste rundene vises åpent, resten legges bak "Vis alle runder".
   matches = [];
-  FIXTURES_IN.forEach(r=>{
+  const hiddenRounds = document.createElement('div'); hiddenRounds.hidden = true; hiddenRounds.id = 'hiddenRounds';
+  FIXTURES_IN.forEach((r,ri)=>{
     const d = document.createElement('div'); d.className='round';
     d.innerHTML = `<h3><span>Runde ${r.round}</span><span class="when">${r.when}</span></h3>`;
     r.matches.forEach((m,mi)=>{
@@ -656,7 +673,7 @@ async function boot(){
         const row=document.createElement('div');
         row.className='match played'+(isBrann(m)?' brann':'');
         row.title=`Spilt ${formatDateNo(m.date)}, ligger i tabellen`;
-        row.innerHTML=`<span class="home">${m.home}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${m.away}</span><span class="done">Spilt ${shortDateNo(m.date)}</span>`;
+        row.innerHTML=`<span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">Spilt ${shortDateNo(m.date)}</span>`;
         d.appendChild(row);
         return;
       }
@@ -665,16 +682,22 @@ async function boot(){
       const isB = isBrann(m);
       const row = document.createElement('div'); row.className='match'+(isB?' brann':''); row.dataset.id=id;
       row.innerHTML = `
-        <span class="home ${m.home==="Brann"?"b":""}">${m.home}</span>
+        <span class="home ${m.home==="Brann"?"b":""}">${shortTeam(m.home)}</span>
         <input inputmode="numeric" data-side="h" aria-label="${m.home} mål">
         <span class="colon">-</span>
         <input inputmode="numeric" data-side="a" aria-label="${m.away} mål">
-        <span class="away ${m.away==="Brann"?"b":""}">${m.away}</span>
+        <span class="away ${m.away==="Brann"?"b":""}">${shortTeam(m.away)}</span>
         <span class="quick"><span class="q"><button data-q="H" title="Hjemmeseier 1-0">H</button><i class="pct" data-o="H"></i></span><span class="q"><button data-q="U" title="Uavgjort 0-0">U</button><i class="pct" data-o="U"></i></span><span class="q"><button data-q="B" title="Borteseier 0-1">B</button><i class="pct" data-o="B"></i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src"></i></span></span>`;
       d.appendChild(row);
     });
-    roundsEl.appendChild(d);
+    (ri<2 ? roundsEl : hiddenRounds).appendChild(d);
   });
+  const showAllBtn = document.getElementById('showAllRounds');
+  if(hiddenRounds.children.length){
+    roundsEl.after(hiddenRounds);
+    showAllBtn.hidden = false;
+    showAllBtn.onclick = () => { hiddenRounds.hidden = false; showAllBtn.hidden = true; };
+  }
 
   applyScenario();
   fillProb();
