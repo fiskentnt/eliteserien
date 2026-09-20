@@ -220,6 +220,14 @@
   .rounds{padding:0 16px 16px}
   .showAll{display:block;margin:4px 16px 16px;width:calc(100% - 32px);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:10px;font-weight:600;font-size:14px}
   .showAll:hover{border-color:var(--ink)}
+  /* Over 1181px (samme grense som gjør tabellen sticky, se .panel-follow)
+     vises alle rundene med en gang — tabellen ved siden av gjør lengden
+     ufarlig der. Under grensen (og på mobil) holdes "Vis alle runder" som
+     før, siden siden ellers blir veldig lang uten en sticky tabell å måle mot. */
+  @media (min-width:1181px){
+    #hiddenRounds[hidden]{display:block}
+    #showAllRounds{display:none}
+  }
   .round{margin-top:14px}
   .round h3{margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;font:700 17px/1.2 var(--cond);border-bottom:2px solid var(--ink);padding-bottom:4px}
   .round h3 .when{font:500 13px var(--body);color:var(--muted)}
