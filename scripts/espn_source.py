@@ -86,8 +86,10 @@ def fetch_all(cache_dir=None, log=lambda s: None):
             cache_dir.mkdir(parents=True, exist_ok=True)
             cache_file.write_text(json.dumps(d), encoding="utf-8")
 
+    events = d.get("events", [])
+    log(f"[espn] {len(events)} kamp(er) i svaret for {day}.")
     out = []
-    for e in d.get("events", []):
+    for e in events:
         comp = e["competitions"][0]
         utc_dt = datetime.fromisoformat(e["date"].replace("Z", "+00:00"))
         date = utc_dt.astimezone(OSLO).strftime("%Y-%m-%d")
@@ -95,9 +97,14 @@ def fetch_all(cache_dir=None, log=lambda s: None):
         home = away = hg = ag = None
         winner_home = winner_away = False
         for c in comp["competitors"]:
-            name = TEAM_ID_TO_NAME.get(c["team"]["id"])
+            # ID-en har kommet både som str og int fra ESPN avhengig av
+            # endepunkt -- normaliser til str, ellers stryker oppslaget
+            # stille (Ingen -> hele kampen droppes lenger ned).
+            raw_id = c.get("team", {}).get("id")
+            name = TEAM_ID_TO_NAME.get(str(raw_id)) if raw_id is not None else None
             if name is None:
-                continue  # kamp mot lag utenfor Eliteserien (bør ikke skje for nor.1)
+                log(f"[espn]   ukjent lag-id {raw_id!r} ({type(raw_id).__name__}) i {e.get('name')}, hopper over laget")
+                continue
             score = c.get("score")
             v = score.get("value") if isinstance(score, dict) else None
             if c["homeAway"] == "home":
@@ -105,7 +112,9 @@ def fetch_all(cache_dir=None, log=lambda s: None):
             else:
                 away, ag, winner_away = name, v, bool(c.get("winner"))
         if not (home and away):
+            log(f"[espn]   {e.get('name')} ({date}): hjemme={home!r} borte={away!r} -- mangler ett eller begge lag, hopper over hele kampen")
             continue
+        log(f"[espn]   {home}-{away} ({date}): completed={completed} hg={hg!r} ag={ag!r}")
         if completed and hg is not None and ag is not None:
             # Selvmotsigende data sett i praksis: 0-0 men en "winner" merket.
             # Slikt forkastes her (ikke None -> spilt, men markert usikkert)
