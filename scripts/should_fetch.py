@@ -62,8 +62,8 @@ def should_fetch(now=None):
         if now.minute <= 10:
             return True, f"{len(pending)} kamp(er) over 6 timer uten resultat ('venter på resultat'), prøver i timeslotten"
         return False, f"{len(pending)} kamp(er) over 6 timer uten resultat, venter til neste timeslott"
-    if oslo_hour == 6:
-        return True, "ingen ventende kamper, men innenfor den daglige football-data.co.uk-sjekken (kl 06 norsk tid)"
+    if oslo_hour == 6 and now.minute <= 10:  # bare første kvarter-slott i 06-timen, ikke alle fire
+        return True, "ingen ventende kamper, men innenfor den daglige 06-sjekken (football-data.co.uk + ffk-revisjon)"
     return False, "ingen kamper har startet for over 105 minutter siden uten resultat"
 
 

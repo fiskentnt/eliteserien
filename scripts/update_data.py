@@ -16,6 +16,7 @@ import json
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).parent))
 import ffk_source
@@ -25,12 +26,20 @@ import merge_odds
 import fit_model
 
 ROOT = Path(__file__).parent.parent
+OSLO = ZoneInfo("Europe/Oslo")
 MONTH_ABBR = {1: "jan", 2: "feb", 3: "mar", 4: "apr", 5: "mai", 6: "jun",
               7: "jul", 8: "aug", 9: "sep", 10: "okt", 11: "nov", 12: "des"}
 
 FFK_CACHE_PATH = ROOT / "data" / "ffk_cache.json"
 FFK_MIN_INTERVAL_MIN = 60  # ffksupporter.net skrapes (16 sider) maks én gang i timen
 STATUS_PATH = ROOT / "data" / "status.json"
+AUDIT_STATE_PATH = ROOT / "data" / "audit_state.json"
+
+
+class DataAuditError(Exception):
+    """Avvik funnet i den daglige kontrollen mot ffksupporter.net (se
+    run_daily_audit). Skal feile kjøringen synlig, som EspnDataError."""
+    pass
 
 
 def month_range_label(dates):
@@ -154,16 +163,67 @@ def get_ffk_rows(cache_dir, log):
     return cached["rows"]
 
 
+def audit_against_ffk(matches_out, ffk_rows):
+    """Sammenligner ALLE spilte kamper i matches_out (vår fasit akkurat nå,
+    uansett hvilken kilde hvert resultat kom fra) mot ffksupporter.net sin
+    egen liste (ffk_rows, fra denne kjøringens get_ffk_rows()). Fanger opp
+    f.eks. at et ESPN-resultat vi tok inn tidlig, senere viser seg å ikke
+    stemme med det ffksupporter.net til slutt legger inn. Returnerer en
+    liste med tekstlige avvik (tom liste = alt stemmer)."""
+    ffk_by_pair = {(r["home"], r["away"]): r for r in ffk_rows}
+    diffs = []
+    for m in matches_out:
+        ffk = ffk_by_pair.get((m["home"], m["away"]))
+        if ffk is None:
+            diffs.append(f"{m['home']}-{m['away']} ({m['date']}): finnes i matches.json, men ikke i det hele tatt hos ffksupporter.net")
+        elif ffk["hg"] is None or ffk["ag"] is None:
+            diffs.append(f"{m['home']}-{m['away']} ({m['date']}): vi har {m['hg']}-{m['ag']}, ffksupporter.net har ikke registrert resultat ennå")
+        elif (ffk["hg"], ffk["ag"]) != (m["hg"], m["ag"]):
+            diffs.append(f"{m['home']}-{m['away']} ({m['date']}): vi har {m['hg']}-{m['ag']}, ffksupporter.net har {ffk['hg']}-{ffk['ag']}")
+    return diffs
+
+
+def run_daily_audit(matches_out, ffk_rows, now, log):
+    """Én gang i døgnet (06-vinduet, se should_fetch.py): full kontroll av
+    alle spilte kamper mot ffksupporter.net. Kjøres uansett hvor ofte
+    main() ellers kjører den dagen -- egen dato-sperre her, ikke bare
+    avhengig av 06-gatingen (som selv kan trigge flere ganger hvis en kamp
+    også er pending i samme time). Avvik feiler kjøringen (stempelet blir
+    rødt), med listen i loggen; "sjekket i dag"-merket settes uansett
+    utfall, så en reell uenighet ikke spammer feil hvert kvarter resten av
+    dagen -- den står synlig til neste dags kontroll (eller til noen ser på
+    det)."""
+    today = now.astimezone(OSLO).strftime("%Y-%m-%d")
+    state = json.loads(AUDIT_STATE_PATH.read_text(encoding="utf-8")) if AUDIT_STATE_PATH.exists() else {}
+    if state.get("checked_date") == today:
+        return
+    log(f"--- Daglig kontroll: {len(matches_out)} spilte kamper mot ffksupporter.net ---")
+    diffs = audit_against_ffk(matches_out, ffk_rows)
+    AUDIT_STATE_PATH.write_text(json.dumps({"checked_date": today, "diffs": len(diffs)}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    if diffs:
+        for d in diffs:
+            log(f"AVVIK: {d}")
+        raise DataAuditError(f"{len(diffs)} avvik mellom matches.json og ffksupporter.net:\n" + "\n".join(diffs))
+    log("Daglig kontroll: ingen avvik funnet.")
+
+
 def main(cache_dir=None):
     log = lambda s: print(s, file=sys.stderr)
     now = datetime.now(timezone.utc)
     try:
         try:
             espn_rows = espn_source.fetch_all(cache_dir=cache_dir, log=log)
+        except espn_source.EspnDataError:
+            # Datakvalitetsproblem (ferdigspilt kamp som ikke lot seg tolke),
+            # ikke en vanlig nettverks-/API-feil -- skal IKKE skjules. Feiler
+            # kjøringen synlig (stempelet blir rødt) i stedet for å risikere
+            # å bare hoppe stille over et ekte resultat, slik det gjorde
+            # 20. september 2026 (se git-historikken for den hendelsen).
+            raise
         except Exception as e:
-            # ESPN er bare en friskhets-snarvei -- ffksupporter.net er fasit
-            # uansett, så EN HVILKEN SOM HELST feil her (429, 400, timeout,
-            # DNS...) skal aldri felle hele kjøringen.
+            # Alt annet (429, 400, timeout, DNS...) er bare ESPN som er
+            # utilgjengelig -- ffksupporter.net er fasit uansett, så dette
+            # skal aldri felle hele kjøringen.
             log(f"ADVARSEL: ESPN feilet ({e}) -- fortsetter uten ESPN denne runden (ffksupporter dekker fortsatt resultatet).")
             espn_rows = []
 
@@ -187,6 +247,12 @@ def main(cache_dir=None):
         merge_odds.main()
         log("--- Tilpasser modellen ---")
         fit_model.main()
+
+        # Etter alt det normale arbeidet er gjort og lagret: den daglige
+        # kontrollen mot ffksupporter.net. Kan fortsatt feile KJØRINGEN
+        # (stempelet blir rødt), men hindrer ikke dagens resultater/odds/
+        # modell i å bli skrevet og committet først.
+        run_daily_audit(matches_out, ffk_rows, now, log)
 
         write_status(ok=True, now=now)
     except Exception as e:

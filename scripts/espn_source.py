@@ -51,6 +51,16 @@ class RateLimited(Exception):
         super().__init__(f"ESPN svarte {code}")
 
 
+class EspnDataError(Exception):
+    """En ferdigspilt kamp kunne ikke tolkes (ukjent lag eller manglende
+    resultat) -- et tegn på at ESPN har endret svarformatet igjen (som da
+    scoreboard-endepunktet viste seg å mangle score.value 20. sep 2026).
+    Skal IKKE fanges stille som en vanlig ESPN-feil (se update_data.py) --
+    kjøringen skal feile synlig, ikke risikere å hoppe over et ekte
+    resultat uten at noen merker det."""
+    pass
+
+
 def get_json(url):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"})
     try:
@@ -89,6 +99,7 @@ def fetch_all(cache_dir=None, log=lambda s: None):
     events = d.get("events", [])
     log(f"[espn] {len(events)} kamp(er) i svaret for {day}.")
     out = []
+    problems = []  # ferdigspilte kamper som ikke kunne tolkes -- se EspnDataError under
     for e in events:
         comp = e["competitions"][0]
         utc_dt = datetime.fromisoformat(e["date"].replace("Z", "+00:00"))
@@ -103,7 +114,10 @@ def fetch_all(cache_dir=None, log=lambda s: None):
             raw_id = c.get("team", {}).get("id")
             name = TEAM_ID_TO_NAME.get(str(raw_id)) if raw_id is not None else None
             if name is None:
-                log(f"[espn]   ukjent lag-id {raw_id!r} ({type(raw_id).__name__}) i {e.get('name')}, hopper over laget")
+                msg = f"ukjent lag-id {raw_id!r} ({type(raw_id).__name__}) i {e.get('name')} ({date})"
+                log(f"[espn]   {msg}, hopper over laget")
+                if completed:
+                    problems.append(msg)
                 continue
             score = c.get("score")
             if isinstance(score, dict):
@@ -126,9 +140,14 @@ def fetch_all(cache_dir=None, log=lambda s: None):
             else:
                 away, ag, winner_away = name, v, bool(c.get("winner"))
         if not (home and away):
-            log(f"[espn]   {e.get('name')} ({date}): hjemme={home!r} borte={away!r} -- mangler ett eller begge lag, hopper over hele kampen")
+            msg = f"{e.get('name')} ({date}): mangler ett eller begge lag (hjemme={home!r} borte={away!r})"
+            log(f"[espn]   {msg}, hopper over hele kampen")
+            if completed:
+                problems.append(msg)
             continue
         log(f"[espn]   {home}-{away} ({date}): completed={completed} hg={hg!r} ag={ag!r}")
+        if completed and (hg is None or ag is None):
+            problems.append(f"{home}-{away} ({date}): markert ferdigspilt (completed=True) men resultatet kunne ikke leses (hg={hg!r} ag={ag!r})")
         if completed and hg is not None and ag is not None:
             # Selvmotsigende data sett i praksis: 0-0 men en "winner" merket.
             # Slikt forkastes her (ikke None -> spilt, men markert usikkert)
@@ -138,6 +157,12 @@ def fetch_all(cache_dir=None, log=lambda s: None):
                         "hg": int(hg), "ag": int(ag), "suspect": suspect})
         else:
             out.append({"home": home, "away": away, "date": date, "hg": None, "ag": None, "suspect": False})
+
+    if problems:
+        raise EspnDataError(
+            f"{len(problems)} ferdigspilt(e) kamp(er) fra ESPN kunne ikke tolkes riktig:\n" +
+            "\n".join(f"  - {p}" for p in problems)
+        )
     return out
 
 
