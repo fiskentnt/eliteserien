@@ -142,12 +142,13 @@ def get_ffk_rows(cache_dir, log):
                 {"fetched_at": now.isoformat(timespec="seconds"), "rows": rows}, ensure_ascii=False, indent=2) + "\n",
                 encoding="utf-8")
             return rows
-        except ffk_source.RateLimited as e:
-            log(f"ADVARSEL: {e} -- venter til neste times-sjekk.")
+        except Exception as e:
+            wait_msg = "venter til neste times-sjekk" if isinstance(e, ffk_source.RateLimited) else "prøver igjen neste kjøring"
+            log(f"ADVARSEL: ffksupporter.net feilet ({e}) -- {wait_msg}.")
             if cached:
                 log(f"Bruker mellomlagrede ffksupporter-data fra for {age_min:.0f} min siden i mellomtiden.")
                 return cached["rows"]
-            raise  # ingen mellomlagrede data å falle tilbake på
+            raise  # ingen mellomlagrede data å falle tilbake på -- da skal kjøringen faktisk feile synlig
 
     log(f"ffksupporter.net sjekket for {age_min:.0f} min siden (maks én gang i timen) -- bruker mellomlagrede data.")
     return cached["rows"]
@@ -159,8 +160,11 @@ def main(cache_dir=None):
     try:
         try:
             espn_rows = espn_source.fetch_all(cache_dir=cache_dir, log=log)
-        except espn_source.RateLimited as e:
-            log(f"ADVARSEL: {e} -- fortsetter uten ESPN denne runden (ffksupporter dekker fortsatt resultatet).")
+        except Exception as e:
+            # ESPN er bare en friskhets-snarvei -- ffksupporter.net er fasit
+            # uansett, så EN HVILKEN SOM HELST feil her (429, 400, timeout,
+            # DNS...) skal aldri felle hele kjøringen.
+            log(f"ADVARSEL: ESPN feilet ({e}) -- fortsetter uten ESPN denne runden (ffksupporter dekker fortsatt resultatet).")
             espn_rows = []
 
         ffk_rows = get_ffk_rows(cache_dir, log)

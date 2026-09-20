@@ -7,24 +7,21 @@ kunne gi feil resultat for enkeltkamper (verifisert manuelt: to kamper i mai
 er alltid fasit når den har et resultat. ESPN gir ingen rundenummer, så runde
 kommer alltid fra ffksupporter.net.
 
-Ett API-kall per kjøring (rundetavle-endepunktet med en datoperiode), i
-stedet for tidligere 32 kall (16 lag x 2 endepunkt) — ESPN sin rolle er bare
-"har noe blitt spilt de siste dagene", ikke hele sesongoppsettet, så et par
-dagers vindu er nok.
+Ett API-kall per kjøring (rundetavle-endepunktet for dagens dato), i stedet
+for tidligere 32 kall (16 lag x 2 endepunkt) — ESPN sin rolle er bare "har
+noe blitt spilt i dag", ikke hele sesongoppsettet.
 """
 import json
 import sys
 import urllib.request
 import urllib.error
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
 LEAGUE = "nor.1"
 OSLO = ZoneInfo("Europe/Oslo")
-WINDOW_DAYS_BACK = 3  # dekker en hel helgerunde (fre-man) selv om vi sjekker sent
-WINDOW_DAYS_FWD = 1
 
 # ESPN lag-id -> visningsnavn slik det brukes i index.html
 TEAM_ID_TO_NAME = {
@@ -66,20 +63,24 @@ def get_json(url):
 
 
 def fetch_all(cache_dir=None, log=lambda s: None):
-    """Ett kall til rundetavle-endepunktet for et par dagers vindu rundt nå.
-    Returnerer deduplisert liste av {home, away, date, hg, ag} (hg/ag er None
-    for uspilte/ikke fullførte kamper). Datoer konverteres fra UTC til norsk
-    lokaltid."""
+    """Ett kall til rundetavle-endepunktet. MERK: nøyaktig spørreparameter-
+    format for ESPN sitt scoreboard-endepunkt for fotball er ikke verifisert
+    mot live API (ingen nettverkstilgang tilgjengelig da dette ble skrevet) —
+    et forsøk med datoperiode (?dates=YYYYMMDD-YYYYMMDD) ga 400 Bad Request i
+    produksjon. Bruker nå en enkelt dato (i dag, norsk tid) som et enklere,
+    mer sannsynlig gyldig forsøk. Feiler dette også: update_data.py fanger
+    ALLTID opp feil herfra og fortsetter uten ESPN (se main() sin try/except)
+    — ffksupporter.net er uansett fasit, så en feilende ESPN-sjekk degraderer
+    aldri til et ødelagt resultat, bare til sjeldnere friskhet."""
     now_oslo = datetime.now(OSLO)
-    start = (now_oslo - timedelta(days=WINDOW_DAYS_BACK)).strftime("%Y%m%d")
-    end = (now_oslo + timedelta(days=WINDOW_DAYS_FWD)).strftime("%Y%m%d")
+    day = now_oslo.strftime("%Y%m%d")
     cache_file = cache_dir and (cache_dir / "espn_scoreboard.json")
     if cache_file and cache_file.exists():
         d = json.loads(cache_file.read_text(encoding="utf-8"))
         log("[espn] scoreboard: fra lokal cache")
     else:
-        url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{LEAGUE}/scoreboard?dates={start}-{end}"
-        log(f"[espn] Henter rundetavle {start}-{end} (ett kall) ...")
+        url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{LEAGUE}/scoreboard?dates={day}"
+        log(f"[espn] Henter rundetavle for {day} (ett kall) ...")
         d = get_json(url)
         if cache_file:
             cache_dir.mkdir(parents=True, exist_ok=True)
