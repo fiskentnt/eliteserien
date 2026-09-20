@@ -23,16 +23,24 @@
 <style>
   :root{
     --bg:#e7eaea; --panel:#ffffff; --ink:#15191c; --muted:#5d666c; --line:#d6dbdb; --line-soft:#e8ecec;
-    /* --brann/--brann-deep/--eu/--q er faste fyllfarger (knapper, header, sterke
-       ruter) -- samme verdi i lyst og mørkt, alltid parret med hvit tekst, se
+    /* --brann/--brann-deep/--eu/--q er faste fyllfarger (knapper, sterke ruter)
+       -- samme verdi i lyst og mørkt, alltid parret med hvit tekst, se
        kontrollen i scratchpad-scriptet som validerte hele paletten mot WCAG AA.
        --*-text er samme farge brukt som SKRIFT mot --panel/--bg, og lysnes i
-       mørk modus siden en mørk rødfarge mot en mørk bakgrunn ikke er lesbar. */
+       mørk modus siden en mørk rødfarge mot en mørk bakgrunn ikke er lesbar.
+       --top-bg/--top-bg-deep ER themet (i motsetning til --brann): et helt
+       flatt rødt felt i full høyde leses som skrikende mot en mørk side på en
+       måte en liten rød knapp ikke gjør, så mørk modus dempes egen. */
+    --top-bg:#c4111d; --top-bg-deep:#8d0a13;
     --brann:#c4111d; --brann-deep:#8d0a13; --brann-soft:#fdecee; --brann-text:#c4111d;
     --formbox-red-bg:#c4111d;
     --eu:#1d7a63; --eu-soft:#e2f1ec; --eu-text:#1d7a63;
     --q:#cf951a; --q-soft:#fbf1dc; --q-text:#9a6c08; --q-border:#d9b872; --q-note:#8a6a1f;
     --ned:#6c7479;
+    /* Nøytral, svak markering for "laget du følger" i tabell/kampliste --
+       selve fargeidentiteten står i teksten (fet + klubbfarge), ikke i en
+       farget bakgrunnsvask som lett leses som en advarsel (særlig røde lag). */
+    --highlight-bg:#fdecee;
     --strong-bg:#15191c; --strong-fg:#ffffff; --strong-bg-hover:#000000;
     --cut-line:#b7bfbf;
     --input-bg:#f6f7f7; --sim-bg:#e3e7e8; --sim-border:#c3cacc;
@@ -46,34 +54,41 @@
      tema-knappen (setTheme() i JS), som setter data-theme og dermed vinner
      over media-spørringen. Alle fargeverdier under er validert mot WCAG AA
      (4.5:1 for tekst, 3:1 for UI-grenser som formboksene) -- se
-     scratchpad/contrast.py fra utviklingen av denne funksjonen. */
+     scratchpad/contrast.py fra utviklingen av denne funksjonen. Bakgrunn og
+     paneler er bevisst gitt god avstand (bg #15181a, panel #1f2426, ikke
+     nesten-sorte og nesten-like) slik at kortene og radskillene faktisk
+     synes -- se samme scriptet for luminans-sjekken. */
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --bg:#14171a; --panel:#1c2024; --ink:#eef0f1; --muted:#9aa3a8; --line:#34393d; --line-soft:#262b2e;
+      --bg:#15181a; --panel:#1f2426; --ink:#eef0f1; --muted:#9aa3a8; --line:#454d53; --line-soft:#343b40;
+      --top-bg:#62181d; --top-bg-deep:#451115;
       --brann-soft:rgba(255,107,116,.12); --brann-text:#ff6b74; --formbox-red-bg:#d1272f;
       --eu-soft:rgba(79,211,171,.14); --eu-text:#4fd3ab;
       --q-soft:rgba(224,173,74,.12); --q-text:#e0ad4a; --q-border:#6b5220; --q-note:#caa059;
       --ned:#8b939a;
-      --strong-bg:#eef0f1; --strong-fg:#15191c; --strong-bg-hover:#ffffff;
-      --cut-line:#454b4f;
-      --input-bg:#23282b; --sim-bg:#262b2e; --sim-border:#3b4247;
-      --played-bg:#1f2327; --played-fg:#8b939a; --played-score-bg:#282d31; --played-score-fg:#9aa3a8;
-      --ned-row-a:#1f2327; --ned-row-b:#22262a;
-      --hist-flat:#4a3d40; --hist-eu:#3f7864; --hist-q:#8a6a2c; --hist-n:#8a4a50;
+      --highlight-bg:#262c30;
+      --strong-bg:#3a4247; --strong-fg:#eef0f1; --strong-bg-hover:#4a5359;
+      --cut-line:#484f51;
+      --input-bg:#262c2d; --sim-bg:#292f30; --sim-border:#3e4649;
+      --played-bg:#222729; --played-fg:#8b939a; --played-score-bg:#2b3133; --played-score-fg:#9aa3a8;
+      --ned-row-a:#222729; --ned-row-b:#252a2c;
+      --hist-flat:#4d4142; --hist-eu:#427c66; --hist-q:#8d6e2e; --hist-n:#8d4e52;
     }
   }
   :root[data-theme="dark"]{
-    --bg:#14171a; --panel:#1c2024; --ink:#eef0f1; --muted:#9aa3a8; --line:#34393d; --line-soft:#262b2e;
+    --bg:#15181a; --panel:#1f2426; --ink:#eef0f1; --muted:#9aa3a8; --line:#454d53; --line-soft:#343b40;
+    --top-bg:#62181d; --top-bg-deep:#451115;
     --brann-soft:rgba(255,107,116,.12); --brann-text:#ff6b74; --formbox-red-bg:#d1272f;
     --eu-soft:rgba(79,211,171,.14); --eu-text:#4fd3ab;
     --q-soft:rgba(224,173,74,.12); --q-text:#e0ad4a; --q-border:#6b5220; --q-note:#caa059;
     --ned:#8b939a;
-    --strong-bg:#eef0f1; --strong-fg:#15191c; --strong-bg-hover:#ffffff;
-    --cut-line:#454b4f;
-    --input-bg:#23282b; --sim-bg:#262b2e; --sim-border:#3b4247;
-    --played-bg:#1f2327; --played-fg:#8b939a; --played-score-bg:#282d31; --played-score-fg:#9aa3a8;
-    --ned-row-a:#1f2327; --ned-row-b:#22262a;
-    --hist-flat:#4a3d40; --hist-eu:#3f7864; --hist-q:#8a6a2c; --hist-n:#8a4a50;
+    --highlight-bg:#262c30;
+    --strong-bg:#3a4247; --strong-fg:#eef0f1; --strong-bg-hover:#4a5359;
+    --cut-line:#484f51;
+    --input-bg:#262c2d; --sim-bg:#292f30; --sim-border:#3e4649;
+    --played-bg:#222729; --played-fg:#8b939a; --played-score-bg:#2b3133; --played-score-fg:#9aa3a8;
+    --ned-row-a:#222729; --ned-row-b:#252a2c;
+    --hist-flat:#4d4142; --hist-eu:#427c66; --hist-q:#8d6e2e; --hist-n:#8d4e52;
   }
   html{background:var(--bg)}
   * { transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
@@ -88,8 +103,8 @@
   body{padding-bottom:env(safe-area-inset-bottom,0px)}
 
   /* Topp — kompakt: maks ca 180px på PC, se .top-in/.status under */
-  .top{background:var(--brann);color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 24px 0;position:relative;overflow:hidden}
-  .top::after{content:"";position:absolute;inset:auto 0 0 0;height:5px;background:repeating-linear-gradient(90deg,var(--brann-deep) 0 16px,var(--brann) 16px 32px)}
+  .top{background:var(--top-bg);color:#fff;padding:calc(10px + env(safe-area-inset-top,0px)) 24px 0;position:relative;overflow:hidden}
+  .top::after{content:"";position:absolute;inset:auto 0 0 0;height:5px;background:repeating-linear-gradient(90deg,var(--top-bg-deep) 0 16px,var(--top-bg) 16px 32px)}
   .top-in{max-width:1380px;margin:0 auto;padding-bottom:10px;padding-right:44px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:center}
   /* Tema-knapp: sol/måne-ikon øverst til høyre i det røde feltet. Absolutt
      posisjonert i .top (ikke en del av .top-in-gridden), så den blir stående
@@ -187,7 +202,7 @@
   td.team{font-weight:500}
   td.pts{font:800 19px/1 var(--cond);padding-right:12px}
   td.gd{color:var(--muted)}
-  tr.brann td{background:var(--brann-soft)}
+  tr.brann td{background:var(--highlight-bg)}
   tr.brann td.team{color:var(--brann-text);font-weight:700}
   tr.brann td.pts{color:var(--brann-text)}
   tr.cut td{border-bottom:2px dashed var(--cut-line)}
@@ -320,7 +335,7 @@
   .match .when{text-align:center;font-size:10.5px;line-height:1;white-space:nowrap}
   .match .when .t{font-weight:700;color:var(--ink)}
   .match.played .when .t{color:var(--played-fg)}
-  .match.brann{background:var(--brann-soft)}
+  .match.brann{background:var(--highlight-bg)}
   .match .b{color:var(--brann-text);font-weight:700}
   .match input{width:40px;height:34px;text-align:center;font:700 19px/1 var(--cond);border:1px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--ink);padding:0}
   .match input.set{background:var(--strong-bg);color:var(--strong-fg);border-color:var(--strong-bg)}
@@ -567,12 +582,41 @@ const FORM_K = 0.015;
 // treffer rekke-målet uten den kostnaden. Bonus 0,60 per ekstra steg (tak 5)
 // er valgt: nær markedets faktiske reaksjon (1,11x av de samme 77 rekkene)
 // og blant de beste på rullerende log-loss (-0,0030) — flat multiplikator er
-// forkastet nettopp fordi den gjør enkeltkamp-treffsikkerheten dårligere. Bare
-// de to STEDENE som driver det synlige Form-tallet direkte (computeLiveState,
-// teamFormHistory) bruker rampen — Monte Carlo-simuleringen i Workeren er en
-// egen, allerede kalibrert prosess og røres ikke i denne omgangen.
+// forkastet nettopp fordi den gjør enkeltkamp-treffsikkerheten dårligere.
+// Rampen brukes samme sted i Workeren også (runProb/runTypical), se
+// streakKFor() der — samme regel begge steder, se DRIFT_CAP_* rett under for
+// hvorfor det trengs en grense i tillegg.
 const STREAK_BONUS = 0.6, STREAK_CAP = 5;
 function kFor(streakLen){ return FORM_K*(1+STREAK_BONUS*(Math.min(streakLen,STREAK_CAP)-1)); }
+// Grense for hvor langt en lagstyrke kan bevege seg fra SESONGSTART (modellens
+// eget anslag) i én simulert sesong, pluss en svak tilbaketrekking mot det
+// samme anslaget hver kamp. Uten dette kan den "varme" oppdateringen (over)
+// løpe løpsk: et lag som vinner over forventning blir sterkere, som gjør
+// neste overraskelse mer sannsynlig, som gjør laget enda sterkere -- en
+// selvforsterkende løkke som i verste fall ga enkeltkamper med over 150
+// forventede mål i test (se scratchpad/sim_test.js fra undersøkelsen).
+// Grensene er ikke gjettet: att/con-grensen (0,5) og ha/hc-grensen (0,35) er
+// satt like over den STØRSTE faktiske sesong-lange bevegelsen (tidlig- mot
+// full-sesong-tilpasning) blant 224 lag-sesonger i NOR.csv 2012-2025 (att
+// maks 0,46, con maks 0,39, ha maks 0,30, hc maks 0,33 — se
+// scratchpad/measure_drift.py), så en simulert sesong kan fortsatt vise noe
+// like ekstremt som den mest ekstreme ekte sesongen på 14 år, men ikke mer.
+// Tilbaketrekkingen (2 % av avviket fra start, hver kamp) er bevisst svak —
+// den skal dempe VEDVARENDE drift over en hel sesong, ikke viske ut en
+// reell, kortvarig formsvingning midt i sesongen.
+const DRIFT_CAP_ATTCON = 0.5, DRIFT_CAP_HAHC = 0.35, DRIFT_REVERSION = 0.02;
+function applyDrift(arr, base, i, delta, cap){
+  let v = arr[i] + delta - DRIFT_REVERSION*(arr[i]-base[i]);
+  arr[i] = Math.min(base[i]+cap, Math.max(base[i]-cap, v));
+}
+// Ekstra sikring i TILLEGG til DRIFT_CAP_* over, ikke i stedet for: et
+// absolutt tak på forventede mål i én kamp, uansett hvor lagstyrkene måtte
+// stå. 6 er rett over det høyeste noe lag faktisk har scoret i en
+// Eliteserien-kamp 2012-2026 (8 mål, se NOR.csv) -- Poisson(6) gir fortsatt
+// god sjanse for et resultat i den størrelsesordenen, uten å tillate en
+// "forventning" som aldri kan være riktig uansett hva som skulle drive
+// lagstyrkene opp seinere.
+const MAX_LAMBDA_LOG = Math.log(6);
 // Starttilstand for rekke-sporing: et lags NÅVÆRENDE strake W/L-rekke fra
 // ekte resultater (STATS[t].form, kronologisk), FØR eventuelle scenario-
 // eller sesong-kamper legges til oppå. En uavgjort nullstiller rekken.
@@ -698,7 +742,7 @@ function stateRate(state,home,away){
   const h=TI[home], a=TI[away];
   let eh=MODEL.mu+MODEL.H+state.att[h]+state.ha[h]+state.con[a]-state.hc[a];
   let ea=MODEL.mu+state.att[a]-state.ha[a]+state.con[h]+state.hc[h];
-  eh=Math.min(9,Math.max(-9,eh)); ea=Math.min(9,Math.max(-9,ea));
+  eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
   return [Math.exp(eh), Math.exp(ea)];
 }
 // Bygger lagstyrkene på nytt: kopi av MODEL (omindeksert til TI-rekkefølge,
@@ -710,6 +754,12 @@ function computeLiveState(){
   const n=TEAMS.length;
   const att=new Float64Array(n), con=new Float64Array(n), ha=new Float64Array(n), hc=new Float64Array(n);
   TEAMS.forEach((t,i)=>{ const mi=MTI[t]; att[i]=MODEL.att[mi]; con[i]=MODEL.con[mi]; ha[i]=MODEL.ha[mi]; hc[i]=MODEL.hc[mi]; });
+  // Grensen (DRIFT_CAP_*) måles fra DENNE starttilstanden -- modellens eget
+  // anslag akkurat nå, ikke sesongstart i kalendersans. Riktig referanse
+  // uansett når på sesongen dette kalles: kampene som allerede er inne har
+  // allerede flyttet MODEL.att/con et stykke, og det er bevegelsen HERFRA og
+  // videre (resten av det som fylles inn i scenariet) grensen skal dempe.
+  const att0=Float64Array.from(att), con0=Float64Array.from(con), ha0=Float64Array.from(ha), hc0=Float64Array.from(hc);
   const state={att,con,ha,hc};
   // Rekke-sporing starter fra ekte resultater (ikke fra 0 her), slik at en
   // scenario-forlengelse av en pågående ekte rekke fortsetter den riktig.
@@ -728,8 +778,10 @@ function computeLiveState(){
     streakLen[m.away]=(resA!=='D'&&streakRes[m.away]===resA)?streakLen[m.away]+1:(resA==='D'?0:1);
     streakRes[m.away]=resA==='D'?null:resA;
     const kH=kFor(streakLen[m.home]), kA=kFor(streakLen[m.away]);
-    att[h]+=kH*rh; ha[h]+=kH*rh; con[a]+=kH*rh; hc[a]-=kH*rh;
-    att[a]+=kA*ra; ha[a]-=kA*ra; con[h]+=kA*ra; hc[h]+=kA*ra;
+    applyDrift(att,att0,h,kH*rh,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,h,kH*rh,DRIFT_CAP_HAHC);
+    applyDrift(con,con0,a,kH*rh,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,a,-kH*rh,DRIFT_CAP_HAHC);
+    applyDrift(att,att0,a,kA*ra,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,a,-kA*ra,DRIFT_CAP_HAHC);
+    applyDrift(con,con0,h,kA*ra,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,h,kA*ra,DRIFT_CAP_HAHC);
   });
   state.streakLen = TEAMS.map(t=>streakLen[t]);
   state.streakRes = TEAMS.map(t=>streakRes[t]==='W'?1:streakRes[t]==='L'?-1:0); // 0=ingen/uavgjort, 1=W, -1=L (strukturklonbart tall, ikke streng/null)
@@ -1016,6 +1068,18 @@ function streakKFor(baseK, len, bonus, cap){
   var m = len<cap ? len : cap;
   return baseK*(1+bonus*(m-1));
 }
+// Grense og tilbaketrekking for lagstyrke-drift, delt med hovedtråden (samme
+// tall og samme formel som applyDrift()/DRIFT_CAP_* der -- se kommentaren
+// ved den definisjonen for hvorfor grensene er akkurat 0,5/0,35, og hvorfor
+// en simulert sesong ellers kan løpe løpsk).
+var DRIFT_CAP_ATTCON = 0.5, DRIFT_CAP_HAHC = 0.35, DRIFT_REVERSION = 0.02;
+function applyDrift(arr, base, i, delta, cap){
+  var v = arr[i] + delta - DRIFT_REVERSION*(arr[i]-base[i]);
+  arr[i] = Math.min(base[i]+cap, Math.max(base[i]-cap, v));
+}
+// Samme absolutte mål-tak som hovedtråden (MAX_LAMBDA_LOG der) -- se
+// kommentaren ved den definisjonen.
+var MAX_LAMBDA_LOG = Math.log(6);
 // ---- Europa/Ned/Brann-boksen: 4000 "hot" simulerte sesonger. Rekke-
 // forsterkningen (streakBonus/streakCap/streakLen/streakRes, samme regel som
 // Form-kolonnen) må nullstilles til STARTtilstanden (d.streakLen/d.streakRes)
@@ -1040,7 +1104,7 @@ function runProb(d){
     for(var j=0;j<open.length;j++){
       var h=open[j][0], a=open[j][1];
       var eh=mu+H+attS[h]+haS[h]+conS[a]-hcS[a], ea=mu+attS[a]-haS[a]+conS[h]+hcS[h];
-      eh=Math.min(9,Math.max(-9,eh)); ea=Math.min(9,Math.max(-9,ea));
+      eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
       var lh=Math.exp(eh), la=Math.exp(ea);
       var x=poisSample(lh), y=poisSample(la);
       G[h]+=x-y; G[a]+=y-x; F[h]+=x; F[a]+=y;
@@ -1052,8 +1116,10 @@ function runProb(d){
       streakLenS[a] = (resA!==0 && streakResS[a]===resA) ? streakLenS[a]+1 : (resA===0?0:1);
       streakResS[a] = resA;
       var kH=streakKFor(k, streakLenS[h], streakBonus, streakCap), kA=streakKFor(k, streakLenS[a], streakBonus, streakCap);
-      attS[h]+=kH*rh; haS[h]+=kH*rh; conS[a]+=kH*rh; hcS[a]-=kH*rh;
-      attS[a]+=kA*ra; haS[a]-=kA*ra; conS[h]+=kA*ra; hcS[h]+=kA*ra;
+      applyDrift(attS,d.att,h,kH*rh,DRIFT_CAP_ATTCON); applyDrift(haS,d.ha,h,kH*rh,DRIFT_CAP_HAHC);
+      applyDrift(conS,d.con,a,kH*rh,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,a,-kH*rh,DRIFT_CAP_HAHC);
+      applyDrift(attS,d.att,a,kA*ra,DRIFT_CAP_ATTCON); applyDrift(haS,d.ha,a,-kA*ra,DRIFT_CAP_HAHC);
+      applyDrift(conS,d.con,h,kA*ra,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,h,kA*ra,DRIFT_CAP_HAHC);
     }
     for(var i3=0;i3<n;i3++) R[i3]=rnd();
     ord.sort(function(p,q){ return P[q]-P[p] || G[q]-G[p] || F[q]-F[p] || R[q]-R[p]; });
@@ -1104,7 +1170,7 @@ function runTypical(d){
   for(var j0=0;j0<m;j0++){
     var h0=hiArr[j0], a0=aiArr[j0];
     var eh0=mu+H+att0[h0]+ha0[h0]+con0[a0]-hc0[a0], ea0=mu+att0[a0]-ha0[a0]+con0[h0]+hc0[h0];
-    eh0=Math.min(9,Math.max(-9,eh0)); ea0=Math.min(9,Math.max(-9,ea0));
+    eh0=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh0)); ea0=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea0));
     var pr0=outcomeProbs(Math.exp(eh0), Math.exp(ea0));
     var sp=(pr0.H<0.30?pr0.H:0)+(pr0.D<0.30?pr0.D:0)+(pr0.B<0.30?pr0.B:0);
     expTotal+=sp; expByRound[roundIdxArr[j0]]+=sp;
@@ -1126,7 +1192,7 @@ function runTypical(d){
     for(var j=0;j<m;j++){
       var h=hiArr[j], a=aiArr[j];
       var eh=mu+H+att[h]+ha[h]+con[a]-hc[a], ea=mu+att[a]-ha[a]+con[h]+hc[h];
-      eh=Math.min(9,Math.max(-9,eh)); ea=Math.min(9,Math.max(-9,ea));
+      eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
       var lh=Math.exp(eh), la=Math.exp(ea);
       var probs=outcomeProbs(lh,la);
       var x,y,cat,catP;
@@ -1145,8 +1211,10 @@ function runTypical(d){
       streakLen[a] = (resA!==0 && streakRes[a]===resA) ? streakLen[a]+1 : (resA===0?0:1);
       streakRes[a] = resA;
       var kH=streakKFor(k, streakLen[h], streakBonus, streakCap), kA=streakKFor(k, streakLen[a], streakBonus, streakCap);
-      att[h]+=kH*rh; ha[h]+=kH*rh; con[a]+=kH*rh; hc[a]-=kH*rh;
-      att[a]+=kA*ra; ha[a]-=kA*ra; con[h]+=kA*ra; hc[h]+=kA*ra;
+      applyDrift(att,att0,h,kH*rh,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,h,kH*rh,DRIFT_CAP_HAHC);
+      applyDrift(con,con0,a,kH*rh,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,a,-kH*rh,DRIFT_CAP_HAHC);
+      applyDrift(att,att0,a,kA*ra,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,a,-kA*ra,DRIFT_CAP_HAHC);
+      applyDrift(con,con0,h,kA*ra,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,h,kA*ra,DRIFT_CAP_HAHC);
     }
     var diffTotal=Math.abs(actualTotal-expTotal);
     var violation=Math.max(0, diffTotal-tolTotal);
@@ -1477,7 +1545,7 @@ function renderModelTbl(){
   TEAMS.forEach(t=>{ const i=TI[t], S=STATS[t];
     const hf=Math.exp(mu+H+att[i]+ha[i]), hm=Math.exp(mu+con[i]+hc[i]);
     const bf=Math.exp(mu+att[i]-ha[i]), bm=Math.exp(mu+H+con[i]-hc[i]);
-    h+=`<tr${t==='Brann'?' style="background:var(--brann-soft)"':''}><td class="team">${t}</td><td>${formHtml(t)}</td>
+    h+=`<tr${t==='Brann'?' style="background:var(--highlight-bg)"':''}><td class="team">${t}</td><td>${formHtml(t)}</td>
       <td>${f2(S.h[1]/S.h[0])}</td><td>${S.h[2]}-${S.h[3]}</td><td>${f2(S.b[1]/S.b[0])}</td><td>${S.b[2]}-${S.b[3]}</td>
       <td>${f1(hf)}-${f1(hm)}</td><td>${f1(bf)}-${f1(bm)}</td></tr>`; });
   document.getElementById('modelTbl').innerHTML=h+'</tbody>';
@@ -1495,6 +1563,7 @@ function teamFormHistory(team){
   const n=TEAMS.length;
   const att=new Float64Array(n), con=new Float64Array(n), ha=new Float64Array(n), hc=new Float64Array(n);
   TEAMS.forEach((t,i)=>{ const mi=MTI[t]; att[i]=MODEL.att[mi]; con[i]=MODEL.con[mi]; ha[i]=MODEL.ha[mi]; hc[i]=MODEL.hc[mi]; });
+  const att0=Float64Array.from(att), con0=Float64Array.from(con), ha0=Float64Array.from(ha), hc0=Float64Array.from(hc);
   const state={att,con,ha,hc};
   const points=[];
   const streakLen={}, streakRes={}; TEAMS.forEach(t=>{ streakLen[t]=0; streakRes[t]=null; });
@@ -1507,8 +1576,10 @@ function teamFormHistory(team){
     streakLen[m.away]=(resA!=='D'&&streakRes[m.away]===resA)?streakLen[m.away]+1:(resA==='D'?0:1);
     streakRes[m.away]=resA==='D'?null:resA;
     const kH=kFor(streakLen[m.home]), kA=kFor(streakLen[m.away]);
-    att[h]+=kH*rh; ha[h]+=kH*rh; con[a]+=kH*rh; hc[a]-=kH*rh;
-    att[a]+=kA*ra; ha[a]-=kA*ra; con[h]+=kA*ra; hc[h]+=kA*ra;
+    applyDrift(att,att0,h,kH*rh,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,h,kH*rh,DRIFT_CAP_HAHC);
+    applyDrift(con,con0,a,kH*rh,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,a,-kH*rh,DRIFT_CAP_HAHC);
+    applyDrift(att,att0,a,kA*ra,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,a,-kA*ra,DRIFT_CAP_HAHC);
+    applyDrift(con,con0,h,kA*ra,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,h,kA*ra,DRIFT_CAP_HAHC);
     if(m.home===team || m.away===team){
       const scores=formScores(Array.from(att),Array.from(con));
       points.push({date:m.date, score:scores[TI[team]]});
