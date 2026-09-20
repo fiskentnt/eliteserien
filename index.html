@@ -1203,12 +1203,16 @@ var MAX_LAMBDA_LOG = Math.log(6);
 // forsterkningen (streakBonus/streakCap/streakLen/streakRes, samme regel som
 // Form-kolonnen) må nullstilles til STARTtilstanden (d.streakLen/d.streakRes)
 // for HVER av de N simulerte sesongene -- en rekke i sesong 37 skal ikke
-// arve rekken fra sesong 36. ----
+// arve rekken fra sesong 36. Frøet (d.seed) er avledet av de låste
+// resultatene i scenarioet (se hashStr()/runMCAsync() i hovedtråden), ikke
+// Math.random() -- samme scenario skal alltid gi samme prosenter, ikke støy
+// på ±1-2 prosentpoeng hver gang render() utløses uten at noe faktisk endret
+// seg. ----
 function runProb(d){
   var mu=d.mu, H=d.H, k=d.k, P0=d.P0, G0=d.G0, F0=d.F0, open=d.open, N=d.N, runId=d.runId;
   var streakBonus=d.streakBonus, streakCap=d.streakCap;
   var n = P0.length;
-  var rnd = mulberry32((Math.random()*4294967296)>>>0);
+  var rnd = mulberry32(d.seed);
   var cnt=[]; for(var i=0;i<n;i++) cnt.push(new Float64Array(n));
   var P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
   var attS=new Float64Array(n), conS=new Float64Array(n), haS=new Float64Array(n), hcS=new Float64Array(n);
@@ -1338,7 +1342,16 @@ function runTypical(d){
   }});
 }
 `;
-let mcWorker=null, mcRunId=0, mcTimer=null, lastMC=null;
+let mcWorker=null, mcRunId=0, mcTimer=null, lastMC=null, lastMCScenarioKey=null;
+// Fast, avledet av det låste scenarioet (samme streng-mønster som
+// encodeScenario()) i stedet for Math.random() -- samme scenario skal alltid
+// gi samme prosenter i tabellen, ikke ±1-2 prosentpoeng støy hver gang render()
+// tilfeldigvis utløses uten at noe resultat faktisk er endret.
+function hashStr(s){
+  var h=2166136261;
+  for(var i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619); }
+  return h>>>0;
+}
 const typicalResolvers = new Map(); // runId -> resolve-funksjon, for "typical"-jobber
 let typicalRunId = 0;
 let lastTypicalDiagnostics = null; // for feilsøking/verifisering, se console
@@ -1374,6 +1387,7 @@ function runMCAsync(N){
   const n=TEAMS.length, P0=new Float64Array(n), G0=new Float64Array(n), F0=new Float64Array(n);
   BASE.forEach(b=>{ const i=TI[b[0]]; P0[i]=b[2]*3+b[3]; G0[i]=b[5]-b[6]; F0[i]=b[5]; });
   const open=[];
+  const scenarioParts=[];
   // Alle utfylte kamper (også grå simulerte) står fast — bare tomme kamper
   // simuleres, slik at tabellen og sannsynlighetene alltid beskriver samme
   // scenario. Se simNote i render() for varselteksten dette utløser.
@@ -1382,11 +1396,21 @@ function runMCAsync(N){
     if(m.hg!=null&&m.ag!=null){
       G0[h]+=m.hg-m.ag; G0[a]+=m.ag-m.hg; F0[h]+=m.hg; F0[a]+=m.ag;
       if(m.hg>m.ag)P0[h]+=3; else if(m.hg<m.ag)P0[a]+=3; else {P0[h]++;P0[a]++;}
+      scenarioParts.push(`${h}.${a}.${m.hg}.${m.ag}`);
     } else open.push([h,a]);
   });
+  // Scenarioet er fullt bestemt av de låste resultatene over (LIVE er selv
+  // avledet av akkurat de samme resultatene, se refreshLiveState() i
+  // render()) — er nøkkelen uendret siden forrige kjøring, er resultatet
+  // garantert identisk, og vi slipper en helt ny 4000-sesongers kjøring bare
+  // fordi noe utløste render() på nytt (f.eks. av/på-kryssing av en boks som
+  // ikke selv endrer noe resultat).
+  const scenarioKey = scenarioParts.join('_');
+  if(scenarioKey===lastMCScenarioKey && lastMC) return;
+  lastMCScenarioKey = scenarioKey;
   mcRunId++;
   getWorker().postMessage({
-    runId:mcRunId, mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+    runId:mcRunId, seed:hashStr(scenarioKey), mu:MODEL.mu, H:MODEL.H, k:FORM_K,
     streakBonus:STREAK_BONUS, streakCap:STREAK_CAP,
     streakLen:Array.from(LIVE.streakLen), streakRes:Array.from(LIVE.streakRes),
     att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
