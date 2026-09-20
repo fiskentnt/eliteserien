@@ -152,6 +152,7 @@
   .odds-row{display:flex;gap:10px;flex-wrap:wrap;font-size:10.5px;color:var(--muted)}
   .odds-row strong{display:block;font:800 15px/1 var(--cond);color:var(--ink)}
   .odds-row .n strong{color:var(--brann)}
+  .odds-row.flat{font-size:12.5px;color:var(--ink)}
   .hist{display:grid;grid-template-columns:repeat(16,1fr);gap:1px;align-items:end;height:20px;margin-top:6px}
   .hist i{display:block;background:#e3c3c6;border-radius:1px 1px 0 0;min-height:1px}
   .hist i.eu{background:#8cc3b3}.hist i.q{background:#e8c374}.hist i.n{background:#c98a90}
@@ -742,13 +743,21 @@ function fillOdds(){
     b.textContent=pctTxt(ned); b.classList.toggle('hot',ned>=0.5);
   });
   const box=document.getElementById('odds'); if(!box) return;
-  const d=lastMC['Brann'], mx=Math.max(...d), nedP=d[14]+d[15];
-  box.innerHTML=`<div class="odds-row" title="Sannsynlighet for sluttplassering, ut fra modellen">
-      <span><strong>${pctTxt(d[0]+d[1]+d[2])}</strong>topp 3</span>
-      <span><strong>${pctTxt(d.slice(3,13).reduce((x,y)=>x+y,0))}</strong>4 til 13</span>
-      <span><strong>${pctTxt(d[13])}</strong>kvalik</span>
-      <span class="n"><strong>${pctTxt(nedP)}</strong>nedrykk</span></div>
-    <div class="hist" aria-hidden="true" title="Sannsynlighet for sluttplassering, ut fra modellen">${d.map((v,i)=>`<i class="${i<3?'eu':i===13?'q':i>=14?'n':''}" style="height:${(v/mx*100).toFixed(1)}%" title="${i+1}. plass: ${pctTxt(v)}"></i>`).join('')}</div>
+  const d=lastMC['Brann'], mx=Math.max(...d);
+  const gull=d[0], europa=d[0]+d[1]+d[2], kvalik=d[13], nedrykk=d[14]+d[15];
+  const midtP=d.slice(3,13).reduce((x,y)=>x+y,0);
+  // Når verken gull, Europa, kvalik eller nedrykk er reelle muligheter (alle
+  // under 1%) sier de fire tallene ingenting — vis heller én forklarende
+  // linje enn en rad med fire "<1 %"-verdier.
+  const row = (gull<0.01 && europa<0.01 && kvalik<0.01 && nedrykk<0.01)
+    ? `<div class="odds-row flat" title="Sannsynlighet for sluttplassering, ut fra modellen">Ingenting er i spill: Brann ender mellom 4. og 13. plass i ${Math.round(midtP*100)} av 100 simuleringer.</div>`
+    : `<div class="odds-row" title="Sannsynlighet for sluttplassering, ut fra modellen">
+      ${gull>0.01?`<span><strong>${pctTxt(gull)}</strong>Gull</span>`:''}
+      <span><strong>${pctTxt(europa)}</strong>Europa</span>
+      <span><strong>${pctTxt(kvalik)}</strong>Kvalik</span>
+      <span class="n"><strong>${pctTxt(nedrykk)}</strong>Nedrykk</span></div>`;
+  box.innerHTML=row+
+    `<div class="hist" aria-hidden="true" title="Sannsynlighet for sluttplassering, ut fra modellen">${d.map((v,i)=>`<i class="${i<3?'eu':i===13?'q':i>=14?'n':''}" style="height:${(v/mx*100).toFixed(1)}%" title="${i+1}. plass: ${pctTxt(v)}"></i>`).join('')}</div>
     <div class="hist-l">${d.map((v,i)=>`<span>${i+1}</span>`).join('')}</div>`;
 }
 function scheduleMC(){ clearTimeout(mcTimer); mcTimer=setTimeout(()=>runMCAsync(4000), 250); }
