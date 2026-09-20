@@ -2,7 +2,9 @@ name: Oppdater odds for kommende kamper
 
 on:
   schedule:
-    # Kl. 08 og 16 UTC hver dag.
+    # Kl. 08 og 16 UTC hver dag -- selve kjøringen sjekker først om det er
+    # noen vits (uspilte kamper innen 7 dager, og at kvoten hos The Odds API
+    # ikke nylig ble lav), se scripts/should_fetch_odds.py.
     - cron: "13 8 * * *"
     - cron: "13 16 * * *"
   workflow_dispatch: {}
@@ -20,24 +22,34 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Sjekk om det er noen vits (kamper innen 7 dager, kvote ikke lav)
+        id: gate
+        env:
+          FORCE_FETCH: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+        run: python3 scripts/should_fetch_odds.py
+
       - uses: actions/setup-python@v5
+        if: steps.gate.outputs.should_fetch == 'true'
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Installer avhengigheter (numpy, scipy)
+        if: steps.gate.outputs.should_fetch == 'true'
         run: pip install -r requirements.txt
 
       - name: Hent kommende odds, slå sammen kilder og tilpass modellen på nytt
+        if: steps.gate.outputs.should_fetch == 'true'
         env:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: python3 scripts/update_odds.py
 
       - name: Committer og pusher hvis noe endret seg
+        if: always() && steps.gate.outputs.should_fetch == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/odds_upcoming.json data/odds.json data/model.json
+          git add data/odds_upcoming.json data/odds.json data/model.json data/odds_quota.json
           [ -f data/odds_captured.json ] && git add data/odds_captured.json
           if git diff --cached --quiet; then
             echo "Ingen endringer i odds."

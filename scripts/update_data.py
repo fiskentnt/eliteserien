@@ -14,6 +14,7 @@ workflowen (kun hvis noe faktisk endret seg).
 """
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -26,6 +27,10 @@ import fit_model
 ROOT = Path(__file__).parent.parent
 MONTH_ABBR = {1: "jan", 2: "feb", 3: "mar", 4: "apr", 5: "mai", 6: "jun",
               7: "jul", 8: "aug", 9: "sep", 10: "okt", 11: "nov", 12: "des"}
+
+FFK_CACHE_PATH = ROOT / "data" / "ffk_cache.json"
+FFK_MIN_INTERVAL_MIN = 60  # ffksupporter.net skrapes (16 sider) maks én gang i timen
+STATUS_PATH = ROOT / "data" / "status.json"
 
 
 def month_range_label(dates):
@@ -106,33 +111,83 @@ def write_json(path, data):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
+def write_status(ok, now, error=None):
+    """data/status.json -- leses av index.html sitt stempel. Skrives KUN her,
+    dvs. bare når update_data.py faktisk har kjørt (ikke når should_fetch.py
+    avsluttet kjøringen tidlig uten å hente noe), slik at "Sist sjekket" i
+    stempelet bare oppdateres ved reelle sjekker."""
+    data = {"last_checked": now.isoformat(timespec="seconds"), "ok": ok}
+    if error:
+        data["error"] = str(error)[:300]
+    STATUS_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+
+
+def get_ffk_rows(cache_dir, log):
+    """Henter ffksupporter.net sine 16 sider maks én gang i timen (se
+    FFK_MIN_INTERVAL_MIN) — resten av tiden gjenbrukes mellomlagrede rader
+    fra forrige skraping (data/ffk_cache.json, committes av workflowen så den
+    overlever til neste kjøring). ESPN (ett kall, se main()) dekker friskhet
+    i mellomtiden; ffksupporter er fortsatt fasit når begge har et resultat."""
+    cached = json.loads(FFK_CACHE_PATH.read_text(encoding="utf-8")) if FFK_CACHE_PATH.exists() else None
+    now = datetime.now(timezone.utc)
+    age_min = (now - datetime.fromisoformat(cached["fetched_at"])).total_seconds() / 60 if cached else None
+    due = cached is None or age_min >= FFK_MIN_INTERVAL_MIN
+
+    if due:
+        try:
+            rows, warnings = ffk_source.fetch_all(cache_dir=cache_dir, log=log)
+            for key, prev, r in warnings:
+                log(f"ADVARSEL ffksupporter: uenighet mellom lagenes sider for {key}: {prev} vs {r}")
+            FFK_CACHE_PATH.write_text(json.dumps(
+                {"fetched_at": now.isoformat(timespec="seconds"), "rows": rows}, ensure_ascii=False, indent=2) + "\n",
+                encoding="utf-8")
+            return rows
+        except ffk_source.RateLimited as e:
+            log(f"ADVARSEL: {e} -- venter til neste times-sjekk.")
+            if cached:
+                log(f"Bruker mellomlagrede ffksupporter-data fra for {age_min:.0f} min siden i mellomtiden.")
+                return cached["rows"]
+            raise  # ingen mellomlagrede data å falle tilbake på
+
+    log(f"ffksupporter.net sjekket for {age_min:.0f} min siden (maks én gang i timen) -- bruker mellomlagrede data.")
+    return cached["rows"]
+
+
 def main(cache_dir=None):
     log = lambda s: print(s, file=sys.stderr)
+    now = datetime.now(timezone.utc)
+    try:
+        try:
+            espn_rows = espn_source.fetch_all(cache_dir=cache_dir, log=log)
+        except espn_source.RateLimited as e:
+            log(f"ADVARSEL: {e} -- fortsetter uten ESPN denne runden (ffksupporter dekker fortsatt resultatet).")
+            espn_rows = []
 
-    ffk_rows, ffk_warnings = ffk_source.fetch_all(cache_dir=cache_dir, log=log)
-    for key, prev, r in ffk_warnings:
-        log(f"ADVARSEL ffksupporter: uenighet mellom lagenes sider for {key}: {prev} vs {r}")
+        ffk_rows = get_ffk_rows(cache_dir, log)
 
-    espn_rows = espn_source.fetch_all(cache_dir=cache_dir, log=log)
+        merged = reconcile(ffk_rows, espn_rows, log=log)
+        matches_out, fixtures_out = build(merged)
 
-    merged = reconcile(ffk_rows, espn_rows, log=log)
-    matches_out, fixtures_out = build(merged)
+        from_espn = sum(1 for r in merged if r["src"] == "espn")
+        log(f"Ferdig: {len(matches_out)} spilte kamper ({from_espn} fra ESPN, resten ffksupporter.net), "
+            f"{len(fixtures_out)} runder med gjenstående kamper.")
 
-    from_espn = sum(1 for r in merged if r["src"] == "espn")
-    log(f"Ferdig: {len(matches_out)} spilte kamper ({from_espn} fra ESPN, resten ffksupporter.net), "
-        f"{len(fixtures_out)} runder med gjenstående kamper.")
+        data_dir = ROOT / "data"
+        data_dir.mkdir(exist_ok=True)
+        write_json(data_dir / "matches.json", matches_out)
+        write_json(data_dir / "fixtures.json", fixtures_out)
 
-    data_dir = ROOT / "data"
-    data_dir.mkdir(exist_ok=True)
-    write_json(data_dir / "matches.json", matches_out)
-    write_json(data_dir / "fixtures.json", fixtures_out)
+        log("--- Sluttodds (football-data.co.uk, maks én gang i døgnet) ---")
+        fetch_odds_history.main()
+        log("--- Slår sammen oddskilder ---")
+        merge_odds.main()
+        log("--- Tilpasser modellen ---")
+        fit_model.main()
 
-    log("--- Sluttodds (football-data.co.uk) ---")
-    fetch_odds_history.main()
-    log("--- Slår sammen oddskilder ---")
-    merge_odds.main()
-    log("--- Tilpasser modellen ---")
-    fit_model.main()
+        write_status(ok=True, now=now)
+    except Exception as e:
+        write_status(ok=False, now=now, error=e)
+        raise
 
 
 if __name__ == "__main__":

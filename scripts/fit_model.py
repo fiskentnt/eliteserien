@@ -21,8 +21,25 @@ ODDS_WEIGHT = 40.0
 HALF_LIFE_DAYS = 35.0
 L1, L2 = 2.0, 6.0
 
+WATCH_TEAMS = ["Brann", "Bodø/Glimt"]  # logges før/etter hver tilpasning, til overvåking av kjøringene
+
+
+def log_watch_teams(label, log):
+    model_path = ROOT / "data" / "model.json"
+    if not model_path.exists():
+        return
+    m = json.loads(model_path.read_text(encoding="utf-8"))
+    ti = {t: i for i, t in enumerate(m["teams"])}
+    for t in WATCH_TEAMS:
+        if t not in ti:
+            continue
+        i = ti[t]
+        log(f"  {label} {t}: att={m['att'][i]:+.4f} con={m['con'][i]:+.4f} ha={m['ha'][i]:+.4f} hc={m['hc'][i]:+.4f}")
+
+
 def main():
     log = lambda s: print(s, file=sys.stderr)
+    log_watch_teams("FØR", log)
 
     matches = json.loads((ROOT / "data" / "matches.json").read_text(encoding="utf-8"))
     odds_path = ROOT / "data" / "odds.json"
@@ -63,6 +80,7 @@ def main():
     }
     (ROOT / "data" / "model.json").write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     log("Skrev data/model.json.")
+    log_watch_teams("ETTER", log)
 
 if __name__ == "__main__":
     main()

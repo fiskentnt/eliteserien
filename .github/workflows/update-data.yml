@@ -2,10 +2,13 @@ name: Oppdater kampdata
 
 on:
   schedule:
-    # Hver time fredag til og med mandag (UTC). Dag-felt: 5=fre,6=lør,0=søn,1=man.
-    - cron: "7 * * * 5,6,0,1"
-    # Én gang i døgnet tirsdag til torsdag (UTC).
-    - cron: "7 6 * * 2,3,4"
+    # Hvert kvarter, døgnet rundt, på minutt 7/22/37/52 (ikke runde
+    # klokkeslett, som GitHub sin planlegger ofte utsetter eller dropper).
+    # Selve kjøringen er billig å avslutte tidlig — se scripts/should_fetch.py,
+    # som avgjør om det faktisk er noe å hente ut fra data/fixtures.json (en
+    # kamp som startet for >105 min siden uten resultat), ikke faste
+    # kampdager her i cronen.
+    - cron: "7,22,37,52 * * * *"
   workflow_dispatch: {}
 
 permissions:
@@ -21,22 +24,32 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Sjekk om noe faktisk trenger henting (ingen avhengigheter, raskt)
+        id: gate
+        env:
+          FORCE_FETCH: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+        run: python3 scripts/should_fetch.py
+
       - uses: actions/setup-python@v5
+        if: steps.gate.outputs.should_fetch == 'true'
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Installer avhengigheter (numpy, scipy)
+        if: steps.gate.outputs.should_fetch == 'true'
         run: pip install -r requirements.txt
 
       - name: Kjør oppdateringsscript (kamper, sluttodds og modell)
+        if: steps.gate.outputs.should_fetch == 'true'
         run: python3 scripts/update_data.py
 
       - name: Committer og pusher hvis noe endret seg
+        if: always() && steps.gate.outputs.should_fetch == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/matches.json data/fixtures.json data/odds_fd.json data/odds.json data/model.json
+          git add data/matches.json data/fixtures.json data/odds_fd.json data/odds.json data/model.json data/status.json data/ffk_cache.json
           if git diff --cached --quiet; then
             echo "Ingen endringer i kampdata."
           else

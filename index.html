@@ -325,12 +325,27 @@ function dateNoLong(iso){
 // ---- Norsk klokketid (Europe/Oslo, DST-riktig) for "sist sjekket"-stempelet
 // og oddstidspunktet — begge kommer som UTC-tidsstempler (fra GitHub sitt API
 // og fra data/odds_upcoming.json) og må vises i norsk lokaltid, ikke UTC. ----
-const _OSLO_FMT = new Intl.DateTimeFormat('en-US', {timeZone:'Europe/Oslo', weekday:'short', day:'numeric', month:'numeric', hour:'2-digit', minute:'2-digit', hourCycle:'h23'});
+const _OSLO_FMT = new Intl.DateTimeFormat('en-US', {timeZone:'Europe/Oslo', weekday:'short', day:'numeric', month:'numeric', year:'numeric', hour:'2-digit', minute:'2-digit', hourCycle:'h23'});
 const _WD_EN_TO_IDX = {Sun:0,Mon:1,Tue:2,Wed:3,Thu:4,Fri:5,Sat:6};
 function osloParts(d){
   const parts = _OSLO_FMT.formatToParts(d);
   const get = t => parts.find(p=>p.type===t).value;
-  return { weekday:_WD_EN_TO_IDX[get('weekday')], day:+get('day'), month:+get('month'), hour:+get('hour'), minute:+get('minute') };
+  return { weekday:_WD_EN_TO_IDX[get('weekday')], day:+get('day'), month:+get('month'), year:+get('year'), hour:+get('hour'), minute:+get('minute') };
+}
+// Runder en UTC-tidsstempel til nærmeste heltalls Oslo-UTC-offset i minutter
+// (+60 eller +120), for å konvertere ANDRE veien: fra et norsk lokalt
+// dato+klokkeslett (fra data/fixtures.json) til korrekt UTC-millisekunder.
+function osloOffsetMinutes(atDate){
+  const p = osloParts(atDate);
+  let diff = (p.hour*60+p.minute) - (atDate.getUTCHours()*60+atDate.getUTCMinutes());
+  if(diff < -720) diff += 1440; if(diff > 720) diff -= 1440;
+  return diff;
+}
+function osloDateTimeToMs(dateStr, timeStr){
+  const [y,mo,da] = dateStr.split('-').map(Number);
+  const [hh,mm] = timeStr.split(':').map(Number);
+  const guessUtcMs = Date.UTC(y,mo-1,da,hh,mm);
+  return guessUtcMs - osloOffsetMinutes(new Date(guessUtcMs))*60000;
 }
 // "søndag 20.9 kl. 21.14"
 function formatOsloDT(d){
@@ -823,24 +838,63 @@ document.getElementById('share').addEventListener('click',async e=>{
   btn.classList.add('done'); setTimeout(()=>{btn.textContent='Del scenario';btn.classList.remove('done');},2500);
 });
 
-// Henter tidspunkt og status for siste kjøring av update-data.yml fra GitHub
-// sitt åpne API (ingen nøkkel trengs) og legger det til i stempelet. Kjøres
-// uavhengig av resten av boot() (venter ikke på svar) — svarer ikke GitHub,
-// vises bare datoteksten som allerede står der, uten feilmelding (fanget av
-// catch under).
-async function updateCheckStamp(){
+// Finner om noen uspilt kamp allerede har startet (avspark <= nå) og, hvis
+// ikke, den nærmeste kommende avsparken — brukt til å velge mellom "Sist
+// sjekket" og "Neste sjekk etter kampen X-Y" i stempelet.
+function findPendingAndNext(fixturesIn){
+  const now = Date.now();
+  let anyStarted = false, next = null;
+  fixturesIn.forEach(r=>{
+    r.matches.forEach(m=>{
+      if(m.played || !m.time) return;
+      const kickoffMs = osloDateTimeToMs(m.date, m.time);
+      if(kickoffMs <= now) anyStarted = true;
+      else if(!next || kickoffMs < next.kickoffMs) next = {home:m.home, away:m.away, time:m.time, kickoffMs};
+    });
+  });
+  return {anyStarted, next};
+}
+
+// Henter tidspunkt og status for siste REELLE sjekk fra data/status.json
+// (skrevet av update_data.py — kun når den faktisk har hentet noe, ikke når
+// should_fetch.py avsluttet tidlig) og legger det til i stempelet. Kjøres
+// uavhengig av resten av boot() (venter ikke på svar) — finnes ikke
+// status.json ennå, vises bare datoteksten som allerede står der.
+async function updateCheckStamp(fixturesIn){
   try{
-    const res = await fetch('https://api.github.com/repos/fiskentnt/eliteserien/actions/workflows/update-data.yml/runs?per_page=1');
+    const res = await fetch('data/status.json');
     if(!res.ok) return;
-    const data = await res.json();
-    const run = data.workflow_runs && data.workflow_runs[0];
-    if(!run) return;
-    const t = new Date(run.updated_at || run.created_at);
-    const failed = run.conclusion === 'failure';
+    const status = await res.json();
+    const t = new Date(status.last_checked);
+    const failed = status.ok === false;
+    let clause;
+    if(failed){
+      clause = `Siste automatiske sjekk feilet ${formatOsloDT(t)}.`;
+    } else {
+      const {anyStarted, next} = findPendingAndNext(fixturesIn);
+      clause = (!anyStarted && next)
+        ? `Neste sjekk etter kampen ${shortTeam(next.home)}-${shortTeam(next.away)} kl. ${next.time.replace(':','.')}.`
+        : `Sist sjekket ${formatOsloDT(t)}.`;
+    }
     const warn = failed || checkIsStale(t);
-    const clause = failed ? `Siste automatiske sjekk feilet ${formatOsloDT(t)}.` : `Sist sjekket ${formatOsloDT(t)}.`;
     document.querySelector('.stamp').insertAdjacentHTML('beforeend', ` ${warn ? `<span class="warn">${clause}</span>` : clause}`);
-  }catch(_){ /* GitHub-API-et svarte ikke — stempelet viser bare datoen, som før */ }
+  }catch(_){ /* status.json ikke tilgjengelig — stempelet viser bare datoen, som før */ }
+}
+
+// The Odds API-kvoten: hvis den nylig ble lav (data/odds_quota.json, skrevet
+// av fetch_odds_upcoming.py), legges "Odds ikke oppdatert." til i tooltipen.
+async function updateOddsQuotaNote(){
+  try{
+    const res = await fetch('data/odds_quota.json');
+    if(!res.ok) return;
+    const quota = await res.json();
+    const p = osloParts(new Date());
+    const thisMonthKey = `${p.year}-${String(p.month).padStart(2,'0')}`;
+    if(quota.stopped_until_month === thisMonthKey){
+      const stampEl = document.querySelector('.stamp');
+      stampEl.title = (stampEl.title ? stampEl.title+' ' : '') + 'Odds ikke oppdatert.';
+    }
+  }catch(_){ }
 }
 
 // ---- Bootstrap: hent data-filene, bygg alt, render ----
@@ -918,7 +972,8 @@ async function boot(){
   const stampEl = document.querySelector('.stamp');
   stampEl.textContent = `Alle kamper til og med ${formatDateNo(last.date)} er lagt inn.`;
   stampEl.title = ODDS_FETCHED_AT !== 'ukjent tidspunkt' ? `Odds hentet ${ODDS_FETCHED_AT}.` : '';
-  updateCheckStamp();
+  updateCheckStamp(FIXTURES_IN);
+  updateOddsQuotaNote();
 
   // "Slik fungerer det": de to første avsnittene har tall som må stemme med
   // faktisk vekt/halveringstid (fra fase A: uendret, men holdt dynamisk i tilfelle).

@@ -6,19 +6,25 @@ kunne gi feil resultat for enkeltkamper (verifisert manuelt: to kamper i mai
 å fylle inn resultater ffksupporter.net ikke har lagt inn ennå — ffksupporter
 er alltid fasit når den har et resultat. ESPN gir ingen rundenummer, så runde
 kommer alltid fra ffksupporter.net.
+
+Ett API-kall per kjøring (rundetavle-endepunktet med en datoperiode), i
+stedet for tidligere 32 kall (16 lag x 2 endepunkt) — ESPN sin rolle er bare
+"har noe blitt spilt de siste dagene", ikke hele sesongoppsettet, så et par
+dagers vindu er nok.
 """
 import json
 import sys
-import time
 import urllib.request
-from datetime import datetime
+import urllib.error
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
 USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
 LEAGUE = "nor.1"
-REQUEST_DELAY = 0.4
 OSLO = ZoneInfo("Europe/Oslo")
+WINDOW_DAYS_BACK = 3  # dekker en hel helgerunde (fre-man) selv om vi sjekker sent
+WINDOW_DAYS_FWD = 1
 
 # ESPN lag-id -> visningsnavn slik det brukes i index.html
 TEAM_ID_TO_NAME = {
@@ -41,37 +47,46 @@ TEAM_ID_TO_NAME = {
 }
 
 
+class RateLimited(Exception):
+    """429/403 fra ESPN -- ikke prøv igjen med en gang, vent til neste kjøring."""
+    def __init__(self, code):
+        self.code = code
+        super().__init__(f"ESPN svarte {code}")
+
+
 def get_json(url):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"})
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        if e.code in (429, 403):
+            raise RateLimited(e.code) from e
+        raise
 
 
 def fetch_all(cache_dir=None, log=lambda s: None):
-    """Henter alle 16 lags sesongoppsett (spilte + kommende, via ?fixture=true)
-    og returnerer deduplisert liste av {home, away, date, hg, ag} (hg/ag er
-    None for uspilte/ikke fullførte kamper). Datoer konverteres fra UTC til
-    norsk lokaltid."""
-    events = {}
-    for i, (tid, name) in enumerate(TEAM_ID_TO_NAME.items()):
-        for suffix in ("", "?fixture=true"):
-            cache_file = cache_dir and (cache_dir / f"{tid}{'_fx' if suffix else ''}.json")
-            if cache_file and cache_file.exists():
-                d = json.loads(cache_file.read_text(encoding="utf-8"))
-                log(f"[espn {i+1}/16] {name}{' (fixture)' if suffix else ''}: fra lokal cache")
-            else:
-                url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{LEAGUE}/teams/{tid}/schedule{suffix}"
-                log(f"[espn {i+1}/16] Henter {name}{' (fixture)' if suffix else ''} ...")
-                d = get_json(url)
-                if cache_file:
-                    cache_dir.mkdir(parents=True, exist_ok=True)
-                    cache_file.write_text(json.dumps(d), encoding="utf-8")
-                time.sleep(REQUEST_DELAY)
-            for e in d.get("events", []):
-                events[e["id"]] = e
+    """Ett kall til rundetavle-endepunktet for et par dagers vindu rundt nå.
+    Returnerer deduplisert liste av {home, away, date, hg, ag} (hg/ag er None
+    for uspilte/ikke fullførte kamper). Datoer konverteres fra UTC til norsk
+    lokaltid."""
+    now_oslo = datetime.now(OSLO)
+    start = (now_oslo - timedelta(days=WINDOW_DAYS_BACK)).strftime("%Y%m%d")
+    end = (now_oslo + timedelta(days=WINDOW_DAYS_FWD)).strftime("%Y%m%d")
+    cache_file = cache_dir and (cache_dir / "espn_scoreboard.json")
+    if cache_file and cache_file.exists():
+        d = json.loads(cache_file.read_text(encoding="utf-8"))
+        log("[espn] scoreboard: fra lokal cache")
+    else:
+        url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{LEAGUE}/scoreboard?dates={start}-{end}"
+        log(f"[espn] Henter rundetavle {start}-{end} (ett kall) ...")
+        d = get_json(url)
+        if cache_file:
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            cache_file.write_text(json.dumps(d), encoding="utf-8")
 
     out = []
-    for e in events.values():
+    for e in d.get("events", []):
         comp = e["competitions"][0]
         utc_dt = datetime.fromisoformat(e["date"].replace("Z", "+00:00"))
         date = utc_dt.astimezone(OSLO).strftime("%Y-%m-%d")
@@ -107,7 +122,7 @@ if __name__ == "__main__":
     rows = fetch_all(cache_dir=cache, log=lambda s: print(s, file=sys.stderr))
     played = sum(1 for r in rows if r["hg"] is not None)
     suspect = [r for r in rows if r.get("suspect")]
-    print(f"Kamper: {len(rows)} ({played} spilt)", file=sys.stderr)
+    print(f"Kamper i vinduet: {len(rows)} ({played} spilt)", file=sys.stderr)
     if suspect:
         print(f"MISTENKELIGE ({len(suspect)}): 0-0 men med vinner merket:", file=sys.stderr)
         for r in suspect:

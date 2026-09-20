@@ -9,6 +9,7 @@ inn friskere resultater når ffksupporter ikke har oppdatert ennå.
 import re
 import sys
 import time
+import urllib.error
 import urllib.request
 from html.parser import HTMLParser
 from pathlib import Path
@@ -138,11 +139,23 @@ def parse_page(html, source_slug):
     return out
 
 
+class RateLimited(Exception):
+    """429/403 fra ffksupporter.net -- ikke prøv igjen med en gang, vent til neste kjøring."""
+    def __init__(self, code):
+        self.code = code
+        super().__init__(f"ffksupporter.net svarte {code}")
+
+
 def fetch(slug):
     url = BASE_URL.format(slug=slug)
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        return resp.read().decode("utf-8")
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            return resp.read().decode("utf-8")
+    except urllib.error.HTTPError as e:
+        if e.code in (429, 403):
+            raise RateLimited(e.code) from e
+        raise
 
 
 def fetch_all(cache_dir=None, log=lambda s: None):

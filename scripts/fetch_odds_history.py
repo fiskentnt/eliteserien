@@ -13,12 +13,22 @@ import json
 import sys
 import urllib.request
 import urllib.error
+from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
 CSV_URL = "https://football-data.co.uk/new/NOR.csv"
 ROOT = Path(__file__).parent.parent
 OUT_PATH = ROOT / "data" / "odds_fd.json"
+OSLO = ZoneInfo("Europe/Oslo")
+
+
+class RateLimited(Exception):
+    """429/403 -- ikke prøv igjen med en gang, vent til neste planlagte sjekk (i morgen)."""
+    def __init__(self, code):
+        self.code = code
+        super().__init__(f"football-data.co.uk svarte {code}")
 
 NAME_MAP = {"Bodo/Glimt": "Bodø/Glimt", "Lillestrom": "Lillestrøm",
             "Tromso": "Tromsø", "Valerenga": "Vålerenga"}
@@ -40,6 +50,8 @@ def fetch(etag=None, log=lambda s: None):
         if e.code == 304:
             log("Ikke endret siden sist (304).")
             return None, etag
+        if e.code in (429, 403):
+            raise RateLimited(e.code) from e
         raise
 
 def parse(csv_text):
@@ -62,19 +74,31 @@ def parse(csv_text):
                      "D": round(d, 4), "A": round(a, 4), "src": src})
     return out
 
-def main():
+def main(force=False):
     log = lambda s: print(s, file=sys.stderr)
-    existing = {"etag": None, "matches": []}
+    existing = {"etag": None, "matches": [], "checked_date": None}
     if OUT_PATH.exists():
         existing = json.loads(OUT_PATH.read_text(encoding="utf-8"))
 
+    today_oslo = datetime.now(timezone.utc).astimezone(OSLO).strftime("%Y-%m-%d")
+    if not force and existing.get("checked_date") == today_oslo:
+        log(f"Allerede sjekket football-data.co.uk i dag ({today_oslo}), maks én gang i døgnet -- hopper over.")
+        return
+
     try:
         csv_text, new_etag = fetch(etag=existing.get("etag"), log=log)
+    except RateLimited as e:
+        log(f"ADVARSEL: {e} -- venter til neste planlagte sjekk (i morgen kl 06), beholder eksisterende data/odds_fd.json")
+        existing["checked_date"] = today_oslo  # ikke prøv igjen før i morgen selv om andre kjøringer skjer i dag
+        OUT_PATH.write_text(json.dumps(existing, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+        return
     except Exception as e:
         log(f"ADVARSEL: klarte ikke hente odds-CSV ({e}), beholder eksisterende data/odds_fd.json")
         return
 
     if csv_text is None:
+        existing["checked_date"] = today_oslo
+        OUT_PATH.write_text(json.dumps(existing, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         log(f"data/odds_fd.json uendret ({len(existing['matches'])} kamper).")
         return
 
@@ -87,8 +111,8 @@ def main():
     bfe = sum(1 for m in matches if m["src"] == "BFE")
     log(f"Hentet {len(matches)} kamper med sluttodds ({bfe} BFE, {len(matches)-bfe} AvgC).")
     OUT_PATH.parent.mkdir(exist_ok=True)
-    OUT_PATH.write_text(json.dumps({"etag": new_etag, "matches": matches}, ensure_ascii=False, indent=2) + "\n",
-                         encoding="utf-8")
+    OUT_PATH.write_text(json.dumps({"etag": new_etag, "checked_date": today_oslo, "matches": matches},
+                                    ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 if __name__ == "__main__":
     main()

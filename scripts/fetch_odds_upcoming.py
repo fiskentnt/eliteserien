@@ -24,6 +24,15 @@ ROOT = Path(__file__).parent.parent
 UPCOMING_PATH = ROOT / "data" / "odds_upcoming.json"
 CAPTURED_PATH = ROOT / "data" / "odds_captured.json"
 MATCHES_PATH = ROOT / "data" / "matches.json"
+QUOTA_PATH = ROOT / "data" / "odds_quota.json"
+QUOTA_FLOOR = 100  # under denne mengden kreditter igjen: stopp til neste måned
+
+
+class RateLimited(Exception):
+    """429/403 -- ikke prøv igjen med en gang, vent til neste planlagte kjøring."""
+    def __init__(self, code):
+        self.code = code
+        super().__init__(f"The Odds API svarte {code}")
 
 # The Odds API sine lagnavn -> navnene i index.html (fra /v4/sports/.../participants)
 NAME_MAP = {
@@ -43,11 +52,30 @@ def devig(h, d, a):
 def fetch_odds(api_key, log):
     url = f"{BASE}?apiKey={api_key}&regions=eu&markets=h2h&oddsFormat=decimal"
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"})
-    with urllib.request.urlopen(req, timeout=30) as resp:
-        remaining = resp.headers.get("x-requests-remaining")
-        data = json.loads(resp.read().decode("utf-8"))
+    try:
+        with urllib.request.urlopen(req, timeout=30) as resp:
+            remaining = resp.headers.get("x-requests-remaining")
+            data = json.loads(resp.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        if e.code in (429, 403):
+            raise RateLimited(e.code) from e
+        raise
     log(f"The Odds API: {len(data)} kamper, {remaining} kreditter igjen denne måneden.")
+    record_quota(remaining, log)
     return data
+
+
+def record_quota(remaining, log):
+    """Logger x-requests-remaining hver kjøring. Under QUOTA_FLOOR: stopp
+    videre henting til kalendermåneden skifter (kvoten fornyes månedlig), og
+    la index.html vise "Odds ikke oppdatert" i tooltip mens vi venter."""
+    now = datetime.now(timezone.utc)
+    data = {"remaining": int(remaining) if remaining is not None else None,
+            "checked_at": now.isoformat(timespec="seconds")}
+    if remaining is not None and int(remaining) < QUOTA_FLOOR:
+        data["stopped_until_month"] = now.strftime("%Y-%m")
+        log(f"ADVARSEL: bare {remaining} kreditter igjen (under {QUOTA_FLOOR}) -- stopper oddshenting til neste måned.")
+    QUOTA_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 def parse(raw):
     out = []
