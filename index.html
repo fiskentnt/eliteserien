@@ -1,0 +1,851 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Eliteserien 2026: tabellkalkulator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#e7eaea; --panel:#ffffff; --ink:#15191c; --muted:#5d666c; --line:#d6dbdb; --line-soft:#e8ecec;
+    --brann:#c4111d; --brann-deep:#8d0a13; --brann-soft:#fdecee;
+    --eu:#1d7a63; --eu-soft:#e2f1ec; --q:#cf951a; --q-soft:#fbf1dc; --ned:#6c7479;
+    --cond:"Barlow Condensed","Arial Narrow","Roboto Condensed",system-ui,sans-serif;
+    --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--body);font-variant-numeric:tabular-nums}
+  body{padding-bottom:env(safe-area-inset-bottom,0px)}
+
+  /* Topp */
+  .top{background:var(--brann);color:#fff;padding:calc(22px + env(safe-area-inset-top,0px)) 24px 0;position:relative;overflow:hidden}
+  .top::after{content:"";position:absolute;inset:auto 0 0 0;height:10px;background:repeating-linear-gradient(90deg,var(--brann-deep) 0 28px,var(--brann) 28px 56px)}
+  .top-in{max-width:1380px;margin:0 auto;padding-bottom:34px;display:grid;grid-template-columns:1fr auto;gap:24px;align-items:end}
+  h1{margin:0;font:800 clamp(34px,5.2vw,58px)/.92 var(--cond);letter-spacing:-.01em}
+  h1 small{display:block;font:600 clamp(17px,2vw,22px)/1.2 var(--cond);opacity:.85;margin-top:8px;letter-spacing:.01em}
+  .stamp{margin:12px 0 0;display:inline-block;background:rgba(0,0,0,.18);color:#fff;border-radius:999px;padding:4px 12px;font-size:13px;font-weight:600}
+  .lede{max-width:64ch;margin:14px 0 0;color:#ffe3e5;font-size:15px}
+  .status{background:#fff;color:var(--ink);border-radius:10px;padding:16px 18px;min-width:280px;max-width:420px;box-shadow:0 10px 30px -12px rgba(60,0,4,.55)}
+  .status .pos{font:800 44px/1 var(--cond);color:var(--brann)}
+  .status .pos span{font-size:20px;color:var(--ink);font-weight:600;margin-left:6px}
+  .status .line{margin-top:8px;font-weight:600}
+  .status .sub{color:var(--muted);font-size:13px;margin-top:6px}
+
+  /* Siste resultater */
+  .recent{max-width:1380px;margin:0 auto;padding:18px 24px 0}
+  .recent h2{font:700 20px/1 var(--cond);margin:0 0 10px}
+  .chips{display:flex;flex-wrap:wrap;gap:8px}
+  .chip{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:7px 10px;display:flex;align-items:center;gap:8px;font-size:14px}
+  .chip .d{color:var(--muted);font-size:12px}
+  .chip .s{font:700 18px/1 var(--cond);background:var(--ink);color:#fff;border-radius:4px;padding:3px 7px}
+
+  /* Verktøy */
+  .tools{max-width:1380px;margin:0 auto;padding:16px 24px 0;display:flex;flex-wrap:wrap;gap:8px}
+  button{font:inherit;cursor:pointer}
+  .tools button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;font-weight:600;font-size:14px}
+  .tools button:hover{border-color:var(--ink)}
+  .tools button.on{background:var(--brann);border-color:var(--brann);color:#fff}
+  .tools button.on:hover{background:var(--brann-deep);border-color:var(--brann-deep)}
+  .tools button.ghost{background:transparent}
+  .tools button.share{margin-left:auto;background:var(--ink);border-color:var(--ink);color:#fff}
+  .tools button.share.done{background:var(--eu);border-color:var(--eu)}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--brann);outline-offset:2px}
+
+  /* Layout */
+  .wrap{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(360px,1fr);gap:20px;padding:16px 24px 48px;max-width:1380px;margin:0 auto;align-items:start}
+  @media (max-width:1180px){.wrap{grid-template-columns:1fr}}
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .panel > h2{font:700 22px/1 var(--cond);margin:0;padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .panel > h2 .count{font:500 14px var(--body);color:var(--muted)}
+
+  /* Tabell */
+  .tblwrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse}
+  th,td{padding:8px 7px;text-align:right;white-space:nowrap}
+  thead th{font-weight:600;color:var(--muted);font-size:12.5px;border-bottom:2px solid var(--ink);padding-top:4px}
+  tbody td{border-bottom:1px solid var(--line-soft)}
+  td.team,th.team{text-align:left}
+  td.pos{width:40px;text-align:center;padding-left:12px;font:700 17px/1 var(--cond);color:var(--muted);position:relative}
+  td.pos::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px}
+  tr.eu td.pos::before{background:var(--eu)}
+  tr.playoff td.pos::before{background:var(--q)}
+  tr.ned td.pos::before{background:repeating-linear-gradient(135deg,var(--ned) 0 3px,transparent 3px 6px)}
+  tr.eu td.pos{color:var(--eu)}
+  tr.playoff td.pos{color:#9a6c08}
+  tr.ned td{background:repeating-linear-gradient(135deg,#f4f5f5 0 6px,#fafbfb 6px 12px)}
+  td.team{font-weight:500}
+  td.pts{font:800 19px/1 var(--cond);padding-right:12px}
+  td.gd{color:var(--muted)}
+  tr.brann td{background:var(--brann-soft)}
+  tr.brann td.team{color:var(--brann);font-weight:700}
+  tr.brann td.pts{color:var(--brann)}
+  tr.cut td{border-bottom:2px dashed #b7bfbf}
+  .diff{font-size:11.5px;margin-left:6px;font-weight:600}
+  .diff.up{color:var(--eu)}.diff.down{color:var(--brann)}
+
+  /* Rekkevidde-stripe */
+  th.reach,td.reach{width:24%;min-width:130px;text-align:left;padding-right:14px}
+  .bar{position:relative;height:16px}
+  .bar .track{position:absolute;left:0;right:0;top:7px;height:2px;background:var(--line-soft)}
+  .bar .span{position:absolute;top:6px;height:4px;border-radius:2px;background:#aab3b6;transform-origin:left center}
+  .bar .dot{position:absolute;top:2px;width:12px;height:12px;border-radius:50%;background:var(--ink);transform:translateX(-6px);border:2px solid #fff;box-shadow:0 0 0 1px var(--ink)}
+  .bar .guide{position:absolute;top:-8px;bottom:-9px;width:0;border-left:1.5px dashed var(--brann);opacity:.55}
+  tr.brann .bar .span{background:var(--brann)}
+  tr.brann .bar .dot{background:var(--brann);box-shadow:0 0 0 1px var(--brann)}
+  tr.eu .bar .span{background:#7fb9a8}
+  tr.ned .bar .span{background:#9aa3a7}
+  .scale{display:flex;justify-content:space-between;font-size:11px;color:var(--muted);font-weight:500}
+  body.intro .bar .span{animation:grow .9s cubic-bezier(.2,.8,.2,1) both}
+  body.intro tbody tr:nth-child(n) .bar .span{animation-delay:calc(var(--i) * 35ms)}
+  @keyframes grow{from{transform:scaleX(0)}}
+  @media (prefers-reduced-motion:reduce){body.intro .bar .span{animation:none}}
+
+  .legend{padding:12px 16px;color:var(--muted);font-size:13px;display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:2px}
+  .legend .eu i{background:var(--eu)}
+  .legend .q i{background:var(--q)}
+  .legend .n i{background:repeating-linear-gradient(135deg,var(--ned) 0 2px,transparent 2px 4px);border:1px solid var(--ned)}
+  .legend .r i{width:22px;height:4px;border-radius:2px;background:#aab3b6;position:relative}
+  .legend .r i::after{content:"";position:absolute;left:-3px;top:-4px;width:8px;height:8px;border-radius:50%;background:var(--ink)}
+  .legend .g i{width:0;height:14px;border-left:1.5px dashed var(--brann);border-radius:0}
+  .note{padding:10px 16px 14px;color:var(--muted);font-size:13px}
+  /* Form og sannsynligheter */
+  .form{display:inline-flex;gap:2px;vertical-align:middle}
+  .form b{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .form .W{background:var(--eu)} .form .D{background:#b3babd} .form .L{background:var(--brann)}
+  td.odds{font-size:13px;color:var(--muted);text-align:right;min-width:44px}
+  td.odds.hot{color:var(--ink);font-weight:700}
+  tr.brann td.odds{color:var(--brann)}
+  /* Status: Brann-sannsynligheter */
+  .odds-box{margin-top:12px;padding-top:10px;border-top:1px solid var(--line)}
+  .odds-row{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+  .odds-row strong{display:block;font:800 22px/1 var(--cond);color:var(--ink)}
+  .odds-row .n strong{color:var(--brann)}
+  .hist{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;align-items:end;height:42px;margin-top:10px}
+  .hist i{display:block;background:#e3c3c6;border-radius:2px 2px 0 0;min-height:1px}
+  .hist i.eu{background:#8cc3b3}.hist i.q{background:#e8c374}.hist i.n{background:#c98a90}
+  .hist-l{display:grid;grid-template-columns:repeat(16,1fr);gap:2px;font-size:10px;color:var(--muted);text-align:center;margin-top:2px}
+  /* Kampsannsynlighet */
+  /* Modellpanel */
+  details.model{border-top:1px solid var(--line)}
+  details.model summary{cursor:pointer;padding:12px 16px;font:700 18px/1 var(--cond)}
+  details.model .in{padding:0 16px 16px;overflow-x:auto}
+  details.model p{font-size:13px;color:var(--muted);margin:0 0 10px;max-width:70ch}
+  table.mt th,table.mt td{padding:5px 6px;font-size:13px}
+  table.mt thead th{border-bottom:2px solid var(--ink)}
+  table.mt td{border-bottom:1px solid var(--line-soft)}
+  table.mt .grp{text-align:center;border-bottom:1px solid var(--line)}
+
+  @media (max-width:640px){
+    .top{padding-left:16px;padding-right:16px}
+    .top-in{grid-template-columns:1fr}
+    .status{max-width:none;min-width:0}
+    .recent,.tools{padding-left:16px;padding-right:16px}
+    .wrap{padding-left:12px;padding-right:12px}
+    th.hide-s,td.hide-s{display:none}
+    th.reach,td.reach{min-width:110px;padding-right:10px}
+    .scale span:nth-child(even){visibility:hidden}
+    th,td{padding-left:5px;padding-right:5px}
+    td.pos{padding-left:9px;width:30px}
+    .panel > h2{padding-left:12px;padding-right:12px}
+  }
+
+  /* Kamper */
+  .rounds{padding:0 16px 16px}
+  .round{margin-top:14px}
+  .round h3{margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;font:700 17px/1.2 var(--cond);border-bottom:2px solid var(--ink);padding-bottom:4px}
+  .round h3 .when{font:500 13px var(--body);color:var(--muted)}
+  .match{display:grid;grid-template-columns:1fr 40px 8px 40px 1fr auto;align-items:center;gap:6px;padding:6px 6px;border-bottom:1px solid var(--line-soft);border-radius:6px}
+  .match .home{text-align:right}
+  .match .away{text-align:left}
+  .match .home,.match .away{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .match.brann{background:var(--brann-soft)}
+  .match .b{color:var(--brann);font-weight:700}
+  .match input{width:40px;height:34px;text-align:center;font:700 19px/1 var(--cond);border:1px solid var(--line);border-radius:6px;background:#f6f7f7;color:var(--ink);padding:0}
+  .match input.set{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .match.brann input.set{background:var(--brann);border-color:var(--brann)}
+  .match input.set.sim{background:#e3e7e8;color:var(--ink);border-color:#c3cacc;font-style:italic}
+  .toolnote{max-width:1380px;margin:0 auto;padding:8px 24px 0;color:var(--muted);font-size:13px}
+  .toolnote em{font-style:italic;background:#e3e7e8;border:1px solid #c3cacc;border-radius:4px;padding:0 5px;color:var(--ink);font-weight:700}
+  @media (max-width:640px){.toolnote{padding-left:16px;padding-right:16px}}
+  @media (max-width:760px){th.hide-m,td.hide-m{display:none}}
+  .match .colon{text-align:center;color:var(--muted);font-weight:700}
+  .match.played{background:#f1f3f3;color:#8a9296}
+  .match.played .score{width:40px;height:34px;display:flex;align-items:center;justify-content:center;font:700 19px/1 var(--cond);border-radius:6px;background:#dde2e3;color:#6f787c}
+  .match.played .done{margin-left:6px;font-size:12.5px;font-weight:600;color:#8a9296;width:121px;text-align:center}
+  .quick{display:flex;gap:3px;margin-left:6px;align-items:flex-start}
+  .quick .q{display:flex;flex-direction:column;align-items:center;gap:2px;width:28px}
+  .quick .pct{font:500 10.5px/1 var(--body);letter-spacing:-.01em;color:#98a0a4;height:11px;white-space:nowrap}
+  .quick .pct.best{color:var(--ink);font-weight:700}
+  .quick .pct.odds{color:var(--brann);font-weight:700;font-size:10px;letter-spacing:.02em}
+  .match.fixed .quick .pct{visibility:hidden}
+  .quick button{padding:4px 0;font-size:12.5px;width:28px;border:1px solid var(--line);background:#fff;border-radius:5px;font-weight:600;color:var(--ink)}
+  .quick button:hover{border-color:var(--ink)}
+  .quick button.on{background:var(--ink);color:#fff;border-color:var(--ink)}
+  .quick button.x{color:var(--muted)}
+  @media (max-width:520px){
+    .match{grid-template-columns:1fr 40px 8px 40px 1fr;row-gap:6px}
+    .quick{grid-column:1 / -1;justify-content:center;margin-left:0}
+    .match.played .done{grid-column:1 / -1;width:auto;margin-left:0}
+  }
+</style>
+</head>
+<body class="intro">
+
+<header class="top">
+  <div class="top-in">
+    <div>
+      <h1>Eliteserien 2026<small>Tabellkalkulator med Brann i sentrum</small></h1>
+      <p class="stamp">Sist oppdatert 20. september 2026, med alle kamper til og med lørdag 19. september.</p>
+      <p class="lede">Utgangspunkt er tabellen etter lørdag 19. september. Runde 21 er ferdigspilt, og fra runde 22 er Sarpsborg 08 1-3 KFUM, Kristiansund 1-3 Rosenborg og Molde 1-2 Aalesund lagt inn. Skriv inn resultat i kampene som gjenstår, eller trykk H, U eller B (1-0, 0-0, 0-1). Kamper du lar stå tomme, telles ikke.</p>
+    </div>
+    <div class="status" id="verdict" aria-live="polite"></div>
+  </div>
+</header>
+
+<section class="recent" aria-label="Spilt siden forrige versjon">
+  <h2>Spilt siden sist</h2>
+  <div class="chips" id="recent"></div>
+</section>
+
+<div class="tools">
+  <button id="brannWin">Brann vinner alt</button>
+  <button id="brannLose">Brann taper alt</button>
+  <button id="simRest">Simuler tomme kamper</button>
+  <button id="homeAll">Hjemmeseier i tomme kamper</button>
+  <button id="drawAll">Uavgjort i tomme kamper</button>
+  <button class="ghost" id="reset">Nullstill</button>
+  <button class="share" id="share">Del scenario</button>
+</div>
+<p class="toolnote">Brann-knappene fyller også resten av kampene med en typisk sesong: siden simulerer 3000 sesonger og velger den der alle lag havner nærmest sin forventede poengsum. Modellen bygger på alle 163 seriekampene i år: hver klubb har egen angreps- og forsvarsstyrke hjemme og borte, og nyere kamper teller mer enn gamle, så formen slår inn. Simulerte resultater vises i grått, som <em>2</em>, og kan overskrives. Tallene under H, U og B er sjansen for hvert utfall, med det mest sannsynlige i svart. Der bookmakerne har lagt ut odds, merket <b style="color:var(--brann)">odds</b>, veier oddsen 70 prosent og modellen 30. Prosentene kommer fra 4000 simuleringer av resten av sesongen, der kampene du har fylt inn selv står fast.</p>
+
+<div class="wrap">
+  <section class="panel">
+    <h2>Tabell <span class="count" id="tblInfo"></span></h2>
+    <div class="tblwrap">
+      <table id="tbl">
+        <thead><tr>
+          <th></th><th class="team">Lag</th><th class="hide-s">K</th>
+          <th class="hide-s">V</th><th class="hide-s">U</th><th class="hide-s">T</th><th class="hide-s">Mål</th>
+          <th>Diff</th><th>P</th>
+          <th class="hide-s" title="Siste fem seriekamper, eldst til venstre">Form</th>
+          <th class="hide-m" title="Sannsynlighet for topp 3">Topp 3</th>
+          <th title="Sannsynlighet for plass 15 eller 16">Ned</th>
+          <th class="reach" title="Poeng nå og høyest mulige sluttsum">Rekkevidde<div class="scale" id="scale"></div></th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="legend">
+      <span class="eu"><i></i>Europa (1 til 3)</span>
+      <span class="q"><i></i>Kvalik (14)</span>
+      <span class="n"><i></i>Nedrykk (15 og 16)</span>
+      <span class="r"><i></i>Poeng nå til maks mulig</span>
+      <span class="g"><i></i>Branns poeng nå</span>
+    </div>
+    <div class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn. Runde 12 ble flyttet fra juli til 24. og 25. oktober. Kilder: kampdata fra ffksupporter.net, kontrollert mot den offisielle tabellen. Odds fra OddsPortal.</div>
+    <details class="model">
+      <summary>Slik regner modellen</summary>
+      <div class="in">
+        <p>Hvert mål i hver av de 163 kampene brukes. Modellen finner en angreps- og en forsvarsstyrke per lag, med eget tillegg hjemme og borte, pluss en felles hjemmefordel. En kamp for ti uker siden teller halvparten så mye som en kamp i dag. Styrkene trekkes litt mot ligasnittet, så få kamper ikke gir ville utslag. Kolonnene til høyre viser forventede mål scoret og sluppet inn mot et gjennomsnittslag.</p>
+        <table class="mt" id="modelTbl"></table>
+      </div>
+    </details>
+  </section>
+
+  <section class="panel">
+    <h2>Gjenstående kamper <span class="count" id="fxInfo"></span></h2>
+    <div class="rounds" id="rounds"></div>
+  </section>
+</div>
+
+<script>
+// Tabell etter kampene til og med lørdag 19. september 2026.
+// Nytt siden forrige versjon: Fredrikstad 1-1 Sarpsborg 08 (13.9), Bodø/Glimt 3-2 Sandefjord (14.9),
+// Sarpsborg 08 1-3 KFUM Oslo (18.9), Kristiansund 1-3 Rosenborg (19.9), Molde 1-2 Aalesund (19.9)
+// [lag, kamper, seire, uavgjort, tap, mål for, mål mot]
+const BASE = [
+  ["Bodø/Glimt",20,16,2,2,52,17],
+  ["Viking",20,15,2,3,51,20],
+  ["Molde",21,11,3,7,44,32],
+  ["Tromsø",20,10,5,5,37,27],
+  ["Rosenborg",21,10,3,8,39,30],
+  ["Lillestrøm",20,10,2,8,28,26],
+  ["Fredrikstad",20,8,3,9,24,31],
+  ["Brann",20,8,2,10,37,31],
+  ["Sarpsborg 08",21,6,7,8,24,29],
+  ["KFUM Oslo",21,7,4,10,25,35],
+  ["HamKam",20,6,5,9,27,41],
+  ["Vålerenga",20,6,4,10,33,42],
+  ["Aalesund",21,4,9,8,33,46],
+  ["Sandefjord",20,5,5,10,18,27],
+  ["Kristiansund",21,5,4,12,21,40],
+  ["Start",20,4,4,12,22,41],
+];
+
+const RECENT = [
+  ["13. sep","Fredrikstad",1,1,"Sarpsborg 08"],
+  ["14. sep","Bodø/Glimt",3,2,"Sandefjord"],
+  ["18. sep","Sarpsborg 08",1,3,"KFUM Oslo"],
+  ["19. sep","Kristiansund",1,3,"Rosenborg"],
+  ["19. sep","Molde",1,2,"Aalesund"],
+];
+
+// Kamper i en runde som allerede er spilt. De ligger i grunntabellen og vises bare, gråtonet.
+const PLAYED = {
+  "Runde 22": [["fre 18. sep","Sarpsborg 08","KFUM Oslo",1,3],["lør 19. sep","Kristiansund","Rosenborg",1,3],["lør 19. sep","Molde","Aalesund",1,2]],
+};
+
+const ROUNDS = [
+  ["Runde 22", "18. til 20. sep", [["Vålerenga","Fredrikstad"],["Tromsø","HamKam"],["Sandefjord","Start"],["Viking","Lillestrøm"],["Brann","Bodø/Glimt"]]],
+  ["Runde 23", "9. til 12. okt", [["Brann","Viking"],["Bodø/Glimt","Kristiansund"],["Rosenborg","Sandefjord"],["Fredrikstad","Tromsø"],["Start","HamKam"],["Aalesund","Sarpsborg 08"],["Lillestrøm","Molde"],["KFUM Oslo","Vålerenga"]]],
+  ["Runde 24", "17. og 18. okt", [["HamKam","Bodø/Glimt"],["Kristiansund","Aalesund"],["Viking","Fredrikstad"],["Sarpsborg 08","Rosenborg"],["Vålerenga","Brann"],["Molde","Start"],["Sandefjord","Lillestrøm"],["Tromsø","KFUM Oslo"]]],
+  ["Runde 12 (flyttet)", "24. og 25. okt", [["Bodø/Glimt","Vålerenga"],["HamKam","Rosenborg"],["Viking","Tromsø"],["Kristiansund","KFUM Oslo"],["Lillestrøm","Brann"],["Sarpsborg 08","Aalesund"],["Start","Sandefjord"],["Molde","Fredrikstad"]]],
+  ["Runde 25", "30. okt til 1. nov", [["Bodø/Glimt","Viking"],["Fredrikstad","Rosenborg"],["Aalesund","Sandefjord"],["Brann","Molde"],["Sarpsborg 08","Kristiansund"],["Start","Lillestrøm"],["KFUM Oslo","HamKam"],["Vålerenga","Tromsø"]]],
+  ["Runde 26", "7. og 8. nov", [["Kristiansund","Vålerenga"],["Rosenborg","Start"],["Tromsø","Bodø/Glimt"],["Lillestrøm","Aalesund"],["Sandefjord","Molde"],["Viking","KFUM Oslo"],["HamKam","Sarpsborg 08"],["Fredrikstad","Brann"]]],
+  ["Runde 27", "20. til 22. nov", [["Molde","Bodø/Glimt"],["Tromsø","Viking"],["HamKam","Fredrikstad"],["Vålerenga","Start"],["Kristiansund","Sandefjord"],["Aalesund","Rosenborg"],["KFUM Oslo","Brann"],["Sarpsborg 08","Lillestrøm"]]],
+  ["Runde 28", "28. til 30. nov", [["Bodø/Glimt","KFUM Oslo"],["Rosenborg","Molde"],["Fredrikstad","Aalesund"],["Brann","Kristiansund"],["Sandefjord","Tromsø"],["Start","Sarpsborg 08"],["Viking","Vålerenga"],["Lillestrøm","HamKam"]]],
+  ["Runde 29", "4. til 6. des", [["Molde","Viking"],["Aalesund","Bodø/Glimt"],["Vålerenga","Rosenborg"],["Sarpsborg 08","Brann"],["Kristiansund","Lillestrøm"],["Tromsø","Start"],["KFUM Oslo","Fredrikstad"],["HamKam","Sandefjord"]]],
+  ["Runde 30", "13. des", [["Brann","Aalesund"],["Lillestrøm","Tromsø"],["Bodø/Glimt","Sarpsborg 08"],["Rosenborg","KFUM Oslo"],["Sandefjord","Vålerenga"],["Start","Kristiansund"],["Viking","HamKam"],["Fredrikstad","Molde"]]],
+];
+
+// Siste resultater
+document.getElementById('recent').innerHTML = RECENT.map(r=>{
+  const b = n => n==="Brann" ? ` style="color:var(--brann);font-weight:700"` : '';
+  return `<div class="chip"><span class="d">${r[0]}</span><span${b(r[1])}>${r[1]}</span><span class="s">${r[2]}-${r[3]}</span><span${b(r[4])}>${r[4]}</span></div>`;
+}).join('');
+
+const matches = [];
+ROUNDS.forEach((r,ri)=>r[2].forEach((m,mi)=>matches.push({id:`m${ri}_${mi}`,home:m[0],away:m[1],hg:null,ag:null})));
+
+const roundsEl = document.getElementById('rounds');
+ROUNDS.forEach((r,ri)=>{
+  const d = document.createElement('div'); d.className='round';
+  d.innerHTML = `<h3><span>${r[0]}</span><span class="when">${r[1]}</span></h3>`;
+  (PLAYED[r[0]]||[]).forEach(([when,h,a,hg,ag])=>{
+    const row=document.createElement('div');
+    row.className='match played'+(h==="Brann"||a==="Brann"?' brann':'');
+    row.title=`Spilt ${when}, ligger i tabellen`;
+    row.innerHTML=`<span class="home">${h}</span><span class="score">${hg}</span><span class="colon">-</span><span class="score">${ag}</span><span class="away">${a}</span><span class="done">Spilt ${when.split(' ')[0]}</span>`;
+    d.appendChild(row);
+  });
+  r[2].forEach((m,mi)=>{
+    const mt = matches.find(x=>x.id===`m${ri}_${mi}`);
+    const isB = m[0]==="Brann"||m[1]==="Brann";
+    const row = document.createElement('div'); row.className='match'+(isB?' brann':''); row.dataset.id=mt.id;
+    row.innerHTML = `
+      <span class="home ${m[0]==="Brann"?"b":""}">${m[0]}</span>
+      <input inputmode="numeric" data-side="h" aria-label="${m[0]} mål">
+      <span class="colon">-</span>
+      <input inputmode="numeric" data-side="a" aria-label="${m[1]} mål">
+      <span class="away ${m[1]==="Brann"?"b":""}">${m[1]}</span>
+      <span class="quick"><span class="q"><button data-q="H" title="Hjemmeseier 1-0">H</button><i class="pct" data-o="H"></i></span><span class="q"><button data-q="U" title="Uavgjort 0-0">U</button><i class="pct" data-o="U"></i></span><span class="q"><button data-q="B" title="Borteseier 0-1">B</button><i class="pct" data-o="B"></i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src"></i></span></span>`;
+    d.appendChild(row);
+  });
+  roundsEl.appendChild(d);
+});
+
+function fillProb(){
+  matches.forEach(m=>{
+    const [lh,la]=rateFor(m.home,m.away), o=outcome(lh,la), info=RATES[m.home+"|"+m.away];
+    const el=document.querySelector(`.match[data-id="${m.id}"] .quick`);
+    const best=o.H>=o.U&&o.H>=o.B?'H':o.B>=o.U?'B':'U';
+    el.querySelectorAll('.pct[data-o]').forEach(p=>{ const k=p.dataset.o; p.textContent=Math.round(o[k]*100)+' %'; p.classList.toggle('best',k===best); });
+    const src=el.querySelector('.pct.src'); src.textContent=info.odds?'odds':''; src.classList.toggle('odds',info.odds);
+    el.title=`${m.home} seier ${Math.round(o.H*100)} %, uavgjort ${Math.round(o.U*100)} %, ${m.away} seier ${Math.round(o.B*100)} %. Forventede mål ${f1(lh)}-${f1(la)}.`+(info.odds?` Blandet ${Math.round(ODDS_W*100)} % odds (${ODDS_SRC}: ${Math.round(info.mk[0]*100)}/${Math.round(info.mk[1]*100)}/${Math.round(info.mk[2]*100)}) og ${Math.round((1-ODDS_W)*100)} % modell (${Math.round(info.md.H*100)}/${Math.round(info.md.U*100)}/${Math.round(info.md.B*100)}).`:'');
+  });
+}
+
+function parse(v){ if(v===''||v==null) return null; const n=parseInt(v,10); return Number.isFinite(n)&&n>=0?n:null; }
+
+function setMatch(m,hg,ag,writeInputs=true,sim=false){
+  m.hg=hg; m.ag=ag; m.sim=sim && hg!=null;
+  if(writeInputs){
+    const row=document.querySelector(`.match[data-id="${m.id}"]`);
+    row.querySelector('[data-side=h]').value = hg==null?'':hg;
+    row.querySelector('[data-side=a]').value = ag==null?'':ag;
+  }
+}
+
+roundsEl.addEventListener('input',e=>{
+  if(e.target.tagName!=='INPUT') return;
+  const row=e.target.closest('.match'); const m=matches.find(x=>x.id===row.dataset.id);
+  setMatch(m, parse(row.querySelector('[data-side=h]').value), parse(row.querySelector('[data-side=a]').value), false);
+  render();
+});
+roundsEl.addEventListener('click',e=>{
+  const b=e.target.closest('button'); if(!b) return;
+  const row=b.closest('.match'); const m=matches.find(x=>x.id===row.dataset.id);
+  const q=b.dataset.q;
+  if(q==='H') setMatch(m,1,0); else if(q==='U') setMatch(m,0,0); else if(q==='B') setMatch(m,0,1); else setMatch(m,null,null);
+  render();
+});
+
+const isBrann = m => m.home==="Brann"||m.away==="Brann";
+// Alle seriekamper spilt til og med 19. september 2026: [dato, hjemme, borte, mål hjemme, mål borte]
+const MATCHES = [
+  ["03-14","HamKam","Viking",2,1],
+  ["03-14","Molde","Rosenborg",2,0],
+  ["03-15","Aalesund","Lillestrøm",1,3],
+  ["03-15","KFUM Oslo","Start",2,0],
+  ["03-15","Kristiansund","Brann",3,2],
+  ["03-15","Tromsø","Fredrikstad",4,0],
+  ["03-15","Vålerenga","Sandefjord",1,0],
+  ["03-21","Start","Aalesund",1,1],
+  ["03-21","Viking","Molde",4,1],
+  ["03-22","Brann","Tromsø",1,2],
+  ["03-22","Fredrikstad","KFUM Oslo",3,1],
+  ["03-22","Rosenborg","Vålerenga",0,2],
+  ["03-22","Sandefjord","Sarpsborg 08",0,2],
+  ["04-06","HamKam","Brann",1,5],
+  ["04-06","Kristiansund","Bodø/Glimt",0,3],
+  ["04-06","Molde","Lillestrøm",0,1],
+  ["04-06","Sarpsborg 08","Start",1,1],
+  ["04-06","Tromsø","Rosenborg",2,0],
+  ["04-06","Vålerenga","Viking",0,1],
+  ["04-07","Aalesund","Fredrikstad",2,3],
+  ["04-07","KFUM Oslo","Sandefjord",1,2],
+  ["04-11","Lillestrøm","Start",3,1],
+  ["04-11","Tromsø","Kristiansund",2,0],
+  ["04-11","Viking","Bodø/Glimt",5,0],
+  ["04-12","Aalesund","KFUM Oslo",2,2],
+  ["04-12","Brann","Sandefjord",0,1],
+  ["04-12","Fredrikstad","Vålerenga",1,1],
+  ["04-12","Molde","HamKam",4,1],
+  ["04-12","Rosenborg","Sarpsborg 08",2,1],
+  ["04-15","Sarpsborg 08","Bodø/Glimt",1,1],
+  ["04-15","Tromsø","Lillestrøm",0,0],
+  ["04-18","Bodø/Glimt","Aalesund",3,0],
+  ["04-18","Sandefjord","Rosenborg",0,0],
+  ["04-18","Viking","Brann",3,2],
+  ["04-19","HamKam","KFUM Oslo",4,0],
+  ["04-19","Kristiansund","Fredrikstad",2,0],
+  ["04-19","Sarpsborg 08","Tromsø",0,1],
+  ["04-19","Start","Molde",1,1],
+  ["04-19","Vålerenga","Lillestrøm",0,2],
+  ["04-25","Fredrikstad","Viking",1,2],
+  ["04-25","Rosenborg","Brann",1,1],
+  ["04-26","Aalesund","Kristiansund",1,1],
+  ["04-26","HamKam","Start",2,1],
+  ["04-26","KFUM Oslo","Sarpsborg 08",1,0],
+  ["04-26","Lillestrøm","Bodø/Glimt",0,2],
+  ["04-26","Molde","Vålerenga",5,1],
+  ["04-26","Tromsø","Sandefjord",3,1],
+  ["04-29","Tromsø","Brann",0,5],
+  ["04-30","Bodø/Glimt","Start",5,0],
+  ["05-01","Viking","Rosenborg",3,0],
+  ["05-02","Brann","Fredrikstad",3,1],
+  ["05-03","Kristiansund","HamKam",1,1],
+  ["05-03","Lillestrøm","Sarpsborg 08",4,0],
+  ["05-03","Sandefjord","Aalesund",1,0],
+  ["05-03","Start","Tromsø",1,1],
+  ["05-03","Vålerenga","KFUM Oslo",2,2],
+  ["05-04","Bodø/Glimt","Molde",0,1],
+  ["05-08","HamKam","Vålerenga",1,0],
+  ["05-09","Sarpsborg 08","Fredrikstad",2,1],
+  ["05-10","KFUM Oslo","Viking",0,2],
+  ["05-10","Rosenborg","Lillestrøm",2,0],
+  ["05-10","Sandefjord","Kristiansund",2,0],
+  ["05-10","Tromsø","Molde",2,0],
+  ["05-16","Bodø/Glimt","Tromsø",5,0],
+  ["05-16","Brann","KFUM Oslo",2,1],
+  ["05-16","Fredrikstad","HamKam",2,1],
+  ["05-16","Lillestrøm","Sandefjord",3,1],
+  ["05-16","Molde","Kristiansund",1,0],
+  ["05-16","Rosenborg","Aalesund",2,3],
+  ["05-16","Viking","Start",6,3],
+  ["05-16","Vålerenga","Sarpsborg 08",3,2],
+  ["05-20","Aalesund","Brann",2,1],
+  ["05-20","Lillestrøm","Kristiansund",1,2],
+  ["05-20","Start","Bodø/Glimt",1,4],
+  ["05-24","Bodø/Glimt","Brann",3,1],
+  ["05-24","Kristiansund","Viking",1,2],
+  ["05-25","HamKam","Lillestrøm",2,0],
+  ["05-25","KFUM Oslo","Rosenborg",2,0],
+  ["05-25","Sandefjord","Fredrikstad",1,1],
+  ["05-25","Sarpsborg 08","Molde",2,1],
+  ["05-25","Start","Vålerenga",2,0],
+  ["05-25","Tromsø","Aalesund",1,1],
+  ["05-29","Aalesund","HamKam",2,2],
+  ["05-29","Brann","Sarpsborg 08",1,2],
+  ["05-29","Fredrikstad","Start",2,1],
+  ["05-29","KFUM Oslo","Tromsø",0,0],
+  ["05-29","Rosenborg","Bodø/Glimt",2,2],
+  ["05-29","Vålerenga","Kristiansund",3,1],
+  ["05-30","Molde","Sandefjord",2,1],
+  ["07-11","Aalesund","Molde",2,2],
+  ["07-11","Fredrikstad","Lillestrøm",0,2],
+  ["07-11","Tromsø","Vålerenga",4,0],
+  ["07-12","Brann","Start",2,1],
+  ["07-12","KFUM Oslo","Bodø/Glimt",0,2],
+  ["07-12","Rosenborg","Kristiansund",3,0],
+  ["07-12","Sandefjord","HamKam",2,2],
+  ["07-12","Sarpsborg 08","Viking",1,0],
+  ["07-16","Vålerenga","Aalesund",6,1],
+  ["07-17","Bodø/Glimt","Fredrikstad",1,0],
+  ["07-18","HamKam","Tromsø",1,4],
+  ["07-18","Kristiansund","Sarpsborg 08",0,0],
+  ["07-18","Lillestrøm","KFUM Oslo",2,1],
+  ["07-18","Molde","Brann",1,2],
+  ["07-18","Start","Rosenborg",0,3],
+  ["07-18","Viking","Sandefjord",2,1],
+  ["07-22","Bodø/Glimt","HamKam",3,0],
+  ["07-22","Lillestrøm","Viking",1,2],
+  ["07-25","Kristiansund","Start",1,2],
+  ["07-26","Aalesund","Viking",1,1],
+  ["07-26","Brann","Vålerenga",2,3],
+  ["07-26","KFUM Oslo","Molde",2,4],
+  ["07-26","Sandefjord","Bodø/Glimt",0,3],
+  ["07-26","Sarpsborg 08","HamKam",1,0],
+  ["07-27","Rosenborg","Fredrikstad",4,0],
+  ["07-31","Bodø/Glimt","Lillestrøm",4,0],
+  ["07-31","Vålerenga","HamKam",0,3],
+  ["08-01","Fredrikstad","Sandefjord",1,0],
+  ["08-01","Start","Viking",0,3],
+  ["08-02","Aalesund","Tromsø",2,6],
+  ["08-02","Brann","Rosenborg",3,2],
+  ["08-02","KFUM Oslo","Kristiansund",2,1],
+  ["08-02","Molde","Sarpsborg 08",3,3],
+  ["08-07","Sandefjord","KFUM Oslo",0,1],
+  ["08-08","Start","Fredrikstad",0,1],
+  ["08-08","Viking","Sarpsborg 08",2,1],
+  ["08-08","Vålerenga","Bodø/Glimt",1,2],
+  ["08-09","HamKam","Aalesund",1,1],
+  ["08-09","Kristiansund","Molde",2,1],
+  ["08-09","Lillestrøm","Rosenborg",0,2],
+  ["08-14","Rosenborg","Viking",2,1],
+  ["08-16","Aalesund","Vålerenga",5,5],
+  ["08-16","Brann","HamKam",3,0],
+  ["08-16","Fredrikstad","Kristiansund",1,0],
+  ["08-16","KFUM Oslo","Lillestrøm",1,1],
+  ["08-16","Molde","Tromsø",3,2],
+  ["08-16","Sarpsborg 08","Sandefjord",1,2],
+  ["08-30","Bodø/Glimt","Rosenborg",4,2],
+  ["08-30","HamKam","Kristiansund",2,2],
+  ["08-30","Lillestrøm","Fredrikstad",1,4],
+  ["08-30","Sandefjord","Brann",0,0],
+  ["08-30","Start","KFUM Oslo",4,1],
+  ["08-30","Tromsø","Sarpsborg 08",0,0],
+  ["08-30","Viking","Aalesund",2,1],
+  ["08-30","Vålerenga","Molde",3,4],
+  ["09-04","Aalesund","Start",2,0],
+  ["09-04","Fredrikstad","Bodø/Glimt",1,2],
+  ["09-04","Sandefjord","Viking",1,1],
+  ["09-05","Brann","Lillestrøm",1,2],
+  ["09-05","Rosenborg","HamKam",4,0],
+  ["09-06","Kristiansund","Tromsø",2,0],
+  ["09-06","Molde","KFUM Oslo",2,0],
+  ["09-06","Sarpsborg 08","Vålerenga",2,2],
+  ["09-12","Lillestrøm","Vålerenga",2,0],
+  ["09-12","Rosenborg","Tromsø",5,3],
+  ["09-13","Fredrikstad","Sarpsborg 08",1,1],
+  ["09-13","HamKam","Molde",1,5],
+  ["09-13","KFUM Oslo","Aalesund",2,1],
+  ["09-13","Start","Brann",2,0],
+  ["09-13","Viking","Kristiansund",8,1],
+  ["09-14","Bodø/Glimt","Sandefjord",3,2],
+  ["09-18","Sarpsborg 08","KFUM Oslo",1,3],
+  ["09-19","Kristiansund","Rosenborg",1,3],
+  ["09-19","Molde","Aalesund",1,2]
+];
+
+// Vektet Poisson-modell: hjemme- og bortestyrke i angrep og forsvar per lag
+function fitModel(MATCHES, TEAMS, opt={}){
+  const HL=opt.halfLife??70, REF=Date.UTC(2026,8,20), l1=opt.l1??2, l2=opt.l2??6;
+  const idx={}; TEAMS.forEach((t,i)=>idx[t]=i); const n=TEAMS.length;
+  const data=MATCHES.map(([d,h,a,hg,ag])=>{ const [m,dd]=d.split('-').map(Number);
+    const days=(REF-Date.UTC(2026,m-1,dd))/864e5; return {h:idx[h],a:idx[a],hg,ag,w:Math.pow(.5,days/HL)}; });
+  const P={mu:0,H:0.2,att:Array(n).fill(0),con:Array(n).fill(0),ha:Array(n).fill(0),hc:Array(n).fill(0)};
+  const lr=0.05;
+  for(let it=0;it<3000;it++){
+    const g={mu:0,H:0,att:Array(n).fill(0),con:Array(n).fill(0),ha:Array(n).fill(0),hc:Array(n).fill(0)};
+    let W=0;
+    for(const m of data){
+      const eh=P.mu+P.H+P.att[m.h]+P.ha[m.h]+P.con[m.a]-P.hc[m.a];
+      const ea=P.mu+P.att[m.a]-P.ha[m.a]+P.con[m.h]+P.hc[m.h];
+      const rh=m.w*(m.hg-Math.exp(eh)), ra=m.w*(m.ag-Math.exp(ea));
+      g.mu+=rh+ra; g.H+=rh;
+      g.att[m.h]+=rh; g.ha[m.h]+=rh; g.con[m.a]+=rh; g.hc[m.a]-=rh;
+      g.att[m.a]+=ra; g.ha[m.a]-=ra; g.con[m.h]+=ra; g.hc[m.h]+=ra;
+      W+=m.w;
+    }
+    const s=lr/ (W/n);
+    P.mu+=s*g.mu/ n; P.H+=s*g.H/ n;
+    for(let i=0;i<n;i++){
+      P.att[i]+=s*(g.att[i]-l1*P.att[i]); P.con[i]+=s*(g.con[i]-l1*P.con[i]);
+      P.ha[i]+=s*(g.ha[i]-l2*P.ha[i]); P.hc[i]+=s*(g.hc[i]-l2*P.hc[i]);
+    }
+  }
+  P.rate=(home,away)=>{ const h=idx[home],a=idx[away];
+    return [Math.exp(P.mu+P.H+P.att[h]+P.ha[h]+P.con[a]-P.hc[a]), Math.exp(P.mu+P.att[a]-P.ha[a]+P.con[h]+P.hc[h])]; };
+  return P;
+}
+
+const TEAMS = BASE.map(b=>b[0]);
+const MODEL = fitModel(MATCHES, TEAMS);
+function pois(l,k){ let p=Math.exp(-l); for(let i=1;i<=k;i++) p*=l/i; return p; }
+function outcome(lh,la){ let H=0,U=0,B=0;
+  for(let h=0;h<=10;h++) for(let a=0;a<=10;a++){ const p=pois(lh,h)*pois(la,a); if(h>a)H+=p; else if(h===a)U+=p; else B+=p; }
+  const t=H+U+B; return {H:H/t,U:U/t,B:B/t}; }
+// Forventede mål, rundet til nærmeste hele tall. Jevne kamper blir uavgjort.
+// Odds: snittodds fra OddsPortal, hentet 20. september. Bare kamper bookmakerne har lagt ut.
+const ODDS_SRC = "OddsPortal, snittodds 20. sep";
+const ODDS = {
+  "Vålerenga|Fredrikstad": [2.00,3.75,3.33],
+  "Tromsø|HamKam":         [1.46,4.65,6.08],
+  "Viking|Lillestrøm":     [1.38,5.25,6.50],
+  "Sandefjord|Start":      [2.12,3.57,3.22],
+  "Brann|Bodø/Glimt":      [4.58,4.60,1.58],
+};
+const ODDS_W = 0.7; // oddsens vekt. Resten er modellen.
+// Finn forventede mål for hjemme og borte som gir ønsket sjanse for hjemmeseier og borteseier
+function fitRates(pH,pB,start){
+  let best=[start[0],start[1]], err=1e9;
+  const tryAt=(lh,la)=>{ const o=outcome(lh,la), e=(o.H-pH)**2+(o.B-pB)**2; if(e<err){err=e;best=[lh,la];} };
+  for(let lh=0.15;lh<=4.5;lh+=0.05) for(let la=0.15;la<=4.5;la+=0.05) tryAt(lh,la);
+  const [h0,a0]=best;
+  for(let lh=h0-0.05;lh<=h0+0.05;lh+=0.005) for(let la=a0-0.05;la<=a0+0.05;la+=0.005) if(lh>0&&la>0) tryAt(lh,la);
+  return best;
+}
+const RATES={};
+function rateFor(home,away){
+  const k=home+"|"+away; if(RATES[k]) return RATES[k].r;
+  const base=MODEL.rate(home,away), o=ODDS[k];
+  if(!o){ RATES[k]={r:base,odds:false}; return base; }
+  const inv=o.map(x=>1/x), sum=inv[0]+inv[1]+inv[2], mk=inv.map(x=>x/sum), md=outcome(base[0],base[1]);
+  const pH=ODDS_W*mk[0]+(1-ODDS_W)*md.H, pB=ODDS_W*mk[2]+(1-ODDS_W)*md.B;
+  const r=fitRates(pH,pB,base); RATES[k]={r,odds:true,mk,md}; return r;
+}
+function predict(home,away){ const [lh,la]=rateFor(home,away); return [Math.round(lh), Math.round(la)]; }
+
+// Form og hjemme/borte-tall fra kampdataene
+const STATS={}; TEAMS.forEach(t=>STATS[t]={form:[],h:[0,0,0,0],b:[0,0,0,0]});
+[...MATCHES].sort((x,y)=>x[0].localeCompare(y[0])).forEach(([d,h,a,hg,ag])=>{
+  const rh=hg>ag?'W':hg===ag?'D':'L', ra=hg<ag?'W':hg===ag?'D':'L', pt={W:3,D:1,L:0};
+  STATS[h].form.push(rh); STATS[a].form.push(ra);
+  const H=STATS[h].h, B=STATS[a].b;
+  H[0]++; H[1]+=pt[rh]; H[2]+=hg; H[3]+=ag;
+  B[0]++; B[1]+=pt[ra]; B[2]+=ag; B[3]+=hg;
+});
+const formHtml=t=>`<span class="form">${STATS[t].form.slice(-5).map(r=>`<b class="${r}" title="${{W:'Seier',D:'Uavgjort',L:'Tap'}[r]}"></b>`).join('')}</span>`;
+const f1=x=>x.toFixed(1).replace('.',',');
+const f2=x=>x.toFixed(2).replace('.',',');
+
+// Modelltabell
+(()=>{
+  const {mu,H,att,con,ha,hc}=MODEL, ix={}; TEAMS.forEach((t,i)=>ix[t]=i);
+  let h='<thead><tr><th class="team"></th><th></th><th class="grp" colspan="2">Hjemme</th><th class="grp" colspan="2">Borte</th><th class="grp" colspan="2">Modell, forventet mål</th></tr>'+
+        '<tr><th class="team">Lag</th><th>Form</th><th>P per kamp</th><th>Mål</th><th>P per kamp</th><th>Mål</th><th>Hjemme</th><th>Borte</th></tr></thead><tbody>';
+  TEAMS.forEach(t=>{ const i=ix[t], S=STATS[t];
+    const hf=Math.exp(mu+H+att[i]+ha[i]), hm=Math.exp(mu+con[i]+hc[i]);
+    const bf=Math.exp(mu+att[i]-ha[i]), bm=Math.exp(mu+H+con[i]-hc[i]);
+    h+=`<tr${t==='Brann'?' style="background:var(--brann-soft)"':''}><td class="team">${t}</td><td>${formHtml(t)}</td>
+      <td>${f2(S.h[1]/S.h[0])}</td><td>${S.h[2]}-${S.h[3]}</td><td>${f2(S.b[1]/S.b[0])}</td><td>${S.b[2]}-${S.b[3]}</td>
+      <td>${f1(hf)}-${f1(hm)}</td><td>${f1(bf)}-${f1(bm)}</td></tr>`; });
+  document.getElementById('modelTbl').innerHTML=h+'</tbody>';
+})();
+
+// Monte Carlo: simulerer alle kamper uten eget resultat (også de grå, simulerte)
+const TI={}; TEAMS.forEach((t,i)=>TI[t]=i);
+function samplePois(l){ const L=Math.exp(-l); let k=0,p=Math.random(); while(p>L){ k++; p*=Math.random(); } return k; }
+function runMC(N){
+  const n=TEAMS.length, P0=new Float64Array(n), G0=new Float64Array(n), F0=new Float64Array(n);
+  BASE.forEach(b=>{ const i=TI[b[0]]; P0[i]=b[2]*3+b[3]; G0[i]=b[5]-b[6]; F0[i]=b[5]; });
+  const open=[];
+  matches.forEach(m=>{
+    const h=TI[m.home], a=TI[m.away];
+    if(m.hg!=null&&m.ag!=null&&!m.sim){
+      G0[h]+=m.hg-m.ag; G0[a]+=m.ag-m.hg; F0[h]+=m.hg; F0[a]+=m.ag;
+      if(m.hg>m.ag)P0[h]+=3; else if(m.hg<m.ag)P0[a]+=3; else {P0[h]++;P0[a]++;}
+    } else { const [lh,la]=rateFor(m.home,m.away); open.push([h,a,lh,la]); }
+  });
+  const cnt=TEAMS.map(()=>new Array(n).fill(0)), P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
+  const ord=[...Array(n).keys()];
+  for(let s=0;s<N;s++){
+    P.set(P0); G.set(G0); F.set(F0);
+    for(const [h,a,lh,la] of open){ const x=samplePois(lh), y=samplePois(la);
+      G[h]+=x-y; G[a]+=y-x; F[h]+=x; F[a]+=y;
+      if(x>y)P[h]+=3; else if(x<y)P[a]+=3; else {P[h]++;P[a]++;} }
+    for(let i=0;i<n;i++) R[i]=Math.random();
+    ord.sort((i,j)=>P[j]-P[i]||G[j]-G[i]||F[j]-F[i]||R[j]-R[i]);
+    ord.forEach((t,pos)=>cnt[t][pos]++);
+  }
+  const out={}; TEAMS.forEach((t,i)=>out[t]=cnt[i].map(c=>c/N)); return out;
+}
+let lastMC=null, mcTimer=null;
+const pctTxt=x=> x===0?'0 %': x<0.005?'<1 %': x>0.995&&x<1?'>99 %': Math.round(x*100)+' %';
+function fillOdds(){
+  if(!lastMC) return;
+  document.querySelectorAll('#tbl tbody tr').forEach(tr=>{
+    const d=lastMC[tr.dataset.team]; if(!d) return;
+    const top=d[0]+d[1]+d[2], ned=d[14]+d[15];
+    const a=tr.querySelector('td.p3'), b=tr.querySelector('td.ned');
+    a.textContent=pctTxt(top); a.classList.toggle('hot',top>=0.5);
+    b.textContent=pctTxt(ned); b.classList.toggle('hot',ned>=0.5);
+  });
+  const box=document.getElementById('odds'); if(!box) return;
+  const d=lastMC['Brann'], mx=Math.max(...d);
+  box.innerHTML=`<div class="odds-row">
+      <span><strong>${pctTxt(d[0]+d[1]+d[2])}</strong>topp 3</span>
+      <span><strong>${pctTxt(d.slice(3,13).reduce((x,y)=>x+y,0))}</strong>4 til 13</span>
+      <span><strong>${pctTxt(d[13])}</strong>kvalik</span>
+      <span class="n"><strong>${pctTxt(d[14]+d[15])}</strong>nedrykk</span></div>
+    <div class="hist" aria-hidden="true">${d.map((v,i)=>`<i class="${i<3?'eu':i===13?'q':i>=14?'n':''}" style="height:${(v/mx*100).toFixed(1)}%" title="${i+1}. plass: ${pctTxt(v)}"></i>`).join('')}</div>
+    <div class="hist-l">${d.map((v,i)=>`<span>${i+1}</span>`).join('')}</div>`;
+}
+function scheduleMC(){ clearTimeout(mcTimer); mcTimer=setTimeout(()=>{ lastMC=runMC(4000); fillOdds(); },120); }
+
+// Fyll tomme kamper med én "typisk" sesong: simuler mange sesonger og velg den der
+// alle lags poengsum ligger nærmest sitt forventede snitt. Da får svake lag også sine poeng,
+// i stedet for at det mest sannsynlige utfallet (tap) velges i hver eneste kamp.
+function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+function simulateEmpty(){
+  matches.filter(m=>m.sim).forEach(m=>setMatch(m,null,null));
+  const open=matches.filter(m=>m.hg==null||m.ag==null); if(!open.length) return;
+  const rnd=mulberry32(20260920), N=3000, n=TEAMS.length;
+  const rates=open.map(m=>rateFor(m.home,m.away)), hi=open.map(m=>TI[m.home]), ai=open.map(m=>TI[m.away]);
+  const pois=l=>{ const L=Math.exp(-l); let k=0,p=rnd(); while(p>L){k++;p*=rnd();} return k; };
+  const G=new Uint8Array(N*open.length*2), PTS=new Float64Array(N*n), E=new Float64Array(n);
+  for(let s=0;s<N;s++){
+    for(let j=0;j<open.length;j++){
+      const x=pois(rates[j][0]), y=pois(rates[j][1]); G[(s*open.length+j)*2]=x; G[(s*open.length+j)*2+1]=y;
+      const o=s*n; if(x>y)PTS[o+hi[j]]+=3; else if(x<y)PTS[o+ai[j]]+=3; else {PTS[o+hi[j]]++;PTS[o+ai[j]]++;}
+    }
+  }
+  for(let s=0;s<N;s++) for(let t=0;t<n;t++) E[t]+=PTS[s*n+t]/N;
+  let best=0, bestErr=Infinity;
+  for(let s=0;s<N;s++){ let e=0; for(let t=0;t<n;t++){ const d=PTS[s*n+t]-E[t]; e+=d*d; } if(e<bestErr){bestErr=e;best=s;} }
+  open.forEach((m,j)=>setMatch(m,G[(best*open.length+j)*2],G[(best*open.length+j)*2+1],true,true));
+}
+
+document.getElementById('brannLose').onclick=()=>{ matches.filter(isBrann).forEach(m=> m.home==="Brann"?setMatch(m,0,1):setMatch(m,1,0)); simulateEmpty(); render(); };
+document.getElementById('brannWin').onclick=()=>{ matches.filter(isBrann).forEach(m=> m.home==="Brann"?setMatch(m,1,0):setMatch(m,0,1)); simulateEmpty(); render(); };
+document.getElementById('simRest').onclick=()=>{ simulateEmpty(); render(); };
+document.getElementById('homeAll').onclick=()=>{ matches.filter(m=>m.hg==null||m.ag==null).forEach(m=>setMatch(m,1,0)); render(); };
+document.getElementById('drawAll').onclick=()=>{ matches.filter(m=>m.hg==null||m.ag==null).forEach(m=>setMatch(m,0,0)); render(); };
+document.getElementById('reset').onclick=()=>{ matches.forEach(m=>setMatch(m,null,null)); render(); };
+// Valgt knapp lyser rødt. Nullstill slår av markeringen.
+document.querySelectorAll('.tools button:not(.share)').forEach(b=>b.addEventListener('click',()=>{
+  document.querySelectorAll('.tools button:not(.share)').forEach(x=>{ x.classList.remove('on'); x.setAttribute('aria-pressed','false'); });
+  if(b.id!=='reset'){ b.classList.add('on'); b.setAttribute('aria-pressed','true'); }
+}));
+
+function compute(){
+  const t={};
+  BASE.forEach(r=>t[r[0]]={name:r[0],p:r[1],w:r[2],d:r[3],l:r[4],gf:r[5],ga:r[6],left:0});
+  let played=0;
+  matches.forEach(m=>{
+    if(m.hg==null||m.ag==null){ t[m.home].left++; t[m.away].left++; return; }
+    played++;
+    const h=t[m.home],a=t[m.away];
+    h.p++;a.p++; h.gf+=m.hg;h.ga+=m.ag; a.gf+=m.ag;a.ga+=m.hg;
+    if(m.hg>m.ag){h.w++;a.l++;} else if(m.hg<m.ag){a.w++;h.l++;} else {h.d++;a.d++;}
+  });
+  const rows=Object.values(t).map(r=>({...r,pts:r.w*3+r.d,gd:r.gf-r.ga,max:r.w*3+r.d+3*r.left}));
+  rows.sort((x,y)=> y.pts-x.pts || y.gd-x.gd || y.gf-x.gf || x.name.localeCompare(y.name,'no'));
+  return {rows,played};
+}
+
+const basePos={};
+(()=>{ const r=BASE.map(b=>({n:b[0],pts:b[2]*3+b[3],gd:b[5]-b[6],gf:b[5]}));
+  r.sort((x,y)=>y.pts-x.pts||y.gd-x.gd||y.gf-x.gf||x.n.localeCompare(y.n,'no'));
+  r.forEach((x,i)=>basePos[x.n]=i+1); })();
+
+function render(){
+  const {rows,played}=compute();
+  const brann=rows.find(r=>r.name==='Brann');
+
+  // Skala for rekkevidde: rundet ned/opp til nærmeste 10
+  const lo=Math.floor(Math.min(...rows.map(r=>r.pts))/10)*10;
+  const hi=Math.ceil(Math.max(...rows.map(r=>r.max))/10)*10;
+  const pct=v=>((v-lo)/(hi-lo)*100).toFixed(2);
+  const ticks=[]; for(let v=lo; v<=hi; v+=10) ticks.push(`<span>${v}</span>`);
+  document.getElementById('scale').innerHTML=ticks.join('');
+
+  const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
+  rows.forEach((r,i)=>{
+    const pos=i+1; const tr=document.createElement('tr');
+    tr.style.setProperty('--i',i); tr.dataset.team=r.name;
+    tr.className=[pos<=3?'eu':'',pos===14?'playoff':'',pos>=15?'ned':'',r.name==='Brann'?'brann':'',(pos===3||pos===13)?'cut':''].join(' ').trim();
+    const mv=basePos[r.name]-pos;
+    const diff = mv===0?'':`<span class="diff ${mv>0?'up':'down'}">${mv>0?'▲':'▼'}${Math.abs(mv)}</span>`;
+    const bar=`<div class="bar" title="${r.pts} poeng nå, maks ${r.max}">
+      <div class="track"></div>
+      <div class="span" style="left:${pct(r.pts)}%;width:${(pct(r.max)-pct(r.pts)).toFixed(2)}%"></div>
+      <div class="guide" style="left:${pct(brann.pts)}%"></div>
+      <div class="dot" style="left:${pct(r.pts)}%"></div></div>`;
+    tr.innerHTML=`<td class="pos">${pos}</td><td class="team">${r.name}${diff}</td><td class="hide-s">${r.p}</td>
+      <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
+      <td class="gd">${r.gd>0?'+':''}${r.gd}</td><td class="pts">${r.pts}</td>
+      <td class="hide-s">${formHtml(r.name)}</td><td class="odds p3 hide-m"></td><td class="odds ned"></td><td class="reach">${bar}</td>`;
+    tb.appendChild(tr);
+  });
+  document.getElementById('tblInfo').textContent = played? `${played} kamper lagt inn` : 'etter 19. september';
+  document.getElementById('fxInfo').textContent = `${matches.length-played} av ${matches.length} uten resultat`;
+
+  matches.forEach(m=>{
+    const row=document.querySelector(`.match[data-id="${m.id}"]`);
+    const set=m.hg!=null&&m.ag!=null;
+    row.querySelectorAll('input').forEach(i=>{i.classList.toggle('set',set); i.classList.toggle('sim',set&&!!m.sim);});
+    row.classList.toggle('fixed', set&&!m.sim);
+    row.querySelectorAll('.quick button').forEach(b=>{
+      const q=b.dataset.q;
+      b.classList.toggle('on', set && ((q==='H'&&m.hg>m.ag)||(q==='U'&&m.hg===m.ag)||(q==='B'&&m.hg<m.ag)));
+    });
+  });
+
+  // Brann: verste fall ut fra det som er lagt inn (tomme kamper: Brann taper, alle andre vinner sine)
+  const pos=rows.indexOf(brann)+1;
+  // Likt på poeng regnes mot Brann, unntatt når begge er ferdigspilt: da avgjør målforskjell og scorede mål
+  const canPass=rows.filter(r=>r.name!=='Brann' && (r.max > brann.pts || (r.max===brann.pts && (r.left>0 || brann.left>0 || rows.indexOf(r)<pos-1)))).length;
+  const worst=canPass+1;
+  let verdictTxt, sub='';
+  if(worst<=13){ verdictTxt=`Sikret ny kontrakt. Dårligst mulige plassering er ${worst}.`; sub='Ingen kombinasjon av gjenstående resultater kan sende Brann under 13. plass.'; }
+  else if(worst===14){ verdictTxt='Kan ikke rykke ned direkte, men kan fortsatt havne på kvalikplass.'; }
+  else { verdictTxt='Kan fortsatt rykke ned.'; sub=`${canPass} lag kan i teorien ende foran eller likt med Brann, så Brann kan ende så lavt som ${Math.min(worst,16)}. plass.`; }
+  if(played===matches.length){
+    sub='';
+    verdictTxt = pos<=3 ? 'Sesongen er ferdig i dette scenariet: Brann tar europaplass.'
+      : pos<=13 ? 'Sesongen er ferdig i dette scenariet: Brann har ny kontrakt.'
+      : pos===14 ? 'Sesongen er ferdig i dette scenariet: Brann må spille kvalik.'
+      : 'Sesongen er ferdig i dette scenariet: Brann rykker ned.';
+  }
+  document.getElementById('verdict').innerHTML=
+    `<div class="pos">${pos}.<span>plass for Brann</span></div>
+     <div class="line">${brann.pts} poeng, ${brann.left} kamper igjen. ${verdictTxt}</div>
+     ${sub?`<div class="sub">${sub}</div>`:''}
+     <div class="sub">Sjekken regner tomme kamper som tap for Brann og seier for alle andre. Sier den "sikret", er det sikkert.</div>
+     <div class="odds-box"><div class="sub" style="margin:0 0 6px">Sannsynlighet for sluttplassering, ut fra modellen</div><div id="odds"></div></div>`;
+  fillOdds(); scheduleMC();
+}
+// Del scenario: resultatene legges i lenken etter #s=
+function encodeScenario(){
+  return matches.filter(m=>m.hg!=null&&m.ag!=null).map(m=>`${TI[m.home]}.${TI[m.away]}.${m.hg}.${m.ag}${m.sim?'s':''}`).join('_');
+}
+function applyScenario(){
+  const h=location.hash.match(/s=([0-9._s]+)/); if(!h) return;
+  h[1].split('_').forEach(part=>{
+    const x=part.match(/^(\d+)\.(\d+)\.(\d+)\.(\d+)(s?)$/); if(!x) return;
+    const m=matches.find(q=>TI[q.home]===+x[1]&&TI[q.away]===+x[2]); if(m) setMatch(m,+x[3],+x[4],true,x[5]==='s');
+  });
+}
+document.getElementById('share').addEventListener('click',async e=>{
+  e.stopPropagation();
+  const code=encodeScenario();
+  const url=location.href.split('#')[0]+(code?'#s='+code:'');
+  history.replaceState(null,'',url);
+  const btn=document.getElementById('share');
+  try{ await navigator.clipboard.writeText(url); btn.textContent='Lenke kopiert'; }
+  catch(_){ prompt('Kopier lenken:',url); btn.textContent='Lenke klar'; }
+  btn.classList.add('done'); setTimeout(()=>{btn.textContent='Del scenario';btn.classList.remove('done');},2500);
+});
+applyScenario();
+fillProb();
+render();
+setTimeout(()=>document.body.classList.remove('intro'),1600);
+</script>
+</body>
+</html>
