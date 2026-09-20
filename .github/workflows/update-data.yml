@@ -2,13 +2,19 @@ name: Oppdater kampdata
 
 on:
   schedule:
-    # Hvert kvarter, døgnet rundt, på minutt 7/22/37/52 (ikke runde
-    # klokkeslett, som GitHub sin planlegger ofte utsetter eller dropper).
-    # Selve kjøringen er billig å avslutte tidlig — se scripts/should_fetch.py,
-    # som avgjør om det faktisk er noe å hente ut fra data/fixtures.json (en
-    # kamp som startet for >105 min siden uten resultat), ikke faste
-    # kampdager her i cronen.
-    - cron: "7,22,37,52 * * * *"
+    # Hvert 20. minutt norsk kveld/dag (12-23), hver time ellers. Var hvert
+    # kvarter døgnet rundt, men GitHub nedprioriterer og dropper kjøringer på
+    # hyppige planer, spesielt på nye repoer (se undersøkelsen 2026-09-20:
+    # null av de planlagte kjøringene hadde gått etter 5+ timer, bare de
+    # manuelle). Klokkeslettene under er UTC og forutsetter norsk sommertid
+    # (UTC+2) — må skyves én time når vintertiden begynner i slutten av
+    # oktober. Selve kjøringen er uansett billig å avslutte tidlig — se
+    # scripts/should_fetch.py, som avgjør om det faktisk er noe å hente ut
+    # fra data/fixtures.json (en kamp som startet for >105 min siden uten
+    # resultat), ikke faste kampdager her i cronen. Ikke runde klokkeslett
+    # (minutt 5/25/45 og 7), som GitHub sin planlegger ofte utsetter/dropper.
+    - cron: "5,25,45 10-20 * * *"  # kl 12-22 norsk tid, hvert 20. minutt
+    - cron: "7 21-23,0-9 * * *"    # kl 23-11 norsk tid, hver time
   workflow_dispatch: {}
 
 permissions:
