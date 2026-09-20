@@ -106,7 +106,21 @@ def fetch_all(cache_dir=None, log=lambda s: None):
                 log(f"[espn]   ukjent lag-id {raw_id!r} ({type(raw_id).__name__}) i {e.get('name')}, hopper over laget")
                 continue
             score = c.get("score")
-            v = score.get("value") if isinstance(score, dict) else None
+            if isinstance(score, dict):
+                v = score.get("value")
+                if v is None and score.get("displayValue") not in (None, ""):
+                    v = score["displayValue"]  # scoreboard-endepunktet ser ut til å mangle "value", bare "displayValue"
+            elif isinstance(score, (int, float, str)):
+                v = score
+            else:
+                v = None
+            if v is not None:
+                try:
+                    v = float(v)
+                except (TypeError, ValueError):
+                    v = None
+            if completed and v is None:
+                log(f"[espn]   rått score-felt for lag-id {raw_id} i {e.get('name')}: {score!r}")
             if c["homeAway"] == "home":
                 home, hg, winner_home = name, v, bool(c.get("winner"))
             else:
