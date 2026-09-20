@@ -63,6 +63,12 @@
   /* Tabell */
   .tblwrap{overflow-x:auto}
   table{width:100%;border-collapse:collapse}
+  /* Frys posisjon og lagnavn: blir stående til venstre når resten av tabellen skrolles */
+  #tbl td.pos,#tbl thead th:first-child{position:sticky;left:0;z-index:2;background:var(--panel)}
+  #tbl td.team,#tbl th.team{position:sticky;left:40px;z-index:2;background:var(--panel);box-shadow:2px 0 6px -2px rgba(0,0,0,.15)}
+  @media (max-width:640px){
+    #tbl td.team,#tbl th.team{left:30px}
+  }
   th,td{padding:8px 7px;text-align:right;white-space:nowrap}
   thead th{font-weight:600;color:var(--muted);font-size:12.5px;border-bottom:2px solid var(--ink);padding-top:4px}
   tbody td{border-bottom:1px solid var(--line-soft)}
