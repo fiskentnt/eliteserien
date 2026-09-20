@@ -223,11 +223,11 @@
   .moved-note{margin:0 0 8px;font-size:12px;color:#8a6a1f}
   .dayhead{margin:10px 0 2px;font:700 12.5px/1.2 var(--cond);color:var(--muted)}
   .dayhead:first-of-type{margin-top:6px}
-  .match{display:grid;grid-template-columns:30px minmax(0,1fr) 40px 8px 40px minmax(0,1fr) auto;align-items:center;gap:6px;padding:6px 6px;border-bottom:1px solid var(--line-soft);border-radius:6px;max-width:100%}
+  .match{display:grid;grid-template-columns:27px minmax(0,1fr) 40px 8px 40px minmax(0,1fr) auto;align-items:center;gap:3px;padding:6px 4px;border-bottom:1px solid var(--line-soft);border-radius:6px;max-width:100%}
   .match .home{text-align:right}
   .match .away{text-align:left}
-  .match .home,.match .away{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-  .match .when{text-align:center;font-size:11.5px;line-height:1;white-space:nowrap}
+  .match .home,.match .away{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:12.5px}
+  .match .when{text-align:center;font-size:10.5px;line-height:1;white-space:nowrap}
   .match .when .t{font-weight:700;color:var(--ink)}
   .match.played .when .t{color:#8a9296}
   .match.brann{background:var(--brann-soft)}
@@ -240,9 +240,9 @@
   .match .colon{text-align:center;color:var(--muted);font-weight:700}
   .match.played{background:#f1f3f3;color:#8a9296}
   .match.played .score{width:40px;height:34px;display:flex;align-items:center;justify-content:center;font:700 19px/1 var(--cond);border-radius:6px;background:#dde2e3;color:#6f787c}
-  .match.played .done{margin-left:6px;font-size:12.5px;font-weight:600;color:#8a9296;width:121px;text-align:center}
-  .quick{display:flex;gap:3px;margin-left:6px;align-items:flex-start}
-  .quick .q{display:flex;flex-direction:column;align-items:center;gap:2px;width:28px}
+  .match.played .done{margin-left:6px;font-size:12.5px;font-weight:600;color:#8a9296;width:100px;text-align:center;white-space:nowrap}
+  .quick{display:flex;gap:2px;margin-left:3px;align-items:flex-start}
+  .quick .q{display:flex;flex-direction:column;align-items:center;gap:2px;width:25px}
   .quick .pct{font:500 10.5px/1 var(--body);letter-spacing:-.01em;color:#98a0a4;height:11px;white-space:nowrap}
   .quick .pct.best{color:var(--ink);font-weight:700}
   .quick .pct.odds{color:var(--brann);font-weight:700;font-size:10px;letter-spacing:.02em}
@@ -486,11 +486,13 @@ document.getElementById('formModalBackdrop').addEventListener('click', e=>{
 document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeFormModal(); });
 // Korte lagnavn der kampradene blir trange (kolonnen med klokkeslett + H/U/B
 // tar en del av bredden, så lange navn må forkortes for å unngå at CSS
-// klipper dem med "...")
+// klipper dem med "..."). Bare allment kjente forkortelser — resten skrives
+// fullt ut, selv om det er trangere (se .match .home/.away og .when i CSS
+// for hvordan bredden løses uten å forkorte mer).
 const SHORT_NAME = {
-  "Kristiansund":"KBK", "Sarpsborg 08":"Sarpsborg", "Bodø/Glimt":"Glimt",
-  "Rosenborg":"RBK", "Fredrikstad":"FFK", "Vålerenga":"VIF",
-  "Lillestrøm":"LSK", "KFUM Oslo":"KFUM", "Sandefjord":"SFK", "Aalesund":"AaFK",
+  "Kristiansund":"KBK", "Sarpsborg 08":"S08", "Bodø/Glimt":"Glimt",
+  "Rosenborg":"RBK", "Vålerenga":"VIF",
+  "Lillestrøm":"LSK", "KFUM Oslo":"KFUM",
 };
 const shortTeam = t => SHORT_NAME[t] || t;
 const capFirst = s => s.charAt(0).toUpperCase()+s.slice(1);
