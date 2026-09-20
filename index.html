@@ -40,10 +40,6 @@
     --eu:#1d7a63; --eu-soft:#e2f1ec; --eu-text:#1d7a63;
     --q:#cf951a; --q-soft:#fbf1dc; --q-text:#9a6c08; --q-border:#d9b872; --q-note:#8a6a1f;
     --ned:#6c7479;
-    /* Nøytral, svak markering for "laget du følger" i tabell/kampliste --
-       selve fargeidentiteten står i teksten (fet + klubbfarge), ikke i en
-       farget bakgrunnsvask som lett leses som en advarsel (særlig røde lag). */
-    --highlight-bg:#fdecee;
     --strong-bg:#15191c; --strong-fg:#ffffff; --strong-bg-hover:#000000;
     --cut-line:#b7bfbf;
     --input-bg:#f6f7f7; --sim-bg:#e3e7e8; --sim-border:#c3cacc;
@@ -52,13 +48,19 @@
     --hist-flat:#e3c3c6; --hist-eu:#8cc3b3; --hist-q:#e8c374; --hist-n:#c98a90;
     /* --team*: DYNAMISK, satt av JS (applyTeamColors()) fra TEAM_COLORS ut
        fra valgt lag. --team-fill/-deep/-fill-text er unthemet (samme "fyll
-       med hvit/mørk tekst"-logikk som --accent), --team-text-light/-dark
-       byttes akkurat som --eu-text/--q-text. Standardverdiene her er bare et
-       fall-tilbake før boot() har satt de ekte -- Brann sine farger, siden
-       Brann er standardvalget. */
+       med hvit/mørk tekst"-logikk som --accent), --team-text-light/-dark og
+       --team-soft-light/-dark byttes akkurat som --eu-text/--q-text.
+       --team-soft er markeringens BAKGRUNN i tabell/kampliste (tabell/rad),
+       en svak, gjennomsiktig fargevask av lagets egen farge -- lav alfa
+       (samme mønster som --accent-soft i mørk modus) i stedet for en fast,
+       Brann-tilpasset rosa, slik at vasken faktisk følger valgt lag.
+       Standardverdiene her er bare et fall-tilbake før boot() har satt de
+       ekte -- Brann sine farger, siden Brann er standardvalget. */
     --team-fill:#c4111d; --team-deep:#8d0a13; --team-fill-text:#ffffff;
     --team-text-light:#c4111d; --team-text-dark:#ff6b74;
     --team-text: var(--team-text-light);
+    --team-soft-light:rgba(196,17,29,.08); --team-soft-dark:rgba(255,107,116,.12);
+    --team-soft: var(--team-soft-light);
     --cond:"Barlow Condensed","Arial Narrow","Roboto Condensed",system-ui,sans-serif;
     --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
   }
@@ -79,7 +81,7 @@
       --q-soft:rgba(224,173,74,.12); --q-text:#e0ad4a; --q-border:#6b5220; --q-note:#caa059;
       --ned:#8b939a;
       --team-text: var(--team-text-dark);
-      --highlight-bg:#262c30;
+      --team-soft: var(--team-soft-dark);
       --strong-bg:#3a4247; --strong-fg:#eef0f1; --strong-bg-hover:#4a5359;
       --cut-line:#484f51;
       --input-bg:#262c2d; --sim-bg:#292f30; --sim-border:#3e4649;
@@ -96,7 +98,7 @@
     --q-soft:rgba(224,173,74,.12); --q-text:#e0ad4a; --q-border:#6b5220; --q-note:#caa059;
     --ned:#8b939a;
     --team-text: var(--team-text-dark);
-    --highlight-bg:#262c30;
+    --team-soft: var(--team-soft-dark);
     --strong-bg:#3a4247; --strong-fg:#eef0f1; --strong-bg-hover:#4a5359;
     --cut-line:#484f51;
     --input-bg:#262c2d; --sim-bg:#292f30; --sim-border:#3e4649;
@@ -225,7 +227,11 @@
   td.team{font-weight:500}
   td.pts{font:800 19px/1 var(--cond);padding-right:12px}
   td.gd{color:var(--muted)}
-  tr.followed td{background:var(--highlight-bg)}
+  tr.followed td{background:var(--team-soft)}
+  /* #tbl td.pos/#tbl td.team over (id-selektor, for den frosne venstrekanten)
+     slår ellers alltid tr.followed sin bakgrunn, uansett rekkefølge --
+     trenger samme id-prefiks for å faktisk vinne der raden er fulgt. */
+  #tbl tr.followed td.pos,#tbl tr.followed td.team{background:var(--team-soft)}
   tr.followed td.team{color:var(--team-text);font-weight:700}
   tr.followed td.pts{color:var(--team-text)}
   tr.cut td{border-bottom:2px dashed var(--cut-line)}
@@ -363,7 +369,6 @@
   .match .when{text-align:center;font-size:10.5px;line-height:1;white-space:nowrap}
   .match .when .t{font-weight:700;color:var(--ink)}
   .match.played .when .t{color:var(--played-fg)}
-  .match.followed{background:var(--highlight-bg)}
   .match .followed-name{color:var(--team-text);font-weight:700}
   .match input{width:40px;height:34px;text-align:center;font:700 19px/1 var(--cond);border:1px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--ink);padding:0}
   .match input.set{background:var(--strong-bg);color:var(--strong-fg);border-color:var(--strong-bg)}
@@ -374,6 +379,11 @@
   .match.played{background:var(--played-bg);color:var(--played-fg)}
   .match.played .score{width:40px;height:34px;display:flex;align-items:center;justify-content:center;font:700 19px/1 var(--cond);border-radius:6px;background:var(--played-score-bg);color:var(--played-score-fg)}
   .match.played .done{margin-left:6px;font-size:12.5px;font-weight:600;color:var(--played-fg);width:100px;text-align:center;white-space:nowrap}
+  /* Etter .match.played, ikke før -- ellers vinner .match.played sin
+     bakgrunn (samme spesifisitet, senere regel vinner) over markeringen for
+     en kamp som er BÅDE spilt OG følges (f.eks. alt i "Siste runde", som
+     alltid er spilte kamper). */
+  .match.followed{background:var(--team-soft)}
   .quick{display:flex;gap:2px;margin-left:3px;align-items:flex-start}
   .quick .q{display:flex;flex-direction:column;align-items:center;gap:2px;width:25px}
   .quick .pct{font:500 10.5px/1 var(--body);letter-spacing:-.01em;color:var(--muted);height:11px;white-space:nowrap}
@@ -695,6 +705,10 @@ const TEAM_COLORS = {
 // er standard i DET tilfellet, ikke hvis noen aktivt har valgt bort et lag.
 let SELECTED_TEAM = localStorage.getItem('followTeam');
 if(SELECTED_TEAM===null) SELECTED_TEAM = 'Brann';
+function hexToRgbStr(hex){
+  const n = parseInt(hex.slice(1), 16);
+  return `${(n>>16)&255},${(n>>8)&255},${n&255}`;
+}
 function applyTeamColors(){
   const c = TEAM_COLORS[SELECTED_TEAM];
   if(!c) return; // ingen lag valgt -- ingen .followed-elementer finnes uansett, variablene er ubrukt
@@ -704,11 +718,32 @@ function applyTeamColors(){
   root.setProperty('--team-fill-text', c.fillText);
   root.setProperty('--team-text-light', c.textLight);
   root.setProperty('--team-text-dark', c.textDark);
+  // Markeringens bakgrunn: en svak, gjennomsiktig vask av lagets egen farge
+  // (lav alfa over --panel/--bg) i stedet for en fast rosa -- se
+  // --team-soft-light/-dark i :root for hvorfor alfa (0,08/0,12 -- hentet
+  // fra de gamle, Brann-tilpassede faste verdiene den erstattet).
+  root.setProperty('--team-soft-light', `rgba(${hexToRgbStr(c.fill)},.08)`);
+  root.setProperty('--team-soft-dark', `rgba(${hexToRgbStr(c.textDark)},.12)`);
 }
 applyTeamColors();
 
 const roundsEl = document.getElementById('rounds');
 const isFollowedMatch = m => SELECTED_TEAM!=='' && (m.home===SELECTED_TEAM||m.away===SELECTED_TEAM);
+// #rounds og #lastRound bygges bare ÉN gang, i boot() -- kamprad-elementene
+// (data-home/data-away, satt ved opprettelse) lever videre uendret resten av
+// økten, uansett hvilket lag som følges siden. Uten dette kalt fra render()
+// hver gang ville .followed-klassen (og dermed markeringen) blitt stående
+// fast på laget som var valgt ved sideinnlasting, ikke laget som faktisk er
+// valgt nå -- se brukerrapporten som avdekket dette.
+function updateFollowedMatchRows(){
+  document.querySelectorAll('#rounds .match, #lastRound .match').forEach(row=>{
+    const isF = SELECTED_TEAM!=='' && (row.dataset.home===SELECTED_TEAM || row.dataset.away===SELECTED_TEAM);
+    row.classList.toggle('followed', isF);
+    const home=row.querySelector('.home'), away=row.querySelector('.away');
+    if(home) home.classList.toggle('followed-name', row.dataset.home===SELECTED_TEAM);
+    if(away) away.classList.toggle('followed-name', row.dataset.away===SELECTED_TEAM);
+  });
+}
 
 // Dynamisk "følg med"-topp: top = min(16px, vindushøyde - tabellhøyde - 16px).
 // Kort tabell -> top=16px (fester seg rett under vindustoppen med en gang).
@@ -1686,7 +1721,7 @@ function renderModelTbl(){
   TEAMS.forEach(t=>{ const i=TI[t], S=STATS[t];
     const hf=Math.exp(mu+H+att[i]+ha[i]), hm=Math.exp(mu+con[i]+hc[i]);
     const bf=Math.exp(mu+att[i]-ha[i]), bm=Math.exp(mu+H+con[i]-hc[i]);
-    h+=`<tr${t===SELECTED_TEAM?' style="background:var(--highlight-bg)"':''}><td class="team">${t}</td><td>${formHtml(t)}</td>
+    h+=`<tr${t===SELECTED_TEAM?' style="background:var(--team-soft)"':''}><td class="team">${t}</td><td>${formHtml(t)}</td>
       <td>${f2(S.h[1]/S.h[0])}</td><td>${S.h[2]}-${S.h[3]}</td><td>${f2(S.b[1]/S.b[0])}</td><td>${S.b[2]}-${S.b[3]}</td>
       <td>${f1(hf)}-${f1(hm)}</td><td>${f1(bf)}-${f1(bm)}</td></tr>`; });
   document.getElementById('modelTbl').innerHTML=h+'</tbody>';
@@ -1889,6 +1924,7 @@ function render(){
       b.classList.toggle('on', set && ((q==='H'&&m.hg>m.ag)||(q==='U'&&m.hg===m.ag)||(q==='B'&&m.hg<m.ag)));
     });
   });
+  updateFollowedMatchRows();
 
   // Lagboksen finnes bare når et lag er fulgt (item 2f) -- resten av denne
   // blokken bruker SELECTED_TEAM overalt der det tidligere sto "Brann".
@@ -2151,7 +2187,8 @@ async function boot(){
     const d = document.createElement('div'); d.className='round';
     roundMatches.forEach(m=>{
       const row=document.createElement('div');
-      row.className='match played'+(isFollowedMatch(m)?' followed':'');
+      row.className='match played';
+      row.dataset.home=m.home; row.dataset.away=m.away;
       row.title=`Spilt ${formatDateNo(m.date)}, ligger i tabellen`;
       row.innerHTML=`<span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">${shortDateNo(m.date)}</span>`;
       d.appendChild(row);
@@ -2211,7 +2248,8 @@ async function boot(){
       }
       if(m.played){
         const row=document.createElement('div');
-        row.className='match played'+(isFollowedMatch(m)?' followed':'');
+        row.className='match played';
+        row.dataset.home=m.home; row.dataset.away=m.away;
         row.title=`Spilt ${formatDateNo(m.date)}, ligger i tabellen`;
         row.innerHTML=`<span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">Spilt ${shortDateNo(m.date)}</span>`;
         d.appendChild(row);
@@ -2219,15 +2257,15 @@ async function boot(){
       }
       const id = `m${r.round}_${mi}`;
       matches.push({id, round:r.round, date:m.date, home:m.home, away:m.away, hg:null, ag:null});
-      const isF = isFollowedMatch(m);
-      const row = document.createElement('div'); row.className='match'+(isF?' followed':''); row.dataset.id=id;
+      const row = document.createElement('div'); row.className='match'; row.dataset.id=id;
+      row.dataset.home=m.home; row.dataset.away=m.away;
       row.innerHTML = `
         <span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span>
-        <span class="home ${m.home===SELECTED_TEAM?"followed-name":""}">${shortTeam(m.home)}</span>
+        <span class="home">${shortTeam(m.home)}</span>
         <input inputmode="numeric" data-side="h" aria-label="${m.home} mål">
         <span class="colon">-</span>
         <input inputmode="numeric" data-side="a" aria-label="${m.away} mål">
-        <span class="away ${m.away===SELECTED_TEAM?"followed-name":""}">${shortTeam(m.away)}</span>
+        <span class="away">${shortTeam(m.away)}</span>
         <span class="quick"><span class="q"><button data-q="H" title="Hjemmeseier 1-0">H</button><i class="pct" data-o="H"></i></span><span class="q"><button data-q="U" title="Uavgjort 0-0">U</button><i class="pct" data-o="U"></i></span><span class="q"><button data-q="B" title="Borteseier 0-1">B</button><i class="pct" data-o="B"></i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src"></i></span></span>`;
       d.appendChild(row);
     });
