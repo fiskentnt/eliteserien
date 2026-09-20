@@ -117,6 +117,7 @@
 
   /* Merker: matematisk avgjort (task 3a) */
   .badge{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font:700 10px/1.7 var(--body);letter-spacing:.02em;vertical-align:middle;white-space:nowrap}
+  .badge:empty{display:none;margin-left:0}
   .badge.champ{background:var(--q);color:#3a2c05}
   .badge.europe{background:var(--eu-soft);color:var(--eu)}
   .badge.safe{background:var(--line-soft);color:var(--muted)}
@@ -620,8 +621,221 @@ function outcomeProbs(lh, la){
 
 self.onmessage = function(e){
   var d = e.data;
-  if(d.mode==='typical'){ runTypical(d); } else { runProb(d); }
+  if(d.mode==='typical'){ runTypical(d); } else if(d.mode==='badges'){ runBadges(d); } else { runProb(d); }
 };
+
+// ---- Merker ("Seriemester"/"Klar for Europa"/"Sikret plass"/"Rykket ned"):
+// matematisk avgjort MÅ ta hensyn til at lagene under/over også møter
+// hverandre (en kamp gir maks 3 poeng å fordele på to lag, ikke 3 til hver),
+// ellers teller man feil -- se samtalen som førte til denne omskrivingen
+// (Viking sto uten "Sikret plass" mens Glimt hadde det, samme poengsum).
+// Eksakt løsning for generell K (flere enn ett lag skal samtidig passere)
+// er NP-hardt (Kern & Paulusma 2004, fotball-tabeller med 3-1-0-poeng), så
+// dette er maksflyt (Dinic) som en STRAM, GYLDIG øvre grense inni et
+// branch-and-bound-søk over kampene mellom kandidatene -- eksakt når søket
+// fullfører, en sikker (aldri for lav) grense ellers. Blir svaret usikkert
+// innen tidsgrensen, vises heller ikke merket enn å påstå noe galt.
+function Dinic(n){
+  this.n = n;
+  this.g = [];
+  for(var i=0;i<n;i++) this.g.push([]);
+}
+Dinic.prototype.addEdge = function(u,v,cap){
+  this.g[u].push({to:v, cap:cap, flow:0, rev:this.g[v].length});
+  this.g[v].push({to:u, cap:0, flow:0, rev:this.g[u].length-1});
+};
+Dinic.prototype.bfs = function(s,t){
+  this.level = new Array(this.n).fill(-1);
+  this.level[s] = 0;
+  var q=[s];
+  for(var qi=0; qi<q.length; qi++){
+    var u=q[qi];
+    for(var k=0;k<this.g[u].length;k++){
+      var e=this.g[u][k];
+      if(e.cap-e.flow>0 && this.level[e.to]<0){ this.level[e.to]=this.level[u]+1; q.push(e.to); }
+    }
+  }
+  return this.level[t]>=0;
+};
+Dinic.prototype.dfs = function(u,t,f){
+  if(u===t) return f;
+  for(; this.it[u]<this.g[u].length; this.it[u]++){
+    var e=this.g[u][this.it[u]];
+    if(e.cap-e.flow>0 && this.level[e.to]===this.level[u]+1){
+      var dd=this.dfs(e.to,t,Math.min(f,e.cap-e.flow));
+      if(dd>0){ e.flow+=dd; this.g[e.to][e.rev].flow-=dd; return dd; }
+    }
+  }
+  return 0;
+};
+Dinic.prototype.maxflow = function(s,t){
+  var flow=0;
+  while(this.bfs(s,t)){
+    this.it = new Array(this.n).fill(0);
+    var f;
+    while((f=this.dfs(s,t,Infinity))>0) flow+=f;
+  }
+  return flow;
+};
+// Øvre grense (LP-avslappet, forsvarlig men ikke nødvendigvis eksakt alene)
+// for hvor mange av idxSet samtidig kan nå needArr[i], gitt games (par av
+// idxSet-indekser, hver kamp maks 3 poeng delt fritt mellom de to lagene --
+// en avslapping av at ekte resultater bare er 3-0/0-3/1-1, men en GYLDIG
+// (aldri for lav) øvre grense siden ekte utfall er en delmengde av dette).
+function flowUpperBoundCount(needArr, idxSet, games){
+  if(idxSet.length===0) return 0;
+  var idxPos={}; idxSet.forEach(function(ci,p){ idxPos[ci]=p; });
+  var G=games.length, C=idxSet.length;
+  var S=0, T=1+G+C;
+  var dinic=new Dinic(T+1);
+  games.forEach(function(_,gi){ dinic.addEdge(S,1+gi,3); });
+  games.forEach(function(pair,gi){ dinic.addEdge(1+gi,1+G+idxPos[pair[0]],3); dinic.addEdge(1+gi,1+G+idxPos[pair[1]],3); });
+  idxSet.forEach(function(ci,p){ dinic.addEdge(1+G+p,T,needArr[ci]); });
+  var F=dinic.maxflow(S,T);
+  var sortedNeeds=idxSet.map(function(ci){ return needArr[ci]; }).sort(function(a,b){ return a-b; });
+  var cum=0, cnt=0;
+  for(var i=0;i<sortedNeeds.length;i++){ var x=sortedNeeds[i]; if(cum+x<=F){ cum+=x; cnt++; } else break; }
+  return cnt;
+}
+// Propagering: fjern kandidater som ER avgjort ut fra sine EGNE ikke-
+// omstridte kamper alene (mot ikke-kandidater eller allerede avgjorte
+// kandidater), og krediter motstanderen deres kampen som en gratis kamp.
+// Gjøres til et fastpunkt -- avgjør de fleste sesonger tidlig UTEN søk i
+// det hele tatt, og er nødvendig for riktig svar: et lag som uansett er
+// avgjort (f.eks. allerede sikret uten hjelp fra en bestemt kamp) skal ikke
+// telle den kampen som reell konkurranse mot noen andre heller.
+function solveDirection(byname, remaining, excludeName, target, direction, deadline){
+  var rows=[]; for(var k in byname) if(k!==excludeName) rows.push(byname[k]);
+  var candNames = rows.filter(function(r){ return direction==='above' ? r.max>target : r.pts<=target; }).map(function(r){ return r.name; });
+  if(candNames.length===0) return {count:0, exact:true};
+
+  var idx={}; candNames.forEach(function(n,i){ idx[n]=i; });
+  var n=candNames.length;
+  var games = remaining.filter(function(pair){ return idx[pair[0]]!==undefined && idx[pair[1]]!==undefined; })
+                        .map(function(pair){ return [idx[pair[0]], idx[pair[1]]]; });
+  var resolvedSafe=new Array(n).fill(false);
+  var bonus=new Array(n).fill(0);
+
+  candNames.forEach(function(name,i){
+    var nOutside = remaining.filter(function(pair){
+      var touches = (pair[0]===name || pair[1]===name);
+      var bothCand = idx[pair[0]]!==undefined && idx[pair[1]]!==undefined;
+      return touches && !bothCand;
+    }).length;
+    bonus[i] = direction==='above' ? 3*nOutside : 0;
+  });
+
+  function curFloor(i){ return byname[candNames[i]].pts + bonus[i]; }
+
+  var changed=true;
+  while(changed){
+    changed=false;
+    for(var i=0;i<n;i++){
+      if(resolvedSafe[i]) continue;
+      var justResolved=false;
+      if(direction==='above'){ if(curFloor(i)>target){ resolvedSafe[i]=true; justResolved=true; } }
+      else {
+        var gamesLeft = games.filter(function(pair){ return pair[0]===i||pair[1]===i; }).length;
+        if(curFloor(i)<=target && gamesLeft===0){ resolvedSafe[i]=true; justResolved=true; }
+      }
+      if(justResolved){
+        changed=true;
+        var stay=[];
+        games.forEach(function(pair){
+          if(pair[0]===i || pair[1]===i){
+            var other = pair[0]===i ? pair[1] : pair[0];
+            if(!resolvedSafe[other]) bonus[other]+=3;
+          } else stay.push(pair);
+        });
+        games=stay;
+      }
+    }
+  }
+
+  var stillIdx=[]; for(var i2=0;i2<n;i2++) if(!resolvedSafe[i2]) stillIdx.push(i2);
+  var metCount=0; for(var i3=0;i3<n;i3++) if(resolvedSafe[i3]) metCount++;
+  if(stillIdx.length===0) return {count:metCount, exact:true};
+
+  var need = stillIdx.map(function(i){ return direction==='above' ? Math.max(0, target-curFloor(i)+1) : target-curFloor(i); });
+  var localIdx={}; stillIdx.forEach(function(gi,li){ localIdx[gi]=li; });
+  var localGames = games.map(function(pair){ return [localIdx[pair[0]], localIdx[pair[1]]]; });
+
+  return searchResidual(metCount, stillIdx.length, need, localGames, direction, deadline);
+}
+function searchResidual(metBase, m, need, games, direction, deadline){
+  if(games.length===0){
+    var cnt=0; for(var i=0;i<m;i++) if(direction==='above' ? need[i]<=0 : need[i]>=0) cnt++;
+    return {count:metBase+cnt, exact:true};
+  }
+  var earned=new Array(m).fill(0);
+  var bestFound=0;
+  function successCount(){
+    var c=0; for(var i=0;i<m;i++) if(direction==='above' ? earned[i]>=need[i] : earned[i]<=need[i]) c++;
+    return c;
+  }
+  function bound(gi){
+    if(direction==='lte') return successCount();
+    var remNeed = need.map(function(v,i){ return Math.max(0, v-earned[i]); });
+    var mc=0; var stillNeedArr=[];
+    var stillNeedFlag=new Array(m).fill(false);
+    for(var i=0;i<m;i++){ if(remNeed[i]===0) mc++; else { stillNeedFlag[i]=true; stillNeedArr.push(i); } }
+    var trueConf=[];
+    for(var kk=gi; kk<games.length; kk++){
+      var pair=games[kk], i2=pair[0], j2=pair[1];
+      var iIn=stillNeedFlag[i2], jIn=stillNeedFlag[j2];
+      if(iIn&&jIn) trueConf.push(pair);
+      else if(iIn) remNeed[i2]=Math.max(0,remNeed[i2]-3);
+      else if(jIn) remNeed[j2]=Math.max(0,remNeed[j2]-3);
+    }
+    var extra = flowUpperBoundCount(remNeed, stillNeedArr, trueConf);
+    return mc+extra;
+  }
+  var visited=0, timedOut=false;
+  function dfs(gi){
+    if(timedOut) return;
+    visited++;
+    if((visited & 511)===0 && Date.now()>deadline){ timedOut=true; return; }
+    if(gi===games.length){ var c=successCount(); if(c>bestFound) bestFound=c; return; }
+    if(bound(gi)<=bestFound) return;
+    var pair=games[gi], i=pair[0], j=pair[1];
+    earned[i]+=3; dfs(gi+1); earned[i]-=3;
+    if(timedOut) return;
+    earned[j]+=3; dfs(gi+1); earned[j]-=3;
+    if(timedOut) return;
+    earned[i]+=1; earned[j]+=1; dfs(gi+1); earned[i]-=1; earned[j]-=1;
+  }
+  dfs(0);
+  var exact=!timedOut;
+  var count = metBase + (exact ? bestFound : bound(0));
+  return {count:count, exact:exact};
+}
+function computeOneBadge(byname, remaining, name, budgetMs){
+  // Én delt tidsgrense for HELE laget (ikke per sjekk): "above" bruker det
+  // meste normalt (avgjør champ/europa/safe), "atmost" (rykket ned) får det
+  // som er igjen, bare når "above" ikke allerede ga et merke.
+  var r=byname[name];
+  var deadline=Date.now()+budgetMs;
+  var above=solveDirection(byname, remaining, name, r.pts, 'above', deadline);
+  var badge=null;
+  if(above.exact){
+    if(above.count<1) badge={cls:'champ', text:'Seriemester'};
+    else if(above.count<4) badge={cls:'europe', text:'Klar for Europa'};
+    else if(above.count<13) badge={cls:'safe', text:'Sikret plass'};
+  }
+  if(!badge){
+    var atmost=solveDirection(byname, remaining, name, r.max, 'atmost', deadline);
+    if(atmost.exact && atmost.count<2) badge={cls:'relegated', text:'Rykket ned'};
+  }
+  return badge;
+}
+function runBadges(d){
+  var byname={}; d.rows.forEach(function(r){ byname[r.name]=r; });
+  var out={};
+  d.rows.forEach(function(r){
+    out[r.name] = computeOneBadge(byname, d.remaining, r.name, d.budgetMs||500);
+  });
+  postMessage({runId:d.runId, mode:'badges', badges:out});
+}
 
 // ---- Europa/Ned/Brann-boksen: 4000 "hot" simulerte sesonger (uendret metode). ----
 function runProb(d){
@@ -773,6 +987,12 @@ function getWorker(){
       if(data.mode==='typical'){
         const resolve=typicalResolvers.get(data.runId);
         if(resolve){ resolve(data); typicalResolvers.delete(data.runId); }
+        return;
+      }
+      if(data.mode==='badges'){
+        if(data.runId!==badgeRunId) return; // scenariet er endret siden dette kallet startet — forkast
+        lastBadges=data.badges;
+        applyBadgesToDom();
         return;
       }
       const {runId,out}=data;
@@ -962,22 +1182,36 @@ function compute(){
   return {rows,played};
 }
 
-// Merke for det som er matematisk avgjort. "rows" er poengsortert (indeks =
-// nåværende plassering - 1). Samme prinsipp som Branns egen worst-case-
-// utregning i render(): et lag med FÆRRE poeng enn mitt maks kan fortsatt
-// forbigå meg (uavgjort på poeng regnes mot meg, unntatt når begge er
-// ferdigspilt og den andre allerede ligger foran — da avgjør målforskjellen).
-function computeBadge(rows,r,idx){
-  const others=rows.filter(x=>x!==r);
-  const canPass=others.filter(o=>o.max>r.pts || (o.max===r.pts && (o.left>0 || r.left>0 || rows.indexOf(o)<idx))).length;
-  const worst=canPass+1;
-  if(worst===1) return {cls:'champ',text:'Seriemester'};
-  if(worst<=4) return {cls:'europe',text:'Klar for Europa'};
-  if(worst<=13) return {cls:'safe',text:'Sikret plass'};
-  const guaranteedAbove=others.filter(o=>o.pts>r.max || (o.pts===r.max && o.left===0 && r.left===0 && rows.indexOf(o)<idx)).length;
-  const best=guaranteedAbove+1;
-  if(best>=15) return {cls:'relegated',text:'Rykket ned'};
-  return null;
+// Merke for det som er matematisk avgjort. Regnes i Web Workeren (mode:
+// 'badges', se WORKER_SRC) siden det å ta hensyn til at kandidatene også
+// møter hverandre (ikke bare "mitt maks mot ditt maks" hver for seg) krever
+// et søk som i sjeldne, trange sesonger kan ta opptil budsjettet (500 ms per
+// lag) — tabellen skal aldri vente på det. render() viser først det som
+// ligger i cachen (lastBadges, tom første gang), og ber Workeren om et nytt
+// svar bare når poeng/gjenstående kamper faktisk er annerledes enn sist
+// (badgeSignature); svaret patches inn i de allerede tegnede radene når det
+// kommer, uten en ny full render().
+let lastBadges = null, lastBadgeSignature = null, badgeRunId = 0;
+function badgeSignatureOf(rows){
+  return rows.map(r=>r.name+':'+r.pts+':'+r.left).sort().join('|');
+}
+function applyBadgesToDom(){
+  document.querySelectorAll('#tbl tbody tr').forEach(tr=>{
+    const el = tr.querySelector('.badge');
+    if(!el) return;
+    const b = lastBadges && lastBadges[tr.dataset.team];
+    el.className = 'badge'+(b?' '+b.cls:'');
+    el.textContent = b ? b.text : '';
+  });
+}
+function computeBadgesAsync(rows){
+  const sig = badgeSignatureOf(rows);
+  if(sig===lastBadgeSignature) return; // ingenting som kan ha endret badge-utfallet
+  lastBadgeSignature = sig;
+  badgeRunId++;
+  const payloadRows = rows.map(r=>({name:r.name, pts:r.pts, left:r.left, max:r.max}));
+  const remainingPairs = matches.filter(isEmpty).map(m=>[m.home,m.away]);
+  getWorker().postMessage({mode:'badges', runId:badgeRunId, rows:payloadRows, remaining:remainingPairs, budgetMs:500});
 }
 
 // "Slik fungerer det"-tabellen: forventede mål ut fra de LEVENDE lagstyrkene
@@ -1105,7 +1339,6 @@ function render(){
   const baseForm=formScores(TEAMS.map(t=>MODEL.att[MTI[t]]), TEAMS.map(t=>MODEL.con[MTI[t]]));
   rows.forEach((r,i)=>{
     r.pos=i+1;
-    r.badge=computeBadge(rows,r,i);
     r.form=liveForm[TI[r.name]];
     r.formChange=r.form-baseForm[TI[r.name]];
   });
@@ -1125,19 +1358,20 @@ function render(){
     tr.className=[pos<=4?'eu':'',pos===14?'playoff':'',pos>=15?'ned':'',r.name==='Brann'?'brann':'',(pos===4||pos===13)?'cut':''].join(' ').trim();
     const mv=basePos[r.name]-pos;
     const diff = mv===0?'':`<span class="diff ${mv>0?'up':'down'}">${mv>0?'▲':'▼'}${Math.abs(mv)}</span>`;
-    const badge = r.badge?`<span class="badge ${r.badge.cls}">${r.badge.text}</span>`:'';
     const posTitle = EURO_TITLES[pos]||'';
     const formCls = r.form<4?'red':r.form>6?'green':'yellow';
     const changeTxt = r.formChange>=0.05?`Opp ${r.formChange.toFixed(1)} siden forrige modelloppdatering.`
       : r.formChange<=-0.05?`Ned ${Math.abs(r.formChange).toFixed(1)} siden forrige modelloppdatering.`
       : 'Uendret siden forrige modelloppdatering.';
-    tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}">${r.name}</span>${badge}${diff}</td><td class="hide-s">${r.p}</td>
+    tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}">${r.name}</span><span class="badge"></span>${diff}</td><td class="hide-s">${r.p}</td>
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
       <td class="gd">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.pts} poeng nå. Maks mulig sluttsum: ${r.max}.">${r.pts}</td>
       <td class="formcol"><span class="formbox ${formCls}" title="${r.form.toFixed(1)} av 10. ${changeTxt}">${r.form.toFixed(1)}</span></td>
       <td class="hide-s">${formHtml(r.name)}</td><td class="odds p3 hide-m"></td><td class="odds ned"></td>`;
     tb.appendChild(tr);
   });
+  applyBadgesToDom(); // viser cachen (tom første gang) med en gang, uten å vente
+  computeBadgesAsync(rows); // ber Workeren om et nytt svar bare hvis noe faktisk kan ha endret badge-utfallet
   const ownMatch = latestOwnMatch();
   if(ownMatch){
     const targetDate = ROUND_LAST_DATE[ownMatch.round] || ownMatch.date;
