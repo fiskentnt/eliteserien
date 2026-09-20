@@ -321,6 +321,7 @@ function dateNoLong(iso){
 // og data/odds_upcoming.json (fylles av boot()) ----
 let TEAMS = [], BASE = [], MATCHES = [], TI = {}, MTI = {}, STATS = {}, MODEL = null, basePos = {};
 let matches = []; // gjenstående kamper, redigerbare
+let ROUND_LAST_DATE = {}; // runde -> siste kampdato i runden (uansett spilt eller ikke), for "samme runde"-utfylling
 let ODDS_UP = {}, ODDS_FETCHED_AT = null; // odds for kommende kamper, nøkkel "hjemme|borte"
 const RATES = {};
 
@@ -585,15 +586,23 @@ function simulateEmpty(){
 }
 
 // ---- "Tabell på samme tidspunkt": fyller automatisk ut andre kamper til og
-// med datoen for din seneste egne, FERDIG utfylte (begge mål satt) kamp. ----
-function latestOwnDate(){
-  let max=null;
-  matches.forEach(m=>{ if(m.hg!=null && m.ag!=null && !m.sim && (max===null || m.date>max)) max=m.date; });
-  return max;
+// med SISTE KAMPDAG I RUNDEN til din seneste egne, FERDIG utfylte (begge mål
+// satt) kamp — ikke bare til og med den ene kampens egen dato. Rent
+// datobasert filter (m.date<=targetDate), så en flyttet runde (som runde 12,
+// 24.-25. oktober) tas med så snart utfyllingen passerer de datoene, uansett
+// hvilket rundenummer den har. ----
+function latestOwnMatch(){
+  let best=null;
+  matches.forEach(m=>{ if(m.hg!=null && m.ag!=null && !m.sim && (best===null || m.date>best.date)) best=m; });
+  return best;
+}
+function fillTargetDate(){
+  const own=latestOwnMatch();
+  return own ? (ROUND_LAST_DATE[own.round] || own.date) : null;
 }
 function fillToDate(){
   matches.filter(m=>m.sim).forEach(m=>setMatch(m,null,null));
-  const targetDate=latestOwnDate();
+  const targetDate=fillTargetDate();
   if(!targetDate) return;
   simulateTypical(matches.filter(m=>isEmpty(m) && m.date<=targetDate));
 }
@@ -709,11 +718,10 @@ function render(){
       <td class="hide-s">${formHtml(r.name)}</td><td class="odds p3 hide-m"></td><td class="odds ned"></td><td class="reach">${bar}</td>`;
     tb.appendChild(tr);
   });
-  const asOfDate = latestOwnDate();
-  if(asOfDate){
-    const brannBase = BASE.find(b=>b[0]==='Brann')[1];
-    const brannGames = brannBase + matches.filter(m=>(m.home==='Brann'||m.away==='Brann') && m.hg!=null && m.date<=asOfDate).length;
-    document.getElementById('tblInfo').textContent = `etter ${dateNoLong(asOfDate)} (Brann ${brannGames} kamper)`;
+  const ownMatch = latestOwnMatch();
+  if(ownMatch){
+    const targetDate = ROUND_LAST_DATE[ownMatch.round] || ownMatch.date;
+    document.getElementById('tblInfo').textContent = `etter runde ${ownMatch.round} (${dateNoLong(targetDate)})`;
   } else {
     document.getElementById('tblInfo').textContent = played? `${played} kamper lagt inn` : `etter ${formatDateNo(MATCHES[MATCHES.length-1].date)}`;
   }
@@ -868,6 +876,8 @@ async function boot(){
   // som ikke er ferdig, vises gråtonet og legges ikke i den redigerbare listen.
   // De to neste rundene vises åpent, resten legges bak "Vis alle runder".
   matches = [];
+  ROUND_LAST_DATE = {};
+  FIXTURES_IN.forEach(r=>{ ROUND_LAST_DATE[r.round] = r.matches.reduce((mx,m)=> m.date>mx?m.date:mx, r.matches[0].date); });
   const hiddenRounds = document.createElement('div'); hiddenRounds.hidden = true; hiddenRounds.id = 'hiddenRounds';
   FIXTURES_IN.forEach((r,ri)=>{
     const d = document.createElement('div'); d.className='round';
