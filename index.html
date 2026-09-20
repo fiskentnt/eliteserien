@@ -125,6 +125,8 @@
   button{font:inherit;cursor:pointer}
   .tools button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;font-weight:600;font-size:14px}
   .tools button:hover{border-color:var(--ink)}
+  .tools button:disabled{color:var(--muted);cursor:default}
+  .tools button:disabled:hover{border-color:var(--line)}
   /* Brann-knappene (et "scenario") lyser rødt; de andre fyllingsknappene
      ("andre kamper") får en egen, nøytral markering — se deriveScenario(). */
   .tools button.on{background:var(--brann);border-color:var(--brann);color:#fff}
@@ -367,6 +369,7 @@
   <button id="brannWin" title="Fyller Brann-kampene med seier til Brann og resten med en typisk sesong">Brann vinner alt</button>
   <button id="brannLose" title="Fyller Brann-kampene med tap for Brann og resten med en typisk sesong">Brann taper alt</button>
   <button id="simRest" title="Fyller alle tomme kamper med én typisk sesong">Simuler tomme kamper</button>
+  <button id="simNextRound" title="Fyller kampene i neste runde med et trukket resultat, som i en typisk sesong. Resultatene vises i grått og kan overskrives.">Simuler neste runde</button>
   <button class="reset" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
   <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
 </div>
@@ -1301,6 +1304,38 @@ async function simulateEmpty(){
   await simulateTypicalAsync(matches.filter(isEmpty));
 }
 
+// "Simuler neste runde": samme trekk-mekanikk som "Simuler tomme kamper",
+// men begrenset til ÉN runde av gangen -- den første som fortsatt har
+// uspilte kamper. Ingenting nullstilles her (i motsetning til
+// simulateEmpty over), så tidligere simulerte runder står urørt: LIVE-
+// tilstanden (se refreshLiveState() i simulateTypicalAsync og i render())
+// bygges alltid fra ALLE resultater i matches, også de grå, så neste klikk
+// automatisk fortsetter formoppdateringen fra runden som nettopp ble fylt.
+function firstOpenRound(){
+  const empty = matches.filter(isEmpty);
+  if(!empty.length) return null;
+  // Kronologisk, ikke etter rundenummer: runde 12 er flyttet til 24.-25.
+  // oktober og kommer altså etter runde 23 og 24 i faktisk spilledato (se
+  // samme resonnement ved "moved"-merkingen av runde 12 i kamplisten).
+  return empty.reduce((a,b)=> a.date<b.date ? a : b).round;
+}
+async function simulateNextRound(){
+  const round = firstOpenRound();
+  if(round==null) return;
+  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && m.round===round));
+}
+function updateSimNextRoundButton(){
+  const btn = document.getElementById('simNextRound');
+  const round = firstOpenRound();
+  if(round==null){
+    btn.textContent = 'Alle runder fylt ut';
+    btn.disabled = true;
+  } else {
+    btn.textContent = `Simuler runde ${round}`;
+    btn.disabled = false;
+  }
+}
+
 // ---- "Tabell på samme tidspunkt": fyller automatisk ut andre kamper til og
 // med SISTE KAMPDAG I RUNDEN til din seneste egne, FERDIG utfylte (begge mål
 // satt) kamp — ikke bare til og med den ene kampens egen dato. Rent
@@ -1355,6 +1390,7 @@ function forcedScoreline(home,away,homeWins){
 document.getElementById('brannLose').onclick=async ()=>{ matches.filter(isBrann).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home!=="Brann"); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
 document.getElementById('brannWin').onclick=async ()=>{ matches.filter(isBrann).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home==="Brann"); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
 document.getElementById('simRest').onclick=async ()=>{ await simulateEmpty(); render(); };
+document.getElementById('simNextRound').onclick=async ()=>{ await simulateNextRound(); render(); };
 document.getElementById('reset').onclick=()=>{ matches.forEach(m=>setMatch(m,null,null)); render(); };
 document.getElementById('autoFillToggle').addEventListener('change',async ()=>{ await updateAutoFill(); render(); });
 // På mobil er fordelingsstripen skjult til man trykker på Brann-boksen (se
@@ -1553,6 +1589,7 @@ function render(){
   renderModelTbl();
   fillProb();
   updateToolButtons();
+  updateSimNextRoundButton();
   const {rows,played}=compute();
   const brann=rows.find(r=>r.name==='Brann');
 
