@@ -163,48 +163,85 @@ def get_ffk_rows(cache_dir, log):
     return cached["rows"]
 
 
-def audit_against_ffk(matches_out, ffk_rows):
+def _kickoff_utc(date_str, time_str):
+    naive = datetime.strptime(f"{date_str} {time_str}", "%Y-%m-%d %H:%M")
+    return naive.replace(tzinfo=OSLO).astimezone(timezone.utc)
+
+
+def audit_against_ffk(matches_out, ffk_rows, now):
     """Sammenligner ALLE spilte kamper i matches_out (vår fasit akkurat nå,
     uansett hvilken kilde hvert resultat kom fra) mot ffksupporter.net sin
-    egen liste (ffk_rows, fra denne kjøringens get_ffk_rows()). Fanger opp
-    f.eks. at et ESPN-resultat vi tok inn tidlig, senere viser seg å ikke
-    stemme med det ffksupporter.net til slutt legger inn. Returnerer en
-    liste med tekstlige avvik (tom liste = alt stemmer)."""
+    egen liste (ffk_rows, fra denne kjøringens get_ffk_rows()). ffksupporter
+    oppdateres for hånd og ligger ofte etter, så avvik deles i to
+    alvorlighetsgrader:
+      1. Begge kilder har et resultat, men de er ULIKE -- feil med en gang.
+      2. Vi har et resultat (typisk fra ESPN) som ffksupporter.net ikke har
+         registrert ennå -- bare en advarsel, siden dette er normalt og
+         forbigående. Blir en feil først når det er over 72 timer siden
+         avspark og ffksupporter.net FORTSATT ikke har det.
+      3. ffksupporter.net har et resultat vi mangler helt -- feil med en
+         gang (skal være umulig gitt at reconcile() alltid bruker
+         ffksupporter sitt tall når det finnes, så dette er et tegn på en
+         reell feil i sammenslåingen).
+    Returnerer (errors, warnings), begge lister med tekst."""
     ffk_by_pair = {(r["home"], r["away"]): r for r in ffk_rows}
-    diffs = []
+    matches_by_pair = {(m["home"], m["away"]): m for m in matches_out}
+    errors, warnings = [], []
+
     for m in matches_out:
         ffk = ffk_by_pair.get((m["home"], m["away"]))
         if ffk is None:
-            diffs.append(f"{m['home']}-{m['away']} ({m['date']}): finnes i matches.json, men ikke i det hele tatt hos ffksupporter.net")
+            errors.append(f"{m['home']}-{m['away']} ({m['date']}): finnes hos oss, men ikke i det hele tatt hos ffksupporter.net")
         elif ffk["hg"] is None or ffk["ag"] is None:
-            diffs.append(f"{m['home']}-{m['away']} ({m['date']}): vi har {m['hg']}-{m['ag']}, ffksupporter.net har ikke registrert resultat ennå")
+            hours_since = None
+            if m.get("time"):
+                try:
+                    hours_since = (now - _kickoff_utc(m["date"], m["time"])).total_seconds() / 3600
+                except ValueError:
+                    hours_since = None
+            if hours_since is not None and hours_since > 72:
+                errors.append(f"{m['home']}-{m['away']} ({m['date']}): vi har {m['hg']}-{m['ag']}, "
+                               f"ffksupporter.net har fortsatt ikke registrert resultat {hours_since:.0f} timer etter avspark")
+            else:
+                suffix = f" ({hours_since:.0f}t siden avspark)" if hours_since is not None else ""
+                warnings.append(f"{m['home']}-{m['away']} ({m['date']}): vi har {m['hg']}-{m['ag']}, "
+                                 f"ffksupporter.net har ikke registrert resultat ennå{suffix}")
         elif (ffk["hg"], ffk["ag"]) != (m["hg"], m["ag"]):
-            diffs.append(f"{m['home']}-{m['away']} ({m['date']}): vi har {m['hg']}-{m['ag']}, ffksupporter.net har {ffk['hg']}-{ffk['ag']}")
-    return diffs
+            errors.append(f"{m['home']}-{m['away']} ({m['date']}): vi har {m['hg']}-{m['ag']}, ffksupporter.net har {ffk['hg']}-{ffk['ag']}")
+
+    for r in ffk_rows:
+        if r["hg"] is None or r["ag"] is None:
+            continue
+        if (r["home"], r["away"]) not in matches_by_pair:
+            errors.append(f"{r['home']}-{r['away']} ({r['date']}): ffksupporter.net har {r['hg']}-{r['ag']}, vi mangler kampen helt")
+
+    return errors, warnings
 
 
 def run_daily_audit(matches_out, ffk_rows, now, log):
-    """Én gang i døgnet (06-vinduet, se should_fetch.py): full kontroll av
-    alle spilte kamper mot ffksupporter.net. Kjøres uansett hvor ofte
-    main() ellers kjører den dagen -- egen dato-sperre her, ikke bare
-    avhengig av 06-gatingen (som selv kan trigge flere ganger hvis en kamp
-    også er pending i samme time). Avvik feiler kjøringen (stempelet blir
-    rødt), med listen i loggen; "sjekket i dag"-merket settes uansett
-    utfall, så en reell uenighet ikke spammer feil hvert kvarter resten av
-    dagen -- den står synlig til neste dags kontroll (eller til noen ser på
-    det)."""
+    """Én gang i døgnet: full kontroll av alle spilte kamper mot
+    ffksupporter.net. Kjøres på den første kjøringen som når hit hver dag --
+    egen dato-sperre her, ikke avhengig av noe bestemt klokkeslett. Kritiske
+    avvik feiler kjøringen (stempelet blir rødt); "ikke registrert ennå" er
+    bare en advarsel i loggen med mindre den har stått i over 72 timer.
+    "Sjekket i dag"-merket settes uansett utfall, så en reell feil ikke
+    spammer hvert kvarter resten av dagen."""
     today = now.astimezone(OSLO).strftime("%Y-%m-%d")
     state = json.loads(AUDIT_STATE_PATH.read_text(encoding="utf-8")) if AUDIT_STATE_PATH.exists() else {}
     if state.get("checked_date") == today:
         return
     log(f"--- Daglig kontroll: {len(matches_out)} spilte kamper mot ffksupporter.net ---")
-    diffs = audit_against_ffk(matches_out, ffk_rows)
-    AUDIT_STATE_PATH.write_text(json.dumps({"checked_date": today, "diffs": len(diffs)}, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
-    if diffs:
-        for d in diffs:
-            log(f"AVVIK: {d}")
-        raise DataAuditError(f"{len(diffs)} avvik mellom matches.json og ffksupporter.net:\n" + "\n".join(diffs))
-    log("Daglig kontroll: ingen avvik funnet.")
+    errors, warnings = audit_against_ffk(matches_out, ffk_rows, now)
+    AUDIT_STATE_PATH.write_text(json.dumps(
+        {"checked_date": today, "errors": len(errors), "warnings": len(warnings)}, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8")
+    for w in warnings:
+        log(f"ADVARSEL: {w}")
+    if errors:
+        for e in errors:
+            log(f"AVVIK: {e}")
+        raise DataAuditError(f"{len(errors)} avvik mellom matches.json og ffksupporter.net:\n" + "\n".join(errors))
+    log(f"Daglig kontroll: ingen kritiske avvik ({len(warnings)} advarsel(er)).")
 
 
 def main(cache_dir=None):
