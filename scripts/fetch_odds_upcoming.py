@@ -18,7 +18,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
-from oddslib import devig
+from oddslib import devig, UnmappedTeamError
 
 USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
 SPORT = "soccer_norway_eliteserien"
@@ -76,11 +76,20 @@ def record_quota(remaining, log):
     QUOTA_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 def parse(raw):
+    # Ethvert ukjent lagnavn her gjelder per definisjon en IKKE spilt kamp --
+    # endepunktet returnerer bare kommende/pågående kamper, aldri ferdigspilte
+    # -- så det finnes ingen "har allerede odds fra en annen kilde"-unntak å
+    # nedgradere til (i motsetning til fetch_odds_history.py, der CSV-en bare
+    # inneholder ferdigspilte kamper). Feiler alltid kjøringen, samme mønster
+    # som EspnDataError i espn_source.py.
     out = []
+    problems = []
     for m in raw:
         home = NAME_MAP.get(m["home_team"])
         away = NAME_MAP.get(m["away_team"])
         if not home or not away:
+            bad = m["home_team"] if not home else m["away_team"]
+            problems.append(f"ukjent lagnavn {bad!r} ({m['home_team']}-{m['away_team']}, {m.get('commence_time','?')})")
             continue
         H, D, A, n = [], [], [], 0
         for bm in m["bookmakers"]:
@@ -99,6 +108,11 @@ def parse(raw):
             "home": home, "away": away, "commence_time": m["commence_time"],
             "H": round(h, 4), "D": round(d, 4), "A": round(a, 4), "n_bookmakers": n,
         })
+    if problems:
+        raise UnmappedTeamError(
+            f"{len(problems)} kamp(er) fra The Odds API har lagnavn som ikke finnes i NAME_MAP:\n" +
+            "\n".join(f"  - {p}" for p in problems)
+        )
     return out
 
 def main():

@@ -18,12 +18,13 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).parent))
-from oddslib import devig
+from oddslib import devig, CANONICAL_TEAMS, UnmappedTeamError
 
 USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
 CSV_URL = "https://football-data.co.uk/new/NOR.csv"
 ROOT = Path(__file__).parent.parent
 OUT_PATH = ROOT / "data" / "odds_fd.json"
+CAPTURED_PATH = ROOT / "data" / "odds_captured.json"
 OSLO = ZoneInfo("Europe/Oslo")
 
 
@@ -36,6 +37,7 @@ class RateLimited(Exception):
 NAME_MAP = {"Bodo/Glimt": "Bodø/Glimt", "Lillestrom": "Lillestrøm",
             "Tromso": "Tromsø", "Valerenga": "Vålerenga"}
 def norm(name): return NAME_MAP.get(name, name)
+def is_known(name): return name in NAME_MAP or name in CANONICAL_TEAMS
 
 def fetch(etag=None, log=lambda s: None):
     req = urllib.request.Request(CSV_URL, headers={"User-Agent": USER_AGENT})
@@ -52,14 +54,42 @@ def fetch(etag=None, log=lambda s: None):
             raise RateLimited(e.code) from e
         raise
 
-def parse(csv_text):
+def parse(csv_text, captured_matches=(), log=lambda s: None):
+    # Hver rad her ER en ferdigspilt kamp (CSV-en har bare resultater), så det
+    # "allerede spilt"-vilkåret er alltid oppfylt for et ukjent lagnavn. Det
+    # eneste spørsmålet er om kampen ALLEREDE har odds fra reserve-kilden
+    # (data/odds_captured.json, The Odds API) -- da nedgraderes det ukjente
+    # navnet til en advarsel (vi mister ikke reell kalibreringsdata), ellers
+    # feiler kjøringen (samme mønster som EspnDataError i espn_source.py).
+    # Krysssjekken bruker den GJENKJENTE siden av kampen (dato + det andre
+    # lagnavnet) -- er BEGGE navn ukjente samtidig kan vi ikke bekrefte
+    # reserven finnes, og det er da alltid en feil.
+    captured_by_date = {}
+    for cm in captured_matches:
+        captured_by_date.setdefault(cm["date"], []).append(cm)
+
     rows = [r for r in csv.DictReader(io.StringIO(csv_text)) if r.get("Season") == "2026"
             and r.get("League") == "Eliteserien"]
     out = []
+    problems = []
     for r in rows:
         dd, mm, yy = r["Date"].split("/")
         date = f"{yy}-{mm}-{dd}"
-        home, away = norm(r["Home"]), norm(r["Away"])
+        raw_home, raw_away = r["Home"], r["Away"]
+        home_known, away_known = is_known(raw_home), is_known(raw_away)
+        if not (home_known and away_known):
+            bad = raw_home if not home_known else raw_away
+            known_side = norm(raw_away) if not home_known and away_known else (norm(raw_home) if not away_known and home_known else None)
+            has_reserve = known_side is not None and any(
+                known_side in (cm["home"], cm["away"]) for cm in captured_by_date.get(date, [])
+            )
+            msg = f"ukjent lagnavn {bad!r} ({raw_home}-{raw_away}, {date})"
+            if has_reserve:
+                log(f"ADVARSEL: {msg} -- men The Odds API har allerede odds for denne kampen, hopper over raden")
+            else:
+                problems.append(msg)
+            continue
+        home, away = norm(raw_home), norm(raw_away)
         if r.get("BFECH", "").strip():
             h, d, a = devig(float(r["BFECH"]), float(r["BFECD"]), float(r["BFECA"]))
             src = "BFE"
@@ -70,6 +100,12 @@ def parse(csv_text):
             continue
         out.append({"date": date, "home": home, "away": away, "H": round(h, 4),
                      "D": round(d, 4), "A": round(a, 4), "src": src})
+    if problems:
+        raise UnmappedTeamError(
+            f"{len(problems)} kamp(er) fra football-data.co.uk har lagnavn som ikke finnes i NAME_MAP, "
+            "og har ingen odds fra The Odds API som reserve:\n" +
+            "\n".join(f"  - {p}" for p in problems)
+        )
     return out
 
 def main(force=False):
@@ -100,7 +136,10 @@ def main(force=False):
         log(f"data/odds_fd.json uendret ({len(existing['matches'])} kamper).")
         return
 
-    matches = parse(csv_text)
+    captured_matches = []
+    if CAPTURED_PATH.exists():
+        captured_matches = json.loads(CAPTURED_PATH.read_text(encoding="utf-8")).get("matches", [])
+    matches = parse(csv_text, captured_matches, log)
     if len(matches) < len(existing["matches"]):
         log(f"ADVARSEL: ny CSV ga færre kamper ({len(matches)}) enn eksisterende data ({len(existing['matches'])}) "
             "— beholder eksisterende data/odds_fd.json uendret.")
