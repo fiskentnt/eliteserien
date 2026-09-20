@@ -285,7 +285,7 @@
     <h3>Slik regnes sannsynlighetene</h3>
     <p id="howP1"></p>
     <p id="howP2"></p>
-    <p>Deretter spilles resten av sesongen 4000 ganger med tilfeldige resultater etter disse sannsynlighetene. Topp 3, Ned og fordelingen i Brann-boksen er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
+    <p>Deretter spilles resten av sesongen 4000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Topp 3, Ned og fordelingen i Brann-boksen er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
     <p>Knappene "Brann vinner alt" og "Brann taper alt" fyller resten med én typisk sesong: den av 3000 simulerte sesonger der alle lag havner nærmest sin forventede poengsum.</p>
     <hr>
     <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
@@ -319,10 +319,20 @@ function whenShort(iso){
 
 // ---- Data hentet fra data/matches.json, data/fixtures.json, data/model.json
 // og data/odds_upcoming.json (fylles av boot()) ----
-let TEAMS = [], BASE = [], MATCHES = [], TI = {}, STATS = {}, MODEL = null, basePos = {};
+let TEAMS = [], BASE = [], MATCHES = [], TI = {}, MTI = {}, STATS = {}, MODEL = null, basePos = {};
 let matches = []; // gjenstående kamper, redigerbare
 let ODDS_UP = {}, ODDS_FETCHED_AT = null; // odds for kommende kamper, nøkkel "hjemme|borte"
 const RATES = {};
+
+// ---- Form: lagstyrkene følger resultatene i scenariet ----
+// Elo-lignende oppdatering (k funnet ved rullerende evaluering mot fasit): et
+// resultat bedre enn ventet løfter et lags angreps- og hjemme/borte-styrke (og
+// senker motstanderens forsvarsstyrke) med k ganger avviket mellom faktiske og
+// forventede mål. mu og hjemmefordelen H holdes faste — bare de fire
+// lagspesifikke styrkene (att/con/ha/hc) oppdateres, akkurat som i
+// odds-kalibreringen i Python (isolate_global).
+const FORM_K = 0.01;
+let LIVE = null; // {att,con,ha,hc} i TI-indeksrekkefølge — kopi av MODEL, oppdatert av alle låste resultater i inneværende scenario
 
 const roundsEl = document.getElementById('rounds');
 const isBrann = m => m.home==="Brann"||m.away==="Brann";
@@ -360,6 +370,33 @@ function outcome(lh,la){ let H=0,U=0,B=0;
   for(let h=0;h<=10;h++) for(let a=0;a<=10;a++){ const p=pois(lh,h)*pois(la,a); if(h>a)H+=p; else if(h===a)U+=p; else B+=p; }
   const t=H+U+B; return {H:H/t,U:U/t,B:B/t}; }
 
+function stateRate(state,home,away){
+  const h=TI[home], a=TI[away];
+  let eh=MODEL.mu+MODEL.H+state.att[h]+state.ha[h]+state.con[a]-state.hc[a];
+  let ea=MODEL.mu+state.att[a]-state.ha[a]+state.con[h]+state.hc[h];
+  eh=Math.min(9,Math.max(-9,eh)); ea=Math.min(9,Math.max(-9,ea));
+  return [Math.exp(eh), Math.exp(ea)];
+}
+// Bygger lagstyrkene på nytt: kopi av MODEL (omindeksert til TI-rekkefølge,
+// samme som TEAMS/standings, ikke modellens egen MTI-rekkefølge, så resten av
+// koden kan bruke én felles indeksering), deretter kjøres alle resultater som
+// står i kamplisten nå (også de grå simulerte, se item 7) gjennom
+// oppdateringsregelen i kronologisk rekkefølge.
+function computeLiveState(){
+  const n=TEAMS.length;
+  const att=new Float64Array(n), con=new Float64Array(n), ha=new Float64Array(n), hc=new Float64Array(n);
+  TEAMS.forEach((t,i)=>{ const mi=MTI[t]; att[i]=MODEL.att[mi]; con[i]=MODEL.con[mi]; ha[i]=MODEL.ha[mi]; hc[i]=MODEL.hc[mi]; });
+  const state={att,con,ha,hc};
+  matches.filter(m=>m.hg!=null&&m.ag!=null).sort((x,y)=>x.date.localeCompare(y.date)).forEach(m=>{
+    const h=TI[m.home], a=TI[m.away], [lh,la]=stateRate(state,m.home,m.away);
+    const rh=m.hg-lh, ra=m.ag-la;
+    att[h]+=FORM_K*rh; ha[h]+=FORM_K*rh; con[a]+=FORM_K*rh; hc[a]-=FORM_K*rh;
+    att[a]+=FORM_K*ra; ha[a]-=FORM_K*ra; con[h]+=FORM_K*ra; hc[h]+=FORM_K*ra;
+  });
+  return state;
+}
+function refreshLiveState(){ LIVE=computeLiveState(); for(const k in RATES) delete RATES[k]; }
+
 function fitRates(pH,pB,start){
   let best=[start[0],start[1]], err=1e9;
   const tryAt=(lh,la)=>{ const o=outcome(lh,la), e=(o.H-pH)**2+(o.B-pB)**2; if(e<err){err=e;best=[lh,la];} };
@@ -370,7 +407,7 @@ function fitRates(pH,pB,start){
 }
 function rateFor(home,away){
   const k=home+"|"+away; if(RATES[k]) return RATES[k].r;
-  const base=MODEL.rate(home,away), o=ODDS_UP[k];
+  const base=stateRate(LIVE,home,away), o=ODDS_UP[k];
   if(!o){ RATES[k]={r:base,odds:false}; return base; }
   const mk=[o.H,o.D,o.A], md=outcome(base[0],base[1]);
   const pH=ODDS_W*mk[0]+(1-ODDS_W)*md.H, pB=ODDS_W*mk[2]+(1-ODDS_W)*md.B;
@@ -396,8 +433,61 @@ function fillProb(){
   });
 }
 
-function samplePois(l){ const L=Math.exp(-l); let k=0,p=Math.random(); while(p>L){ k++; p*=Math.random(); } return k; }
-function runMC(N){
+// ---- Topp3/Ned/Brann-boksen: 4000 simulerte sesonger, "hot" (lagstyrkene
+// oppdateres etter hver simulerte kamp i hver sesong, se FORM_K). Kjøres i en
+// Web Worker (WORKER_SRC under) så siden aldri fryser mens du skriver — et
+// første anslag postes etter 1000 sesonger, det endelige etter 4000. ----
+const WORKER_SRC = `
+self.onmessage = function(e){
+  var d = e.data, mu=d.mu, H=d.H, k=d.k, P0=d.P0, G0=d.G0, F0=d.F0, open=d.open, N=d.N, runId=d.runId;
+  var n = P0.length;
+  function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  var rnd = mulberry32((Math.random()*4294967296)>>>0);
+  function poisSample(l){ var L=Math.exp(-l), x=0, p=rnd(); while(p>L){ x++; p*=rnd(); } return x; }
+  var cnt=[]; for(var i=0;i<n;i++) cnt.push(new Float64Array(n));
+  var P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
+  var attS=new Float64Array(n), conS=new Float64Array(n), haS=new Float64Array(n), hcS=new Float64Array(n);
+  var ord=[]; for(var i2=0;i2<n;i2++) ord.push(i2);
+  var REPORT_AT=1000;
+  for(var s=1;s<=N;s++){
+    P.set(P0); G.set(G0); F.set(F0);
+    attS.set(d.att); conS.set(d.con); haS.set(d.ha); hcS.set(d.hc);
+    for(var j=0;j<open.length;j++){
+      var h=open[j][0], a=open[j][1];
+      var eh=mu+H+attS[h]+haS[h]+conS[a]-hcS[a], ea=mu+attS[a]-haS[a]+conS[h]+hcS[h];
+      eh=Math.min(9,Math.max(-9,eh)); ea=Math.min(9,Math.max(-9,ea));
+      var lh=Math.exp(eh), la=Math.exp(ea);
+      var x=poisSample(lh), y=poisSample(la);
+      G[h]+=x-y; G[a]+=y-x; F[h]+=x; F[a]+=y;
+      if(x>y) P[h]+=3; else if(x<y) P[a]+=3; else { P[h]++; P[a]++; }
+      var rh=x-lh, ra=y-la;
+      attS[h]+=k*rh; haS[h]+=k*rh; conS[a]+=k*rh; hcS[a]-=k*rh;
+      attS[a]+=k*ra; haS[a]-=k*ra; conS[h]+=k*ra; hcS[h]+=k*ra;
+    }
+    for(var i3=0;i3<n;i3++) R[i3]=rnd();
+    ord.sort(function(p,q){ return P[q]-P[p] || G[q]-G[p] || F[q]-F[p] || R[q]-R[p]; });
+    for(var pos=0;pos<n;pos++) cnt[ord[pos]][pos]++;
+    if(s===REPORT_AT || s===N){
+      var out=cnt.map(function(row){ return Array.prototype.slice.call(row).map(function(c){ return c/s; }); });
+      postMessage({runId:runId, done:s, total:N, out:out});
+    }
+  }
+};
+`;
+let mcWorker=null, mcRunId=0, mcTimer=null, lastMC=null;
+function getWorker(){
+  if(!mcWorker){
+    mcWorker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'})));
+    mcWorker.onmessage = e=>{
+      const {runId,out}=e.data;
+      if(runId!==mcRunId) return; // scenariet er endret siden denne kjøringen startet — forkast
+      const outObj={}; TEAMS.forEach((t,i)=>outObj[t]=out[i]);
+      lastMC=outObj; fillOdds();
+    };
+  }
+  return mcWorker;
+}
+function runMCAsync(N){
   const n=TEAMS.length, P0=new Float64Array(n), G0=new Float64Array(n), F0=new Float64Array(n);
   BASE.forEach(b=>{ const i=TI[b[0]]; P0[i]=b[2]*3+b[3]; G0[i]=b[5]-b[6]; F0[i]=b[5]; });
   const open=[];
@@ -409,22 +499,15 @@ function runMC(N){
     if(m.hg!=null&&m.ag!=null){
       G0[h]+=m.hg-m.ag; G0[a]+=m.ag-m.hg; F0[h]+=m.hg; F0[a]+=m.ag;
       if(m.hg>m.ag)P0[h]+=3; else if(m.hg<m.ag)P0[a]+=3; else {P0[h]++;P0[a]++;}
-    } else { const [lh,la]=rateFor(m.home,m.away); open.push([h,a,lh,la]); }
+    } else open.push([h,a]);
   });
-  const cnt=TEAMS.map(()=>new Array(n).fill(0)), P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
-  const ord=[...Array(n).keys()];
-  for(let s=0;s<N;s++){
-    P.set(P0); G.set(G0); F.set(F0);
-    for(const [h,a,lh,la] of open){ const x=samplePois(lh), y=samplePois(la);
-      G[h]+=x-y; G[a]+=y-x; F[h]+=x; F[a]+=y;
-      if(x>y)P[h]+=3; else if(x<y)P[a]+=3; else {P[h]++;P[a]++;} }
-    for(let i=0;i<n;i++) R[i]=Math.random();
-    ord.sort((i,j)=>P[j]-P[i]||G[j]-G[i]||F[j]-F[i]||R[j]-R[i]);
-    ord.forEach((t,pos)=>cnt[t][pos]++);
-  }
-  const out={}; TEAMS.forEach((t,i)=>out[t]=cnt[i].map(c=>c/N)); return out;
+  mcRunId++;
+  getWorker().postMessage({
+    runId:mcRunId, mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, N
+  });
 }
-let lastMC=null, mcTimer=null;
 const pctTxt=x=> x===0?'0 %': x<0.005?'<1 %': x>0.995&&x<1?'>99 %': Math.round(x*100)+' %';
 function fillOdds(){
   if(!lastMC) return;
@@ -445,7 +528,7 @@ function fillOdds(){
     <div class="hist" aria-hidden="true" title="Sannsynlighet for sluttplassering, ut fra modellen">${d.map((v,i)=>`<i class="${i<3?'eu':i===13?'q':i>=14?'n':''}" style="height:${(v/mx*100).toFixed(1)}%" title="${i+1}. plass: ${pctTxt(v)}"></i>`).join('')}</div>
     <div class="hist-l">${d.map((v,i)=>`<span>${i+1}</span>`).join('')}</div>`;
 }
-function scheduleMC(){ clearTimeout(mcTimer); mcTimer=setTimeout(()=>{ lastMC=runMC(4000); fillOdds(); },120); }
+function scheduleMC(){ clearTimeout(mcTimer); mcTimer=setTimeout(()=>runMCAsync(4000), 250); }
 
 function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 // Fyller de gitte kampene med én "typisk" utvikling: simulerer mange ganger og
@@ -454,14 +537,27 @@ function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.im
 // "samme dato"-utfyllingen (bare kampene til og med en gitt dato).
 function simulateTypical(open){
   if(!open.length) return;
+  refreshLiveState();
   const rnd=mulberry32((Math.random()*4294967296)>>>0), N=3000, n=TEAMS.length;
-  const rates=open.map(m=>rateFor(m.home,m.away)), hi=open.map(m=>TI[m.home]), ai=open.map(m=>TI[m.away]);
+  const hi=open.map(m=>TI[m.home]), ai=open.map(m=>TI[m.away]);
   const pois=l=>{ const L=Math.exp(-l); let k=0,p=rnd(); while(p>L){k++;p*=rnd();} return k; };
   const G=new Uint8Array(N*open.length*2), PTS=new Float64Array(N*n), E=new Float64Array(n);
+  const {mu,H}=MODEL, baseAtt=LIVE.att, baseCon=LIVE.con, baseHa=LIVE.ha, baseHc=LIVE.hc;
+  // "Hot": lagstyrkene (kopi av LIVE) oppdateres etter hver kamp i hver av de
+  // 3000 simulerte sesongene, så en kamp tidlig i den simulerte fortsettelsen
+  // påvirker sannsynlighetene for de neste, akkurat som i runMCAsync().
   for(let s=0;s<N;s++){
+    const att=baseAtt.slice(), con=baseCon.slice(), ha=baseHa.slice(), hc=baseHc.slice();
     for(let j=0;j<open.length;j++){
-      const x=pois(rates[j][0]), y=pois(rates[j][1]); G[(s*open.length+j)*2]=x; G[(s*open.length+j)*2+1]=y;
-      const o=s*n; if(x>y)PTS[o+hi[j]]+=3; else if(x<y)PTS[o+ai[j]]+=3; else {PTS[o+hi[j]]++;PTS[o+ai[j]]++;}
+      const h=hi[j], a=ai[j];
+      let eh=mu+H+att[h]+ha[h]+con[a]-hc[a], ea=mu+att[a]-ha[a]+con[h]+hc[h];
+      eh=Math.min(9,Math.max(-9,eh)); ea=Math.min(9,Math.max(-9,ea));
+      const lh=Math.exp(eh), la=Math.exp(ea), x=pois(lh), y=pois(la);
+      G[(s*open.length+j)*2]=x; G[(s*open.length+j)*2+1]=y;
+      const o=s*n; if(x>y)PTS[o+h]+=3; else if(x<y)PTS[o+a]+=3; else {PTS[o+h]++;PTS[o+a]++;}
+      const rh=x-lh, ra=y-la;
+      att[h]+=FORM_K*rh; ha[h]+=FORM_K*rh; con[a]+=FORM_K*rh; hc[a]-=FORM_K*rh;
+      att[a]+=FORM_K*ra; ha[a]-=FORM_K*ra; con[h]+=FORM_K*ra; hc[h]+=FORM_K*ra;
     }
   }
   for(let s=0;s<N;s++) for(let t=0;t<n;t++) E[t]+=PTS[s*n+t]/N;
@@ -551,7 +647,25 @@ function compute(){
   return {rows,played};
 }
 
+// "Slik fungerer det"-tabellen: forventede mål ut fra de LEVENDE lagstyrkene
+// (LIVE), altså etter at resultatene i scenariet er tatt med — ikke de
+// statiske tallene fra data/model.json.
+function renderModelTbl(){
+  const {mu,H}=MODEL, {att,con,ha,hc}=LIVE;
+  let h='<thead><tr><th class="team"></th><th></th><th class="grp" colspan="2">Hjemme</th><th class="grp" colspan="2">Borte</th><th class="grp" colspan="2">Modell, forventet mål</th></tr>'+
+        '<tr><th class="team">Lag</th><th>Form</th><th>P per kamp</th><th>Mål</th><th>P per kamp</th><th>Mål</th><th>Hjemme</th><th>Borte</th></tr></thead><tbody>';
+  TEAMS.forEach(t=>{ const i=TI[t], S=STATS[t];
+    const hf=Math.exp(mu+H+att[i]+ha[i]), hm=Math.exp(mu+con[i]+hc[i]);
+    const bf=Math.exp(mu+att[i]-ha[i]), bm=Math.exp(mu+H+con[i]-hc[i]);
+    h+=`<tr${t==='Brann'?' style="background:var(--brann-soft)"':''}><td class="team">${t}</td><td>${formHtml(t)}</td>
+      <td>${f2(S.h[1]/S.h[0])}</td><td>${S.h[2]}-${S.h[3]}</td><td>${f2(S.b[1]/S.b[0])}</td><td>${S.b[2]}-${S.b[3]}</td>
+      <td>${f1(hf)}-${f1(hm)}</td><td>${f1(bf)}-${f1(bm)}</td></tr>`; });
+  document.getElementById('modelTbl').innerHTML=h+'</tbody>';
+}
 function render(){
+  refreshLiveState();
+  renderModelTbl();
+  fillProb();
   const {rows,played}=compute();
   const brann=rows.find(r=>r.name==='Brann');
 
@@ -711,33 +825,12 @@ async function boot(){
   // fra MODEL.teams sin egen rekkefølge — ikke nødvendigvis lik TEAMS sin,
   // siden Python og JS kan sortere spesialtegn (æøå) ulikt.
   MODEL = MODEL_IN;
-  const MTI = {}; MODEL.teams.forEach((t,i)=>MTI[t]=i);
-  MODEL.rate = (home,away) => {
-    const h=MTI[home], a=MTI[away];
-    let eh = MODEL.mu+MODEL.H+MODEL.att[h]+MODEL.ha[h]+MODEL.con[a]-MODEL.hc[a];
-    let ea = MODEL.mu+MODEL.att[a]-MODEL.ha[a]+MODEL.con[h]+MODEL.hc[h];
-    eh = Math.min(9,Math.max(-9,eh)); ea = Math.min(9,Math.max(-9,ea));
-    return [Math.exp(eh), Math.exp(ea)];
-  };
+  MTI = {}; MODEL.teams.forEach((t,i)=>MTI[t]=i);
 
   // Odds for kommende kamper (The Odds API, allerede avvigget av Python)
   ODDS_UP = {};
   (ODDS_UP_IN.matches||[]).forEach(o=>{ ODDS_UP[o.home+"|"+o.away] = o; });
   ODDS_FETCHED_AT = ODDS_UP_IN.fetched_at ? formatDateNo(ODDS_UP_IN.fetched_at.slice(0,10))+' kl. '+ODDS_UP_IN.fetched_at.slice(11,16) : 'ukjent tidspunkt';
-
-  // Modelltabell
-  (()=>{
-    const {mu,H,att,con,ha,hc}=MODEL, ix=MTI;
-    let h='<thead><tr><th class="team"></th><th></th><th class="grp" colspan="2">Hjemme</th><th class="grp" colspan="2">Borte</th><th class="grp" colspan="2">Modell, forventet mål</th></tr>'+
-          '<tr><th class="team">Lag</th><th>Form</th><th>P per kamp</th><th>Mål</th><th>P per kamp</th><th>Mål</th><th>Hjemme</th><th>Borte</th></tr></thead><tbody>';
-    TEAMS.forEach(t=>{ const i=ix[t], S=STATS[t];
-      const hf=Math.exp(mu+H+att[i]+ha[i]), hm=Math.exp(mu+con[i]+hc[i]);
-      const bf=Math.exp(mu+att[i]-ha[i]), bm=Math.exp(mu+H+con[i]-hc[i]);
-      h+=`<tr${t==='Brann'?' style="background:var(--brann-soft)"':''}><td class="team">${t}</td><td>${formHtml(t)}</td>
-        <td>${f2(S.h[1]/S.h[0])}</td><td>${S.h[2]}-${S.h[3]}</td><td>${f2(S.b[1]/S.b[0])}</td><td>${S.b[2]}-${S.b[3]}</td>
-        <td>${f1(hf)}-${f1(hm)}</td><td>${f1(bf)}-${f1(bm)}</td></tr>`; });
-    document.getElementById('modelTbl').innerHTML=h+'</tbody>';
-  })();
 
   // Siste resultater: de 5 ferskeste spilte kampene
   const recent = [...MATCHES].sort((x,y)=>x.date.localeCompare(y.date)).slice(-5);
@@ -754,7 +847,7 @@ async function boot(){
   // faktisk vekt/halveringstid (fra fase A: uendret, men holdt dynamisk i tilfelle).
   const hlWeeks = Math.round(MODEL.meta.half_life_days/7);
   document.getElementById('howP1').textContent = `Hvert lag får en angreps- og en forsvarsstyrke, hjemme og borte. Styrkene er beregnet fra alle kampene i sesongen: målene og sluttoddsen fra spillmarkedet. Nyere kamper teller mest, og en kamp for ${hlWeeks} uker siden teller halvparten så mye som en kamp i dag.`;
-  document.getElementById('howP2').textContent = `For hver kamp som gjenstår, gir styrkene forventede mål for hvert lag, og av dem regnes sjansen for hjemmeseier, uavgjort og borteseier. Der spillselskapene har lagt ut odds, blandes de inn med ${Math.round(ODDS_W*100)} prosent vekt.`;
+  document.getElementById('howP2').textContent = `For hver kamp som gjenstår, gir styrkene forventede mål for hvert lag, og av dem regnes sjansen for hjemmeseier, uavgjort og borteseier. Der spillselskapene har lagt ut odds, blandes de inn med ${Math.round(ODDS_W*100)} prosent vekt. Resultater du fyller inn selv, eller lar stå fast fra en simulering, justerer styrkene videre for kampene som kommer etter i samme scenario.`;
 
   // Gjenstående kamper, gruppert per runde. Kamper som allerede er spilt innad i en runde
   // som ikke er ferdig, vises gråtonet og legges ikke i den redigerbare listen.
@@ -800,7 +893,6 @@ async function boot(){
 
   applyScenario();
   updateAutoFill();
-  fillProb();
   render();
   setTimeout(()=>document.body.classList.remove('intro'),1600);
 }
