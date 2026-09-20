@@ -314,6 +314,7 @@
   .fc-line{fill:none;stroke:var(--ink);stroke-width:2}
   .fc-dot{fill:var(--ink)}
   .fc-ytick{font:500 9px var(--body);fill:var(--muted)}
+  .fc-avg{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3;opacity:.7}
 
   @media (max-width:640px){
     .top{padding-left:16px;padding-right:16px}
@@ -1731,13 +1732,26 @@ function buildFormChartSvg(points){
   const W=580, H=200, padL=26, padR=10, padT=10, padB=22;
   const innerW=W-padL-padR, innerH=H-padT-padB;
   const x=i=>padL+(points.length<=1?innerW/2:innerW*i/(points.length-1));
-  const y=v=>padT+innerH*(1-v/10);
-  const zone=(v0,v1,cls)=>`<rect x="${padL}" y="${y(v1).toFixed(1)}" width="${innerW}" height="${(y(v0)-y(v1)).toFixed(1)}" class="fc-zone ${cls}"></rect>`;
+  // Aksen er fast 3 til 8 -- de aller fleste formverdiene ligger mellom 3,5
+  // og 7,5, så 0-til-10-skalaen gjorde kurvene nesten flate. Utvides
+  // automatisk (til nærmeste hele tall) hvis et lag går utenfor, slik at
+  // ingen punkt noensinne klippes bort.
+  const scores=points.map(p=>p.score);
+  const axisMin=Math.min(3, Math.floor(Math.min(...scores)));
+  const axisMax=Math.max(8, Math.ceil(Math.max(...scores)));
+  const y=v=>padT+innerH*(1-(v-axisMin)/(axisMax-axisMin));
+  const zone=(v0,v1,cls)=>{
+    const cv0=Math.max(axisMin,Math.min(axisMax,v0)), cv1=Math.max(axisMin,Math.min(axisMax,v1));
+    if(cv1<=cv0) return '';
+    return `<rect x="${padL}" y="${y(cv1).toFixed(1)}" width="${innerW}" height="${(y(cv0)-y(cv1)).toFixed(1)}" class="fc-zone ${cls}"></rect>`;
+  };
+  const avgLine=`<line x1="${padL}" x2="${W-padR}" y1="${y(5).toFixed(1)}" y2="${y(5).toFixed(1)}" class="fc-avg"></line>`;
   const path=points.map((p,i)=>`${i===0?'M':'L'}${x(i).toFixed(1)},${y(p.score).toFixed(1)}`).join(' ');
   const dots=points.map((p,i)=>`<circle cx="${x(i).toFixed(1)}" cy="${y(p.score).toFixed(1)}" r="3.5" class="fc-dot"><title>${shortDateNo(p.date)}: ${p.score.toFixed(1)}</title></circle>`).join('');
-  const yTicks=[0,4,6,10].map(v=>`<text x="${padL-6}" y="${(y(v)+3).toFixed(1)}" class="fc-ytick" text-anchor="end">${v}</text>`).join('');
+  const yTicks=[axisMin,4,6,axisMax].map(v=>`<text x="${padL-6}" y="${(y(v)+3).toFixed(1)}" class="fc-ytick" text-anchor="end">${v}</text>`).join('');
   return `<svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet" role="img">
     ${zone(0,4,'red')}${zone(4,6,'yellow')}${zone(6,10,'green')}
+    ${avgLine}
     ${yTicks}
     <path d="${path}" class="fc-line"></path>
     ${dots}
@@ -1747,7 +1761,7 @@ function openFormModal(team){
   const points=teamFormHistory(team);
   document.getElementById('formModalTitle').textContent=team;
   document.getElementById('formModalSub').textContent=points.length
-    ? 'Formutvikling denne sesongen, etter hver spilte kamp (0 til 10).'
+    ? 'Formutvikling denne sesongen, etter hver spilte kamp. Skalaen er 0 til 10, aksen er zoomet inn på 3 til 8.'
     : 'Ingen spilte kamper å vise ennå.';
   document.getElementById('formChart').innerHTML=points.length?buildFormChartSvg(points):'';
   document.getElementById('formModalBackdrop').hidden=false;
