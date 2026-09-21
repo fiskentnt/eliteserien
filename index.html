@@ -2275,7 +2275,7 @@ function qaTargetZone(team){
   if(nedrykk>0.05) return qaZoneByKey(team,'nedrykk');
   return qaZoneByKey(team,'kvalik');
 }
-const QA_REACH_PHRASE = {gull:'vinne serien', europa:'nå Europa', kvalik:'berge plassen', nedrykk:'berge plassen'};
+const QA_REACH_PHRASE = {gull:'vinne serien', europa:'nå Europa', kvalik:'sikre plassen direkte', nedrykk:'sikre plassen direkte'};
 // Satt av et klikk på et tall i lagboksen (qaJumpToWhy) -- spørsmål 1 bruker
 // DENNE sonen i stedet for å auto-velge "mest aktuelt" når den er satt.
 // Nullstilt av selve spørsmål-knappen (runQaQuestion) så et vanlig klikk på
@@ -2520,7 +2520,7 @@ function qaFieldInWay(team, zone){
   // første lag utenfor sonen (innenfor).
   const refRow = outside ? rows[b-1] : rows[b];
   const refLabel = outside
-    ? (zone.dir==='front' ? (QA_ORD[b]||`${b}. plass`) : 'trygg plass')
+    ? (zone.dir==='front' ? (QA_ORD[b]||`${b}. plass`) : '13. plass')
     : (zone.dir==='front' ? (QA_ORD[b+1]||`${b+1}. plass`) : `${b+1}. plass`);
   // Til visning: maks tre, de nærmest laget i tabellen (utenfor: de rett
   // foran; innenfor: de rett bak), vist i tabellrekkefølge.
@@ -2588,7 +2588,7 @@ async function qaWhy(team){
     const strong = Math.abs(diff)>=1.5;
     const formPart = Math.abs(diff)<0.3 ? `${team} er i omtrent lik form`
       : `${team} er i ${strong?'klart':'litt'} ${diff>0?'bedre':'dårligere'} form`;
-    const holds = (field.outside && field.zoneBack ? 'Siste trygge plass' : field.refLabel.charAt(0).toUpperCase()+field.refLabel.slice(1));
+    const holds = field.refLabel.charAt(0).toUpperCase()+field.refLabel.slice(1);
     const others = field.names.length ? ` Også ${listNames(field.shown, field.more)} ${field.outside?'står i veien':'jager'}.` : '';
     part2 = `${holds} holdes av ${field.nearest}, ${where}, og ${formPart} (${fmtForm(form)} mot ${fmtForm(rivalForm)}).${others}`;
   } else if(rival){
@@ -2654,8 +2654,8 @@ async function qaHowTo(team){
   // kampene, summert per simulering -- IKKE regnet om fra antall seire.
   const avgPts = Math.round(data.successPtsSumT/data.successCount);
   const maxPts = 3 * buildQaOpen().open.filter(o=>o[0]===TI[team]||o[1]===TI[team]).length;
-  // Snittet er fra sesongene der laget LYKTES, ikke et krav: laget kan berge
-  // plassen med mindre og ryke med mer. Formuleres derfor som "typisk", og
+  // Snittet er fra sesongene der laget LYKTES, ikke et krav: laget kan sikre plassen
+  // direkte med mindre og ryke med mer. Formuleres derfor som "typisk", og
   // avhengigheten av hovedkonkurrenten nevnes uten tall.
   const rivalTxt = rivalName ? `, men det avhenger også av hva ${rivalName} gjør` : '';
   // Terskel: laveste sluttpoengsum der laget klarer målet i over halvparten
@@ -2665,7 +2665,7 @@ async function qaHowTo(team){
   for(let p=0;p<data.totalAtPts.length;p++){
     if(data.totalAtPts[p]>=10 && data.successAtPts[p]/data.totalAtPts[p]>0.5){ threshold=p; break; }
   }
-  const thrTxt = threshold==null ? '' : ` Som tommelfingerregel trengs omtrent ${threshold} poeng totalt: fra den poengsummen er det mer sannsynlig enn ikke at laget ${zone.dir==='front'?`når ${zone.label}`:`unngår ${zone.label}`}.`;
+  const thrTxt = threshold==null ? '' : ` Som tommelfingerregel trengs omtrent ${threshold} poeng totalt: fra den poengsummen er det mer sannsynlig enn ikke at laget ${zone.dir==='front'?`når ${zone.label}`:'sikrer plassen direkte'}.`;
   return `Typisk holder det med rundt ${avgPts} av ${maxPts} mulige poeng. `+
     `I de ${pctTxt(data.successCount/data.N)} av de simulerte sesongene der ${team} klarer å ${QA_REACH_PHRASE[zone.key]}, tar de i snitt så mye${rivalTxt}.${thrTxt}`;
 }
@@ -2707,7 +2707,7 @@ async function qaWhenDecided(team){
     if(cum > data.N/2){ answerRound=r; break; }
   }
   const outcomeTxt = zone.dir==='front' ? `sjansen for ${zone.label} enten sikret eller helt utelukket`
-    : `${team} enten trygg eller ikke lenger kan unngå kvalik/nedrykk`;
+    : `${team} enten direkte sikret eller ikke lenger kan sikre plassen direkte`;
   if(answerRound==null){
     return `I over halvparten av simuleringene er det fortsatt uavklart helt til siste runde.`;
   }
@@ -2781,7 +2781,7 @@ function renderQaButtons(){
 // nedrykk, ellers kvalik), men ordlyden følger sonens retning: front
 // (gull/Europa, noe å vinne) spør "Hvorfor har ... sjanse for ...?" (samme
 // som spørsmål 1); back (kvalik/nedrykk, noe å unngå) spør heller "Hva må
-// ... gjøre for å berge plassen?" (spørsmål 2) -- mer handlingsrettet enn å
+// ... gjøre for å sikre plassen direkte?" (spørsmål 2) -- mer handlingsrettet enn å
 // forklare en nedrykkssjanse. Uten valgt lag: spørsmål 8 (heldig/uheldig),
 // som ikke trenger et lag.
 function renderQaHighlight(){
