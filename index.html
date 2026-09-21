@@ -396,7 +396,7 @@
     th.hide-s,td.hide-s{display:none}
     th,td{padding-left:5px;padding-right:5px}
     td.pos{padding-left:9px;width:30px}
-    .panel > h2{padding-left:12px;padding-right:12px}
+    .panel > h2,.qa > summary{padding-left:12px;padding-right:12px}
   }
 
   /* Kamper */
@@ -409,6 +409,14 @@
   /* "Spør om tabellen": knappene ligner .tools sine, men egne (ikke delt)
      siden .active her betyr "sist stilte spørsmål", en annen betydning enn
      .tools sin .on/.on-other (aktivt scenario). */
+  /* Sammenleggbar: lukket som standard når layouten er stablet (mobil), åpen på
+     PC -- se qaApplyDefault(). Overskriften har samme utseende som .panel > h2. */
+  .qa > summary{list-style:none;cursor:pointer;font:700 22px/1 var(--cond);padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:center;gap:12px;user-select:none}
+  .qa > summary::-webkit-details-marker{display:none}
+  .qa > summary::after{content:"";flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;margin-right:4px}
+  .qa[open] > summary::after{transform:rotate(45deg)}
+  .qa > summary:hover::after{border-color:var(--ink)}
+  .qa > summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:10px}
   .qa-list{display:flex;flex-direction:column;padding:0 16px 16px}
   .qa-item{border-top:1px solid var(--line-soft)}
   .qa-item:first-child{border-top:none}
@@ -416,7 +424,7 @@
   .qa-item > button::before{content:"▸";display:inline-block;width:1.1em;color:var(--muted)}
   .qa-item > button:hover{text-decoration:underline}
   .qa-item.active > button::before{content:"▾"}
-  .qa-answer{margin:0 0 12px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
+  .qa-answer{scroll-margin-bottom:16px;margin:0 0 12px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
   .qa-answer.loading{color:var(--muted);display:flex;align-items:center;gap:9px}
   .qa-spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--muted);animation:qa-spin .7s linear infinite;flex:none}
   @keyframes qa-spin{to{transform:rotate(360deg)}}
@@ -539,10 +547,10 @@
   </section>
   </div>
 
-    <section class="panel qa" aria-label="Spør om tabellen">
-      <h2>Spør om tabellen</h2>
+    <details class="panel qa" id="qaPanel">
+      <summary>Spør om tabellen</summary>
       <div class="qa-list" id="qaButtons"></div>
-    </section>
+    </details>
   </div>
 
   <div class="rightcol">
@@ -3033,7 +3041,36 @@ document.getElementById('qaButtons').addEventListener('click', e=>{
 // Klikk på et tall i lagboksen (Gull/Europa/Kvalik/Nedrykk) eller på
 // spørsmålslinjen i banneret: hopp til spør-om-tabellen-seksjonen. Tallene
 // spør i tillegg om AKKURAT den sonen (se qaWhyZoneOverride).
+// Sammenleggbar seksjon. Standard: åpen når layouten er todelt (PC, samme
+// grense som resten av siden, 1181 px), lukket når den er stablet (mobil),
+// så man slipper å scrolle forbi åtte spørsmål hver gang man legger inn
+// resultater. Brukerens eget valg (åpne/lukke) huskes i localStorage og
+// vinner over standarden. Å åpne den fra kode (banneret, tall i lagboksen)
+// huskes IKKE -- det er bare et midlertidig "vis meg svaret".
+const QA_OPEN_KEY = 'qaOpen';
+const qaPanel = document.getElementById('qaPanel');
+let qaSkipStore = false;
+function qaStoredOpen(){
+  try{ const v = localStorage.getItem(QA_OPEN_KEY); return v===null ? null : v==='1'; }catch(e){ return null; }
+}
+function qaSetOpen(want){
+  if(qaPanel.open===want) return;
+  qaSkipStore = true; // toggle-hendelsen kommer asynkront, og skal ikke lagres
+  qaPanel.open = want;
+}
+function qaApplyDefault(){
+  const stored = qaStoredOpen();
+  qaSetOpen(stored!==null ? stored : window.matchMedia('(min-width:1181px)').matches);
+}
+qaPanel.addEventListener('toggle', ()=>{
+  if(qaSkipStore){ qaSkipStore = false; return; }
+  try{ localStorage.setItem(QA_OPEN_KEY, qaPanel.open ? '1' : '0'); }catch(e){}
+});
+qaApplyDefault();
+// Krysser vinduet grensen uten et lagret valg, følger standarden med.
+window.matchMedia('(min-width:1181px)').addEventListener('change', ()=>{ if(qaStoredOpen()===null) qaApplyDefault(); });
 function qaJumpToSection(){
+  qaSetOpen(true); // spørsmålslinjen i banneret åpner seksjonen selv om den er lukket
   document.querySelector('.panel.qa').scrollIntoView({behavior:'smooth', block:'start'});
 }
 function qaJumpToWhy(zoneKey){
