@@ -2615,6 +2615,14 @@ async function qaRivals(team){
   const aheadTop = others.map(t=>({t,c:data.aheadOfT[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
   const behindTop = others.map(t=>({t,c:data.behindT[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
   const main = others.map(t=>({t,c:data.aheadOfT[TI[t]]+data.behindT[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
+  // Samme lag som oftest både foran og bak: slå sammen til én setning (andelene
+  // er disjunkte, laget kan ikke være både rett foran og rett bak i samme sesong).
+  if(aheadTop.t===behindTop.t){
+    // Summen av de avrundede delene, så tallene i setningen alltid stemmer.
+    const ahead=Math.round(aheadTop.c/data.N*100), behind=Math.round(behindTop.c/data.N*100);
+    return `${aheadTop.t} er nabolaget i tabellen i ${ahead+behind} prosent av simuleringene: `+
+      `rett bak ${team} i ${behind} og rett foran i ${ahead}.`;
+  }
   return `${aheadTop.t} ligger oftest rett foran ${team} (${pctTxt(aheadTop.c/data.N)} av simuleringene), og ${behindTop.t} rett bak (${pctTxt(behindTop.c/data.N)}). `+
     `Hovedkonkurrenten om plasseringen er ${main.t}.`;
 }
