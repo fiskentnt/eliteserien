@@ -146,7 +146,7 @@
   :root{--nav-h:56px}
   .topnav{position:sticky;top:0;z-index:30;background:var(--panel);border-bottom:2px solid var(--team-fill);padding-top:env(safe-area-inset-top,0px)}
   .nav-in{max-width:1380px;margin:0 auto;padding:0 24px;height:var(--nav-h);display:flex;align-items:center;gap:20px}
-  .brand{font:800 21px/1 var(--cond);letter-spacing:.05em;color:var(--ink);text-decoration:none;white-space:nowrap}
+  .brand{font:800 21px/1 var(--cond);letter-spacing:.02em;color:var(--ink);text-decoration:none;white-space:nowrap}
   .nav-links{flex:1;min-width:0;display:flex;justify-content:center;gap:2px;overflow-x:auto;scrollbar-width:none}
   .nav-links::-webkit-scrollbar{display:none}
   .nav-links .sm{display:none}
@@ -182,6 +182,7 @@
   .subline{margin:8px 0 0;font-size:12.5px}
   .stamp{display:inline-block;background:var(--input-bg);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:2px 10px;font-weight:600}
   .stamp .warn{color:var(--accent-text)}
+  .stamp .stale{color:inherit}
   /* Det mest aktuelle spørsmålet for valgt lag (eller "heldig/uheldig" uten
      lag) -- se qaHighlightUpdate(). Egen knapp, ikke del av .team-picker sin
      flex-rad, siden spørsmålsteksten kan bli lang og trenger egen linje. */
@@ -197,8 +198,8 @@
   .qa-highlight:hover,.qa-highlight:focus-visible{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
   .qa-highlight:empty{display:none}
   /* Lagboksen (når et lag følges): et kort øverst i høyrekolonnen. */
-  .status{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
-  .status .teamname-lg{display:block;font:800 clamp(18px,2vw,22px)/1.1 var(--cond);color:var(--ink);margin:0 0 6px}
+  .status{background:linear-gradient(var(--team-soft),var(--team-soft)),var(--panel);color:var(--ink);border:1px solid var(--line);border-top:5px solid var(--team-fill);border-radius:12px;padding:14px 16px}
+  .status .teamname-lg{display:block;font:800 clamp(18px,2vw,22px)/1.1 var(--cond);color:var(--team-text);margin:0 0 6px}
   .status .posline{font:700 14.5px/1.3 var(--body);color:var(--ink)}
   .status .posline b{font:800 17px/1 var(--cond);color:var(--ink);margin-right:2px}
 
@@ -215,6 +216,11 @@
   .roundnav{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted)}
   .roundnav button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:18px;line-height:1;padding:0}
   .roundnav button:hover{border-color:var(--ink)}
+  .roundnav .head-link{width:auto;height:auto;border:none;background:none;font-size:12.5px;margin-left:4px}
+  .round-note{margin:0 16px 10px;padding:8px 12px;border-radius:8px;background:var(--q-soft);color:var(--ink);font-size:13px;border:1px solid var(--q-border)}
+  .round-note[hidden]{display:none}
+  /* Tabell for en annen runde enn den gjeldende: modellkolonnene (Form og prosentene) gjelder bare nå-situasjonen. */
+  #tbl.asof .hh,#tbl.asof .badge{display:none}
   .roundnav button:disabled{color:var(--muted);opacity:.5;cursor:default}
   .teamsel select{font:inherit;font-weight:600;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;max-width:150px}
   .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
@@ -295,8 +301,14 @@
   button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
   /* Layout */
-  .wrap{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(360px,1fr);gap:20px;padding:16px 24px 20px;max-width:1380px;margin:0 auto;align-items:start}
-  @media (max-width:1180px){.wrap{grid-template-columns:1fr}}
+  .wrap{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(360px,1fr);column-gap:20px;row-gap:0;padding:16px 24px 20px;max-width:1380px;margin:0 auto;align-items:start}
+  #verdict{grid-column:2;grid-row:1;margin-bottom:20px}
+  .wrap > .leftcol{grid-column:1;grid-row:1 / span 2}
+  .wrap > .rightcol{grid-column:2;grid-row:2}
+  @media (max-width:1180px){
+    .wrap{grid-template-columns:minmax(0,1fr);row-gap:20px}
+    #verdict,.wrap > .leftcol,.wrap > .rightcol{grid-column:auto;grid-row:auto;margin-bottom:0}
+  }
   .rightcol,.leftcol{display:flex;flex-direction:column;gap:20px;min-width:0}
   /* "Siste runde": samme radstil som spilte kamper i kamplisten (.match.played),
      se renderLastRound() -- bare selve panelet/overskriften er egen her. */
@@ -564,7 +576,7 @@
   .match input.set{background:var(--strong-bg);color:var(--strong-fg);border-color:var(--strong-bg)}
   .match.followed input.set{background:var(--team-fill);border-color:var(--team-fill);color:var(--team-fill-text)}
   .match input.set.sim{background:var(--sim-bg);color:var(--ink);border-color:var(--sim-border);font-style:italic}
-  @media (max-width:760px){th.hide-m,td.hide-m{display:none}}
+  @media (max-width:760px){th.hide-m,td.hide-m,th.hide-diff,td.hide-diff{display:none}}
   .match .colon{text-align:center;color:var(--muted);font-weight:700}
   .match.played{background:var(--played-bg);color:var(--played-fg)}
   .match.played .score{width:40px;height:34px;display:flex;align-items:center;justify-content:center;font:700 19px/1 var(--cond);border-radius:6px;background:var(--played-score-bg);color:var(--played-score-fg)}
@@ -596,7 +608,7 @@
 
 <nav class="topnav" aria-label="Hovedmeny">
   <div class="nav-in">
-    <a class="brand" href="#tabell">ELITESERIEN</a>
+    <a class="brand" href="#tabell">Tabellkalkulator</a>
     <div class="nav-links" id="navLinks">
       <a href="#tabell" data-target="tabell" class="active">Tabell</a>
       <a href="#kamper" data-target="kamper">Kamper</a>
@@ -617,6 +629,9 @@
 </header>
 
 <div class="wrap">
+  <!-- Lagboksen står først i rutenettet: på mobil rett under tittelen (før tabellen),
+       på PC øverst i høyrekolonnen (se .wrap-reglene). -->
+  <div class="status" id="verdict" aria-live="polite" hidden></div>
   <div class="leftcol">
     <div class="tblzone">
      <div class="followbox">
@@ -628,12 +643,14 @@
               <button type="button" id="roundPrev" aria-label="Forrige runde">‹</button>
               <span id="roundLabel">Runde – av 30</span>
               <button type="button" id="roundNext" aria-label="Neste runde">›</button>
+              <button type="button" id="roundReset" class="head-link" hidden>Til gjeldende</button>
             </div>
             <label class="teamsel"><span class="sr-only">Følg laget ditt</span>
               <select id="teamSelect"><option value="">Alle lag</option></select>
             </label>
           </div>
         </div>
+        <p class="round-note" id="roundNote" hidden></p>
         <p class="scenario-line" id="scenarioLine" hidden></p>
         <p class="simnote" id="simNote" hidden>Prosentene bygger på resultatene i kamplisten, også de simulerte.</p>
         <div class="tblwrap">
@@ -641,12 +658,12 @@
         <thead><tr>
           <th></th><th class="team">Lag</th><th class="hide-s">K</th>
           <th class="hide-s">V</th><th class="hide-s">U</th><th class="hide-s">T</th><th class="hide-s">Mål</th>
-          <th>Diff</th><th>P</th>
-          <th class="sortable" id="formHeader" title="Form: forventede poeng per kamp mot et gjennomsnittslag, minus ligasnittet. 5 er snittet. Klikk for å sortere.">Form</th>
+          <th class="hide-diff">Diff</th><th>P</th>
+          <th class="sortable hh" id="formHeader" title="Form: forventede poeng per kamp mot et gjennomsnittslag, minus ligasnittet. 5 er snittet. Klikk for å sortere.">Form</th>
           <th class="hide-s" title="Siste fem seriekamper, eldst til venstre">Siste 5</th>
-          <th class="sortable hide-m" id="gullHeader" data-sort="gull" title="Sannsynlighet for å vinne serien. Klikk for å sortere.">Gull</th>
-          <th class="sortable hide-m" id="europaHeader" data-sort="europa" title="Sannsynlighet for europaplass (topp 4). Klikk for å sortere.">Europa</th>
-          <th class="sortable" id="nedHeader" data-sort="ned" title="Sannsynlighet for plass 15 eller 16. Klikk for å sortere.">Ned</th>
+          <th class="sortable hide-m hh" id="gullHeader" data-sort="gull" title="Sannsynlighet for å vinne serien. Klikk for å sortere.">Gull</th>
+          <th class="sortable hh" id="europaHeader" data-sort="europa" title="Sannsynlighet for europaplass (topp 4). Klikk for å sortere.">Europa</th>
+          <th class="sortable hh" id="nedHeader" data-sort="ned" title="Sannsynlighet for plass 15 eller 16. Klikk for å sortere.">Ned</th>
         </tr></thead>
         <tbody></tbody>
       </table>
@@ -680,7 +697,6 @@
   </div>
 
   <div class="rightcol">
-    <div class="status" id="verdict" aria-live="polite" hidden></div>
 
     <section class="panel nextmatch" id="nextMatch" hidden>
       <div class="panel-head">
@@ -1077,10 +1093,10 @@ const TOP_DARK_TEXT = {text:'#15191c', pill:'rgba(255,255,255,.45)', warn:'#7a0c
 
 // Laget du følger: huskes i localStorage og legges i delingslenken (se
 // encodeScenario/applyScenario). '' betyr eksplisitt "ingen lag" -- skilt
-// fra "aldri valgt" (localStorage-nøkkelen mangler helt) siden Brann bare
-// er standard i DET tilfellet, ikke hvis noen aktivt har valgt bort et lag.
+// fra "aldri valgt" (localStorage-nøkkelen mangler helt): nye besøkende
+// starter med "Alle lag" (ingen fulgt), og et lag man selv har valgt huskes.
 let SELECTED_TEAM = localStorage.getItem('followTeam');
-if(SELECTED_TEAM===null) SELECTED_TEAM = 'Brann';
+if(SELECTED_TEAM===null) SELECTED_TEAM = '';
 function hexToRgbStr(hex){
   const n = parseInt(hex.slice(1), 16);
   return `${(n>>16)&255},${(n>>8)&255},${n&255}`;
@@ -1343,7 +1359,8 @@ function rateFor(home,away){
 }
 function predict(home,away){ const [lh,la]=rateFor(home,away); return [Math.round(lh), Math.round(la)]; }
 
-const formHtml=t=>`<span class="form">${STATS[t].form.slice(-5).map(r=>`<b class="${r}" title="${{W:'Seier',D:'Uavgjort',L:'Tap'}[r]}"></b>`).join('')}</span>`;
+const formHtmlFrom=arr=>`<span class="form">${arr.slice(-5).map(r=>`<b class="${r}" title="${{W:'Seier',D:'Uavgjort',L:'Tap'}[r]}"></b>`).join('')}</span>`;
+const formHtml=t=>formHtmlFrom(STATS[t].form);
 const f1=x=>x.toFixed(1).replace('.',',');
 const f2=x=>x.toFixed(2).replace('.',',');
 
@@ -2096,7 +2113,9 @@ function fillOdds(){
     const d=lastMC[tr.dataset.team]; if(!d) return;
     const top=d[0]+d[1]+d[2]+d[3], ned=d[14]+d[15], gull=d[0];
     const g=tr.querySelector('td.gull'), a=tr.querySelector('td.p3'), b=tr.querySelector('td.ned');
-    g.textContent=pctTxt(gull); a.textContent=pctTxt(top); b.textContent=pctTxt(ned);
+    // Nøyaktig 0 vises som en svak strek, ikke "0 %".
+    const cellTxt = v => v===0 ? '–' : pctTxt(v);
+    g.textContent=cellTxt(gull); a.textContent=cellTxt(top); b.textContent=cellTxt(ned);
     // Grønt for høy sjanse, rødt for nedrykk, grått under 1 %.
     [[g,gull],[a,top],[b,ned]].forEach(([cell,v])=>{
       cell.classList.toggle('pc-zero', v<0.005);
@@ -2280,17 +2299,21 @@ function forcedDrawScoreline(home,away){
   const g=Math.round((hg+ag)/2);
   return [g,g];
 }
-document.getElementById('followLose').onclick=async ()=>{ matches.filter(isFollowedMatch).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home!==SELECTED_TEAM); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
-document.getElementById('followWin').onclick=async ()=>{ matches.filter(isFollowedMatch).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home===SELECTED_TEAM); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
-document.getElementById('simRest').onclick=async ()=>{ await simulateEmpty(); render(); };
+document.getElementById('followLose').onclick=async ()=>{ tableSort=null; matches.filter(isFollowedMatch).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home!==SELECTED_TEAM); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
+document.getElementById('followWin').onclick=async ()=>{ tableSort=null; matches.filter(isFollowedMatch).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home===SELECTED_TEAM); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
+// Simulering, nullstilling og endring av resultater legger tabellen tilbake i vanlig
+// rekkefølge (etter poeng): en sortering på Form/Gull/Europa/Ned overlever ikke, for da
+// ser plasseringstallene ut som de hopper.
+document.getElementById('simRest').onclick=async ()=>{ tableSort=null; await simulateEmpty(); render(); };
 roundsEl.addEventListener('click', async e=>{
   const btn=e.target.closest('.round-sim'); if(!btn) return;
   const round=+btn.dataset.round, state=roundButtonState(round);
   if(state===null) return;
+  tableSort=null;
   await simulateRound(round, state==='resimulate');
   render();
 });
-document.getElementById('reset').onclick=()=>{ matches.forEach(m=>setMatch(m,null,null)); render(); };
+document.getElementById('reset').onclick=()=>{ tableSort=null; matches.forEach(m=>setMatch(m,null,null)); render(); };
 document.getElementById('autoFillToggle').addEventListener('change',async ()=>{ await updateAutoFill(); render(); });
 document.getElementById('teamSelect').addEventListener('change', e=>{
   SELECTED_TEAM = e.target.value;
@@ -2321,6 +2344,7 @@ async function onRoundsEvent(e){
   // Utfylling bare når kampen er ferdig utfylt (begge tall inne): en halvferdig
   // kamp (ett tall skrevet) eller en tømt kamp (×, eller begge felt slettet)
   // skal ikke utløse noe. En tømt kamp forblir tom, og ingenting annet endres.
+  tableSort=null;
   if(m.hg!=null && m.ag!=null) await updateAutoFill();
   render();
 }
@@ -2399,34 +2423,92 @@ function updateSummaryCards(){
   });
 }
 
-// ---- Rundevelger over tabellen: "Runde N av 30 ‹ ›". Bladr mellom rundene som
-// har kamper igjen og hopp til runden i kamplisten. ----
-const TOTAL_ROUNDS = 30;
-let roundIdx = 0;
-function roundOrder(){ return [...document.querySelectorAll('#rounds .round[data-round], #hiddenRounds .round[data-round]')].map(e=>+e.dataset.round); }
+// ---- Rundevelger over tabellen: "Runde N av 30 ‹ ›". Viser tabellen slik den var
+// (spilte runder, fra faktiske resultater) eller blir (kommende, fra resultatene
+// i kamplisten) etter valgt runde. Rundene sorteres etter dato, ikke nummer:
+// runde 12 er utsatt til oktober og havner mellom 24 og 25. ----
+let ROUND_SEQ = []; // [{round, end}] i tidsrekkefølge, end = siste kampdato i runden
+function buildRoundSeq(){
+  // Sorteres på MEDIANEN av kampdatoene i runden, ikke på siste dato: en enkelt
+  // utsatt kamp (runde 1, 2, 8, 11 har hver én) skal ikke flytte hele runden,
+  // mens runde 12 (alle kampene utsatt til oktober) havner mellom 24 og 25.
+  const dates = {}, last = {};
+  const add = m=>{ (dates[m.round] = dates[m.round] || []).push(m.date); if(!last[m.round] || m.date>last[m.round]) last[m.round] = m.date; };
+  MATCHES.forEach(add); matches.forEach(add);
+  ROUND_SEQ = Object.keys(dates).map(r=>{
+    const d = dates[r].slice().sort();
+    return {round:+r, mid:d[Math.floor(d.length/2)], end:last[r]};
+  }).sort((a,b)=> a.mid.localeCompare(b.mid) || a.round-b.round);
+}
+let selRoundIdx = null; // null = gjeldende tabell (alle resultater)
+const hasResult = m => m.hg!=null && m.ag!=null;
+// Siste runde (i tidsrekkefølge) med minst ett resultat, spilt eller fylt inn:
+// tabellen med alle resultater står etter denne runden.
+function currentRoundIdx(){
+  const has = new Set(MATCHES.map(m=>m.round));
+  matches.forEach(m=>{ if(hasResult(m)) has.add(m.round); });
+  let idx = 0;
+  ROUND_SEQ.forEach((r,i)=>{ if(has.has(r.round)) idx = i; });
+  return idx;
+}
+function viewRoundIdx(){
+  const cur = currentRoundIdx();
+  return (selRoundIdx==null || selRoundIdx===cur) ? cur : Math.max(0, Math.min(ROUND_SEQ.length-1, selRoundIdx));
+}
+// Tabellen etter runde-indeks idx: alle spilte kamper (MATCHES) og resultater i
+// kamplisten (matches) i rundene til og med den valgte.
+function computeAt(idx){
+  const inc = new Set(ROUND_SEQ.slice(0, idx+1).map(r=>r.round));
+  const t = {}; TEAMS.forEach(n=>t[n]={name:n,p:0,w:0,d:0,l:0,gf:0,ga:0,results:[]});
+  const games = [];
+  MATCHES.forEach(m=>{ if(inc.has(m.round)) games.push(m); });
+  matches.forEach(m=>{ if(inc.has(m.round) && hasResult(m)) games.push(m); });
+  games.sort((x,y)=>x.date.localeCompare(y.date));
+  games.forEach(m=>{
+    const h=t[m.home], a=t[m.away];
+    h.p++; a.p++; h.gf+=m.hg; h.ga+=m.ag; a.gf+=m.ag; a.ga+=m.hg;
+    const rh = m.hg>m.ag?'W':m.hg<m.ag?'L':'D', ra = m.hg<m.ag?'W':m.hg>m.ag?'L':'D';
+    if(rh==='W'){h.w++;a.l++;} else if(rh==='L'){a.w++;h.l++;} else {h.d++;a.d++;}
+    h.results.push(rh); a.results.push(ra);
+  });
+  const rows = Object.values(t).map(r=>({...r, pts:r.w*3+r.d, gd:r.gf-r.ga}));
+  rows.sort((x,y)=> y.pts-x.pts || y.gd-x.gd || y.gf-x.gf || x.name.localeCompare(y.name,'no'));
+  rows.forEach((r,i)=>r.pos=i+1);
+  return rows;
+}
+// Kamper uten resultat i rundene til og med den valgte: tabellen er da ikke
+// komplett. Sier fra om den valgte runden selv og om tidligere runder.
+function roundGapNote(idx){
+  const R = ROUND_SEQ[idx].round;
+  const inc = new Set(ROUND_SEQ.slice(0, idx+1).map(r=>r.round));
+  const missing = matches.filter(m=>inc.has(m.round) && !hasResult(m));
+  if(!missing.length) return '';
+  const inR = matches.filter(m=>m.round===R);
+  const total = MATCHES.filter(m=>m.round===R).length + inR.length;
+  const haveR = total - inR.filter(m=>!hasResult(m)).length;
+  const parts = [];
+  if(inR.some(m=>!hasResult(m))) parts.push(haveR===0 ? `Runde ${R} har ingen resultater ennå.` : `Runde ${R} har resultater for bare ${haveR} av ${total} kamper.`);
+  const earlier = missing.filter(m=>m.round!==R).length;
+  if(earlier) parts.push(`Tidligere runder mangler resultater for ${earlier} ${earlier===1?'kamp':'kamper'}.`);
+  return parts.join(' ') + ' Tabellen bygger bare på resultatene som er lagt inn.';
+}
 function updateRoundNav(){
-  const order = roundOrder(); if(!order.length) return;
-  roundIdx = Math.max(0, Math.min(order.length-1, roundIdx));
-  document.getElementById('roundLabel').textContent = `Runde ${order[roundIdx]} av ${TOTAL_ROUNDS}`;
-  document.getElementById('roundPrev').disabled = roundIdx===0;
-  document.getElementById('roundNext').disabled = roundIdx===order.length-1;
+  if(!ROUND_SEQ.length) return;
+  const idx = viewRoundIdx();
+  const r = ROUND_SEQ[idx].round;
+  document.getElementById('roundLabel').textContent = `Runde ${r}${r===12?' (utsatt)':''} av ${ROUND_SEQ.length}`;
+  document.getElementById('roundPrev').disabled = idx===0;
+  document.getElementById('roundNext').disabled = idx===ROUND_SEQ.length-1;
+  document.getElementById('roundReset').hidden = idx===currentRoundIdx();
 }
-function goToRound(idx){
-  const order = roundOrder(); if(!order.length) return;
-  roundIdx = idx; updateRoundNav();
-  const el = document.querySelector(`.round[data-round="${order[roundIdx]}"]`);
-  const hidden = document.getElementById('hiddenRounds');
-  if(hidden && hidden.hidden && hidden.contains(el)){
-    hidden.hidden = false;
-    const btn = document.getElementById('showAllRounds'); if(btn) btn.hidden = true;
-  }
-  if(el){
-    el.scrollIntoView({behavior:'smooth', block:'start'});
-    el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'), 1400);
-  }
+function stepRound(d){
+  selRoundIdx = viewRoundIdx() + d;
+  if(selRoundIdx===currentRoundIdx()) selRoundIdx = null;
+  render();
 }
-document.getElementById('roundPrev').addEventListener('click', ()=> goToRound(roundIdx-1));
-document.getElementById('roundNext').addEventListener('click', ()=> goToRound(roundIdx+1));
+document.getElementById('roundPrev').addEventListener('click', ()=> stepRound(-1));
+document.getElementById('roundNext').addEventListener('click', ()=> stepRound(1));
+document.getElementById('roundReset').addEventListener('click', ()=>{ selRoundIdx = null; render(); });
 
 // ---- Navigasjonen: hopp til seksjon, og marker seksjonen du er i ----
 function scrollToSection(id){
@@ -3521,30 +3603,50 @@ function render(){
   }
   updateSortHeaders();
 
+  const viewIdx = viewRoundIdx(), isCurrent = viewIdx===currentRoundIdx();
   const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
-  displayRows.forEach(r=>{
+  document.getElementById('tbl').classList.toggle('asof', !isCurrent);
+  const histRows = isCurrent ? null : computeAt(viewIdx);
+  (isCurrent ? displayRows : histRows).forEach(r=>{
     const pos=r.pos; const tr=document.createElement('tr');
+    if(!isCurrent){
+      // Tabell for en annen runde: bare stillingen og siste fem for den runden.
+      // Modellkolonnene (Form, Gull, Europa, Ned) og merkene gjelder bare nå-situasjonen.
+      tr.dataset.team=r.name;
+      tr.className=[pos<=4?'eu':'',pos===14?'playoff':'',pos>=15?'ned':'',r.name===SELECTED_TEAM?'followed':'',(pos===4||pos===13)?'cut':''].join(' ').trim();
+      tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}">${r.name}</span><span class="badge"></span></td><td class="hide-s">${r.p}</td>
+        <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
+        <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts">${r.pts}</td>
+        <td class="formcol hh"></td><td class="hide-s">${formHtmlFrom(r.results)}</td><td class="odds gull hide-m hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
+      tb.appendChild(tr);
+      return;
+    }
     tr.dataset.team=r.name;
     tr.className=[pos<=4?'eu':'',pos===14?'playoff':'',pos>=15?'ned':'',r.name===SELECTED_TEAM?'followed':'',(pos===4||pos===13)?'cut':''].join(' ').trim();
     const mv=basePos[r.name]-pos;
     const diff = mv===0?'':`<span class="diff ${mv>0?'up':'down'}">${mv>0?'▲':'▼'}${Math.abs(mv)}</span>`;
     const posTitle = EURO_TITLES[pos]||'';
     const formCls = r.form<4.0?'red':r.form<5.5?'yellow':r.form<6.5?'lightgreen':'green';
-    const changeTxt = r.formChange>=0.05?`Opp ${r.formChange.toFixed(1)} siden forrige modelloppdatering.`
-      : r.formChange<=-0.05?`Ned ${Math.abs(r.formChange).toFixed(1)} siden forrige modelloppdatering.`
+    const changeTxt = r.formChange>=0.05?`Opp ${f1(r.formChange)} siden forrige modelloppdatering.`
+      : r.formChange<=-0.05?`Ned ${f1(Math.abs(r.formChange))} siden forrige modelloppdatering.`
       : 'Uendret siden forrige modelloppdatering.';
     tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}">${r.name}</span><span class="badge"></span>${diff}</td><td class="hide-s">${r.p}</td>
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
-      <td class="gd">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.pts} poeng nå. Maks mulig sluttsum: ${r.max}.">${r.pts}</td>
-      <td class="formcol"><span class="formbox ${formCls}" title="${r.form.toFixed(1)} av 10. ${changeTxt}">${r.form.toFixed(1)}</span></td>
-      <td class="hide-s">${formHtml(r.name)}</td><td class="odds gull hide-m"></td><td class="odds p3 hide-m"></td><td class="odds ned"></td>`;
+      <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.pts} poeng nå. Maks mulig sluttsum: ${r.max}.">${r.pts}</td>
+      <td class="formcol"><span class="formbox ${formCls}" title="${f1(r.form)} av 10. ${changeTxt}">${f1(r.form)}</span></td>
+      <td class="hide-s">${formHtml(r.name)}</td><td class="odds gull hide-m"></td><td class="odds p3"></td><td class="odds ned"></td>`;
     tb.appendChild(tr);
   });
   applyBadgesToDom(); // viser cachen (tom første gang) med en gang, uten å vente
   computeBadgesAsync(rows); // ber Workeren om et nytt svar bare hvis noe faktisk kan ha endret badge-utfallet
   const ownMatch = latestOwnMatch();
   document.getElementById('autoFillLabel').classList.toggle('active', !!ownMatch);
-  if(ownMatch){
+  updateRoundNav();
+  const gap = roundGapNote(viewIdx), gapEl = document.getElementById('roundNote');
+  gapEl.textContent = gap; gapEl.hidden = !gap;
+  if(!isCurrent){
+    document.getElementById('tblInfo').textContent = `etter runde ${ROUND_SEQ[viewIdx].round} (${dateNoLong(ROUND_SEQ[viewIdx].end)})`;
+  } else if(ownMatch){
     const targetDate = ROUND_LAST_DATE[ownMatch.round] || ownMatch.date;
     document.getElementById('tblInfo').textContent = `etter runde ${ownMatch.round} (${dateNoLong(targetDate)})`;
   } else {
@@ -3692,8 +3794,13 @@ async function updateCheckStamp(fixturesIn){
         ? `Neste sjekk etter kampen ${shortTeam(next.home)}-${shortTeam(next.away)} kl. ${next.time.replace(':','.')}.`
         : `Sist sjekket ${formatOsloDT(t)}.`;
     }
-    const warn = failed || checkIsStale(t);
-    document.querySelector('.stamp').insertAdjacentHTML('beforeend', ` ${warn ? `<span class="warn">${clause}</span>` : clause}`);
+    // Rødt bare ved en faktisk feil. En gammel sjekk er ikke en feil: vises
+    // som vanlig tekst, med forklaring i tooltipen.
+    const stale = !failed && checkIsStale(t);
+    const html = failed ? `<span class="warn">${clause}</span>`
+      : stale ? `<span class="stale" title="Siste sjekk er noen timer gammel.">${clause}</span>`
+      : clause;
+    document.querySelector('.stamp').insertAdjacentHTML('beforeend', ` ${html}`);
   }catch(_){ /* status.json ikke tilgjengelig — stempelet viser bare datoen, som før */ }
 }
 
@@ -3910,6 +4017,7 @@ async function boot(){
     });
     (ri<2 ? roundsEl : hiddenRounds).appendChild(d);
   });
+  buildRoundSeq(); // etter at kamplisten (matches) er bygd
   const showAllBtn = document.getElementById('showAllRounds');
   if(hiddenRounds.children.length){
     // Må være INNI #rounds (ikke bare etter), ellers bobler ikke input/klikk-
@@ -3926,8 +4034,6 @@ async function boot(){
   const hadScenario = /s=/.test(location.hash);
   await applyScenario();
   if(!hadScenario) await updateAutoFill();
-  // Rundevelgeren starter på runden med neste kamp.
-  { const order = roundOrder(); const first = matches[0] && order.indexOf(matches[0].round); roundIdx = first>=0 ? first : 0; updateRoundNav(); }
   render();
 }
 boot();
