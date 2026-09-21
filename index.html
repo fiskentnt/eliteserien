@@ -2452,38 +2452,38 @@ function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base){
   });
 }
 
-// Nærmeste konkurrent om AKKURAT samme sone. Fremre soner (gull/Europa):
-// laget (utenom selv) med høyest EGEN sjanse for sonen (fra den vanlige
-// tabell-simuleringen, lastMC, via qaZoneByKey) -- egne, uavhengige tall,
-// IKKE en betinget telling fra spørsmål 1 sin egen simulering ("hvor ofte
-// konkurrenten tar plassen NÅR laget selv feiler" ga et tall som så
-// ubetydelig ut, f.eks. 21 %, selv når konkurrenten vinner nesten HVER gang
-// laget selv ikke gjør det). Bakre soner (kvalik/nedrykk): "høyest sjanse"
-// gir feil ramme -- det velger laget som ligger dårligst an (f.eks. Start på
-// 71 % nedrykk for Vålerenga på 8 %), ikke laget man faktisk kjemper med om
-// å unngå plassen. Der velges i stedet laget nærmest i poeng som også har en
-// reell sjanse for sonen (5 %, samme grense som qaTargetZone; om ingen når
-// den, 1 %), med høyest sjanse som tie-break ved lik poengavstand.
+// Nærmeste konkurrent om AKKURAT samme sone: laget nærmest i poeng som har en
+// reell sjanse for sonen (fra den vanlige tabell-simuleringen, lastMC, via
+// qaZoneByKey), med høyest sjanse som tie-break ved lik poengavstand. "Høyest
+// sjanse" alene gir feil ramme i begge retninger: bak velger den laget som
+// ligger dårligst an (Start på 71 % nedrykk for Vålerenga på 8 %), foran laget
+// som allerede er i mål (Glimt på 100 % Europa for Brann). Egne, uavhengige
+// tall for konkurrenten -- IKKE en betinget telling fra spørsmål 1 sin egen
+// simulering ("hvor ofte konkurrenten tar plassen NÅR laget selv feiler" ga et
+// tall som så ubetydelig ut, f.eks. 21 %).
+//   Fremre soner (gull/Europa): bare lag mellom 5 og 95 % -- over 95 % er
+//   allerede der, under 5 % er ute, ingen av dem er konkurrenter. Finnes
+//   ingen slike, faller den tilbake til høyest sjanse (over 1 %).
+//   Bakre soner (kvalik/nedrykk): lag med minst 5 % (om ingen, minst 1 %).
 function qaFindRival(team, zone){
-  const others = TEAMS.filter(t=>t!==team);
-  const withPct = others.map(t=>{
+  const {rows} = compute();
+  const pts = {}; rows.forEach(r=>{pts[r.name]=r.pts;});
+  const withPct = TEAMS.filter(t=>t!==team).map(t=>{
     const z = qaZoneByKey(t, zone.key);
     return {t, pct: z ? z.pct : 0};
   });
+  const nearest = cand => {
+    cand.sort((a,b)=>Math.abs(pts[a.t]-pts[team])-Math.abs(pts[b.t]-pts[team]) || b.pct-a.pct);
+    return cand[0] || null;
+  };
   if(zone.dir==='front'){
+    const inBand = nearest(withPct.filter(x=>x.pct>=0.05 && x.pct<=0.95));
+    if(inBand) return inBand;
     const cand = withPct.filter(x=>x.pct>0.01);
     cand.sort((a,b)=>b.pct-a.pct);
     return cand[0] || null;
   }
-  const {rows} = compute();
-  const pts = {}; rows.forEach(r=>{pts[r.name]=r.pts;});
-  for(const limit of [0.05, 0.01]){
-    const cand = withPct.filter(x=>x.pct>=limit);
-    if(!cand.length) continue;
-    cand.sort((a,b)=>Math.abs(pts[a.t]-pts[team])-Math.abs(pts[b.t]-pts[team]) || b.pct-a.pct);
-    return cand[0];
-  }
-  return null;
+  return nearest(withPct.filter(x=>x.pct>=0.05)) || nearest(withPct.filter(x=>x.pct>=0.01));
 }
 // ---- Spørsmål 1: hvorfor har laget X % sjanse for det som er mest
 // aktuelt? Tre deler, alle bygget mot NÆRMESTE KONKURRENT der én finnes
