@@ -2452,22 +2452,38 @@ function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base){
   });
 }
 
-// Nærmeste konkurrent om AKKURAT samme sone: laget (utenom selv) med høyest
-// EGEN sjanse for den sonen (fra den vanlige tabell-simuleringen, lastMC,
-// via qaZoneByKey) -- egne, uavhengige tall for konkurrenten (egen sjanse,
-// egen poengsnitt via rivalIdx i runInsights), IKKE en betinget telling fra
-// spørsmål 1 sin egen simulering ("hvor ofte konkurrenten tar plassen NÅR
-// laget selv feiler" ga et tall som så ubetydelig ut, f.eks. 21 %, selv når
-// konkurrenten vinner nesten HVER gang laget selv ikke gjør det -- se
-// navnediskusjonen).
+// Nærmeste konkurrent om AKKURAT samme sone. Fremre soner (gull/Europa):
+// laget (utenom selv) med høyest EGEN sjanse for sonen (fra den vanlige
+// tabell-simuleringen, lastMC, via qaZoneByKey) -- egne, uavhengige tall,
+// IKKE en betinget telling fra spørsmål 1 sin egen simulering ("hvor ofte
+// konkurrenten tar plassen NÅR laget selv feiler" ga et tall som så
+// ubetydelig ut, f.eks. 21 %, selv når konkurrenten vinner nesten HVER gang
+// laget selv ikke gjør det). Bakre soner (kvalik/nedrykk): "høyest sjanse"
+// gir feil ramme -- det velger laget som ligger dårligst an (f.eks. Start på
+// 71 % nedrykk for Vålerenga på 8 %), ikke laget man faktisk kjemper med om
+// å unngå plassen. Der velges i stedet laget nærmest i poeng som også har en
+// reell sjanse for sonen (5 %, samme grense som qaTargetZone; om ingen når
+// den, 1 %), med høyest sjanse som tie-break ved lik poengavstand.
 function qaFindRival(team, zone){
   const others = TEAMS.filter(t=>t!==team);
   const withPct = others.map(t=>{
     const z = qaZoneByKey(t, zone.key);
     return {t, pct: z ? z.pct : 0};
-  }).filter(x=>x.pct>0.01);
-  withPct.sort((a,b)=>b.pct-a.pct);
-  return withPct[0] || null;
+  });
+  if(zone.dir==='front'){
+    const cand = withPct.filter(x=>x.pct>0.01);
+    cand.sort((a,b)=>b.pct-a.pct);
+    return cand[0] || null;
+  }
+  const {rows} = compute();
+  const pts = {}; rows.forEach(r=>{pts[r.name]=r.pts;});
+  for(const limit of [0.05, 0.01]){
+    const cand = withPct.filter(x=>x.pct>=limit);
+    if(!cand.length) continue;
+    cand.sort((a,b)=>Math.abs(pts[a.t]-pts[team])-Math.abs(pts[b.t]-pts[team]) || b.pct-a.pct);
+    return cand[0];
+  }
+  return null;
 }
 // ---- Spørsmål 1: hvorfor har laget X % sjanse for det som er mest
 // aktuelt? Tre deler, alle bygget mot NÆRMESTE KONKURRENT der én finnes
@@ -2504,12 +2520,26 @@ async function qaWhy(team){
   if(rival){
     const rivalForm = liveForm[TI[rival.t]];
     const diff = form - rivalForm;
-    if(Math.abs(diff)<0.3){
-      part2 = `Modellen ser dem som like sterke om dagen (form ${form.toFixed(1)} mot ${rivalForm.toFixed(1)}).`;
+    const ptsGap = Math.abs(row.pts - rivalRow.pts);
+    const formTxt = `form ${form.toFixed(1)} mot ${rivalForm.toFixed(1)}`;
+    if(ptsGap>=4){
+      // Stor poengforskjell: si noe om marginen, ikke om "overtak" -- 7 poeng
+      // er et stort forsprang uansett hvem som har best form.
+      const leader = row.pts>rivalRow.pts ? team : rival.t, trailer = leader===team ? rival.t : team;
+      const leaderFormEdge = leader===team ? diff : -diff;
+      const seier = ptsGap>=7 ? 'mer enn to seire' : 'mer enn én seier';
+      // Formtallene i samme rekkefølge som lagene nevnes (leder først).
+      const lf = (leader===team ? form : rivalForm).toFixed(1), tf = (leader===team ? rivalForm : form).toFixed(1);
+      const formPart = Math.abs(diff)<0.3 ? `formen er lik (${lf} mot ${tf})`
+        : leaderFormEdge>0 ? `${leader} er også i best form (${lf} mot ${tf})`
+        : `${trailer} er likevel i bedre form (${tf} mot ${lf})`;
+      part2 = `Marginen er ${ptsGap} poeng (${seier}), og ${formPart}.`;
+    } else if(Math.abs(diff)<0.3){
+      part2 = `Modellen ser dem som like sterke om dagen (${formTxt}).`;
     } else {
       const better = diff>0 ? team : rival.t;
       const edge = Math.abs(diff)>=1.5 ? 'et klart overtak' : 'et lite overtak';
-      part2 = `Modellen gir ${better} ${edge}, fordi de har spilt bedre den siste tiden (form ${form.toFixed(1)} mot ${rivalForm.toFixed(1)}).`;
+      part2 = `Modellen gir ${better} ${edge}, fordi de har spilt bedre den siste tiden (${formTxt}).`;
     }
   } else {
     const diff = form - 5.0;
