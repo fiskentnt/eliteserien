@@ -1053,8 +1053,8 @@ const RATES = {};
 // målt direkte per kamp (ikke glattet) mot 14 sesonger historiske odds
 // (NOR.csv 2012-2026, 7054 lag-kamp-observasjoner, 95% KI [0,0100, 0,0209]).
 const FORM_K = 0.015;
-// Rekke-forsterkning: BARE i Form-kolonnen (computeLiveState/teamFormHistory
-// under), IKKE i simuleringen (runProb/runTypical i Workeren, eller
+// Rekke-forsterkning: BARE i Form-visningen (Form-kolonnen, via LIVE_FORM, og
+// formgrafen, via teamFormHistory), IKKE i simuleringen (runProb/runTypical i Workeren, eller
 // spør-om-tabellen sine runInsights/simulateZoneProb) lenger. Ble opprinnelig
 // lagt inn fordi k=0,015 alene ga Brann høyere Form enn Fredrikstad etter ti
 // strake tap -- en rampe som forsterker k for påfølgende like resultater
@@ -1067,7 +1067,11 @@ const FORM_K = 0.015;
 // bedre enkeltkamp-kalibrering ga ikke bedre sesongutfall der. Se
 // scratchpad/ablation_study.py fra undersøkelsen. Formelen er derfor delt:
 // ekte, lest resultater (Form) bruker rampen: kFor() her. Simulerte
-// sesonger (prediksjon) bruker flat FORM_K.
+// sesonger (prediksjon) bruker flat FORM_K. Alt som regner sannsynligheter
+// (simuleringen, prosentene under H/U/B i kamplisten, "Spør om tabellen",
+// H/U/B-trekkene, "Simuler tomme kamper") bruker LIVE, som er uten rampe, så
+// kamplisten og simuleringen alltid bygger på samme sannsynligheter for samme
+// kamp. Rampen ligger bare i LIVE_FORM, som kun Form-visningen leser.
 const STREAK_BONUS = 0.6, STREAK_CAP = 5;
 function kFor(streakLen){ return FORM_K*(1+STREAK_BONUS*(Math.min(streakLen,STREAK_CAP)-1)); }
 // Starttilstand for rekke-sporing: et lags NÅVÆRENDE strake W/L-rekke fra
@@ -1111,7 +1115,8 @@ function applyDrift(arr, base, i, delta, cap){
 // "forventning" som aldri kan være riktig uansett hva som skulle drive
 // lagstyrkene opp seinere.
 const MAX_LAMBDA_LOG = Math.log(6);
-let LIVE = null; // {att,con,ha,hc} i TI-indeksrekkefølge — kopi av MODEL, oppdatert av alle låste resultater i inneværende scenario
+let LIVE = null; // {att,con,ha,hc} i TI-indeksrekkefølge — kopi av MODEL, oppdatert av alle låste resultater i inneværende scenario, med flat FORM_K (UTEN rekke-rampe). Brukes av ALT som regner sannsynligheter.
+let LIVE_FORM = null; // samme, men MED rekke-rampen (kFor). Bare til Form-visningen (Form-kolonnen og kortet "Form"); aldri til sannsynligheter.
 let tableSort = null; // null = standings-rekkefølge, ellers {key:'form'|'gull'|'europa'|'ned', dir:1|-1}
 const PROB_KEYS = ['gull','europa','ned'];
 // Sannsynlighet for sonen fra siste simulering (lastMC: sjanse per sluttplass).
@@ -1420,7 +1425,7 @@ function stateRate(state,home,away){
 // koden kan bruke én felles indeksering), deretter kjøres alle resultater som
 // står i kamplisten nå (også de grå simulerte, se item 7) gjennom
 // oppdateringsregelen i kronologisk rekkefølge.
-function computeLiveState(){
+function computeLiveState(useRamp){
   const n=TEAMS.length;
   const att=new Float64Array(n), con=new Float64Array(n), ha=new Float64Array(n), hc=new Float64Array(n);
   TEAMS.forEach((t,i)=>{ const mi=MTI[t]; att[i]=MODEL.att[mi]; con[i]=MODEL.con[mi]; ha[i]=MODEL.ha[mi]; hc[i]=MODEL.hc[mi]; });
@@ -1446,7 +1451,8 @@ function computeLiveState(){
     streakRes[m.home]=resH==='D'?null:resH;
     streakLen[m.away]=(resA!=='D'&&streakRes[m.away]===resA)?streakLen[m.away]+1:(resA==='D'?0:1);
     streakRes[m.away]=resA==='D'?null:resA;
-    const kH=kFor(streakLen[m.home]), kA=kFor(streakLen[m.away]);
+    // Med rampe (LIVE_FORM, til Form-visningen) eller flat FORM_K (LIVE, til alt annet).
+    const kH=useRamp?kFor(streakLen[m.home]):FORM_K, kA=useRamp?kFor(streakLen[m.away]):FORM_K;
     applyDrift(att,att0,h,kH*rh,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,h,kH*rh,DRIFT_CAP_HAHC);
     applyDrift(con,con0,a,kH*rh,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,a,-kH*rh,DRIFT_CAP_HAHC);
     applyDrift(att,att0,a,kA*ra,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,a,-kA*ra,DRIFT_CAP_HAHC);
@@ -1454,7 +1460,7 @@ function computeLiveState(){
   });
   return state;
 }
-function refreshLiveState(){ LIVE=computeLiveState(); for(const k in RATES) delete RATES[k]; }
+function refreshLiveState(){ LIVE=computeLiveState(false); LIVE_FORM=computeLiveState(true); for(const k in RATES) delete RATES[k]; }
 
 function fitRates(pH,pB,start){
   let best=[start[0],start[1]], err=1e9;
@@ -2527,9 +2533,10 @@ function updateSummaryCards(){
     // Nedrykk: de tre mest utsatte.
     fill('ned', all('ned').slice(0,3).map(txt));
   }
-  if(typeof LIVE!=='undefined' && LIVE){
+  if(typeof LIVE_FORM!=='undefined' && LIVE_FORM){
     // Form: modellens vurdering av hvor godt laget spiller nå (0 til 10), de tre beste.
-    const form = formScores(Array.from(LIVE.att), Array.from(LIVE.con));
+    // Fra LIVE_FORM (med rampe), så tallene er de samme som i Form-kolonnen.
+    const form = formScores(Array.from(LIVE_FORM.att), Array.from(LIVE_FORM.con));
     fill('form', TEAMS.map((t,i)=>({t,v:form[i]})).sort((a,b)=>b.v-a.v).slice(0,3).map(x=>({...x, txt:f1(x.v)})));
   }
 }
@@ -3227,7 +3234,9 @@ async function qaWhy(team){
   const {rows} = compute();
   const row = rows.find(r=>r.name===team);
   const pos = rows.indexOf(row)+1;
-  const liveForm = formScores(Array.from(LIVE.att), Array.from(LIVE.con));
+  // Formtallene som vises i svaret er de samme som i Form-kolonnen (LIVE_FORM); selve
+  // simuleringen bak svaret bruker LIVE (uten rampe).
+  const liveForm = formScores(Array.from(LIVE_FORM.att), Array.from(LIVE_FORM.con));
   const form = liveForm[TI[team]];
   const rivalRow = rival ? rows.find(r=>r.name===rival.t) : null;
 
@@ -3705,7 +3714,7 @@ function render(){
   // Badge (matematisk avgjort) og Form regnes ut fra "rows" i standings-
   // rekkefølge (pos = ekte tabellplassering), FØR en eventuell Form-sortering
   // bare endrer visningsrekkefølgen av selve radene.
-  const liveForm=formScores(Array.from(LIVE.att),Array.from(LIVE.con));
+  const liveForm=formScores(Array.from(LIVE_FORM.att),Array.from(LIVE_FORM.con)); // Form-kolonnen: med rampe
   const baseForm=formScores(TEAMS.map(t=>MODEL.att[MTI[t]]), TEAMS.map(t=>MODEL.con[MTI[t]]));
   rows.forEach((r,i)=>{
     r.pos=i+1;
