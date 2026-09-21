@@ -173,6 +173,12 @@
   .stamp .warn{color:var(--top-warn)}
   .team-picker{margin-top:12px;display:flex;align-items:center;gap:9px;font-size:13px;color:var(--top-label);flex-wrap:wrap}
   .team-picker select{font:inherit;font-weight:700;color:#15191c;background:#fff;border:none;border-radius:999px;padding:6px 30px 6px 14px;cursor:pointer}
+  /* Det mest aktuelle spørsmålet for valgt lag (eller "heldig/uheldig" uten
+     lag) -- se qaHighlightUpdate(). Egen knapp, ikke del av .team-picker sin
+     flex-rad, siden spørsmålsteksten kan bli lang og trenger egen linje. */
+  .qa-highlight{display:block;margin-top:8px;background:none;border:none;padding:0;color:var(--top-label);font-size:13px;text-decoration:underline;text-align:left;cursor:pointer;font-family:inherit;max-width:100%}
+  .qa-highlight:hover{color:var(--top-text)}
+  .qa-highlight:empty{display:none}
   /* Lagboksen har ingen egen lagfarge lenger -- banneret bak den bærer nå
      den identiteten, så boksen skal bare stå nøytralt fram mot et banner i
      en hvilken som helst klubbfarge (se --top-bg). Skyggen var før tonet
@@ -471,6 +477,7 @@
         <label for="teamSelect">Følg laget ditt</label>
         <select id="teamSelect"><option value="">Ingen</option></select>
       </div>
+      <button class="qa-highlight" id="qaHighlight" title="Hopp til Spør om tabellen"></button>
     </div>
     <div class="status" id="verdict" aria-live="polite" hidden></div>
   </div>
@@ -1846,6 +1853,7 @@ const pctTxt=x=> x===0?'0 %': x<0.005?'<1 %': x>0.995&&x<1?'>99 %': Math.round(x
 function fillOdds(){
   if(!lastMC) return;
   renderQaButtons(); // spørsmål 1/2 sine knappetekster trenger lastMC (se qaTargetZone) -- oppdater så snart det er klart, ikke bare på neste fulle render()
+  renderQaHighlight();
   document.querySelectorAll('#tbl tbody tr').forEach(tr=>{
     const d=lastMC[tr.dataset.team]; if(!d) return;
     const top=d[0]+d[1]+d[2]+d[3], ned=d[14]+d[15];
@@ -2534,6 +2542,44 @@ function renderQaButtons(){
     document.getElementById('qaAnswer').hidden = true;
   }
 }
+// Det mest aktuelle spørsmålet for valgt lag, som en klikkbar linje ved
+// lagvelgeren -- i stedet for en generisk lenke til seksjonen. Samme
+// sonevalg som spørsmål 1 (qaTargetZone: gull > 5 %, ellers Europa, ellers
+// nedrykk, ellers kvalik), men ordlyden følger sonens retning: front
+// (gull/Europa, noe å vinne) spør "Hvorfor har ... sjanse for ...?" (samme
+// som spørsmål 1); back (kvalik/nedrykk, noe å unngå) spør heller "Hva må
+// ... gjøre for å berge plassen?" (spørsmål 2) -- mer handlingsrettet enn å
+// forklare en nedrykkssjanse. Uten valgt lag: spørsmål 8 (heldig/uheldig),
+// som ikke trenger et lag.
+function renderQaHighlight(){
+  const el = document.getElementById('qaHighlight');
+  if(!el) return;
+  if(!SELECTED_TEAM){
+    el.textContent = 'Hvem har vært heldig eller uheldig?';
+    el.dataset.qid = 'luck';
+    return;
+  }
+  const zone = qaTargetZone(SELECTED_TEAM);
+  if(!zone){
+    // lastMC ikke klar ennå (rett etter sideinnlasting) -- vis samme
+    // fallback som uten lag til den er det, i stedet for en tom knapp.
+    el.textContent = 'Hvem har vært heldig eller uheldig?';
+    el.dataset.qid = 'luck';
+    return;
+  }
+  if(zone.dir==='front'){
+    el.textContent = `Hvorfor har ${SELECTED_TEAM} ${pctTxt(zone.pct)} sjanse for ${zone.label}?`;
+    el.dataset.qid = 'why';
+  } else {
+    el.textContent = `Hva må ${SELECTED_TEAM} gjøre for å ${QA_REACH_PHRASE[zone.key]}?`;
+    el.dataset.qid = 'howto';
+  }
+}
+document.getElementById('qaHighlight').addEventListener('click', ()=>{
+  const qid = document.getElementById('qaHighlight').dataset.qid || 'luck';
+  qaJumpToSection();
+  runQaQuestion(qid);
+});
 // keepZoneOverride: false for et vanlig knappeklikk (nullstiller
 // qaWhyZoneOverride, så "Hvorfor har ..."-knappen alltid går tilbake til
 // auto-valget) -- true bare når qaJumpToWhy() selv har satt overstyringen
@@ -2640,6 +2686,7 @@ function render(){
   updateToolButtons();
   updateRoundSimButtons();
   renderQaButtons();
+  renderQaHighlight();
   const {rows,played}=compute();
 
   // Badge (matematisk avgjort) og Form regnes ut fra "rows" i standings-
