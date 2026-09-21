@@ -355,6 +355,32 @@
   details.howitworks .note{padding:0 0 12px;font-size:13px}
   @media (max-width:640px){details.howitworks{padding:0 16px}}
   table.mt th,table.mt td{padding:5px 6px;font-size:13px}
+  /* Tabellene i "Slik fungerer det" og "Hvordan vet vi at modellen virker?"
+     ligger i en beholder som scroller sidelengs inne i seg selv, så en for
+     bred tabell aldri får hele siden til å scrolle sidelengs. På mobil gjøres
+     de i tillegg smalere: kortere overskrifter (.sm i stedet for .lg), korte
+     lagnavn, mindre skrift og luft, "Siste 5" skjult, og ablasjonstabellen
+     stables med én variant per blokk. */
+  .tblscroll{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+  table.mt .sm{display:none}
+  @media (max-width:640px){
+    details.howitworks .in{padding-left:14px;padding-right:14px}
+    table.mt .lg{display:none}
+    table.mt .sm{display:inline}
+    table.mt th,table.mt td{padding:4px 3px;font-size:12px}
+    table.mt .mtx{display:none}
+    table.mt.ablation,table.mt.ablation tbody,table.mt.ablation tr,table.mt.ablation td{display:block}
+    table.mt.ablation thead{display:none}
+    table.mt.ablation tr{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+    table.mt.ablation td{border:none;padding:2px 0;text-align:left;display:flex;justify-content:space-between;gap:12px}
+    table.mt.ablation td::before{content:attr(data-l);color:var(--muted)}
+    table.mt.ablation td:not([data-l]){display:block}
+    table.mt.ablation td:not([data-l])::before{content:none}
+    table.mt.ablation td:first-child{font-weight:700;padding-bottom:4px}
+    table.mt.ablation td:last-child{color:var(--muted);padding-top:4px}
+    table.mt.ablation td{overflow-wrap:anywhere;white-space:normal}
+    table.mt.brier td:first-child,table.mt.brier th:first-child{white-space:normal}
+  }
   table.mt thead th{border-bottom:2px solid var(--ink)}
   table.mt td{border-bottom:1px solid var(--line-soft)}
   table.mt .grp{text-align:center;border-bottom:1px solid var(--line)}
@@ -584,7 +610,7 @@
     <p>Form viser hvor godt laget spiller nå, fra 0 til 10, der 5 er et gjennomsnittslag i Eliteserien. Formen reagerer sterkere jo lengre en rekke med strake seire eller tap varer, siden markedet selv reagerer sterkere på rekker enn på spredte enkeltresultater.</p>
     <hr>
     <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
-    <table class="mt" id="modelTbl"></table>
+    <div class="tblscroll"><table class="mt" id="modelTbl"></table></div>
   </div>
 </details>
 
@@ -596,8 +622,8 @@
 
     <h3>Kalibrering</h3>
     <p>Prediksjonene delt i sannsynlighetsintervaller på ti prosentpoeng: hvis modellen er godt kalibrert, skal "faktisk andel" ligge nær "snitt predikert" i hver rad. Intervaller med få prediksjoner (under ca. 15) svinger mer og bør leses varsomt.</p>
-    <table class="mt calib">
-      <thead><tr><th colspan="4">Topp 4</th></tr><tr><th>Intervall</th><th>Antall</th><th>Snitt predikert</th><th>Faktisk andel</th></tr></thead>
+    <div class="tblscroll"><table class="mt calib">
+      <thead><tr><th colspan="4">Topp 4</th></tr><tr><th>Intervall</th><th>Antall</th><th><span class="lg">Snitt predikert</span><span class="sm">Snitt pred.</span></th><th><span class="lg">Faktisk andel</span><span class="sm">Faktisk</span></th></tr></thead>
       <tbody>
         <tr><td>0–10 %</td><td>282</td><td>1,7 %</td><td>2,8 %</td></tr>
         <tr><td>10–20 %</td><td>34</td><td>14,8 %</td><td>17,6 %</td></tr>
@@ -610,9 +636,9 @@
         <tr><td>80–90 %</td><td>16</td><td>86,7 %</td><td>68,8 %</td></tr>
         <tr><td>90–100 %</td><td>51</td><td>97,4 %</td><td>98,0 %</td></tr>
       </tbody>
-    </table>
-    <table class="mt calib">
-      <thead><tr><th colspan="4">Nedrykk</th></tr><tr><th>Intervall</th><th>Antall</th><th>Snitt predikert</th><th>Faktisk andel</th></tr></thead>
+    </table></div>
+    <div class="tblscroll"><table class="mt calib">
+      <thead><tr><th colspan="4">Nedrykk</th></tr><tr><th>Intervall</th><th>Antall</th><th><span class="lg">Snitt predikert</span><span class="sm">Snitt pred.</span></th><th><span class="lg">Faktisk andel</span><span class="sm">Faktisk</span></th></tr></thead>
       <tbody>
         <tr><td>0–10 %</td><td>339</td><td>1,3 %</td><td>2,1 %</td></tr>
         <tr><td>10–20 %</td><td>46</td><td>14,7 %</td><td>6,5 %</td></tr>
@@ -625,32 +651,32 @@
         <tr><td>80–90 %</td><td>7</td><td>86,0 %</td><td>100,0 %</td></tr>
         <tr><td>90–100 %</td><td>11</td><td>97,9 %</td><td>100,0 %</td></tr>
       </tbody>
-    </table>
+    </table></div>
 
     <h3>Brier-score</h3>
     <p>Brier-score er snittet av (predikert sannsynlighet − faktisk utfall, 0 eller 1) i annen. Lavere er bedre: 0 er perfekt, og en modell som alltid gjetter 50 % gir 0,25. Sammenlignet med en naiv basisrate (samme faste sannsynlighet for alle lag, uansett form eller tabellplassering: 1/16 for gull, 4/16 for topp 4, 2/16 for nedrykk) og en ren Poisson-modell uten odds.</p>
-    <table class="mt brier">
+    <div class="tblscroll"><table class="mt brier">
       <thead><tr><th>Modell</th><th>Seriemester</th><th>Topp 4</th><th>Nedrykk</th></tr></thead>
       <tbody>
         <tr><td>Naiv basisrate</td><td>0,0586</td><td>0,1875</td><td>0,1094</td></tr>
         <tr><td>Ren Poisson (uten odds)</td><td>0,0230</td><td>0,0896</td><td>0,0598</td></tr>
         <tr><td>Full modell (i bruk)</td><td>0,0192</td><td>0,0795</td><td>0,0511</td></tr>
       </tbody>
-    </table>
+    </table></div>
 
     <h3>Ablasjonstest</h3>
     <p>Samme test, bygget stegvis: hva tilfører hver enkelt del av modellen faktisk sluttplassprediksjonen?</p>
-    <table class="mt ablation">
+    <div class="tblscroll"><table class="mt ablation">
       <thead><tr><th>Steg</th><th>Seriemester</th><th>Topp 4</th><th>Nedrykk</th><th>Effekt</th></tr></thead>
       <tbody>
-        <tr><td>1. Ren Poisson</td><td>0,0230</td><td>0,0896</td><td>0,0598</td><td>Utgangspunkt</td></tr>
-        <tr><td>2. + historiske sluttodds</td><td>0,0195</td><td>0,0814</td><td>0,0515</td><td>Forbedrer alle tre klart</td></tr>
-        <tr><td>3. + formoppdatering</td><td>0,0196</td><td>0,0803</td><td>0,0518</td><td>Forbedrer topp 4, nøytral ellers</td></tr>
-        <tr><td>4. + rekke-rampe</td><td>0,0199</td><td>0,0807</td><td>0,0517</td><td>Svakt DÅRLIGERE på gull/topp 4 -- <strong>ikke i bruk</strong></td></tr>
-        <tr><td>5. + Dixon-Coles</td><td>0,0195</td><td>0,0807</td><td>0,0513</td><td>Marginal effekt på sluttplass (retter mest enkeltkamp-uavgjort)</td></tr>
-        <tr><td>6. Full modell (l1/l2=16/48)</td><td>0,0192</td><td>0,0795</td><td>0,0511</td><td>Best samlet -- regulariseringen hjelper i tillegg</td></tr>
+        <tr><td>1. Ren Poisson</td><td data-l="Seriemester">0,0230</td><td data-l="Topp 4">0,0896</td><td data-l="Nedrykk">0,0598</td><td>Utgangspunkt</td></tr>
+        <tr><td>2. + historiske sluttodds</td><td data-l="Seriemester">0,0195</td><td data-l="Topp 4">0,0814</td><td data-l="Nedrykk">0,0515</td><td>Forbedrer alle tre klart</td></tr>
+        <tr><td>3. + formoppdatering</td><td data-l="Seriemester">0,0196</td><td data-l="Topp 4">0,0803</td><td data-l="Nedrykk">0,0518</td><td>Forbedrer topp 4, nøytral ellers</td></tr>
+        <tr><td>4. + rekke-rampe</td><td data-l="Seriemester">0,0199</td><td data-l="Topp 4">0,0807</td><td data-l="Nedrykk">0,0517</td><td>Svakt DÅRLIGERE på gull/topp 4 -- <strong>ikke i bruk</strong></td></tr>
+        <tr><td>5. + Dixon-Coles</td><td data-l="Seriemester">0,0195</td><td data-l="Topp 4">0,0807</td><td data-l="Nedrykk">0,0513</td><td>Marginal effekt på sluttplass (retter mest enkeltkamp-uavgjort)</td></tr>
+        <tr><td>6. Full modell (l1/l2=16/48)</td><td data-l="Seriemester">0,0192</td><td data-l="Topp 4">0,0795</td><td data-l="Nedrykk">0,0511</td><td>Best samlet -- regulariseringen hjelper i tillegg</td></tr>
       </tbody>
-    </table>
+    </table></div>
     <p class="note">Rekke-rampen ble opprinnelig lagt inn fordi Brann fikk høyere Form enn Fredrikstad etter ti strake tap. Den løser fortsatt det -- Form-kolonnen bruker den fremdeles -- men gjør altså selve sluttplassprediksjonen svakt dårligere, så simuleringen bruker den ikke.</p>
 
     <h3>Hvordan testen er gjort</h3>
@@ -2179,12 +2205,13 @@ function computeBadgesAsync(rows){
 // statiske tallene fra data/model.json.
 function renderModelTbl(){
   const {mu,H}=MODEL, {att,con,ha,hc}=LIVE;
-  let h='<thead><tr><th class="team"></th><th></th><th class="grp" colspan="2">Hjemme</th><th class="grp" colspan="2">Borte</th><th class="grp" colspan="2">Modell, forventet mål</th></tr>'+
-        '<tr><th class="team">Lag</th><th>Siste 5</th><th>P per kamp</th><th>Mål</th><th>P per kamp</th><th>Mål</th><th>Hjemme</th><th>Borte</th></tr></thead><tbody>';
+  const ppk='<span class="lg">P per kamp</span><span class="sm">P/kamp</span>';
+  let h='<thead><tr><th class="team"></th><th class="mtx"></th><th class="grp" colspan="2">Hjemme</th><th class="grp" colspan="2">Borte</th><th class="grp" colspan="2"><span class="lg">Modell, forventet mål</span><span class="sm">Forv. mål</span></th></tr>'+
+        `<tr><th class="team">Lag</th><th class="mtx">Siste 5</th><th>${ppk}</th><th>Mål</th><th>${ppk}</th><th>Mål</th><th>Hjemme</th><th>Borte</th></tr></thead><tbody>`;
   TEAMS.forEach(t=>{ const i=TI[t], S=STATS[t];
     const hf=Math.exp(mu+H+att[i]+ha[i]), hm=Math.exp(mu+con[i]+hc[i]);
     const bf=Math.exp(mu+att[i]-ha[i]), bm=Math.exp(mu+H+con[i]-hc[i]);
-    h+=`<tr${t===SELECTED_TEAM?' style="background:var(--team-soft)"':''}><td class="team">${t}</td><td>${formHtml(t)}</td>
+    h+=`<tr${t===SELECTED_TEAM?' style="background:var(--team-soft)"':''}><td class="team"><span class="lg">${t}</span><span class="sm">${shortTeam(t)}</span></td><td class="mtx">${formHtml(t)}</td>
       <td>${f2(S.h[1]/S.h[0])}</td><td>${S.h[2]}-${S.h[3]}</td><td>${f2(S.b[1]/S.b[0])}</td><td>${S.b[2]}-${S.b[3]}</td>
       <td>${f1(hf)}-${f1(hm)}</td><td>${f1(bf)}-${f1(bm)}</td></tr>`; });
   document.getElementById('modelTbl').innerHTML=h+'</tbody>';
