@@ -1612,7 +1612,7 @@ function runInsights(d){
   var sumFinalPts=0, sumBoundaryPts=0, sumRivalFinalPts=0;
   var favorAheadCount=new Float64Array(n), coStruggleCount=new Float64Array(n);
   var aheadOfT=new Float64Array(n), behindT=new Float64Array(n);
-  var successCount=0, successWinSumT=0;
+  var successCount=0, successWinSumT=0, successPtsSumT=0;
   var successLossSum=new Float64Array(n);
   var totalAtPts=new Float64Array(200), successAtPts=new Float64Array(200);
   var decidedHist={};
@@ -1622,7 +1622,7 @@ function runInsights(d){
     P.set(P0); G.set(G0); F.set(F0);
     attS.set(d.att); conS.set(d.con); haS.set(d.ha); hcS.set(d.hc);
     lossThis.fill(0);
-    var winsT=0, decidedThisSim=false, cpIdx=0;
+    var winsT=0, ptsT=0, decidedThisSim=false, cpIdx=0;
     for(var j=0;j<open.length;j++){
       var h=open[j][0], a=open[j][1];
       var forced = oddsOverride && oddsOverride[j];
@@ -1635,9 +1635,9 @@ function runInsights(d){
       }
       var xy=sampleScoreDC(lh,la,rnd), x=xy[0], y=xy[1];
       G[h]+=x-y; G[a]+=y-x; F[h]+=x; F[a]+=y;
-      if(x>y){ P[h]+=3; lossThis[a]++; if(h===ti) winsT++; }
-      else if(x<y){ P[a]+=3; lossThis[h]++; if(a===ti) winsT++; }
-      else { P[h]++; P[a]++; }
+      if(x>y){ P[h]+=3; lossThis[a]++; if(h===ti){ winsT++; ptsT+=3; } }
+      else if(x<y){ P[a]+=3; lossThis[h]++; if(a===ti){ winsT++; ptsT+=3; } }
+      else { P[h]++; P[a]++; if(h===ti||a===ti) ptsT++; }
       var rh=x-lh, ra=y-la;
       applyDrift(attS,d.att,h,k*rh,DRIFT_CAP_ATTCON); applyDrift(haS,d.ha,h,k*rh,DRIFT_CAP_HAHC);
       applyDrift(conS,d.con,a,k*rh,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,a,-k*rh,DRIFT_CAP_HAHC);
@@ -1686,6 +1686,7 @@ function runInsights(d){
     if(success){
       successCount++;
       successWinSumT += winsT;
+      successPtsSumT += ptsT; // lagets FAKTISKE poeng i gjenstående kamper (uavgjort teller 1)
       for(var i5=0;i5<n;i5++){ if(i5!==ti) successLossSum[i5]+=lossThis[i5]; }
     }
   }
@@ -1694,7 +1695,7 @@ function runInsights(d){
     avgFinalPts: sumFinalPts/N, avgBoundaryPts: sumBoundaryPts/N, avgRivalFinalPts: rivalIdx!=null?sumRivalFinalPts/N:null,
     favorAheadCount: Array.from(favorAheadCount), coStruggleCount: Array.from(coStruggleCount),
     aheadOfT: Array.from(aheadOfT), behindT: Array.from(behindT),
-    successCount: successCount, successWinSumT: successWinSumT, successLossSum: Array.from(successLossSum),
+    successCount: successCount, successWinSumT: successWinSumT, successPtsSumT: successPtsSumT, successLossSum: Array.from(successLossSum),
     decidedHist: decidedHist,
     totalAtPts: Array.from(totalAtPts), successAtPts: Array.from(successAtPts)
   });
@@ -2625,7 +2626,10 @@ async function qaHowTo(team){
   const others = TEAMS.filter(t=>t!==team);
   const counter = zone.dir==='front' ? data.favorAheadCount : data.coStruggleCount;
   const rival = others.map(t=>({t, c:counter[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
-  const avgWins = (data.successWinSumT/data.successCount).toFixed(1);
+  // Snitt av lagets faktiske poeng (seier 3, uavgjort 1) i de gjenstående
+  // kampene, summert per simulering -- IKKE regnet om fra antall seire.
+  const avgPts = Math.round(data.successPtsSumT/data.successCount);
+  const maxPts = 3 * buildQaOpen().open.filter(o=>o[0]===TI[team]||o[1]===TI[team]).length;
   let rivalTxt = '';
   if(rival && rival.c>0){
     const avgRivalLoss = (data.successLossSum[TI[rival.t]]/data.successCount).toFixed(1);
@@ -2639,7 +2643,7 @@ async function qaHowTo(team){
     if(data.totalAtPts[p]>=10 && data.successAtPts[p]/data.totalAtPts[p]>0.5){ threshold=p; break; }
   }
   const thrTxt = threshold==null ? '' : ` Som tommelfingerregel trengs omtrent ${threshold} poeng totalt: fra den poengsummen er det mer sannsynlig enn ikke at laget ${zone.dir==='front'?`når ${zone.label}`:`unngår ${zone.label}`}.`;
-  return `I de ${pctTxt(data.successCount/data.N)} av simuleringene der ${team} klarer å ${QA_REACH_PHRASE[zone.key]}, tar de i snitt ${avgWins} seire i de gjenstående kampene.${rivalTxt}${thrTxt}`;
+  return `I de ${pctTxt(data.successCount/data.N)} av simuleringene der ${team} klarer å ${QA_REACH_PHRASE[zone.key]}, tar de i snitt ${avgPts} av ${maxPts} mulige poeng i de gjenstående kampene.${rivalTxt}${thrTxt}`;
 }
 
 // ---- Spørsmål 3: hvilke kamper betyr mest? Se buildMatchImpactCandidates()
