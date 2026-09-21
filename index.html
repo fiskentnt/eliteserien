@@ -2276,6 +2276,10 @@ function qaTargetZone(team){
   return qaZoneByKey(team,'kvalik');
 }
 const QA_REACH_PHRASE = {gull:'vinne serien', europa:'nå Europa', kvalik:'sikre plassen direkte', nedrykk:'sikre plassen direkte'};
+// Spørsmålsteksten (knapp og banner) for bakre soner sier også "uten kvalik",
+// så det er tydelig at grensen er 13. plass og hvorfor tallet er lavere enn
+// nedrykksprosenten i tabellen (14. plass er kvalik, ikke sikret).
+const qaReachQuestion = key => QA_REACH_PHRASE[key] + (key==='kvalik'||key==='nedrykk' ? ', uten kvalik' : '');
 // Satt av et klikk på et tall i lagboksen (qaJumpToWhy) -- spørsmål 1 bruker
 // DENNE sonen i stedet for å auto-velge "mest aktuelt" når den er satt.
 // Nullstilt av selve spørsmål-knappen (runQaQuestion) så et vanlig klikk på
@@ -2748,7 +2752,7 @@ const QA_QUESTIONS = [
   }},
   {id:'howto', needsTeam:true, run:qaHowTo, label:team=>{
     const z=qaTargetZone(team);
-    return `Hva må ${team} gjøre for å ${z?QA_REACH_PHRASE[z.key]:'nå målet'}?`;
+    return `Hva må ${team} gjøre for å ${z?qaReachQuestion(z.key):'nå målet'}?`;
   }},
   {id:'keymatches', needsTeam:true, run:qaKeyMatches, label:team=>`Hvilke kamper betyr mest for ${team}?`},
   {id:'runin', needsTeam:false, run:()=>qaToughestRunIn(), label:()=>'Hvem har tyngst avslutning?'},
@@ -2804,7 +2808,7 @@ function renderQaHighlight(){
     el.textContent = `Hvorfor har ${SELECTED_TEAM} ${pctTxt(zone.pct)} sjanse for ${zone.label}?`;
     el.dataset.qid = 'why';
   } else {
-    el.textContent = `Hva må ${SELECTED_TEAM} gjøre for å ${QA_REACH_PHRASE[zone.key]}?`;
+    el.textContent = `Hva må ${SELECTED_TEAM} gjøre for å ${qaReachQuestion(zone.key)}?`;
     el.dataset.qid = 'howto';
   }
 }
