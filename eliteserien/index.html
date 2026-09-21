@@ -273,8 +273,14 @@
   .roundnav .head-link{width:auto;height:auto;border:none;background:none;font-size:12.5px;margin-left:4px}
   .round-note{margin:0 16px 10px;padding:8px 12px;border-radius:8px;background:var(--q-soft);color:var(--ink);font-size:13px;border:1px solid var(--q-border)}
   .round-note[hidden]{display:none}
+  .sort-note{margin:0 16px 8px;font-size:13px;color:var(--muted)}
+  .sort-note[hidden]{display:none}
+  .sort-note .head-link{font-size:13px}
+  #tbl.sorted tr.cut td{border-bottom:1px solid var(--line-soft)}
   /* Tabell for en annen runde enn den gjeldende: modellkolonnene (Form og prosentene) gjelder bare nå-situasjonen. */
   #tbl.asof .hh,#tbl.asof .badge{display:none}
+  #tbl th .sm{display:none}
+  @media (max-width:760px),(min-width:1181px) and (max-width:1219px){#tbl th .lg{display:none}#tbl th .sm{display:inline}}
   .roundnav button:disabled{color:var(--muted);opacity:.5;cursor:default}
   .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
   /* Tabellradene er tettere enn de var, så tabell og kort til sammen er lave nok til å
@@ -736,6 +742,7 @@
             </div>
           </div>
         </div>
+        <p class="sort-note" id="sortNote" hidden></p>
         <p class="round-note" id="roundNote" hidden></p>
         <p class="scenario-line" id="scenarioLine" hidden></p>
         <p class="simnote" id="simNote" hidden>Prosentene bygger på resultatene i kamplisten, også de simulerte.</p>
@@ -749,7 +756,7 @@
           <th class="hide-s" title="Siste fem seriekamper, eldst til venstre">Siste 5</th>
           <th class="sortable hide-m hh" id="gullHeader" data-sort="gull" title="Sannsynlighet for å vinne serien. Klikk for å sortere.">Gull</th>
           <th class="sortable hh" id="europaHeader" data-sort="europa" title="Sannsynlighet for europaplass (topp 4). Klikk for å sortere.">Europa</th>
-          <th class="sortable hh" id="nedHeader" data-sort="ned" title="Sannsynlighet for plass 15 eller 16. Klikk for å sortere.">Ned</th>
+          <th class="sortable hh" id="nedHeader" data-sort="ned" title="Sannsynlighet for nedrykk (plass 15 eller 16). Klikk for å sortere."><span class="lg">Nedrykk</span><span class="sm">Nedr.</span></th>
         </tr></thead>
         <tbody></tbody>
       </table>
@@ -826,7 +833,7 @@
     </section>
     <section class="about" id="om-siden" aria-labelledby="omSidenTittel">
       <h2 id="omSidenTittel">Om tabellkalkulatoren for Eliteserien</h2>
-      <p>Tabellkalkulator for Eliteserien 2026 viser dagens tabell og sannsynligheten for at hvert lag vinner serien, tar en europaplass (topp 4), havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 4000 ganger.</p>
+      <p>Tabellkalkulator for Eliteserien 2026 viser dagens tabell og sannsynligheten for at hvert lag vinner serien, tar en europaplass (topp 4), havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 10&nbsp;000 ganger.</p>
       <p>Du kan fylle inn egne resultater, la modellen simulere tomme kamper, følge ett lag og se hvordan tabellen og sjansene endrer seg. Tabellen kan også vises slik den var, eller blir, etter en valgt runde. Tallene oppdateres automatisk etter hver kamp.</p>
       <noscript><p><strong>Tabellen og sannsynlighetene regnes ut i nettleseren og krever JavaScript.</strong> Slå på JavaScript for å bruke kalkulatoren.</p></noscript>
     </section>
@@ -840,7 +847,7 @@
     <h3>Slik regnes sannsynlighetene</h3>
     <p id="howP1"></p>
     <p id="howP2"></p>
-    <p>Deretter spilles resten av sesongen 4000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Europa, Ned og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
+    <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Europa, Ned og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
     <p>Cupvinneren får også en plass i Europa, men den cupfinalen spilles etter at serien er ferdig, så den er ikke med her. Går plassen til et lag som allerede er kvalifisert gjennom tabellen, kan 5. plass få Europa.</p>
     <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner alt", "...taper alt", "Simuler tomme kamper", og knappen i hver runde) bruker alle én tilfeldig, statistisk normal sesong: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
     <p>Form viser hvor godt laget spiller nå, fra 0 til 10, der 5 er et gjennomsnittslag i Eliteserien. Formen reagerer sterkere jo lengre en rekke med strake seire eller tap varer, siden markedet selv reagerer sterkere på rekker enn på spredte enkeltresultater.</p>
@@ -919,7 +926,7 @@
     <p>Modellen testes på framtiden, ikke på kampene den allerede har sett. Ved flere tidspunkter i hver sesong tilpasses modellen kun på kampene som var spilt fram til dette tidspunktet. Deretter simuleres resten av sesongen, og sannsynlighetene sammenlignes med det som faktisk skjedde.</p>
 
     <h3>Begrensninger</h3>
-    <p>Innbyrdes oppgjør brukes ikke som fjerde rangeringskriterium hvis lag står likt på poeng, målforskjell og scorede mål. 4000 simuleringer gir Monte Carlo-støy på omtrent 1–2 prosentpoeng, så prosentene på siden bør ikke tolkes på desimalnivå.</p>
+    <p>Innbyrdes oppgjør brukes ikke som fjerde rangeringskriterium hvis lag står likt på poeng, målforskjell og scorede mål. 10&nbsp;000 simuleringer gir Monte Carlo-støy på rundt 1 prosentpoeng, så prosentene på siden bør ikke tolkes på desimalnivå.</p>
   </div>
 </details>
 </div>
@@ -1122,19 +1129,31 @@ function probOf(team,key){
   if(!d) return 0;
   return key==='gull' ? d[0] : key==='europa' ? d[0]+d[1]+d[2]+d[3] : d[14]+d[15];
 }
-const SORT_LABELS = {form:'Form', gull:'Gull', europa:'Europa', ned:'Ned'};
+const SORT_LABELS = {form:'Form', gull:'Gull', europa:'Europa', ned:'<span class="lg">Nedrykk</span><span class="sm">Nedr.</span>'};
 function updateSortHeaders(){
   const hdr = {form:'formHeader', gull:'gullHeader', europa:'europaHeader', ned:'nedHeader'};
   Object.keys(hdr).forEach(k=>{
     const el = document.getElementById(hdr[k]); if(!el) return;
     const on = !!(tableSort && tableSort.key===k);
-    el.textContent = SORT_LABELS[k] + (on ? (tableSort.dir===1 ? ' ▼' : ' ▲') : '');
+    // Pil: ▼ = høyeste verdi først, ▲ = laveste først. Nedrykk starter med LAVEST først.
+    el.innerHTML = SORT_LABELS[k] + (on ? (((tableSort.dir===1)===(k!=='ned')) ? ' ▼' : ' ▲') : '');
     el.classList.toggle('active', on);
   });
 }
 // Klikk på en sorterbar kolonne: samme retning som før (▼ først, så ▲, så
 // tilbake til tabellrekkefølge). Kortene under tabellen ("Se alle") setter
 // sorteringen direkte og hopper opp til tabellen.
+// Rekkefølge for en sortering {key,dir}. dir 1 = "naturlig" retning: høyest først for Form,
+// Gull og Europa, men LAVEST nedrykkssjanse først for Nedrykk, som i en vanlig tabell
+// der nedrykkslagene står nederst. Ved lik verdi (prosent avrundet til hele tall, form
+// til én desimal, altså slik de vises) avgjør tabellplasseringen.
+function compareForSort(a,b,sort){
+  const v = x => sort.key==='form' ? Math.round(x.form*10) : Math.round(probOf(x.name,sort.key)*100);
+  let d = v(b)-v(a);
+  if(sort.key==='ned') d = -d;
+  return sort.dir*d || a.pos-b.pos;
+}
+const SORT_NOTE = {form:'form', gull:'gullsjanse', europa:'europasjanse', ned:'nedrykkssjanse'};
 function cycleSort(key){
   if(!tableSort || tableSort.key!==key) tableSort={key,dir:1};
   else if(tableSort.dir===1) tableSort={key,dir:-1};
@@ -1302,6 +1321,7 @@ document.querySelectorAll('.wrap > .leftcol, .wrap > .rightcol, .tblzone, .follo
 // lagnavn åpner formgrafen (delegert på tbody, siden radene bygges på nytt
 // hver render()).
 document.getElementById('formHeader').addEventListener('click', ()=> cycleSort('form'));
+document.getElementById('sortNote').addEventListener('click', e=>{ if(e.target.closest('#unsortBtn')){ tableSort=null; render(); } });
 ['gullHeader','europaHeader','nedHeader'].forEach(id=>{
   document.getElementById(id).addEventListener('click', e=> cycleSort(e.currentTarget.dataset.sort));
 });
@@ -1496,10 +1516,10 @@ function fillProb(){
   });
 }
 
-// ---- Europa/Ned/lagboksen: 4000 simulerte sesonger, "hot" (lagstyrkene
+// ---- Europa/Ned/lagboksen: 10 000 simulerte sesonger, "hot" (lagstyrkene
 // oppdateres etter hver simulerte kamp i hver sesong, se FORM_K). Kjøres i en
 // Web Worker (WORKER_SRC under) så siden aldri fryser mens du skriver — et
-// første anslag postes etter 1000 sesonger, det endelige etter 4000. ----
+// første anslag postes etter 1000 sesonger, det endelige etter 10 000. ----
 const WORKER_SRC = `
 function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
 var GMAX = 15; // samme grense overalt -- se kommentaren ved hovedtrådens GMAX
@@ -1773,10 +1793,10 @@ function applyDrift(arr, base, i, delta, cap){
 // Samme absolutte mål-tak som hovedtråden (MAX_LAMBDA_LOG der) -- se
 // kommentaren ved den definisjonen.
 var MAX_LAMBDA_LOG = Math.log(6);
-// ---- Europa/Ned/lagboksen: 4000 "hot" simulerte sesonger. Frøet (d.seed)
+// ---- Europa/Ned/lagboksen: 10 000 "hot" simulerte sesonger. Frøet (d.seed)
 // er avledet av de låste resultatene i scenarioet (se hashStr()/
 // runMCAsync() i hovedtråden), ikke Math.random() -- samme scenario skal
-// alltid gi samme prosenter, ikke støy på ±1-2 prosentpoeng hver gang
+// alltid gi samme prosenter, ikke støy på rundt ±1 prosentpoeng hver gang
 // render() utløses uten at noe faktisk endret seg. ----
 function runProb(d){
   var mu=d.mu, H=d.H, k=d.k, P0=d.P0, G0=d.G0, F0=d.F0, open=d.open, N=d.N, runId=d.runId;
@@ -2129,7 +2149,7 @@ function simulateZoneProb(d, forcedIdx, forcedScore, seed){
 let mcWorker=null, mcRunId=0, mcTimer=null, lastMC=null, lastMCScenarioKey=null;
 // Fast, avledet av det låste scenarioet (samme streng-mønster som
 // encodeScenario()) i stedet for Math.random() -- samme scenario skal alltid
-// gi samme prosenter i tabellen, ikke ±1-2 prosentpoeng støy hver gang render()
+// gi samme prosenter i tabellen, ikke rundt ±1 prosentpoeng støy hver gang render()
 // tilfeldigvis utløses uten at noe resultat faktisk er endret.
 function hashStr(s){
   var h=2166136261;
@@ -2209,7 +2229,7 @@ function runMCAsync(N){
   // Scenarioet er fullt bestemt av de låste resultatene over (LIVE er selv
   // avledet av akkurat de samme resultatene, se refreshLiveState() i
   // render()) — er nøkkelen uendret siden forrige kjøring, er resultatet
-  // garantert identisk, og vi slipper en helt ny 4000-sesongers kjøring bare
+  // garantert identisk, og vi slipper en helt ny 10 000-sesongers kjøring bare
   // fordi noe utløste render() på nytt (f.eks. av/på-kryssing av en boks som
   // ikke selv endrer noe resultat).
   const scenarioKey = scenarioParts.join('_');
@@ -2244,7 +2264,7 @@ function fillOdds(){
   if(tableSort && PROB_KEYS.includes(tableSort.key)){
     const tb=document.querySelector('#tbl tbody');
     [...tb.querySelectorAll('tr')]
-      .sort((x,y)=> tableSort.dir*(probOf(y.dataset.team,tableSort.key)-probOf(x.dataset.team,tableSort.key)))
+      .sort((x,y)=> compareForSort({name:x.dataset.team,pos:parseInt(x.children[0].textContent)},{name:y.dataset.team,pos:parseInt(y.children[0].textContent)},tableSort))
       .forEach(tr=>tb.appendChild(tr));
   }
   updateSummaryCards();
@@ -2277,7 +2297,11 @@ function fillOdds(){
     <div class="hist-l">${d.map((v,i)=>`<span>${i+1}</span>`).join('')}</div>`
     : '');
 }
-function scheduleMC(){ clearTimeout(mcTimer); mcTimer=setTimeout(()=>runMCAsync(4000), 250); }
+// Antall simulerte sesonger for Europa/Ned/lagboksen. 10 000 gir Monte Carlo-støy på
+// rundt 1 prosentpoeng (95 %-margin ved 50 %); målt ca. 0,4 s på en PC i Workeren
+// (4 000 tok 0,17 s), og første anslag kommer etter 1 000 sesonger.
+const MC_N = 10000;
+function scheduleMC(){ clearTimeout(mcTimer); mcTimer=setTimeout(()=>runMCAsync(MC_N), 250); }
 
 // Fyller de gitte kampene med ett "plausibelt scenario": kjøres i Web Workeren
 // (WORKER_SRC, mode:'typical'), som trekker kandidatsesonger kronologisk med
@@ -3720,18 +3744,23 @@ function render(){
   });
 
   let displayRows=rows;
-  if(tableSort && tableSort.key==='form'){
-    displayRows=[...rows].sort((a,b)=> tableSort.dir*(b.form-a.form) || a.pos-b.pos);
-  } else if(tableSort && PROB_KEYS.includes(tableSort.key)){
-    // Gull/Europa/Ned: sorteres på sannsynlighetene fra siste simulering (lastMC).
+  if(tableSort && (tableSort.key==='form' || PROB_KEYS.includes(tableSort.key))){
+    // Gull/Europa/Nedrykk sorteres på sannsynlighetene fra siste simulering (lastMC).
     // Er de ikke klare ennå, sorteres på nytt av fillOdds() når de kommer.
-    displayRows=[...rows].sort((a,b)=> tableSort.dir*(probOf(b.name,tableSort.key)-probOf(a.name,tableSort.key)) || a.pos-b.pos);
+    displayRows=[...rows].sort((a,b)=> compareForSort(a,b,tableSort));
   }
   updateSortHeaders();
 
   const viewIdx = viewRoundIdx(), isCurrent = viewIdx===currentRoundIdx();
   const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
   document.getElementById('tbl').classList.toggle('asof', !isCurrent);
+  // Sortert etter noe annet enn plassering: skjul de stiplede sonestrekene (de hører til
+  // rekkefølgen etter plassering) og si fra over tabellen, med en lenke tilbake.
+  const sortedNow = !!(isCurrent && tableSort);
+  document.getElementById('tbl').classList.toggle('sorted', sortedNow);
+  const sortNote = document.getElementById('sortNote');
+  sortNote.hidden = !sortedNow;
+  if(sortedNow) sortNote.innerHTML = `Sortert etter ${SORT_NOTE[tableSort.key]}. <button type="button" class="head-link" id="unsortBtn">Vis vanlig tabell</button>`;
   const histRows = isCurrent ? null : computeAt(viewIdx);
   (isCurrent ? displayRows : histRows).forEach(r=>{
     const pos=r.pos; const tr=document.createElement('tr');
