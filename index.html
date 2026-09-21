@@ -824,9 +824,10 @@ const MAX_LAMBDA_LOG = Math.log(6);
 let LIVE = null; // {att,con,ha,hc} i TI-indeksrekkefølge — kopi av MODEL, oppdatert av alle låste resultater i inneværende scenario
 let tableSort = null; // null = standings-rekkefølge, ellers {key:'form', dir:1|-1}
 
-// Klubbfarger for alle 16 lag (hovedfarge, ingen logoer). Spredt over
-// fargesirkelen for innbyrdes skille (flere lag deler faktisk klubbfarge-
-// familie, f.eks. fire røde og seks blå), og hver variant kontrollert mot
+// Klubbfarger for alle 16 lag (hovedfarge, ingen logoer): klubbens faktiske
+// hovedfarge, IKKE forskjøvet for å skille lag fra hverandre -- bare ett lag
+// vises om gangen, så flere røde/blå/gule lag trenger ikke se ulike ut. Hver
+// variant er kontrollert mot
 // WCAG AA (4,5:1 for tekst mot panel i begge temaer, 3:1 for fyll+tekst) --
 // se scratchpad-scriptet fra utviklingen av mørk modus for metoden.
 // fill/deep/fillText er unthemet (samme "fyll med hvit/mørk tekst"-mønster
@@ -842,18 +843,18 @@ const TEAM_COLORS = {
   "Aalesund": {fill:"#e6700f", deep:"#a6510b", fillText:"#15191c", textLight:"#b6590c", textDark:"#e6700f", topDark:"#73421a", topDeepDark:"#533013"},
   "Bodø/Glimt": {fill:"#f0b400", deep:"#ad8200", fillText:"#15191c", textLight:"#946f00", textDark:"#f0b400", topDark:"#765e13", topDeepDark:"#55440e"},
   "Brann": {fill:"#c5111d", deep:"#8e0c15", fillText:"#ffffff", textLight:"#c5111d", textDark:"#f04c57", topDark:"#63181d", topDeepDark:"#471115"},
-  "Fredrikstad": {fill:"#e64c19", deep:"#a63712", fillText:"#15191c", textLight:"#ca4316", textDark:"#e85a2b", topDark:"#73341f", topDeepDark:"#532516"},
-  "HamKam": {fill:"#6cab3f", deep:"#4e7b2d", fillText:"#15191c", textLight:"#507e2f", textDark:"#6cab3f", topDark:"#3f592d", topDeepDark:"#2e4020"},
-  "KFUM Oslo": {fill:"#901d3c", deep:"#68152b", fillText:"#ffffff", textLight:"#901d3c", textDark:"#de5d80", topDark:"#491a27", topDeepDark:"#35131c"},
+  "Fredrikstad": {fill:"#d6181f", deep:"#9a1116", fillText:"#ffffff", textLight:"#d6181f", textDark:"#ec565c", topDark:"#6b1d20", topDeepDark:"#4d1517"},
+  "HamKam": {fill:"#23783a", deep:"#19562a", fillText:"#ffffff", textLight:"#23783a", textDark:"#2e9e4d", topDark:"#1b3e24", topDeepDark:"#132d1a"},
+  "KFUM Oslo": {fill:"#cc1a22", deep:"#931318", fillText:"#ffffff", textLight:"#cc1a22", textDark:"#ea595f", topDark:"#671d20", topDeepDark:"#4a1517"},
   "Kristiansund": {fill:"#2fadda", deep:"#1d7fa2", fillText:"#15191c", textLight:"#1c7a9c", textDark:"#2fadda", topDark:"#265e72", topDeepDark:"#1b4452"},
-  "Lillestrøm": {fill:"#a39e1f", deep:"#757216", fillText:"#15191c", textLight:"#787417", textDark:"#a39e1f", topDark:"#53511c", topDeepDark:"#3b3a14"},
+  "Lillestrøm": {fill:"#fbd400", deep:"#b59900", fillText:"#15191c", textLight:"#8a7500", textDark:"#fbd400", topDark:"#7c6c14", topDeepDark:"#594e0e"},
   "Molde": {fill:"#1942e6", deep:"#1230a6", fillText:"#ffffff", textLight:"#1942e6", textDark:"#6c86ef", topDark:"#1f3073", topDeepDark:"#162353"},
   "Rosenborg": {fill:"#2a2e32", deep:"#1e2124", fillText:"#ffffff", textLight:"#2a2e32", textDark:"#808a94", topDark:"#191a1c", topDeepDark:"#121314"},
   "Sandefjord": {fill:"#1852aa", deep:"#113b7a", fillText:"#ffffff", textLight:"#1852aa", textDark:"#4c89e6", topDark:"#193156", topDeepDark:"#12233e"},
   "Sarpsborg 08": {fill:"#35728d", deep:"#265266", fillText:"#ffffff", textLight:"#35728d", textDark:"#4390b2", topDark:"#253f4a", topDeepDark:"#1b2d35"},
-  "Start": {fill:"#a3660a", deep:"#754907", fillText:"#ffffff", textLight:"#a3660a", textDark:"#c0780c", topDark:"#513812", topDeepDark:"#3a280d"},
+  "Start": {fill:"#ffcf00", deep:"#b89500", fillText:"#15191c", textLight:"#8f7400", textDark:"#ffcf00", topDark:"#7e6a14", topDeepDark:"#5b4c0f"},
   "Tromsø": {fill:"#d23754", deep:"#9c233a", fillText:"#ffffff", textLight:"#d23754", textDark:"#db6178", topDark:"#6f2936", topDeepDark:"#501e27"},
-  "Vålerenga": {fill:"#6245d3", deep:"#4027a3", fillText:"#ffffff", textLight:"#6245d3", textDark:"#8c76df", topDark:"#3b2c74", topDeepDark:"#2b2054"},
+  "Vålerenga": {fill:"#0a2c78", deep:"#072056", fillText:"#ffffff", textLight:"#0a2c78", textDark:"#5786f1", topDark:"#0e1d3c", topDeepDark:"#0a152b"},
   "Viking": {fill:"#161f4b", deep:"#101636", fillText:"#ffffff", textLight:"#161f4b", textDark:"#7586d7", topDark:"#111527", topDeepDark:"#0c0f1c"},
 };
 // Uten valgt lag (item 3): banneret får en nøytral mørk grå i stedet for et
