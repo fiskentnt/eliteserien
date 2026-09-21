@@ -238,6 +238,15 @@
   /* Tabellradene er tettere enn de var, så tabell og kort til sammen er lave nok til å
      stå fast uten å kappes under navigasjonen ved bunnen av siden. */
   #tbl td{padding-top:4px;padding-bottom:4px}
+  /* Lave vinduer (PC): tabell og kort er tettere, så begge rekker å stå fast uten at
+     kortene kappes nederst. Kortene viser da to lag i stedet for tre. */
+  @media (min-width:1181px) and (max-height:820px){
+    #tbl td{padding-top:2px;padding-bottom:2px}
+    .panel-head{padding-top:10px;padding-bottom:6px}
+    .cards{margin-top:10px}
+    .card{padding:8px 12px 7px;gap:5px}
+    .card-list li:nth-child(n+3){display:none}
+  }
   .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 14px 10px;display:flex;flex-direction:column;gap:7px;min-width:0}
   .card-h{display:flex;align-items:center;gap:7px;font:700 15px/1.1 var(--cond);min-width:0}
   .card-h svg{width:20px;height:20px;flex:none;color:var(--ink)}
@@ -1186,7 +1195,7 @@ function updateFollowedMatchRows(){
 function updateFollowFit(){
   // Det som står fast er tabellen OG kortene under den (.followbox), så begge
   // alltid er synlige når du blar i kamplisten ved siden av. Toppen ligger rett
-  // under den faste navigasjonen; er boksen høyere enn vinduet, er det kortene
+  // under den faste navigasjonen (8 px luft); er boksen høyere enn vinduet, er det kortene
   // nederst som kappes, ikke tabellen.
   const box = document.querySelector('.wrap > .leftcol .followbox');
   const zone = box && box.parentElement;
@@ -1199,7 +1208,7 @@ function updateFollowFit(){
     return;
   }
   box.classList.add('panel-follow');
-  box.style.top = ((document.querySelector('.topnav')||{offsetHeight:0}).offsetHeight + 16) + 'px';
+  box.style.top = ((document.querySelector('.topnav')||{offsetHeight:0}).offsetHeight + 8) + 'px'; // 8 px luft under navigasjonen
 }
 window.addEventListener('resize', updateFollowFit);
 // Fanger opp høydeendringer som ikke kommer fra render() eller vindu-resize
