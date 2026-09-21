@@ -324,8 +324,6 @@
      de erstattet (ellers helt vanlig knappe-fokus/tastatur-tilgjengelighet). */
   .odds-jump{font:inherit;color:inherit;background:none;border:none;padding:0;margin:0;text-align:left;cursor:pointer}
   .odds-jump:hover strong{text-decoration:underline}
-  .qa-jump-link{display:block;margin-top:6px;background:none;border:none;padding:0;color:var(--muted);font-size:12.5px;text-decoration:underline;cursor:pointer;font-family:inherit}
-  .qa-jump-link:hover{color:var(--ink)}
   .hist{display:grid;grid-template-columns:repeat(16,1fr);gap:1px;align-items:end;height:20px;margin-top:6px}
   .hist i{display:block;background:var(--hist-flat);border-radius:1px 1px 0 0;min-height:1px}
   .hist i.eu{background:var(--hist-eu)}.hist i.q{background:var(--hist-q)}.hist i.n{background:var(--hist-n)}
@@ -527,8 +525,6 @@
       <span class="q"><i></i>Kvalik (14)</span>
       <span class="n"><i></i>Nedrykk (15 og 16)</span>
     </div>
-    <div class="note">Klikk på et lag for å se formen som graf. Kilder: ffksupporter.net, ESPN, football-data.co.uk og The Odds API, alt hentet automatisk.</div>
-    <button class="qa-jump-link" id="qaJumpLink">Spør om tabellen ↓</button>
   </section>
 
     <section class="panel qa" aria-label="Spør om tabellen">
@@ -576,6 +572,7 @@
   <summary>Hvordan vet vi at modellen virker?</summary>
   <div class="in">
     <p class="note">Sist validert: 21. september 2026, mot NOR.csv (football-data.co.uk), sesongene 2016–2025. Tallene under er faste resultater fra den testen, ikke noe som regnes ut i nettleseren.</p>
+    <p class="note">Kilder til dataene på siden: ffksupporter.net, ESPN, football-data.co.uk og The Odds API, alt hentet automatisk.</p>
 
     <h3>Kalibrering</h3>
     <p>Prediksjonene delt i sannsynlighetsintervaller på ti prosentpoeng: hvis modellen er godt kalibrert, skal "faktisk andel" ligge nær "snitt predikert" i hver rad. Intervaller med få prediksjoner (under ca. 15) svinger mer og bør leses varsomt.</p>
@@ -2870,8 +2867,8 @@ document.getElementById('qaButtons').addEventListener('click', e=>{
   const btn = e.target.closest('button'); if(!btn) return;
   runQaQuestion(btn.dataset.id);
 });
-// Klikk på et tall i lagboksen (Gull/Europa/Kvalik/Nedrykk) eller på den
-// vesle lenken under tabellen: hopp til spør-om-tabellen-seksjonen. Tallene
+// Klikk på et tall i lagboksen (Gull/Europa/Kvalik/Nedrykk) eller på
+// spørsmålslinjen i banneret: hopp til spør-om-tabellen-seksjonen. Tallene
 // spør i tillegg om AKKURAT den sonen (se qaWhyZoneOverride).
 function qaJumpToSection(){
   document.querySelector('.panel.qa').scrollIntoView({behavior:'smooth', block:'start'});
@@ -2885,7 +2882,6 @@ document.getElementById('verdict').addEventListener('click', e=>{
   const btn = e.target.closest('.odds-jump'); if(!btn) return;
   qaJumpToWhy(btn.dataset.zone);
 });
-document.getElementById('qaJumpLink').addEventListener('click', qaJumpToSection);
 
 // ---- Knappene: to uavhengige, rent datadrevne tilstander (ikke "hvilken
 // knapp ble sist klikket", som lett kommer ut av synk med manuelle
