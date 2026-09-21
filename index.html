@@ -2669,7 +2669,27 @@ async function qaHowTo(team){
   for(let p=0;p<data.totalAtPts.length;p++){
     if(data.totalAtPts[p]>=10 && data.successAtPts[p]/data.totalAtPts[p]>0.5){ threshold=p; break; }
   }
-  const thrTxt = threshold==null ? '' : ` Som tommelfingerregel trengs omtrent ${threshold} poeng totalt: fra den poengsummen er det mer sannsynlig enn ikke at laget ${zone.dir==='front'?`når ${zone.label}`:'sikrer plassen direkte'}.`;
+  const myPts = compute().rows.find(r=>r.name===team).pts;
+  // Nesten alltid i mål: "klarer å ..." i "100 %" av sesongene leses rart, så
+  // svaret sies rett ut. Marginen er poengene laget trenger utover dagens for
+  // å lykkes i minst 95 % av simuleringene som endte på akkurat den poengsummen
+  // (minst 10 slike per poengsum, så enkeltutslag ikke avgjør).
+  const successShare = data.successCount/data.N;
+  if(successShare>0.95){
+    let safe = null;
+    for(let p=0;p<data.totalAtPts.length;p++){
+      if(data.totalAtPts[p]>=10 && data.successAtPts[p]/data.totalAtPts[p]>=0.95){ safe=p; break; }
+    }
+    const verb = zone.key==='gull' ? 'vinner serien' : zone.key==='europa' ? 'tar Europa-plassen' : 'sikrer plassen direkte';
+    const fails = zone.dir==='front' ? 'det glipper' : 'det ryker';
+    const all = Math.round(successShare*100)>=100 ? 'alle' : 'nesten alle';
+    const need = safe==null ? null : Math.max(0, safe-myPts);
+    const marginTxt = need==null ? '' : need===0
+      ? ` ${team} har allerede poengene som skal til med god margin.`
+      : ` Det skal mye til for at ${fails}, men rundt ${need} av ${maxPts} mulige poeng holder med god margin.`;
+    return `${team} ${verb} i ${all} simuleringene.${marginTxt}`;
+  }
+  const thrTxt = threshold==null || myPts>=threshold ? '' : ` Som tommelfingerregel trengs omtrent ${threshold} poeng totalt: fra den poengsummen er det mer sannsynlig enn ikke at laget ${zone.dir==='front'?`når ${zone.label}`:'sikrer plassen direkte'}.`;
   return `Typisk holder det med rundt ${avgPts} av ${maxPts} mulige poeng. `+
     `I de ${pctTxt(data.successCount/data.N)} av de simulerte sesongene der ${team} klarer å ${QA_REACH_PHRASE[zone.key]}, tar de i snitt så mye${rivalTxt}.${thrTxt}`;
 }
