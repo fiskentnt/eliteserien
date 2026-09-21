@@ -2485,6 +2485,42 @@ function qaFindRival(team, zone){
   }
   return nearest(withPct.filter(x=>x.pct>=0.05)) || nearest(withPct.filter(x=>x.pct>=0.01));
 }
+// Feltet i veien for laget (spørsmål 1): ALLE lagene med reell sjanse (5 til
+// 95 %) for sonen som står mellom laget og sonegrensen -- ikke bare det
+// nærmeste. Grensen er siste plass i sonen (gull 1, Europa 4) eller, for
+// kvalik/nedrykk, 13. plass (trygg). Ligger laget UTENFOR (bak grensen): lagene
+// fra grenseplassen og ned til rett foran laget står i veien ("foran seg").
+// Ligger laget INNENFOR: lagene bak laget er de som jager ("bak seg"), og
+// marginen måles mot første plass utenfor. Lag over 95 % er allerede i mål og
+// lag under 5 % er ute, så ingen av dem er konkurrenter. Nærmeste konkurrent
+// (i poeng) brukes til formsammenligningen. null hvis ingen finnes.
+const QA_ORD = {1:'førsteplassen', 2:'andreplassen', 3:'tredjeplassen', 4:'fjerdeplassen', 5:'femteplassen'};
+function qaFieldInWay(team, zone){
+  const {rows} = compute();
+  const r = rows.findIndex(x=>x.name===team)+1; // 1-indeksert
+  if(r<1) return null;
+  const b = zone.dir==='front' ? zone.hi : zone.boundary;
+  const outside = r>b;
+  const between = outside ? rows.slice(b-1, r-1) : rows.slice(r);
+  const inBand = between.filter(x=>{
+    const z = qaZoneByKey(x.name, zone.key);
+    return z && z.pct>=0.05 && z.pct<=0.95;
+  });
+  if(!inBand.length) return null;
+  const myPts = rows[r-1].pts;
+  const nearest = inBand.slice().sort((a,c)=>Math.abs(a.pts-myPts)-Math.abs(c.pts-myPts))[0];
+  // Referansen for marginen: laget som holder grenseplassen (utenfor) eller
+  // første lag utenfor sonen (innenfor).
+  const refRow = outside ? rows[b-1] : rows[b];
+  const refLabel = outside
+    ? (zone.dir==='front' ? (QA_ORD[b]||`${b}. plass`) : 'trygg plass')
+    : (zone.dir==='front' ? (QA_ORD[b+1]||`${b+1}. plass`) : `${b+1}. plass`);
+  return {outside, names:inBand.map(x=>x.name), nearest:nearest.name, nearestPts:nearest.pts,
+    margin: refRow ? Math.abs(outside ? refRow.pts-myPts : myPts-refRow.pts) : null, refLabel};
+}
+const fmtForm = v => v.toFixed(1).replace('.',',');
+function joinNames(a){ return a.length<2 ? a.join('') : a.slice(0,-1).join(', ')+' og '+a[a.length-1]; }
+
 // ---- Spørsmål 1: hvorfor har laget X % sjanse for det som er mest
 // aktuelt? Tre deler, alle bygget mot NÆRMESTE KONKURRENT der én finnes
 // (ellers mot ligasnittet/egne tall): 1) nåværende stilling (ekte tabell,
@@ -2496,7 +2532,8 @@ function qaFindRival(team, zone){
 async function qaWhy(team){
   const zone = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
-  const rival = qaFindRival(team, zone);
+  const field = qaFieldInWay(team, zone);
+  const rival = field ? {t:field.nearest} : qaFindRival(team, zone);
   const data = await runInsightsAsync(team, zone, rival ? rival.t : null);
   const {rows} = compute();
   const row = rows.find(r=>r.name===team);
@@ -2506,7 +2543,11 @@ async function qaWhy(team){
   const rivalRow = rival ? rows.find(r=>r.name===rival.t) : null;
 
   let part1;
-  if(rival){
+  if(field){
+    const m = field.margin;
+    const mTxt = m===0 ? `på samme poeng som ${field.refLabel}` : `${m} poeng ${field.outside?'bak':'foran'} ${field.refLabel}`;
+    part1 = `${team} ligger ${mTxt}, med ${joinNames(field.names)} ${field.outside?'foran seg':'som jager'}.`;
+  } else if(rival){
     part1 = row.pts===rivalRow.pts
       ? `${team} og ${rival.t} står likt på ${row.pts} poeng, med ${row.left} kamper igjen.`
       : row.pts>rivalRow.pts
@@ -2517,7 +2558,16 @@ async function qaWhy(team){
   }
 
   let part2;
-  if(rival){
+  if(field){
+    const rivalForm = liveForm[TI[field.nearest]];
+    const diff = form - rivalForm;
+    const d = Math.abs(field.nearestPts - row.pts);
+    const where = d===0 ? 'på samme poeng' : `${d} poeng ${field.nearestPts>row.pts?'foran':'bak'}`;
+    const strong = Math.abs(diff)>=1.5;
+    const formPart = Math.abs(diff)<0.3 ? `${team} er i omtrent lik form`
+      : `${team} er i ${strong?'klart':'litt'} ${diff>0?'bedre':'dårligere'} form`;
+    part2 = `Nærmest er ${field.nearest}, ${where}, og ${formPart} (${fmtForm(form)} mot ${fmtForm(rivalForm)}).`;
+  } else if(rival){
     const rivalForm = liveForm[TI[rival.t]];
     const diff = form - rivalForm;
     const ptsGap = Math.abs(row.pts - rivalRow.pts);
