@@ -174,8 +174,20 @@
   /* Sidehode: tittel, undertittel, stempel og blikkfang-spørsmålet -- nøytralt,
      ikke lenger et fargefelt i lagets farge (laget viser seg i aksenten i
      navigasjonen og i markeringen i tabellen). */
-  .pagehead{max-width:1380px;margin:0 auto;padding:22px 24px 4px}
-  @media (max-width:640px){.pagehead{padding:16px 16px 0}}
+  .pagehead{max-width:1380px;margin:0 auto;padding:22px 24px 4px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title pick" "sub pick" "qa qa";column-gap:24px;align-items:start}
+  .pagehead .titlerow{grid-area:title}
+  .pagehead .subline{grid-area:sub}
+  .pagehead .qa-highlight{grid-area:qa}
+  /* Lagvelgeren: tydelig etikett og ramme i lagets farge, så den er lett å finne. */
+  .followpick{grid-area:pick;display:flex;align-items:center;gap:10px;align-self:center;margin:0}
+  .followpick label{font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap}
+  .followpick select{font:inherit;font-weight:700;font-size:15px;color:var(--ink);background:var(--panel);border:2px solid var(--team-fill);border-radius:10px;padding:8px 12px;min-width:190px;cursor:pointer}
+  .followpick select:hover{background:var(--input-bg)}
+  @media (max-width:760px){
+    .pagehead{padding:16px 16px 0;grid-template-columns:minmax(0,1fr);grid-template-areas:"title" "sub" "pick" "qa"}
+    .followpick{margin:10px 0 0;align-self:start}
+    .followpick select{flex:1;min-width:0}
+  }
   .titlerow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
   h1{margin:0;font:800 clamp(26px,3.4vw,34px)/1 var(--cond);letter-spacing:-.01em}
   .subtitle{font:600 clamp(13px,1.4vw,15px)/1.2 var(--cond);color:var(--muted);letter-spacing:.01em}
@@ -222,7 +234,6 @@
   /* Tabell for en annen runde enn den gjeldende: modellkolonnene (Form og prosentene) gjelder bare nå-situasjonen. */
   #tbl.asof .hh,#tbl.asof .badge{display:none}
   .roundnav button:disabled{color:var(--muted);opacity:.5;cursor:default}
-  .teamsel select{font:inherit;font-weight:600;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;max-width:150px}
   .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
   /* Tabellradene er tettere enn de var, så tabell og kort til sammen er lave nok til å
      stå fast uten å kappes under navigasjonen ved bunnen av siden. */
@@ -625,6 +636,10 @@
 <header class="pagehead">
   <div class="titlerow"><h1>Eliteserien 2026</h1><span class="subtitle">Tabellkalkulator for Eliteserien</span></div>
   <p class="subline"><span class="stamp"></span></p>
+  <div class="followpick">
+    <label for="teamSelect">Følg laget ditt</label>
+    <select id="teamSelect"><option value="">Alle lag</option></select>
+  </div>
   <button class="qa-highlight" id="qaHighlight" title="Hopp til Spør om tabellen"></button>
 </header>
 
@@ -645,9 +660,6 @@
               <button type="button" id="roundNext" aria-label="Neste runde">›</button>
               <button type="button" id="roundReset" class="head-link" hidden>Til gjeldende</button>
             </div>
-            <label class="teamsel"><span class="sr-only">Følg laget ditt</span>
-              <select id="teamSelect"><option value="">Alle lag</option></select>
-            </label>
           </div>
         </div>
         <p class="round-note" id="roundNote" hidden></p>
