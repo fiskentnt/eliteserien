@@ -336,6 +336,17 @@
   table.mt thead th{border-bottom:2px solid var(--ink)}
   table.mt td{border-bottom:1px solid var(--line-soft)}
   table.mt .grp{text-align:center;border-bottom:1px solid var(--line)}
+  /* "Hvordan vet vi at modellen virker?": kalibrering/Brier/ablasjon --
+     tallkolonner høyrestilt, første (og for ablasjon: siste, tekst)
+     venstrestilt. Egne klasser (ikke table.mt generelt) for ikke å endre
+     den eksisterende #modelTbl-tabellen, som har en annen kolonnestruktur. */
+  table.mt.calib{margin-bottom:14px}
+  table.mt.calib td,table.mt.calib th,table.mt.brier td,table.mt.brier th{text-align:right}
+  table.mt.calib td:first-child,table.mt.calib th:first-child,
+  table.mt.brier td:first-child,table.mt.brier th:first-child{text-align:left}
+  table.mt.ablation td,table.mt.ablation th{text-align:left}
+  table.mt.ablation td:nth-child(2),table.mt.ablation td:nth-child(3),table.mt.ablation td:nth-child(4),
+  table.mt.ablation th:nth-child(2),table.mt.ablation th:nth-child(3),table.mt.ablation th:nth-child(4){text-align:right}
 
   /* Formgraf: modal med SVG-graf, åpnes ved klikk på et lag i tabellen */
   .modal-backdrop{position:fixed;inset:0;background:rgba(10,12,13,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
@@ -537,6 +548,78 @@
     <hr>
     <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
     <table class="mt" id="modelTbl"></table>
+  </div>
+</details>
+
+<details class="howitworks modelcheck">
+  <summary>Hvordan vet vi at modellen virker?</summary>
+  <div class="in">
+    <p class="note">Sist validert: 21. september 2026, mot NOR.csv (football-data.co.uk), sesongene 2016–2025. Tallene under er faste resultater fra den testen, ikke noe som regnes ut i nettleseren.</p>
+
+    <h3>Kalibrering</h3>
+    <p>Prediksjonene delt i sannsynlighetsintervaller på ti prosentpoeng: hvis modellen er godt kalibrert, skal "faktisk andel" ligge nær "snitt predikert" i hver rad. Intervaller med få prediksjoner (under ca. 15) svinger mer og bør leses varsomt.</p>
+    <table class="mt calib">
+      <thead><tr><th colspan="4">Topp 4</th></tr><tr><th>Intervall</th><th>Antall</th><th>Snitt predikert</th><th>Faktisk andel</th></tr></thead>
+      <tbody>
+        <tr><td>0–10 %</td><td>282</td><td>1,7 %</td><td>2,8 %</td></tr>
+        <tr><td>10–20 %</td><td>34</td><td>14,8 %</td><td>17,6 %</td></tr>
+        <tr><td>20–30 %</td><td>24</td><td>24,3 %</td><td>29,2 %</td></tr>
+        <tr><td>30–40 %</td><td>14</td><td>33,9 %</td><td>35,7 %</td></tr>
+        <tr><td>40–50 %</td><td>15</td><td>45,8 %</td><td>13,3 %</td></tr>
+        <tr><td>50–60 %</td><td>15</td><td>54,8 %</td><td>66,7 %</td></tr>
+        <tr><td>60–70 %</td><td>9</td><td>64,5 %</td><td>66,7 %</td></tr>
+        <tr><td>70–80 %</td><td>20</td><td>75,8 %</td><td>75,0 %</td></tr>
+        <tr><td>80–90 %</td><td>16</td><td>86,7 %</td><td>68,8 %</td></tr>
+        <tr><td>90–100 %</td><td>51</td><td>97,4 %</td><td>98,0 %</td></tr>
+      </tbody>
+    </table>
+    <table class="mt calib">
+      <thead><tr><th colspan="4">Nedrykk</th></tr><tr><th>Intervall</th><th>Antall</th><th>Snitt predikert</th><th>Faktisk andel</th></tr></thead>
+      <tbody>
+        <tr><td>0–10 %</td><td>339</td><td>1,3 %</td><td>2,1 %</td></tr>
+        <tr><td>10–20 %</td><td>46</td><td>14,7 %</td><td>6,5 %</td></tr>
+        <tr><td>20–30 %</td><td>22</td><td>24,2 %</td><td>22,7 %</td></tr>
+        <tr><td>30–40 %</td><td>19</td><td>34,7 %</td><td>21,1 %</td></tr>
+        <tr><td>40–50 %</td><td>15</td><td>45,3 %</td><td>40,0 %</td></tr>
+        <tr><td>50–60 %</td><td>10</td><td>54,8 %</td><td>80,0 %</td></tr>
+        <tr><td>60–70 %</td><td>5</td><td>65,3 %</td><td>60,0 %</td></tr>
+        <tr><td>70–80 %</td><td>6</td><td>75,7 %</td><td>100,0 %</td></tr>
+        <tr><td>80–90 %</td><td>7</td><td>86,0 %</td><td>100,0 %</td></tr>
+        <tr><td>90–100 %</td><td>11</td><td>97,9 %</td><td>100,0 %</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Brier-score</h3>
+    <p>Brier-score er snittet av (predikert sannsynlighet − faktisk utfall, 0 eller 1) i annen. Lavere er bedre: 0 er perfekt, og en modell som alltid gjetter 50 % gir 0,25. Sammenlignet med en naiv basisrate (samme faste sannsynlighet for alle lag, uansett form eller tabellplassering: 1/16 for gull, 4/16 for topp 4, 2/16 for nedrykk) og en ren Poisson-modell uten odds.</p>
+    <table class="mt brier">
+      <thead><tr><th>Modell</th><th>Seriemester</th><th>Topp 4</th><th>Nedrykk</th></tr></thead>
+      <tbody>
+        <tr><td>Naiv basisrate</td><td>0,0586</td><td>0,1875</td><td>0,1094</td></tr>
+        <tr><td>Ren Poisson (uten odds)</td><td>0,0230</td><td>0,0896</td><td>0,0598</td></tr>
+        <tr><td>Full modell (i bruk)</td><td>0,0192</td><td>0,0795</td><td>0,0511</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Ablasjonstest</h3>
+    <p>Samme test, bygget stegvis: hva tilfører hver enkelt del av modellen faktisk sluttplassprediksjonen?</p>
+    <table class="mt ablation">
+      <thead><tr><th>Steg</th><th>Seriemester</th><th>Topp 4</th><th>Nedrykk</th><th>Effekt</th></tr></thead>
+      <tbody>
+        <tr><td>1. Ren Poisson</td><td>0,0230</td><td>0,0896</td><td>0,0598</td><td>Utgangspunkt</td></tr>
+        <tr><td>2. + historiske sluttodds</td><td>0,0195</td><td>0,0814</td><td>0,0515</td><td>Forbedrer alle tre klart</td></tr>
+        <tr><td>3. + formoppdatering</td><td>0,0196</td><td>0,0803</td><td>0,0518</td><td>Forbedrer topp 4, nøytral ellers</td></tr>
+        <tr><td>4. + rekke-rampe</td><td>0,0199</td><td>0,0807</td><td>0,0517</td><td>Svakt DÅRLIGERE på gull/topp 4 -- <strong>ikke i bruk</strong></td></tr>
+        <tr><td>5. + Dixon-Coles</td><td>0,0195</td><td>0,0807</td><td>0,0513</td><td>Marginal effekt på sluttplass (retter mest enkeltkamp-uavgjort)</td></tr>
+        <tr><td>6. Full modell (l1/l2=16/48)</td><td>0,0192</td><td>0,0795</td><td>0,0511</td><td>Best samlet -- regulariseringen hjelper i tillegg</td></tr>
+      </tbody>
+    </table>
+    <p class="note">Rekke-rampen ble opprinnelig lagt inn fordi Brann fikk høyere Form enn Fredrikstad etter ti strake tap. Den løser fortsatt det -- Form-kolonnen bruker den fremdeles -- men gjør altså selve sluttplassprediksjonen svakt dårligere, så simuleringen bruker den ikke.</p>
+
+    <h3>Hvordan testen er gjort</h3>
+    <p>Modellen testes på framtiden, ikke på kampene den allerede har sett. Ved flere tidspunkter i hver sesong tilpasses modellen kun på kampene som var spilt fram til dette tidspunktet. Deretter simuleres resten av sesongen, og sannsynlighetene sammenlignes med det som faktisk skjedde.</p>
+
+    <h3>Begrensninger</h3>
+    <p>Innbyrdes oppgjør brukes ikke som fjerde rangeringskriterium hvis lag står likt på poeng, målforskjell og scorede mål. 4000 simuleringer gir Monte Carlo-støy på omtrent 1–2 prosentpoeng, så prosentene på siden bør ikke tolkes på desimalnivå.</p>
   </div>
 </details>
 
