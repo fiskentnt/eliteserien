@@ -176,8 +176,9 @@
   /* Det mest aktuelle spørsmålet for valgt lag (eller "heldig/uheldig" uten
      lag) -- se qaHighlightUpdate(). Egen knapp, ikke del av .team-picker sin
      flex-rad, siden spørsmålsteksten kan bli lang og trenger egen linje. */
-  .qa-highlight{display:block;margin-top:8px;background:none;border:none;padding:0;color:var(--top-label);font-size:13px;text-decoration:underline;text-align:left;cursor:pointer;font-family:inherit;max-width:100%}
-  .qa-highlight:hover{color:var(--top-text)}
+  .qa-highlight{display:block;margin-top:14px;background:none;border:none;padding:0;color:var(--top-text);font-size:15.5px;font-weight:600;line-height:1.35;text-align:left;cursor:pointer;font-family:inherit;max-width:100%}
+  .qa-highlight::after{content:"\2192";display:inline-block;margin-left:.4em;transition:transform .15s}
+  .qa-highlight:hover::after{transform:translateX(3px)}
   .qa-highlight:empty{display:none}
   /* Lagboksen har ingen egen lagfarge lenger -- banneret bak den bærer nå
      den identiteten, så boksen skal bare stå nøytralt fram mot et banner i
