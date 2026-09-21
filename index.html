@@ -2033,18 +2033,20 @@ function fillTargetDate(){
   const own=latestOwnMatch();
   return own ? (ROUND_LAST_DATE[own.round] || own.date) : null;
 }
+// Grå (simulerte) resultater slettes ALDRI av seg selv: å justere én kamp skal
+// gi effekten av akkurat den, med alt annet likt. Vil du trekke på nytt, bruker
+// du "Simuler på nytt" i runden eller "Simuler tomme kamper". Utfyllingen
+// under fyller derfor bare TOMME kamper, og rører verken grå eller egne.
 async function fillToDate(){
-  matches.filter(m=>m.sim).forEach(m=>setMatch(m,null,null));
   const targetDate=fillTargetDate();
   if(!targetDate) return;
   await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && m.date<=targetDate));
 }
+// Avkryssingsboksen bestemmer bare om tomme kamper fylles ut når du legger inn
+// et resultat. Av eller på: den sletter ingenting.
 async function updateAutoFill(){
   const toggle=document.getElementById('autoFillToggle');
-  if(!toggle || !toggle.checked){
-    matches.filter(m=>m.sim).forEach(m=>setMatch(m,null,null));
-    return;
-  }
+  if(!toggle || !toggle.checked) return;
   await fillToDate();
 }
 
@@ -2115,7 +2117,10 @@ async function onRoundsEvent(e){
     const q=b.dataset.q;
     if(q==='H') setMatch(m,1,0); else if(q==='U') setMatch(m,0,0); else if(q==='B') setMatch(m,0,1); else if(q==='X') setMatch(m,null,null); else return;
   } else return;
-  await updateAutoFill();
+  // Utfylling bare når kampen er ferdig utfylt (begge tall inne): en halvferdig
+  // kamp (ett tall skrevet) eller en tømt kamp (×, eller begge felt slettet)
+  // skal ikke utløse noe. En tømt kamp forblir tom, og ingenting annet endres.
+  if(m.hg!=null && m.ag!=null) await updateAutoFill();
   render();
 }
 roundsEl.addEventListener('input', onRoundsEvent);
@@ -3562,11 +3567,10 @@ async function boot(){
     showAllBtn.onclick = () => { hiddenRounds.hidden = false; showAllBtn.hidden = true; };
   }
 
-  // updateAutoFill() sletter og fyller på nytt ALT som er merket sim — kjøres
-  // den etter en delt lenke er lastet, ville den umiddelbart overskrevet det
-  // grå resultatet linken nettopp gjenskapte (og nå, uten fast frø, gitt en
-  // ANNEN tilfeldig sesong enn den som ble delt). Bare kjør auto-fyllingen
-  // ved vanlig sidelasting, ikke når en lenke allerede satte scenariet.
+  // Auto-fyllingen fyller bare tomme kamper, men en delt lenke skal gjenskape
+  // scenariet nøyaktig som det ble delt, uten at noe fylles på ved siden av.
+  // Bare kjør auto-fyllingen ved vanlig sidelasting, ikke når en lenke
+  // allerede satte scenariet.
   const hadScenario = /s=/.test(location.hash);
   await applyScenario();
   if(!hadScenario) await updateAutoFill();
