@@ -2516,7 +2516,6 @@ function qaFieldInWay(team, zone){
   });
   if(!inBand.length) return null;
   const myPts = rows[r-1].pts;
-  const nearest = inBand.slice().sort((a,c)=>Math.abs(a.pts-myPts)-Math.abs(c.pts-myPts))[0];
   // Referansen for marginen: laget som holder grenseplassen (utenfor) eller
   // første lag utenfor sonen (innenfor).
   const refRow = outside ? rows[b-1] : rows[b];
@@ -2525,9 +2524,13 @@ function qaFieldInWay(team, zone){
     : (zone.dir==='front' ? (QA_ORD[b+1]||`${b+1}. plass`) : `${b+1}. plass`);
   // Til visning: maks tre, de nærmest laget i tabellen (utenfor: de rett
   // foran; innenfor: de rett bak), vist i tabellrekkefølge.
-  const names = inBand.map(x=>x.name);
+  // Formsammenligningen gjøres mot laget på SONEGRENSEN (refRow: den som faktisk
+  // sitter på plassen laget vil ha, eller første lag utenfor for et lag som
+  // allerede er innenfor) -- ikke mot laget nærmest i poeng, som ofte ikke er
+  // det vanskeligste laget å komme forbi. De ANDRE i veien nevnes i tillegg.
+  const names = inBand.map(x=>x.name).filter(n=>n!==refRow.name);
   const shown = outside ? names.slice(-3) : names.slice(0,3);
-  return {outside, names, shown, more:names.length-shown.length, nearest:nearest.name, nearestPts:nearest.pts,
+  return {outside, zoneBack:zone.dir!=='front', names, shown, more:names.length-shown.length, nearest:refRow.name, nearestPts:refRow.pts,
     margin: refRow ? Math.abs(outside ? refRow.pts-myPts : myPts-refRow.pts) : null, refLabel};
 }
 const fmtForm = v => v.toFixed(1).replace('.',',');
@@ -2565,7 +2568,7 @@ async function qaWhy(team){
   if(field){
     const m = field.margin;
     const mTxt = m===0 ? `på samme poeng som ${field.refLabel}` : `${m} poeng ${field.outside?'bak':'foran'} ${field.refLabel}`;
-    part1 = `${team} ligger ${mTxt}, med ${listNames(field.shown, field.more)} ${field.outside?'foran seg':'som jager'}.`;
+    part1 = `${team} ligger ${mTxt}.`;
   } else if(rival){
     part1 = row.pts===rivalRow.pts
       ? `${team} og ${rival.t} står likt på ${row.pts} poeng, med ${row.left} kamper igjen.`
@@ -2585,7 +2588,9 @@ async function qaWhy(team){
     const strong = Math.abs(diff)>=1.5;
     const formPart = Math.abs(diff)<0.3 ? `${team} er i omtrent lik form`
       : `${team} er i ${strong?'klart':'litt'} ${diff>0?'bedre':'dårligere'} form`;
-    part2 = `Nærmest er ${field.nearest}, ${where}, og ${formPart} (${fmtForm(form)} mot ${fmtForm(rivalForm)}).`;
+    const holds = (field.outside && field.zoneBack ? 'Siste trygge plass' : field.refLabel.charAt(0).toUpperCase()+field.refLabel.slice(1));
+    const others = field.names.length ? ` Også ${listNames(field.shown, field.more)} ${field.outside?'står i veien':'jager'}.` : '';
+    part2 = `${holds} holdes av ${field.nearest}, ${where}, og ${formPart} (${fmtForm(form)} mot ${fmtForm(rivalForm)}).${others}`;
   } else if(rival){
     const rivalForm = liveForm[TI[rival.t]];
     const diff = form - rivalForm;
