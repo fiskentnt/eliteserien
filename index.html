@@ -176,9 +176,16 @@
   /* Det mest aktuelle spørsmålet for valgt lag (eller "heldig/uheldig" uten
      lag) -- se qaHighlightUpdate(). Egen knapp, ikke del av .team-picker sin
      flex-rad, siden spørsmålsteksten kan bli lang og trenger egen linje. */
-  .qa-highlight{display:block;margin-top:14px;background:none;border:none;padding:0;color:var(--top-text);font-size:15.5px;font-weight:600;line-height:1.35;text-align:left;cursor:pointer;font-family:inherit;max-width:100%}
-  .qa-highlight::after{content:"\2192";display:inline-block;margin-left:.4em;transition:transform .15s}
-  .qa-highlight:hover::after{transform:translateX(3px)}
+  /* Blikkfang: viser hva siden kan. Samme kondenserte skrift som tittelen,
+     anførselstegn (ikke kursiv -- en kondensert skrift har ingen ekte kursiv,
+     og skrå syntetisk kursiv ser skral ut) så den leses som et spørsmål og
+     ikke som en knapp, full tekstfarge, pil etter, og luft over og under.
+     Ved hover understrekes den. Stor tekst (over 18 px
+     halvfet) trenger bare 3:1 mot banneret; alle klubbfarger har over 4,5:1. */
+  .qa-highlight{display:block;margin:18px 0 6px;background:none;border:none;padding:0;color:var(--top-text);font:600 19px/1.25 var(--cond);letter-spacing:.005em;text-align:left;cursor:pointer;max-width:100%}
+  .qa-highlight::before{content:"\00AB"}
+  .qa-highlight::after{content:"\00BB\00A0\00A0\2192"}
+  .qa-highlight:hover,.qa-highlight:focus-visible{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
   .qa-highlight:empty{display:none}
   /* Lagboksen har ingen egen lagfarge lenger -- banneret bak den bærer nå
      den identiteten, så boksen skal bare stå nøytralt fram mot et banner i
