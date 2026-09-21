@@ -304,6 +304,14 @@
   .odds-row strong{display:block;font:800 15px/1 var(--cond);color:var(--ink)}
   .odds-row .n strong{color:var(--accent-text)}
   .odds-row.flat{font-size:12.5px;color:var(--ink)}
+  /* Tallene i lagboksen (Gull/Europa/Kvalik/Nedrykk) hopper til og åpner
+     "Hvorfor har <lag> X% sjanse for ..." i spør-om-tabellen-seksjonen --
+     knapper, ikke span, men tilbakestilt til å se ut som den vanlige teksten
+     de erstattet (ellers helt vanlig knappe-fokus/tastatur-tilgjengelighet). */
+  .odds-jump{font:inherit;color:inherit;background:none;border:none;padding:0;margin:0;text-align:left;cursor:pointer}
+  .odds-jump:hover strong{text-decoration:underline}
+  .qa-jump-link{display:block;margin-top:6px;background:none;border:none;padding:0;color:var(--muted);font-size:12.5px;text-decoration:underline;cursor:pointer;font-family:inherit}
+  .qa-jump-link:hover{color:var(--ink)}
   .hist{display:grid;grid-template-columns:repeat(16,1fr);gap:1px;align-items:end;height:20px;margin-top:6px}
   .hist i{display:block;background:var(--hist-flat);border-radius:1px 1px 0 0;min-height:1px}
   .hist i.eu{background:var(--hist-eu)}.hist i.q{background:var(--hist-q)}.hist i.n{background:var(--hist-n)}
@@ -490,6 +498,7 @@
       <span class="n"><i></i>Nedrykk (15 og 16)</span>
     </div>
     <div class="note">Klikk på et lag for å se formen som graf. Kilder: ffksupporter.net, ESPN, football-data.co.uk og The Odds API, alt hentet automatisk.</div>
+    <button class="qa-jump-link" id="qaJumpLink">Spør om tabellen ↓</button>
   </section>
 
   <div class="rightcol">
@@ -1769,13 +1778,17 @@ function fillOdds(){
   // Når verken gull, Europa, kvalik eller nedrykk er reelle muligheter (alle
   // under 1%) sier de fire tallene ingenting — vis heller én forklarende
   // linje enn en rad med fire "<1 %"-verdier.
+  // Hvert tall er en knapp: hopper til "Spør om tabellen" og åpner "Hvorfor
+  // har <lag> X% sjanse for ..." for AKKURAT den sonen (ikke bare den
+  // "mest aktuelle" spørsmål 1 ellers velger automatisk) -- se
+  // qaJumpToWhy()/qaZoneByKey().
   const row = (gull<0.01 && europa<0.01 && kvalik<0.01 && nedrykk<0.01)
     ? `<div class="odds-row flat" title="Sannsynlighet for sluttplassering, ut fra modellen">Ingenting er i spill: ${SELECTED_TEAM} ender mellom 5. og 13. plass i ${Math.round(midtP*100)} av 100 simuleringer.</div>`
-    : `<div class="odds-row" title="Sannsynlighet for sluttplassering, ut fra modellen">
-      ${gull>0.01?`<span><strong>${pctTxt(gull)}</strong>Gull</span>`:''}
-      <span><strong>${pctTxt(europa)}</strong>Europa</span>
-      <span><strong>${pctTxt(kvalik)}</strong>Kvalik</span>
-      <span class="n"><strong>${pctTxt(nedrykk)}</strong>Nedrykk</span></div>`;
+    : `<div class="odds-row" title="Sannsynlighet for sluttplassering, ut fra modellen. Klikk et tall for å se hvorfor.">
+      ${gull>0.01?`<button class="odds-jump" data-zone="gull"><strong>${pctTxt(gull)}</strong>Gull</button>`:''}
+      <button class="odds-jump" data-zone="europa"><strong>${pctTxt(europa)}</strong>Europa</button>
+      <button class="odds-jump" data-zone="kvalik"><strong>${pctTxt(kvalik)}</strong>Kvalik</button>
+      <button class="odds-jump n" data-zone="nedrykk"><strong>${pctTxt(nedrykk)}</strong>Nedrykk</button></div>`;
   // Fordelingsstripen over alle 16 plassene sier lite når Europa, kvalik og
   // nedrykk alle er fjerne — 12 nesten like små stolper mellom to knapt synlige.
   // Vis den bare når noe av det faktisk er i spill (over 5 %), ellers holder
@@ -2106,23 +2119,40 @@ function closeFormModal(){ document.getElementById('formModalBackdrop').hidden=t
 // av spørsmål 1, 2 og 6, og WORKER_SRC (mode:'insights'/'matchImpact') for
 // de tunge beregningene (3 og 6 særlig) som ikke skal fryse siden. ----
 
+// Sone-objekt for en EKSPLISITT nøkkel (gull/europa/kvalik/nedrykk) -- delt
+// av qaTargetZone() ("mest aktuelt", under) og av klikk på et bestemt tall i
+// lagboksen (qaJumpToWhy()), som skal spørre om AKKURAT det tallet, ikke det
+// automatisk mest aktuelle. front (gull/europa): sonen SELV er målet. back
+// (kvalik/nedrykk): å unngå sonen er målet -- "boundary" er da 13 (trygg
+// plass) for BEGGE, siden spørsmålet i praksis er om laget er på riktig side
+// av 13.–14.-plass-skillet uansett hvilken av de to det gjelder (se
+// qaZoneStats()-kommentaren i Workeren for hvorfor de deler samme grense).
+function qaZoneByKey(team, key){
+  const d = lastMC && lastMC[team];
+  if(!d) return null;
+  if(key==='gull') return {key:'gull', label:'gull', lo:1, hi:1, boundary:1, dir:'front', pct:d[0]};
+  if(key==='europa') return {key:'europa', label:'Europa', lo:1, hi:4, boundary:4, dir:'front', pct:d[0]+d[1]+d[2]+d[3]};
+  if(key==='nedrykk') return {key:'nedrykk', label:'nedrykk', lo:15, hi:16, boundary:13, dir:'back', pct:d[14]+d[15]};
+  if(key==='kvalik') return {key:'kvalik', label:'kvalik', lo:14, hi:14, boundary:13, dir:'back', pct:d[13]};
+  return null;
+}
 // "Mest aktuelt" for laget: gull hvis over 5 %, ellers Europa hvis over 5 %,
-// ellers nedrykk hvis over 5 %, ellers kvalik. front (gull/europa): sonen
-// SELV er målet. back (kvalik/nedrykk): å unngå sonen er målet -- "boundary"
-// er da 13 (trygg plass) for BEGGE, siden spørsmålet i praksis er om laget
-// er på riktig side av 13.–14.-plass-skillet uansett hvilken av de to som
-// utløste valget (se qaZoneStats()-kommentaren i Workeren for hvorfor de
-// deler samme grense).
+// ellers nedrykk hvis over 5 %, ellers kvalik.
 function qaTargetZone(team){
   const d = lastMC && lastMC[team];
   if(!d) return null;
   const gull=d[0], europa=d[0]+d[1]+d[2]+d[3], nedrykk=d[14]+d[15];
-  if(gull>0.05) return {key:'gull', label:'gull', lo:1, hi:1, boundary:1, dir:'front', pct:gull};
-  if(europa>0.05) return {key:'europa', label:'Europa', lo:1, hi:4, boundary:4, dir:'front', pct:europa};
-  if(nedrykk>0.05) return {key:'nedrykk', label:'nedrykk', lo:15, hi:16, boundary:13, dir:'back', pct:nedrykk};
-  return {key:'kvalik', label:'kvalik', lo:14, hi:14, boundary:13, dir:'back', pct:d[13]};
+  if(gull>0.05) return qaZoneByKey(team,'gull');
+  if(europa>0.05) return qaZoneByKey(team,'europa');
+  if(nedrykk>0.05) return qaZoneByKey(team,'nedrykk');
+  return qaZoneByKey(team,'kvalik');
 }
 const QA_REACH_PHRASE = {gull:'vinne serien', europa:'nå Europa', kvalik:'berge plassen', nedrykk:'berge plassen'};
+// Satt av et klikk på et tall i lagboksen (qaJumpToWhy) -- spørsmål 1 bruker
+// DENNE sonen i stedet for å auto-velge "mest aktuelt" når den er satt.
+// Nullstilt av selve spørsmål-knappen (runQaQuestion) så et vanlig klikk på
+// "Hvorfor har ..."-knappen alltid går tilbake til auto-valget.
+let qaWhyZoneOverride = null;
 
 // ---- Spørsmål 4: tyngst/lettest avslutning -- ingen simulering, bare
 // motstandernes vinnersjanse (fra LIVE-styrkene, som predict()/rateFor()
@@ -2289,7 +2319,7 @@ function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base){
 // N (ikke på antall mislykkede sesonger) gir "andel av ALLE simuleringer",
 // samme tolkning som eksempelet i oppgaven ("ligger foran i 8 av 10").
 async function qaWhy(team){
-  const zone = qaTargetZone(team);
+  const zone = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
   const data = await runInsightsAsync(team, zone);
   const others = TEAMS.filter(t=>t!==team);
@@ -2393,7 +2423,7 @@ async function qaRivals(team){
 // opp over et nyere spørsmål. ----
 const QA_QUESTIONS = [
   {id:'why', needsTeam:true, run:qaWhy, label:team=>{
-    const z=qaTargetZone(team);
+    const z=qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team);
     return z ? `Hvorfor har ${team} ${pctTxt(z.pct)} sjanse for ${z.label}?` : `Hvorfor har ${team} den sjansen den har?`;
   }},
   {id:'howto', needsTeam:true, run:qaHowTo, label:team=>{
@@ -2421,9 +2451,14 @@ function renderQaButtons(){
     document.getElementById('qaAnswer').hidden = true;
   }
 }
-async function runQaQuestion(id){
+// keepZoneOverride: false for et vanlig knappeklikk (nullstiller
+// qaWhyZoneOverride, så "Hvorfor har ..."-knappen alltid går tilbake til
+// auto-valget) -- true bare når qaJumpToWhy() selv har satt overstyringen
+// rett før kallet, og IKKE vil at den skal nullstilles med det samme.
+async function runQaQuestion(id, keepZoneOverride){
   const q = QA_QUESTIONS.find(x=>x.id===id);
   if(!q) return;
+  if(!keepZoneOverride) qaWhyZoneOverride = null;
   qaActiveId = id;
   renderQaButtons();
   const answerEl = document.getElementById('qaAnswer');
@@ -2446,6 +2481,22 @@ document.getElementById('qaButtons').addEventListener('click', e=>{
   const btn = e.target.closest('button'); if(!btn) return;
   runQaQuestion(btn.dataset.id);
 });
+// Klikk på et tall i lagboksen (Gull/Europa/Kvalik/Nedrykk) eller på den
+// vesle lenken under tabellen: hopp til spør-om-tabellen-seksjonen. Tallene
+// spør i tillegg om AKKURAT den sonen (se qaWhyZoneOverride).
+function qaJumpToSection(){
+  document.querySelector('.panel.qa').scrollIntoView({behavior:'smooth', block:'start'});
+}
+function qaJumpToWhy(zoneKey){
+  qaWhyZoneOverride = zoneKey;
+  qaJumpToSection();
+  runQaQuestion('why', true);
+}
+document.getElementById('verdict').addEventListener('click', e=>{
+  const btn = e.target.closest('.odds-jump'); if(!btn) return;
+  qaJumpToWhy(btn.dataset.zone);
+});
+document.getElementById('qaJumpLink').addEventListener('click', qaJumpToSection);
 
 // ---- Knappene: to uavhengige, rent datadrevne tilstander (ikke "hvilken
 // knapp ble sist klikket", som lett kommer ut av synk med manuelle
