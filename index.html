@@ -1723,13 +1723,13 @@ function runMatchImpact(d){
     // tre utfall) trenger den; spørsmål 3 (mange kandidatkamper, bare
     // seier/tap-forskjellen) lar den stå tom for å spare en tredje kjøring.
     var drawProb = c.drawScore ? simulateZoneProb(d, c.idx, c.drawScore, c.seed) : null;
-    return {idx:c.idx, homeProb:homeProb, drawProb:drawProb, awayProb:awayProb, diff:Math.abs(homeProb-awayProb)};
+    // Utgangspunktet uten låst kamp, samme frø som de låste kjøringene, så
+    // endringen (utfall minus utgangspunkt) kan legges oppå tabellens tall.
+    // Bare spørsmål 3 (finpuss) og 5 ber om den.
+    var baseProb = d.wantBaseline ? simulateZoneProb(d, -1, null, c.seed) : null;
+    return {idx:c.idx, homeProb:homeProb, drawProb:drawProb, awayProb:awayProb, baseProb:baseProb, diff:Math.abs(homeProb-awayProb)};
   });
-  // Utgangspunktet uten låst kamp, samme frø som første kandidat (så
-  // differansene mot seier/uavgjort/tap ikke drukner i simuleringsstøy).
-  // Bare spørsmål 5 ber om den.
-  var baselineProb = d.wantBaseline ? simulateZoneProb(d, -1, null, d.candidates[0].seed) : null;
-  postMessage({runId:d.runId, mode:'matchImpact', results:results, baselineProb:baselineProb});
+  postMessage({runId:d.runId, mode:'matchImpact', results:results});
 }
 function simulateZoneProb(d, forcedIdx, forcedScore, seed){
   var n=d.P0.length, k=d.k, zone=d.zone, ti=d.ti;
@@ -2284,6 +2284,62 @@ const qaReachQuestion = key => QA_REACH_PHRASE[key] + (key==='kvalik'||key==='ne
 // "Hvorfor har ..."-knappen alltid går tilbake til auto-valget.
 let qaWhyZoneOverride = null;
 
+// ---- Felles hjelpere for svarene ----
+// Tallformat: komma som desimaltegn, ekte minustegn (−), tankestrek (–), og
+// "1 kamp" i entall.
+const kampTxt = n => n===1 ? '1 kamp' : `${n} kamper`;
+const fmtSigned = v => (v<0?'−':'+') + Math.abs(v).toFixed(1).replace('.',',');
+const ppTxt = d => { const r=Math.round(d*100); return r===0 ? '±0' : (r>0?'+':'−')+Math.abs(r); };
+const QA_SAFE_PHRASE = {gull:'sikret gull', europa:'sikret Europa', kvalik:'sikret plassen direkte', nedrykk:'sikret plassen direkte'};
+const QA_VERB = {gull:'vinner serien', europa:'tar Europa-plass', kvalik:'sikrer plassen direkte (13. plass eller bedre)', nedrykk:'sikrer plassen direkte (13. plass eller bedre)'};
+
+// Er saken avgjort? Gjelder "sonen" i den betydningen alle spørsmålene bruker
+// for suksess: plass <= grensen (gull 1, Europa 4, for kvalik/nedrykk 13 eller
+// bedre = sikret plass direkte). kind:
+//   'done'  ingen kamper igjen i det hele tatt (sesongen er ferdig)
+//   'safe'  / 'out'   matematisk sikret / utelukket (uavgjort poeng regnes
+//           konservativt, som worstBestRank i Workeren)
+//   'safe~' / 'out~'  ikke matematisk avgjort, men under 1 % / over 99 % i
+//           simuleringene
+//   null    fortsatt åpent -- svarene kan bruke tall
+function qaSettled(team, zone){
+  const {rows} = compute();
+  const idx = rows.findIndex(r=>r.name===team);
+  if(idx<0) return null;
+  const me = rows[idx];
+  const b = zone.dir==='front' ? zone.hi : zone.boundary;
+  if(!matches.some(isEmpty)) return {kind:'done', pos:idx+1, pts:me.pts, b};
+  const myMax = me.pts + 3*me.left;
+  let worst=1, best=1;
+  rows.forEach((r,i)=>{ if(i===idx) return; if(r.pts+3*r.left>=me.pts) worst++; if(r.pts>=myMax) best++; });
+  if(worst<=b) return {kind:'safe', pos:idx+1, pts:me.pts, b};
+  if(best>b) return {kind:'out', pos:idx+1, pts:me.pts, b};
+  const d = lastMC && lastMC[team];
+  if(d){
+    let sp=0; for(let i=0;i<b;i++) sp+=d[i];
+    if(sp>0.99) return {kind:'safe~', pos:idx+1, pts:me.pts, b};
+    if(sp<0.01) return {kind:'out~', pos:idx+1, pts:me.pts, b};
+  }
+  return null;
+}
+function qaSettledText(team, zone, st){
+  const safeP = QA_SAFE_PHRASE[zone.key], reach = QA_REACH_PHRASE[zone.key];
+  const back = zone.dir==='back';
+  if(st.kind==='done'){
+    const ok = st.pos<=st.b;
+    const res = zone.dir==='front'
+      ? (zone.key==='gull' ? (ok?'og vant serien':'og vant ikke serien') : (ok?'og tok Europa-plass':'og nådde ikke Europa'))
+      : (st.pos<=13 ? 'og sikret plassen direkte' : st.pos===14 ? 'og må i kvalik' : 'og rykket ned');
+    return `Sesongen er ferdig: ${team} endte på ${st.pos}. plass med ${st.pts} poeng ${res}.`;
+  }
+  if(st.kind==='safe') return `${team} er ${safeP}, og ingen gjenstående kamp kan endre det.`;
+  if(st.kind==='out') return `${team} kan ikke lenger ${reach}${back?' (det blir kvalik eller nedrykk)':''}, uansett hva som skjer i de gjenstående kampene.`;
+  if(st.kind==='safe~') return `${team} er så godt som ${safeP}: det skal svært mye til for at det endrer seg.`;
+  return `${team} har så godt som ingen mulighet til å ${reach} lenger${back?' (kvalik eller nedrykk er så godt som sikkert)':''}.`;
+}
+// Kan lagene fortsatt krysse hverandre i tabellen? Bruker maks mulige poeng.
+function qaCanCross(a, b){ return a.pts+3*a.left >= b.pts && b.pts+3*b.left >= a.pts; }
+
 // ---- Spørsmål 4: tyngst/lettest avslutning -- ingen simulering, bare
 // motstandernes vinnersjanse (fra LIVE-styrkene, som predict()/rateFor()
 // ellers bruker) i hver gjenstående kamp, i riktig hjemme/borte-retning.
@@ -2299,8 +2355,11 @@ function qaToughestRunIn(){
   const rows = TEAMS.filter(t=>oppWin[t].length).map(t=>({
     team:t, avg: oppWin[t].reduce((a,b)=>a+b,0)/oppWin[t].length, n: oppWin[t].length
   }));
+  if(!rows.length) return 'Ingen kamper igjen, så det er ingen avslutning å sammenligne.';
   rows.sort((a,b)=>b.avg-a.avg);
-  const toughest = rows.slice(0,3), easiest = rows.slice(-3).reverse();
+  // Få lag igjen: del listen i to, så samme lag ikke står både tyngst og lettest.
+  const k = Math.min(3, Math.floor(rows.length/2)) || 1;
+  const toughest = rows.slice(0,k), easiest = rows.slice(-k).reverse();
   const fmt = r => `${r.team} (${pctTxt(r.avg)})`;
   return `Tyngst avslutning: ${toughest.map(fmt).join(', ')}. Lettest: ${easiest.map(fmt).join(', ')}. `+
     `Tallet er motstandernes gjennomsnittlige vinnersjanse i de gjenstående kampene, ut fra dagens lagstyrker.`;
@@ -2317,6 +2376,8 @@ function qaToughestRunIn(){
 async function qaNextMatch(team){
   const zone = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
+  const st = qaSettled(team, zone);
+  if(st) return qaSettledText(team, zone, st);
   const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
   const next = openMatches.filter(m=>m.home===team||m.away===team).sort((a,b)=>a.date.localeCompare(b.date))[0];
   if(!next) return `${team} har ingen gjenstående kamper i dette scenariet.`;
@@ -2324,17 +2385,23 @@ async function qaNextMatch(team){
   const isHome = next.home===team;
   const opp = isHome?next.away:next.home;
 
-  const data = await runMatchImpactAsync(team, zone, [{idx, match:next, needsDraw:true}], scenarioKey, {P0,G0,F0,open,oddsOverride,N:1000,wantBaseline:true});
-  const r = data.results[0], before = data.baselineProb;
-  const winProb = isHome ? r.homeProb : r.awayProb;
-  const loseProb = isHome ? r.awayProb : r.homeProb;
-  // Endring i prosentpoeng fra utgangspunktet, med fortegn (minus-tegnet er ekte "−").
-  const pp = v => { const d=Math.round((v-before)*100); return d===0 ? '±0' : (d>0?'+':'−')+Math.abs(d); };
-
-  return `${team} møter ${opp} ${isHome?'hjemme':'borte'} ${formatDateNo(next.date)}. `+
-    `Sjansen for ${zone.label} er ${pctTxt(before)} nå. `+
-    `Vinner ${team}, går den til ${pctTxt(winProb)} (${pp(winProb)} prosentpoeng). `+
-    `Uavgjort gir ${pctTxt(r.drawProb)} (${pp(r.drawProb)}), og tap ${pctTxt(loseProb)} (${pp(loseProb)}).`;
+  const data = await runMatchImpactAsync(team, zone, [{idx, match:next, needsDraw:true}], scenarioKey, {P0,G0,F0,open,oddsOverride,N:2500,wantBaseline:true});
+  const r = data.results[0];
+  // Tabellens tall er utgangspunktet ("nå"); simuleringen gir bare ENDRINGEN
+  // (utfall minus utgangspunkt med samme frø), lagt oppå. Endringer under 2
+  // prosentpoeng er støy og vises ikke.
+  const tableP = zone.pct;
+  const dWin = (isHome ? r.homeProb : r.awayProb) - r.baseProb;
+  const dLose = (isHome ? r.awayProb : r.homeProb) - r.baseProb;
+  const dDraw = r.drawProb - r.baseProb;
+  const head = `${team} møter ${opp} ${isHome?'hjemme':'borte'} ${formatDateNo(next.date)}.`;
+  if(Math.abs(dWin)<0.02 && Math.abs(dDraw)<0.02 && Math.abs(dLose)<0.02){
+    return `${head} Kampen betyr lite for ${team}: sjansen for ${zone.label} holder seg ${/^[<>]/.test(pctTxt(tableP)) ? '' : 'rundt '}${pctTxt(tableP)} uansett utfall.`;
+  }
+  const piece = (label,d) => Math.abs(d)<0.02 ? `${label} endrer lite`
+    : `${label} gir ${pctTxt(Math.min(1,Math.max(0,tableP+d)))} (${ppTxt(d)})`;
+  return `${head} Sjansen for ${zone.label} er ${pctTxt(tableP)} nå. `+
+    `${piece('Seier',dWin)}, ${piece('uavgjort',dDraw)} og ${piece('tap',dLose)} (endring i prosentpoeng).`;
 }
 
 // ---- Spørsmål 8: hell/uhell -- ingen simulering. Sammenligner FAKTISKE
@@ -2360,7 +2427,7 @@ function qaLuck(){
   const rows = TEAMS.map(t=>({team:t, diff: actual[t]-expected[t]}));
   rows.sort((a,b)=>b.diff-a.diff);
   const lucky=rows.slice(0,3), unlucky=rows.slice(-3).reverse();
-  const fmt = r => `${r.team} (${r.diff>=0?'+':''}${r.diff.toFixed(1)})`;
+  const fmt = r => `${r.team} (${fmtSigned(r.diff)})`;
   return `Heldigst: ${lucky.map(fmt).join(', ')}. Uheldigst: ${unlucky.map(fmt).join(', ')}. `+
     `Tallet er faktiske poeng i spilte kamper minus forventet poengsum fra modellen. Modellen er tilpasset på de samme kampene, så avvikene er et forsiktig anslag.`;
 }
@@ -2477,13 +2544,17 @@ function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base){
 //   Bakre soner (kvalik/nedrykk): lag med minst 5 % (om ingen, minst 1 %).
 function qaFindRival(team, zone){
   const {rows} = compute();
-  const pts = {}; rows.forEach(r=>{pts[r.name]=r.pts;});
-  const withPct = TEAMS.filter(t=>t!==team).map(t=>{
+  const me = rows.find(r=>r.name===team);
+  const byName = {}; rows.forEach(r=>{byName[r.name]=r;});
+  // Bare lag som matematisk kan krysse laget i tabellen (qaCanCross) er
+  // konkurrenter -- ellers ender laget med å sammenligne seg med et lag som
+  // ikke kan påvirke utfallet.
+  const withPct = TEAMS.filter(t=>t!==team && qaCanCross(me, byName[t])).map(t=>{
     const z = qaZoneByKey(t, zone.key);
     return {t, pct: z ? z.pct : 0};
   });
   const nearest = cand => {
-    cand.sort((a,b)=>Math.abs(pts[a.t]-pts[team])-Math.abs(pts[b.t]-pts[team]) || b.pct-a.pct);
+    cand.sort((a,b)=>Math.abs(byName[a.t].pts-me.pts)-Math.abs(byName[b.t].pts-me.pts) || b.pct-a.pct);
     return cand[0] || null;
   };
   if(zone.dir==='front'){
@@ -2512,9 +2583,13 @@ function qaFieldInWay(team, zone){
   const b = zone.dir==='front' ? zone.hi : zone.boundary;
   const outside = r>b;
   const between = outside ? rows.slice(b-1, r-1) : rows.slice(r);
+  // Bare lag som matematisk kan krysse laget regnes med (qaCanCross): et lag
+  // som ikke kan ta igjen laget (eller som laget ikke kan nå) er ikke i
+  // veien og ikke en jager, uansett hva sonesannsynligheten er.
+  const me = rows[r-1];
   const inBand = between.filter(x=>{
     const z = qaZoneByKey(x.name, zone.key);
-    return z && z.pct>=0.05 && z.pct<=0.95;
+    return z && z.pct>=0.05 && z.pct<=0.95 && qaCanCross(me, x);
   });
   if(!inBand.length) return null;
   const myPts = rows[r-1].pts;
@@ -2553,9 +2628,22 @@ function listNames(shown, more){
 // Form mot konkurrenten, med retning og størrelse på forskjellen. 3) det
 // simulerte utfallet -- egne poeng mot konkurrentens, og den faktiske
 // sjansen (samme tall som knappeteksten), ikke en betinget telling.
+// Spørsmålsteksten for spørsmål 1: sier ikke "0 %/100 % sjanse" når saken er avgjort.
+function qaWhyLabel(team){
+  const z = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team);
+  if(!z) return `Hvorfor har ${team} den sjansen den har?`;
+  const st = qaSettled(team, z);
+  if(!st) return `Hvorfor har ${team} ${pctTxt(z.pct)} sjanse for ${z.label}?`;
+  if(st.kind==='done') return `Hvordan endte sesongen for ${team}?`;
+  if(st.kind==='safe') return `Hvorfor er ${team} ${QA_SAFE_PHRASE[z.key]}?`;
+  if(st.kind==='safe~') return `Hvorfor er ${team} så godt som ${QA_SAFE_PHRASE[z.key]}?`;
+  return `Hvorfor kan ${team} ikke lenger ${QA_REACH_PHRASE[z.key]}?`;
+}
 async function qaWhy(team){
   const zone = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
+  const st = qaSettled(team, zone);
+  if(st) return qaSettledText(team, zone, st);
   const field = qaFieldInWay(team, zone);
   const rival = field ? {t:field.nearest} : qaFindRival(team, zone);
   const data = await runInsightsAsync(team, zone, rival ? rival.t : null);
@@ -2573,12 +2661,12 @@ async function qaWhy(team){
     part1 = `${team} ligger ${mTxt}.`;
   } else if(rival){
     part1 = row.pts===rivalRow.pts
-      ? `${team} og ${rival.t} står likt på ${row.pts} poeng, med ${row.left} kamper igjen.`
+      ? `${team} og ${rival.t} står likt på ${row.pts} poeng, med ${kampTxt(row.left)} igjen.`
       : row.pts>rivalRow.pts
-        ? `${team} leder ${rival.t} ${row.pts}-${rivalRow.pts} i poeng, med ${row.left} kamper igjen.`
-        : `${team} ligger bak ${rival.t} ${row.pts}-${rivalRow.pts} i poeng, med ${row.left} kamper igjen.`;
+        ? `${team} leder ${rival.t} ${row.pts}–${rivalRow.pts} i poeng, med ${kampTxt(row.left)} igjen.`
+        : `${team} ligger bak ${rival.t} ${row.pts}–${rivalRow.pts} i poeng, med ${kampTxt(row.left)} igjen.`;
   } else {
-    part1 = `${team} ligger på ${pos}. plass med ${row.pts} poeng, ${row.left} kamper igjen.`;
+    part1 = `${team} ligger på ${pos}. plass med ${row.pts} poeng, ${kampTxt(row.left)} igjen.`;
   }
 
   let part2;
@@ -2597,7 +2685,7 @@ async function qaWhy(team){
     const rivalForm = liveForm[TI[rival.t]];
     const diff = form - rivalForm;
     const ptsGap = Math.abs(row.pts - rivalRow.pts);
-    const formTxt = `form ${form.toFixed(1)} mot ${rivalForm.toFixed(1)}`;
+    const formTxt = `form ${fmtForm(form)} mot ${fmtForm(rivalForm)}`;
     if(ptsGap>=4){
       // Stor poengforskjell: si noe om marginen, ikke om "overtak" -- 7 poeng
       // er et stort forsprang uansett hvem som har best form.
@@ -2605,7 +2693,7 @@ async function qaWhy(team){
       const leaderFormEdge = leader===team ? diff : -diff;
       const seier = ptsGap>=7 ? 'mer enn to seire' : 'mer enn én seier';
       // Formtallene i samme rekkefølge som lagene nevnes (leder først).
-      const lf = (leader===team ? form : rivalForm).toFixed(1), tf = (leader===team ? rivalForm : form).toFixed(1);
+      const lf = fmtForm(leader===team ? form : rivalForm), tf = fmtForm(leader===team ? rivalForm : form);
       const formPart = Math.abs(diff)<0.3 ? `formen er lik (${lf} mot ${tf})`
         : leaderFormEdge>0 ? `${leader} er også i best form (${lf} mot ${tf})`
         : `${trailer} er likevel i bedre form (${tf} mot ${lf})`;
@@ -2624,7 +2712,7 @@ async function qaWhy(team){
       : diff<=-1.0 ? `klart svakere enn et gjennomsnittslag`
       : diff<=-0.3 ? `under snittet`
       : `om lag som et gjennomsnittslag`;
-    part2 = `Formen er ${form.toFixed(1)} av 10 -- ${strengthTxt}.`;
+    part2 = `Formen er ${fmtForm(form)} av 10 – ${strengthTxt}.`;
   }
 
   const outcomeTxt = zone.dir==='front'
@@ -2644,6 +2732,8 @@ async function qaWhy(team){
 async function qaHowTo(team){
   const zone = qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
+  const st = qaSettled(team, zone);
+  if(st) return qaSettledText(team, zone, st);
   const data = await runInsightsAsync(team, zone);
   if(data.successCount===0){
     return `Ingen av de ${data.N} simulerte sesongene endte med at ${team} klarte å ${QA_REACH_PHRASE[zone.key]}, så et typisk mønster finnes ikke å vise.`;
@@ -2687,7 +2777,15 @@ async function qaHowTo(team){
       : ` Det skal mye til for at ${fails}, men rundt ${need} av ${maxPts} mulige poeng holder med god margin.`;
     return `${team} ${verb} i ${all} simuleringene.${marginTxt}`;
   }
-  const thrTxt = threshold==null || myPts>=threshold ? '' : ` Som tommelfingerregel trengs omtrent ${threshold} poeng totalt: fra den poengsummen er det mer sannsynlig enn ikke at laget ${zone.dir==='front'?`når ${zone.label}`:'sikrer plassen direkte'}.`;
+  // "N til fra i dag" forklarer hvorfor terskelen ser lavere ut enn snittet over:
+  // snittet er av de vellykkede sesongene (også de som tar mer enn nødvendig),
+  // terskelen er der det tipper over 50 %.
+  const thrTxt = threshold==null || myPts>=threshold ? '' : ` Som tommelfingerregel trengs omtrent ${threshold} poeng totalt (${threshold-myPts} til fra i dag): fra den poengsummen er det mer sannsynlig enn ikke at laget ${zone.dir==='front'?`når ${zone.label}`:'sikrer plassen direkte'}.`;
+  // Lang sjanse: "typisk holder det" ville leses som et krav laget sjelden når.
+  if(successShare<0.25){
+    return `Det skal mye til: ${team} klarer å ${QA_REACH_PHRASE[zone.key]} i bare ${pctTxt(successShare)} av de simulerte sesongene. `+
+      `I dem tar de i snitt ${avgPts} av ${maxPts} mulige poeng${rivalTxt}.${thrTxt}`;
+  }
   return `Typisk holder det med rundt ${avgPts} av ${maxPts} mulige poeng. `+
     `I de ${pctTxt(data.successCount/data.N)} av de simulerte sesongene der ${team} klarer å ${QA_REACH_PHRASE[zone.key]}, tar de i snitt så mye${rivalTxt}.${thrTxt}`;
 }
@@ -2698,20 +2796,38 @@ async function qaHowTo(team){
 async function qaKeyMatches(team){
   const zone = qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
+  const st = qaSettled(team, zone);
+  if(st) return qaSettledText(team, zone, st);
   const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
   if(!openMatches.length) return `${team} har ingen gjenstående kamper i dette scenariet.`;
+  const base = {P0,G0,F0,open,oddsOverride};
+  // Trinn 1: grovsilting av alle kandidatkamper (få simuleringer per kamp).
   const candidateSpecs = buildMatchImpactCandidates(team, openMatches);
-  const data = await runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, {P0,G0,F0,open,oddsOverride});
-  const withMeta = data.results.map(r=>({...r, match:openMatches[r.idx]}));
-  withMeta.sort((a,b)=>b.diff-a.diff);
-  const lines = withMeta.slice(0,3).map(r=>{
-    const m=r.match;
-    const first = r.homeProb>=r.awayProb
-      ? `hvis ${m.home} vinner, er ${team} sin sjanse for ${zone.label} ${pctTxt(r.homeProb)}, og hvis ${m.away} vinner, ${pctTxt(r.awayProb)}`
-      : `hvis ${m.away} vinner, er ${team} sin sjanse for ${zone.label} ${pctTxt(r.awayProb)}, og hvis ${m.home} vinner, ${pctTxt(r.homeProb)}`;
-    return `${m.home} mot ${m.away} (${formatDateNo(m.date)}): ${first}.`;
+  const screen = await runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base);
+  const top = screen.results.slice().sort((a,b)=>b.diff-a.diff).slice(0,3);
+  // Trinn 2 (samme antall simuleringer og frø som spørsmål 5, så samme kamp
+  // gir samme tall i begge svar): finpuss av de tre beste med et utgangspunkt
+  // uten låst kamp. Tallene som vises er tabellens tall pluss endringen (utfall
+  // minus utgangspunkt), så de alltid henger sammen med tabellen, og endringer
+  // under 2 prosentpoeng er støy som ikke vises.
+  const fine = await runMatchImpactAsync(team, zone, top.map(r=>({idx:r.idx, match:openMatches[r.idx]})), scenarioKey, {...base, N:2500, wantBaseline:true});
+  const tableP = zone.pct;
+  const shown = fine.results.map(r=>{
+    const m = openMatches[r.idx];
+    const outs = [{who:m.home, d:r.homeProb-r.baseProb}, {who:m.away, d:r.awayProb-r.baseProb}];
+    return {m, outs, impact:Math.max(Math.abs(outs[0].d), Math.abs(outs[1].d))};
+  }).sort((a,b)=>b.impact-a.impact).filter(x=>x.impact>=0.02);
+  if(!shown.length){
+    return `Ingen enkeltkamp betyr mye for ${team}: ingen utfall flytter sjansen for ${zone.label} mer enn to prosentpoeng fra dagens ${pctTxt(tableP)}.`;
+  }
+  const piece = o => Math.abs(o.d)<0.02
+    ? `hvis ${o.who} vinner, endres sjansen lite`
+    : `hvis ${o.who} vinner, blir sjansen ${pctTxt(Math.min(1,Math.max(0,tableP+o.d)))} (${ppTxt(o.d)})`;
+  const lines = shown.map(x=>{
+    const outs = x.outs.slice().sort((a,b)=>b.d-a.d);
+    return `${x.m.home} mot ${x.m.away} (${formatDateNo(x.m.date)}): ${piece(outs[0])}, og ${piece(outs[1])}.`;
   });
-  return lines.join('\n');
+  return `Sjansen for ${zone.label} er ${pctTxt(tableP)} nå (endring i prosentpoeng i parentes).\n`+lines.join('\n');
 }
 
 // ---- Spørsmål 6: når kan det være avgjort? decidedHist[runde] = antall
@@ -2721,19 +2837,25 @@ async function qaKeyMatches(team){
 async function qaWhenDecided(team){
   const zone = qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
+  // Allerede avgjort (eller sesongen ferdig): si det, ikke "avgjort senest runde N".
+  const st = qaSettled(team, zone);
+  if(st) return qaSettledText(team, zone, st);
   const data = await runInsightsAsync(team, zone);
   const rounds = Object.keys(data.decidedHist).filter(k=>k!=='end').map(Number).sort((a,b)=>a-b);
+  const lastRound = Math.max(...matches.filter(isEmpty).map(m=>m.round));
   let cum=0, answerRound=null;
   for(const r of rounds){
     cum += data.decidedHist[r];
     if(cum > data.N/2){ answerRound=r; break; }
   }
-  const outcomeTxt = zone.dir==='front' ? `sjansen for ${zone.label} enten sikret eller helt utelukket`
-    : `${team} enten direkte sikret eller ikke lenger kan sikre plassen direkte`;
-  if(answerRound==null){
-    return `I over halvparten av simuleringene er det fortsatt uavklart helt til siste runde.`;
+  if(answerRound==null || answerRound>=lastRound){
+    // Avgjort først i siste runde: "senest runde N, i 100 %" ville vært en tautologi.
+    return `Det er typisk uavklart helt til siste runde (runde ${lastRound}).`;
   }
-  return `Typisk avgjort senest runde ${answerRound}: i ${pctTxt(cum/data.N)} av simuleringene er ${outcomeTxt} da.`;
+  // Grensen sies eksplisitt i bakre soner (13. plass eller bedre), så det ikke
+  // ser ut til å motsi nedrykksprosenten, som gjelder 15. og 16. plass.
+  const what = `om ${team} ${QA_VERB[zone.key]}`;
+  return `Typisk avgjort senest runde ${answerRound}: i ${pctTxt(cum/data.N)} av simuleringene er det da avgjort ${what}.`;
 }
 
 // ---- Spørsmål 7: hvem kjemper laget mot? aheadOfT/behindT talt fra den
@@ -2741,21 +2863,45 @@ async function qaWhenDecided(team){
 // siden: poeng, målforskjell, scoret, tilfeldig til slutt).
 async function qaRivals(team){
   const zone = qaTargetZone(team) || {key:'kvalik', label:'kvalik', lo:14, hi:14, boundary:13, dir:'back', pct:0};
+  const {rows} = compute();
+  const idx = rows.findIndex(r=>r.name===team);
+  // Sesongen ferdig: fakta fra tabellen, ingen simulering.
+  if(!matches.some(isEmpty)){
+    const parts = [];
+    if(idx>0) parts.push(`rett bak ${rows[idx-1].name}`);
+    if(idx<rows.length-1) parts.push(`rett foran ${rows[idx+1].name}`);
+    return `Sesongen er ferdig: ${team} endte på ${idx+1}. plass med ${rows[idx].pts} poeng${parts.length?', '+parts.join(' og '):''}.`;
+  }
   const data = await runInsightsAsync(team, zone);
   const others = TEAMS.filter(t=>t!==team);
   const aheadTop = others.map(t=>({t,c:data.aheadOfT[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
   const behindTop = others.map(t=>({t,c:data.behindT[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
-  const main = others.map(t=>({t,c:data.aheadOfT[TI[t]]+data.behindT[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
-  // Samme lag som oftest både foran og bak: slå sammen til én setning (andelene
-  // er disjunkte, laget kan ikke være både rett foran og rett bak i samme sesong).
-  if(aheadTop.t===behindTop.t){
+  const aheadShare = aheadTop.c/data.N, behindShare = behindTop.c/data.N;
+  // Samme konkurrentvalg som spørsmål 1 og 2 (qaFieldInWay/qaFindRival), ikke
+  // en egen regel, så de tre svarene peker på samme lag. Ikke relevant når
+  // saken er avgjort.
+  const field = qaFieldInWay(team, zone);
+  const rivalName = qaSettled(team, zone) ? null : (field ? field.nearest : (qaFindRival(team, zone)||{}).t);
+  const rivalTxt = rivalName ? ` Hovedkonkurrenten om plasseringen er ${rivalName}.` : '';
+  // Under 1 %: ingen ligger der (laget leder eller ligger sist), og "oftest
+  // foran/bak (0 %)" ville vært feil.
+  const hasAhead = aheadShare>=0.01, hasBehind = behindShare>=0.01;
+  if(hasAhead && hasBehind && aheadTop.t===behindTop.t){
+    // Samme lag som oftest både foran og bak: slå sammen til én setning (andelene
+    // er disjunkte, laget kan ikke være både rett foran og rett bak i samme sesong).
     // Summen av de avrundede delene, så tallene i setningen alltid stemmer.
-    const ahead=Math.round(aheadTop.c/data.N*100), behind=Math.round(behindTop.c/data.N*100);
-    return `${aheadTop.t} er nabolaget i tabellen i ${ahead+behind} prosent av simuleringene: `+
+    const ahead=Math.round(aheadShare*100), behind=Math.round(behindShare*100);
+    const merged = `${aheadTop.t} er nabolaget i tabellen i ${ahead+behind} prosent av simuleringene: `+
       `rett bak ${team} i ${behind} og rett foran i ${ahead}.`;
+    return merged + (rivalName && rivalName!==aheadTop.t ? rivalTxt : '');
   }
-  return `${aheadTop.t} ligger oftest rett foran ${team} (${pctTxt(aheadTop.c/data.N)} av simuleringene), og ${behindTop.t} rett bak (${pctTxt(behindTop.c/data.N)}). `+
-    `Hovedkonkurrenten om plasseringen er ${main.t}.`;
+  if(!hasAhead && hasBehind){
+    return `Ingen ligger foran ${team} i simuleringene. ${behindTop.t} ligger oftest rett bak (${pctTxt(behindShare)}).${rivalTxt}`;
+  }
+  if(hasAhead && !hasBehind){
+    return `Ingen ligger bak ${team} i simuleringene. ${aheadTop.t} ligger oftest rett foran (${pctTxt(aheadShare)}).${rivalTxt}`;
+  }
+  return `${aheadTop.t} ligger oftest rett foran ${team} (${pctTxt(aheadShare)} av simuleringene), og ${behindTop.t} rett bak (${pctTxt(behindShare)}).${rivalTxt}`;
 }
 
 // ---- Knappene selv. Uten valgt lag vises bare de to som ikke trenger et
@@ -2764,17 +2910,14 @@ async function qaRivals(team){
 // gamle svaret når det kommer (qaRequestSeq), så et sent svar ikke dukker
 // opp over et nyere spørsmål. ----
 const QA_QUESTIONS = [
-  {id:'why', needsTeam:true, run:qaWhy, label:team=>{
-    const z=qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team);
-    return z ? `Hvorfor har ${team} ${pctTxt(z.pct)} sjanse for ${z.label}?` : `Hvorfor har ${team} den sjansen den har?`;
-  }},
+  {id:'why', needsTeam:true, run:qaWhy, label:qaWhyLabel},
   {id:'howto', needsTeam:true, run:qaHowTo, label:team=>{
     const z=qaTargetZone(team);
     return `Hva må ${team} gjøre for å ${z?qaReachQuestion(z.key):'nå målet'}?`;
   }},
   {id:'keymatches', needsTeam:true, run:qaKeyMatches, label:team=>`Hvilke kamper betyr mest for ${team}?`},
   {id:'runin', needsTeam:false, run:()=>qaToughestRunIn(), label:()=>'Hvem har tyngst avslutning?'},
-  {id:'nextmatch', needsTeam:true, run:team=>qaNextMatch(team), label:team=>`Hva skjer hvis ${team} vinner neste kamp?`},
+  {id:'nextmatch', needsTeam:true, run:team=>qaNextMatch(team), label:team=>`Hva betyr neste kamp for ${team}?`},
   {id:'decided', needsTeam:true, run:qaWhenDecided, label:()=>'Når kan det være avgjort?'},
   {id:'rivals', needsTeam:true, run:qaRivals, label:team=>`Hvem kjemper ${team} mot?`},
   {id:'luck', needsTeam:false, run:()=>qaLuck(), label:()=>'Hvem har vært heldig eller uheldig?'},
@@ -2822,8 +2965,10 @@ function renderQaHighlight(){
     el.dataset.qid = 'luck';
     return;
   }
-  if(zone.dir==='front'){
-    el.textContent = `Hvorfor har ${SELECTED_TEAM} ${pctTxt(zone.pct)} sjanse for ${zone.label}?`;
+  // Front-soner og avgjorte saker: spørsmål 1 ("Hvorfor …"), med tekst som ikke
+  // later som noe er åpent når det er avgjort (qaWhyLabel).
+  if(zone.dir==='front' || qaSettled(SELECTED_TEAM, zone)){
+    el.textContent = qaWhyLabel(SELECTED_TEAM);
     el.dataset.qid = 'why';
   } else {
     el.textContent = `Hva må ${SELECTED_TEAM} gjøre for å ${qaReachQuestion(zone.key)}?`;
