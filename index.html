@@ -22,7 +22,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#e7eaea; --panel:#ffffff; --ink:#15191c; --muted:#5d666c; --line:#d6dbdb; --line-soft:#e8ecec;
+    --bg:#eef2f7; --panel:#ffffff; --ink:#0f1b2d; --muted:#56667d; --line:#d8e0ec; --line-soft:#e8edf5;
     /* --accent/--accent-deep/--eu/--q er faste fyllfarger (knapper, sterke
        ruter) -- samme verdi i lyst og mørkt, alltid parret med hvit tekst, se
        kontrollen i scratchpad-scriptet som validerte hele paletten mot WCAG AA.
@@ -56,11 +56,11 @@
     --eu:#1d7a63; --eu-soft:#e2f1ec; --eu-text:#1d7a63;
     --q:#cf951a; --q-soft:#fbf1dc; --q-text:#9a6c08; --q-border:#d9b872; --q-note:#8a6a1f;
     --ned:#6c7479;
-    --strong-bg:#15191c; --strong-fg:#ffffff; --strong-bg-hover:#000000;
-    --cut-line:#b7bfbf;
-    --input-bg:#f6f7f7; --sim-bg:#e3e7e8; --sim-border:#c3cacc;
-    --played-bg:#f1f3f3; --played-fg:#8a9296; --played-score-bg:#dde2e3; --played-score-fg:#6f787c;
-    --ned-row-a:#f4f5f5; --ned-row-b:#fafbfb;
+    --strong-bg:#0f1b2d; --strong-fg:#ffffff; --strong-bg-hover:#000000;
+    --cut-line:#b4bfd0;
+    --input-bg:#f4f7fb; --sim-bg:#e6ecf4; --sim-border:#c5d0e0;
+    --played-bg:#f2f5f9; --played-fg:#7d8ca1; --played-score-bg:#dfe6ef; --played-score-fg:#66768c;
+    --ned-row-a:#f5f7fb; --ned-row-b:#fafbfd;
     --hist-flat:#e3c3c6; --hist-eu:#8cc3b3; --hist-q:#e8c374; --hist-n:#c98a90;
     /* --team*: DYNAMISK, satt av JS (applyTeamColors()) fra TEAM_COLORS ut
        fra valgt lag. --team-fill/-deep/-fill-text er unthemet (samme "fyll
@@ -90,7 +90,7 @@
      synes -- se samme scriptet for luminans-sjekken. */
   @media (prefers-color-scheme: dark){
     :root:not([data-theme="light"]){
-      --bg:#15181a; --panel:#1f2426; --ink:#eef0f1; --muted:#9aa3a8; --line:#454d53; --line-soft:#343b40;
+      --bg:#0a1220; --panel:#111c2e; --ink:#e9eff8; --muted:#93a3ba; --line:#2a3a54; --line-soft:#1e2c44;
       --top-bg: var(--top-bg-d); --top-bg-deep: var(--top-bg-deep-d);
       --top-text:#ffffff; --top-pill:rgba(0,0,0,.18); --top-warn:#ffd6da; --top-label:rgba(255,255,255,.85);
       --top-toggle-border:rgba(255,255,255,.4); --top-toggle-bg:rgba(255,255,255,.12); --top-toggle-hover:rgba(255,255,255,.24);
@@ -100,16 +100,16 @@
       --ned:#8b939a;
       --team-text: var(--team-text-dark);
       --team-soft: var(--team-soft-dark);
-      --strong-bg:#3a4247; --strong-fg:#eef0f1; --strong-bg-hover:#4a5359;
-      --cut-line:#484f51;
-      --input-bg:#262c2d; --sim-bg:#292f30; --sim-border:#3e4649;
-      --played-bg:#222729; --played-fg:#8b939a; --played-score-bg:#2b3133; --played-score-fg:#9aa3a8;
-      --ned-row-a:#222729; --ned-row-b:#252a2c;
+      --strong-bg:#2a3a54; --strong-fg:#e9eff8; --strong-bg-hover:#36496a;
+      --cut-line:#3a4a63;
+      --input-bg:#16243a; --sim-bg:#1a2a44; --sim-border:#2f4262;
+      --played-bg:#0f1a2b; --played-fg:#8697ae; --played-score-bg:#1a2940; --played-score-fg:#93a3ba;
+      --ned-row-a:#0f1a2b; --ned-row-b:#121f33;
       --hist-flat:#4d4142; --hist-eu:#427c66; --hist-q:#8d6e2e; --hist-n:#8d4e52;
     }
   }
   :root[data-theme="dark"]{
-    --bg:#15181a; --panel:#1f2426; --ink:#eef0f1; --muted:#9aa3a8; --line:#454d53; --line-soft:#343b40;
+    --bg:#0a1220; --panel:#111c2e; --ink:#e9eff8; --muted:#93a3ba; --line:#2a3a54; --line-soft:#1e2c44;
     --top-bg: var(--top-bg-d); --top-bg-deep: var(--top-bg-deep-d);
     --top-text:#ffffff; --top-pill:rgba(0,0,0,.18); --top-warn:#ffd6da; --top-label:rgba(255,255,255,.85);
     --top-toggle-border:rgba(255,255,255,.4); --top-toggle-bg:rgba(255,255,255,.12); --top-toggle-hover:rgba(255,255,255,.24);
@@ -119,11 +119,11 @@
     --ned:#8b939a;
     --team-text: var(--team-text-dark);
     --team-soft: var(--team-soft-dark);
-    --strong-bg:#3a4247; --strong-fg:#eef0f1; --strong-bg-hover:#4a5359;
-    --cut-line:#484f51;
-    --input-bg:#262c2d; --sim-bg:#292f30; --sim-border:#3e4649;
-    --played-bg:#222729; --played-fg:#8b939a; --played-score-bg:#2b3133; --played-score-fg:#9aa3a8;
-    --ned-row-a:#222729; --ned-row-b:#252a2c;
+    --strong-bg:#2a3a54; --strong-fg:#e9eff8; --strong-bg-hover:#36496a;
+    --cut-line:#3a4a63;
+    --input-bg:#16243a; --sim-bg:#1a2a44; --sim-border:#2f4262;
+    --played-bg:#0f1a2b; --played-fg:#8697ae; --played-score-bg:#1a2940; --played-score-fg:#93a3ba;
+    --ned-row-a:#0f1a2b; --ned-row-b:#121f33;
     --hist-flat:#4d4142; --hist-eu:#427c66; --hist-q:#8d6e2e; --hist-n:#8d4e52;
   }
   html{background:var(--bg)}
@@ -138,24 +138,23 @@
   body{overflow-x:clip}
   body{padding-bottom:env(safe-area-inset-bottom,0px)}
 
-  /* Topp — kompakt: maks ca 180px på PC, se .top-in/.status under. Jevn luft
-     over og under (24px begge veier på .top-in), i stedet for den tidligere
-     asymmetriske paddingen (0 nederst på .top selv, bare 10px på .top-in) --
-     se også at ingressen ("Fyll inn resultater...") er fjernet: den og
-     stempelet la seg ulikt i Chrome (stablet) og Firefox (side om side) i
-     samme flex-rad, og heller enn å style-låse et bestemt utfall er den
-     enkleste, mest robuste rettingen å fjerne den ekstra linja helt. */
-  .top{background:var(--top-bg);color:var(--top-text);padding:calc(24px + env(safe-area-inset-top,0px)) 24px 0;position:relative;overflow:hidden}
-  .top::after{content:"";position:absolute;inset:auto 0 0 0;height:2px;opacity:.55;background:repeating-linear-gradient(90deg,var(--top-bg-deep) 0 16px,var(--top-bg) 16px 32px)}
-  .top-in{max-width:1380px;margin:0 auto;padding-bottom:24px;padding-right:44px;display:grid;grid-template-columns:1fr auto;gap:16px;align-items:start}
-  /* Tema-knapp: sol/måne-ikon øverst til høyre i det røde feltet. Absolutt
-     posisjonert i .top (ikke en del av .top-in-gridden), så den blir stående
-     øverst i hjørnet uansett skjermbredde i stedet for å bli dyttet ned når
-     .top-in stables i én kolonne på mobil. Bare ETT av ikonene vises av
-     gangen -- CSS alene, styrt av data-theme/systeminnstilling (samme kilde
-     som fargevariablene), ikke av JS som må endre klasser. */
-  .theme-toggle{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:24px;width:34px;height:34px;border-radius:50%;border:1px solid var(--top-toggle-border);background:var(--top-toggle-bg);color:var(--top-text);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0;z-index:1}
-  .theme-toggle:hover{background:var(--top-toggle-hover)}
+  /* Navigasjon øverst (skisse A/B): merkenavn, hopplenker til seksjonene og
+     mørk/lys-bryteren. Står fast øverst (top:0), med en tynn strek i lagets
+     farge nederst. Tabellen som følger med under scrolling starter under den
+     (se NAV_H i updateFollowFit()), og seksjonene har scroll-margin-top så
+     hopplenkene ikke legger overskriften bak linja. */
+  :root{--nav-h:56px}
+  .topnav{position:sticky;top:0;z-index:30;background:var(--panel);border-bottom:2px solid var(--team-fill);padding-top:env(safe-area-inset-top,0px)}
+  .nav-in{max-width:1380px;margin:0 auto;padding:0 24px;height:var(--nav-h);display:flex;align-items:center;gap:20px}
+  .brand{font:800 21px/1 var(--cond);letter-spacing:.05em;color:var(--ink);text-decoration:none;white-space:nowrap}
+  .nav-links{flex:1;min-width:0;display:flex;justify-content:center;gap:2px;overflow-x:auto;scrollbar-width:none}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-links .sm{display:none}
+  .nav-links a{color:var(--muted);text-decoration:none;font-weight:600;font-size:14px;padding:18px 14px 16px;border-bottom:2px solid transparent;white-space:nowrap}
+  .nav-links a:hover{color:var(--ink)}
+  .nav-links a.active{color:var(--ink);border-bottom-color:var(--team-fill)}
+  .theme-toggle{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .theme-toggle:hover{background:var(--input-bg)}
   .theme-toggle svg{width:18px;height:18px;display:block}
   .theme-toggle .icon-moon{display:none}
   :root[data-theme="dark"] .theme-toggle .icon-sun{display:none}
@@ -164,15 +163,25 @@
     :root:not([data-theme="light"]) .theme-toggle .icon-sun{display:none}
     :root:not([data-theme="light"]) .theme-toggle .icon-moon{display:block}
   }
-  @media (max-width:640px){.theme-toggle{right:16px}}
+  @media (max-width:640px){
+    .nav-in{padding:0 12px;gap:8px}
+    .brand{display:none}
+    .nav-links{justify-content:flex-start}
+    .nav-links a{padding:18px 10px 16px;font-size:13.5px}
+    .nav-links .lg{display:none}
+    .nav-links .sm{display:inline}
+  }
+  /* Sidehode: tittel, undertittel, stempel og blikkfang-spørsmålet -- nøytralt,
+     ikke lenger et fargefelt i lagets farge (laget viser seg i aksenten i
+     navigasjonen og i markeringen i tabellen). */
+  .pagehead{max-width:1380px;margin:0 auto;padding:22px 24px 4px}
+  @media (max-width:640px){.pagehead{padding:16px 16px 0}}
   .titlerow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
-  h1{margin:0;font:800 clamp(24px,3.2vw,30px)/1 var(--cond);letter-spacing:-.01em}
-  .subtitle{font:600 clamp(13px,1.4vw,15px)/1.2 var(--cond);opacity:.85;letter-spacing:.01em}
+  h1{margin:0;font:800 clamp(26px,3.4vw,34px)/1 var(--cond);letter-spacing:-.01em}
+  .subtitle{font:600 clamp(13px,1.4vw,15px)/1.2 var(--cond);color:var(--muted);letter-spacing:.01em}
   .subline{margin:8px 0 0;font-size:12.5px}
-  .stamp{display:inline-block;background:var(--top-pill);color:var(--top-text);border-radius:999px;padding:2px 9px;font-weight:600}
-  .stamp .warn{color:var(--top-warn)}
-  .team-picker{margin-top:12px;display:flex;align-items:center;gap:9px;font-size:13px;color:var(--top-label);flex-wrap:wrap}
-  .team-picker select{font:inherit;font-weight:700;color:#15191c;background:#fff;border:none;border-radius:999px;padding:6px 30px 6px 14px;cursor:pointer}
+  .stamp{display:inline-block;background:var(--input-bg);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:2px 10px;font-weight:600}
+  .stamp .warn{color:var(--accent-text)}
   /* Det mest aktuelle spørsmålet for valgt lag (eller "heldig/uheldig" uten
      lag) -- se qaHighlightUpdate(). Egen knapp, ikke del av .team-picker sin
      flex-rad, siden spørsmålsteksten kan bli lang og trenger egen linje. */
@@ -182,22 +191,84 @@
      ikke som en knapp, full tekstfarge, pil etter, og luft over og under.
      Ved hover understrekes den. Stor tekst (over 18 px
      halvfet) trenger bare 3:1 mot banneret; alle klubbfarger har over 4,5:1. */
-  .qa-highlight{display:block;margin:18px 0 6px;background:none;border:none;padding:0;color:var(--top-text);font:600 19px/1.25 var(--cond);letter-spacing:.005em;text-align:left;cursor:pointer;max-width:100%}
+  .qa-highlight{display:block;margin:18px 0 6px;background:none;border:none;padding:0;color:var(--team-text);font:600 19px/1.25 var(--cond);letter-spacing:.005em;text-align:left;cursor:pointer;max-width:100%}
   .qa-highlight::before{content:"\00AB"}
   .qa-highlight::after{content:"\00BB\00A0\00A0\2192"}
   .qa-highlight:hover,.qa-highlight:focus-visible{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
   .qa-highlight:empty{display:none}
-  /* Lagboksen har ingen egen lagfarge lenger -- banneret bak den bærer nå
-     den identiteten, så boksen skal bare stå nøytralt fram mot et banner i
-     en hvilken som helst klubbfarge (se --top-bg). Skyggen var før tonet
-     mot Brann-rødt (rgba(60,0,4,...)), en annen antakelse samme feil. */
-  .status{background:var(--panel);color:var(--ink);border-radius:10px;padding:14px 16px;min-width:250px;max-width:420px;box-shadow:0 10px 30px -12px rgba(0,0,0,.4)}
+  /* Lagboksen (når et lag følges): et kort øverst i høyrekolonnen. */
+  .status{background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:12px;padding:14px 16px}
   .status .teamname-lg{display:block;font:800 clamp(18px,2vw,22px)/1.1 var(--cond);color:var(--ink);margin:0 0 6px}
   .status .posline{font:700 14.5px/1.3 var(--body);color:var(--ink)}
   .status .posline b{font:800 17px/1 var(--cond);color:var(--ink);margin-right:2px}
 
+
+  /* ---- Nytt oppsett (skisse A/B) ---- */
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:16px 16px 12px}
+  .panel-head h2{margin:0;font:700 22px/1 var(--cond);display:flex;align-items:center;gap:8px}
+  .panel-head h2 .count{font:500 14px var(--body);color:var(--muted)}
+  .h-ic svg{width:20px;height:20px;display:block;color:var(--ink)}
+  .head-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .head-link{background:none;border:none;padding:0;color:var(--team-text);font-size:13px;font-weight:600;cursor:pointer}
+  .head-link:hover{text-decoration:underline}
+  .roundnav{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted)}
+  .roundnav button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:18px;line-height:1;padding:0}
+  .roundnav button:hover{border-color:var(--ink)}
+  .roundnav button:disabled{color:var(--muted);opacity:.5;cursor:default}
+  .teamsel select{font:inherit;font-weight:600;font-size:13px;color:var(--ink);background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 10px;cursor:pointer;max-width:150px}
+  .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:12px 14px 10px;display:flex;flex-direction:column;gap:7px;min-width:0}
+  .card-h{display:flex;align-items:center;gap:8px;font:700 15px/1.1 var(--cond)}
+  .card-h svg{width:22px;height:22px;flex:none;color:var(--ink)}
+  .card-b{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0}
+  .card-team{font-weight:600;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .card-pct{font:800 21px/1 var(--cond);flex:none}
+  .c-gull .card-pct,.c-eu .card-pct,.c-form .card-pct{color:var(--eu-text)}
+  .c-ned .card-pct{color:var(--accent-text)}
+  .c-ned .card-h svg{color:var(--accent-text)}
+  .card-link{align-self:flex-start;background:none;border:none;padding:0;color:var(--team-text);font-size:12.5px;font-weight:600;cursor:pointer}
+  .card-link:hover{text-decoration:underline}
+  @media (max-width:760px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  /* Neste kamp */
+  .nm-body{padding:0 16px 16px}
+  .nm-when{margin:0 0 12px;font-size:13px;color:var(--muted)}
+  .nm-teams{display:flex;align-items:center;justify-content:center;gap:14px;font:700 21px/1.1 var(--cond);margin-bottom:14px;flex-wrap:wrap;text-align:center}
+  .nm-dash{color:var(--muted);font-weight:500}
+  .nm-hub{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .nm-hub button{padding:9px 6px;border-radius:8px;border:1px solid var(--line);background:var(--input-bg);color:var(--ink);font-weight:700;font-size:13.5px}
+  .nm-hub button:hover{border-color:var(--ink)}
+  .nm-hub button.on{background:var(--team-fill);border-color:var(--team-fill);color:var(--team-fill-text)}
+  /* Kamper-seksjonen (verktøy + siste runde + gjenstående) */
+  .kamper{display:flex;flex-direction:column;gap:20px;min-width:0}
+  .kamper .tools{padding:0}
+  /* Prosentkolonnene: grønt for høy sjanse, rødt for nedrykk, grått under 1 % */
+  td.odds{font-weight:600}
+  td.odds.pc-zero{color:var(--muted);font-weight:500}
+  td.odds.gull.pc-hi,td.odds.p3.pc-hi{color:var(--eu-text);font-weight:800}
+  td.odds.gull.pc-mid,td.odds.p3.pc-mid{color:var(--eu-text)}
+  td.odds.ned.pc-mid,td.odds.ned.pc-hi{color:var(--accent-text)}
+  td.odds.ned.pc-hi{font-weight:800}
+  tr.followed td.odds.pc-zero{color:var(--muted)}
+  th.sortable{cursor:pointer}
+  th.sortable.active{color:var(--ink)}
+  /* Seksjonene som hopplenkene går til */
+  #tabell,#kamper,#qaPanel,#omModellen{scroll-margin-top:calc(var(--nav-h) + 12px)}
+  .round{scroll-margin-top:calc(var(--nav-h) + 12px)}
+  .round.flash{animation:roundflash 1.4s ease}
+  @keyframes roundflash{0%,60%{background:var(--team-soft)}100%{background:transparent}}
+  /* De to sammenleggbare feltene nederst, side om side */
+  .bottomdetails{max-width:1380px;margin:0 auto;padding:0 24px 40px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+  .bottomdetails details.howitworks{max-width:none;margin:0;padding:0}
+  .bottomdetails details.howitworks summary{display:flex;align-items:center;gap:10px;font-size:18px}
+  .bottomdetails .sum-ic svg{width:20px;height:20px;display:block;color:var(--muted)}
+  @media (max-width:900px){
+    .bottomdetails{grid-template-columns:minmax(0,1fr);padding:0 16px 32px}
+    .bottomdetails details.howitworks{padding:0}
+  }
+
   /* Verktøy */
-  .tools{max-width:1380px;margin:0 auto;padding:16px 24px 0;display:flex;flex-wrap:wrap;gap:8px}
+  .tools{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 14px}
   .tools[hidden]{display:none}
   button{font:inherit;cursor:pointer}
   .tools button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;font-weight:600;font-size:14px}
@@ -243,7 +314,7 @@
   @media (min-width:1181px){
     .leftcol{align-self:stretch}
     .tblzone{flex:1 1 auto;min-height:0}
-    .tblzone > .panel-follow{position:sticky}
+    .tblzone > .followbox.panel-follow{position:sticky}
   }
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .panel > h2{font:700 22px/1 var(--cond);margin:0;padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
@@ -517,41 +588,49 @@
 </head>
 <body>
 
-<header class="top">
-  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Bytt til mørkt tema" title="Bytt til mørkt tema">
-    <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"></path></svg>
-    <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a.6.6 0 0 0-.7-.8A9.5 9.5 0 1 0 21.3 15.3a.6.6 0 0 0-.8-.7Z"></path></svg>
-  </button>
-  <div class="top-in">
-    <div>
-      <div class="titlerow"><h1>Eliteserien 2026</h1><span class="subtitle">Tabellkalkulator for Eliteserien</span></div>
-      <p class="subline"><span class="stamp"></span></p>
-      <div class="team-picker">
-        <label for="teamSelect">Følg laget ditt</label>
-        <select id="teamSelect"><option value="">Ingen</option></select>
-      </div>
-      <button class="qa-highlight" id="qaHighlight" title="Hopp til Spør om tabellen"></button>
+<nav class="topnav" aria-label="Hovedmeny">
+  <div class="nav-in">
+    <a class="brand" href="#tabell">ELITESERIEN</a>
+    <div class="nav-links" id="navLinks">
+      <a href="#tabell" data-target="tabell" class="active">Tabell</a>
+      <a href="#kamper" data-target="kamper">Kamper</a>
+      <a href="#qaPanel" data-target="qaPanel"><span class="lg">Spør om tabellen</span><span class="sm">Spør</span></a>
+      <a href="#omModellen" data-target="omModellen"><span class="lg">Om modellen</span><span class="sm">Modellen</span></a>
     </div>
-    <div class="status" id="verdict" aria-live="polite" hidden></div>
+    <button class="theme-toggle" id="themeToggle" type="button" aria-label="Bytt til mørkt tema" title="Bytt til mørkt tema">
+      <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"></path></svg>
+      <svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a.6.6 0 0 0-.7-.8A9.5 9.5 0 1 0 21.3 15.3a.6.6 0 0 0-.8-.7Z"></path></svg>
+    </button>
   </div>
-</header>
+</nav>
 
-<div class="tools">
-  <button id="followWin"></button>
-  <button id="followLose"></button>
-  <button id="simRest" title="Fyller alle tomme kamper med ett plausibelt scenario">Simuler tomme kamper</button>
-  <button class="reset" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
-  <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
-</div>
+<header class="pagehead">
+  <div class="titlerow"><h1>Eliteserien 2026</h1><span class="subtitle">Tabellkalkulator for Eliteserien</span></div>
+  <p class="subline"><span class="stamp"></span></p>
+  <button class="qa-highlight" id="qaHighlight" title="Hopp til Spør om tabellen"></button>
+</header>
 
 <div class="wrap">
   <div class="leftcol">
-  <div class="tblzone">
-  <section class="panel tblpanel">
-    <h2>Tabell <span class="count" id="tblInfo"></span></h2>
-    <p class="scenario-line" id="scenarioLine" hidden></p>
-    <p class="simnote" id="simNote" hidden>Prosentene bygger på resultatene i kamplisten, også de simulerte.</p>
-    <div class="tblwrap">
+    <div class="tblzone">
+     <div class="followbox">
+      <section class="panel tblpanel" id="tabell">
+        <div class="panel-head">
+          <h2>Tabell <span class="count" id="tblInfo"></span></h2>
+          <div class="head-tools">
+            <div class="roundnav" id="roundNav" aria-label="Velg runde">
+              <button type="button" id="roundPrev" aria-label="Forrige runde">‹</button>
+              <span id="roundLabel">Runde – av 30</span>
+              <button type="button" id="roundNext" aria-label="Neste runde">›</button>
+            </div>
+            <label class="teamsel"><span class="sr-only">Følg laget ditt</span>
+              <select id="teamSelect"><option value="">Alle lag</option></select>
+            </label>
+          </div>
+        </div>
+        <p class="scenario-line" id="scenarioLine" hidden></p>
+        <p class="simnote" id="simNote" hidden>Prosentene bygger på resultatene i kamplisten, også de simulerte.</p>
+        <div class="tblwrap">
       <table id="tbl">
         <thead><tr>
           <th></th><th class="team">Lag</th><th class="hide-s">K</th>
@@ -559,33 +638,80 @@
           <th>Diff</th><th>P</th>
           <th class="sortable" id="formHeader" title="Form: forventede poeng per kamp mot et gjennomsnittslag, minus ligasnittet. 5 er snittet. Klikk for å sortere.">Form</th>
           <th class="hide-s" title="Siste fem seriekamper, eldst til venstre">Siste 5</th>
-          <th class="hide-m" title="Sannsynlighet for europaplass (topp 4)">Europa</th>
-          <th title="Sannsynlighet for plass 15 eller 16">Ned</th>
+          <th class="sortable hide-m" id="gullHeader" data-sort="gull" title="Sannsynlighet for å vinne serien. Klikk for å sortere.">Gull</th>
+          <th class="sortable hide-m" id="europaHeader" data-sort="europa" title="Sannsynlighet for europaplass (topp 4). Klikk for å sortere.">Europa</th>
+          <th class="sortable" id="nedHeader" data-sort="ned" title="Sannsynlighet for plass 15 eller 16. Klikk for å sortere.">Ned</th>
         </tr></thead>
         <tbody></tbody>
       </table>
-    </div>
-    <div class="legend">
+        </div>
+        <div class="legend">
       <span class="eu"><i></i>Europa (1 til 4)</span>
       <span class="q"><i></i>Kvalik (14)</span>
       <span class="n"><i></i>Nedrykk (15 og 16)</span>
     </div>
-  </section>
+      </section>
+      <div class="cards" id="summaryCards">
+      <div class="card c-gull" data-card="gull">
+        <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"/><path d="M8 6H5a2 2 0 0 0 2 4M16 6h3a2 2 0 0 1-2 4M12 13v4M8.5 20h7M10 17h4"/></svg><span>Seriemester</span></div>
+        <div class="card-b"><span class="card-team">–</span><b class="card-pct"></b></div>
+        <button type="button" class="card-link" data-sort="gull">Se alle →</button>
+      </div>
+      <div class="card c-eu" data-card="europa">
+        <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8ZM12 3.5V8M20 10.2l-4.4.4M17 18.4l-2.8-3.6M7 18.4l2.8-3.6M4 10.2l4.4.4"/></svg><span>Europa (topp 4)</span></div>
+        <div class="card-b"><span class="card-team">–</span><b class="card-pct"></b></div>
+        <button type="button" class="card-link" data-sort="europa">Se alle →</button>
+      </div>
+      <div class="card c-ned" data-card="ned">
+        <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v8M8.5 12.5 12 16l3.5-3.5"/></svg><span>Nedrykk</span></div>
+        <div class="card-b"><span class="card-team">–</span><b class="card-pct"></b></div>
+        <button type="button" class="card-link" data-sort="ned">Se alle →</button>
+      </div>
+      <div class="card c-form" data-card="form">
+        <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 16.5 5.5-5.5 3.5 3.5 7.5-8"/><path d="M15.5 6.5h5v5"/></svg><span>Form (siste 5)</span></div>
+        <div class="card-b"><span class="card-team">–</span><b class="card-pct"></b></div>
+        <button type="button" class="card-link" data-sort="form">Se alle →</button>
+      </div>
+      </div>
+     </div>
+    </div>
   </div>
+
+  <div class="rightcol">
+    <div class="status" id="verdict" aria-live="polite" hidden></div>
+
+    <section class="panel nextmatch" id="nextMatch" hidden>
+      <div class="panel-head">
+        <h2><span class="h-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8Z"/></svg></span>Neste kamp</h2>
+        <button type="button" class="head-link" id="nmAll">Se alle kamper →</button>
+      </div>
+      <div class="nm-body">
+        <p class="nm-when" id="nmWhen"></p>
+        <div class="nm-teams"><span id="nmHome"></span><span class="nm-dash">–</span><span id="nmAway"></span></div>
+        <div class="nm-hub" id="nmHub">
+          <button type="button" data-q="H"></button><button type="button" data-q="U"></button><button type="button" data-q="B"></button>
+        </div>
+      </div>
+    </section>
 
     <details class="panel qa" id="qaPanel">
       <summary>Spør om tabellen</summary>
       <div class="qa-list" id="qaButtons"></div>
     </details>
-  </div>
 
-  <div class="rightcol">
-    <section class="panel recent" aria-label="Siste runde">
+    <section class="kamper" id="kamper">
+      <div class="tools">
+  <button id="followWin"></button>
+  <button id="followLose"></button>
+  <button id="simRest" title="Fyller alle tomme kamper med ett plausibelt scenario">Simuler tomme kamper</button>
+  <button class="reset" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
+  <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
+</div>
+      <section class="panel recent" aria-label="Siste runde">
       <h2>Siste runde <span class="count" id="lastRoundInfo"></span></h2>
       <div class="rounds" id="lastRound"></div>
     </section>
-
-    <section class="panel">
+      <section class="panel" id="fxPanel">
       <h2>Gjenstående kamper <span class="count" id="fxInfo"></span></h2>
       <label class="autofill" id="autoFillLabel" title="De andre kampene i samme runde simuleres, så alle lagene har spilt like mange og tabellen er sammenlignbar.">
         <input type="checkbox" id="autoFillToggle" checked> Fyll ut runden når jeg legger inn et resultat
@@ -593,13 +719,13 @@
       <div class="rounds" id="rounds"></div>
       <button class="showAll" id="showAllRounds" hidden>Vis alle runder</button>
     </section>
+    </section>
   </div>
 </div>
 
-
-
+<div class="bottomdetails" id="omModellen">
 <details class="howitworks">
-  <summary>Slik fungerer det</summary>
+  <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7"/></svg></span>Slik fungerer det</summary>
   <div class="in">
     <h3>Slik regnes sannsynlighetene</h3>
     <p id="howP1"></p>
@@ -615,7 +741,7 @@
 </details>
 
 <details class="howitworks modelcheck">
-  <summary>Hvordan vet vi at modellen virker?</summary>
+  <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 20v-7M12 20V6M18 20v-11"/></svg></span>Hvordan vet vi at modellen virker?</summary>
   <div class="in">
     <p class="note">Sist validert: 21. september 2026, mot NOR.csv (football-data.co.uk), sesongene 2016–2025. Tallene under er faste resultater fra den testen, ikke noe som regnes ut i nettleseren.</p>
     <p class="note">Kilder til dataene på siden: ffksupporter.net, ESPN, football-data.co.uk og The Odds API, alt hentet automatisk.</p>
@@ -686,6 +812,9 @@
     <p>Innbyrdes oppgjør brukes ikke som fjerde rangeringskriterium hvis lag står likt på poeng, målforskjell og scorede mål. 4000 simuleringer gir Monte Carlo-støy på omtrent 1–2 prosentpoeng, så prosentene på siden bør ikke tolkes på desimalnivå.</p>
   </div>
 </details>
+</div>
+
+
 
 <div class="modal-backdrop" id="formModalBackdrop" hidden>
   <div class="modal" role="dialog" aria-modal="true" aria-labelledby="formModalTitle">
@@ -868,7 +997,33 @@ function applyDrift(arr, base, i, delta, cap){
 // lagstyrkene opp seinere.
 const MAX_LAMBDA_LOG = Math.log(6);
 let LIVE = null; // {att,con,ha,hc} i TI-indeksrekkefølge — kopi av MODEL, oppdatert av alle låste resultater i inneværende scenario
-let tableSort = null; // null = standings-rekkefølge, ellers {key:'form', dir:1|-1}
+let tableSort = null; // null = standings-rekkefølge, ellers {key:'form'|'gull'|'europa'|'ned', dir:1|-1}
+const PROB_KEYS = ['gull','europa','ned'];
+// Sannsynlighet for sonen fra siste simulering (lastMC: sjanse per sluttplass).
+function probOf(team,key){
+  const d = typeof lastMC!=='undefined' && lastMC && lastMC[team];
+  if(!d) return 0;
+  return key==='gull' ? d[0] : key==='europa' ? d[0]+d[1]+d[2]+d[3] : d[14]+d[15];
+}
+const SORT_LABELS = {form:'Form', gull:'Gull', europa:'Europa', ned:'Ned'};
+function updateSortHeaders(){
+  const hdr = {form:'formHeader', gull:'gullHeader', europa:'europaHeader', ned:'nedHeader'};
+  Object.keys(hdr).forEach(k=>{
+    const el = document.getElementById(hdr[k]); if(!el) return;
+    const on = !!(tableSort && tableSort.key===k);
+    el.textContent = SORT_LABELS[k] + (on ? (tableSort.dir===1 ? ' ▼' : ' ▲') : '');
+    el.classList.toggle('active', on);
+  });
+}
+// Klikk på en sorterbar kolonne: samme retning som før (▼ først, så ▲, så
+// tilbake til tabellrekkefølge). Kortene under tabellen ("Se alle") setter
+// sorteringen direkte og hopper opp til tabellen.
+function cycleSort(key){
+  if(!tableSort || tableSort.key!==key) tableSort={key,dir:1};
+  else if(tableSort.dir===1) tableSort={key,dir:-1};
+  else tableSort=null;
+  render();
+}
 
 // Klubbfarger for alle 16 lag (hovedfarge, ingen logoer): klubbens faktiske
 // hovedfarge, IKKE forskjøvet for å skille lag fra hverandre -- bare ett lag
@@ -928,21 +1083,25 @@ function hexToRgbStr(hex){
   const n = parseInt(hex.slice(1), 16);
   return `${(n>>16)&255},${(n>>8)&255},${n&255}`;
 }
+// Uten fulgt lag: sidens egen, nøytrale blå aksent (lenker, markering i
+// navigasjonen, valgte knapper) i stedet for et lags farge.
+const NEUTRAL_ACCENT = {fill:"#2f6fed", deep:"#2251b8", fillText:"#ffffff", textLight:"#1f5fd6", textDark:"#7aa8ff"};
 function applyTeamColors(){
   const c = TEAM_COLORS[SELECTED_TEAM];
-  if(c){
+  const a = c || NEUTRAL_ACCENT;
+  if(a){
     const root = document.documentElement.style;
-    root.setProperty('--team-fill', c.fill);
-    root.setProperty('--team-deep', c.deep);
-    root.setProperty('--team-fill-text', c.fillText);
-    root.setProperty('--team-text-light', c.textLight);
-    root.setProperty('--team-text-dark', c.textDark);
+    root.setProperty('--team-fill', a.fill);
+    root.setProperty('--team-deep', a.deep);
+    root.setProperty('--team-fill-text', a.fillText);
+    root.setProperty('--team-text-light', a.textLight);
+    root.setProperty('--team-text-dark', a.textDark);
     // Markeringens bakgrunn: en svak, gjennomsiktig vask av lagets egen farge
     // (lav alfa over --panel/--bg) i stedet for en fast rosa -- se
     // --team-soft-light/-dark i :root for hvorfor alfa (0,08/0,12 -- hentet
     // fra de gamle, Brann-tilpassede faste verdiene den erstattet).
-    root.setProperty('--team-soft-light', `rgba(${hexToRgbStr(c.fill)},.08)`);
-    root.setProperty('--team-soft-dark', `rgba(${hexToRgbStr(c.textDark)},.12)`);
+    root.setProperty('--team-soft-light', `rgba(${hexToRgbStr(a.fill)},.08)`);
+    root.setProperty('--team-soft-dark', `rgba(${hexToRgbStr(a.textDark)},.12)`);
   }
   // Toppbanneret trenger EGNE verdier uansett om et lag er valgt eller ikke
   // (--team-* over er bare brukt av .followed-elementer, som ikke finnes
@@ -995,18 +1154,22 @@ function updateFollowedMatchRows(){
 // mobil. Navngivningen unngår bevisst "sticky"/"fixed"/"float"/"pin" (se
 // CSS-kommentaren over @media-regelen).
 function updateFollowFit(){
-  const panel = document.querySelector('.wrap > .leftcol .tblpanel');
-  const zone = panel && panel.parentElement;
-  if(!panel || !zone) return;
-  // Ingen effekt på mobil, eller når festeområdet ikke er høyere enn tabellen
+  // Det som står fast er tabellen OG kortene under den (.followbox), så begge
+  // alltid er synlige når du blar i kamplisten ved siden av. Toppen ligger rett
+  // under den faste navigasjonen; er boksen høyere enn vinduet, er det kortene
+  // nederst som kappes, ikke tabellen.
+  const box = document.querySelector('.wrap > .leftcol .followbox');
+  const zone = box && box.parentElement;
+  if(!box || !zone) return;
+  // Ingen effekt på mobil, eller når festeområdet ikke er høyere enn boksen
   // (kamplisten ved siden av er kortere), siden det da ikke er noe å scrolle forbi.
-  if(window.innerWidth < 1181 || zone.offsetHeight <= panel.offsetHeight){
-    panel.classList.remove('panel-follow');
-    panel.style.top = '';
+  if(window.innerWidth < 1181 || zone.offsetHeight <= box.offsetHeight){
+    box.classList.remove('panel-follow');
+    box.style.top = '';
     return;
   }
-  panel.classList.add('panel-follow');
-  panel.style.top = Math.min(16, window.innerHeight - panel.offsetHeight - 16) + 'px';
+  box.classList.add('panel-follow');
+  box.style.top = ((document.querySelector('.topnav')||{offsetHeight:0}).offsetHeight + 16) + 'px';
 }
 window.addEventListener('resize', updateFollowFit);
 // Fanger opp høydeendringer som ikke kommer fra render() eller vindu-resize
@@ -1015,17 +1178,15 @@ window.addEventListener('resize', updateFollowFit);
 // statiske markup-et (bare innholdet fylles av JS), så vi kan observere dem
 // med en gang.
 const _followObserver = new ResizeObserver(()=>updateFollowFit());
-document.querySelectorAll('.wrap > .leftcol, .wrap > .rightcol, .tblzone, .tblpanel').forEach(p=>_followObserver.observe(p));
+document.querySelectorAll('.wrap > .leftcol, .wrap > .rightcol, .tblzone, .followbox').forEach(p=>_followObserver.observe(p));
 
 // Form-kolonnen: klikk på header sorterer tabellen etter Form (bytter
 // retning, tredje klikk går tilbake til standings-rekkefølge). Klikk på et
 // lagnavn åpner formgrafen (delegert på tbody, siden radene bygges på nytt
 // hver render()).
-document.getElementById('formHeader').addEventListener('click', ()=>{
-  if(!tableSort) tableSort={key:'form',dir:1};
-  else if(tableSort.dir===1) tableSort={key:'form',dir:-1};
-  else tableSort=null;
-  render();
+document.getElementById('formHeader').addEventListener('click', ()=> cycleSort('form'));
+['gullHeader','europaHeader','nedHeader'].forEach(id=>{
+  document.getElementById(id).addEventListener('click', e=> cycleSort(e.currentTarget.dataset.sort));
 });
 document.querySelector('#tbl tbody').addEventListener('click', e=>{
   const el=e.target.closest('.teamname');
@@ -1931,11 +2092,23 @@ function fillOdds(){
   renderQaHighlight();
   document.querySelectorAll('#tbl tbody tr').forEach(tr=>{
     const d=lastMC[tr.dataset.team]; if(!d) return;
-    const top=d[0]+d[1]+d[2]+d[3], ned=d[14]+d[15];
-    const a=tr.querySelector('td.p3'), b=tr.querySelector('td.ned');
-    a.textContent=pctTxt(top); a.classList.toggle('hot',top>=0.5);
-    b.textContent=pctTxt(ned); b.classList.toggle('hot',ned>=0.5);
+    const top=d[0]+d[1]+d[2]+d[3], ned=d[14]+d[15], gull=d[0];
+    const g=tr.querySelector('td.gull'), a=tr.querySelector('td.p3'), b=tr.querySelector('td.ned');
+    g.textContent=pctTxt(gull); a.textContent=pctTxt(top); b.textContent=pctTxt(ned);
+    // Grønt for høy sjanse, rødt for nedrykk, grått under 1 %.
+    [[g,gull],[a,top],[b,ned]].forEach(([cell,v])=>{
+      cell.classList.toggle('pc-zero', v<0.005);
+      cell.classList.toggle('pc-hi', v>=0.5);
+      cell.classList.toggle('pc-mid', v>=0.005 && v<0.5);
+    });
   });
+  if(tableSort && PROB_KEYS.includes(tableSort.key)){
+    const tb=document.querySelector('#tbl tbody');
+    [...tb.querySelectorAll('tr')]
+      .sort((x,y)=> tableSort.dir*(probOf(y.dataset.team,tableSort.key)-probOf(x.dataset.team,tableSort.key)))
+      .forEach(tr=>tb.appendChild(tr));
+  }
+  updateSummaryCards();
   const box=document.getElementById('odds'); if(!box || !SELECTED_TEAM) return;
   const d=lastMC[SELECTED_TEAM]; if(!d) return;
   const mx=Math.max(...d);
@@ -2151,6 +2324,134 @@ async function onRoundsEvent(e){
 }
 roundsEl.addEventListener('input', onRoundsEvent);
 roundsEl.addEventListener('click', onRoundsEvent);
+
+// ---- Neste kamp: neste ekte kamp for laget du følger (ellers neste i serien),
+// med H/U/B-sjansene fra modellen. Knappene setter resultatet slik som H/U/B-
+// knappene i kamplisten (samme hendelse), så alt annet følger med. ----
+function renderNextMatch(){
+  const box = document.getElementById('nextMatch');
+  if(!box) return;
+  const m = SELECTED_TEAM
+    ? (matches.find(x=>x.home===SELECTED_TEAM||x.away===SELECTED_TEAM) || matches[0])
+    : matches[0];
+  if(!m){ box.hidden = true; return; }
+  box.hidden = false;
+  box.dataset.id = m.id;
+  const when = capFirst(formatDateNo(m.date)) + (m.time ? ` kl. ${m.time}` : '');
+  document.getElementById('nmWhen').textContent = when + ` · runde ${m.round}`;
+  document.getElementById('nmHome').textContent = m.home;
+  document.getElementById('nmAway').textContent = m.away;
+  const [lh,la] = rateFor(m.home, m.away), o = outcome(lh,la);
+  const set = m.hg!=null && m.ag!=null;
+  const pct = v => Math.round(v*100)+' %';
+  [['H',o.H,set&&m.hg>m.ag],['U',o.U,set&&m.hg===m.ag],['B',o.B,set&&m.hg<m.ag]].forEach(([q,v,on])=>{
+    const b = document.querySelector(`#nmHub button[data-q="${q}"]`);
+    b.textContent = `${q} ${pct(v)}`;
+    b.classList.toggle('on', !!on);
+  });
+}
+document.getElementById('nmHub').addEventListener('click', e=>{
+  const b = e.target.closest('button'); if(!b) return;
+  const id = document.getElementById('nextMatch').dataset.id;
+  const q = document.querySelector(`.match[data-id="${id}"] .quick button[data-q="${b.dataset.q}"]`);
+  if(q) q.click();
+});
+document.getElementById('nmAll').addEventListener('click', ()=> scrollToSection('kamper'));
+
+// ---- Oppsummeringskortene under tabellen: leder for gull, Europa og
+// nedrykk (fra simuleringen) og lag med best form. "Se alle" sorterer tabellen. ----
+function updateSummaryCards(){
+  const box = document.getElementById('summaryCards');
+  if(!box || typeof lastMC==='undefined') return;
+  const setCard = (key, team, txt) => {
+    const c = box.querySelector(`[data-card="${key}"]`); if(!c) return;
+    c.querySelector('.card-team').textContent = team || '–';
+    c.querySelector('.card-pct').textContent = txt || '';
+  };
+  if(lastMC){
+    ['gull','europa','ned'].forEach(k=>{
+      const best = TEAMS.map(t=>({t,v:probOf(t,k)})).sort((a,b)=>b.v-a.v)[0];
+      setCard(k, best.t, pctTxt(best.v));
+    });
+  }
+  if(typeof LIVE!=='undefined' && LIVE){
+    const form = formScores(Array.from(LIVE.att), Array.from(LIVE.con));
+    const bi = form.indexOf(Math.max(...form));
+    setCard('form', TEAMS[bi], f1(form[bi]));
+  }
+}
+{
+  const cards = document.getElementById('summaryCards');
+  cards.addEventListener('click', e=>{
+    const b = e.target.closest('.card-link'); if(!b) return;
+    tableSort = {key:b.dataset.sort, dir:1};
+    render();
+    scrollToSection('tabell');
+  });
+}
+
+// ---- Rundevelger over tabellen: "Runde N av 30 ‹ ›". Bladr mellom rundene som
+// har kamper igjen og hopp til runden i kamplisten. ----
+const TOTAL_ROUNDS = 30;
+let roundIdx = 0;
+function roundOrder(){ return [...document.querySelectorAll('#rounds .round[data-round], #hiddenRounds .round[data-round]')].map(e=>+e.dataset.round); }
+function updateRoundNav(){
+  const order = roundOrder(); if(!order.length) return;
+  roundIdx = Math.max(0, Math.min(order.length-1, roundIdx));
+  document.getElementById('roundLabel').textContent = `Runde ${order[roundIdx]} av ${TOTAL_ROUNDS}`;
+  document.getElementById('roundPrev').disabled = roundIdx===0;
+  document.getElementById('roundNext').disabled = roundIdx===order.length-1;
+}
+function goToRound(idx){
+  const order = roundOrder(); if(!order.length) return;
+  roundIdx = idx; updateRoundNav();
+  const el = document.querySelector(`.round[data-round="${order[roundIdx]}"]`);
+  const hidden = document.getElementById('hiddenRounds');
+  if(hidden && hidden.hidden && hidden.contains(el)){
+    hidden.hidden = false;
+    const btn = document.getElementById('showAllRounds'); if(btn) btn.hidden = true;
+  }
+  if(el){
+    el.scrollIntoView({behavior:'smooth', block:'start'});
+    el.classList.add('flash'); setTimeout(()=>el.classList.remove('flash'), 1400);
+  }
+}
+document.getElementById('roundPrev').addEventListener('click', ()=> goToRound(roundIdx-1));
+document.getElementById('roundNext').addEventListener('click', ()=> goToRound(roundIdx+1));
+
+// ---- Navigasjonen: hopp til seksjon, og marker seksjonen du er i ----
+function scrollToSection(id){
+  if(id==='qaPanel') qaSetOpen(true); // spørsmålsseksjonen åpnes hvis den er lukket
+  const el = document.getElementById(id);
+  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+}
+document.getElementById('navLinks').addEventListener('click', e=>{
+  const a = e.target.closest('a[data-target]'); if(!a) return;
+  e.preventDefault();
+  scrollToSection(a.dataset.target);
+});
+(function navSpy(){
+  const links = [...document.querySelectorAll('#navLinks a[data-target]')];
+  const targets = links.map(a=>document.getElementById(a.dataset.target));
+  const update = ()=>{
+    const y = window.scrollY + 120;
+    // Seksjonen med nederste topp som er passert, uavhengig av rekkefølgen i
+    // menyen ("Spør om tabellen" ligger over "Kamper" i høyrekolonnen på PC).
+    let active = 0, bestTop = -Infinity; // øverst på siden: Tabell
+    targets.forEach((t,i)=>{
+      if(!t) return;
+      const top = t.getBoundingClientRect().top + window.scrollY;
+      if(top <= y && top > bestTop){ bestTop = top; active = i; }
+    });
+    if(window.scrollY>50 && window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 4) active = links.length-1;
+    links.forEach((a,i)=>a.classList.toggle('active', i===active));
+  };
+  window.addEventListener('scroll', update, {passive:true});
+  window.addEventListener('resize', update);
+  update();
+  // Sidehøyden endres når kamplisten bygges og tabellen fylles -- oppdater da også.
+  new ResizeObserver(update).observe(document.body);
+})();
 
 function compute(){
   const t={};
@@ -3175,6 +3476,8 @@ function render(){
   updateRoundSimButtons();
   renderQaButtons();
   renderQaHighlight();
+  renderNextMatch();
+  updateSummaryCards();
   const {rows,played}=compute();
 
   // Badge (matematisk avgjort) og Form regnes ut fra "rows" i standings-
@@ -3191,10 +3494,12 @@ function render(){
   let displayRows=rows;
   if(tableSort && tableSort.key==='form'){
     displayRows=[...rows].sort((a,b)=> tableSort.dir*(b.form-a.form) || a.pos-b.pos);
+  } else if(tableSort && PROB_KEYS.includes(tableSort.key)){
+    // Gull/Europa/Ned: sorteres på sannsynlighetene fra siste simulering (lastMC).
+    // Er de ikke klare ennå, sorteres på nytt av fillOdds() når de kommer.
+    displayRows=[...rows].sort((a,b)=> tableSort.dir*(probOf(b.name,tableSort.key)-probOf(a.name,tableSort.key)) || a.pos-b.pos);
   }
-  const formHeader=document.getElementById('formHeader');
-  formHeader.textContent = 'Form'+(tableSort&&tableSort.key==='form' ? (tableSort.dir===1?' ▼':' ▲') : '');
-  formHeader.classList.toggle('active', !!(tableSort&&tableSort.key==='form'));
+  updateSortHeaders();
 
   const tb=document.querySelector('#tbl tbody'); tb.innerHTML='';
   displayRows.forEach(r=>{
@@ -3212,7 +3517,7 @@ function render(){
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
       <td class="gd">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.pts} poeng nå. Maks mulig sluttsum: ${r.max}.">${r.pts}</td>
       <td class="formcol"><span class="formbox ${formCls}" title="${r.form.toFixed(1)} av 10. ${changeTxt}">${r.form.toFixed(1)}</span></td>
-      <td class="hide-s">${formHtml(r.name)}</td><td class="odds p3 hide-m"></td><td class="odds ned"></td>`;
+      <td class="hide-s">${formHtml(r.name)}</td><td class="odds gull hide-m"></td><td class="odds p3 hide-m"></td><td class="odds ned"></td>`;
     tb.appendChild(tr);
   });
   applyBadgesToDom(); // viser cachen (tom første gang) med en gang, uten å vente
@@ -3539,7 +3844,7 @@ async function boot(){
   FIXTURES_IN.forEach(r=>{ ROUND_LAST_DATE[r.round] = r.matches.reduce((mx,m)=> m.date>mx?m.date:mx, r.matches[0].date); });
   const hiddenRounds = document.createElement('div'); hiddenRounds.hidden = true; hiddenRounds.id = 'hiddenRounds';
   FIXTURES_IN.forEach((r,ri)=>{
-    const d = document.createElement('div'); d.className='round';
+    const d = document.createElement('div'); d.className='round'; d.dataset.round = r.round;
     // Runde 12 ble flyttet fra juli til oktober og havner derfor mellom runde
     // 24 og 25 i kronologisk rekkefølge — merkes tydelig så det ikke ser ut
     // som en feil for de som ikke vet det ble utsatt.
@@ -3570,7 +3875,7 @@ async function boot(){
         return;
       }
       const id = `m${r.round}_${mi}`;
-      matches.push({id, round:r.round, date:m.date, home:m.home, away:m.away, hg:null, ag:null});
+      matches.push({id, round:r.round, date:m.date, time:m.time||'', home:m.home, away:m.away, hg:null, ag:null});
       const row = document.createElement('div'); row.className='match'; row.dataset.id=id;
       row.dataset.home=m.home; row.dataset.away=m.away;
       row.innerHTML = `
@@ -3601,6 +3906,8 @@ async function boot(){
   const hadScenario = /s=/.test(location.hash);
   await applyScenario();
   if(!hadScenario) await updateAutoFill();
+  // Rundevelgeren starter på runden med neste kamp.
+  { const order = roundOrder(); const first = matches[0] && order.indexOf(matches[0].round); roundIdx = first>=0 ? first : 0; updateRoundNav(); }
   render();
 }
 boot();
