@@ -4,6 +4,10 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Eliteserien 2026: tabellkalkulator</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="icon" href="favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
 <script>
 // Kjøres synkront i <head>, før noe rekker å tegnes: leser et eventuelt lagret
 // temavalg og setter data-theme med en gang, slik at siden aldri først blinker
@@ -146,7 +150,8 @@
   :root{--nav-h:56px}
   .topnav{position:sticky;top:0;z-index:30;background:var(--panel);border-bottom:2px solid var(--team-fill);padding-top:env(safe-area-inset-top,0px)}
   .nav-in{max-width:1380px;margin:0 auto;padding:0 24px;height:var(--nav-h);display:flex;align-items:center;gap:20px}
-  .brand{font:800 21px/1 var(--cond);letter-spacing:.02em;color:var(--ink);text-decoration:none;white-space:nowrap}
+  .brand{display:inline-flex;align-items:center;gap:10px;font:800 21px/1 var(--cond);letter-spacing:.02em;color:var(--ink);text-decoration:none;white-space:nowrap}
+  .brand-mark{flex:none;display:block}
   .nav-links{flex:1;min-width:0;display:flex;justify-content:center;gap:2px;overflow-x:auto;scrollbar-width:none}
   .nav-links::-webkit-scrollbar{display:none}
   .nav-links .sm{display:none}
@@ -165,7 +170,8 @@
   }
   @media (max-width:640px){
     .nav-in{padding:0 12px;gap:8px}
-    .brand{display:none}
+    .brand span{display:none} /* mobil: bare ikonet, så lenkene får plass */
+    .brand-mark{width:26px;height:26px}
     .nav-links{justify-content:flex-start}
     .nav-links a{padding:18px 10px 16px;font-size:13.5px}
     .nav-links .lg{display:none}
@@ -628,7 +634,7 @@
 
 <nav class="topnav" aria-label="Hovedmeny">
   <div class="nav-in">
-    <a class="brand" href="#tabell">Tabellkalkulator</a>
+    <a class="brand" href="#tabell" aria-label="Tabellkalkulator"><svg class="brand-mark" viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><rect x=".5" y=".5" width="15" height="15" rx="3.5" fill="#13305f" stroke="#4f7fc4" stroke-opacity=".6"/><rect x="3" y="4" width="10" height="2" rx="1" fill="#34d399"/><rect x="3" y="7" width="7" height="2" rx="1" fill="#e8f0fc"/><rect x="3" y="10" width="5" height="2" rx="1" fill="#e8f0fc"/></svg><span>Tabellkalkulator</span></a>
     <div class="nav-links" id="navLinks">
       <a href="#tabell" data-target="tabell" class="active">Tabell</a>
       <a href="#kamper" data-target="kamper">Kamper</a>
