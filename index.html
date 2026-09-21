@@ -2516,11 +2516,22 @@ function qaFieldInWay(team, zone){
   const refLabel = outside
     ? (zone.dir==='front' ? (QA_ORD[b]||`${b}. plass`) : 'trygg plass')
     : (zone.dir==='front' ? (QA_ORD[b+1]||`${b+1}. plass`) : `${b+1}. plass`);
-  return {outside, names:inBand.map(x=>x.name), nearest:nearest.name, nearestPts:nearest.pts,
+  // Til visning: maks tre, de nærmest laget i tabellen (utenfor: de rett
+  // foran; innenfor: de rett bak), vist i tabellrekkefølge.
+  const names = inBand.map(x=>x.name);
+  const shown = outside ? names.slice(-3) : names.slice(0,3);
+  return {outside, names, shown, more:names.length-shown.length, nearest:nearest.name, nearestPts:nearest.pts,
     margin: refRow ? Math.abs(outside ? refRow.pts-myPts : myPts-refRow.pts) : null, refLabel};
 }
 const fmtForm = v => v.toFixed(1).replace('.',',');
 function joinNames(a){ return a.length<2 ? a.join('') : a.slice(0,-1).join(', ')+' og '+a[a.length-1]; }
+// Maks tre navn, resten som "og fire andre". Navnene skal komme i den
+// rekkefølgen de nærmeste står i (se qaFieldInWay: nærmest laget først).
+const QA_NUM = ['null','én','to','tre','fire','fem','seks','sju','åtte','ni','ti','elleve','tolv','tretten','fjorten'];
+function listNames(shown, more){
+  if(!more) return joinNames(shown);
+  return `${shown.join(', ')} og ${QA_NUM[more]||more} ${more===1?'annen':'andre'}`;
+}
 
 // ---- Spørsmål 1: hvorfor har laget X % sjanse for det som er mest
 // aktuelt? Tre deler, alle bygget mot NÆRMESTE KONKURRENT der én finnes
@@ -2547,7 +2558,7 @@ async function qaWhy(team){
   if(field){
     const m = field.margin;
     const mTxt = m===0 ? `på samme poeng som ${field.refLabel}` : `${m} poeng ${field.outside?'bak':'foran'} ${field.refLabel}`;
-    part1 = `${team} ligger ${mTxt}, med ${joinNames(field.names)} ${field.outside?'foran seg':'som jager'}.`;
+    part1 = `${team} ligger ${mTxt}, med ${listNames(field.shown, field.more)} ${field.outside?'foran seg':'som jager'}.`;
   } else if(rival){
     part1 = row.pts===rivalRow.pts
       ? `${team} og ${rival.t} står likt på ${row.pts} poeng, med ${row.left} kamper igjen.`
@@ -2623,18 +2634,18 @@ async function qaHowTo(team){
   if(data.successCount===0){
     return `Ingen av de ${data.N} simulerte sesongene endte med at ${team} klarte å ${QA_REACH_PHRASE[zone.key]}, så et typisk mønster finnes ikke å vise.`;
   }
-  const others = TEAMS.filter(t=>t!==team);
-  const counter = zone.dir==='front' ? data.favorAheadCount : data.coStruggleCount;
-  const rival = others.map(t=>({t, c:counter[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
+  // Samme konkurrentvalg som spørsmål 1: nærmest i poeng blant lagene med
+  // reell sjanse for sonen (5 til 95 %), se qaFieldInWay()/qaFindRival().
+  const field = qaFieldInWay(team, zone);
+  const rivalName = field ? field.nearest : (qaFindRival(team, zone)||{}).t;
   // Snitt av lagets faktiske poeng (seier 3, uavgjort 1) i de gjenstående
   // kampene, summert per simulering -- IKKE regnet om fra antall seire.
   const avgPts = Math.round(data.successPtsSumT/data.successCount);
   const maxPts = 3 * buildQaOpen().open.filter(o=>o[0]===TI[team]||o[1]===TI[team]).length;
-  let rivalTxt = '';
-  if(rival && rival.c>0){
-    const avgRivalLoss = (data.successLossSum[TI[rival.t]]/data.successCount).toFixed(1);
-    rivalTxt = ` ${rival.t} taper i snitt ${avgRivalLoss} kamper i de samme simuleringene.`;
-  }
+  // Snittet er fra sesongene der laget LYKTES, ikke et krav: laget kan berge
+  // plassen med mindre og ryke med mer. Formuleres derfor som "typisk", og
+  // avhengigheten av hovedkonkurrenten nevnes uten tall.
+  const rivalTxt = rivalName ? `, men det avhenger også av hva ${rivalName} gjør` : '';
   // Terskel: laveste sluttpoengsum der laget klarer målet i over halvparten
   // av simuleringene som endte på akkurat den poengsummen (minst 10 slike, så
   // enkeltutslag i halen ikke avgjør).
@@ -2643,7 +2654,8 @@ async function qaHowTo(team){
     if(data.totalAtPts[p]>=10 && data.successAtPts[p]/data.totalAtPts[p]>0.5){ threshold=p; break; }
   }
   const thrTxt = threshold==null ? '' : ` Som tommelfingerregel trengs omtrent ${threshold} poeng totalt: fra den poengsummen er det mer sannsynlig enn ikke at laget ${zone.dir==='front'?`når ${zone.label}`:`unngår ${zone.label}`}.`;
-  return `I de ${pctTxt(data.successCount/data.N)} av simuleringene der ${team} klarer å ${QA_REACH_PHRASE[zone.key]}, tar de i snitt ${avgPts} av ${maxPts} mulige poeng i de gjenstående kampene.${rivalTxt}${thrTxt}`;
+  return `Typisk holder det med rundt ${avgPts} av ${maxPts} mulige poeng. `+
+    `I de ${pctTxt(data.successCount/data.N)} av sesongene der ${team} klarer å ${QA_REACH_PHRASE[zone.key]}, tar de i snitt så mye${rivalTxt}.${thrTxt}`;
 }
 
 // ---- Spørsmål 3: hvilke kamper betyr mest? Se buildMatchImpactCandidates()
