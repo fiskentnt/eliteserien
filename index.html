@@ -212,7 +212,7 @@
   /* Layout */
   .wrap{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(360px,1fr);gap:20px;padding:16px 24px 48px;max-width:1380px;margin:0 auto;align-items:start}
   @media (max-width:1180px){.wrap{grid-template-columns:1fr}}
-  .rightcol{display:flex;flex-direction:column;gap:20px;min-width:0}
+  .rightcol,.leftcol{display:flex;flex-direction:column;gap:20px;min-width:0}
   /* "Siste runde": samme radstil som spilte kamper i kamplisten (.match.played),
      se renderLastRound() -- bare selve panelet/overskriften er egen her. */
   .recent .round{margin-top:0}
@@ -226,7 +226,7 @@
      bunnen (med forklaringen) er synlig og låses først da. Ingen effekt på
      mobil, og ingen effekt i det hele tatt når kamplisten er kortere enn
      tabellen (styrt av .panel-follow-klassen fra JS, ikke her). */
-  @media (min-width:1181px){.wrap > .panel:first-child.panel-follow{position:sticky}}
+  @media (min-width:1181px){.wrap > .leftcol.panel-follow{position:sticky}}
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .panel > h2{font:700 22px/1 var(--cond);margin:0;padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
   .panel > h2 .count{font:500 14px var(--body);color:var(--muted)}
@@ -393,11 +393,14 @@
   /* "Spør om tabellen": knappene ligner .tools sine, men egne (ikke delt)
      siden .active her betyr "sist stilte spørsmål", en annen betydning enn
      .tools sin .on/.on-other (aktivt scenario). */
-  .qa-buttons{display:flex;flex-wrap:wrap;gap:8px}
-  .qa-buttons button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;font-weight:600;font-size:13.5px;cursor:pointer;text-align:left;line-height:1.3}
-  .qa-buttons button:hover{border-color:var(--ink)}
-  .qa-buttons button.active{background:var(--strong-bg);border-color:var(--strong-bg);color:var(--strong-fg)}
-  .qa-answer{margin-top:14px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink)}
+  .qa-list{display:flex;flex-direction:column;padding:0 16px 16px}
+  .qa-item{border-top:1px solid var(--line-soft)}
+  .qa-item:first-child{border-top:none}
+  .qa-item > button{display:block;width:100%;border:none;background:none;color:var(--ink);padding:10px 0;font:600 14px/1.35 var(--body);text-align:left;cursor:pointer}
+  .qa-item > button::before{content:"▸";display:inline-block;width:1.1em;color:var(--muted)}
+  .qa-item > button:hover{text-decoration:underline}
+  .qa-item.active > button::before{content:"▾"}
+  .qa-answer{margin:0 0 12px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
   .qa-answer.loading{color:var(--muted);display:flex;align-items:center;gap:9px}
   .qa-spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--muted);animation:qa-spin .7s linear infinite;flex:none}
   @keyframes qa-spin{to{transform:rotate(360deg)}}
@@ -492,6 +495,7 @@
 </div>
 
 <div class="wrap">
+  <div class="leftcol">
   <section class="panel">
     <h2>Tabell <span class="count" id="tblInfo"></span></h2>
     <p class="scenario-line" id="scenarioLine" hidden></p>
@@ -519,6 +523,12 @@
     <button class="qa-jump-link" id="qaJumpLink">Spør om tabellen ↓</button>
   </section>
 
+    <section class="panel qa" aria-label="Spør om tabellen">
+      <h2>Spør om tabellen</h2>
+      <div class="qa-list" id="qaButtons"></div>
+    </section>
+  </div>
+
   <div class="rightcol">
     <section class="panel recent" aria-label="Siste runde">
       <h2>Siste runde <span class="count" id="lastRoundInfo"></span></h2>
@@ -536,11 +546,7 @@
   </div>
 </div>
 
-<section class="panel qa" aria-label="Spør om tabellen">
-  <h2>Spør om tabellen</h2>
-  <div class="qa-buttons" id="qaButtons"></div>
-  <div class="qa-answer" id="qaAnswer" hidden></div>
-</section>
+
 
 <details class="howitworks">
   <summary>Slik fungerer det</summary>
@@ -937,7 +943,7 @@ function updateFollowedMatchRows(){
 // mobil. Navngivningen unngår bevisst "sticky"/"fixed"/"float"/"pin" (se
 // CSS-kommentaren over @media-regelen).
 function updateFollowFit(){
-  const panel = document.querySelector('.wrap > .panel:first-child');
+  const panel = document.querySelector('.wrap > .leftcol');
   const sibling = document.querySelector('.wrap > .rightcol');
   if(!panel || !sibling) return;
   if(window.innerWidth < 1181 || sibling.offsetHeight < panel.offsetHeight){
@@ -955,7 +961,7 @@ window.addEventListener('resize', updateFollowFit);
 // statiske markup-et (bare innholdet fylles av JS), så vi kan observere dem
 // med en gang.
 const _followObserver = new ResizeObserver(()=>updateFollowFit());
-document.querySelectorAll('.wrap > .panel, .wrap > .rightcol').forEach(p=>_followObserver.observe(p));
+document.querySelectorAll('.wrap > .leftcol, .wrap > .rightcol').forEach(p=>_followObserver.observe(p));
 
 // Form-kolonnen: klikk på header sorterer tabellen etter Form (bytter
 // retning, tredje klikk går tilbake til standings-rekkefølge). Klikk på et
@@ -1595,18 +1601,19 @@ function zoneDecided(worst, best, zone){
 }
 function runInsights(d){
   var mu=d.mu, H=d.H, k=d.k, P0=d.P0, G0=d.G0, F0=d.F0, open=d.open, N=d.N, runId=d.runId, oddsOverride=d.oddsOverride;
-  var ti=d.ti, zone=d.zone, checkpoints=d.checkpoints;
+  var ti=d.ti, zone=d.zone, checkpoints=d.checkpoints, rivalIdx=d.rivalIdx;
   var n = P0.length;
   var rnd = mulberry32(d.seed);
   var P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
   var attS=new Float64Array(n), conS=new Float64Array(n), haS=new Float64Array(n), hcS=new Float64Array(n);
   var ord=[]; for(var i2=0;i2<n;i2++) ord.push(i2);
 
-  var sumFinalPts=0, sumBoundaryPts=0;
+  var sumFinalPts=0, sumBoundaryPts=0, sumRivalFinalPts=0;
   var favorAheadCount=new Float64Array(n), coStruggleCount=new Float64Array(n);
   var aheadOfT=new Float64Array(n), behindT=new Float64Array(n);
   var successCount=0, successWinSumT=0;
   var successLossSum=new Float64Array(n);
+  var totalAtPts=new Float64Array(200), successAtPts=new Float64Array(200);
   var decidedHist={};
   var lossThis=new Float64Array(n);
 
@@ -1654,6 +1661,7 @@ function runInsights(d){
     var posOfT = ord.indexOf(ti); // 0-indeksert
     sumFinalPts += P[ti];
     sumBoundaryPts += P[ord[zone.boundary-1]];
+    if(rivalIdx!=null) sumRivalFinalPts += P[rivalIdx];
 
     var tInTarget = (posOfT+1)>=zone.lo && (posOfT+1)<=zone.hi;
     for(var i4=0;i4<n;i4++){
@@ -1671,6 +1679,9 @@ function runInsights(d){
     // "Suksess" = laget når det som er målet: i sonen selv for gull/Europa,
     // eller INNENFOR trygghetsgrensa (unngår sonen) for kvalik/nedrykk.
     var success = zone.dir==='front' ? tInTarget : (posOfT+1)<=zone.boundary;
+    var pi = Math.min(199, P[ti]);
+    totalAtPts[pi]++;
+    if(success) successAtPts[pi]++;
     if(success){
       successCount++;
       successWinSumT += winsT;
@@ -1679,11 +1690,12 @@ function runInsights(d){
   }
 
   postMessage({runId:runId, mode:'insights', N:N,
-    avgFinalPts: sumFinalPts/N, avgBoundaryPts: sumBoundaryPts/N,
+    avgFinalPts: sumFinalPts/N, avgBoundaryPts: sumBoundaryPts/N, avgRivalFinalPts: rivalIdx!=null?sumRivalFinalPts/N:null,
     favorAheadCount: Array.from(favorAheadCount), coStruggleCount: Array.from(coStruggleCount),
     aheadOfT: Array.from(aheadOfT), behindT: Array.from(behindT),
     successCount: successCount, successWinSumT: successWinSumT, successLossSum: Array.from(successLossSum),
-    decidedHist: decidedHist
+    decidedHist: decidedHist,
+    totalAtPts: Array.from(totalAtPts), successAtPts: Array.from(successAtPts)
   });
 }
 
@@ -1700,9 +1712,17 @@ function runMatchImpact(d){
   var results = d.candidates.map(function(c){
     var homeProb = simulateZoneProb(d, c.idx, c.homeScore, c.seed);
     var awayProb = simulateZoneProb(d, c.idx, c.awayScore, c.seed);
-    return {idx:c.idx, homeProb:homeProb, awayProb:awayProb, diff:Math.abs(homeProb-awayProb)};
+    // drawScore er valgfri -- bare spørsmål 5 (ett resultat om gangen, alle
+    // tre utfall) trenger den; spørsmål 3 (mange kandidatkamper, bare
+    // seier/tap-forskjellen) lar den stå tom for å spare en tredje kjøring.
+    var drawProb = c.drawScore ? simulateZoneProb(d, c.idx, c.drawScore, c.seed) : null;
+    return {idx:c.idx, homeProb:homeProb, drawProb:drawProb, awayProb:awayProb, diff:Math.abs(homeProb-awayProb)};
   });
-  postMessage({runId:d.runId, mode:'matchImpact', results:results});
+  // Utgangspunktet uten låst kamp, samme frø som første kandidat (så
+  // differansene mot seier/uavgjort/tap ikke drukner i simuleringsstøy).
+  // Bare spørsmål 5 ber om den.
+  var baselineProb = d.wantBaseline ? simulateZoneProb(d, -1, null, d.candidates[0].seed) : null;
+  postMessage({runId:d.runId, mode:'matchImpact', results:results, baselineProb:baselineProb});
 }
 function simulateZoneProb(d, forcedIdx, forcedScore, seed){
   var n=d.P0.length, k=d.k, zone=d.zone, ti=d.ti;
@@ -2020,6 +2040,14 @@ function forcedScoreline(home,away,homeWins){
   }
   return [hg,ag];
 }
+// Samme idé som forcedScoreline, men for uavgjort (spørsmål 5, "hva skjer
+// hvis <lag> vinner/uavgjør/taper neste kamp") -- modellens forventede
+// målnivå, avrundet til samme tall begge veier.
+function forcedDrawScoreline(home,away){
+  const [hg,ag]=predict(home,away);
+  const g=Math.round((hg+ag)/2);
+  return [g,g];
+}
 document.getElementById('followLose').onclick=async ()=>{ matches.filter(isFollowedMatch).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home!==SELECTED_TEAM); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
 document.getElementById('followWin').onclick=async ()=>{ matches.filter(isFollowedMatch).forEach(m=>{ const [hg,ag]=forcedScoreline(m.home,m.away,m.home===SELECTED_TEAM); setMatch(m,hg,ag); }); await simulateEmpty(); render(); };
 document.getElementById('simRest').onclick=async ()=>{ await simulateEmpty(); render(); };
@@ -2267,17 +2295,35 @@ function qaToughestRunIn(){
     `Tallet er motstandernes gjennomsnittlige vinnersjanse i de gjenstående kampene, ut fra dagens lagstyrker.`;
 }
 
-// ---- Spørsmål 5: neste kamp -- ingen simulering, samme H/U/B-modell
-// (blandet med odds der de finnes) som resten av siden bruker per kamp. ----
-function qaNextMatch(team){
-  const next = matches.filter(m=>isEmpty(m) && (m.home===team||m.away===team)).sort((a,b)=>a.date.localeCompare(b.date))[0];
+// ---- Spørsmål 5: IKKE kampens egen H/U/B (den står allerede i kamplisten,
+// via rateFor()/fillProb() -- å bare gjenta den her svarer ikke på
+// spørsmålet). Det som faktisk spørres om er hva hvert av de tre utfallene
+// betyr for SESONGEN: låser neste kamp til seier/uavgjort/tap (samme
+// mekanikk som spørsmål 3, simulateZoneProb via runMatchImpactAsync -- bare
+// for de tre utfallene i ÉN kamp, ikke seier/tap i flere kandidatkamper) og
+// måler lagets sjanse for det som er mest aktuelt (samme sone som spørsmål
+// 1) under hvert. Kampens egne sannsynligheter nevnes bare som bisetning.
+async function qaNextMatch(team){
+  const zone = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team);
+  if(!zone) return 'Ingen data å regne på ennå.';
+  const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
+  const next = openMatches.filter(m=>m.home===team||m.away===team).sort((a,b)=>a.date.localeCompare(b.date))[0];
   if(!next) return `${team} har ingen gjenstående kamper i dette scenariet.`;
-  const [lh,la] = rateFor(next.home, next.away), o = outcome(lh,la);
+  const idx = openMatches.indexOf(next);
   const isHome = next.home===team;
-  const win = isHome?o.H:o.B, draw=o.U, lose = isHome?o.B:o.H;
   const opp = isHome?next.away:next.home;
-  return `${team} mot ${opp} (${formatDateNo(next.date)}, ${isHome?'hjemme':'borte'}): `+
-    `seier ${pctTxt(win)}, uavgjort ${pctTxt(draw)}, tap ${pctTxt(lose)}.`;
+
+  const data = await runMatchImpactAsync(team, zone, [{idx, match:next, needsDraw:true}], scenarioKey, {P0,G0,F0,open,oddsOverride,N:1000,wantBaseline:true});
+  const r = data.results[0], before = data.baselineProb;
+  const winProb = isHome ? r.homeProb : r.awayProb;
+  const loseProb = isHome ? r.awayProb : r.homeProb;
+  // Endring i prosentpoeng fra utgangspunktet, med fortegn (minus-tegnet er ekte "−").
+  const pp = v => { const d=Math.round((v-before)*100); return d===0 ? '±0' : (d>0?'+':'−')+Math.abs(d); };
+
+  return `${team} møter ${opp} ${isHome?'hjemme':'borte'} ${formatDateNo(next.date)}. `+
+    `Sjansen for ${zone.label} er ${pctTxt(before)} nå. `+
+    `Vinner ${team}, går den til ${pctTxt(winProb)} (${pp(winProb)} prosentpoeng). `+
+    `Uavgjort gir ${pctTxt(r.drawProb)} (${pp(r.drawProb)}), og tap ${pctTxt(loseProb)} (${pp(loseProb)}).`;
 }
 
 // ---- Spørsmål 8: hell/uhell -- ingen simulering. Sammenligner FAKTISKE
@@ -2305,7 +2351,7 @@ function qaLuck(){
   const lucky=rows.slice(0,3), unlucky=rows.slice(-3).reverse();
   const fmt = r => `${r.team} (${r.diff>=0?'+':''}${r.diff.toFixed(1)})`;
   return `Heldigst: ${lucky.map(fmt).join(', ')}. Uheldigst: ${unlucky.map(fmt).join(', ')}. `+
-    `Tallet er faktiske poeng i spilte kamper minus forventet poengsum fra modellen.`;
+    `Tallet er faktiske poeng i spilte kamper minus forventet poengsum fra modellen. Modellen er tilpasset på de samme kampene, så avvikene er et forsiktig anslag.`;
 }
 
 // ---- Spørsmål 1, 2, 3, 6, 7: krever simulering, kjøres i Workeren (se
@@ -2352,7 +2398,7 @@ function buildCheckpoints(open){
   return checkpoints;
 }
 const QA_N_INSIGHTS = 1500, QA_N_IMPACT = 400;
-function runInsightsAsync(team, zone){
+function runInsightsAsync(team, zone, rivalName){
   const {P0,G0,F0,open,oddsOverride,scenarioKey} = buildQaOpen();
   const checkpoints = buildCheckpoints(open);
   insightsRunId++;
@@ -2364,7 +2410,7 @@ function runInsightsAsync(team, zone){
       mu:MODEL.mu, H:MODEL.H, k:FORM_K,
       att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
       P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride, N:QA_N_INSIGHTS,
-      ti:TI[team], zone, checkpoints
+      ti:TI[team], zone, checkpoints, rivalIdx: rivalName!=null ? TI[rivalName] : null
     });
   });
 }
@@ -2387,6 +2433,7 @@ function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base){
     idx:c.idx,
     homeScore: forcedScoreline(c.match.home, c.match.away, true),
     awayScore: forcedScoreline(c.match.home, c.match.away, false),
+    drawScore: c.needsDraw ? forcedDrawScoreline(c.match.home, c.match.away) : null,
     seed: hashStr(scenarioKey+'|'+c.match.id)
   }));
   matchImpactRunId++;
@@ -2398,32 +2445,89 @@ function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base){
       mu:MODEL.mu, H:MODEL.H, k:FORM_K,
       att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
       P0:Array.from(base.P0), G0:Array.from(base.G0), F0:Array.from(base.F0), open:base.open,
-      oddsOverride:base.oddsOverride, N:QA_N_IMPACT,
+      oddsOverride:base.oddsOverride, N:base.N||QA_N_IMPACT, wantBaseline:!!base.wantBaseline,
       ti:TI[team], zone, candidates
     });
   });
 }
 
+// Nærmeste konkurrent om AKKURAT samme sone: laget (utenom selv) med høyest
+// EGEN sjanse for den sonen (fra den vanlige tabell-simuleringen, lastMC,
+// via qaZoneByKey) -- egne, uavhengige tall for konkurrenten (egen sjanse,
+// egen poengsnitt via rivalIdx i runInsights), IKKE en betinget telling fra
+// spørsmål 1 sin egen simulering ("hvor ofte konkurrenten tar plassen NÅR
+// laget selv feiler" ga et tall som så ubetydelig ut, f.eks. 21 %, selv når
+// konkurrenten vinner nesten HVER gang laget selv ikke gjør det -- se
+// navnediskusjonen).
+function qaFindRival(team, zone){
+  const others = TEAMS.filter(t=>t!==team);
+  const withPct = others.map(t=>{
+    const z = qaZoneByKey(t, zone.key);
+    return {t, pct: z ? z.pct : 0};
+  }).filter(x=>x.pct>0.01);
+  withPct.sort((a,b)=>b.pct-a.pct);
+  return withPct[0] || null;
+}
 // ---- Spørsmål 1: hvorfor har laget X % sjanse for det som er mest
-// aktuelt? favorAheadCount/coStruggleCount er begge bare talt opp i
-// simuleringer der LAGET SELV ikke når målet (se runInsights) -- å dele på
-// N (ikke på antall mislykkede sesonger) gir "andel av ALLE simuleringer",
-// samme tolkning som eksempelet i oppgaven ("ligger foran i 8 av 10").
+// aktuelt? Tre deler, alle bygget mot NÆRMESTE KONKURRENT der én finnes
+// (ellers mot ligasnittet/egne tall): 1) nåværende stilling (ekte tabell,
+// ikke en simulert snittsum -- unngår at en sammenligning blir sirkulær for
+// et lag som selv pleier å vinne). 2) hvorfor modellen tror det den tror --
+// Form mot konkurrenten, med retning og størrelse på forskjellen. 3) det
+// simulerte utfallet -- egne poeng mot konkurrentens, og den faktiske
+// sjansen (samme tall som knappeteksten), ikke en betinget telling.
 async function qaWhy(team){
   const zone = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
-  const data = await runInsightsAsync(team, zone);
-  const others = TEAMS.filter(t=>t!==team);
-  const counter = zone.dir==='front' ? data.favorAheadCount : data.coStruggleCount;
-  const top = others.map(t=>({t, c:counter[TI[t]]})).sort((a,b)=>b.c-a.c).filter(x=>x.c>0).slice(0,2);
-  const positionLabel = zone.dir==='front' ? `${zone.hi}. plass` : '13. plass (trygg)';
-  let extra = '';
-  if(top.length){
-    const names = top.map(x=>`${x.t} (${pctTxt(x.c/data.N)})`).join(' og ');
-    extra = zone.dir==='front' ? ` ${names} ligger foran i disse simuleringene.`
-      : ` ${names} kjemper også om trygg plass i disse simuleringene.`;
+  const rival = qaFindRival(team, zone);
+  const data = await runInsightsAsync(team, zone, rival ? rival.t : null);
+  const {rows} = compute();
+  const row = rows.find(r=>r.name===team);
+  const pos = rows.indexOf(row)+1;
+  const liveForm = formScores(Array.from(LIVE.att), Array.from(LIVE.con));
+  const form = liveForm[TI[team]];
+  const rivalRow = rival ? rows.find(r=>r.name===rival.t) : null;
+
+  let part1;
+  if(rival){
+    part1 = row.pts===rivalRow.pts
+      ? `${team} og ${rival.t} står likt på ${row.pts} poeng, med ${row.left} kamper igjen.`
+      : row.pts>rivalRow.pts
+        ? `${team} leder ${rival.t} ${row.pts}-${rivalRow.pts} i poeng, med ${row.left} kamper igjen.`
+        : `${team} ligger bak ${rival.t} ${row.pts}-${rivalRow.pts} i poeng, med ${row.left} kamper igjen.`;
+  } else {
+    part1 = `${team} ligger på ${pos}. plass med ${row.pts} poeng, ${row.left} kamper igjen.`;
   }
-  return `${team} ender i snitt på ${Math.round(data.avgFinalPts)} poeng. ${positionLabel} krever normalt ${Math.round(data.avgBoundaryPts)}.${extra}`;
+
+  let part2;
+  if(rival){
+    const rivalForm = liveForm[TI[rival.t]];
+    const diff = form - rivalForm;
+    if(Math.abs(diff)<0.3){
+      part2 = `Modellen ser dem som like sterke om dagen (form ${form.toFixed(1)} mot ${rivalForm.toFixed(1)}).`;
+    } else {
+      const better = diff>0 ? team : rival.t;
+      const edge = Math.abs(diff)>=1.5 ? 'et klart overtak' : 'et lite overtak';
+      part2 = `Modellen gir ${better} ${edge}, fordi de har spilt bedre den siste tiden (form ${form.toFixed(1)} mot ${rivalForm.toFixed(1)}).`;
+    }
+  } else {
+    const diff = form - 5.0;
+    const strengthTxt = diff>=1.0 ? `klart sterkere enn et gjennomsnittslag`
+      : diff>=0.3 ? `over snittet`
+      : diff<=-1.0 ? `klart svakere enn et gjennomsnittslag`
+      : diff<=-0.3 ? `under snittet`
+      : `om lag som et gjennomsnittslag`;
+    part2 = `Formen er ${form.toFixed(1)} av 10 -- ${strengthTxt}.`;
+  }
+
+  const outcomeTxt = zone.dir==='front'
+    ? `tar ${zone.label}-plassen i ${pctTxt(zone.pct)} av simuleringene`
+    : `havner i ${zone.label} i ${pctTxt(zone.pct)} av simuleringene`;
+  const part3 = rival && data.avgRivalFinalPts!=null
+    ? ` ${team} ender i snitt på ${Math.round(data.avgFinalPts)} poeng mot ${rival.t} sine ${Math.round(data.avgRivalFinalPts)}, og ${outcomeTxt}.`
+    : ` ${team} ender i snitt på ${Math.round(data.avgFinalPts)} poeng, og ${outcomeTxt}.`;
+
+  return `${part1} ${part2}${part3}`;
 }
 
 // ---- Spørsmål 2: hva må laget gjøre for å nå målet? Filtrerer simulerings-
@@ -2446,7 +2550,15 @@ async function qaHowTo(team){
     const avgRivalLoss = (data.successLossSum[TI[rival.t]]/data.successCount).toFixed(1);
     rivalTxt = ` ${rival.t} taper i snitt ${avgRivalLoss} kamper i de samme simuleringene.`;
   }
-  return `I de ${pctTxt(data.successCount/data.N)} av simuleringene der ${team} klarer å ${QA_REACH_PHRASE[zone.key]}, tar de i snitt ${avgWins} seire i de gjenstående kampene.${rivalTxt}`;
+  // Terskel: laveste sluttpoengsum der laget klarer målet i over halvparten
+  // av simuleringene som endte på akkurat den poengsummen (minst 10 slike, så
+  // enkeltutslag i halen ikke avgjør).
+  let threshold = null;
+  for(let p=0;p<data.totalAtPts.length;p++){
+    if(data.totalAtPts[p]>=10 && data.successAtPts[p]/data.totalAtPts[p]>0.5){ threshold=p; break; }
+  }
+  const thrTxt = threshold==null ? '' : ` Som tommelfingerregel trengs omtrent ${threshold} poeng totalt: fra den poengsummen er det mer sannsynlig enn ikke at laget ${zone.dir==='front'?`når ${zone.label}`:`unngår ${zone.label}`}.`;
+  return `I de ${pctTxt(data.successCount/data.N)} av simuleringene der ${team} klarer å ${QA_REACH_PHRASE[zone.key]}, tar de i snitt ${avgWins} seire i de gjenstående kampene.${rivalTxt}${thrTxt}`;
 }
 
 // ---- Spørsmål 3: hvilke kamper betyr mest? Se buildMatchImpactCandidates()
@@ -2464,11 +2576,11 @@ async function qaKeyMatches(team){
   const lines = withMeta.slice(0,3).map(r=>{
     const m=r.match;
     const first = r.homeProb>=r.awayProb
-      ? `${m.home}-seier gir ${pctTxt(r.homeProb)}, ${m.away}-seier gir ${pctTxt(r.awayProb)}`
-      : `${m.away}-seier gir ${pctTxt(r.awayProb)}, ${m.home}-seier gir ${pctTxt(r.homeProb)}`;
-    return `${m.home} mot ${m.away} (${formatDateNo(m.date)}): ${first} sjanse for ${zone.label}.`;
+      ? `hvis ${m.home} vinner, er ${team} sin sjanse for ${zone.label} ${pctTxt(r.homeProb)}, og hvis ${m.away} vinner, ${pctTxt(r.awayProb)}`
+      : `hvis ${m.away} vinner, er ${team} sin sjanse for ${zone.label} ${pctTxt(r.awayProb)}, og hvis ${m.home} vinner, ${pctTxt(r.homeProb)}`;
+    return `${m.home} mot ${m.away} (${formatDateNo(m.date)}): ${first}.`;
   });
-  return lines.join(' ');
+  return lines.join('\n');
 }
 
 // ---- Spørsmål 6: når kan det være avgjort? decidedHist[runde] = antall
@@ -2485,10 +2597,10 @@ async function qaWhenDecided(team){
     cum += data.decidedHist[r];
     if(cum > data.N/2){ answerRound=r; break; }
   }
-  const outcomeTxt = zone.dir==='front' ? `sjansen for ${zone.label} enten er sikret eller helt utelukket`
-    : `${team} enten er trygg, eller ikke lenger kan unngå kvalik/nedrykk`;
+  const outcomeTxt = zone.dir==='front' ? `sjansen for ${zone.label} enten sikret eller helt utelukket`
+    : `${team} enten trygg eller ikke lenger kan unngå kvalik/nedrykk`;
   if(answerRound==null){
-    return `I over halvparten av simuleringene er det fortsatt åpent helt til siste runde -- det avgjøres typisk sent om ${outcomeTxt}.`;
+    return `I over halvparten av simuleringene er det fortsatt uavklart helt til siste runde.`;
   }
   return `Typisk avgjort senest runde ${answerRound}: i ${pctTxt(cum/data.N)} av simuleringene er ${outcomeTxt} da.`;
 }
@@ -2533,14 +2645,18 @@ function renderQaButtons(){
   const box = document.getElementById('qaButtons');
   const team = SELECTED_TEAM;
   const active = QA_QUESTIONS.filter(q => team ? true : !q.needsTeam);
+  // Svaret ligger rett under sitt eget spørsmål. Gjenoppbyggingen beholder
+  // et allerede vist svar (tekst og lastetilstand) for det aktive spørsmålet.
+  const prev = document.getElementById('qaAnswer');
+  const keep = prev && !prev.hidden ? {cls:prev.className, html:prev.innerHTML} : null;
+  // Aktivt spørsmål kan ha blitt utilgjengelig (f.eks. laget ble valgt bort) -- fjern svaret da.
+  if(qaActiveId && !active.some(q=>q.id===qaActiveId)) qaActiveId = null;
   box.innerHTML = active.map(q=>
-    `<button data-id="${q.id}" class="${q.id===qaActiveId?'active':''}">${q.label(team)}</button>`
+    `<div class="qa-item${q.id===qaActiveId?' active':''}"><button data-id="${q.id}">${q.label(team)}</button>`+
+    (q.id===qaActiveId ? `<div class="qa-answer" id="qaAnswer"></div>` : '')+`</div>`
   ).join('');
-  // Aktivt spørsmål kan ha blitt utilgjengelig (f.eks. laget ble valgt bort) -- skjul svaret da.
-  if(qaActiveId && !active.some(q=>q.id===qaActiveId)){
-    qaActiveId = null;
-    document.getElementById('qaAnswer').hidden = true;
-  }
+  const now = document.getElementById('qaAnswer');
+  if(now && keep){ now.className = keep.cls; now.innerHTML = keep.html; }
 }
 // Det mest aktuelle spørsmålet for valgt lag, som en klikkbar linje ved
 // lagvelgeren -- i stedet for en generisk lenke til seksjonen. Samme
@@ -2591,7 +2707,6 @@ async function runQaQuestion(id, keepZoneOverride){
   qaActiveId = id;
   renderQaButtons();
   const answerEl = document.getElementById('qaAnswer');
-  answerEl.hidden = false;
   answerEl.className = 'qa-answer loading';
   answerEl.innerHTML = `<span class="qa-spinner"></span> Regner svaret…`;
   const myRequestId = ++qaRequestSeq;
@@ -2603,8 +2718,12 @@ async function runQaQuestion(id, keepZoneOverride){
     text = 'Klarte ikke regne ut svaret akkurat nå.';
   }
   if(myRequestId !== qaRequestSeq) return; // et nytt spørsmål er stilt i mellomtiden
-  answerEl.className = 'qa-answer';
-  answerEl.textContent = text;
+  // Listen kan være bygd opp på nytt mens svaret regnet (renderQaButtons) --
+  // slå opp svarboksen på nytt i stedet for å bruke den gamle referansen.
+  const doneEl = document.getElementById('qaAnswer');
+  if(!doneEl) return;
+  doneEl.className = 'qa-answer';
+  doneEl.textContent = text;
 }
 document.getElementById('qaButtons').addEventListener('click', e=>{
   const btn = e.target.closest('button'); if(!btn) return;
