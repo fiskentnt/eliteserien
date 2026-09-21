@@ -2662,7 +2662,7 @@ async function qaHowTo(team){
   }
   const thrTxt = threshold==null ? '' : ` Som tommelfingerregel trengs omtrent ${threshold} poeng totalt: fra den poengsummen er det mer sannsynlig enn ikke at laget ${zone.dir==='front'?`når ${zone.label}`:`unngår ${zone.label}`}.`;
   return `Typisk holder det med rundt ${avgPts} av ${maxPts} mulige poeng. `+
-    `I de ${pctTxt(data.successCount/data.N)} av sesongene der ${team} klarer å ${QA_REACH_PHRASE[zone.key]}, tar de i snitt så mye${rivalTxt}.${thrTxt}`;
+    `I de ${pctTxt(data.successCount/data.N)} av de simulerte sesongene der ${team} klarer å ${QA_REACH_PHRASE[zone.key]}, tar de i snitt så mye${rivalTxt}.${thrTxt}`;
 }
 
 // ---- Spørsmål 3: hvilke kamper betyr mest? Se buildMatchImpactCandidates()
