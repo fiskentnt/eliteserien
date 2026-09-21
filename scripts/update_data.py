@@ -26,14 +26,15 @@ import merge_odds
 import fit_model
 
 ROOT = Path(__file__).parent.parent
+LEAGUE = ROOT / "eliteserien"  # ligamappen (data/ ligger under den, så flere ligaer kan komme ved siden av)
 OSLO = ZoneInfo("Europe/Oslo")
 MONTH_ABBR = {1: "jan", 2: "feb", 3: "mar", 4: "apr", 5: "mai", 6: "jun",
               7: "jul", 8: "aug", 9: "sep", 10: "okt", 11: "nov", 12: "des"}
 
-FFK_CACHE_PATH = ROOT / "data" / "ffk_cache.json"
+FFK_CACHE_PATH = LEAGUE / "data" / "ffk_cache.json"
 FFK_MIN_INTERVAL_MIN = 60  # ffksupporter.net skrapes (16 sider) maks én gang i timen
-STATUS_PATH = ROOT / "data" / "status.json"
-AUDIT_STATE_PATH = ROOT / "data" / "audit_state.json"
+STATUS_PATH = LEAGUE / "data" / "status.json"
+AUDIT_STATE_PATH = LEAGUE / "data" / "audit_state.json"
 
 
 class DataAuditError(Exception):
@@ -273,7 +274,7 @@ def main(cache_dir=None):
         log(f"Ferdig: {len(matches_out)} spilte kamper ({from_espn} fra ESPN, resten ffksupporter.net), "
             f"{len(fixtures_out)} runder med gjenstående kamper.")
 
-        data_dir = ROOT / "data"
+        data_dir = LEAGUE / "data"
         data_dir.mkdir(exist_ok=True)
         write_json(data_dir / "matches.json", matches_out)
         write_json(data_dir / "fixtures.json", fixtures_out)

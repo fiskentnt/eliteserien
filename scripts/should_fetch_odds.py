@@ -16,6 +16,7 @@ from datetime import datetime, timezone, timedelta
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
+LEAGUE = ROOT / "eliteserien"  # ligamappen (data/ ligger under den, så flere ligaer kan komme ved siden av)
 
 
 def should_fetch_odds(now=None):
@@ -23,14 +24,14 @@ def should_fetch_odds(now=None):
         return True, "manuelt trigget (workflow_dispatch)"
     now = now or datetime.now(timezone.utc)
 
-    quota_path = ROOT / "data" / "odds_quota.json"
+    quota_path = LEAGUE / "data" / "odds_quota.json"
     if quota_path.exists():
         quota = json.loads(quota_path.read_text(encoding="utf-8"))
         stopped_month = quota.get("stopped_until_month")
         if stopped_month == now.strftime("%Y-%m"):
             return False, f"kvoten ble lav denne måneden ({quota.get('remaining')} igjen {quota.get('checked_at')}), venter til neste måned"
 
-    fixtures_path = ROOT / "data" / "fixtures.json"
+    fixtures_path = LEAGUE / "data" / "fixtures.json"
     if not fixtures_path.exists():
         return True, "data/fixtures.json finnes ikke ennå"
     fixtures = json.loads(fixtures_path.read_text(encoding="utf-8"))

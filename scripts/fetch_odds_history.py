@@ -23,8 +23,9 @@ from oddslib import devig, CANONICAL_TEAMS, UnmappedTeamError
 USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
 CSV_URL = "https://football-data.co.uk/new/NOR.csv"
 ROOT = Path(__file__).parent.parent
-OUT_PATH = ROOT / "data" / "odds_fd.json"
-CAPTURED_PATH = ROOT / "data" / "odds_captured.json"
+LEAGUE = ROOT / "eliteserien"  # ligamappen (data/ ligger under den, så flere ligaer kan komme ved siden av)
+OUT_PATH = LEAGUE / "data" / "odds_fd.json"
+CAPTURED_PATH = LEAGUE / "data" / "odds_captured.json"
 OSLO = ZoneInfo("Europe/Oslo")
 
 

@@ -30,6 +30,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import fit_fast
 
 ROOT = Path(__file__).parent.parent
+LEAGUE = ROOT / "eliteserien"  # ligamappen (data/ ligger under den, så flere ligaer kan komme ved siden av)
 ODDS_WEIGHT = 40.0
 HALF_LIFE_DAYS = 35.0
 L1, L2 = 16.0, 48.0
@@ -38,7 +39,7 @@ WATCH_TEAMS = ["Brann", "Bodø/Glimt"]  # logges før/etter hver tilpasning, til
 
 
 def log_watch_teams(label, log):
-    model_path = ROOT / "data" / "model.json"
+    model_path = LEAGUE / "data" / "model.json"
     if not model_path.exists():
         return
     m = json.loads(model_path.read_text(encoding="utf-8"))
@@ -54,8 +55,8 @@ def main():
     log = lambda s: print(s, file=sys.stderr)
     log_watch_teams("FØR", log)
 
-    matches = json.loads((ROOT / "data" / "matches.json").read_text(encoding="utf-8"))
-    odds_path = ROOT / "data" / "odds.json"
+    matches = json.loads((LEAGUE / "data" / "matches.json").read_text(encoding="utf-8"))
+    odds_path = LEAGUE / "data" / "odds.json"
     odds_by_key = {}
     if odds_path.exists():
         odds_data = json.loads(odds_path.read_text(encoding="utf-8"))["matches"]
@@ -91,7 +92,7 @@ def main():
             "l1": L1, "l2": L2, "n_matches": len(matches), "n_odds_matches": n_odds,
         },
     }
-    (ROOT / "data" / "model.json").write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    (LEAGUE / "data" / "model.json").write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     log("Skrev data/model.json.")
     log_watch_teams("ETTER", log)
 

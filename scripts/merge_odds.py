@@ -7,10 +7,11 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-OUT_PATH = ROOT / "data" / "odds.json"
+LEAGUE = ROOT / "eliteserien"  # ligamappen (data/ ligger under den, så flere ligaer kan komme ved siden av)
+OUT_PATH = LEAGUE / "data" / "odds.json"
 
 def load(name):
-    p = ROOT / "data" / name
+    p = LEAGUE / "data" / name
     return json.loads(p.read_text(encoding="utf-8"))["matches"] if p.exists() else []
 
 def main():

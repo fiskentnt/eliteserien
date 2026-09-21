@@ -10,7 +10,7 @@ on:
     # (UTC+2) — må skyves én time når vintertiden begynner i slutten av
     # oktober. Selve kjøringen er uansett billig å avslutte tidlig — se
     # scripts/should_fetch.py, som avgjør om det faktisk er noe å hente ut
-    # fra data/fixtures.json (en kamp som startet for >105 min siden uten
+    # fra eliteserien/data/fixtures.json (en kamp som startet for >105 min siden uten
     # resultat), ikke faste kampdager her i cronen. Ikke runde klokkeslett
     # (minutt 5/25/45 og 7), som GitHub sin planlegger ofte utsetter/dropper.
     - cron: "5,25,45 10-20 * * *"  # kl 12-22 norsk tid, hvert 20. minutt
@@ -50,14 +50,22 @@ jobs:
         if: steps.gate.outputs.should_fetch == 'true'
         run: python3 scripts/update_data.py
 
+      - name: Lag delingsbilde (toppen av tabellen) og sitemap
+        if: steps.gate.outputs.should_fetch == 'true'
+        continue-on-error: true  # et feilet bilde skal ikke stoppe datoppdateringen
+        run: |
+          python3 scripts/make_og.py --league
+          python3 scripts/make_sitemap.py
+
       - name: Committer og pusher hvis noe endret seg
         if: always() && steps.gate.outputs.should_fetch == 'true'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add data/matches.json data/fixtures.json data/odds_fd.json data/odds.json data/model.json data/status.json
-          [ -f data/ffk_cache.json ] && git add data/ffk_cache.json
-          [ -f data/audit_state.json ] && git add data/audit_state.json
+          git add eliteserien/data/matches.json eliteserien/data/fixtures.json eliteserien/data/odds_fd.json eliteserien/data/odds.json eliteserien/data/model.json eliteserien/data/status.json
+          [ -f eliteserien/data/ffk_cache.json ] && git add eliteserien/data/ffk_cache.json
+          [ -f eliteserien/data/audit_state.json ] && git add eliteserien/data/audit_state.json
+          git add eliteserien/og.png sitemap.xml
           if git diff --cached --quiet; then
             echo "Ingen endringer i kampdata."
           else

@@ -24,6 +24,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 ROOT = Path(__file__).parent.parent
+LEAGUE = ROOT / "eliteserien"  # ligamappen (data/ ligger under den, så flere ligaer kan komme ved siden av)
 OSLO = ZoneInfo("Europe/Oslo")
 
 
@@ -50,7 +51,7 @@ def should_fetch(now=None):
     now = now or datetime.now(timezone.utc)
     oslo_hour = now.astimezone(OSLO).hour
 
-    path = ROOT / "data" / "fixtures.json"
+    path = LEAGUE / "data" / "fixtures.json"
     if not path.exists():
         return True, "data/fixtures.json finnes ikke ennå"
     fixtures = json.loads(path.read_text(encoding="utf-8"))

@@ -24,10 +24,11 @@ USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
 SPORT = "soccer_norway_eliteserien"
 BASE = f"https://api.the-odds-api.com/v4/sports/{SPORT}/odds/"
 ROOT = Path(__file__).parent.parent
-UPCOMING_PATH = ROOT / "data" / "odds_upcoming.json"
-CAPTURED_PATH = ROOT / "data" / "odds_captured.json"
-MATCHES_PATH = ROOT / "data" / "matches.json"
-QUOTA_PATH = ROOT / "data" / "odds_quota.json"
+LEAGUE = ROOT / "eliteserien"  # ligamappen (data/ ligger under den, så flere ligaer kan komme ved siden av)
+UPCOMING_PATH = LEAGUE / "data" / "odds_upcoming.json"
+CAPTURED_PATH = LEAGUE / "data" / "odds_captured.json"
+MATCHES_PATH = LEAGUE / "data" / "matches.json"
+QUOTA_PATH = LEAGUE / "data" / "odds_quota.json"
 QUOTA_FLOOR = 100  # under denne mengden kreditter igjen: stopp til neste måned
 
 
