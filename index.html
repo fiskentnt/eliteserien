@@ -2621,11 +2621,11 @@ async function qaWhy(team){
   }
 
   const outcomeTxt = zone.dir==='front'
-    ? `tar ${zone.label}-plassen i ${pctTxt(zone.pct)} av simuleringene`
-    : `havner i ${zone.label} i ${pctTxt(zone.pct)} av simuleringene`;
+    ? `tar ${zone.label}-plassen i ${pctTxt(zone.pct)} av dem`
+    : `havner i ${zone.label} i ${pctTxt(zone.pct)} av dem`;
   const part3 = rival && data.avgRivalFinalPts!=null
-    ? ` ${team} ender i snitt på ${Math.round(data.avgFinalPts)} poeng mot ${rival.t} sine ${Math.round(data.avgRivalFinalPts)}, og ${outcomeTxt}.`
-    : ` ${team} ender i snitt på ${Math.round(data.avgFinalPts)} poeng, og ${outcomeTxt}.`;
+    ? ` I simuleringene ender ${team} i snitt på ${Math.round(data.avgFinalPts)} poeng mot ${rival.t} sine ${Math.round(data.avgRivalFinalPts)}, og ${outcomeTxt}.`
+    : ` I simuleringene ender ${team} i snitt på ${Math.round(data.avgFinalPts)} poeng, og ${outcomeTxt}.`;
 
   return `${part1} ${part2}${part3}`;
 }
