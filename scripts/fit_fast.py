@@ -7,7 +7,10 @@ import numpy as np
 from scipy.optimize import minimize
 from scipy.special import gammaln
 
-GMAX = 12
+# Samme grense overalt (index.html sin hovedtråd og Worker brukte 10 -- en
+# reell inkonsistens siden tilpasningen her summerte til 12; med lambda opp
+# til 6 er halen forbi 10 ikke helt ubetydelig). 15 gir god margin alle steder.
+GMAX = 15
 _K = np.arange(GMAX+1)
 _LOGFACT = gammaln(_K+1)
 _HGRID, _AGRID = np.meshgrid(_K, _K, indexing='ij')  # h varierer over rader, a over kolonner

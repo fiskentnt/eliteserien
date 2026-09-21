@@ -37,7 +37,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import fit_fast
 from oddslib import devig
 
-GMAX = 10
+GMAX = 15  # samme grense som fit_fast.py og index.html
 
 
 def load_seasons(csv_path, league, name_map=None):

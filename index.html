@@ -365,6 +365,17 @@
   .rounds{padding:0 16px 16px}
   .showAll{display:block;margin:4px 16px 16px;width:calc(100% - 32px);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:10px;font-weight:600;font-size:14px}
   .showAll:hover{border-color:var(--ink)}
+  /* "Spør om tabellen": knappene ligner .tools sine, men egne (ikke delt)
+     siden .active her betyr "sist stilte spørsmål", en annen betydning enn
+     .tools sin .on/.on-other (aktivt scenario). */
+  .qa-buttons{display:flex;flex-wrap:wrap;gap:8px}
+  .qa-buttons button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;font-weight:600;font-size:13.5px;cursor:pointer;text-align:left;line-height:1.3}
+  .qa-buttons button:hover{border-color:var(--ink)}
+  .qa-buttons button.active{background:var(--strong-bg);border-color:var(--strong-bg);color:var(--strong-fg)}
+  .qa-answer{margin-top:14px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink)}
+  .qa-answer.loading{color:var(--muted);display:flex;align-items:center;gap:9px}
+  .qa-spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--muted);animation:qa-spin .7s linear infinite;flex:none}
+  @keyframes qa-spin{to{transform:rotate(360deg)}}
   /* Over 1181px (samme grense som gjør tabellen sticky, se .panel-follow)
      vises alle rundene med en gang — tabellen ved siden av gjør lengden
      ufarlig der. Under grensen (og på mobil) holdes "Vis alle runder" som
@@ -449,7 +460,7 @@
 <div class="tools">
   <button id="followWin"></button>
   <button id="followLose"></button>
-  <button id="simRest" title="Fyller alle tomme kamper med én typisk sesong">Simuler tomme kamper</button>
+  <button id="simRest" title="Fyller alle tomme kamper med ett plausibelt scenario">Simuler tomme kamper</button>
   <button class="reset" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
   <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
 </div>
@@ -497,6 +508,12 @@
     </section>
   </div>
 </div>
+
+<section class="panel qa" aria-label="Spør om tabellen">
+  <h2>Spør om tabellen</h2>
+  <div class="qa-buttons" id="qaButtons"></div>
+  <div class="qa-answer" id="qaAnswer" hidden></div>
+</section>
 
 <details class="howitworks">
   <summary>Slik fungerer det</summary>
@@ -636,23 +653,35 @@ const RATES = {};
 // målt direkte per kamp (ikke glattet) mot 14 sesonger historiske odds
 // (NOR.csv 2012-2026, 7054 lag-kamp-observasjoner, 95% KI [0,0100, 0,0209]).
 const FORM_K = 0.015;
-// Rekke-forsterkning: k=0,015 er kalibrert mot GJENNOMSNITTLIG enkeltkamp-
-// reaksjon, men undersøkelse mot NOR.csv 2012-2026 (77 fullstendige rekker på
-// fem eller flere strake seire/tap, alle Eliteserien-sesonger) viste at
-// markedets lagstyrke flytter seg 2,77 ganger så mye over en slik rekke som
-// k=0,015 gir (2,16x for taperekker, 3,45x for vinnerrekker) — Brann kunne
-// tape ti strake med klar margin og knapt bevege seg. En flat høyere k retter
-// opp rekker, men gjør enkeltkamper verre (rullerende log-loss +0,0056 ved
-// k*2,5); en rampe som bare forsterker PÅFØLGENDE resultater i samme retning
-// treffer rekke-målet uten den kostnaden. Bonus 0,60 per ekstra steg (tak 5)
-// er valgt: nær markedets faktiske reaksjon (1,11x av de samme 77 rekkene)
-// og blant de beste på rullerende log-loss (-0,0030) — flat multiplikator er
-// forkastet nettopp fordi den gjør enkeltkamp-treffsikkerheten dårligere.
-// Rampen brukes samme sted i Workeren også (runProb/runTypical), se
-// streakKFor() der — samme regel begge steder, se DRIFT_CAP_* rett under for
-// hvorfor det trengs en grense i tillegg.
+// Rekke-forsterkning: BARE i Form-kolonnen (computeLiveState/teamFormHistory
+// under), IKKE i simuleringen (runProb/runTypical i Workeren, eller
+// spør-om-tabellen sine runInsights/simulateZoneProb) lenger. Ble opprinnelig
+// lagt inn fordi k=0,015 alene ga Brann høyere Form enn Fredrikstad etter ti
+// strake tap -- en rampe som forsterker k for påfølgende like resultater
+// retter opp akkurat DEN saken (Form skal vise hvordan laget spiller NÅ, og
+// en ti-kampers taperekke skal synes), og forbedrer også rullerende
+// enkeltkamp-log-loss (-0,0030). Men en ablasjonstest av hele modellen (10
+// sesonger 2016-2025, tre kuttpunkt per sesong, 480 lag-sesong-datapunkt)
+// viste at rampen IKKE forbedrer selve sluttplassprediksjonen (Brier for
+// gull/topp4 begge svakt dårligere med rampen enn uten, nedrykk uendret) --
+// bedre enkeltkamp-kalibrering ga ikke bedre sesongutfall der. Se
+// scratchpad/ablation_study.py fra undersøkelsen. Formelen er derfor delt:
+// ekte, lest resultater (Form) bruker rampen: kFor() her. Simulerte
+// sesonger (prediksjon) bruker flat FORM_K.
 const STREAK_BONUS = 0.6, STREAK_CAP = 5;
 function kFor(streakLen){ return FORM_K*(1+STREAK_BONUS*(Math.min(streakLen,STREAK_CAP)-1)); }
+// Starttilstand for rekke-sporing: et lags NÅVÆRENDE strake W/L-rekke fra
+// ekte resultater (STATS[t].form, kronologisk), FØR eventuelle scenario-
+// eller sesong-kamper legges til oppå. En uavgjort nullstiller rekken.
+function trailingStreak(formArr){
+  const n=formArr.length;
+  if(n===0) return {len:0, res:null};
+  const last=formArr[n-1];
+  if(last==='D') return {len:0, res:null};
+  let len=1;
+  for(let i=n-2;i>=0 && formArr[i]===last;i--) len++;
+  return {len, res:last};
+}
 // Grense for hvor langt en lagstyrke kan bevege seg fra SESONGSTART (modellens
 // eget anslag) i én simulert sesong, pluss en svak tilbaketrekking mot det
 // samme anslaget hver kamp. Uten dette kan den "varme" oppdateringen (over)
@@ -682,18 +711,6 @@ function applyDrift(arr, base, i, delta, cap){
 // "forventning" som aldri kan være riktig uansett hva som skulle drive
 // lagstyrkene opp seinere.
 const MAX_LAMBDA_LOG = Math.log(6);
-// Starttilstand for rekke-sporing: et lags NÅVÆRENDE strake W/L-rekke fra
-// ekte resultater (STATS[t].form, kronologisk), FØR eventuelle scenario-
-// eller sesong-kamper legges til oppå. En uavgjort nullstiller rekken.
-function trailingStreak(formArr){
-  const n=formArr.length;
-  if(n===0) return {len:0, res:null};
-  const last=formArr[n-1];
-  if(last==='D') return {len:0, res:null};
-  let len=1;
-  for(let i=n-2;i>=0 && formArr[i]===last;i--) len++;
-  return {len, res:last};
-}
 let LIVE = null; // {att,con,ha,hc} i TI-indeksrekkefølge — kopi av MODEL, oppdatert av alle låste resultater i inneværende scenario
 let tableSort = null; // null = standings-rekkefølge, ellers {key:'form', dir:1|-1}
 
@@ -887,6 +904,11 @@ function setMatch(m,hg,ag,writeInputs=true,sim=false){
 // Lagstyrker (mu, H, att/con/ha/hc per lag) kommer ferdig tilpasset fra
 // data/model.json — se buildModel() i boot(). Ingen tilpasning skjer i
 // nettleseren lenger (modellen kalibreres mot mål OG sluttodds i Python).
+// GMAX=15 overalt (fit_fast.py, hovedtråden her, Workeren) -- var før 12/10/10,
+// en reell inkonsistens: tilpasningen summerte til 12 mål, siden kappet ved
+// 10. Med lambda opp til 6 (MAX_LAMBDA_LOG) er halen forbi 10 ikke helt
+// ubetydelig.
+const GMAX = 15;
 function pois(l,k){ let p=Math.exp(-l); for(let i=1;i<=k;i++) p*=l/i; return p; }
 // Dixon-Coles tau (1997): uavhengig Poisson undervurderer uavgjorte, særlig
 // 0-0 og 1-1 -- korreksjonen flytter litt sannsynlighet fra 1-0/0-1 til
@@ -909,7 +931,7 @@ function dcTau(x,y,lh,la){
   return 1;
 }
 function outcome(lh,la){ let H=0,U=0,B=0;
-  for(let h=0;h<=10;h++) for(let a=0;a<=10;a++){ const p=pois(lh,h)*pois(la,a)*dcTau(h,a,lh,la); if(h>a)H+=p; else if(h===a)U+=p; else B+=p; }
+  for(let h=0;h<=GMAX;h++) for(let a=0;a<=GMAX;a++){ const p=pois(lh,h)*pois(la,a)*dcTau(h,a,lh,la); if(h>a)H+=p; else if(h===a)U+=p; else B+=p; }
   const t=H+U+B; return {H:H/t,U:U/t,B:B/t}; }
 
 // Form (0-10): et lags forventede poeng per kamp mot en tenkt SNITTLAG (ingen
@@ -958,10 +980,9 @@ function computeLiveState(){
   const state={att,con,ha,hc};
   // Rekke-sporing starter fra ekte resultater (ikke fra 0 her), slik at en
   // scenario-forlengelse av en pågående ekte rekke fortsetter den riktig.
-  // Eksponeres til slutt som TI-indekserte arrays (streakLen/streakRes på
-  // state) -- Workeren trenger nøyaktig DENNE starttilstanden for at Monte
-  // Carlo-simuleringen og "typisk sesong" skal fortsette samme rekke som
-  // Form-kolonnen viser, ikke starte en ny rekke-telling fra null.
+  // Rampen (kFor) brukes her -- Form skal reagere på en pågående rekke -- se
+  // kommentaren ved FORM_K/kFor for hvorfor SIMULERINGEN (runMCAsync etc.,
+  // som starter FRA denne tilstanden) likevel går videre med flat FORM_K.
   const streakLen={}, streakRes={};
   TEAMS.forEach(t=>{ const s=trailingStreak(STATS[t].form); streakLen[t]=s.len; streakRes[t]=s.res; });
   matches.filter(m=>m.hg!=null&&m.ag!=null).sort((x,y)=>x.date.localeCompare(y.date)).forEach(m=>{
@@ -978,8 +999,6 @@ function computeLiveState(){
     applyDrift(att,att0,a,kA*ra,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,a,-kA*ra,DRIFT_CAP_HAHC);
     applyDrift(con,con0,h,kA*ra,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,h,kA*ra,DRIFT_CAP_HAHC);
   });
-  state.streakLen = TEAMS.map(t=>streakLen[t]);
-  state.streakRes = TEAMS.map(t=>streakRes[t]==='W'?1:streakRes[t]==='L'?-1:0); // 0=ingen/uavgjort, 1=W, -1=L (strukturklonbart tall, ikke streng/null)
   return state;
 }
 function refreshLiveState(){ LIVE=computeLiveState(); for(const k in RATES) delete RATES[k]; }
@@ -1026,7 +1045,7 @@ function fillProb(){
 // første anslag postes etter 1000 sesonger, det endelige etter 4000. ----
 const WORKER_SRC = `
 function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
-var GMAX = 10;
+var GMAX = 15; // samme grense overalt -- se kommentaren ved hovedtrådens GMAX
 // Dixon-Coles tau, delt med hovedtråden (samme DC_RHO og formel som der --
 // se kommentaren ved dcTau() på hovedtråden for hvorfor -0,38).
 var DC_RHO = -0.38;
@@ -1065,7 +1084,11 @@ function sampleScoreDC(lh, la, rnd){
 
 self.onmessage = function(e){
   var d = e.data;
-  if(d.mode==='typical'){ runTypical(d); } else if(d.mode==='badges'){ runBadges(d); } else { runProb(d); }
+  if(d.mode==='typical'){ runTypical(d); }
+  else if(d.mode==='badges'){ runBadges(d); }
+  else if(d.mode==='insights'){ runInsights(d); }
+  else if(d.mode==='matchImpact'){ runMatchImpact(d); }
+  else { runProb(d); }
 };
 
 // ---- Merker ("Seriemester"/"Klar for Europa"/"Sikret plass"/"Rykket ned"):
@@ -1281,13 +1304,6 @@ function runBadges(d){
   postMessage({runId:d.runId, mode:'badges', badges:out});
 }
 
-// Rekke-forsterket k, delt mellom Workeren og hovedtråden (samme formel som
-// kFor() der): et lags k økes med streakBonus per PÅFØLGENDE like resultat
-// (W eller U, ikke uavgjort), til et tak på streakCap steg. baseK er FORM_K.
-function streakKFor(baseK, len, bonus, cap){
-  var m = len<cap ? len : cap;
-  return baseK*(1+bonus*(m-1));
-}
 // Grense og tilbaketrekking for lagstyrke-drift, delt med hovedtråden (samme
 // tall og samme formel som applyDrift()/DRIFT_CAP_* der -- se kommentaren
 // ved den definisjonen for hvorfor grensene er akkurat 0,5/0,35, og hvorfor
@@ -1300,49 +1316,42 @@ function applyDrift(arr, base, i, delta, cap){
 // Samme absolutte mål-tak som hovedtråden (MAX_LAMBDA_LOG der) -- se
 // kommentaren ved den definisjonen.
 var MAX_LAMBDA_LOG = Math.log(6);
-// ---- Europa/Ned/lagboksen: 4000 "hot" simulerte sesonger. Rekke-
-// forsterkningen (streakBonus/streakCap/streakLen/streakRes, samme regel som
-// Form-kolonnen) må nullstilles til STARTtilstanden (d.streakLen/d.streakRes)
-// for HVER av de N simulerte sesongene -- en rekke i sesong 37 skal ikke
-// arve rekken fra sesong 36. Frøet (d.seed) er avledet av de låste
-// resultatene i scenarioet (se hashStr()/runMCAsync() i hovedtråden), ikke
-// Math.random() -- samme scenario skal alltid gi samme prosenter, ikke støy
-// på ±1-2 prosentpoeng hver gang render() utløses uten at noe faktisk endret
-// seg. ----
+// ---- Europa/Ned/lagboksen: 4000 "hot" simulerte sesonger. Frøet (d.seed)
+// er avledet av de låste resultatene i scenarioet (se hashStr()/
+// runMCAsync() i hovedtråden), ikke Math.random() -- samme scenario skal
+// alltid gi samme prosenter, ikke støy på ±1-2 prosentpoeng hver gang
+// render() utløses uten at noe faktisk endret seg. ----
 function runProb(d){
   var mu=d.mu, H=d.H, k=d.k, P0=d.P0, G0=d.G0, F0=d.F0, open=d.open, N=d.N, runId=d.runId;
-  var streakBonus=d.streakBonus, streakCap=d.streakCap;
+  var oddsOverride=d.oddsOverride;
   var n = P0.length;
   var rnd = mulberry32(d.seed);
   var cnt=[]; for(var i=0;i<n;i++) cnt.push(new Float64Array(n));
   var P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
   var attS=new Float64Array(n), conS=new Float64Array(n), haS=new Float64Array(n), hcS=new Float64Array(n);
-  var streakLenS=new Int32Array(n), streakResS=new Int8Array(n);
   var ord=[]; for(var i2=0;i2<n;i2++) ord.push(i2);
   var REPORT_AT=1000;
   for(var s=1;s<=N;s++){
     P.set(P0); G.set(G0); F.set(F0);
     attS.set(d.att); conS.set(d.con); haS.set(d.ha); hcS.set(d.hc);
-    streakLenS.set(d.streakLen); streakResS.set(d.streakRes);
     for(var j=0;j<open.length;j++){
       var h=open[j][0], a=open[j][1];
-      var eh=mu+H+attS[h]+haS[h]+conS[a]-hcS[a], ea=mu+attS[a]-haS[a]+conS[h]+hcS[h];
-      eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
-      var lh=Math.exp(eh), la=Math.exp(ea);
+      var forced = oddsOverride && oddsOverride[j];
+      var lh, la;
+      if(forced){ lh=forced[0]; la=forced[1]; }
+      else {
+        var eh=mu+H+attS[h]+haS[h]+conS[a]-hcS[a], ea=mu+attS[a]-haS[a]+conS[h]+hcS[h];
+        eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
+        lh=Math.exp(eh); la=Math.exp(ea);
+      }
       var xy=sampleScoreDC(lh,la,rnd), x=xy[0], y=xy[1];
       G[h]+=x-y; G[a]+=y-x; F[h]+=x; F[a]+=y;
       if(x>y) P[h]+=3; else if(x<y) P[a]+=3; else { P[h]++; P[a]++; }
       var rh=x-lh, ra=y-la;
-      var resH = x>y?1:(x<y?-1:0), resA = x<y?1:(x>y?-1:0);
-      streakLenS[h] = (resH!==0 && streakResS[h]===resH) ? streakLenS[h]+1 : (resH===0?0:1);
-      streakResS[h] = resH;
-      streakLenS[a] = (resA!==0 && streakResS[a]===resA) ? streakLenS[a]+1 : (resA===0?0:1);
-      streakResS[a] = resA;
-      var kH=streakKFor(k, streakLenS[h], streakBonus, streakCap), kA=streakKFor(k, streakLenS[a], streakBonus, streakCap);
-      applyDrift(attS,d.att,h,kH*rh,DRIFT_CAP_ATTCON); applyDrift(haS,d.ha,h,kH*rh,DRIFT_CAP_HAHC);
-      applyDrift(conS,d.con,a,kH*rh,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,a,-kH*rh,DRIFT_CAP_HAHC);
-      applyDrift(attS,d.att,a,kA*ra,DRIFT_CAP_ATTCON); applyDrift(haS,d.ha,a,-kA*ra,DRIFT_CAP_HAHC);
-      applyDrift(conS,d.con,h,kA*ra,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,h,kA*ra,DRIFT_CAP_HAHC);
+      applyDrift(attS,d.att,h,k*rh,DRIFT_CAP_ATTCON); applyDrift(haS,d.ha,h,k*rh,DRIFT_CAP_HAHC);
+      applyDrift(conS,d.con,a,k*rh,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,a,-k*rh,DRIFT_CAP_HAHC);
+      applyDrift(attS,d.att,a,k*ra,DRIFT_CAP_ATTCON); applyDrift(haS,d.ha,a,-k*ra,DRIFT_CAP_HAHC);
+      applyDrift(conS,d.con,h,k*ra,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,h,k*ra,DRIFT_CAP_HAHC);
     }
     for(var i3=0;i3<n;i3++) R[i3]=rnd();
     ord.sort(function(p,q){ return P[q]-P[p] || G[q]-G[p] || F[q]-F[p] || R[q]-R[p]; });
@@ -1354,9 +1363,13 @@ function runProb(d){
   }
 }
 
-// ---- "Typisk sesong": trekker kandidatsesonger én om gangen (kronologisk,
-// med "hot" formoppdatering -- se hovedløkken) og GODTAR den første som ser
-// statistisk normal ut: totalt antall overraskelser (<30% sjanse) nær
+// ---- "Plausibelt scenario" (het "typisk sesong" før -- misvisende: dette
+// er ikke et trekk fra modellens egen fordeling, men et filtrert utvalg som
+// avviser både enkeltutfall under 10% sjanse og sesonger med for mange
+// overraskelser samlet, se navnediskusjonen). Trekker kandidatsesonger én om
+// gangen (kronologisk, med "hot" formoppdatering -- se hovedløkken) og
+// GODTAR den første som ser statistisk normal ut: totalt antall
+// overraskelser (<30% sjanse) nær
 // forventet, innenfor en toleranse basert på hvor mye det tallet naturlig
 // svinger (kvadratroten av summen av Bernoulli-varians p*(1-p) per kamp).
 // Hadde TIDLIGERE også et eget krav PER RUNDE (samme toleranse, men på hver
@@ -1370,8 +1383,7 @@ function runProb(d){
 // (H/U/B) hadde under 10% sjanse, uansett om sesongen til slutt godtas.
 function runTypical(d){
   var mu=d.mu, H=d.H, k=d.k, att0=d.att, con0=d.con, ha0=d.ha, hc0=d.hc;
-  var streakBonus=d.streakBonus, streakCap=d.streakCap, streakLen0=d.streakLen, streakRes0=d.streakRes;
-  var open=d.open, runId=d.runId;
+  var open=d.open, runId=d.runId, oddsOverride=d.oddsOverride;
   var rnd = mulberry32(d.seed);
   var m = open.length;
   var hiArr=[], aiArr=[];
@@ -1379,13 +1391,20 @@ function runTypical(d){
 
   // Forventet antall overraskelser og naturlig toleranse, fra START-tilstanden
   // (ikke hot-oppdatert per kandidat -- FORM_K sitt bidrag er lite, og en delt,
-  // fast forventning er enklere å sammenligne kandidatene mot).
+  // fast forventning er enklere å sammenligne kandidatene mot). Bruker samme
+  // oddsjusterte rate som resten av siden for kamper som har odds.
   var expTotal=0, varTotal=0;
   for(var j0=0;j0<m;j0++){
     var h0=hiArr[j0], a0=aiArr[j0];
-    var eh0=mu+H+att0[h0]+ha0[h0]+con0[a0]-hc0[a0], ea0=mu+att0[a0]-ha0[a0]+con0[h0]+hc0[h0];
-    eh0=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh0)); ea0=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea0));
-    var pr0=outcomeProbs(Math.exp(eh0), Math.exp(ea0));
+    var forced0 = oddsOverride && oddsOverride[j0];
+    var lh0, la0;
+    if(forced0){ lh0=forced0[0]; la0=forced0[1]; }
+    else {
+      var eh0=mu+H+att0[h0]+ha0[h0]+con0[a0]-hc0[a0], ea0=mu+att0[a0]-ha0[a0]+con0[h0]+hc0[h0];
+      eh0=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh0)); ea0=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea0));
+      lh0=Math.exp(eh0); la0=Math.exp(ea0);
+    }
+    var pr0=outcomeProbs(lh0, la0);
     var sp=(pr0.H<0.30?pr0.H:0)+(pr0.D<0.30?pr0.D:0)+(pr0.B<0.30?pr0.B:0);
     expTotal+=sp;
     var vv=sp*(1-sp); varTotal+=vv;
@@ -1399,14 +1418,18 @@ function runTypical(d){
 
   for(var attempt=0; attempt<MAX_ATTEMPTS; attempt++){
     var att=att0.slice(), con=con0.slice(), ha=ha0.slice(), hc=hc0.slice();
-    var streakLen=streakLen0.slice(), streakRes=streakRes0.slice();
     var G=new Uint8Array(m*2);
     var actualTotal=0;
     for(var j=0;j<m;j++){
       var h=hiArr[j], a=aiArr[j];
-      var eh=mu+H+att[h]+ha[h]+con[a]-hc[a], ea=mu+att[a]-ha[a]+con[h]+hc[h];
-      eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
-      var lh=Math.exp(eh), la=Math.exp(ea);
+      var forced = oddsOverride && oddsOverride[j];
+      var lh, la;
+      if(forced){ lh=forced[0]; la=forced[1]; }
+      else {
+        var eh=mu+H+att[h]+ha[h]+con[a]-hc[a], ea=mu+att[a]-ha[a]+con[h]+hc[h];
+        eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
+        lh=Math.exp(eh); la=Math.exp(ea);
+      }
       var probs=outcomeProbs(lh,la);
       var x,y,cat,catP;
       for(var rtry=0; rtry<50; rtry++){
@@ -1418,16 +1441,10 @@ function runTypical(d){
       G[j*2]=x; G[j*2+1]=y;
       if(catP<0.30){ actualTotal++; }
       var rh=x-lh, ra=y-la;
-      var resH = x>y?1:(x<y?-1:0), resA = x<y?1:(x>y?-1:0);
-      streakLen[h] = (resH!==0 && streakRes[h]===resH) ? streakLen[h]+1 : (resH===0?0:1);
-      streakRes[h] = resH;
-      streakLen[a] = (resA!==0 && streakRes[a]===resA) ? streakLen[a]+1 : (resA===0?0:1);
-      streakRes[a] = resA;
-      var kH=streakKFor(k, streakLen[h], streakBonus, streakCap), kA=streakKFor(k, streakLen[a], streakBonus, streakCap);
-      applyDrift(att,att0,h,kH*rh,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,h,kH*rh,DRIFT_CAP_HAHC);
-      applyDrift(con,con0,a,kH*rh,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,a,-kH*rh,DRIFT_CAP_HAHC);
-      applyDrift(att,att0,a,kA*ra,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,a,-kA*ra,DRIFT_CAP_HAHC);
-      applyDrift(con,con0,h,kA*ra,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,h,kA*ra,DRIFT_CAP_HAHC);
+      applyDrift(att,att0,h,k*rh,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,h,k*rh,DRIFT_CAP_HAHC);
+      applyDrift(con,con0,a,k*rh,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,a,-k*rh,DRIFT_CAP_HAHC);
+      applyDrift(att,att0,a,k*ra,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,a,-k*ra,DRIFT_CAP_HAHC);
+      applyDrift(con,con0,h,k*ra,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,h,k*ra,DRIFT_CAP_HAHC);
     }
     var diffTotal=Math.abs(actualTotal-expTotal);
     var violation=Math.max(0, diffTotal-tolTotal);
@@ -1441,6 +1458,200 @@ function runTypical(d){
     expectedTotal:expTotal, actualTotal:(acceptedAttempt>=0?acceptedTotal:bestTotal), tolTotal:tolTotal,
     attempts:(acceptedAttempt>=0?acceptedAttempt:MAX_ATTEMPTS)+1, accepted:acceptedAttempt>=0
   }});
+}
+
+// ---- "Spør om tabellen", spørsmål 1/2/6/7: én N-sesongers "hot" simulering
+// (samme motor som runProb), men samler i tillegg -- for ÉT lag (d.ti) og
+// sonen hovedtråden bestemte (d.zone, se qaTargetZone()) -- alt disse fire
+// spørsmålene trenger, i samme gjennomløp, i stedet for fire separate
+// kjøringer:
+// 1: gjennomsnittlig sluttpoengsum, poengsum ved sonegrensa, og hvilke lag
+//    som oftest tar plassen laget vil ha (favorAheadCount).
+// 2: hvor mange seire laget tar, og hvor mange tap "hovedkonkurrenten" (den
+//    som ble funnet i 1) får, i AKKURAT de sesongene laget når målet sitt.
+// 6: ved hvert rundekontrollpunkt (d.checkpoints, forhåndsregnet på
+//    hovedtråden fra den faktiske kampplanen): er sonen avgjort (sikret
+//    ELLER helt ute av bildet)? Bruker samme "verste/beste fall"-formel som
+//    lagboksens egen sikker/usikker-vurdering (canPass i render() på
+//    hovedtråden), generalisert til en vilkårlig grense -- se
+//    worstBestRank(). Eksakte poeng-likheter telles konservativt som "ikke
+//    avgjort ennå" (samme forenkling som canPass gjør: den krysssjekker ikke
+//    målforskjell på et delvis simulert tidspunkt).
+// 7: hvilket lag som oftest ligger rett foran/bak laget på sluttabellen.
+function worstBestRank(P, left, ti, n){
+  var teamPts = P[ti], teamMax = P[ti] + 3*left[ti];
+  var worstCount = 0, bestCount = 0;
+  for(var i=0;i<n;i++){
+    if(i===ti) continue;
+    if(P[i] + 3*left[i] >= teamPts) worstCount++; // kan i VERSTE fall ende foran eller likt
+    if(P[i] >= teamMax) bestCount++; // ligger allerede foran eller likt uansett hva laget selv gjør
+  }
+  return [worstCount+1, bestCount+1]; // [verst mulige plassering nå, best mulige plassering nå]
+}
+function zoneDecided(worst, best, zone){
+  var boundary = zone.dir==='front' ? zone.hi : zone.boundary;
+  if(worst<=boundary) return 1; // sikret/trygg
+  if(best>boundary) return -1; // ute av bildet
+  return 0; // ikke avgjort ennå
+}
+function runInsights(d){
+  var mu=d.mu, H=d.H, k=d.k, P0=d.P0, G0=d.G0, F0=d.F0, open=d.open, N=d.N, runId=d.runId, oddsOverride=d.oddsOverride;
+  var ti=d.ti, zone=d.zone, checkpoints=d.checkpoints;
+  var n = P0.length;
+  var rnd = mulberry32(d.seed);
+  var P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
+  var attS=new Float64Array(n), conS=new Float64Array(n), haS=new Float64Array(n), hcS=new Float64Array(n);
+  var ord=[]; for(var i2=0;i2<n;i2++) ord.push(i2);
+
+  var sumFinalPts=0, sumBoundaryPts=0;
+  var favorAheadCount=new Float64Array(n), coStruggleCount=new Float64Array(n);
+  var aheadOfT=new Float64Array(n), behindT=new Float64Array(n);
+  var successCount=0, successWinSumT=0;
+  var successLossSum=new Float64Array(n);
+  var decidedHist={};
+  var lossThis=new Float64Array(n);
+
+  for(var s=1;s<=N;s++){
+    P.set(P0); G.set(G0); F.set(F0);
+    attS.set(d.att); conS.set(d.con); haS.set(d.ha); hcS.set(d.hc);
+    lossThis.fill(0);
+    var winsT=0, decidedThisSim=false, cpIdx=0;
+    for(var j=0;j<open.length;j++){
+      var h=open[j][0], a=open[j][1];
+      var forced = oddsOverride && oddsOverride[j];
+      var lh, la;
+      if(forced){ lh=forced[0]; la=forced[1]; }
+      else {
+        var eh=mu+H+attS[h]+haS[h]+conS[a]-hcS[a], ea=mu+attS[a]-haS[a]+conS[h]+hcS[h];
+        eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
+        lh=Math.exp(eh); la=Math.exp(ea);
+      }
+      var xy=sampleScoreDC(lh,la,rnd), x=xy[0], y=xy[1];
+      G[h]+=x-y; G[a]+=y-x; F[h]+=x; F[a]+=y;
+      if(x>y){ P[h]+=3; lossThis[a]++; if(h===ti) winsT++; }
+      else if(x<y){ P[a]+=3; lossThis[h]++; if(a===ti) winsT++; }
+      else { P[h]++; P[a]++; }
+      var rh=x-lh, ra=y-la;
+      applyDrift(attS,d.att,h,k*rh,DRIFT_CAP_ATTCON); applyDrift(haS,d.ha,h,k*rh,DRIFT_CAP_HAHC);
+      applyDrift(conS,d.con,a,k*rh,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,a,-k*rh,DRIFT_CAP_HAHC);
+      applyDrift(attS,d.att,a,k*ra,DRIFT_CAP_ATTCON); applyDrift(haS,d.ha,a,-k*ra,DRIFT_CAP_HAHC);
+      applyDrift(conS,d.con,h,k*ra,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,h,k*ra,DRIFT_CAP_HAHC);
+
+      if(!decidedThisSim && cpIdx<checkpoints.length && (j+1)>=checkpoints[cpIdx].afterIdx){
+        var wb = worstBestRank(P, checkpoints[cpIdx].left, ti, n);
+        var dec = zoneDecided(wb[0], wb[1], zone);
+        if(dec!==0){
+          decidedThisSim = true;
+          var rr = checkpoints[cpIdx].round;
+          decidedHist[rr] = (decidedHist[rr]||0)+1;
+        }
+        cpIdx++;
+      }
+    }
+    if(!decidedThisSim){ decidedHist['end'] = (decidedHist['end']||0)+1; }
+
+    for(var i3=0;i3<n;i3++) R[i3]=rnd();
+    ord.sort(function(p,q){ return P[q]-P[p] || G[q]-G[p] || F[q]-F[p] || R[q]-R[p]; });
+    var posOfT = ord.indexOf(ti); // 0-indeksert
+    sumFinalPts += P[ti];
+    sumBoundaryPts += P[ord[zone.boundary-1]];
+
+    var tInTarget = (posOfT+1)>=zone.lo && (posOfT+1)<=zone.hi;
+    for(var i4=0;i4<n;i4++){
+      if(i4===ti) continue;
+      var posI = ord.indexOf(i4)+1;
+      if(!tInTarget){
+        var iInFavor = posI>=zone.lo && posI<=zone.hi;
+        if(iInFavor) favorAheadCount[i4]++;
+        else if(zone.dir!=='front' && posI>zone.boundary) coStruggleCount[i4]++;
+      }
+    }
+    if(posOfT>0) aheadOfT[ord[posOfT-1]]++;
+    if(posOfT<n-1) behindT[ord[posOfT+1]]++;
+
+    // "Suksess" = laget når det som er målet: i sonen selv for gull/Europa,
+    // eller INNENFOR trygghetsgrensa (unngår sonen) for kvalik/nedrykk.
+    var success = zone.dir==='front' ? tInTarget : (posOfT+1)<=zone.boundary;
+    if(success){
+      successCount++;
+      successWinSumT += winsT;
+      for(var i5=0;i5<n;i5++){ if(i5!==ti) successLossSum[i5]+=lossThis[i5]; }
+    }
+  }
+
+  postMessage({runId:runId, mode:'insights', N:N,
+    avgFinalPts: sumFinalPts/N, avgBoundaryPts: sumBoundaryPts/N,
+    favorAheadCount: Array.from(favorAheadCount), coStruggleCount: Array.from(coStruggleCount),
+    aheadOfT: Array.from(aheadOfT), behindT: Array.from(behindT),
+    successCount: successCount, successWinSumT: successWinSumT, successLossSum: Array.from(successLossSum),
+    decidedHist: decidedHist
+  });
+}
+
+// ---- "Spør om tabellen", spørsmål 3: for et lite, relevant utvalg
+// gjenstående kamper (hovedtråden begrenser til lagets egne kamper og de
+// nærmeste konkurrentenes, se buildMatchImpactCandidates() -- å kjøre ALLE
+// ~70 gjenstående kamper i hele ligaen i to retninger hver ville vært for
+// tregt til en enkelt spørsmålsklikk), simuleres scenarioet MED den kampen
+// låst til hver av de to utfallene, og forskjellen i lagets sonesannsynlig-
+// het (samme sone som spørsmål 1) måles. Samme frø for begge retninger av
+// SAMME kamp (variansreduksjon -- støyen kansellerer bedre i differansen enn
+// med to uavhengige frø), men ulikt frø per kamp.
+function runMatchImpact(d){
+  var results = d.candidates.map(function(c){
+    var homeProb = simulateZoneProb(d, c.idx, c.homeScore, c.seed);
+    var awayProb = simulateZoneProb(d, c.idx, c.awayScore, c.seed);
+    return {idx:c.idx, homeProb:homeProb, awayProb:awayProb, diff:Math.abs(homeProb-awayProb)};
+  });
+  postMessage({runId:d.runId, mode:'matchImpact', results:results});
+}
+function simulateZoneProb(d, forcedIdx, forcedScore, seed){
+  var n=d.P0.length, k=d.k, zone=d.zone, ti=d.ti;
+  var P0=Float64Array.from(d.P0), G0=Float64Array.from(d.G0), F0=Float64Array.from(d.F0);
+  var open=[], oddsOverride=[];
+  for(var i=0;i<d.open.length;i++){
+    if(i===forcedIdx){
+      var h0=d.open[i][0], a0=d.open[i][1], hg=forcedScore[0], ag=forcedScore[1];
+      G0[h0]+=hg-ag; G0[a0]+=ag-hg; F0[h0]+=hg; F0[a0]+=ag;
+      if(hg>ag) P0[h0]+=3; else if(hg<ag) P0[a0]+=3; else { P0[h0]++; P0[a0]++; }
+    } else {
+      open.push(d.open[i]);
+      oddsOverride.push(d.oddsOverride && d.oddsOverride[i]);
+    }
+  }
+  var rnd = mulberry32(seed);
+  var P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
+  var attS=new Float64Array(n), conS=new Float64Array(n), haS=new Float64Array(n), hcS=new Float64Array(n);
+  var ord=[]; for(var i2=0;i2<n;i2++) ord.push(i2);
+  var hitCount=0;
+  for(var s=0;s<d.N;s++){
+    P.set(P0); G.set(G0); F.set(F0);
+    attS.set(d.att); conS.set(d.con); haS.set(d.ha); hcS.set(d.hc);
+    for(var j=0;j<open.length;j++){
+      var h=open[j][0], a=open[j][1];
+      var forced = oddsOverride[j];
+      var lh, la;
+      if(forced){ lh=forced[0]; la=forced[1]; }
+      else {
+        var eh=d.mu+d.H+attS[h]+haS[h]+conS[a]-hcS[a], ea=d.mu+attS[a]-haS[a]+conS[h]+hcS[h];
+        eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
+        lh=Math.exp(eh); la=Math.exp(ea);
+      }
+      var xy=sampleScoreDC(lh,la,rnd), x=xy[0], y=xy[1];
+      G[h]+=x-y; G[a]+=y-x; F[h]+=x; F[a]+=y;
+      if(x>y) P[h]+=3; else if(x<y) P[a]+=3; else { P[h]++; P[a]++; }
+      var rh=x-lh, ra=y-la;
+      applyDrift(attS,d.att,h,k*rh,DRIFT_CAP_ATTCON); applyDrift(haS,d.ha,h,k*rh,DRIFT_CAP_HAHC);
+      applyDrift(conS,d.con,a,k*rh,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,a,-k*rh,DRIFT_CAP_HAHC);
+      applyDrift(attS,d.att,a,k*ra,DRIFT_CAP_ATTCON); applyDrift(haS,d.ha,a,-k*ra,DRIFT_CAP_HAHC);
+      applyDrift(conS,d.con,h,k*ra,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,h,k*ra,DRIFT_CAP_HAHC);
+    }
+    for(var i3=0;i3<n;i3++) R[i3]=rnd();
+    ord.sort(function(p,q){ return P[q]-P[p] || G[q]-G[p] || F[q]-F[p] || R[q]-R[p]; });
+    var pos = ord.indexOf(ti)+1;
+    if(pos>=zone.lo && pos<=zone.hi) hitCount++;
+  }
+  return hitCount/d.N;
 }
 `;
 let mcWorker=null, mcRunId=0, mcTimer=null, lastMC=null, lastMCScenarioKey=null;
@@ -1460,6 +1671,10 @@ let lastTypicalDiagnostics = null; // for feilsøking/verifisering, se console
 // encodeScenario() ta en snarvei (kort frø i lenken i stedet for hvert
 // resultat) NÅR hele det nåværende grå settet kommer fra akkurat det kallet.
 let lastSimSeed = null, lastSimMatchIds = null;
+// "Spør om tabellen": samme resolver-mønster som typicalResolvers, ett kart
+// per mode siden runId-tellerne er uavhengige.
+const insightsResolvers = new Map(), matchImpactResolvers = new Map();
+let insightsRunId = 0, matchImpactRunId = 0;
 function getWorker(){
   if(!mcWorker){
     mcWorker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'})));
@@ -1476,6 +1691,16 @@ function getWorker(){
         applyBadgesToDom();
         return;
       }
+      if(data.mode==='insights'){
+        const resolve=insightsResolvers.get(data.runId);
+        if(resolve){ resolve(data); insightsResolvers.delete(data.runId); }
+        return;
+      }
+      if(data.mode==='matchImpact'){
+        const resolve=matchImpactResolvers.get(data.runId);
+        if(resolve){ resolve(data); matchImpactResolvers.delete(data.runId); }
+        return;
+      }
       const {runId,out}=data;
       if(runId!==mcRunId) return; // scenariet er endret siden denne kjøringen startet — forkast
       const outObj={}; TEAMS.forEach((t,i)=>outObj[t]=out[i]);
@@ -1484,10 +1709,19 @@ function getWorker(){
   }
   return mcWorker;
 }
+// Oddsjustert rate for én kamp hvis The Odds API har odds for den, ellers
+// null -- delt av alle simuleringsoppsettene under (runMCAsync,
+// simulateTypicalAsync, spør-om-tabellen), slik at simuleringen alltid
+// bruker AKKURAT samme sannsynlighet som fillProb() viser for den kampen,
+// ikke en ren modell-lambda som overser oddsen (se commit-meldingen for
+// bakgrunnen: dette var reelt ulikt før).
+function oddsOverrideFor(home,away){
+  return ODDS_UP[home+"|"+away] ? rateFor(home,away) : null;
+}
 function runMCAsync(N){
   const n=TEAMS.length, P0=new Float64Array(n), G0=new Float64Array(n), F0=new Float64Array(n);
   BASE.forEach(b=>{ const i=TI[b[0]]; P0[i]=b[2]*3+b[3]; G0[i]=b[5]-b[6]; F0[i]=b[5]; });
-  const open=[];
+  const open=[], oddsOverride=[];
   const scenarioParts=[];
   // Alle utfylte kamper (også grå simulerte) står fast — bare tomme kamper
   // simuleres, slik at tabellen og sannsynlighetene alltid beskriver samme
@@ -1498,7 +1732,7 @@ function runMCAsync(N){
       G0[h]+=m.hg-m.ag; G0[a]+=m.ag-m.hg; F0[h]+=m.hg; F0[a]+=m.ag;
       if(m.hg>m.ag)P0[h]+=3; else if(m.hg<m.ag)P0[a]+=3; else {P0[h]++;P0[a]++;}
       scenarioParts.push(`${h}.${a}.${m.hg}.${m.ag}`);
-    } else open.push([h,a]);
+    } else { open.push([h,a]); oddsOverride.push(oddsOverrideFor(m.home,m.away)); }
   });
   // Scenarioet er fullt bestemt av de låste resultatene over (LIVE er selv
   // avledet av akkurat de samme resultatene, se refreshLiveState() i
@@ -1512,15 +1746,14 @@ function runMCAsync(N){
   mcRunId++;
   getWorker().postMessage({
     runId:mcRunId, seed:hashStr(scenarioKey), mu:MODEL.mu, H:MODEL.H, k:FORM_K,
-    streakBonus:STREAK_BONUS, streakCap:STREAK_CAP,
-    streakLen:Array.from(LIVE.streakLen), streakRes:Array.from(LIVE.streakRes),
     att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
-    P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, N
+    P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride, N
   });
 }
 const pctTxt=x=> x===0?'0 %': x<0.005?'<1 %': x>0.995&&x<1?'>99 %': Math.round(x*100)+' %';
 function fillOdds(){
   if(!lastMC) return;
+  renderQaButtons(); // spørsmål 1/2 sine knappetekster trenger lastMC (se qaTargetZone) -- oppdater så snart det er klart, ikke bare på neste fulle render()
   document.querySelectorAll('#tbl tbody tr').forEach(tr=>{
     const d=lastMC[tr.dataset.team]; if(!d) return;
     const top=d[0]+d[1]+d[2]+d[3], ned=d[14]+d[15];
@@ -1555,7 +1788,7 @@ function fillOdds(){
 }
 function scheduleMC(){ clearTimeout(mcTimer); mcTimer=setTimeout(()=>runMCAsync(4000), 250); }
 
-// Fyller de gitte kampene med én "typisk" utvikling: kjøres i Web Workeren
+// Fyller de gitte kampene med ett "plausibelt scenario": kjøres i Web Workeren
 // (WORKER_SRC, mode:'typical'), som trekker kandidatsesonger kronologisk med
 // "hot" formoppdatering til én ser statistisk normal ut (se runTypical der).
 // Nytt, tilfeldig frø hver gang (ikke lenger avledet av de låste resultatene)
@@ -1571,6 +1804,7 @@ function simulateTypicalAsync(open, forcedSeed){
     typicalRunId++;
     const runId = typicalRunId;
     const openData = open.map(m=>[TI[m.home], TI[m.away], m.round]);
+    const oddsOverride = open.map(m=>oddsOverrideFor(m.home,m.away));
     typicalResolvers.set(runId, (data)=>{
       if(data.result) open.forEach((m,j)=>setMatch(m, data.result[j][0], data.result[j][1], true, true));
       lastTypicalDiagnostics = data.diagnostics;
@@ -1581,10 +1815,8 @@ function simulateTypicalAsync(open, forcedSeed){
     getWorker().postMessage({
       mode:'typical', runId, seed,
       mu:MODEL.mu, H:MODEL.H, k:FORM_K,
-      streakBonus:STREAK_BONUS, streakCap:STREAK_CAP,
-      streakLen:Array.from(LIVE.streakLen), streakRes:Array.from(LIVE.streakRes),
       att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
-      open: openData
+      open: openData, oddsOverride
     });
   });
 }
@@ -1868,6 +2100,353 @@ function openFormModal(team){
 }
 function closeFormModal(){ document.getElementById('formModalBackdrop').hidden=true; }
 
+// ==== "Spør om tabellen": ferdige spørsmål, svart ut fra modellen og
+// simuleringene -- ALDRI forhåndsskrevet tekst. Rekkefølge/tekst/regler er
+// spesifisert i oppgaven; se qaTargetZone() for "mest aktuelt"-regelen delt
+// av spørsmål 1, 2 og 6, og WORKER_SRC (mode:'insights'/'matchImpact') for
+// de tunge beregningene (3 og 6 særlig) som ikke skal fryse siden. ----
+
+// "Mest aktuelt" for laget: gull hvis over 5 %, ellers Europa hvis over 5 %,
+// ellers nedrykk hvis over 5 %, ellers kvalik. front (gull/europa): sonen
+// SELV er målet. back (kvalik/nedrykk): å unngå sonen er målet -- "boundary"
+// er da 13 (trygg plass) for BEGGE, siden spørsmålet i praksis er om laget
+// er på riktig side av 13.–14.-plass-skillet uansett hvilken av de to som
+// utløste valget (se qaZoneStats()-kommentaren i Workeren for hvorfor de
+// deler samme grense).
+function qaTargetZone(team){
+  const d = lastMC && lastMC[team];
+  if(!d) return null;
+  const gull=d[0], europa=d[0]+d[1]+d[2]+d[3], nedrykk=d[14]+d[15];
+  if(gull>0.05) return {key:'gull', label:'gull', lo:1, hi:1, boundary:1, dir:'front', pct:gull};
+  if(europa>0.05) return {key:'europa', label:'Europa', lo:1, hi:4, boundary:4, dir:'front', pct:europa};
+  if(nedrykk>0.05) return {key:'nedrykk', label:'nedrykk', lo:15, hi:16, boundary:13, dir:'back', pct:nedrykk};
+  return {key:'kvalik', label:'kvalik', lo:14, hi:14, boundary:13, dir:'back', pct:d[13]};
+}
+const QA_REACH_PHRASE = {gull:'vinne serien', europa:'nå Europa', kvalik:'berge plassen', nedrykk:'berge plassen'};
+
+// ---- Spørsmål 4: tyngst/lettest avslutning -- ingen simulering, bare
+// motstandernes vinnersjanse (fra LIVE-styrkene, som predict()/rateFor()
+// ellers bruker) i hver gjenstående kamp, i riktig hjemme/borte-retning.
+// Gjelder alle 16 lag, ikke bare det fulgte -- vises derfor også uten valgt
+// lag. ----
+function qaToughestRunIn(){
+  const oppWin = {}; TEAMS.forEach(t=>oppWin[t]=[]);
+  matches.filter(isEmpty).forEach(m=>{
+    const [lh,la] = rateFor(m.home, m.away), o = outcome(lh,la);
+    oppWin[m.home].push(o.B); // motstanderen (bortelaget) sin vinnersjanse i DENNE kampen for hjemmelaget
+    oppWin[m.away].push(o.H);
+  });
+  const rows = TEAMS.filter(t=>oppWin[t].length).map(t=>({
+    team:t, avg: oppWin[t].reduce((a,b)=>a+b,0)/oppWin[t].length, n: oppWin[t].length
+  }));
+  rows.sort((a,b)=>b.avg-a.avg);
+  const toughest = rows.slice(0,3), easiest = rows.slice(-3).reverse();
+  const fmt = r => `${r.team} (${pctTxt(r.avg)})`;
+  return `Tyngst avslutning: ${toughest.map(fmt).join(', ')}. Lettest: ${easiest.map(fmt).join(', ')}. `+
+    `Tallet er motstandernes gjennomsnittlige vinnersjanse i de gjenstående kampene, ut fra dagens lagstyrker.`;
+}
+
+// ---- Spørsmål 5: neste kamp -- ingen simulering, samme H/U/B-modell
+// (blandet med odds der de finnes) som resten av siden bruker per kamp. ----
+function qaNextMatch(team){
+  const next = matches.filter(m=>isEmpty(m) && (m.home===team||m.away===team)).sort((a,b)=>a.date.localeCompare(b.date))[0];
+  if(!next) return `${team} har ingen gjenstående kamper i dette scenariet.`;
+  const [lh,la] = rateFor(next.home, next.away), o = outcome(lh,la);
+  const isHome = next.home===team;
+  const win = isHome?o.H:o.B, draw=o.U, lose = isHome?o.B:o.H;
+  const opp = isHome?next.away:next.home;
+  return `${team} mot ${opp} (${formatDateNo(next.date)}, ${isHome?'hjemme':'borte'}): `+
+    `seier ${pctTxt(win)}, uavgjort ${pctTxt(draw)}, tap ${pctTxt(lose)}.`;
+}
+
+// ---- Spørsmål 8: hell/uhell -- ingen simulering. Sammenligner FAKTISKE
+// poeng i FAKTISK spilte kamper (MATCHES, ikke scenario-resultater -- "hell"
+// handler om det som virkelig skjedde) med forventet poengsum fra den
+// STATISKE modellen (MODEL.att/con/ha/hc, ikke LIVE -- LIVE er selv avledet
+// av blant annet disse resultatene, og ville gjort sammenligningen
+// sirkulær). Gjelder alle 16 lag. ----
+function baseRate(home,away){
+  const h=MTI[home], a=MTI[away];
+  let eh=MODEL.mu+MODEL.H+MODEL.att[h]+MODEL.ha[h]+MODEL.con[a]-MODEL.hc[a];
+  let ea=MODEL.mu+MODEL.att[a]-MODEL.ha[a]+MODEL.con[h]+MODEL.hc[h];
+  eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
+  return [Math.exp(eh), Math.exp(ea)];
+}
+function qaLuck(){
+  const actual={}, expected={}; TEAMS.forEach(t=>{actual[t]=0; expected[t]=0;});
+  MATCHES.forEach(m=>{
+    if(m.hg>m.ag){ actual[m.home]+=3; } else if(m.hg<m.ag){ actual[m.away]+=3; } else { actual[m.home]++; actual[m.away]++; }
+    const [lh,la]=baseRate(m.home,m.away), o=outcome(lh,la);
+    expected[m.home]+=3*o.H+o.U; expected[m.away]+=3*o.B+o.U;
+  });
+  const rows = TEAMS.map(t=>({team:t, diff: actual[t]-expected[t]}));
+  rows.sort((a,b)=>b.diff-a.diff);
+  const lucky=rows.slice(0,3), unlucky=rows.slice(-3).reverse();
+  const fmt = r => `${r.team} (${r.diff>=0?'+':''}${r.diff.toFixed(1)})`;
+  return `Heldigst: ${lucky.map(fmt).join(', ')}. Uheldigst: ${unlucky.map(fmt).join(', ')}. `+
+    `Tallet er faktiske poeng i spilte kamper minus forventet poengsum fra modellen.`;
+}
+
+// ---- Spørsmål 1, 2, 3, 6, 7: krever simulering, kjøres i Workeren (se
+// mode:'insights'/'matchImpact' i WORKER_SRC) så siden ikke fryser. ----
+
+// Samme P0/G0/F0-oppbygging som runMCAsync (låste resultater, også grå
+// simulerte, teller som spilt), men med rundenummer på hver gjenstående kamp
+// (openMatches parallelt med open, for spørsmål 3 sine kamp-etiketter) og
+// uten scenarioKey-snarveien der -- disse spørsmålene kjøres bare når
+// brukeren faktisk ber om svar, ikke ved hver render().
+function buildQaOpen(){
+  const n=TEAMS.length, P0=new Float64Array(n), G0=new Float64Array(n), F0=new Float64Array(n);
+  BASE.forEach(b=>{ const i=TI[b[0]]; P0[i]=b[2]*3+b[3]; G0[i]=b[5]-b[6]; F0[i]=b[5]; });
+  const open=[], openMatches=[], oddsOverride=[], scenarioParts=[];
+  matches.forEach(m=>{
+    const h=TI[m.home], a=TI[m.away];
+    if(m.hg!=null&&m.ag!=null){
+      G0[h]+=m.hg-m.ag; G0[a]+=m.ag-m.hg; F0[h]+=m.hg; F0[a]+=m.ag;
+      if(m.hg>m.ag)P0[h]+=3; else if(m.hg<m.ag)P0[a]+=3; else {P0[h]++;P0[a]++;}
+      scenarioParts.push(`${h}.${a}.${m.hg}.${m.ag}`);
+    } else { open.push([h,a,m.round]); openMatches.push(m); oddsOverride.push(oddsOverrideFor(m.home,m.away)); }
+  });
+  return {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey:scenarioParts.join('_')};
+}
+// Rundekontrollpunkter til spørsmål 6: for hver runde med gjenstående
+// kamper, indeksen i `open` rett etter siste kamp i runden, og hvor mange
+// kamper hvert lag har igjen FRA DER. Strukturelt (samme kampplan for alle N
+// sesonger) -- regnes derfor bare én gang, ikke per simulering.
+function buildCheckpoints(open){
+  const n=TEAMS.length, checkpoints=[];
+  let curRound=null;
+  open.forEach((o,idx)=>{
+    if(o[2]!==curRound){
+      if(curRound!==null) checkpoints.push({round:curRound, afterIdx:idx});
+      curRound=o[2];
+    }
+  });
+  if(curRound!==null) checkpoints.push({round:curRound, afterIdx:open.length});
+  checkpoints.forEach(cp=>{
+    const left=new Array(n).fill(0);
+    for(let i=cp.afterIdx;i<open.length;i++){ left[open[i][0]]++; left[open[i][1]]++; }
+    cp.left=left;
+  });
+  return checkpoints;
+}
+const QA_N_INSIGHTS = 1500, QA_N_IMPACT = 400;
+function runInsightsAsync(team, zone){
+  const {P0,G0,F0,open,oddsOverride,scenarioKey} = buildQaOpen();
+  const checkpoints = buildCheckpoints(open);
+  insightsRunId++;
+  const runId = insightsRunId;
+  return new Promise(resolve=>{
+    insightsResolvers.set(runId, resolve);
+    getWorker().postMessage({
+      mode:'insights', runId, seed:hashStr(scenarioKey+'|'+team+'|'+zone.key),
+      mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+      att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+      P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride, N:QA_N_INSIGHTS,
+      ti:TI[team], zone, checkpoints
+    });
+  });
+}
+// Kandidatkamper til spørsmål 3: å teste alle ~70 gjenstående kamper i hele
+// ligaen (to retninger hver) er for tregt til ett knappeklikk -- begrenser
+// derfor til lagets EGNE kamper pluss kampene til de nærmeste konkurrentene
+// i dagens tabell (poengmessig), som dekker det som realistisk kan flytte
+// lagets sjanser.
+function buildMatchImpactCandidates(team, openMatches){
+  const {rows} = compute();
+  const idx = rows.findIndex(r=>r.name===team);
+  const rivals = new Set(rows.slice(Math.max(0,idx-3), idx+4).map(r=>r.name));
+  rivals.add(team);
+  return openMatches
+    .map((m,i)=>({idx:i, match:m}))
+    .filter(c=>rivals.has(c.match.home) || rivals.has(c.match.away));
+}
+function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base){
+  const candidates = candidateSpecs.map(c=>({
+    idx:c.idx,
+    homeScore: forcedScoreline(c.match.home, c.match.away, true),
+    awayScore: forcedScoreline(c.match.home, c.match.away, false),
+    seed: hashStr(scenarioKey+'|'+c.match.id)
+  }));
+  matchImpactRunId++;
+  const runId = matchImpactRunId;
+  return new Promise(resolve=>{
+    matchImpactResolvers.set(runId, resolve);
+    getWorker().postMessage({
+      mode:'matchImpact', runId,
+      mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+      att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+      P0:Array.from(base.P0), G0:Array.from(base.G0), F0:Array.from(base.F0), open:base.open,
+      oddsOverride:base.oddsOverride, N:QA_N_IMPACT,
+      ti:TI[team], zone, candidates
+    });
+  });
+}
+
+// ---- Spørsmål 1: hvorfor har laget X % sjanse for det som er mest
+// aktuelt? favorAheadCount/coStruggleCount er begge bare talt opp i
+// simuleringer der LAGET SELV ikke når målet (se runInsights) -- å dele på
+// N (ikke på antall mislykkede sesonger) gir "andel av ALLE simuleringer",
+// samme tolkning som eksempelet i oppgaven ("ligger foran i 8 av 10").
+async function qaWhy(team){
+  const zone = qaTargetZone(team);
+  if(!zone) return 'Ingen data å regne på ennå.';
+  const data = await runInsightsAsync(team, zone);
+  const others = TEAMS.filter(t=>t!==team);
+  const counter = zone.dir==='front' ? data.favorAheadCount : data.coStruggleCount;
+  const top = others.map(t=>({t, c:counter[TI[t]]})).sort((a,b)=>b.c-a.c).filter(x=>x.c>0).slice(0,2);
+  const positionLabel = zone.dir==='front' ? `${zone.hi}. plass` : '13. plass (trygg)';
+  let extra = '';
+  if(top.length){
+    const names = top.map(x=>`${x.t} (${pctTxt(x.c/data.N)})`).join(' og ');
+    extra = zone.dir==='front' ? ` ${names} ligger foran i disse simuleringene.`
+      : ` ${names} kjemper også om trygg plass i disse simuleringene.`;
+  }
+  return `${team} ender i snitt på ${Math.round(data.avgFinalPts)} poeng. ${positionLabel} krever normalt ${Math.round(data.avgBoundaryPts)}.${extra}`;
+}
+
+// ---- Spørsmål 2: hva må laget gjøre for å nå målet? Filtrerer simulerings-
+// resultatene på suksess (samme betingelse som "success" i runInsights:
+// i sonen for gull/Europa, trygg for kvalik/nedrykk) og ser på lagets egne
+// seire og hovedkonkurrentens tap I AKKURAT DE sesongene.
+async function qaHowTo(team){
+  const zone = qaTargetZone(team);
+  if(!zone) return 'Ingen data å regne på ennå.';
+  const data = await runInsightsAsync(team, zone);
+  if(data.successCount===0){
+    return `Ingen av de ${data.N} simulerte sesongene endte med at ${team} klarte å ${QA_REACH_PHRASE[zone.key]}, så et typisk mønster finnes ikke å vise.`;
+  }
+  const others = TEAMS.filter(t=>t!==team);
+  const counter = zone.dir==='front' ? data.favorAheadCount : data.coStruggleCount;
+  const rival = others.map(t=>({t, c:counter[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
+  const avgWins = (data.successWinSumT/data.successCount).toFixed(1);
+  let rivalTxt = '';
+  if(rival && rival.c>0){
+    const avgRivalLoss = (data.successLossSum[TI[rival.t]]/data.successCount).toFixed(1);
+    rivalTxt = ` ${rival.t} taper i snitt ${avgRivalLoss} kamper i de samme simuleringene.`;
+  }
+  return `I de ${pctTxt(data.successCount/data.N)} av simuleringene der ${team} klarer å ${QA_REACH_PHRASE[zone.key]}, tar de i snitt ${avgWins} seire i de gjenstående kampene.${rivalTxt}`;
+}
+
+// ---- Spørsmål 3: hvilke kamper betyr mest? Se buildMatchImpactCandidates()
+// for hvorfor bare et utvalg kamper testes, ikke alle ~70 gjenstående i hele
+// ligaen.
+async function qaKeyMatches(team){
+  const zone = qaTargetZone(team);
+  if(!zone) return 'Ingen data å regne på ennå.';
+  const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
+  if(!openMatches.length) return `${team} har ingen gjenstående kamper i dette scenariet.`;
+  const candidateSpecs = buildMatchImpactCandidates(team, openMatches);
+  const data = await runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, {P0,G0,F0,open,oddsOverride});
+  const withMeta = data.results.map(r=>({...r, match:openMatches[r.idx]}));
+  withMeta.sort((a,b)=>b.diff-a.diff);
+  const lines = withMeta.slice(0,3).map(r=>{
+    const m=r.match;
+    const first = r.homeProb>=r.awayProb
+      ? `${m.home}-seier gir ${pctTxt(r.homeProb)}, ${m.away}-seier gir ${pctTxt(r.awayProb)}`
+      : `${m.away}-seier gir ${pctTxt(r.awayProb)}, ${m.home}-seier gir ${pctTxt(r.homeProb)}`;
+    return `${m.home} mot ${m.away} (${formatDateNo(m.date)}): ${first} sjanse for ${zone.label}.`;
+  });
+  return lines.join(' ');
+}
+
+// ---- Spørsmål 6: når kan det være avgjort? decidedHist[runde] = antall
+// simuleringer der sonen FØRST ble avgjort (sikret eller helt utelukket)
+// akkurat ved det rundekontrollpunktet -- kumulativ sum til over halvparten
+// av N gir svaret. decidedHist['end'] = aldri avgjort før siste kamp.
+async function qaWhenDecided(team){
+  const zone = qaTargetZone(team);
+  if(!zone) return 'Ingen data å regne på ennå.';
+  const data = await runInsightsAsync(team, zone);
+  const rounds = Object.keys(data.decidedHist).filter(k=>k!=='end').map(Number).sort((a,b)=>a-b);
+  let cum=0, answerRound=null;
+  for(const r of rounds){
+    cum += data.decidedHist[r];
+    if(cum > data.N/2){ answerRound=r; break; }
+  }
+  const outcomeTxt = zone.dir==='front' ? `sjansen for ${zone.label} enten er sikret eller helt utelukket`
+    : `${team} enten er trygg, eller ikke lenger kan unngå kvalik/nedrykk`;
+  if(answerRound==null){
+    return `I over halvparten av simuleringene er det fortsatt åpent helt til siste runde -- det avgjøres typisk sent om ${outcomeTxt}.`;
+  }
+  return `Typisk avgjort senest runde ${answerRound}: i ${pctTxt(cum/data.N)} av simuleringene er ${outcomeTxt} da.`;
+}
+
+// ---- Spørsmål 7: hvem kjemper laget mot? aheadOfT/behindT talt fra den
+// sorterte sluttabellen i hver simulering (samme sortering som resten av
+// siden: poeng, målforskjell, scoret, tilfeldig til slutt).
+async function qaRivals(team){
+  const zone = qaTargetZone(team) || {key:'kvalik', label:'kvalik', lo:14, hi:14, boundary:13, dir:'back', pct:0};
+  const data = await runInsightsAsync(team, zone);
+  const others = TEAMS.filter(t=>t!==team);
+  const aheadTop = others.map(t=>({t,c:data.aheadOfT[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
+  const behindTop = others.map(t=>({t,c:data.behindT[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
+  const main = others.map(t=>({t,c:data.aheadOfT[TI[t]]+data.behindT[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
+  return `${aheadTop.t} ligger oftest rett foran ${team} (${pctTxt(aheadTop.c/data.N)} av simuleringene), og ${behindTop.t} rett bak (${pctTxt(behindTop.c/data.N)}). `+
+    `Hovedkonkurrenten om plasseringen er ${main.t}.`;
+}
+
+// ---- Knappene selv. Uten valgt lag vises bare de to som ikke trenger et
+// lag (7 og 8 i oppgaven -- "runin" og "luck" her). Svaret erstatter alltid
+// forrige, og et NYTT spørsmål mens et gammelt fortsatt regner forkaster det
+// gamle svaret når det kommer (qaRequestSeq), så et sent svar ikke dukker
+// opp over et nyere spørsmål. ----
+const QA_QUESTIONS = [
+  {id:'why', needsTeam:true, run:qaWhy, label:team=>{
+    const z=qaTargetZone(team);
+    return z ? `Hvorfor har ${team} ${pctTxt(z.pct)} sjanse for ${z.label}?` : `Hvorfor har ${team} den sjansen den har?`;
+  }},
+  {id:'howto', needsTeam:true, run:qaHowTo, label:team=>{
+    const z=qaTargetZone(team);
+    return `Hva må ${team} gjøre for å ${z?QA_REACH_PHRASE[z.key]:'nå målet'}?`;
+  }},
+  {id:'keymatches', needsTeam:true, run:qaKeyMatches, label:team=>`Hvilke kamper betyr mest for ${team}?`},
+  {id:'runin', needsTeam:false, run:()=>qaToughestRunIn(), label:()=>'Hvem har tyngst avslutning?'},
+  {id:'nextmatch', needsTeam:true, run:team=>qaNextMatch(team), label:team=>`Hva skjer hvis ${team} vinner neste kamp?`},
+  {id:'decided', needsTeam:true, run:qaWhenDecided, label:()=>'Når kan det være avgjort?'},
+  {id:'rivals', needsTeam:true, run:qaRivals, label:team=>`Hvem kjemper ${team} mot?`},
+  {id:'luck', needsTeam:false, run:()=>qaLuck(), label:()=>'Hvem har vært heldig eller uheldig?'},
+];
+let qaActiveId = null, qaRequestSeq = 0;
+function renderQaButtons(){
+  const box = document.getElementById('qaButtons');
+  const team = SELECTED_TEAM;
+  const active = QA_QUESTIONS.filter(q => team ? true : !q.needsTeam);
+  box.innerHTML = active.map(q=>
+    `<button data-id="${q.id}" class="${q.id===qaActiveId?'active':''}">${q.label(team)}</button>`
+  ).join('');
+  // Aktivt spørsmål kan ha blitt utilgjengelig (f.eks. laget ble valgt bort) -- skjul svaret da.
+  if(qaActiveId && !active.some(q=>q.id===qaActiveId)){
+    qaActiveId = null;
+    document.getElementById('qaAnswer').hidden = true;
+  }
+}
+async function runQaQuestion(id){
+  const q = QA_QUESTIONS.find(x=>x.id===id);
+  if(!q) return;
+  qaActiveId = id;
+  renderQaButtons();
+  const answerEl = document.getElementById('qaAnswer');
+  answerEl.hidden = false;
+  answerEl.className = 'qa-answer loading';
+  answerEl.innerHTML = `<span class="qa-spinner"></span> Regner svaret…`;
+  const myRequestId = ++qaRequestSeq;
+  let text;
+  try{
+    text = await q.run(SELECTED_TEAM);
+  }catch(err){
+    console.error('Spør om tabellen', err);
+    text = 'Klarte ikke regne ut svaret akkurat nå.';
+  }
+  if(myRequestId !== qaRequestSeq) return; // et nytt spørsmål er stilt i mellomtiden
+  answerEl.className = 'qa-answer';
+  answerEl.textContent = text;
+}
+document.getElementById('qaButtons').addEventListener('click', e=>{
+  const btn = e.target.closest('button'); if(!btn) return;
+  runQaQuestion(btn.dataset.id);
+});
+
 // ---- Knappene: to uavhengige, rent datadrevne tilstander (ikke "hvilken
 // knapp ble sist klikket", som lett kommer ut av synk med manuelle
 // redigeringer). Regnes ut på nytt hver render() direkte fra matches. ----
@@ -1905,8 +2484,8 @@ function updateToolButtons(){
   if(hasTeam){
     winBtn.textContent = `${SELECTED_TEAM} vinner alt`;
     loseBtn.textContent = `${SELECTED_TEAM} taper alt`;
-    winBtn.title = `Fyller ${SELECTED_TEAM}-kampene med seier til ${SELECTED_TEAM} og resten med en typisk sesong`;
-    loseBtn.title = `Fyller ${SELECTED_TEAM}-kampene med tap for ${SELECTED_TEAM} og resten med en typisk sesong`;
+    winBtn.title = `Fyller ${SELECTED_TEAM}-kampene med seier til ${SELECTED_TEAM} og resten med et plausibelt scenario`;
+    loseBtn.title = `Fyller ${SELECTED_TEAM}-kampene med tap for ${SELECTED_TEAM} og resten med et plausibelt scenario`;
   }
   mark('followWin', followed==='win', 'on');
   mark('followLose', followed==='lose', 'on');
@@ -1915,7 +2494,7 @@ function updateToolButtons(){
   const parts=[];
   if(followed==='win') parts.push(`Scenario: ${SELECTED_TEAM} vinner alt.`);
   else if(followed==='lose') parts.push(`Scenario: ${SELECTED_TEAM} taper alt.`);
-  if(other==='typical') parts.push('Andre kamper: typisk sesong.');
+  if(other==='typical') parts.push('Andre kamper: plausibelt scenario.');
   const line=document.getElementById('scenarioLine');
   if(parts.length){ line.textContent=parts.join(' '); line.hidden=false; }
   else line.hidden=true;
@@ -1926,6 +2505,7 @@ function render(){
   fillProb();
   updateToolButtons();
   updateRoundSimButtons();
+  renderQaButtons();
   const {rows,played}=compute();
 
   // Badge (matematisk avgjort) og Form regnes ut fra "rows" i standings-
