@@ -234,7 +234,17 @@
      bunnen (med forklaringen) er synlig og låses først da. Ingen effekt på
      mobil, og ingen effekt i det hele tatt når kamplisten er kortere enn
      tabellen (styrt av .panel-follow-klassen fra JS, ikke her). */
-  @media (min-width:1181px){.wrap > .leftcol.panel-follow{position:sticky}}
+  /* Bare tabellpanelet står fast, ikke hele venstrekolonnen: en kolonne med
+     både tabell og "Spør om tabellen" er høyere enn skjermen og ville blitt
+     låst med bunnen synlig, slik at spørsmålene sto fast og tabellen
+     forsvant. .tblzone strekkes til samme høyde som høyrekolonnen (den er
+     festeområdet), og "Spør om tabellen" ligger UNDER festeområdet i vanlig
+     flyt, så tabellen aldri overlapper den. */
+  @media (min-width:1181px){
+    .leftcol{align-self:stretch}
+    .tblzone{flex:1 1 auto;min-height:0}
+    .tblzone > .panel-follow{position:sticky}
+  }
   .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .panel > h2{font:700 22px/1 var(--cond);margin:0;padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
   .panel > h2 .count{font:500 14px var(--body);color:var(--muted)}
@@ -502,7 +512,8 @@
 
 <div class="wrap">
   <div class="leftcol">
-  <section class="panel">
+  <div class="tblzone">
+  <section class="panel tblpanel">
     <h2>Tabell <span class="count" id="tblInfo"></span></h2>
     <p class="scenario-line" id="scenarioLine" hidden></p>
     <p class="simnote" id="simNote" hidden>Prosentene bygger på resultatene i kamplisten, også de simulerte.</p>
@@ -526,6 +537,7 @@
       <span class="n"><i></i>Nedrykk (15 og 16)</span>
     </div>
   </section>
+  </div>
 
     <section class="panel qa" aria-label="Spør om tabellen">
       <h2>Spør om tabellen</h2>
@@ -949,10 +961,12 @@ function updateFollowedMatchRows(){
 // mobil. Navngivningen unngår bevisst "sticky"/"fixed"/"float"/"pin" (se
 // CSS-kommentaren over @media-regelen).
 function updateFollowFit(){
-  const panel = document.querySelector('.wrap > .leftcol');
-  const sibling = document.querySelector('.wrap > .rightcol');
-  if(!panel || !sibling) return;
-  if(window.innerWidth < 1181 || sibling.offsetHeight < panel.offsetHeight){
+  const panel = document.querySelector('.wrap > .leftcol .tblpanel');
+  const zone = panel && panel.parentElement;
+  if(!panel || !zone) return;
+  // Ingen effekt på mobil, eller når festeområdet ikke er høyere enn tabellen
+  // (kamplisten ved siden av er kortere), siden det da ikke er noe å scrolle forbi.
+  if(window.innerWidth < 1181 || zone.offsetHeight <= panel.offsetHeight){
     panel.classList.remove('panel-follow');
     panel.style.top = '';
     return;
@@ -967,7 +981,7 @@ window.addEventListener('resize', updateFollowFit);
 // statiske markup-et (bare innholdet fylles av JS), så vi kan observere dem
 // med en gang.
 const _followObserver = new ResizeObserver(()=>updateFollowFit());
-document.querySelectorAll('.wrap > .leftcol, .wrap > .rightcol').forEach(p=>_followObserver.observe(p));
+document.querySelectorAll('.wrap > .leftcol, .wrap > .rightcol, .tblzone, .tblpanel').forEach(p=>_followObserver.observe(p));
 
 // Form-kolonnen: klikk på header sorterer tabellen etter Form (bytter
 // retning, tredje klikk går tilbake til standings-rekkefølge). Klikk på et
@@ -3008,6 +3022,9 @@ async function runQaQuestion(id, keepZoneOverride){
   if(!doneEl) return;
   doneEl.className = 'qa-answer';
   doneEl.textContent = text;
+  // Svaret skal ikke havne utenfor skjermen: "nearest" scroller bare hvis noe
+  // av det er utenfor, og ellers ikke i det hele tatt.
+  doneEl.scrollIntoView({block:'nearest', behavior:'smooth'});
 }
 document.getElementById('qaButtons').addEventListener('click', e=>{
   const btn = e.target.closest('button'); if(!btn) return;
