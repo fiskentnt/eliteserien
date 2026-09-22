@@ -2653,6 +2653,10 @@ function fillOdds(){
       .forEach(tr=>tb.appendChild(tr));
   }
   updateSummaryCards();
+  // Merkene tegnes når Worker-en svarer, og det skjer uavhengig av
+  // simuleringen. Uten dette kallet sto et merke som skulle vært skjult
+  // (se badgeFor) igjen, fordi lastMC ikke fantes da merkene kom.
+  applyBadgesToDom();
   const box=document.getElementById('odds'); if(!box || !SELECTED_TEAM) return;
   const d=lastMC[SELECTED_TEAM]; if(!d) return;
   const mx=Math.max(...d);

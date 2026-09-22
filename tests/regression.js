@@ -651,6 +651,26 @@ async function main() {
             iKamp.slice(0, 4).map(r => `${r.team} ${r[k].ventet}`).join(', '));
         }
       }
+      // Merkene skal passe til sonen laget faktisk kjemper om. "Sikret plass"
+      // (berget kontrakten) er ikke saken for et lag som fortsatt kan nå topp 6.
+    // Regelen gjelder der ligaen ber om den (hideIfChance). OBOS gjør det;
+    // Eliteserien viser "Sikret plass" til alle som har berget kontrakten.
+      const merker = await tp.evaluate(soner => {
+        const sum = (d, [lo, hi]) => { let v = 0; for (let q = lo; q <= hi; q++) v += d[q - 1]; return v; };
+        const regler = LEAGUE.badges.filter(b => b.hideIfChance)
+          .map(b => ({tekst: b.text, sone: b.hideIfChance.zone, over: b.hideIfChance.over}));
+        return {regler, rader: [...document.querySelectorAll('#tbl tbody tr')].map(tr => ({
+          team: tr.dataset.team,
+          merke: (tr.querySelector('.badge .bt') || {}).textContent || '',
+          topp: sum(lastMC[tr.dataset.team], soner.europa),
+        }))};
+      }, fasit);
+      for (const regel of merker.regler) {
+        const feilMerke = merker.rader.filter(m => m.merke === regel.tekst && m.topp > regel.over);
+        check(`${liga}: "${regel.tekst}" bare for lag uten sjanse i topp-striden`,
+          feilMerke.length === 0,
+          feilMerke.map(m => `${m.team} har ${Math.round(m.topp * 100)} %`).join('; '));
+      }
       await tp.close();
     }
     await page.bringToFront();
