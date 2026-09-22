@@ -50,7 +50,11 @@ def fetch_upcoming_fixtures(key, frm, to, force=False):
     print("  henter kommende kamper fra OddsPapi (1 tellende kall)")
     d, err = oddspapi.call("/v4/fixtures", {"tournamentId": OBOS_TOURNAMENT,
                                             "from": frm, "to": to}, key)
-    if err:
+    if err and "FIXTURE_NOT_FOUND" in str(err):
+        # Ingen kamper i vinduet er et gyldig svar (landskampspause), ikke en feil.
+        print("  ingen OBOS-kamper i vinduet")
+        d = {"data": []}
+    elif err:
         print(f"  FEIL: {err}")
         return None
     fl = oddspapi.unwrap(d)
@@ -85,7 +89,7 @@ def skriv(matches, fetched_at):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--days", type=int, default=10, help="hvor langt fram vi henter")
+    ap.add_argument("--days", type=int, default=14, help="hvor langt fram vi henter (to uker: OBOS har ofte ti dager mellom rundene)")
     ap.add_argument("--refresh", action="store_true", help="se bort fra mellomlageret")
     args = ap.parse_args()
 
