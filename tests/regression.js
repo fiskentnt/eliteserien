@@ -702,25 +702,54 @@ async function main() {
     const lp = await open(1400, 900, base);
     await settle(lp);
     const meny = await lp.evaluate(() => {
-      const btn = document.getElementById('leagueBtn');
-      const menu = document.getElementById('leagueMenu');
-      const skjult = menu.hidden;
-      btn.click();
+      const tabs = document.getElementById('leagueTabs');
       return {
-        skjultFor: skjult, apenEtter: !menu.hidden,
+        finnes: !!tabs,
+        // Nedtrekket i tittelen er borte; tittelen er vanlig tekst.
+        nedtrekk: !!(document.getElementById('leagueMenu') || document.getElementById('leagueBtn')),
         tittel: document.getElementById('leagueName').textContent,
-        valg: [...menu.querySelectorAll('a')].map(a => ({
-          href: a.getAttribute('href'), her: a.getAttribute('aria-current') === 'page',
+        tittelErTekst: !document.querySelector('h1 button'),
+        valg: [...(tabs ? tabs.querySelectorAll('a') : [])].map(a => ({
+          href: a.getAttribute('href'), navn: a.textContent.trim(),
+          her: a.getAttribute('aria-current') === 'page',
         })),
+        // Fanene skal stå til HØYRE for logoen, før seksjonslenkene.
+        etterLogo: tabs ? tabs.compareDocumentPosition(document.querySelector('.brand')) === Node.DOCUMENT_POSITION_PRECEDING : false,
+        forLenker: tabs ? tabs.compareDocumentPosition(document.getElementById('navLinks')) === Node.DOCUMENT_POSITION_FOLLOWING : false,
+        // Seksjonslenkene skal være urørt.
+        lenker: [...document.querySelectorAll('#navLinks a[data-target]')].map(a => a.dataset.target),
       };
     });
-    check('menyen er lukket til den trykkes', meny.skjultFor && meny.apenEtter, JSON.stringify(meny));
+    check('ligafanene ligger i toppmenyen', meny.finnes && meny.etterLogo && meny.forLenker,
+      JSON.stringify({finnes: meny.finnes, etterLogo: meny.etterLogo, forLenker: meny.forLenker}));
+    check('nedtrekket i tittelen er borte', !meny.nedtrekk && meny.tittelErTekst,
+      `nedtrekk=${meny.nedtrekk}, tittelErTekst=${meny.tittelErTekst}`);
     check('tittelen er ligaens navn og sesong', /^Eliteserien \d{4}$/.test(meny.tittel), meny.tittel);
-    check('menyen har begge ligaene', meny.valg.length === 2
+    check('fanene har begge ligaene', meny.valg.length === 2
       && meny.valg.some(v => v.href === '/eliteserien/') && meny.valg.some(v => v.href === '/obos/'),
       JSON.stringify(meny.valg));
     check('ligaen du er på er merket', meny.valg.filter(v => v.her).length === 1
       && meny.valg.find(v => v.her).href === '/eliteserien/', JSON.stringify(meny.valg));
+    check('seksjonslenkene står der de står',
+      JSON.stringify(meny.lenker) === JSON.stringify(['tabell', 'fxPanel', 'qaPanel', 'omModellen']),
+      meny.lenker.join(', '));
+    // Mobil: fanene på egen linje under logoen, så seksjonslenkene ikke blir trangere.
+    await lp.setViewport({width: 390, height: 844});
+    await sleep(400);
+    const fanerMobil = await lp.evaluate(() => {
+      const t = document.getElementById('leagueTabs').getBoundingClientRect();
+      const n = document.querySelector('.nav-links').getBoundingClientRect();
+      const b = document.querySelector('.brand').getBoundingClientRect();
+      return {egenLinje: t.bottom <= n.top + 1, underLogo: t.top >= b.top,
+              innenfor: t.left >= -1 && t.right <= innerWidth + 1,
+              scroll: document.documentElement.scrollWidth - document.documentElement.clientWidth};
+    });
+    check('mobil: fanene har egen linje under logoen',
+      fanerMobil.egenLinje && fanerMobil.underLogo, JSON.stringify(fanerMobil));
+    check('mobil: fanene er innenfor skjermen, ingen sidelengs scroll',
+      fanerMobil.innenfor && fanerMobil.scroll === 0, JSON.stringify(fanerMobil));
+    await lp.setViewport({width: 1400, height: 900});
+    await sleep(300);
     // Følg et lag, stå i kamplisten, og bytt.
     await lp.evaluate(lag => {
       const s = document.getElementById('teamSelect');
@@ -728,18 +757,20 @@ async function main() {
       location.hash = '#fxPanel';
     }, fulgt);
     await sleep(400);
-    await lp.evaluate(() => {
-      if (document.getElementById('leagueMenu').hidden) document.getElementById('leagueBtn').click();
-      document.querySelector('#leagueMenu a[data-league="obos"]').click();
-    });
+    await lp.evaluate(() => document.querySelector('#leagueTabs a[data-league="obos"]').click());
     await sleep(1500);
     await lp.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
     const etter = await lp.evaluate(() => ({
       url: location.href, tittel: document.getElementById('leagueName').textContent,
       lag: document.getElementById('teamSelect').value, tekst: document.body.innerText,
+      herHref: (() => {
+        const a = [...document.querySelectorAll('#leagueTabs a')].find(x => x.getAttribute('aria-current'));
+        return a ? a.getAttribute('href') : null;
+      })(),
     }));
     check('byttet går til samme del av siden', /\/obos\/#fxPanel$/.test(etter.url), etter.url);
     check('tittelen viser den nye ligaen', /^OBOS-ligaen \d{4}$/.test(etter.tittel), etter.tittel);
+    check('den nye ligaen er markert som aktiv', etter.herHref === '/obos/', String(etter.herHref));
     check('fulgt lag følger ikke med over', etter.lag === '' || obosLag.includes(etter.lag), `valgte "${etter.lag}"`);
     check(`ingen tekst nevner ${fulgt} etter byttet`, !etter.tekst.includes(fulgt),
       (etter.tekst.split('\n').find(l => l.includes(fulgt)) || '').slice(0, 120));

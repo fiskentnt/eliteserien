@@ -213,6 +213,15 @@
   .nav-in{max-width:1380px;margin:0 auto;padding:0 24px;height:var(--nav-h);display:flex;align-items:center;gap:20px}
   .brand{display:inline-flex;align-items:center;gap:10px;font:800 21px/1 var(--cond);letter-spacing:.02em;color:var(--ink);text-decoration:none;white-space:nowrap}
   .brand-mark{flex:none;display:block}
+  /* Ligafanene: rett til høyre for logoen, tydelig hvilken som er aktiv.
+     De er navigasjon mellom to sider, ikke seksjoner på samme side, så de
+     ser ut som knapper og ikke som seksjonslenkene ved siden av. */
+  .league-tabs{flex:none;display:flex;gap:4px;padding:3px;border-radius:999px;background:var(--input-bg);border:1px solid var(--line)}
+  .league-tabs a{display:block;padding:6px 13px;border-radius:999px;text-decoration:none;
+    color:var(--muted);font:700 13.5px/1.15 var(--cond);letter-spacing:.01em;white-space:nowrap}
+  .league-tabs a:hover{color:var(--ink)}
+  .league-tabs a[aria-current="page"]{background:var(--team-fill);color:var(--team-fill-text)}
+  .league-tabs a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .nav-links{flex:1;min-width:0;display:flex;justify-content:center;gap:2px;overflow-x:auto;scrollbar-width:none}
   .nav-links::-webkit-scrollbar{display:none}
   .nav-links .sm{display:none}
@@ -229,12 +238,23 @@
     :root:not([data-theme="light"]) .theme-toggle .icon-sun{display:none}
     :root:not([data-theme="light"]) .theme-toggle .icon-moon{display:block}
   }
+  @media (max-width:760px){
+    /* Fanene får en egen linje under logoen, så seksjonslenkene ikke blir
+       trangere enn de var. Menylinja er da to rader høy. */
+    :root{--nav-h:auto}
+    .nav-in{flex-wrap:wrap;height:auto;padding:8px 12px;row-gap:6px}
+    .brand{order:1}
+    .theme-toggle{order:2;margin-left:auto}
+    .league-tabs{order:3;width:100%}
+    .league-tabs a{flex:1;text-align:center}
+    .nav-links{order:4;width:100%;flex:1 0 100%}
+    .nav-links a{padding:8px 10px 8px}
+  }
   @media (max-width:640px){
-    .nav-in{padding:0 12px;gap:8px}
     .brand span{display:none} /* mobil: bare ikonet, så lenkene får plass */
     .brand-mark{width:26px;height:26px}
     .nav-links{justify-content:flex-start}
-    .nav-links a{padding:18px 10px 16px;font-size:13.5px}
+    .nav-links a{padding:8px 10px;font-size:13.5px}
     .nav-links .lg{display:none}
     .nav-links .sm{display:inline}
   }
@@ -257,24 +277,6 @@
   }
   .titlerow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
   h1{margin:0;font:800 clamp(26px,3.4vw,34px)/1 var(--cond);letter-spacing:-.01em}
-  /* Tittelen er samtidig ligavelgeren. Knappen skal se ut som overskriften,
-     ikke som en kontroll: bare en liten pil røper at det er noe å trykke på. */
-  .leaguepick{position:relative}
-  .leaguebtn{display:inline-flex;align-items:baseline;gap:7px;background:none;border:0;padding:0;
-    margin:0;color:inherit;font:inherit;cursor:pointer;border-radius:8px}
-  .leaguebtn:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
-  .leaguebtn .caret{font-size:.5em;line-height:1;transform:translateY(-.25em);color:var(--muted);transition:transform .15s}
-  .leaguebtn:hover .caret{color:var(--ink)}
-  .leaguepick[data-open="1"] .leaguebtn .caret{transform:translateY(-.25em) rotate(180deg)}
-  .leaguemenu{position:absolute;top:calc(100% + 8px);left:0;z-index:60;min-width:210px;
-    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:5px;
-    box-shadow:0 10px 30px rgba(0,0,0,.28)}
-  .leaguemenu[hidden]{display:none}
-  .leaguemenu a{display:block;padding:9px 11px;border-radius:8px;text-decoration:none;
-    color:var(--ink);font:700 15px/1.2 var(--cond)}
-  .leaguemenu a:hover{background:var(--input-bg)}
-  .leaguemenu a[aria-current="page"]{color:var(--eu-text)}
-  .leaguemenu a small{display:block;margin-top:2px;font:500 12px/1.3 var(--body);color:var(--muted)}
   .subtitle{font:600 clamp(13px,1.4vw,15px)/1.2 var(--cond);color:var(--muted);letter-spacing:.01em}
   .subline{margin:8px 0 0;font-size:12.5px}
   .stamp{display:inline-block;background:var(--input-bg);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:2px 10px;font-weight:600}
@@ -834,6 +836,7 @@
 <nav class="topnav" aria-label="Hovedmeny">
   <div class="nav-in">
     <a class="brand" href="#tabell" aria-label="Tabellkalkulator"><svg class="brand-mark" viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><rect x=".5" y=".5" width="15" height="15" rx="3.5" fill="#13305f" stroke="#4f7fc4" stroke-opacity=".6"/><rect x="3" y="4" width="10" height="2" rx="1" fill="#34d399"/><rect x="3" y="7" width="7" height="2" rx="1" fill="#e8f0fc"/><rect x="3" y="10" width="5" height="2" rx="1" fill="#e8f0fc"/></svg><span>Tabellkalkulator</span></a>
+    <div class="league-tabs" id="leagueTabs" role="navigation" aria-label="Velg liga"></div>
     <div class="nav-links" id="navLinks">
       <a href="#tabell" data-target="tabell" class="active">Tabell</a>
       <a href="#fxPanel" data-target="fxPanel"><span class="lg">Legg inn resultater</span><span class="sm">Resultater</span></a>
@@ -850,15 +853,9 @@
 <header class="pagehead">
   <!-- LIGA-TITTEL -->
   <!-- Overskriften er den samme markupen på alle ligasidene; teksten settes av
-       applyLeagueToDom() fra LEAGUE. Den står her, ikke i en byttet region, så
-       ligavelgeren bare finnes ett sted. -->
+       applyLeagueToDom() fra LEAGUE. Ligavalget ligger i toppmenyen, ikke her. -->
   <div class="titlerow">
-    <div class="leaguepick" id="leaguePick">
-      <h1><button class="leaguebtn" id="leagueBtn" aria-haspopup="menu" aria-expanded="false">
-        <span id="leagueName">OBOS-ligaen 2026</span><span class="caret" aria-hidden="true">▼</span>
-      </button></h1>
-      <div class="leaguemenu" id="leagueMenu" role="menu" hidden></div>
-    </div>
+    <h1 id="leagueName">OBOS-ligaen 2026</h1>
     <span class="subtitle" id="leagueSub">Tabellkalkulator for OBOS-ligaen</span>
   </div>
   <!-- /LIGA-TITTEL -->
@@ -1447,15 +1444,13 @@ const SITE_LEAGUES = [
 // Hvilken liga brukeren sist var på. Forsiden leser den og sender deg rett dit.
 const LAST_LEAGUE_KEY = 'tk:sisteLiga';
 function buildLeagueMenu(){
-  const pick = document.getElementById('leaguePick');
-  const btn = document.getElementById('leagueBtn');
-  const menu = document.getElementById('leagueMenu');
+  const tabs = document.getElementById('leagueTabs');
   const name = document.getElementById('leagueName');
   const sub = document.getElementById('leagueSub');
-  if(!pick || !btn || !menu) return;
-  name.textContent = `${LEAGUE.name} ${LEAGUE.season}`;
+  if(name) name.textContent = `${LEAGUE.name} ${LEAGUE.season}`;
   if(sub) sub.textContent = `Tabellkalkulator for ${LEAGUE.name}`;
   try{ localStorage.setItem(LAST_LEAGUE_KEY, LEAGUE.id); }catch(e){}
+  if(!tabs) return;
   // Samme del av siden følger med over, men ingenting annet: scenariet (s=) og
   // det fulgte laget (team=) hører til ÉN liga og skal ikke dras med. Derfor
   // bygges lenken av seksjonsankeret alene.
@@ -1465,24 +1460,15 @@ function buildLeagueMenu(){
     const active = document.querySelector('#navLinks a.active[data-target]');
     return active ? '#' + active.dataset.target : '';
   };
-  menu.innerHTML = SITE_LEAGUES.map(l => l.id===LEAGUE.id
-    ? `<a href="${l.path}" aria-current="page" role="menuitem">${l.name} ${l.season}<small>Du er her</small></a>`
-    : `<a href="${l.path}" role="menuitem" data-league="${l.id}">${l.name} ${l.season}<small>${l.blurb}</small></a>`).join('');
-  menu.querySelectorAll('a[data-league]').forEach(a=>{
+  tabs.innerHTML = SITE_LEAGUES.map(l => l.id===LEAGUE.id
+    ? `<a href="${l.path}" aria-current="page">${l.name}</a>`
+    : `<a href="${l.path}" data-league="${l.id}" title="${l.blurb}">${l.name}</a>`).join('');
+  tabs.querySelectorAll('a[data-league]').forEach(a=>{
     a.addEventListener('click', e=>{
       e.preventDefault();
       location.href = a.getAttribute('href') + section();
     });
   });
-  const setOpen = open => {
-    menu.hidden = !open;
-    pick.dataset.open = open ? '1' : '0';
-    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
-  };
-  btn.addEventListener('click', e=>{ e.stopPropagation(); setOpen(menu.hidden); });
-  document.addEventListener('click', e=>{ if(!pick.contains(e.target)) setOpen(false); });
-  document.addEventListener('keydown', e=>{ if(e.key==='Escape') setOpen(false); });
-  setOpen(false);
 }
 function applyLeagueToDom(){
   buildLeagueMenu();
