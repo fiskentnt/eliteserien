@@ -1064,6 +1064,48 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- 21. trykk i tabellen: lagnavnet følger laget, Form-tallet viser grafen ----
+    setGroup('Trykk i tabellen');
+    for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
+      for (const [w, h, enhet] of [[1400, 900, 'PC'], [390, 844, 'mobil']]) {
+        const ctx = await browser.createBrowserContext();
+        const p = await ctx.newPage();
+        p.on('pageerror', e => errors.push(`${url}: ${e.message}`));
+        await p.setViewport({width: w, height: h});
+        await p.goto(url, {waitUntil: 'networkidle0'});
+        await p.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
+        const lag = await p.evaluate(() => TEAMS[3]);
+        const tilstand = () => p.evaluate(() => ({
+          valgt: document.getElementById('teamSelect').value,
+          fulgt: (document.querySelector('#tbl tr.followed') || {}).dataset?.team || '',
+          boks: !document.getElementById('verdict').hidden,
+          graf: !document.getElementById('formModalBackdrop').hidden,
+        }));
+        // Lagnavnet: velger laget, som "Følg laget ditt", og åpner ikke grafen.
+        await p.click(`#tbl .teamname[data-team="${lag}"]`);
+        await sleep(600);
+        let t = await tilstand();
+        check(`${liga} ${enhet}: trykk på lagnavnet følger laget`,
+          t.valgt === lag && t.fulgt === lag && t.boks, JSON.stringify(t));
+        check(`${liga} ${enhet}: lagnavnet åpner ikke formgrafen`, !t.graf, JSON.stringify(t));
+        // Et nytt trykk på samme lag velger det bort.
+        await p.click(`#tbl .teamname[data-team="${lag}"]`);
+        await sleep(600);
+        t = await tilstand();
+        check(`${liga} ${enhet}: nytt trykk velger laget bort`, t.valgt === '' && t.fulgt === '', JSON.stringify(t));
+        // Form-tallet: åpner formgrafen for riktig lag, og endrer ikke hvilket lag som følges.
+        await p.click(`#tbl button.formbox[data-team="${lag}"]`);
+        await sleep(400);
+        t = await tilstand();
+        const tittel = await p.evaluate(() => document.getElementById('formModalTitle').textContent);
+        check(`${liga} ${enhet}: trykk på Form-tallet åpner formgrafen for laget`,
+          t.graf && tittel === lag, `${JSON.stringify(t)} tittel "${tittel}"`);
+        check(`${liga} ${enhet}: Form-tallet endrer ikke fulgt lag`, t.valgt === '', JSON.stringify(t));
+        await ctx.close();
+      }
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();

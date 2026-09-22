@@ -517,8 +517,10 @@
     .badge.relegated .bi::before{content:"↓"}
   }
 
-  /* Team-navn: klikkbart, åpner formgrafen */
+  /* Lagnavnet: et trykk følger laget (som "Følg laget ditt"), et nytt trykk på
+     laget som alt følges velger det bort. Formgrafen ligger på Form-tallet. */
   .teamname{cursor:pointer}
+  .teamname:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
   /* Under 340 px brukes de korte lagnavnene fra kamplisten (shortTeam), så
      alle tallkolonnene får plass uten sideveis scroll på de smaleste
      skjermene. Over den grensen står navnene fullt ut. */
@@ -531,6 +533,11 @@
   th.sortable:hover,th.sortable.active{color:var(--ink)}
   td.formcol{padding-right:10px}
   .formbox{display:inline-block;min-width:30px;padding:2px 7px;border-radius:5px;font:700 13px/1.3 var(--cond);text-align:center;color:#fff}
+  /* Form-tallet er en knapp som åpner formgrafen, som tallene i lagboksen
+     åpner et svar: samme utseende som før, men den kan trykkes på. */
+  button.formbox{border:none;margin:0;cursor:pointer}
+  button.formbox:hover{text-decoration:underline;filter:brightness(1.08)}
+  button.formbox:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .formbox.red{background:var(--formbox-red-bg)}
   .formbox.yellow{background:var(--q);color:#3a2c05}
   .formbox.lightgreen{background:#7fb9a8;color:#0d3327}
@@ -1741,13 +1748,28 @@ document.getElementById('sortNote').addEventListener('click', e=>{ if(e.target.c
 document.querySelector('#tbl tbody').addEventListener('click', e=>{
   const bd=e.target.closest('.badge');
   if(bd){ e.stopPropagation(); showBadgeTip(bd); return; }
+  const fb=e.target.closest('button.formbox');
+  if(fb){ openFormModal(fb.dataset.team); return; }
   const el=e.target.closest('.teamname');
-  if(el) openFormModal(el.dataset.team);
+  if(el) followTeamToggle(el.dataset.team);
 });
 document.querySelector('#tbl tbody').addEventListener('keydown', e=>{
   const bd=e.target.closest('.badge');
-  if(bd && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); showBadgeTip(bd); }
+  if(bd && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); showBadgeTip(bd); return; }
+  const el=e.target.closest('.teamname');
+  if(el && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); followTeamToggle(el.dataset.team); }
 });
+// Et trykk på lagnavnet i tabellen gjør det samme som å velge laget i "Følg
+// laget ditt" -- lagboksen, fargene og spørsmålene følger med. Trykker man
+// på laget som alt følges, velges det bort. Går via nedtrekksmenyen, så alt
+// som skjer ved et vanlig lagvalg (lagring per liga, farger, omregning av
+// svar) skjer her også, uten en egen kodevei.
+function followTeamToggle(team){
+  const sel = document.getElementById('teamSelect');
+  if(!sel || !team) return;
+  sel.value = team===SELECTED_TEAM ? '' : team;
+  sel.dispatchEvent(new Event('change'));
+}
 // Et klikk utenfor merket lukker boblen.
 document.addEventListener('click', e=>{ if(!e.target.closest('.badge')) hideBadgeTip(); });
 document.getElementById('formModalClose').addEventListener('click', closeFormModal);
@@ -5177,7 +5199,7 @@ function render(){
       // Modellkolonnene (Form, Gull, Europa, Ned) og merkene gjelder bare nå-situasjonen.
       tr.dataset.team=r.name;
       tr.className=[bandClass(pos),r.name===SELECTED_TEAM?'followed':'',LEAGUE.cuts.includes(pos)?'cut':''].join(' ').trim();
-      tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="hide-s">${r.p}</td>
+      tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="hide-s">${r.p}</td>
         <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
         <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts">${r.pts}</td>
         <td class="formcol hh"></td><td class="hide-s">${formHtmlFrom(r.results)}</td><td class="odds gull hide-m hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
@@ -5193,10 +5215,10 @@ function render(){
     const changeTxt = r.formChange>=0.05?`Opp ${f1(r.formChange)} siden forrige modelloppdatering.`
       : r.formChange<=-0.05?`Ned ${f1(Math.abs(r.formChange))} siden forrige modelloppdatering.`
       : 'Uendret siden forrige modelloppdatering.';
-    tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span>${diff}</td><td class="hide-s">${r.p}</td>
+    tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span>${diff}</td><td class="hide-s">${r.p}</td>
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
       <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.pts} poeng nå. Maks mulig sluttsum: ${r.max}.">${r.pts}</td>
-      <td class="formcol"><span class="formbox ${formCls}" title="${f1(r.form)} av 10. ${changeTxt}">${f1(r.form)}</span></td>
+      <td class="formcol"><button type="button" class="formbox ${formCls}" data-team="${r.name}" title="${f1(r.form)} av 10. ${changeTxt} Trykk for formgrafen." aria-label="Form ${f1(r.form)} av 10 for ${r.name}. Vis formgrafen.">${f1(r.form)}</button></td>
       <td class="hide-s">${formHtml(r.name)}</td><td class="odds gull hide-m"></td><td class="odds p3"></td><td class="odds ned"></td>`;
     tb.appendChild(tr);
   });
