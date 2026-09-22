@@ -2818,7 +2818,12 @@ document.getElementById('roundReset').addEventListener('click', ()=>{ selRoundId
 function scrollToSection(id){
   if(id==='qaPanel') qaSetOpen(true); // spørsmålsseksjonen åpnes hvis den er lukket
   const el = document.getElementById(id);
-  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
+  if(!el) return;
+  // Tabellen står fast på PC (sticky, se .panel-follow), så scrollIntoView
+  // mener den allerede er synlig og flytter ingenting -- "Tabell" ble en død
+  // lenke der. Riktig mål er da toppen av siden.
+  if(id==='tabell' && window.innerWidth>=1181){ window.scrollTo({top:0, behavior:'smooth'}); return; }
+  el.scrollIntoView({behavior:'smooth', block:'start'});
 }
 document.getElementById('navLinks').addEventListener('click', e=>{
   const a = e.target.closest('a[data-target]'); if(!a) return;
@@ -2833,22 +2838,30 @@ let navLock = null;
 (function navSpy(){
   const links = [...document.querySelectorAll('#navLinks a[data-target]')];
   const targets = links.map(a=>document.getElementById(a.dataset.target));
-  // Markerer seksjonen som tar mest av skjermen: størst synlig areal (høyde
-  // under navigasjonen ganger bredde), ikke den siste toppen som er passert.
-  // På PC (todelt layout) står tabellen fast og er alltid synlig, så den teller bare
-  // øverst på siden; ellers ville den alltid vunnet. Etter et klikk på en lenke
-  // holdes den valgte lenken markert til brukeren scroller selv.
+  // Lenkene står IKKE i samme rekkefølge som seksjonene i dokumentet ("Legg
+  // inn resultater" står før "Spør om tabellen" i menyen, men under den på
+  // siden), så "sist passerte" må regnes i dokumentrekkefølge. Den er fast,
+  // så den finnes én gang.
+  const docOrder = links.map((a,i)=>i).filter(i=>targets[i]).sort((a,b)=>
+    (targets[a].compareDocumentPosition(targets[b]) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1);
+  // Litt slakk under navigasjonslinjen: seksjonene har scroll-margin-top på
+  // nav + 12 px, så etter et klikk på en lenke ligger overskriften 12 px under
+  // linja og skal likevel regnes som passert.
+  const EDGE = 24;
+  // Markerer seksjonen hvis overskrift SIST passerte under navigasjonslinjen
+  // når man blar nedover -- altså den nederste som har passert, ikke den som
+  // fyller mest av skjermen. På PC (todelt layout) står tabellen fast og er
+  // alltid synlig, så den teller bare øverst på siden; ellers ville den vært
+  // markert hele veien ned. Etter et klikk på en lenke holdes den valgte
+  // lenken markert til brukeren scroller selv.
   const update = ()=>{
     const navH = (document.querySelector('.topnav')||{offsetHeight:0}).offsetHeight;
     if(navLock!==null){ links.forEach((a,i)=>a.classList.toggle('active', i===navLock)); return; }
     const pinned = window.innerWidth>=1181 && window.scrollY>150;
-    let active = pinned ? 1 : 0, best = -1;
-    targets.forEach((t,i)=>{
-      if(!t || (pinned && i===0)) return;
-      const r = t.getBoundingClientRect();
-      const h = Math.max(0, Math.min(r.bottom, window.innerHeight) - Math.max(r.top, navH));
-      const area = h * r.width;
-      if(area > best){ best = area; active = i; }
+    const eligible = docOrder.filter(i=>!(pinned && i===0));
+    let active = eligible[0];
+    eligible.forEach(i=>{
+      if(targets[i].getBoundingClientRect().top <= navH + EDGE) active = i;
     });
     links.forEach((a,i)=>a.classList.toggle('active', i===active));
   };
