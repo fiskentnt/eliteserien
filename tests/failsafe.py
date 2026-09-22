@@ -220,6 +220,33 @@ def main():
     check("treffsikkerhet: kilde som mangler gir ingen rad",
           accuracy_log.probs_for({"H": 0.5, "U": 0.3, "B": 0.2}, "odds") is None)
 
+    # 11. xG-data skal ALDRI ligge i repoet. Den er fra en privat kilde og skal
+    #   bare brukes til å tilpasse modellen, utenfor repoet. Testen ser på
+    #   INNHOLDET, ikke bare filnavnet: et nytt navn skal ikke slippe unna.
+    xg_kol = ("home_xg", "away_xg", "xg_home", "xg_away", "expected_goals", "expectedgoals")
+    funn = []
+    for f in ROOT.rglob("*"):
+        if not f.is_file():
+            continue
+        rel = f.relative_to(ROOT).as_posix()
+        if rel.startswith(".git/") or "__pycache__" in rel or f.suffix not in (".csv", ".json", ".tsv", ".txt"):
+            continue
+        if rel.startswith("tests/") and "failsafe" in rel:
+            continue      # denne filen nevner navnene for å lete etter dem
+        try:
+            hode = f.read_text(encoding="utf-8", errors="ignore")[:4000].lower()
+        except Exception:
+            continue
+        if any(k in hode for k in xg_kol):
+            funn.append(rel)
+    check("ingen xG-data i repoet", not funn, ", ".join(funn[:5]))
+    # Og mønstrene i .gitignore skal fange de vanlige navnene.
+    ignorert = subprocess.run(["git", "check-ignore", "eliteserien_xg.csv", "data/xg_2026.csv",
+                               "obos/data/team-xg.csv", "eliteserien/data/xg/kamper.json"],
+                              capture_output=True, text=True, cwd=ROOT)
+    check("gitignore fanger xG-filnavn",
+          len(ignorert.stdout.split()) == 4, ignorert.stdout.strip() or "ingen treff")
+
     print(f"\n{ok} av {ok + fail} failsafe-tester gikk gjennom.")
     return 1 if fail else 0
 

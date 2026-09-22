@@ -2,3 +2,14 @@
 __pycache__/
 *.pyc
 .claude/
+
+# xG-data fra privat kilde. Skal ALDRI ligge i repoet, aldri lastes ned av
+# nettleseren og aldri vises på siden -- den brukes bare til å tilpasse
+# modellen, der resultatet er lagstyrker. Filen ligger utenfor repoet
+# (~/.local/share/tabellkalkulator/). tests/failsafe.py feiler hvis en fil
+# med xG-kolonner likevel havner her.
+*_xg.csv
+*-xg.csv
+xg_*.csv
+*_xg.json
+**/xg/
