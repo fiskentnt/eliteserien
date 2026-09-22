@@ -1106,6 +1106,38 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- 22. "Rundens viktigste kamp i ligaen" følger den faste malen ----
+    setGroup('Rundens viktigste kamp');
+    for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
+      const kp = await open(1400, 900, url);
+      await settle(kp);
+      const svar = await kp.evaluate(async () => {
+        const q = QA_QUESTIONS.find(x => x.id === 'keyround');
+        return await q.run('');
+      });
+      const l = svar.split('\n');
+      check(`${liga}: første linje sier kamp og strid`,
+        /^Rundens viktigste kamp er .+ mot .+ \S+ \d+\. \w+\. Den påvirker .+ mest\.$/.test(l[0]), l[0]);
+      check(`${liga}: andre linje sier hvem det står mest på spill for`,
+        /^Mest står på spill for .+:$/.test(l[1]), l[1]);
+      // Nøyaktig tre utfallslinjer, og bare ett lag får tall.
+      const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
+      const utfall = l.slice(2, 5);
+      const egen = utfall.every((x, i) => new RegExp(`^${['Seier', 'Uavgjort', 'Tap'][i]}: ${PCTL}$`).test(x));
+      const annet = utfall.every((x, i) => new RegExp(i === 1 ? `^Uavgjort: ${PCTL}$` : `^.+-seier: ${PCTL}$`).test(x));
+      check(`${liga}: tre utfall, i rekkefølgen seier, uavgjort, tap`, egen || annet, utfall.join(' | '));
+      check(`${liga}: så dagens nivå`, new RegExp(`^.+(sjansen|faren) er ${PCTL} før kampen\.$`).test(l[5]), l[5]);
+      // Resten: retning uten tall.
+      const rest = l.slice(6).join(' ');
+      check(`${liga}: de andre lagene får ingen tall`,
+        !rest || !new RegExp(PCTL).test(rest.replace(/ligger like bak.*/, '')), rest.slice(0, 160));
+      check(`${liga}: bare ett lag har utfallstall`,
+        (svar.match(new RegExp(PCTL, 'g')) || []).length === 4,
+        (svar.match(new RegExp(PCTL, 'g')) || []).join(', '));
+      await kp.close();
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();

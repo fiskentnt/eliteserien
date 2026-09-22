@@ -4073,6 +4073,7 @@ const QA_KEY_CLOSE = 0.93;
 const QA_KEY_ZONES = ['gull', 'europa', 'nedrykk'].map(k => ({
   key: k, strid: LEAGUE.zones[k].strid, chance: LEAGUE.zones[k].chance,
   lo: LEAGUE.zones[k].lo, hi: LEAGUE.zones[k].hi,
+  dir: k==='nedrykk' || k==='kvalik' ? 'back' : 'front',
 }));
 // Sjansen for sonen, for hvert lag, ut av en wantAll-fordeling.
 function qaZoneFromPos(pos, n, zone){
@@ -4123,7 +4124,11 @@ async function qaKeyRoundData(){
         });
         total += move; byZone[z.key] += move; byTeam[t] += move;
         // Spennet som vises: laveste og høyeste utfall, lagt oppå tabellens tall.
-        detail.push({team:t, zone:z.key,
+        // Alle tre utfallene tas vare på (samme kjøring, samme tall), så svaret
+        // kan vise hele raden for laget kampen betyr mest for.
+        const d3 = {};
+        outs.forEach(ou=>{ d3[ou.k] = ou.p[z.key][ti] - base[z.key][ti]; });
+        detail.push({team:t, zone:z.key, d: d3,
           span: Math.abs(hi.p[z.key][ti] - lo.p[z.key][ti]),
           dLo: lo.p[z.key][ti] - base[z.key][ti], loTxt: qaUtfallFor(t, m, lo.k),
           dHi: hi.p[z.key][ti] - base[z.key][ti], hiTxt: qaUtfallFor(t, m, hi.k)});
@@ -4170,23 +4175,62 @@ async function qaKeyRound(){
   if(!b.teams.length){
     return `Ingen kamp i ${roundTxt} betyr mye: ingen utfall flytter noe lag mer enn to prosentpoeng for ${QA_KEY_ZONES.map(z=>z.key==='gull'?LEAGUE.zones.gull.label:LEAGUE.zones[z.key].label).join(', ')}.`;
   }
-  const piece = x=>{
-    const z = QA_KEY_ZONES.find(q=>q.key===x.zone);
-    const v = d => pctTxt(Math.min(1,Math.max(0,x.now+d)));
-    return `${x.team}: ${z.chance} ${pctTxt(x.now)} nå, ${v(x.dHi)} ${x.hiTxt} og ${v(x.dLo)} ${x.loTxt}.`;
-  };
+  const m = b.m;
   const navn = x => `${x.m.home} mot ${x.m.away}`;
   const k = data.close.length;
   const liste = data.close.map(navn);
-  const tallord = QA_NUM[k+1] || String(k+1);
-  // Konklusjon først: er flere kamper omtrent like viktige, er DET svaret, og
-  // den som flytter mest nevnes etterpå.
-  const head = !k
-    ? `Rundens viktigste kamp er ${navn(b)} (${formatDateNo(b.m.date)}). Den påvirker ${b.topZone.strid} mest.`
-    : `${tallord.charAt(0).toUpperCase()+tallord.slice(1)} kamper skiller seg ut som omtrent like viktige. `+
-      `${navn(b)} (${formatDateNo(b.m.date)}) påvirker ${b.topZone.strid} mest.`;
-  const tett = !k ? '' : `\nLike bak følger ${joinNames(liste)}.`;
-  return head+'\n'+b.teams.map(piece).join('\n')+tett;
+  const clamp = v => Math.min(1, Math.max(0, v));
+  // Laget kampen betyr mest for -- størst samlet utslag, ikke laget man følger:
+  // spørsmålet gjelder hele ligaen.
+  const hoved = b.teams[0];
+  const hz = QA_KEY_ZONES.find(q=>q.key===hoved.zone);
+  const spiller = hoved.team===m.home || hoved.team===m.away;
+  // Spiller laget ikke selv, navngis utfallene med lagene i kampen.
+  const etikett = {
+    H: spiller ? (m.home===hoved.team ? 'Seier' : 'Tap') : `${m.home}-seier`,
+    U: 'Uavgjort',
+    B: spiller ? (m.away===hoved.team ? 'Seier' : 'Tap') : `${m.away}-seier`,
+  };
+  const rad = key => `${etikett[key]}: ${pctTxt(clamp(hoved.now + (hoved.d[key]||0)))}`;
+  // Rekkefølge sett fra laget: seier, uavgjort, tap. Spiller det ikke selv,
+  // står utfallene i kampens egen rekkefølge (hjemmeseier, uavgjort, borteseier).
+  const rader = (spiller
+    ? (m.home===hoved.team ? ['H','U','B'] : ['B','U','H'])
+    : ['H','U','B']).map(rad).join('\n');
+  // De andre lagene: retningen i én setning, uten tall. Referansen er en seier
+  // til laget over (eller til hjemmelaget, spiller det ikke selv).
+  const refK = spiller ? (m.home===hoved.team ? 'H' : 'B') : 'H';
+  const refNavn = spiller ? hoved.team : m.home;
+  const andre = b.teams.slice(1);
+  let andreTxt = '';
+  if(andre.length){
+    const daarlig = x => { const z = QA_KEY_ZONES.find(q=>q.key===x.zone);
+      const d = x.d[refK]||0; return z.dir==='front' ? d<0 : d>0; };
+    const ned = andre.filter(daarlig), opp = andre.filter(x=>!daarlig(x));
+    const navnene = joinNames(andre.map(x=>x.team));
+    const sammeSone = andre.every(x=>x.zone===andre[0].zone);
+    const z0 = QA_KEY_ZONES.find(q=>q.key===andre[0].zone);
+    if(sammeSone && (!ned.length || !opp.length)){
+      const svekket = ned.length>0;
+      andreTxt = z0.dir==='front'
+        ? `\n${navnene} påvirkes også. En ${refNavn}-seier ${svekket?'svekker':'styrker'} ${z0.chance.replace(/n$/, 'ne')} deres, `+
+          `mens poengtap for ${refNavn} ${svekket?'styrker':'svekker'} dem.`
+        : `\n${navnene} påvirkes også. En ${refNavn}-seier ${svekket?'øker':'senker'} ${z0.chance} deres, `+
+          `mens poengtap for ${refNavn} ${svekket?'senker':'øker'} den.`;
+    } else {
+      andreTxt = `\n${navnene} påvirkes også. En ${refNavn}-seier er dårlig for ${joinNames(ned.map(x=>x.team))||'ingen av dem'}`+
+        ` og bra for ${joinNames(opp.map(x=>x.team))||'ingen av dem'}; poengtap virker motsatt.`;
+    }
+  }
+  // Tallet teller bare de ANDRE kampene, ikke kampen over: "Tre andre kamper
+  // er omtrent like viktige: A, B og C."
+  const tett = !k ? ''
+    : k===1 ? `\nÉn annen kamp er omtrent like viktig: ${liste[0]}.`
+    : `\n${qaStor(QA_NUM[k] || String(k))} andre kamper er omtrent like viktige: ${joinNames(liste)}.`;
+  return `Rundens viktigste kamp er ${navn(b)} ${formatDateNo(m.date)}. Den påvirker ${b.topZone.strid} mest.\n`+
+    `Mest står på spill for ${hoved.team}${spiller?'':', som ikke spiller selv'}:\n`+
+    `${rader}\n`+
+    `${qaStor(hz.chance)} er ${pctTxt(hoved.now)} før kampen.`+andreTxt+tett;
 }
 
 // ---- Hvor kan laget realistisk ende? Bare fordelingen over sluttplasser fra
