@@ -37,6 +37,7 @@ DATA = ROOT / "obos" / "data"
 CSV_PATH = DATA / "obos_2012-2026.csv"
 FIXTURES_CACHE = DATA / "oddspapi_fixtures_2026.json"
 OUT_PATH = DATA / "odds_closing.json"
+MARKETS_CACHE = DATA / "oddspapi_markets.json"
 NAME_MAP_PATH = DATA / "name_map.json"
 
 OBOS_TOURNAMENT = 22          # "1st Division", menn -- 19272 er kvinneligaen
@@ -146,7 +147,36 @@ def match_fixtures(rows, fixtures, name_map):
     return links, only_odds, only_csv
 
 
-def closing_from(payload):
+def fetch_markets(key):
+    """Markedslisten: 1 tellende kall, mellomlagret. Trengs for å vite HVILKET
+    marked som er 1X2 -- flere markeder har tre utfall, og et feil valg ga
+    uavgjort til 1,61 i første forsøk."""
+    if MARKETS_CACHE.exists():
+        return json.loads(MARKETS_CACHE.read_text(encoding="utf-8"))
+    d, err = oddspapi.call("/v4/markets", {}, key)
+    if err:
+        print(f"  FEIL ved markedsliste: {err}")
+        return None
+    MARKETS_CACHE.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+    return d
+
+
+def find_1x2(markets):
+    """Finner markedsid-en for vanlig 1X2 (hjemme/uavgjort/borte i full tid),
+    og rekkefølgen på utfallene."""
+    if not markets:
+        return None
+    for m in oddspapi.unwrap(markets):
+        name = " ".join(str(m.get(k, "")) for k in ("marketName", "name", "slug")).lower()
+        if any(w in name for w in ("1x2", "match winner", "full time result", "match result",
+                                   "three way", "3way", "moneyline 3")):
+            if "half" in name or "period" in name or "corner" in name or "booking" in name:
+                continue
+            return m
+    return None
+
+
+def closing_from(payload, market_id=None, kickoff=None):
     """Plukker sluttoddsen fra svaret. Strukturen er
     bookmakers -> slug -> markets -> markedsid -> outcomes -> utfallsid ->
     players -> "0" -> liste av priser med createdAt.
@@ -163,7 +193,11 @@ def closing_from(payload):
         if not isinstance(node, dict):
             continue
         markets = node.get("markets") or {}
-        for mid, m in sorted(markets.items(), key=lambda kv: str(kv[0])):
+        ids = [str(market_id)] if market_id is not None and str(market_id) in markets else []
+        if not ids:
+            continue   # uten kjent 1X2-marked gjettes det ikke
+        for mid in ids:
+            m = markets.get(mid)
             outcomes = (m or {}).get("outcomes") or {}
             if len(outcomes) != 3:
                 continue
@@ -175,6 +209,10 @@ def closing_from(payload):
                     if isinstance(plist, list):
                         entries.extend(plist)
                 entries = [e for e in entries if isinstance(e, dict) and e.get("price")]
+                # Sluttodds = siste pris FØR avspark. Uten dette filteret kommer
+                # priser fra mens kampen pågår med, og de kjenner resultatet.
+                if kickoff:
+                    entries = [e for e in entries if (e.get("createdAt") or "") <= kickoff]
                 if not entries:
                     vals = []
                     break
@@ -238,8 +276,15 @@ def main():
     if args.report:
         return 0
 
+    markets = fetch_markets(key)
+    mkt = find_1x2(markets)
+    mkt_id = (mkt or {}).get("marketId") or (mkt or {}).get("id")
+    print(f"\n1X2-marked: {json.dumps({k:v for k,v in (mkt or {}).items() if k in ('marketId','id','marketName','name','slug')}, ensure_ascii=False) if mkt else 'IKKE FUNNET -- henter ingen odds'}")
+    if mkt_id is None:
+        return 1
     out = {"version": 1, "source": "OddsPapi /v4/historical-odds",
-           "bookmakers": BOOKMAKERS, "matches": {}}
+           "note": "Siste tilgjengelige odds før kampstart. Utfallene er hjemme, uavgjort, borte.",
+           "market": mkt_id, "bookmakers": BOOKMAKERS, "matches": {}}
     if OUT_PATH.exists():
         out = json.loads(OUT_PATH.read_text(encoding="utf-8"))
         out.setdefault("matches", {})
@@ -262,7 +307,7 @@ def main():
             else:
                 time.sleep(COOLDOWN)
             continue
-        bm, odds, stamp = closing_from(d)
+        bm, odds, stamp = closing_from(d, market_id=mkt_id, kickoff=f.get("startTime"))
         out["matches"][mid] = {
             "fixtureId": fid, "round": r["round"], "start": (f.get("startTime") or "")[:16],
             "bookmaker": bm, "odds": odds, "priced_at": stamp,
