@@ -1,0 +1,17 @@
+{
+ "note": "Egen teller for OddsPapi-kall. Kvoten vises ikke i API-svarene. /v4/historical-odds er gratis og telles ikke.",
+ "monthly_limit": 250,
+ "months": {
+  "2026-09": {
+   "billable": 8,
+   "free": 0,
+   "endpoints": {
+    "/v4/account": 4,
+    "/v4/sports": 2,
+    "/v4/tournaments": 2,
+    "/v4/fixtures": 2
+   },
+   "note": "8 kall brukt pa kartlegging 22. september: kontooppslag, sports, tournaments og fixtures"
+  }
+ }
+}
