@@ -270,8 +270,13 @@ def main():
             continue
         if norm(h) == norm(f.get("participant1Name") or "") and h not in nm.values():
             ukjente.add(f.get("participant1Name"))
-        o, err = oddspapi.call("/v4/historical-odds",
-                               {"fixtureId": f.get("fixtureId"), "bookmakers": ",".join(BOOKMAKERS)}, key)
+        params = {"fixtureId": f.get("fixtureId"), "bookmakers": ",".join(BOOKMAKERS)}
+        o, err = oddspapi.call("/v4/historical-odds", params, key)
+        if err and "RATE_LIMITED" in str(err):
+            # Kortvarig grense på endepunktet (svaret ber om under ett sekund).
+            # Oppslaget er gratis, så ett forsøk til koster ingenting.
+            time.sleep(COOLDOWN)
+            o, err = oddspapi.call("/v4/historical-odds", params, key)
         if err:
             print(f"  {h} mot {a}: FEIL {err}")
             time.sleep(COOLDOWN)
