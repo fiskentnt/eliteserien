@@ -321,6 +321,10 @@
   .nm-hub button{padding:9px 6px;border-radius:8px;border:1px solid var(--line);background:var(--input-bg);color:var(--ink);font-weight:700;font-size:13.5px}
   .nm-hub button:hover{border-color:var(--ink)}
   .nm-hub button.on{background:var(--team-fill);border-color:var(--team-fill);color:var(--team-fill-text)}
+  /* Resultatet av H/U/B står i kortet, så siden ikke behøver å flytte seg. */
+  .nm-res{margin:12px 0 0;text-align:center;font:600 14px/1.2 var(--body);color:var(--ink)}
+  .nm-res b{font:800 19px/1 var(--cond);margin:0 1px}
+  .nm-round{display:block;margin:8px auto 0;text-align:center}
   /* Kamper-seksjonen (verktøy + siste runde + gjenstående) */
   .kamper{display:flex;flex-direction:column;gap:20px;min-width:0}
   /* Verktøyknappene ligger nå INNE i "Gjenstående kamper"-panelet, rett over
@@ -850,6 +854,8 @@
         <div class="nm-hub" id="nmHub">
           <button type="button" data-q="H"></button><button type="button" data-q="U"></button><button type="button" data-q="B"></button>
         </div>
+        <p class="nm-res" id="nmRes" hidden></p>
+        <button type="button" class="head-link nm-round" id="nmRound" hidden></button>
       </div>
     </section>
 
@@ -1453,6 +1459,21 @@ const capFirst = s => s.charAt(0).toUpperCase()+s.slice(1);
 
 function parse(v){ if(v===''||v==null) return null; const n=parseInt(v,10); return Number.isFinite(n)&&n>=0?n:null; }
 
+// H/U/B/×: trekker et resultat for kampen gitt utfallet, eller tømmer den.
+// Delt av kampraden og "Neste kamp"-kortet, så begge gjør akkurat det samme
+// (nytt trekk hver gang samme knapp trykkes). Returnerer false for ukjent
+// knapp, slik at kalleren kan avbryte.
+function drawQuick(m, q){
+  if(q==='H'||q==='U'||q==='B'){
+    // Formen trekkes uten kampens egen forrige score (den skal ikke virke inn på trekket).
+    setMatch(m,null,null); refreshLiveState();
+    const [hg,ag]=drawScoreGivenOutcome(m.home,m.away,q);
+    setMatch(m,hg,ag); // eget resultat (ikke grå): står fast og følger med i delte lenker
+    return true;
+  }
+  if(q==='X'){ setMatch(m,null,null); return true; }
+  return false;
+}
 function setMatch(m,hg,ag,writeInputs=true,sim=false){
   m.hg=hg; m.ag=ag; m.sim=sim && hg!=null;
   if(writeInputs){
@@ -2636,13 +2657,7 @@ async function onRoundsEvent(e){
     setMatch(m, parse(row.querySelector('[data-side=h]').value), parse(row.querySelector('[data-side=a]').value), false);
   } else if(e.type==='click'){
     const b=e.target.closest('button'); if(!b) return;
-    const q=b.dataset.q;
-    if(q==='H'||q==='U'||q==='B'){
-      // Formen trekkes uten kampens egen forrige score (den skal ikke virke inn på trekket).
-      setMatch(m,null,null); refreshLiveState();
-      const [hg,ag]=drawScoreGivenOutcome(m.home,m.away,q);
-      setMatch(m,hg,ag); // eget resultat (ikke grå): står fast og følger med i delte lenker
-    } else if(q==='X') setMatch(m,null,null); else return;
+    if(!drawQuick(m, b.dataset.q)) return;
   } else return;
   // Utfylling bare når kampen er ferdig utfylt (begge tall inne): en halvferdig
   // kamp (ett tall skrevet) eller en tømt kamp (×, eller begge felt slettet)
@@ -2678,12 +2693,35 @@ function renderNextMatch(){
     b.textContent = `${q} ${pct(v)}`;
     b.classList.toggle('on', !!on);
   });
+  // Resultatet står i kortet når kampen er fylt ut, med lenke til runden.
+  const res = document.getElementById('nmRes'), rl = document.getElementById('nmRound');
+  res.hidden = !set;
+  if(set) res.innerHTML = `${m.home} <b>${m.hg}</b> – <b>${m.ag}</b> ${m.away}`;
+  rl.hidden = !set;
+  if(set){ rl.textContent = `Se hele runde ${m.round} →`; rl.dataset.round = m.round; }
 }
-document.getElementById('nmHub').addEventListener('click', e=>{
+// Kortets H/U/B trekker resultatet her, i stedet for å sende klikket videre
+// til kampraden nede i lista: siden skal ikke flytte seg: resultatet vises i
+// kortet, med en lenke til runden for den som vil dit. Nytt trykk = nytt trekk,
+// akkurat som i kamplisten (samme drawQuick).
+document.getElementById('nmHub').addEventListener('click', async e=>{
   const b = e.target.closest('button'); if(!b) return;
-  const id = document.getElementById('nextMatch').dataset.id;
-  const q = document.querySelector(`.match[data-id="${id}"] .quick button[data-q="${b.dataset.q}"]`);
-  if(q) q.click();
+  const m = matches.find(x=>x.id===document.getElementById('nextMatch').dataset.id);
+  if(!m || !drawQuick(m, b.dataset.q)) return;
+  tableSort=null;
+  if(m.hg!=null && m.ag!=null) await updateAutoFill();
+  render();
+});
+// "Se hele runde N →": hopper til runden i kamplisten. Ligger runden bak
+// "Vis alle runder", åpnes den først.
+document.getElementById('nmRound').addEventListener('click', ()=>{
+  const r = document.getElementById('nmRound').dataset.round;
+  let el = document.querySelector(`#rounds .round[data-round="${r}"]`);
+  if(el && el.closest('#hiddenRounds[hidden]')){
+    const btn = document.getElementById('showAllRounds');
+    if(btn && !btn.hidden) btn.click();
+  }
+  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
 });
 document.getElementById('nmAll').addEventListener('click', ()=> scrollToSection('fxPanel'));
 
