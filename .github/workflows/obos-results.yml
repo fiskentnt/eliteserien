@@ -53,6 +53,16 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: python3 -m pip install --quiet -r requirements.txt
 
+      # Odds for kommende kamper: blandes inn per kamp på siden. Gratis
+      # oppslag; bare terminlisten koster ett kall, og den mellomlagres.
+      # Feiler den, er det ikke kritisk -- siden faller tilbake til modellen.
+      - name: Hent odds for kommende kamper
+        if: ${{ !inputs.dry_run }}
+        continue-on-error: true
+        env:
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+        run: python3 scripts/obos_upcoming_odds.py
+
       - name: Bygg tabell og modell på nytt
         if: ${{ !inputs.dry_run }}
         run: python3 scripts/obos_build_data.py --from-matches
@@ -70,6 +80,7 @@ jobs:
           git add obos/data/matches.json obos/data/fixtures.json obos/data/model.json \
                   obos/data/status.json obos/data/results_state.json \
                   obos/data/oddspapi_fixtures_2026.json obos/og.png \
+                  obos/data/odds_upcoming.json obos/data/oddspapi_upcoming_fixtures.json \
                   data/oddspapi_usage.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "Ingen endringer."

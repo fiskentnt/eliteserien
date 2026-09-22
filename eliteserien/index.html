@@ -1951,7 +1951,7 @@ function fillProb(){
     el.querySelectorAll('.pct[data-o]').forEach(p=>{ const k=p.dataset.o; p.textContent=Math.round(o[k]*100)+' %'; p.classList.toggle('best',k===best); });
     const src=el.querySelector('.pct.src'); src.textContent=info.odds?'odds':''; src.classList.toggle('odds',info.odds);
     const oddsTxt = info.odds
-      ? ` Blandet ${Math.round(ODDS_W*100)} % odds (${LEAGUE.oddsSource}, ${info.meta.n_bookmakers} bookmakere, hentet ${ODDS_FETCHED_AT}: ${Math.round(info.mk[0]*100)}/${Math.round(info.mk[1]*100)}/${Math.round(info.mk[2]*100)}) og ${Math.round((1-ODDS_W)*100)} % modell (${Math.round(info.md.H*100)}/${Math.round(info.md.U*100)}/${Math.round(info.md.B*100)}).`
+      ? ` Blandet ${Math.round(ODDS_W*100)} % odds (${oddsKilde(info.meta)}, hentet ${ODDS_FETCHED_AT}: ${Math.round(info.mk[0]*100)}/${Math.round(info.mk[1]*100)}/${Math.round(info.mk[2]*100)}) og ${Math.round((1-ODDS_W)*100)} % modell (${Math.round(info.md.H*100)}/${Math.round(info.md.U*100)}/${Math.round(info.md.B*100)}).`
       : '';
     el.title=`${m.home} seier ${Math.round(o.H*100)} %, uavgjort ${Math.round(o.U*100)} %, ${m.away} seier ${Math.round(o.B*100)} %. Forventede mål ${f1(lh)}-${f1(la)}.`+oddsTxt;
   });
@@ -2669,6 +2669,14 @@ function getWorker(){
     };
   }
   return mcWorker;
+}
+// Hvor oddsen for én kamp kommer fra, i klartekst. OBOS bruker ÉN bookmaker
+// per kamp (Pinnacle, ellers bet365, ellers Unibet) og navngir den. Eliteserien
+// bruker et snitt over flere, og sier hvor mange.
+function oddsKilde(meta){
+  const n = meta && meta.n_bookmakers;
+  if(meta && meta.bookmaker) return `${LEAGUE.oddsSource}: ${meta.bookmaker}`;
+  return `${LEAGUE.oddsSource}, ${n} bookmaker${n===1?'':'e'}`;
 }
 // Oddsjustert rate for én kamp hvis oddskilden (LEAGUE.oddsSource) har odds
 // for den, ellers
