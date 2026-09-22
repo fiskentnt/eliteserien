@@ -341,7 +341,7 @@ async function main() {
         badges: withBadge.length,
         badgeTextHidden: withBadge.length ? getComputedStyle(withBadge[0].querySelector('.bt')).display === 'none' : null,
         badgeIconShown: withBadge.length ? getComputedStyle(withBadge[0].querySelector('.bi')).display !== 'none' : null,
-        longestName: longest.textContent,
+        longestName: longest.innerText.trim(),
         longestClipped: longest.scrollWidth > longest.clientWidth + 1,
         // siste tallkolonne må ligge helt innenfor tabellens synlige bredde
         nedInside: nedCells.every(c => c.getBoundingClientRect().right <= wr.right + 0.5),
@@ -364,6 +364,31 @@ async function main() {
       return {vist: t && !t.hidden, txt: t ? t.textContent : null};
     });
     check('trykk på merket forklarer det', tip.vist && /kan (ikke|verken)/.test(tip.txt || ''), JSON.stringify(tip));
+    // Smale skjermer: alt skal få plass, og under 340 px brukes de korte
+    // lagnavnene fra kamplisten.
+    for (const w of [390, 360, 339, 320]) {
+      await mob.setViewport({width: w, height: 800});
+      await sleep(500);
+      const n = await mob.evaluate(() => {
+        const wrap = document.querySelector('.tblwrap');
+        const wr = wrap.getBoundingClientRect();
+        const ned = [...document.querySelectorAll('#tbl tbody td.ned')];
+        const names = [...document.querySelectorAll('.teamname')].map(e => e.innerText.trim());
+        return {
+          overflow: wrap.scrollWidth - wrap.clientWidth,
+          sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          nedInside: ned.every(c => c.getBoundingClientRect().right <= wr.right + 0.5),
+          short: names.includes('S08') && names.includes('Glimt'),
+          longest: names.slice().sort((a, b) => b.length - a.length)[0],
+        };
+      });
+      check(`${w} px: alt får plass uten sidelengs scroll`,
+        n.overflow === 0 && n.sideways === 0 && n.nedInside,
+        `tabell ${n.overflow}, side ${n.sideways}, siste kolonne innenfor ${n.nedInside}`);
+      check(`${w} px: ${w < 340 ? 'korte' : 'fulle'} lagnavn`, w < 340 ? n.short : !n.short,
+        `bredeste navn "${n.longest}"`);
+    }
+    await mob.setViewport({width: 390, height: 800});
 
     // ---- 10. lagbytte skal ikke scrolle ----
     setGroup('Lagbytte scroller ikke siden');

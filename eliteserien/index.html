@@ -490,6 +490,11 @@
 
   /* Team-navn: klikkbart, åpner formgrafen */
   .teamname{cursor:pointer}
+  /* Under 340 px brukes de korte lagnavnene fra kamplisten (shortTeam), så
+     alle tallkolonnene får plass uten sideveis scroll på de smaleste
+     skjermene. Over den grensen står navnene fullt ut. */
+  .teamname .sm{display:none}
+  @media (max-width:339px){.teamname .lg{display:none}.teamname .sm{display:inline}}
   .teamname:hover{text-decoration:underline}
 
   /* Form-kolonnen (task 3b): farget boks 0-10 */
@@ -4703,7 +4708,7 @@ function render(){
       // Modellkolonnene (Form, Gull, Europa, Ned) og merkene gjelder bare nå-situasjonen.
       tr.dataset.team=r.name;
       tr.className=[pos<=2?'cl':pos<=4?'eu':'',pos===14?'playoff':'',pos>=15?'ned':'',r.name===SELECTED_TEAM?'followed':'',(pos===4||pos===13)?'cut':''].join(' ').trim();
-      tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}">${r.name}</span><span class="badge"></span></td><td class="hide-s">${r.p}</td>
+      tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="hide-s">${r.p}</td>
         <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
         <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts">${r.pts}</td>
         <td class="formcol hh"></td><td class="hide-s">${formHtmlFrom(r.results)}</td><td class="odds gull hide-m hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
@@ -4719,7 +4724,7 @@ function render(){
     const changeTxt = r.formChange>=0.05?`Opp ${f1(r.formChange)} siden forrige modelloppdatering.`
       : r.formChange<=-0.05?`Ned ${f1(Math.abs(r.formChange))} siden forrige modelloppdatering.`
       : 'Uendret siden forrige modelloppdatering.';
-    tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}">${r.name}</span><span class="badge"></span>${diff}</td><td class="hide-s">${r.p}</td>
+    tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span>${diff}</td><td class="hide-s">${r.p}</td>
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
       <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.pts} poeng nå. Maks mulig sluttsum: ${r.max}.">${r.pts}</td>
       <td class="formcol"><span class="formbox ${formCls}" title="${f1(r.form)} av 10. ${changeTxt}">${f1(r.form)}</span></td>
