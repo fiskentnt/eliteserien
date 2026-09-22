@@ -1,0 +1,337 @@
+#!/usr/bin/env node
+/* Regresjonstest for Tabellkalkulator. Kjøres med tests/run.sh.
+ *
+ * Alt testes mot den ekte siden i en headless Chrome, ikke mot kopier av
+ * logikken: serveren under betjener repoet slik GitHub Pages gjør, og testene
+ * klikker og leser det en bruker ville sett.
+ *
+ * Dekker det som har gått galt før, i denne rekkefølgen:
+ *   1. lasting og JS-feil
+ *   2. ingen sidelengs scroll på fire bredder
+ *   3. "Spør om tabellen": hvert spørsmål må svare med DEN STØRRELSEN
+ *      spørsmålet ber om (prosent, poeng, prosentpoeng, plass eller runde),
+ *      i flere situasjoner: dagens tabell, delvis utfylt og ferdig sesong
+ *   4. svar blir aldri stående fra et annet lag eller et annet scenario
+ *   5. grå (simulerte) resultater: fylles, slettes aldri av seg selv,
+ *      og forsvinner bare med Nullstill
+ *   6. sortering: syklus, rekkefølge, merknad og skjulte sonestreker
+ *   7. delingslenker: scenario ut og inn igjen gir samme tabell
+ *   8. datafilene workflowen skriver (keymatch/lastmatch) vises i banneret
+ *      og i lagboksen
+ */
+const http = require('http');
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.join(__dirname, '..');
+const MIME = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json',
+  '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.ttf': 'font/ttf'};
+
+function serve() {
+  const server = http.createServer((req, res) => {
+    let p = decodeURIComponent(req.url.split('?')[0]);
+    if (p.endsWith('/')) p += 'index.html';
+    const f = path.join(ROOT, p);
+    if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
+    res.writeHead(200, {'Content-Type': MIME[path.extname(f)] || 'application/octet-stream'});
+    fs.createReadStream(f).pipe(res);
+  });
+  return new Promise(r => server.listen(0, '127.0.0.1', () => r(server)));
+}
+
+function chromePath() {
+  const c = [process.env.CHROME_PATH, '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable',
+    '/usr/bin/chromium', '/usr/bin/chromium-browser',
+    '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'].filter(Boolean);
+  const found = c.find(x => fs.existsSync(x));
+  if (!found) throw new Error('Fant ikke Chrome. Sett CHROME_PATH.');
+  return found;
+}
+
+// ---- liten testramme: samler feil i stedet for å stoppe ved første ----
+const results = [];
+let group = '';
+const setGroup = g => { group = g; console.log(`\n${g}`); };
+function check(name, ok, detail) {
+  results.push({group, name, ok: !!ok, detail});
+  console.log(`  ${ok ? '✓' : '✗'} ${name}${ok ? '' : `\n      ${detail || ''}`}`);
+}
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+// ---- Størrelsen hvert spørsmål må svare med ----
+// pat: svaret MÅ inneholde dette. alt: gyldige svar der tallet ikke finnes,
+// fordi saken er avgjort, ingenting er i spill, eller sesongen er ferdig.
+const PCT = String.raw`(?:\d+\s%|<1\s%|>99\s%|\d+ prosent)`;
+const PP = String.raw`(?:[+−±]\d+|\d+ prosentpoeng|to prosentpoeng)`;
+const SETTLED = /(sikret|kan ikke lenger|Sesongen er ferdig|så godt som|ingen gjenstående|Ingen kamper igjen|Ingen data|betydde lite|betyr lite|ingen spilte kamper|ingen runde|har ingen|Alle kampene|Ingen av de|Ingen kamp i|Ingenting er i spill)/i;
+const QA_EXPECT = {
+  why:        {what: 'prosent',       pat: new RegExp(PCT)},
+  howto:      {what: 'poeng',         pat: /\d+ (?:av \d+ mulige )?poeng|poengsummer/},
+  keymatches: {what: 'prosentpoeng',  pat: new RegExp(PP)},
+  runin:      {what: 'prosent',       pat: new RegExp(PCT)},
+  // Svaret navngir kampen og viser hva den flytter; rundenummeret står i banneret.
+  keyround:   {what: 'kamp og prosent', pat: new RegExp(String.raw`\w+ mot \w+[\s\S]*${PCT}`)},
+  lastmatch:  {what: 'prosent',       pat: new RegExp(PCT)},
+  nextmatch:  {what: 'prosent',       pat: new RegExp(PCT)},
+  cheer:      {what: 'prosentpoeng',  pat: new RegExp(PP)},
+  // Spennet, ikke bare ordet "plass": svaret nevner plasseringer flere steder,
+  // så et løsere mønster ville ikke merket om selve spennet forsvant.
+  range:      {what: 'plasseringsspenn', pat: /mellom \d+\. og \d+\. plass|Nesten sikkert \d+\. plass|ender på \d+\. plass uansett/},
+  decided:    {what: 'runde',         pat: /runde \d+/},
+  rivals:     {what: 'prosent',       pat: new RegExp(PCT)},
+  luck:       {what: 'poengavvik',    pat: /[+−]\d+,\d/},
+};
+
+async function main() {
+  const puppeteer = require('puppeteer-core');
+  const server = await serve();
+  const base = `http://127.0.0.1:${server.address().port}/eliteserien/`;
+  const browser = await puppeteer.launch({executablePath: chromePath(), headless: 'new',
+    args: ['--no-sandbox', '--disable-setuid-sandbox']});
+  const errors = [];
+
+  const open = async (w = 1400, h = 900, url = base) => {
+    const page = await browser.newPage();
+    page.on('pageerror', e => errors.push(`${url}: ${e.message}`));
+    await page.setViewport({width: w, height: h});
+    await page.goto(url, {waitUntil: 'networkidle0'});
+    await page.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
+    return page;
+  };
+  const settle = page => page.waitForFunction(
+    'lastMCFinal===true && lastMCScenarioKey===qaScenarioKey()', {timeout: 120000});
+  // Utfyllingsknappene er asynkrone, og scenarionøkkelen rekker ikke å endre
+  // seg før settle() ville sagt "ferdig". Vent på at kampene faktisk er fylt.
+  const filled = (page, n) => page.waitForFunction(
+    `matches.filter(m=>m.hg!=null).length===${n}`, {timeout: 120000});
+
+  try {
+    // ---- 1. lasting ----
+    setGroup('Lasting');
+    let page = await open();
+    const rows = await page.$$eval('#tbl tbody tr', r => r.length);
+    check('tabellen har 16 lag', rows === 16, `fant ${rows}`);
+    const teams = await page.$$eval('#teamSelect option', o => o.map(x => x.value).filter(Boolean));
+    check('16 lag i lagvelgeren', teams.length === 16, `fant ${teams.length}`);
+    const sums = await page.evaluate(() => TEAMS.map(t => lastMC[t].reduce((a, b) => a + b, 0)));
+    check('fordelingen summerer til 1 for hvert lag', sums.every(x => Math.abs(x - 1) < 1e-9),
+      sums.filter(x => Math.abs(x - 1) >= 1e-9).join(', '));
+
+    // ---- 2. sidelengs scroll ----
+    setGroup('Ingen sidelengs scroll');
+    for (const [w, h] of [[1400, 900], [1180, 900], [900, 800], [390, 800]]) {
+      await page.setViewport({width: w, height: h});
+      await sleep(400);
+      const over = await page.evaluate(() => Math.max(
+        document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        ...[...document.querySelectorAll('.tblwrap,.tblscroll')].map(e => 0)));
+      check(`${w} px`, over === 0, `${over} px for bredt`);
+    }
+    await page.setViewport({width: 1400, height: 900});
+
+    // ---- 3. Spør om tabellen: riktig størrelse i svaret ----
+    setGroup('Spør om tabellen: svaret inneholder størrelsen spørsmålet ber om');
+    const ask = (id, team) => page.evaluate(async (id, team) => {
+      const q = QA_QUESTIONS.find(x => x.id === id);
+      if (!q) return 'MANGLER';
+      try { return await q.run(team); } catch (e) { return 'ERROR ' + e.message; }
+    }, id, team);
+    const ids = await page.evaluate(() => QA_QUESTIONS.map(q => q.id));
+    check('alle spørsmål har en forventning i testen', ids.every(i => QA_EXPECT[i]),
+      ids.filter(i => !QA_EXPECT[i]).join(', '));
+
+    const scenarios = [
+      ['dagens tabell', null],
+      ['delvis utfylt', async () => { await page.evaluate(() => {
+        document.getElementById('autoFillToggle').checked = false;
+        matches.slice(0, 10).forEach(m => setMatch(m, 2, 1)); render(); }); await settle(page); }],
+      ['ferdig sesong', async () => { await page.evaluate(async () => {
+        await simulateTypicalAsync(matches.filter(m => isEmpty(m))); render(); }); await settle(page); }],
+    ];
+    for (const [label, setup] of scenarios) {
+      if (setup) await setup();
+      for (const team of ['Bodø/Glimt', 'Start', 'Molde']) {
+        await page.select('#teamSelect', team);
+        await sleep(300);
+        await settle(page);
+        for (const id of ids) {
+          const a = await ask(id, team);
+          const exp = QA_EXPECT[id];
+          const bad = /^(ERROR|MANGLER)/.test(a) || /undefined|NaN|\[object/.test(a);
+          const ok = !bad && (exp.pat.test(a) || SETTLED.test(a));
+          check(`${label} · ${team} · ${id} (${exp.what})`, ok, a.slice(0, 160));
+        }
+      }
+    }
+    await page.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); render(); });
+    await settle(page);
+
+    // ---- 4. svaret hører til laget og scenarioet ----
+    setGroup('Svaret blir aldri stående fra en annen tilstand');
+    await page.select('#teamSelect', 'Brann');
+    await sleep(300);
+    await page.evaluate(() => { qaSetOpen(true); runQaQuestion('range'); });
+    await page.waitForFunction(`(()=>{const a=document.getElementById('qaAnswer');return a&&!a.classList.contains('loading')})()`, {timeout: 60000});
+    const shownBrann = await page.evaluate(() => document.getElementById('qaAnswer').textContent);
+    check('svaret gjelder laget som er valgt', shownBrann.includes('Brann'), shownBrann.slice(0, 120));
+    // bytt lag og mål om et utdatert svar noen gang er synlig
+    await page.evaluate(() => { window.__bad = 0; window.__iv = setInterval(() => {
+      const a = document.getElementById('qaAnswer');
+      if (a && !a.classList.contains('loading') && qaAnswerKey !== qaStateKey()) window.__bad++;
+    }, 20); });
+    await page.select('#teamSelect', 'Molde');
+    await settle(page);
+    await page.waitForFunction(`(()=>{const a=document.getElementById('qaAnswer');return a&&!a.classList.contains('loading')&&qaAnswerKey===qaStateKey()})()`, {timeout: 60000});
+    const badTicks = await page.evaluate(() => { clearInterval(window.__iv); return window.__bad; });
+    const shownMolde = await page.evaluate(() => document.getElementById('qaAnswer').textContent);
+    check('utdatert svar er aldri synlig etter lagbytte', badTicks < 2, `${badTicks} målinger`);
+    check('svaret er regnet om for det nye laget', shownMolde.includes('Molde'), shownMolde.slice(0, 120));
+
+    // ---- 5. grå (simulerte) resultater ----
+    setGroup('Grå resultater');
+    await page.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); document.getElementById('autoFillToggle').checked = false; render(); });
+    await settle(page);
+    const total = await page.evaluate(() => matches.length);
+    await page.click('#fxPanel #simRest');
+    await filled(page, total);
+    await settle(page);
+    const greyAll = await page.evaluate(() => matches.filter(m => m.sim).length);
+    check('"Simuler tomme kamper" fyller alle tomme', greyAll === total, `${greyAll} grå av ${total}`);
+    const greyBefore = await page.evaluate(() => matches.filter(m => m.sim).length);
+    await page.evaluate(() => {
+      const m = matches[0]; setMatch(m, 4, 0); render();
+    });
+    await settle(page);
+    const greyAfter = await page.evaluate(() => matches.filter(m => m.sim).length);
+    check('eget resultat sletter ikke de grå', greyAfter === greyBefore - 1,
+      `før ${greyBefore}, etter ${greyAfter}`);
+    const ownStays = await page.evaluate(() => { const m = matches[0]; return m.hg === 4 && m.ag === 0 && !m.sim; });
+    check('eget resultat er lagret som eget (ikke grått)', ownStays);
+    await page.click('#fxPanel #reset');
+    await settle(page);
+    const afterReset = await page.evaluate(() => matches.filter(m => m.hg != null).length);
+    check('Nullstill tømmer alt', afterReset === 0, `${afterReset} igjen`);
+
+    // ---- 6. sortering ----
+    setGroup('Sortering');
+    const posOrder = () => page.$$eval('#tbl tbody tr td.pos', c => c.map(x => +x.textContent));
+    for (const key of ['gull', 'europa', 'ned', 'form']) {
+      await page.evaluate(k => { tableSort = null; render(); cycleSort(k); }, key);
+      await sleep(400);
+      const vals = await page.evaluate(k => [...document.querySelectorAll('#tbl tbody tr')]
+        .map(tr => k === 'form' ? Math.round(parseFloat(tr.querySelector('.formbox').textContent.replace(',', '.')) * 10)
+          : Math.round(probOf(tr.dataset.team, k) * 100)), key);
+      const asc = vals.every((v, i) => i === 0 || vals[i - 1] <= v);
+      const desc = vals.every((v, i) => i === 0 || vals[i - 1] >= v);
+      // nedrykk sorteres lavest først (som en vanlig tabell), de andre høyest først
+      check(`${key} sorterer riktig vei`, key === 'ned' ? asc : desc, vals.join(','));
+      const note = await page.evaluate(() => { const n = document.getElementById('sortNote'); return n.hidden ? null : n.textContent; });
+      check(`${key} viser merknaden`, !!note && /Sortert etter/.test(note || ''), String(note));
+      const dashed = await page.evaluate(() => [...document.querySelectorAll('#tbl tbody tr.cut')]
+        .filter(tr => getComputedStyle(tr.querySelector('td')).borderBottomStyle === 'dashed').length);
+      check(`${key} skjuler sonestrekene`, dashed === 0, `${dashed} stiplede`);
+    }
+    // Tre klikk fra usortert: synkende, stigende, av.
+    await page.evaluate(() => { tableSort = null; render(); cycleSort('gull'); cycleSort('gull'); cycleSort('gull'); });
+    await sleep(400);
+    const backToPos = await posOrder();
+    check('tredje klikk gir vanlig tabell',
+      await page.evaluate(() => tableSort === null) &&
+      backToPos.join(',') === backToPos.slice().sort((a, b) => a - b).join(','), backToPos.join(','));
+    await page.evaluate(k => cycleSort(k), 'gull');
+    await sleep(300);
+    await page.click('#fxPanel #simRest');
+    await filled(page, total);
+    await settle(page);
+    check('sortering nullstilles ved simulering', await page.evaluate(() => tableSort === null));
+    await page.click('#fxPanel #reset');
+    await settle(page);
+
+    // ---- 7. delingslenker ----
+    setGroup('Delingslenker');
+    await page.evaluate(() => {
+      document.getElementById('autoFillToggle').checked = false;
+      matches.slice(0, 6).forEach((m, i) => setMatch(m, i % 3, 1)); render();
+    });
+    await settle(page);
+    const before = await page.evaluate(() => ({
+      hash: encodeScenario(),
+      table: [...document.querySelectorAll('#tbl tbody tr')].map(tr => tr.dataset.team + ':' + tr.querySelector('.pts').textContent).join('|'),
+      filled: matches.filter(m => m.hg != null).map(m => `${m.id}:${m.hg}-${m.ag}${m.sim ? 's' : ''}`).join(','),
+    }));
+    check('scenarioet blir kodet', before.hash.length > 0, before.hash.slice(0, 60));
+    const page2 = await open(1400, 900, `${base}#s=${before.hash}`);
+    await settle(page2);
+    const after = await page2.evaluate(() => ({
+      table: [...document.querySelectorAll('#tbl tbody tr')].map(tr => tr.dataset.team + ':' + tr.querySelector('.pts').textContent).join('|'),
+      filled: matches.filter(m => m.hg != null).map(m => `${m.id}:${m.hg}-${m.ag}${m.sim ? 's' : ''}`).join(','),
+    }));
+    check('lenken gjenskaper resultatene', after.filled === before.filled, `${before.filled}\n      mot ${after.filled}`);
+    check('lenken gjenskaper tabellen', after.table === before.table);
+    await page2.close();
+    await page.bringToFront();
+    // grått sett: frø-snarveien i lenken skal gi samme sesong
+    await page.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); render(); });
+    await settle(page);
+    await page.click('#fxPanel #simRest');
+    await filled(page, total);
+    await settle(page);
+    const simBefore = await page.evaluate(() => ({hash: encodeScenario(),
+      filled: matches.filter(m => m.hg != null).map(m => `${m.id}:${m.hg}-${m.ag}`).join(',')}));
+    const page3 = await open(1400, 900, `${base}#s=${simBefore.hash}`);
+    await settle(page3);
+    const simAfter = await page3.evaluate(() => matches.filter(m => m.hg != null).map(m => `${m.id}:${m.hg}-${m.ag}`).join(','));
+    check('lenken gjenskaper en simulert sesong', simAfter === simBefore.filled,
+      `${simBefore.filled.slice(0, 80)}\n      mot ${simAfter.slice(0, 80)}`);
+    await page3.close();
+    await page.bringToFront();
+
+    // ---- 8. datafilene fra workflowen ----
+    setGroup('Datafiler fra workflowen');
+    for (const f of ['keymatch.json', 'lastmatch.json', 'history.json']) {
+      const p = path.join(ROOT, 'eliteserien', 'data', f);
+      let ok = false, detail = 'mangler';
+      if (fs.existsSync(p)) {
+        try { const j = JSON.parse(fs.readFileSync(p, 'utf8'));
+          ok = f === 'keymatch.json' ? !!(j.banner && j.match) : f === 'lastmatch.json' ? !!j.teams : Array.isArray(j.snapshots);
+          detail = ok ? '' : 'uventet innhold';
+        } catch (e) { detail = e.message; }
+      }
+      check(`${f} finnes og har riktig form`, ok, detail);
+    }
+    const fresh = await open();
+    // Banneret viser lagspørsmålet når et lag er valgt (localStorage husker
+    // valget mellom faner), så velg bort laget først.
+    await fresh.select('#teamSelect', '');
+    await sleep(600);
+    const banner = await fresh.evaluate(() => ({txt: document.getElementById('qaHighlight').textContent,
+      qid: document.getElementById('qaHighlight').dataset.qid}));
+    check('banneret viser rundens viktigste kamp fra datafilen',
+      banner.qid === 'keyround' && /Rundens viktigste kamp/.test(banner.txt), JSON.stringify(banner));
+    await fresh.select('#teamSelect', 'Bodø/Glimt');
+    await sleep(500);
+    const lm = await fresh.evaluate(() => {
+      const el = document.querySelector('.status .lastmatch');
+      return el ? el.textContent : null;
+    });
+    check('lagboksen viser forrige kamp', !!lm && /^Forrige kamp: /.test(lm || ''), String(lm));
+    await fresh.close();
+
+    setGroup('JS-feil');
+    check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
+    await page.close();
+  } finally {
+    await browser.close();
+    server.close();
+  }
+
+  const failed = results.filter(r => !r.ok);
+  console.log(`\n${results.length - failed.length} av ${results.length} tester gikk gjennom.`);
+  if (failed.length) {
+    console.log('\nFeilet:');
+    failed.forEach(f => console.log(`  ${f.group} · ${f.name}`));
+  }
+  return failed.length ? 1 : 0;
+}
+
+main().then(c => process.exit(c)).catch(e => { console.error(e); process.exit(1); });
