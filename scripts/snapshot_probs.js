@@ -72,8 +72,11 @@ function chromePath() {
       if (matches.some(m => m.sim || (m.hg != null && !m.played && m.sim))) throw new Error('Siden har simulerte resultater');
       const teams = {};
       TEAMS.forEach(t => {
+        // Sonene leses fra sidens egen LEAGUE gjennom zoneSum, ikke fra faste
+        // plasseringer her: "europa" er topp 4 i Eliteserien og topp 6 i OBOS.
         const d = lastMC[t];
-        teams[t] = {gull: d[0], europa: d[0]+d[1]+d[2]+d[3], kvalik: d[13], nedrykk: d[14]+d[15]};
+        teams[t] = {gull: zoneSum(d, 'gull'), europa: zoneSum(d, 'europa'),
+                    kvalik: zoneSum(d, 'kvalik'), nedrykk: zoneSum(d, 'nedrykk')};
       });
       return {
         round: ROUND_SEQ[currentRoundIdx()].round,

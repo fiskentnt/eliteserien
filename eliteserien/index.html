@@ -1181,6 +1181,44 @@ const ZONE_KEYS = ['gull', 'cl', 'europa', 'kvalik', 'nedrykk'];
 // Plasseringene en sone dekker, som [fra, til].
 const zoneRange = key => { const z = LEAGUE.zones[key]; return z ? [z.lo, z.hi] : null; };
 // ==== SLUTT PÅ LIGAINNSTILLINGER ===========================================
+// Tabellkolonnenes nøkler er korte ('ned'), sonenes er fulle ('nedrykk').
+const COL_ZONE = {gull: 'gull', europa: 'europa', ned: 'nedrykk'};
+// ENESTE stedet en sonesannsynlighet regnes ut fra fordelingen. Plasseringene
+// kommer fra LEAGUE, aldri fra tall i koden: "topp 4" i Eliteserien og "topp 6"
+// i OBOS er samme kolonne, men ulike plasseringer, og en hardkodet d[0]+..+d[3]
+// ville stille vist feil tall i den ene ligaen.
+function zoneSum(dist, key){
+  const z = LEAGUE.zones[COL_ZONE[key] || key];
+  if(!dist || !z) return 0;
+  let v = 0;
+  for(let q = z.lo; q <= z.hi; q++) v += dist[q-1] || 0;
+  return v;
+}
+
+// ---- det nettleseren husker -------------------------------------------
+// Ligaene ligger på samme domene og deler derfor localStorage. Alt som gjelder
+// ÉN liga (fulgt lag, sortering, åpne seksjoner) må ha ligaens id i nøkkelen,
+// ellers ville OBOS-siden hentet fram et Eliteserien-lag som ikke spiller der.
+// Utseendet (lyst/mørkt) er en innstilling for hele nettstedet og har med
+// vilje ingen liga i nøkkelen.
+const lsKey = name => `${LEAGUE.id}:${name}`;
+function lsGet(name){
+  try{
+    const v = localStorage.getItem(lsKey(name));
+    if(v !== null) return v;
+    // De første nøklene var ligaløse og tilhørte Eliteserien, som var eneste
+    // liga da. Flytt dem over én gang, så ingen mister laget sitt.
+    if(LEAGUE.id !== 'eliteserien') return null;
+    const old = localStorage.getItem(name);
+    if(old === null) return null;
+    localStorage.setItem(lsKey(name), old);
+    localStorage.removeItem(name);
+    return old;
+  }catch(e){ return null; }
+}
+function lsSet(name, value){
+  try{ localStorage.setItem(lsKey(name), value); }catch(e){}
+}
 
 
 // ---- Tema: lyst/mørkt. Følger prefers-color-scheme til brukeren trykker på
@@ -1377,7 +1415,7 @@ const PROB_KEYS = ['gull','europa','ned'];
 function probOf(team,key){
   const d = typeof lastMC!=='undefined' && lastMC && lastMC[team];
   if(!d) return 0;
-  return key==='gull' ? d[0] : key==='europa' ? d[0]+d[1]+d[2]+d[3] : d[14]+d[15];
+  return zoneSum(d, key);
 }
 // Kolonnenavnene i tabellen, både som overskrift og når kolonnen er sortert.
 const SORT_LABELS = Object.assign({form:'Form'}, Object.fromEntries(LEAGUE.cols.map(c =>
@@ -1486,7 +1524,7 @@ const TOP_DARK_TEXT = {text:'#15191c', pill:'rgba(255,255,255,.45)', warn:'#7a0c
 // encodeScenario/applyScenario). '' betyr eksplisitt "ingen lag" -- skilt
 // fra "aldri valgt" (localStorage-nøkkelen mangler helt): nye besøkende
 // starter med "Alle lag" (ingen fulgt), og et lag man selv har valgt huskes.
-let SELECTED_TEAM = localStorage.getItem('followTeam');
+let SELECTED_TEAM = lsGet('followTeam');
 if(SELECTED_TEAM===null) SELECTED_TEAM = '';
 function hexToRgbStr(hex){
   const n = parseInt(hex.slice(1), 16);
@@ -2592,7 +2630,7 @@ function fillOdds(){
   renderQaHighlight();
   document.querySelectorAll('#tbl tbody tr').forEach(tr=>{
     const d=lastMC[tr.dataset.team]; if(!d) return;
-    const top=d[0]+d[1]+d[2]+d[3], ned=d[14]+d[15], gull=d[0];
+    const gull=zoneSum(d,'gull'), top=zoneSum(d,'europa'), ned=zoneSum(d,'ned');
     const g=tr.querySelector('td.gull'), a=tr.querySelector('td.p3'), b=tr.querySelector('td.ned');
     // Nøyaktig 0 vises som en svak strek, ikke "0 %".
     const cellTxt = v => v===0 ? '–' : pctTxt(v);
@@ -2817,7 +2855,7 @@ document.getElementById('reset').onclick=()=>{ tableSort=null; matches.forEach(m
 document.getElementById('autoFillToggle').addEventListener('change',async ()=>{ await updateAutoFill(); render(); });
 document.getElementById('teamSelect').addEventListener('change', e=>{
   SELECTED_TEAM = e.target.value;
-  try{ localStorage.setItem('followTeam', SELECTED_TEAM); }catch(err){}
+  lsSet('followTeam', SELECTED_TEAM);
   applyTeamColors();
   render();
 });
@@ -3128,11 +3166,29 @@ function badgeSignatureOf(rows){
 // Hva merket betyr, vist når det trykkes på (på mobil er merket bare et ikon).
 const BADGE_NOTE = Object.fromEntries(
   LEAGUE.badges.concat([LEAGUE.relegatedBadge]).map(b => [b.cls, b.note]));
+// Merket et lag skal vise. Worker-en regner ut hva som er MATEMATISK sikret;
+// her fjernes merker som er sanne, men ikke er lagets sak. Et lag midt i
+// kampen om topp 6 har for lengst berget plassen, og «Sikret plass» sier da
+// ingenting -- det merket hører til lag som ellers kunne havnet i kvalik
+// eller nedrykk. Styres av hideIfChance i ligainnstillingene, så Eliteserien
+// og OBOS kan ha ulik terskel.
+function badgeFor(team){
+  const b = lastBadges && lastBadges[team];
+  if(!b) return null;
+  const cfg = LEAGUE.badges.find(x=>x.cls===b.cls && x.text===b.text);
+  const hide = cfg && cfg.hideIfChance;
+  if(!hide) return b;
+  const d = lastMC && lastMC[team];
+  const z = LEAGUE.zones[hide.zone];
+  if(!d || !z) return b;
+  let v = 0; for(let q=z.lo; q<=z.hi; q++) v += d[q-1];
+  return v > hide.over ? null : b;
+}
 function applyBadgesToDom(){
   document.querySelectorAll('#tbl tbody tr').forEach(tr=>{
     const el = tr.querySelector('.badge');
     if(!el) return;
-    const b = lastBadges && lastBadges[tr.dataset.team];
+    const b = badgeFor(tr.dataset.team);
     el.className = 'badge'+(b?' '+b.cls:'');
     // Ikonet vises alene på mobil (.bt skjules), teksten på PC. Begge steder
     // gir et trykk forklaringen i en liten boble, se badgeTip.
@@ -3861,7 +3917,7 @@ async function qaKeyRoundData(){
 function qaZoneNow(team, key){
   const d = lastMC && lastMC[team];
   if(!d) return 0;
-  return key==='gull' ? d[0] : key==='europa' ? d[0]+d[1]+d[2]+d[3] : d[14]+d[15];
+  return zoneSum(d, key);
 }
 // Banner-linja (én setning). Bygges her, ikke i workflowen, så ordlyden bare
 // finnes ett sted -- scripts/snapshot_probs.js kaller denne.
@@ -4690,7 +4746,7 @@ const QA_OPEN_KEY = 'qaOpen';
 const qaPanel = document.getElementById('qaPanel');
 let qaSkipStore = false;
 function qaStoredOpen(){
-  try{ const v = localStorage.getItem(QA_OPEN_KEY); return v===null ? null : v==='1'; }catch(e){ return null; }
+  const v = lsGet(QA_OPEN_KEY); return v===null ? null : v==='1';
 }
 function qaSetOpen(want){
   if(qaPanel.open===want) return;
@@ -4703,7 +4759,7 @@ function qaApplyDefault(){
 }
 qaPanel.addEventListener('toggle', ()=>{
   if(qaSkipStore){ qaSkipStore = false; return; }
-  try{ localStorage.setItem(QA_OPEN_KEY, qaPanel.open ? '1' : '0'); }catch(e){}
+  lsSet(QA_OPEN_KEY, qaPanel.open ? '1' : '0');
 });
 qaApplyDefault();
 // Krysser vinduet grensen uten et lagret valg, følger standarden med.
@@ -4892,10 +4948,14 @@ function render(){
     const canPass=rows.filter(r=>r.name!==SELECTED_TEAM && (r.max > followed.pts || (r.max===followed.pts && (r.left>0 || followed.left>0 || rows.indexOf(r)<pos-1)))).length;
     const worst=canPass+1;
     let verdictTxt, sub='';
-    const safePos = LEAGUE.zones.kvalik.boundary || 13;
+    const kv = LEAGUE.zones.kvalik;
+    const safePos = (kv && kv.boundary) || 13;
     if(worst<=safePos){ verdictTxt=`Sikret ny kontrakt. Dårligst mulige plassering er ${worst}.`; sub=`Ingen kombinasjon av gjenstående resultater kan sende ${SELECTED_TEAM} under ${safePos+1}. plass.`; }
-    else if(worst===14){ verdictTxt='Kan ikke rykke ned direkte, men kan fortsatt havne på kvalikplass.'; }
-    else { verdictTxt='Kan fortsatt rykke ned.'; sub=`${canPass} lag kan i teorien ende foran eller likt med ${SELECTED_TEAM}, så ${SELECTED_TEAM} kan ende så lavt som ${Math.min(worst,16)}. plass.`; }
+    // Kvalikplassen og antall lag kommer fra ligaen, ikke fra tall her: begge
+    // ligaene har 16 lag og kvalik på 14. plass i dag, men det er ikke noe
+    // siden skal ta for gitt.
+    else if(kv && worst>=kv.lo && worst<=kv.hi){ verdictTxt='Kan ikke rykke ned direkte, men kan fortsatt havne på kvalikplass.'; }
+    else { verdictTxt='Kan fortsatt rykke ned.'; sub=`${canPass} lag kan i teorien ende foran eller likt med ${SELECTED_TEAM}, så ${SELECTED_TEAM} kan ende så lavt som ${Math.min(worst,TEAMS.length)}. plass.`; }
 
     // Linje to: poeng/kamper igjen som standard, eller sluttresultatet når sesongen
     // er ferdig i dette scenariet. Den matematiske sikker/usikker-vurderingen vises
@@ -5076,6 +5136,13 @@ async function boot(){
   // parses HER, synkront, ikke i den async applyScenario() lenger nede, så
   // nedtrekksboksen og fargene er riktige FØR første render(), ikke bare
   // etter en ekstra async runde.
+  // Et lag som ikke spiller i denne ligaen finnes ikke: en delingslenke fra
+  // en annen liga, eller et lag som har rykket opp eller ned siden sist. Da er
+  // ingen lag valgt, og det gale navnet blir ikke stående i localStorage.
+  if(SELECTED_TEAM && !TEAMS.includes(SELECTED_TEAM)){
+    SELECTED_TEAM = '';
+    lsSet('followTeam', '');
+  }
   const hashTeam = location.hash.match(/[#&]team=([^&]*)/);
   if(hashTeam){
     const t = decodeURIComponent(hashTeam[1]);
@@ -5195,13 +5262,15 @@ async function boot(){
   const hiddenRounds = document.createElement('div'); hiddenRounds.hidden = true; hiddenRounds.id = 'hiddenRounds';
   FIXTURES_IN.forEach((r,ri)=>{
     const d = document.createElement('div'); d.className='round'; d.dataset.round = r.round;
-    // Runde 12 ble flyttet fra juli til oktober og havner derfor mellom runde
-    // 24 og 25 i kronologisk rekkefølge — merkes tydelig så det ikke ser ut
-    // som en feil for de som ikke vet det ble utsatt.
-    const isMoved12 = r.round===12;
-    if(isMoved12) d.className += ' moved';
-    d.innerHTML = `<h3><span>Runde ${r.round}${isMoved12?' (utsatt)':''}</span><span class="when-row"><span class="when">${r.when}</span><button class="round-sim" data-round="${r.round}" hidden></button></span></h3>`
-      + (isMoved12 ? `<p class="moved-note">Opprinnelig 12. juli, flyttet til 24. og 25. oktober.</p>` : '');
+    // En flyttet runde havner et annet sted i den kronologiske rekkefølgen enn
+    // nummeret tilsier, og merkes tydelig så det ikke ser ut som en feil for
+    // de som ikke vet den ble utsatt. Hvilke runder det gjelder, og hva som
+    // står der, kommer BARE fra LEAGUE.movedRounds -- ligaene har ulike
+    // flyttinger, og OBOS har ingen.
+    const moved = (LEAGUE.movedRounds || {})[r.round] || null;
+    if(moved) d.className += ' moved';
+    d.innerHTML = `<h3><span>Runde ${r.round}${moved?' '+moved.label:''}</span><span class="when-row"><span class="when">${r.when}</span><button class="round-sim" data-round="${r.round}" hidden></button></span></h3>`
+      + (moved && moved.note ? `<p class="moved-note">${moved.note}</p>` : '');
     // Sortert etter avspark, ikke etter rekkefølgen i data/fixtures.json (som
     // bare er sortert på dato+lagnavn) — ellers havner f.eks. en 14:30-kamp
     // etter 17:00-kamper bare fordi hjemmelaget kommer seinere alfabetisk.

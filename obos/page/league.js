@@ -55,7 +55,10 @@ const LEAGUE = {
     {above: 1, cls: 'champ', text: 'Vinner ligaen', note: 'Vinner OBOS-ligaen: ingen kan ta dem igjen.'},
     {above: 2, cls: 'champ', text: 'Sikret opprykk', note: 'Sikret direkte opprykk: kan ikke havne lavere enn 2. plass.'},
     {above: 6, cls: 'europe', text: 'Sikret topp 6', note: 'Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykksspill.'},
-    {above: 13, cls: 'safe', text: 'Sikret plass', note: 'Sikret plass: kan verken rykke ned eller havne i kvalik.'},
+    // Vises ikke for lag som fortsatt kan nå topp 6: for dem er opprykksspill
+    // saken, ikke at de har berget plassen.
+    {above: 13, cls: 'safe', text: 'Sikret plass', note: 'Sikret plass: kan verken rykke ned eller havne i kvalik.',
+     hideIfChance: {zone: 'europa', over: 0.01}},
   ],
   relegatedBadge: {cls: 'relegated', text: 'Rykket ned', note: 'Rykket ned: kan ikke berge plassen.'},
   shortNames: {

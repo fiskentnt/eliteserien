@@ -534,6 +534,147 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- 11. ligaene skal ikke lekke inn i hverandre ----
+    // Ligaene deler domene og dermed localStorage. Følger man Tromsø på
+    // Eliteserien-siden, skal OBOS-siden ikke kjenne laget: det spiller ikke
+    // der, og spørsmålene skal ikke handle om det.
+    setGroup('Ingen lekkasje mellom ligaene');
+    const obosUrl = base.replace('/eliteserien/', '/obos/');
+    const peek = await open(1400, 900, obosUrl);
+    const obosLag = await peek.evaluate(() => TEAMS.slice());
+    await peek.close();
+
+    const es = await open(1400, 900, base);
+    const fulgt = await es.evaluate(lag => {
+      const t = TEAMS.find(x => !lag.includes(x));
+      const sel = document.getElementById('teamSelect');
+      sel.value = t; sel.dispatchEvent(new Event('change'));
+      return t;
+    }, obosLag);
+    check('fant et lag som bare finnes i Eliteserien', !!fulgt, `fikk "${fulgt}"`);
+    await sleep(300);
+    const lagret = await es.evaluate(() => Object.fromEntries(
+      Object.keys(localStorage).map(k => [k, localStorage.getItem(k)])));
+    check('fulgt lag lagres med ligaens id i nøkkelen',
+      lagret['eliteserien:followTeam'] === fulgt && lagret.followTeam === undefined,
+      JSON.stringify(lagret));
+    await es.close();
+
+    const ob2 = await open(1400, 900, obosUrl);
+    await settle(ob2);
+    const valgt = await ob2.evaluate(() => document.getElementById('teamSelect').value);
+    // Enten ingen lag, eller et lag som faktisk spiller i OBOS -- aldri laget
+    // fra den andre ligaen. (Testen kjører i samme nettleser som resten, så
+    // OBOS kan ha sitt EGET lagrede lag fra en tidligere blokk. Det er riktig.)
+    check('OBOS-siden har ikke valgt Eliteserien-laget',
+      valgt !== fulgt && (valgt === '' || obosLag.includes(valgt)), `valgte "${valgt}"`);
+    const nokler = await ob2.evaluate(() => Object.fromEntries(
+      Object.keys(localStorage).map(k => [k, localStorage.getItem(k)])));
+    check('ingen ligaløs nøkkel er igjen i localStorage',
+      !('followTeam' in nokler) && !('qaOpen' in nokler), JSON.stringify(nokler));
+    // Alt brukeren kan lese: overskrifter, banner, lagboks, kort og tabell.
+    const synlig = await ob2.evaluate(() => document.body.innerText);
+    check(`ingen tekst på OBOS-siden nevner ${fulgt}`, !synlig.includes(fulgt),
+      (synlig.split('\n').find(l => l.includes(fulgt)) || '').slice(0, 140));
+    // Og hvert spørsmål skal svare om et OBOS-lag, uten spor av det andre laget.
+    const obIds2 = await ob2.evaluate(() => QA_QUESTIONS.map(q => q.id));
+    for (const id of obIds2) {
+      const a = await ob2.evaluate(async (id, t) => {
+        const q = QA_QUESTIONS.find(x => x.id === id);
+        try { return await q.run(t); } catch (e) { return 'ERROR ' + e.message; }
+      }, id, obosLag[0]);
+      check(`OBOS · ${id} nevner ikke ${fulgt}`,
+        !a.includes(fulgt) && !/^ERROR/.test(a), a.slice(0, 160));
+    }
+    await ob2.close();
+    await page.bringToFront();
+
+    // ---- 12. tallene, ikke ordene ----
+    // Kolonnene og kortene skal vise sonen LIGAEN har, ikke Eliteserien sin.
+    // Auditen lette bare etter feil ord og så derfor ikke at OBOS viste
+    // sjansen for 1. plass under "Opprykk" (som er 1. og 2.) og topp 4 under
+    // "Topp 6". Derfor regnes fasiten ut her, fra lastMC og plasseringene
+    // under -- som står i TESTEN, ikke i siden, så en feil i LEAGUE også
+    // fanges opp.
+    setGroup('Tallene i kolonnene og kortene');
+    const SONER = {
+      eliteserien: {gull: [1, 1], europa: [1, 4], ned: [15, 16]},
+      obos:        {gull: [1, 2], europa: [1, 6], ned: [15, 16]},
+    };
+    for (const [url, liga] of [[base, 'eliteserien'], [obosUrl, 'obos']]) {
+      const tp = await open(1400, 900, url);
+      await settle(tp);
+      const id = await tp.evaluate(() => LEAGUE.id);
+      check(`${liga}: siden melder riktig liga-id`, id === liga, `fikk "${id}"`);
+      const fasit = SONER[liga];
+      const funn = await tp.evaluate(soner => {
+        const pct = x => x === 0 ? '0 %' : x < 0.005 ? '<1 %' : x > 0.995 && x < 1 ? '>99 %' : Math.round(x * 100) + ' %';
+        const sum = (d, [lo, hi]) => { let v = 0; for (let q = lo; q <= hi; q++) v += d[q - 1]; return v; };
+        const celle = {gull: 'td.gull', europa: 'td.p3', ned: 'td.ned'};
+        const rader = [...document.querySelectorAll('#tbl tbody tr')].map(tr => {
+          const t = tr.dataset.team, d = lastMC[t], o = {team: t};
+          for (const k of Object.keys(soner)) {
+            const vist = tr.querySelector(celle[k]).textContent.trim();
+            const ventet = sum(d, soner[k]);
+            o[k] = {vist, ventet: ventet === 0 ? '–' : pct(ventet), andel: ventet};
+          }
+          return o;
+        });
+        const kort = {};
+        for (const k of Object.keys(soner)) {
+          const ul = document.querySelector(`[data-card="${k}"] .card-list`);
+          kort[k] = [...ul.querySelectorAll('li')].map(li => ({
+            team: (li.querySelector('.card-team') || {}).textContent,
+            pct: (li.querySelector('.card-pct') || {}).textContent,
+            tom: li.classList.contains('empty'),
+          }));
+        }
+        return {rader, kort};
+      }, fasit);
+      for (const k of Object.keys(fasit)) {
+        const gale = funn.rader.filter(r => r[k].vist !== r[k].ventet);
+        check(`${liga}: kolonnen "${k}" viser plass ${fasit[k][0]}–${fasit[k][1]}`, gale.length === 0,
+          gale.slice(0, 4).map(r => `${r.team}: viste ${r[k].vist}, ventet ${r[k].ventet}`).join('; '));
+        // Kortet skal liste lag fra SAMME sone, med samme prosent som tabellen.
+        const rader = funn.kort[k].filter(x => !x.tom);
+        const feilKort = rader.filter(x => {
+          const r = funn.rader.find(y => y.team === x.team);
+          return !r || r[k].ventet !== x.pct;
+        });
+        check(`${liga}: kortet "${k}" viser samme tall som kolonnen`, feilKort.length === 0,
+          feilKort.map(x => `${x.team}: kort ${x.pct}`).join('; '));
+        // Et tomt kort er bare riktig hvis ingen lag faktisk er i kampen.
+        if (funn.kort[k].some(x => x.tom) && k === 'europa') {
+          const iKamp = funn.rader.filter(r => r[k].andel >= 0.05 && r[k].andel <= 0.95);
+          check(`${liga}: kortet "${k}" er tomt bare når ingen kjemper om plassene`,
+            iKamp.length === 0, `${iKamp.length} lag mellom 5 og 95 %: ` +
+            iKamp.slice(0, 4).map(r => `${r.team} ${r[k].ventet}`).join(', '));
+        }
+      }
+      await tp.close();
+    }
+    await page.bringToFront();
+
+    // ---- 13. kamplisten viser bare gjenstående kamper ----
+    setGroup('Kamplisten');
+    for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
+      const fp = await open(1400, 900, url);
+      const f = await fp.evaluate(() => ({
+        spilte: [...document.querySelectorAll('#rounds .match.played')].length,
+        igjen: [...document.querySelectorAll('#rounds .match')].length,
+        // Merkede runder skal bare finnes der ligaen sier at en runde er flyttet.
+        flyttet: [...document.querySelectorAll('#rounds .round.moved')].map(d => +d.dataset.round),
+        sierFlyttet: Object.keys(LEAGUE.movedRounds || {}).map(Number),
+      }));
+      check(`${liga}: kamplisten har ingen spilte kamper`, f.spilte === 0, `fant ${f.spilte}`);
+      check(`${liga}: kamplisten har kamper igjen`, f.igjen > 0, `fant ${f.igjen}`);
+      check(`${liga}: "(utsatt)" bare der ligaen sier det`,
+        f.flyttet.every(r => f.sierFlyttet.includes(r)),
+        `merket ${f.flyttet.join(', ')}, ligaen sier ${f.sierFlyttet.join(', ') || 'ingen'}`);
+      await fp.close();
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();

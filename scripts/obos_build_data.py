@@ -89,9 +89,16 @@ def main():
     by_round = {}
     for m in rows:
         by_round.setdefault(m["round"], []).append(m)
+    # Kronologisk rekkefølge etter tidligste kampdato, ikke etter rundenummer:
+    # en flyttet runde skal stå der den faktisk spilles. Samme regel som
+    # Eliteserien, se scripts/update_data.py.
+    round_order = sorted(by_round, key=lambda rn: min(m["date"] for m in by_round[rn]))
     fixtures = []
-    for rnd in sorted(by_round):
-        ms = sorted(by_round[rnd], key=lambda m: (m["date"], m["time"], m["home"]))
+    for rnd in round_order:
+        ms = by_round[rnd]
+        if not any(m["hg"] is None for m in ms):
+            continue  # runden er ferdigspilt; kamplisten viser bare gjenstående
+        ms = sorted(ms, key=lambda m: (m["date"], m["time"], m["home"]))
         fixtures.append({
             "round": rnd, "when": when_label([m["date"] for m in ms]),
             "matches": [{"home": m["home"], "away": m["away"], "date": m["date"],
