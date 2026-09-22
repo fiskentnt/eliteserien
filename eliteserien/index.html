@@ -820,7 +820,7 @@
           <th class="sortable hh" id="formHeader" title="Form: forventede poeng per kamp mot et gjennomsnittslag, minus ligasnittet. 5 er snittet. Klikk for å sortere.">Form</th>
           <th class="hide-s" title="Siste fem seriekamper, eldst til venstre">Siste 5</th>
           <th class="sortable hide-m hh" id="gullHeader" data-sort="gull" title="Sannsynlighet for å vinne serien. Klikk for å sortere.">Gull</th>
-          <th class="sortable hh" id="europaHeader" data-sort="europa" title="Sannsynlighet for europaplass: topp 4, altså Champions League- eller Conference League-kvalifisering. Klikk for å sortere.">Europa</th>
+          <th class="sortable hh" id="europaHeader" data-sort="europa" title="Sannsynlighet for 1. til 4. plass, altså Champions League- eller Conference League-kvalifisering. Europa kan også nås gjennom cupen, og det er ikke med i tallet. Klikk for å sortere.">Topp 4</th>
           <th class="sortable hh" id="nedHeader" data-sort="ned" title="Sannsynlighet for nedrykk (plass 15 eller 16). Klikk for å sortere."><span class="lg">Nedrykk</span><span class="sm">Nedr.</span></th>
         </tr></thead>
         <tbody></tbody>
@@ -840,7 +840,7 @@
         <ul class="card-list"></ul>
       </div>
       <div class="card c-eu" data-card="europa">
-        <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8ZM12 3.5V8M20 10.2l-4.4.4M17 18.4l-2.8-3.6M7 18.4l2.8-3.6M4 10.2l4.4.4"/></svg><span class="card-title">Europa</span><button type="button" class="card-link" data-sort="europa">Se alle →</button></div>
+        <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8ZM12 3.5V8M20 10.2l-4.4.4M17 18.4l-2.8-3.6M7 18.4l2.8-3.6M4 10.2l4.4.4"/></svg><span class="card-title">Topp 4</span><button type="button" class="card-link" data-sort="europa">Se alle →</button></div>
         <ul class="card-list"></ul>
       </div>
       <div class="card c-ned" data-card="ned">
@@ -918,10 +918,11 @@
     <h3>Slik regnes sannsynlighetene</h3>
     <p id="howP1"></p>
     <p id="howP2"></p>
-    <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Europa, Ned og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
+    <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Topp 4, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
     <p>Cupvinneren får også en plass i Europa, men den cupfinalen spilles etter at serien er ferdig, så den er ikke med her. Går plassen til et lag som allerede er kvalifisert gjennom tabellen, kan 5. plass få Europa.</p>
-    <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner alt", "...taper alt", "Simuler tomme kamper", og knappen i hver runde) bruker alle én tilfeldig, statistisk normal sesong: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
-    <p>Form viser hvor godt laget spiller nå, fra 0 til 10, der 5 er et gjennomsnittslag i Eliteserien. Formen reagerer sterkere jo lengre en rekke med strake seire eller tap varer, siden markedet selv reagerer sterkere på rekker enn på spredte enkeltresultater.</p>
+    <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner alt", "...taper alt", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
+    <p>Form viser hvor godt laget spiller nå, fra 0 til 10, der 5 er et gjennomsnittslag i Eliteserien. Form-kolonnen reagerer sterkere jo lengre en rekke med strake seire eller tap varer, siden markedet selv reagerer sterkere på rekker enn på spredte enkeltresultater.</p>
+    <p>Denne rekkeeffekten brukes bare i Form-kolonnen og formgrafen. Simuleringene, sannsynlighetene og H/U/B-tallene bruker en tilstand uten den, fordi tilbaketesten viste at rekkeeffekten gjør sluttplassprediksjonen svakt dårligere (se ablasjonstesten under "Hvordan vet vi at modellen virker?").</p>
     <hr>
     <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
     <div class="tblscroll"><table class="mt" id="modelTbl"></table></div>
@@ -936,6 +937,7 @@
 
     <h3>Kalibrering</h3>
     <p>Hvert punkt er ett sannsynlighetsintervall på ti prosentpoeng: modellens sannsynlighet bortover, andelen som faktisk skjedde oppover. Er modellen godt kalibrert, ligger punktene nær den stiplede diagonalen. Punktstørrelsen viser hvor mange prediksjoner intervallet bygger på, så de små punktene svinger mest og bør leses varsomt.</p>
+    <p class="note">To forbehold: intervaller med få prediksjoner svinger mye av seg selv, så et punkt som ligger langt fra diagonalen behøver ikke betyde at modellen er skjev der. Og prediksjonene er ikke uavhengige av hverandre: samme sesong måles ved flere kuttpunkter, og de samme lagene går igjen, så et lag som overrasker gjennom en sesong flytter flere punkter samtidig.</p>
     <svg class="calibchart" viewBox="0 0 380 300" role="img" aria-labelledby="calibTitle calibDesc">
     <title id="calibTitle">Kalibrering: modellens sannsynlighet mot faktisk andel</title>
     <desc id="calibDesc">Punktene ligger nær den stiplede diagonalen når modellen er godt kalibrert. Store punkter er sannsynlighetsintervaller med mange prediksjoner, små punkter har få og svinger mer. Tallene står i tabellene under "Vis tall".</desc>
@@ -1033,16 +1035,16 @@
     </table></div>
 
     <h3>Ablasjonstest</h3>
-    <p>Samme test, bygget stegvis: hva tilfører hver enkelt del av modellen faktisk sluttplassprediksjonen?</p>
+    <p>Samme test, bygget stegvis: hva tilfører hver enkelt del av modellen faktisk sluttplassprediksjonen? Hver rad sammenlignes med raden over, og "marginalt" betyr en forskjell på 0,0003 eller mindre i Brier-score.</p>
     <div class="tblscroll"><table class="mt ablation">
       <thead><tr><th>Steg</th><th>Seriemester</th><th>Topp 4</th><th>Nedrykk</th><th>Effekt</th></tr></thead>
       <tbody>
         <tr><td>1. Ren Poisson</td><td data-l="Seriemester">0,0230</td><td data-l="Topp 4">0,0896</td><td data-l="Nedrykk">0,0598</td><td>Utgangspunkt</td></tr>
-        <tr><td>2. + historiske sluttodds</td><td data-l="Seriemester">0,0195</td><td data-l="Topp 4">0,0814</td><td data-l="Nedrykk">0,0515</td><td>Forbedrer alle tre klart</td></tr>
-        <tr><td>3. + formoppdatering</td><td data-l="Seriemester">0,0196</td><td data-l="Topp 4">0,0803</td><td data-l="Nedrykk">0,0518</td><td>Forbedrer topp 4, nøytral ellers</td></tr>
-        <tr><td>4. + rekke-rampe</td><td data-l="Seriemester">0,0199</td><td data-l="Topp 4">0,0807</td><td data-l="Nedrykk">0,0517</td><td>Svakt DÅRLIGERE på gull/topp 4 -- <strong>ikke i bruk</strong></td></tr>
-        <tr><td>5. + Dixon-Coles</td><td data-l="Seriemester">0,0195</td><td data-l="Topp 4">0,0807</td><td data-l="Nedrykk">0,0513</td><td>Marginal effekt på sluttplass (retter mest enkeltkamp-uavgjort)</td></tr>
-        <tr><td>6. Full modell (l1/l2=16/48)</td><td data-l="Seriemester">0,0192</td><td data-l="Topp 4">0,0795</td><td data-l="Nedrykk">0,0511</td><td>Best samlet -- regulariseringen hjelper i tillegg</td></tr>
+        <tr><td>2. + historiske sluttodds</td><td data-l="Seriemester">0,0195</td><td data-l="Topp 4">0,0814</td><td data-l="Nedrykk">0,0515</td><td>Bedre på alle tre</td></tr>
+        <tr><td>3. + formoppdatering</td><td data-l="Seriemester">0,0196</td><td data-l="Topp 4">0,0803</td><td data-l="Nedrykk">0,0518</td><td>Bedre på topp 4, marginalt dårligere på gull og nedrykk</td></tr>
+        <tr><td>4. + rekke-rampe</td><td data-l="Seriemester">0,0199</td><td data-l="Topp 4">0,0807</td><td data-l="Nedrykk">0,0517</td><td>Dårligere på gull og topp 4, marginalt bedre på nedrykk -- <strong>ikke i bruk</strong></td></tr>
+        <tr><td>5. + Dixon-Coles</td><td data-l="Seriemester">0,0195</td><td data-l="Topp 4">0,0807</td><td data-l="Nedrykk">0,0513</td><td>Bedre på gull og nedrykk, uendret på topp 4 (retter mest enkeltkamp-uavgjort)</td></tr>
+        <tr><td>6. Full modell (l1/l2=16/48)</td><td data-l="Seriemester">0,0192</td><td data-l="Topp 4">0,0795</td><td data-l="Nedrykk">0,0511</td><td>Bedre på alle tre, og best samlet</td></tr>
       </tbody>
     </table></div>
     <p class="note">Rekke-rampen ble opprinnelig lagt inn fordi Brann fikk høyere Form enn Fredrikstad etter ti strake tap. Den løser fortsatt det -- Form-kolonnen bruker den fremdeles -- men gjør altså selve sluttplassprediksjonen svakt dårligere, så simuleringen bruker den ikke.</p>
@@ -1051,7 +1053,7 @@
     <p>Modellen testes på framtiden, ikke på kampene den allerede har sett. Ved flere tidspunkter i hver sesong tilpasses modellen kun på kampene som var spilt fram til dette tidspunktet. Deretter simuleres resten av sesongen, og sannsynlighetene sammenlignes med det som faktisk skjedde.</p>
 
     <h3>Begrensninger</h3>
-    <p>Innbyrdes oppgjør brukes ikke som fjerde rangeringskriterium hvis lag står likt på poeng, målforskjell og scorede mål. 10&nbsp;000 simuleringer gir Monte Carlo-støy på rundt 1 prosentpoeng, så prosentene på siden bør ikke tolkes på desimalnivå.</p>
+    <p>Innbyrdes oppgjør brukes ikke som fjerde rangeringskriterium hvis lag står likt på poeng, målforskjell og scorede mål. Med 10&nbsp;000 simuleringer er usikkerheten høyst omtrent ±1 prosentpoeng, og mindre for lave og høye sannsynligheter, så prosentene på siden bør ikke tolkes på desimalnivå.</p>
   </div>
 </details>
 </div>
@@ -1266,7 +1268,7 @@ function probOf(team,key){
   if(!d) return 0;
   return key==='gull' ? d[0] : key==='europa' ? d[0]+d[1]+d[2]+d[3] : d[14]+d[15];
 }
-const SORT_LABELS = {form:'Form', gull:'Gull', europa:'Europa', ned:'<span class="lg">Nedrykk</span><span class="sm">Nedr.</span>'};
+const SORT_LABELS = {form:'Form', gull:'Gull', europa:'Topp 4', ned:'<span class="lg">Nedrykk</span><span class="sm">Nedr.</span>'};
 function updateSortHeaders(){
   const hdr = {form:'formHeader', gull:'gullHeader', europa:'europaHeader', ned:'nedHeader'};
   Object.keys(hdr).forEach(k=>{
