@@ -88,8 +88,18 @@ const QA_EXPECT = {
 
 async function main() {
   const puppeteer = require('puppeteer-core');
-  const server = await serve();
-  const base = `http://127.0.0.1:${server.address().port}/eliteserien/`;
+  // Uten argument testes filene i repoet, servert fra en lokal server. Med
+  // --live testes den publiserte siden i stedet, så en lansering kan
+  // kontrolleres slik publikum faktisk ser den:
+  //   node tests/regression.js --live
+  //   node tests/regression.js --live https://tabellkalkulator.no
+  const liveArg = process.argv.indexOf('--live');
+  const live = liveArg >= 0;
+  const origin = live ? (process.argv[liveArg + 1] || '').replace(/^-.*/, '') || 'https://tabellkalkulator.no' : null;
+  const server = live ? null : await serve();
+  const base = live ? `${origin.replace(/\/$/, '')}/eliteserien/`
+                    : `http://127.0.0.1:${server.address().port}/eliteserien/`;
+  if (live) console.log(`Tester den publiserte siden: ${origin}`);
   const browser = await puppeteer.launch({executablePath: chromePath(), headless: 'new',
     args: ['--no-sandbox', '--disable-setuid-sandbox']});
   const errors = [];
@@ -529,7 +539,7 @@ async function main() {
     await page.close();
   } finally {
     await browser.close();
-    server.close();
+    if (server) server.close();
   }
 
   const failed = results.filter(r => !r.ok);
