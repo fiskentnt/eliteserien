@@ -3,13 +3,16 @@
 
   obos/data/matches.json   spilte kamper i 2026 (dato, tid, runde, lag, mål)
   obos/data/fixtures.json  rundene det står kamper igjen i, med played-flagg
-  obos/data/model.json     lagstyrkene, tilpasset på 2026-kampene (uten odds)
+  obos/data/model.json     lagstyrkene, tilpasset på 2026-kampene
   obos/data/status.json    når filene sist ble bygget
 
 Samme format som eliteserien/data/, så sidekoden er felles. Modellen tilpasses
 med de samme parameterne som Eliteserien (l1/l2 = 16/48, halveringstid 35
-dager), men uten oddsleddet: OBOS-historikken har ingen odds før 2026, og
-tilbaketesten viste at parameterne holder (se scripts/backtest_zones.py).
+dager). Oddsleddet er med når obos/data/odds_closing.json har sluttodds, og
+ellers faller den tilbake til bare mål. --no-odds slår oddsleddet av.
+
+Tilbaketesten i scripts/backtest_zones.py er kjørt UTEN odds: OBOS-historikken
+har ingen odds før 2026, så oddsleddet er ikke validert på denne ligaen.
 
   python3 scripts/obos_build_data.py
 """
@@ -22,12 +25,15 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent))
 import fit_fast
 import leaguedata
+import oddslib
 
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / "obos" / "data"
 CSV_PATH = DATA / "obos_2012-2026.csv"
 SEASON = "2026"
 HALF_LIFE, L1, L2 = 35.0, 16.0, 48.0
+ODDS_WEIGHT = 40.0    # samme vekt som Eliteserien (se eliteserien/data/model.json)
+ODDS_PATH = DATA / "odds_closing.json"
 
 
 def rows_for(season=SEASON):
@@ -42,6 +48,27 @@ def rows_for(season=SEASON):
             "ag": int(float(r["bortemaal"])) if r["bortemaal"] else None,
         })
     out.sort(key=lambda m: (m["date"], m["time"], m["home"]))
+    return out
+
+
+def load_closing_odds():
+    """Sluttoddsen per kamp, som de-viggede sannsynligheter (H, U, B).
+
+    Nøkkelen er hjemmelag og bortelag, aldri datoen: en flyttet kamp er den
+    samme kampen. Filen fylles av scripts/obos_closing_odds.py.
+    """
+    if not ODDS_PATH.exists():
+        return {}
+    d = json.loads(ODDS_PATH.read_text(encoding="utf-8"))
+    out = {}
+    for key, v in d.get("matches", {}).items():
+        o = v.get("odds")
+        if not o or not v.get("bookmaker"):
+            continue
+        parts = key.split("|")
+        if len(parts) != 3:
+            continue
+        out[(parts[1], parts[2])] = oddslib.devig(o["H"], o["U"], o["B"])
     return out
 
 
@@ -72,12 +99,19 @@ def main():
     leaguedata.write_json(DATA / "fixtures.json", fixtures, indent=1)
     print(f"  {len(fixtures)} runder med kamper igjen")
 
-    # Modellen: samme tilpasning som Eliteserien, men uten oddsleddet.
+    # Modellen: samme tilpasning som Eliteserien. Oddsleddet er med når vi har
+    # sluttodds (obos/data/odds_closing.json, Pinnacle via OddsPapi), ellers
+    # faller den tilbake til bare mål. --no-odds slår det av, til sammenligning.
     TI = {t: i for i, t in enumerate(teams)}
+    closing = load_closing_odds() if "--no-odds" not in sys.argv else {}
     fit_matches = [{"date": m["date"], "home": m["home"], "away": m["away"],
-                    "hg": m["hg"], "ag": m["ag"], "odds": None} for m in played]
+                    "hg": m["hg"], "ag": m["ag"],
+                    "odds": closing.get((m["home"], m["away"]))} for m in played]
+    n_odds = sum(1 for m in fit_matches if m["odds"])
+    odds_weight = ODDS_WEIGHT if n_odds else 0.0
+    print(f"  odds: {n_odds} av {len(played)} spilte kamper, vekt {odds_weight}")
     ref = max(m["date"] for m in played) if played else date.today().isoformat()
-    res = fit_fast.fit_model_fast(fit_matches, teams, TI, odds_weight=0.0,
+    res = fit_fast.fit_model_fast(fit_matches, teams, TI, odds_weight=odds_weight,
                                   half_life_goals=HALF_LIFE, half_life_odds=HALF_LIFE,
                                   l1=L1, l2=L2, ref_date=ref, isolate_global=True)
     model = {
@@ -86,8 +120,11 @@ def main():
         "att": list(res["att"]), "con": list(res["con"]),
         "ha": list(res["ha"]), "hc": list(res["hc"]),
         "meta": {"league": "OBOS-ligaen", "season": int(SEASON), "matches": len(played),
-                 "odds_weight": 0.0, "half_life_days": HALF_LIFE, "l1": L1, "l2": L2,
-                 "note": "Tilpasset uten odds: OBOS-historikken har ingen odds før 2026."},
+                 "odds_weight": odds_weight, "n_odds_matches": n_odds,
+                 "half_life_days": HALF_LIFE, "l1": L1, "l2": L2,
+                 "note": ("Sluttodds fra Pinnacle via OddsPapi, samme vekt som Eliteserien."
+                          if n_odds else
+                          "Tilpasset uten odds: ingen sluttodds tilgjengelig.")},
     }
     (DATA / "model.json").write_text(json.dumps(model, ensure_ascii=False, indent=1) + "\n",
                                      encoding="utf-8")

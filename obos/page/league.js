@@ -65,6 +65,9 @@ const LEAGUE = {
     'Kongsvinger': 'KIL', 'Strømsgodset': 'Godset', 'Sandnes Ulf': 'Sandnes',
     'Strømmen': 'Strømmen', 'Haugesund': 'FKH',
   },
+  // Oddsen for OBOS kommer fra OddsPapi (sluttodds fra Pinnacle, bet365 og
+  // unibet). Eliteserien bruker The Odds API.
+  oddsSource: 'OddsPapi',
   // Klubbfarger, én per lag i DENNE ligaen. Draktfargen (trøyens hovedfarge)
   // fra draktboksen på Wikipedia, krysssjekket mot NFFs lagsider. Tre valg
   // som ikke kommer rett fra kilden, alle etter samme regel som Eliteserien:

@@ -1205,6 +1205,9 @@ const LEAGUE = {
     'Kristiansund': 'KBK', 'Sarpsborg 08': 'S08', 'Bodø/Glimt': 'Glimt',
     'Rosenborg': 'RBK', 'Vålerenga': 'VIF', 'Lillestrøm': 'LSK', 'KFUM Oslo': 'KFUM',
   },
+  // Hvor oddsen i verktøytipset på kampene kommer fra. Ligaene bruker ulike
+  // leverandører, så navnet kan ikke stå i den delte koden.
+  oddsSource: 'The Odds API',
   // Klubbfarger, én per lag i DENNE ligaen. Variantene er laget med
   // scripts/team_colors.py; se kommentaren ved TEAM_COLORS for metoden.
   teamColors: {
@@ -1948,7 +1951,7 @@ function fillProb(){
     el.querySelectorAll('.pct[data-o]').forEach(p=>{ const k=p.dataset.o; p.textContent=Math.round(o[k]*100)+' %'; p.classList.toggle('best',k===best); });
     const src=el.querySelector('.pct.src'); src.textContent=info.odds?'odds':''; src.classList.toggle('odds',info.odds);
     const oddsTxt = info.odds
-      ? ` Blandet ${Math.round(ODDS_W*100)} % odds (The Odds API, ${info.meta.n_bookmakers} bookmakere, hentet ${ODDS_FETCHED_AT}: ${Math.round(info.mk[0]*100)}/${Math.round(info.mk[1]*100)}/${Math.round(info.mk[2]*100)}) og ${Math.round((1-ODDS_W)*100)} % modell (${Math.round(info.md.H*100)}/${Math.round(info.md.U*100)}/${Math.round(info.md.B*100)}).`
+      ? ` Blandet ${Math.round(ODDS_W*100)} % odds (${LEAGUE.oddsSource}, ${info.meta.n_bookmakers} bookmakere, hentet ${ODDS_FETCHED_AT}: ${Math.round(info.mk[0]*100)}/${Math.round(info.mk[1]*100)}/${Math.round(info.mk[2]*100)}) og ${Math.round((1-ODDS_W)*100)} % modell (${Math.round(info.md.H*100)}/${Math.round(info.md.U*100)}/${Math.round(info.md.B*100)}).`
       : '';
     el.title=`${m.home} seier ${Math.round(o.H*100)} %, uavgjort ${Math.round(o.U*100)} %, ${m.away} seier ${Math.round(o.B*100)} %. Forventede mål ${f1(lh)}-${f1(la)}.`+oddsTxt;
   });
@@ -2667,7 +2670,8 @@ function getWorker(){
   }
   return mcWorker;
 }
-// Oddsjustert rate for én kamp hvis The Odds API har odds for den, ellers
+// Oddsjustert rate for én kamp hvis oddskilden (LEAGUE.oddsSource) har odds
+// for den, ellers
 // null -- delt av alle simuleringsoppsettene under (runMCAsync,
 // simulateTypicalAsync, spør-om-tabellen), slik at simuleringen alltid
 // bruker AKKURAT samme sannsynlighet som fillProb() viser for den kampen,

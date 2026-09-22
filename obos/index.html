@@ -982,7 +982,7 @@
     <!-- LIGA-OM: byttes ut per liga -->
     <section class="about" id="om-siden" aria-labelledby="omSidenTittel">
       <h2 id="omSidenTittel">Om tabellkalkulatoren for OBOS-ligaen</h2>
-      <p>Tabellkalkulator for OBOS-ligaen 2026 viser dagens tabell og sannsynligheten for at hvert lag rykker direkte opp, havner i topp 6 og får spille opprykksspill, havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 10&nbsp;000 ganger.</p>
+      <p>Tabellkalkulator for OBOS-ligaen 2026 viser dagens tabell og sannsynligheten for at hvert lag rykker direkte opp, havner i topp 6 og får spille opprykksspill, havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater, og på odds når odds er tilgjengelige, og resten av sesongen simuleres 10&nbsp;000 ganger.</p>
       <p>De to øverste rykker direkte opp i Eliteserien. Lagene på 3. til 6. plass spiller opprykksspill, og de kampene er ikke regnet inn her: siden sier hvor sannsynlig det er å komme dit, ikke hvor sannsynlig det er å vinne det. 14. plass må spille kvalik, og de to nederste rykker ned.</p>
       <p>Du kan fylle inn egne resultater, la modellen simulere tomme kamper, følge ett lag og se hvordan tabellen og sjansene endrer seg. Tallene oppdateres automatisk etter hver kamp.</p>
       <noscript><p><strong>Tabellen og sannsynlighetene regnes ut i nettleseren og krever JavaScript.</strong> Slå på JavaScript for å bruke kalkulatoren.</p></noscript>
@@ -997,7 +997,7 @@
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7"/></svg></span>Slik fungerer det</summary>
   <div class="in">
     <p class="plain-lead">Siden spiller resten av sesongen 10&nbsp;000 ganger og teller hvor ofte hvert lag ender hvor.</p>
-    <p>Hvert lag får en styrke fra målene sine og fra hva spillmarkedet har trodd om kampene deres, der nye kamper teller mest. Står det 52 prosent for topp 6, endte laget blant de seks beste i omtrent 5200 av de 10&nbsp;000 sesongene.</p>
+    <p>Hvert lag får en styrke fra målene sine, der nye kamper teller mest. Når odds er tilgjengelige, teller også hva spillmarkedet har trodd om kampene deres. For OBOS-ligaen er odds ikke koblet inn ennå, så styrken kommer bare fra målene. Står det 52 prosent for topp 6, endte laget blant de seks beste i omtrent 5200 av de 10&nbsp;000 sesongene.</p>
     <p>Fyller du inn et resultat selv, står det fast i alle 10&nbsp;000, så du ser hva akkurat det gjør. Form er et tall fra 0 til 10 for hvor godt laget spiller nå, der 5 er et gjennomsnittslag.</p>
 
     <details class="details-tech">
@@ -1010,6 +1010,7 @@
       <p>Form-kolonnen reagerer sterkere jo lengre en rekke med strake seire eller tap varer, siden markedet selv reagerer sterkere på rekker enn på spredte enkeltresultater.</p>
       <p>Denne rekkeeffekten brukes bare i Form-kolonnen og formgrafen. Simuleringene, sannsynlighetene og H/U/B-tallene bruker en tilstand uten den, fordi tilbaketesten ikke viser at rekkeeffekten gjør sluttplassprediksjonen bedre (se tabellen under "Hvordan vet vi at modellen virker?").</p>
       <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn, verken i tabellen eller i simuleringene. </p>
+      <p class="note">To av innstillingene er foreløpig overført fra Eliteserien og ikke målt på OBOS-ligaen: hvor raskt lagstyrken oppdateres etter hver kamp (formoppdateringen), og Dixon-Coles-parameteren, som justerer sannsynligheten for de laveste resultatene. Tilbaketesten på OBOS-historikken 2012&ndash;2025 viser at modellen med disse innstillingene slår tabellmodellen tydelig på nedrykk og er omtrent lik på opprykk og topp 6, men innstillingene selv er ikke tilpasset OBOS-tall.</p>
       <div class="tblscroll"><table class="mt" id="modelTbl"></table></div>
     </details>
   </div>
@@ -1148,6 +1149,9 @@ const LEAGUE = {
     'Kongsvinger': 'KIL', 'Strømsgodset': 'Godset', 'Sandnes Ulf': 'Sandnes',
     'Strømmen': 'Strømmen', 'Haugesund': 'FKH',
   },
+  // Oddsen for OBOS kommer fra OddsPapi (sluttodds fra Pinnacle, bet365 og
+  // unibet). Eliteserien bruker The Odds API.
+  oddsSource: 'OddsPapi',
   // Klubbfarger, én per lag i DENNE ligaen. Draktfargen (trøyens hovedfarge)
   // fra draktboksen på Wikipedia, krysssjekket mot NFFs lagsider. Tre valg
   // som ikke kommer rett fra kilden, alle etter samme regel som Eliteserien:
@@ -1904,7 +1908,7 @@ function fillProb(){
     el.querySelectorAll('.pct[data-o]').forEach(p=>{ const k=p.dataset.o; p.textContent=Math.round(o[k]*100)+' %'; p.classList.toggle('best',k===best); });
     const src=el.querySelector('.pct.src'); src.textContent=info.odds?'odds':''; src.classList.toggle('odds',info.odds);
     const oddsTxt = info.odds
-      ? ` Blandet ${Math.round(ODDS_W*100)} % odds (The Odds API, ${info.meta.n_bookmakers} bookmakere, hentet ${ODDS_FETCHED_AT}: ${Math.round(info.mk[0]*100)}/${Math.round(info.mk[1]*100)}/${Math.round(info.mk[2]*100)}) og ${Math.round((1-ODDS_W)*100)} % modell (${Math.round(info.md.H*100)}/${Math.round(info.md.U*100)}/${Math.round(info.md.B*100)}).`
+      ? ` Blandet ${Math.round(ODDS_W*100)} % odds (${LEAGUE.oddsSource}, ${info.meta.n_bookmakers} bookmakere, hentet ${ODDS_FETCHED_AT}: ${Math.round(info.mk[0]*100)}/${Math.round(info.mk[1]*100)}/${Math.round(info.mk[2]*100)}) og ${Math.round((1-ODDS_W)*100)} % modell (${Math.round(info.md.H*100)}/${Math.round(info.md.U*100)}/${Math.round(info.md.B*100)}).`
       : '';
     el.title=`${m.home} seier ${Math.round(o.H*100)} %, uavgjort ${Math.round(o.U*100)} %, ${m.away} seier ${Math.round(o.B*100)} %. Forventede mål ${f1(lh)}-${f1(la)}.`+oddsTxt;
   });
@@ -2623,7 +2627,8 @@ function getWorker(){
   }
   return mcWorker;
 }
-// Oddsjustert rate for én kamp hvis The Odds API har odds for den, ellers
+// Oddsjustert rate for én kamp hvis oddskilden (LEAGUE.oddsSource) har odds
+// for den, ellers
 // null -- delt av alle simuleringsoppsettene under (runMCAsync,
 // simulateTypicalAsync, spør-om-tabellen), slik at simuleringen alltid
 // bruker AKKURAT samme sannsynlighet som fillProb() viser for den kampen,
