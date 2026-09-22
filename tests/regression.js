@@ -73,7 +73,8 @@ const QA_EXPECT = {
   keymatches: {what: 'prosentpoeng',  pat: new RegExp(PP)},
   runin:      {what: 'prosent',       pat: new RegExp(PCT)},
   // Svaret navngir kampen og viser hva den flytter; rundenummeret står i banneret.
-  keyround:   {what: 'kamp og prosent', pat: new RegExp(String.raw`\w+ mot \w+[\s\S]*${PCT}`)},
+  // Lagnavn kan ha æ, ø og å, som \w ikke dekker i JavaScript.
+  keyround:   {what: 'kamp og prosent', pat: new RegExp(String.raw`\S+ mot \S+[\s\S]*${PCT}`)},
   lastmatch:  {what: 'prosent',       pat: new RegExp(PCT)},
   nextmatch:  {what: 'prosent',       pat: new RegExp(PCT)},
   cheer:      {what: 'prosentpoeng',  pat: new RegExp(PP)},
@@ -419,6 +420,96 @@ async function main() {
       await q.close();
     }
     await mob.close();
+    await page.bringToFront();
+
+    // ---- 11. OBOS-ligaen: soner, tekster og grenser ----
+    setGroup('OBOS-ligaen');
+    const ob = await open(1400, 900, base.replace('/eliteserien/', '/obos/'));
+    const o1 = await ob.evaluate(() => ({
+      liga: LEAGUE.name, id: LEAGUE.id,
+      rows: document.querySelectorAll('#tbl tbody tr').length,
+      cols: [...document.querySelectorAll('#tbl thead th')].map(t => t.innerText.trim()).filter(Boolean),
+      legend: [...document.querySelectorAll('.legend span')].map(s => s.textContent),
+      cards: [...document.querySelectorAll('.card-title')].map(t => t.textContent),
+      // soneklasse og stiplet linje per plassering
+      bands: [...document.querySelectorAll('#tbl tbody tr')].map((tr, i) =>
+        `${i + 1}:${[...tr.classList].filter(c => ['cl','eu','playoff','ned','cut'].includes(c)).join('+')}`),
+      sums: TEAMS.map(t => lastMC[t].reduce((a, b) => a + b, 0)),
+    }));
+    check('OBOS: riktig liga og 16 lag', o1.id === 'obos' && o1.rows === 16, `${o1.liga}, ${o1.rows} rader`);
+    check('OBOS: kolonnene heter Opprykk, Topp 6 og Nedrykk',
+      o1.cols.includes('Opprykk') && o1.cols.includes('Topp 6') && o1.cols.includes('Nedrykk'),
+      o1.cols.join(' | '));
+    check('OBOS: ingen Gull- eller Topp 4-kolonne',
+      !o1.cols.includes('Gull') && !o1.cols.includes('Topp 4'), o1.cols.join(' | '));
+    check('OBOS: fargeforklaringen nevner opprykksspill',
+      o1.legend.some(l => /Direkte opprykk \(1 og 2\)/.test(l)) &&
+      o1.legend.some(l => /Opprykksspill \(3 til 6\)/.test(l)), o1.legend.join(' / '));
+    check('OBOS: kortene heter Direkte opprykk, Topp 6, Nedrykk',
+      o1.cards.slice(0, 3).join(',') === 'Direkte opprykk,Topp 6,Nedrykk', o1.cards.join(','));
+    // sonene: 1-2 direkte opprykk, 3-6 opprykksspill, 14 kvalik, 15-16 ned,
+    // med stiplet linje etter 2, 6 og 13
+    const vent = ['1:cl','2:cl+cut','3:eu','4:eu','5:eu','6:eu+cut','7:','8:','9:','10:','11:','12:','13:cut','14:playoff','15:ned','16:ned'];
+    check('OBOS: sonefarger og stiplede linjer på riktige plasser',
+      o1.bands.join(' ') === vent.join(' '), `${o1.bands.join(' ')}\n      ventet: ${vent.join(' ')}`);
+    check('OBOS: fordelingen summerer til 1 per lag', o1.sums.every(x => Math.abs(x - 1) < 1e-9));
+
+    // hvert spørsmål må svare med riktig størrelse, og aldri arve Eliteserien-sonene
+    const obTeams = await ob.$$eval('#teamSelect option', o => o.map(x => x.value).filter(Boolean));
+    const obIds = await ob.evaluate(() => QA_QUESTIONS.map(q => q.id));
+    for (const team of [obTeams[0], obTeams[8]]) {
+      await ob.select('#teamSelect', team);
+      await sleep(300);
+      await settle(ob);
+      for (const id of obIds) {
+        const a = await ob.evaluate(async (id, t) => {
+          const q = QA_QUESTIONS.find(x => x.id === id);
+          try { return await q.run(t); } catch (e) { return 'ERROR ' + e.message; }
+        }, id, team);
+        const exp = QA_EXPECT[id];
+        const bad = /^ERROR/.test(a) || /undefined|NaN/.test(a);
+        const leak = /Europa|topp 4|gullsjansen|seriemester/i.test(a);
+        check(`OBOS: ${team} · ${id} (${exp.what})`,
+          !bad && !leak && (exp.pat.test(a) || SETTLED.test(a)), a.slice(0, 150));
+      }
+    }
+
+    // ---- grensene: et lag som flytter seg over hver grense ----
+    setGroup('OBOS: grensene');
+    const boundaries = [[3, 2, 'eu', 'cl'], [7, 6, '', 'eu'], [15, 14, 'ned', 'playoff'], [14, 13, 'playoff', '']];
+    for (const [from, to, clsFrom, clsTo] of boundaries) {
+      const r = await ob.evaluate(({from, to}) => {
+        // Kunstig scenario: gi laget på plass `from` nok poeng til å gå forbi
+        // laget på plass `to`, og ingen andre kamper fylles ut.
+        matches.forEach(m => setMatch(m, null, null));
+        document.getElementById('autoFillToggle').checked = false;
+        const rows = compute().rows;
+        const mover = rows[from - 1].name, target = rows[to - 1].name;
+        const need = rows[to - 1].pts - rows[from - 1].pts + 1;
+        let won = 0;
+        matches.filter(m => m.home === mover || m.away === mover).forEach(m => {
+          if (won * 3 >= need) return;
+          setMatch(m, m.home === mover ? 5 : 0, m.home === mover ? 0 : 5);
+          won++;
+        });
+        render();
+        const after = compute().rows;
+        const nyPos = after.findIndex(x => x.name === mover) + 1;
+        const tr = document.querySelector(`#tbl tbody tr[data-team="${CSS.escape(mover)}"]`);
+        const band = LEAGUE.bands.find(b => nyPos >= b.lo && nyPos <= b.hi);
+        return {mover, target, need, nyPos, ventetCls: band ? band.cls : '',
+                cls: [...tr.classList].filter(c => ['cl','eu','playoff','ned'].includes(c)).join(''),
+                tittel: tr.querySelector('td.pos').title || ''};
+      }, {from, to});
+      check(`${from}. til ${to}. plass: ${r.mover} krysset grensen`, r.nyPos <= to,
+        `endte på ${r.nyPos}. plass (trengte ${r.need} poeng)`);
+      // Sonefargen skal stemme med plasseringen laget FAKTISK endte på, ikke
+      // bare med målplassen: et lag som hopper for langt skal ha sonen der.
+      check(`${from}. til ${to}. plass: sonefargen følger ny plassering`,
+        r.cls === r.ventetCls, `på ${r.nyPos}. plass fikk "${r.cls}", ventet "${r.ventetCls}"`);
+    }
+    await ob.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); render(); });
+    await ob.close();
     await page.bringToFront();
 
     setGroup('JS-feil');
