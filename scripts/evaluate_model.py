@@ -116,7 +116,13 @@ def rolling_evaluate(by_season, seasons, l1, l2, odds_weight, half_life, cutoff_
     delvis nåværende sesong som ikke er lastet)."""
     total_logloss = 0.0
     total_nll = 0.0
+    # Sammenligning: alle lag like sterke, bare hjemmefordel (mu og H fra samme
+    # tilpasning, alle lagvise ledd satt til 0). Viser hvor mye det er verdt å
+    # vite HVEM som spiller, på samme kamper som modellen vurderes på.
+    flat_logloss = 0.0
+    flat_nll = 0.0
     n_eval = 0
+    hits = flat_hits = 0
     for season in seasons:
         if season not in by_season:
             continue
@@ -137,6 +143,7 @@ def rolling_evaluate(by_season, seasons, l1, l2, odds_weight, half_life, cutoff_
                                            half_life_goals=half_life, half_life_odds=half_life,
                                            l1=l1, l2=l2, ref_date=known[-1]["date"], isolate_global=True)
             mu, Hp, att, con, ha, hc = res["mu"], res["H"], res["att"], res["con"], res["ha"], res["hc"]
+            zeros = [0.0] * len(teams)
             for m in matches[eval_start:eval_end]:
                 lh, la = rate_pair(mu, Hp, att, con, ha, hc, TI, m["home"], m["away"])
                 hg, ag = m["hg"], m["ag"]
@@ -145,10 +152,20 @@ def rolling_evaluate(by_season, seasons, l1, l2, odds_weight, half_life, cutoff_
                 p_actual = {"H": pH, "D": pD, "B": pB}[actual]
                 total_logloss += -math.log(max(p_actual, 1e-9))
                 total_nll += poisson_nll(hg, lh) + poisson_nll(ag, la)
+                if max((pH, "H"), (pD, "D"), (pB, "B"))[1] == actual:
+                    hits += 1
+                flh, fla = rate_pair(mu, Hp, zeros, zeros, zeros, zeros, TI, m["home"], m["away"])
+                fH, fD, fB = outcome_probs_dc(flh, fla, dc_rho)
+                f_actual = {"H": fH, "D": fD, "B": fB}[actual]
+                flat_logloss += -math.log(max(f_actual, 1e-9))
+                flat_nll += poisson_nll(hg, flh) + poisson_nll(ag, fla)
+                if max((fH, "H"), (fD, "D"), (fB, "B"))[1] == actual:
+                    flat_hits += 1
                 n_eval += 1
     if n_eval == 0:
         return None
-    return total_logloss / n_eval, total_nll / n_eval, n_eval
+    return (total_logloss / n_eval, total_nll / n_eval, n_eval,
+            flat_logloss / n_eval, flat_nll / n_eval, hits / n_eval, flat_hits / n_eval)
 
 
 def season_range(spec):
@@ -184,7 +201,8 @@ def main():
         if not seasons:
             return {}
         print(f"\n{label} = {seasons[0]}-{seasons[-1]} ({len(seasons)} sesonger)")
-        print(f"{'l1xl2':>10s} {'log loss':>10s} {'Poisson-NLL':>12s} {'n kamper':>10s}")
+        print(f"{'l1xl2':>10s} {'log loss':>10s} {'Poisson-NLL':>12s} {'n kamper':>10s}"
+              f"   | sammenligning med alle lag like sterke")
         results = {}
         for mult in mults:
             out = rolling_evaluate(by_season, seasons, args.l1_base * mult, args.l2_base * mult,
@@ -192,9 +210,11 @@ def main():
             if out is None:
                 print(f"{mult:>9.1f}x  (ingen kamper funnet for disse sesongene)")
                 continue
-            ll, nll, n = out
+            ll, nll, n, fll, fnll, hit, fhit = out
             results[mult] = ll
-            print(f"{mult:>9.1f}x {ll:10.4f} {nll:12.4f} {n:10d}")
+            print(f"{mult:>9.1f}x {ll:10.4f} {nll:12.4f} {n:10d}"
+                  f"   | like sterke lag: {fll:.4f} / {fnll:.4f}"
+                  f"   | traff utfallet: {hit*100:.1f} % mot {fhit*100:.1f} %")
         return results
 
     train_results = run_sweep("TRAIN", season_range(args.train_seasons) if args.train_seasons else [])

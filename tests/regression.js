@@ -306,8 +306,12 @@ async function main() {
     await sleep(600);
     const banner = await fresh.evaluate(() => ({txt: document.getElementById('qaHighlight').textContent,
       qid: document.getElementById('qaHighlight').dataset.qid}));
+    // To gyldige former: én tydelig viktigste kamp, eller flere som betyr
+    // omtrent like mye (se qaKeyBanner).
     check('banneret viser rundens viktigste kamp fra datafilen',
-      banner.qid === 'keyround' && /Rundens viktigste kamp/.test(banner.txt), JSON.stringify(banner));
+      banner.qid === 'keyround' &&
+      /(Rundens viktigste kamp|kamper betyr omtrent like mye)/.test(banner.txt) &&
+      / mot /.test(banner.txt), JSON.stringify(banner));
     await fresh.select('#teamSelect', 'Bodø/Glimt');
     await sleep(500);
     const lm = await fresh.evaluate(() => {

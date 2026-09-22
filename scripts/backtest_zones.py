@@ -216,6 +216,11 @@ def main():
     # regnes ut. Uten det kan man ikke si om en rad faktisk er bedre enn raden
     # over, eller om forskjellen er innenfor testens egen støy.
     err = {m: {t: [] for t in targets} for m in models}
+    # Kuttpunktet hver observasjon hører til, i samme rekkefølge som err-listene,
+    # så resultatet kan brytes ned per kuttpunkt etterpå.
+    tags = {t: [] for t in targets}
+    # Rå sannsynlighet og utfall, til kalibreringen (samme observasjoner).
+    raw = {m: {t: {"p": [], "y": []} for t in targets} for m in models}
     cnt = 0
 
     for season in seasons:
@@ -278,6 +283,10 @@ def main():
             for name in models:
                 for t in targets:
                     err[name][t].extend(((probs[name][t] - actual[t]) ** 2).tolist())
+                    raw[name][t]["p"].extend(probs[name][t].tolist())
+                    raw[name][t]["y"].extend(actual[t].tolist())
+            for t in targets:
+                tags[t].extend([frac] * n)
             cnt += n
             print(f"  {season} kutt {frac:.2f}: {k} spilt, {len(remaining)} igjen", file=sys.stderr)
 
@@ -294,6 +303,49 @@ def main():
     # Rampen er en sidegren: den sammenlignes med +form, ikke med raden over.
     BASE_OF = {"tabell": "basisrate", "poisson": "tabell", "+odds": "poisson",
                "+form": "+odds", "+dc": "+form", "full": "+dc", "+rampe": "+form"}
+    # Per kuttpunkt: hvor mye modellen slår tabellmodellen når det er mye igjen
+    # å spille, mot når det nesten er over.
+    if "tabell" in E and "full" in E:
+        TAG = {t: np.array(tags[t]) for t in targets}
+        print("\nPer kuttpunkt: full modell mot tabellmodell. Negativ forskjell = modellen er bedre.")
+        for t in targets:
+            print(f"\n  {t}")
+            print(f"    {'spilt':>7}{'lag':>6}{'tabell':>9}{'full':>9}{'forskjell':>12}{'standardfeil':>14}")
+            for frac in cuts:
+                sel = TAG[t] == frac
+                if not sel.any():
+                    continue
+                a, b = E["tabell"][t][sel], E["full"][t][sel]
+                d = b - a
+                se = d.std(ddof=1) / np.sqrt(len(d))
+                print(f"    {frac*100:>5.0f} %{int(sel.sum()):>6}{a.mean():>9.4f}{b.mean():>9.4f}"
+                      f"{d.mean():>+12.4f}{se:>14.4f}")
+
+    # Full modell mot tabellmodellen, samlet: den sammenligningen teksten under
+    # Brier-tabellen bygger på.
+    if "tabell" in E and "full" in E:
+        print("\nFull modell mot tabellmodell, alle kuttpunkt samlet:")
+        for t in targets:
+            d = E["full"][t] - E["tabell"][t]
+            se = d.std(ddof=1) / np.sqrt(len(d))
+            print(f"    {t:<10}{d.mean():>+9.4f} +/- {se:.4f}   ({abs(d.mean())/se:.1f} standardfeil)")
+
+    # Kalibrering for modellen som er i bruk: prediksjonene delt i
+    # tiprosentspenn, med snitt predikert og faktisk andel i hvert.
+    if "full" in raw:
+        print("\nKalibrering, full modell (samme observasjoner):")
+        for t in targets:
+            P = np.array(raw["full"][t]["p"]); Y = np.array(raw["full"][t]["y"])
+            print(f"\n  {t}  ({len(P)} prediksjoner)")
+            print(f"    {'intervall':<12}{'antall':>7}{'snitt pred.':>13}{'faktisk':>10}")
+            for lo in range(0, 100, 10):
+                hi = lo + 10
+                sel = (P >= lo / 100) & (P < hi / 100) if hi < 100 else (P >= 0.9) & (P <= 1.0)
+                if not sel.any():
+                    print(f"    {lo}-{hi} %{'':<6}{0:>7}{'-':>13}{'-':>10}")
+                    continue
+                print(f"    {lo}-{hi} %{'':<6}{int(sel.sum()):>7}{P[sel].mean()*100:>12.1f}%{Y[sel].mean()*100:>9.1f}%")
+
     print("\nForskjell mot referansen, med standardfeil (parvis, samme lag og kuttpunkt).")
     print("Et avvik mindre enn omtrent to standardfeil kan ikke skilles fra testens egen stoy.")
     print(f"{'Steg':<14}{'mot':<12}" + "".join(f"{t:>22}" for t in targets))

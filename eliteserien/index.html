@@ -543,6 +543,11 @@
   details.howitworks p{font-size:14px;line-height:1.55;color:var(--ink);margin:0 0 12px;max-width:72ch}
   details.howitworks hr{border:none;border-top:1px solid var(--line);margin:16px 0}
   details.howitworks .note{padding:0 0 12px;font-size:13px}
+  /* Folkelig forklaring øverst i "Hvordan vet vi at modellen virker?": litt
+     større skrift enn resten, så den leses først. Alt det tekniske ligger bak
+     "Vis detaljer" (details.details-tech). */
+  details.howitworks .plain-lead{font-size:16.5px;color:var(--ink)}
+  details.howitworks h4{font:700 15px/1.25 var(--cond);margin:18px 0 8px}
   @media (max-width:640px){details.howitworks{padding:0 16px}}
   table.mt th,table.mt td{padding:5px 6px;font-size:13px}
   /* Tabellene i "Slik fungerer det" og "Hvordan vet vi at modellen virker?"
@@ -610,10 +615,10 @@
   ul.baselines{margin:0 0 12px;padding-left:20px;color:var(--muted);font-size:13.5px;line-height:1.5}
   ul.baselines li{margin:0 0 5px}
   ul.baselines strong{color:var(--ink)}
-  details.shownums{margin:0 0 14px}
-  details.shownums > summary{cursor:pointer;color:var(--team-text);font-weight:600;font-size:13.5px;width:fit-content}
-  details.shownums > summary:hover{text-decoration:underline}
-  details.shownums[open] > summary{margin-bottom:10px}
+  details.details-tech{margin:10px 0 0;border-top:1px solid var(--line);padding-top:10px}
+  details.details-tech > summary{cursor:pointer;color:var(--team-text);font-weight:600;font-size:14px;width:fit-content}
+  details.details-tech > summary:hover{text-decoration:underline}
+  details.details-tech[open] > summary{margin-bottom:12px}
 
   /* Formgraf: modal med SVG-graf, åpnes ved klikk på et lag i tabellen */
   .modal-backdrop{position:fixed;inset:0;background:rgba(10,12,13,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
@@ -918,113 +923,72 @@
 <details class="howitworks">
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7"/></svg></span>Slik fungerer det</summary>
   <div class="in">
-    <h3>Slik regnes sannsynlighetene</h3>
-    <p id="howP1"></p>
-    <p id="howP2"></p>
-    <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Topp 4, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
-    <p>Cupvinneren får også en plass i Europa, men den cupfinalen spilles etter at serien er ferdig, så den er ikke med her. Går plassen til et lag som allerede er kvalifisert gjennom tabellen, kan 5. plass få Europa.</p>
-    <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner alt", "...taper alt", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
-    <p>Form viser hvor godt laget spiller nå, fra 0 til 10, der 5 er et gjennomsnittslag i Eliteserien. Form-kolonnen reagerer sterkere jo lengre en rekke med strake seire eller tap varer, siden markedet selv reagerer sterkere på rekker enn på spredte enkeltresultater.</p>
-    <p>Denne rekkeeffekten brukes bare i Form-kolonnen og formgrafen. Simuleringene, sannsynlighetene og H/U/B-tallene bruker en tilstand uten den, fordi tilbaketesten ikke viser at rekkeeffekten gjør sluttplassprediksjonen bedre (se ablasjonstesten under "Hvordan vet vi at modellen virker?").</p>
-    <hr>
-    <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
-    <div class="tblscroll"><table class="mt" id="modelTbl"></table></div>
+    <p class="plain-lead">Siden spiller resten av sesongen 10&nbsp;000 ganger og teller hvor ofte hvert lag ender hvor.</p>
+    <p>Hvert lag får en styrke fra målene sine og fra hva spillmarkedet har trodd om kampene deres, der nye kamper teller mest. Står det 52 prosent for topp 4, endte laget blant de fire beste i omtrent 5200 av de 10&nbsp;000 sesongene.</p>
+    <p>Fyller du inn et resultat selv, står det fast i alle 10&nbsp;000, så du ser hva akkurat det gjør. Form er et tall fra 0 til 10 for hvor godt laget spiller nå, der 5 er et gjennomsnittslag.</p>
+
+    <details class="details-tech">
+      <summary>Vis detaljer</summary>
+      <h3>Slik regnes sannsynlighetene</h3>
+      <p id="howP1"></p>
+      <p id="howP2"></p>
+      <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Topp 4, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
+      <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner alt", "...taper alt", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
+      <p>Form-kolonnen reagerer sterkere jo lengre en rekke med strake seire eller tap varer, siden markedet selv reagerer sterkere på rekker enn på spredte enkeltresultater.</p>
+      <p>Denne rekkeeffekten brukes bare i Form-kolonnen og formgrafen. Simuleringene, sannsynlighetene og H/U/B-tallene bruker en tilstand uten den, fordi tilbaketesten ikke viser at rekkeeffekten gjør sluttplassprediksjonen bedre (se ablasjonstesten under "Hvordan vet vi at modellen virker?").</p>
+      <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn, verken i tabellen eller i simuleringene. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
+      <div class="tblscroll"><table class="mt" id="modelTbl"></table></div>
+    </details>
   </div>
 </details>
 
 <details class="howitworks modelcheck">
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 20v-7M12 20V6M18 20v-11"/></svg></span>Hvordan vet vi at modellen virker?</summary>
   <div class="in">
-    <p class="note">Sist validert: 22. september 2026, mot NOR.csv (football-data.co.uk), sesongene 2016–2025. Modellen tilpasses ved fire kuttpunkter i hver sesong (etter 40, 55, 70 og 85 prosent av kampene), resten av sesongen simuleres 8000 ganger, og tallene er snittet over 640 lag-observasjoner. Kvalikkampene, som ligger i samme CSV-fil, er holdt utenfor. Hele kjøringen ligger i <code>scripts/backtest_zones.py</code> i kildekoden, så tallene kan reproduseres. De regnes ikke ut i nettleseren.</p>
-    <p class="note">Kilder til dataene på siden: ffksupporter.net, ESPN, football-data.co.uk og The Odds API, alt hentet automatisk.</p>
+    <p class="plain-lead">Modellen er prøvd på de ti forrige sesongene, og treffer omtrent så ofte som den sier: da den ga rundt 20 prosent, skjedde det i 18 prosent av tilfellene.</p>
+    <p>Det meste av treffsikkerheten kommer av å spille resten av sesongen tusenvis av ganger fra dagens tabell. At modellen i tillegg vet hvor gode lagene er, gjør mest nytte tidlig i sesongen. Mot slutten betyr poengene så mye at lagstyrken spiller liten rolle.</p>
+    <p id="modelExample"></p>
+    <p>Den ser ikke skader, suspensjoner, overganger eller trenerbytter, bare resultatene som er spilt og hva oddsen sier om kampene som kommer.</p>
 
-    <h3>Kalibrering</h3>
-    <p>Hvert punkt er ett sannsynlighetsintervall på ti prosentpoeng: modellens sannsynlighet bortover, andelen som faktisk skjedde oppover. Er modellen godt kalibrert, ligger punktene nær den stiplede diagonalen. Punktstørrelsen viser hvor mange prediksjoner intervallet bygger på, så de små punktene svinger mest og bør leses varsomt.</p>
-    <p class="note">To forbehold: intervaller med få prediksjoner svinger mye av seg selv, så et punkt som ligger langt fra diagonalen behøver ikke betyde at modellen er skjev der. Og prediksjonene er ikke uavhengige av hverandre: samme sesong måles ved flere kuttpunkter, og de samme lagene går igjen, så et lag som overrasker gjennom en sesong flytter flere punkter samtidig.</p>
-    <svg class="calibchart" viewBox="0 0 380 300" role="img" aria-labelledby="calibTitle calibDesc">
-    <title id="calibTitle">Kalibrering: modellens sannsynlighet mot faktisk andel</title>
-    <desc id="calibDesc">Punktene ligger nær den stiplede diagonalen når modellen er godt kalibrert. Store punkter er sannsynlighetsintervaller med mange prediksjoner, små punkter har få og svinger mer. Tallene står i tabellene under "Vis tall".</desc>
-    <line class="cgrid" x1="50.0" y1="16" x2="50.0" y2="260"/>
-    <line class="cgrid" x1="50" y1="260.0" x2="366" y2="260.0"/>
-    <text class="ctick" x="50.0" y="276" text-anchor="middle">0</text>
-    <text class="ctick" x="42" y="264.0" text-anchor="end">0</text>
-    <line class="cgrid" x1="129.0" y1="16" x2="129.0" y2="260"/>
-    <line class="cgrid" x1="50" y1="199.0" x2="366" y2="199.0"/>
-    <text class="ctick" x="129.0" y="276" text-anchor="middle">25</text>
-    <text class="ctick" x="42" y="203.0" text-anchor="end">25</text>
-    <line class="cgrid" x1="208.0" y1="16" x2="208.0" y2="260"/>
-    <line class="cgrid" x1="50" y1="138.0" x2="366" y2="138.0"/>
-    <text class="ctick" x="208.0" y="276" text-anchor="middle">50</text>
-    <text class="ctick" x="42" y="142.0" text-anchor="end">50</text>
-    <line class="cgrid" x1="287.0" y1="16" x2="287.0" y2="260"/>
-    <line class="cgrid" x1="50" y1="77.0" x2="366" y2="77.0"/>
-    <text class="ctick" x="287.0" y="276" text-anchor="middle">75</text>
-    <text class="ctick" x="42" y="81.0" text-anchor="end">75</text>
-    <line class="cgrid" x1="366.0" y1="16" x2="366.0" y2="260"/>
-    <line class="cgrid" x1="50" y1="16.0" x2="366" y2="16.0"/>
-    <text class="ctick" x="366.0" y="276" text-anchor="middle">100</text>
-    <text class="ctick" x="42" y="20.0" text-anchor="end">100</text>
-    <line class="caxis" x1="50" y1="16" x2="50" y2="260"/>
-    <line class="caxis" x1="50" y1="260" x2="366" y2="260"/>
-    <line class="cdiag" x1="50.0" y1="260.0" x2="366.0" y2="16.0"/>
-    <text class="cdlbl" x="296.5" y="55.0" transform="rotate(-39.5 296.5 55.0)" text-anchor="middle">perfekt kalibrering</text>
-    <circle class="cned" cx="54.1" cy="254.9" r="8.5"><title>1,3 % predikert, 2,1 % faktisk, 339 prediksjoner</title></circle>
-    <circle class="cned" cx="96.5" cy="244.1" r="4.7"><title>14,7 % predikert, 6,5 % faktisk, 46 prediksjoner</title></circle>
-    <circle class="cned" cx="126.5" cy="204.6" r="4.0"><title>24,2 % predikert, 22,7 % faktisk, 22 prediksjoner</title></circle>
-    <circle class="cned" cx="159.7" cy="208.5" r="3.9"><title>34,7 % predikert, 21,1 % faktisk, 19 prediksjoner</title></circle>
-    <circle class="cned" cx="193.1" cy="162.4" r="3.8"><title>45,3 % predikert, 40,0 % faktisk, 15 prediksjoner</title></circle>
-    <circle class="cned" cx="223.2" cy="64.8" r="3.5"><title>54,8 % predikert, 80,0 % faktisk, 10 prediksjoner</title></circle>
-    <circle class="cned" cx="256.3" cy="113.6" r="3.2"><title>65,3 % predikert, 60,0 % faktisk, 5 prediksjoner</title></circle>
-    <circle class="cned" cx="289.2" cy="16.0" r="3.3"><title>75,7 % predikert, 100,0 % faktisk, 6 prediksjoner</title></circle>
-    <circle class="cned" cx="321.8" cy="16.0" r="3.4"><title>86,0 % predikert, 100,0 % faktisk, 7 prediksjoner</title></circle>
-    <circle class="cned" cx="359.4" cy="16.0" r="3.6"><title>97,9 % predikert, 100,0 % faktisk, 11 prediksjoner</title></circle>
-    <circle class="ctop" cx="55.4" cy="253.2" r="8.0"><title>1,7 % predikert, 2,8 % faktisk, 282 prediksjoner</title></circle>
-    <circle class="ctop" cx="96.8" cy="217.1" r="4.4"><title>14,8 % predikert, 17,6 % faktisk, 34 prediksjoner</title></circle>
-    <circle class="ctop" cx="126.8" cy="188.8" r="4.1"><title>24,3 % predikert, 29,2 % faktisk, 24 prediksjoner</title></circle>
-    <circle class="ctop" cx="157.1" cy="172.9" r="3.7"><title>33,9 % predikert, 35,7 % faktisk, 14 prediksjoner</title></circle>
-    <circle class="ctop" cx="194.7" cy="227.5" r="3.8"><title>45,8 % predikert, 13,3 % faktisk, 15 prediksjoner</title></circle>
-    <circle class="ctop" cx="223.2" cy="97.3" r="3.8"><title>54,8 % predikert, 66,7 % faktisk, 15 prediksjoner</title></circle>
-    <circle class="ctop" cx="253.8" cy="97.3" r="3.5"><title>64,5 % predikert, 66,7 % faktisk, 9 prediksjoner</title></circle>
-    <circle class="ctop" cx="289.5" cy="77.0" r="4.0"><title>75,8 % predikert, 75,0 % faktisk, 20 prediksjoner</title></circle>
-    <circle class="ctop" cx="324.0" cy="92.1" r="3.8"><title>86,7 % predikert, 68,8 % faktisk, 16 prediksjoner</title></circle>
-    <circle class="ctop" cx="357.8" cy="20.9" r="4.8"><title>97,4 % predikert, 98,0 % faktisk, 51 prediksjoner</title></circle>
-    <text class="cax" x="208" y="294" text-anchor="middle">Modellens sannsynlighet (%)</text>
-    <text class="cax" x="12" y="138" text-anchor="middle" transform="rotate(-90 12 138)">Faktisk andel (%)</text>
-    </svg>
-    <p class="clegend"><span class="ckey ctopkey"></span>Topp 4<span class="ckey cnedkey"></span>Nedrykk<span class="cnote">Punktstørrelse = antall prediksjoner (5 til 339)</span></p>
-    <details class="shownums">
-      <summary>Vis tall</summary>
+    <h3>Treffer den?</h3>
+    <p>Bortover står modellens sannsynlighet, oppover hvor ofte det faktisk gikk slik. Ligger punktene nær den stiplede linjen, holder prosentene omtrent vann. Store punkter bygger på mange prediksjoner, små på få, og de små spretter mye av seg selv.</p>
+    <details class="details-tech">
+      <summary>Vis detaljer</summary>
+    <p class="note">Kilder til dataene på siden: ffksupporter.net, ESPN, football-data.co.uk og The Odds API, alt hentet automatisk.</p>
+    <p class="note">Sist validert: 22. september 2026, mot NOR.csv (football-data.co.uk), sesongene 2016–2025. Modellen tilpasses ved fire kuttpunkter i hver sesong (etter 40, 55, 70 og 85 prosent av kampene), resten av sesongen simuleres 8000 ganger, og tallene er snittet over 640 lag-observasjoner. Kvalikkampene, som ligger i samme CSV-fil, er holdt utenfor. Hele kjøringen ligger i <code>scripts/backtest_zones.py</code> i kildekoden, så tallene kan reproduseres. De regnes ikke ut i nettleseren.</p>
+    <p class="note">To forbehold om grafen over: intervaller med få prediksjoner svinger mye av seg selv, så et punkt som ligger langt fra diagonalen behøver ikke betyde at modellen er skjev der. Og prediksjonene er ikke uavhengige av hverandre: samme sesong måles ved flere kuttpunkter, og de samme lagene går igjen, så et lag som overrasker gjennom en sesong flytter flere punkter samtidig.</p>
+
+    <h4>Kalibrering, tall</h4>
       <div class="tblscroll"><table class="mt calib">
         <thead><tr><th colspan="4">Topp 4</th></tr><tr><th>Intervall</th><th>Antall</th><th><span class="lg">Snitt predikert</span><span class="sm">Snitt pred.</span></th><th><span class="lg">Faktisk andel</span><span class="sm">Faktisk</span></th></tr></thead>
-        <tbody>
-          <tr><td>0–10 %</td><td>282</td><td>1,7 %</td><td>2,8 %</td></tr>
-          <tr><td>10–20 %</td><td>34</td><td>14,8 %</td><td>17,6 %</td></tr>
-          <tr><td>20–30 %</td><td>24</td><td>24,3 %</td><td>29,2 %</td></tr>
-          <tr><td>30–40 %</td><td>14</td><td>33,9 %</td><td>35,7 %</td></tr>
-          <tr><td>40–50 %</td><td>15</td><td>45,8 %</td><td>13,3 %</td></tr>
-          <tr><td>50–60 %</td><td>15</td><td>54,8 %</td><td>66,7 %</td></tr>
-          <tr><td>60–70 %</td><td>9</td><td>64,5 %</td><td>66,7 %</td></tr>
-          <tr><td>70–80 %</td><td>20</td><td>75,8 %</td><td>75,0 %</td></tr>
-          <tr><td>80–90 %</td><td>16</td><td>86,7 %</td><td>68,8 %</td></tr>
-          <tr><td>90–100 %</td><td>51</td><td>97,4 %</td><td>98,0 %</td></tr>
-        </tbody>
+      <tbody>
+        <tr><td>0–10 %</td><td>393</td><td>1,2 %</td><td>1,5 %</td></tr>
+        <tr><td>10–20 %</td><td>32</td><td>14,2 %</td><td>18,8 %</td></tr>
+        <tr><td>20–30 %</td><td>32</td><td>24,1 %</td><td>18,8 %</td></tr>
+        <tr><td>30–40 %</td><td>20</td><td>35,5 %</td><td>40,0 %</td></tr>
+        <tr><td>40–50 %</td><td>11</td><td>44,8 %</td><td>63,6 %</td></tr>
+        <tr><td>50–60 %</td><td>13</td><td>54,6 %</td><td>46,2 %</td></tr>
+        <tr><td>60–70 %</td><td>17</td><td>64,6 %</td><td>58,8 %</td></tr>
+        <tr><td>70–80 %</td><td>14</td><td>75,8 %</td><td>57,1 %</td></tr>
+        <tr><td>80–90 %</td><td>26</td><td>84,9 %</td><td>84,6 %</td></tr>
+        <tr><td>90–100 %</td><td>82</td><td>98,0 %</td><td>98,8 %</td></tr>
+      </tbody>
       </table></div>
       <div class="tblscroll"><table class="mt calib">
         <thead><tr><th colspan="4">Nedrykk</th></tr><tr><th>Intervall</th><th>Antall</th><th><span class="lg">Snitt predikert</span><span class="sm">Snitt pred.</span></th><th><span class="lg">Faktisk andel</span><span class="sm">Faktisk</span></th></tr></thead>
-        <tbody>
-          <tr><td>0–10 %</td><td>339</td><td>1,3 %</td><td>2,1 %</td></tr>
-          <tr><td>10–20 %</td><td>46</td><td>14,7 %</td><td>6,5 %</td></tr>
-          <tr><td>20–30 %</td><td>22</td><td>24,2 %</td><td>22,7 %</td></tr>
-          <tr><td>30–40 %</td><td>19</td><td>34,7 %</td><td>21,1 %</td></tr>
-          <tr><td>40–50 %</td><td>15</td><td>45,3 %</td><td>40,0 %</td></tr>
-          <tr><td>50–60 %</td><td>10</td><td>54,8 %</td><td>80,0 %</td></tr>
-          <tr><td>60–70 %</td><td>5</td><td>65,3 %</td><td>60,0 %</td></tr>
-          <tr><td>70–80 %</td><td>6</td><td>75,7 %</td><td>100,0 %</td></tr>
-          <tr><td>80–90 %</td><td>7</td><td>86,0 %</td><td>100,0 %</td></tr>
-          <tr><td>90–100 %</td><td>11</td><td>97,9 %</td><td>100,0 %</td></tr>
-        </tbody>
+      <tbody>
+        <tr><td>0–10 %</td><td>472</td><td>1,0 %</td><td>1,7 %</td></tr>
+        <tr><td>10–20 %</td><td>43</td><td>14,2 %</td><td>7,0 %</td></tr>
+        <tr><td>20–30 %</td><td>33</td><td>24,9 %</td><td>27,3 %</td></tr>
+        <tr><td>30–40 %</td><td>13</td><td>35,1 %</td><td>30,8 %</td></tr>
+        <tr><td>40–50 %</td><td>14</td><td>44,5 %</td><td>35,7 %</td></tr>
+        <tr><td>50–60 %</td><td>19</td><td>54,5 %</td><td>52,6 %</td></tr>
+        <tr><td>60–70 %</td><td>9</td><td>66,4 %</td><td>44,4 %</td></tr>
+        <tr><td>70–80 %</td><td>5</td><td>76,3 %</td><td>100,0 %</td></tr>
+        <tr><td>80–90 %</td><td>10</td><td>86,2 %</td><td>100,0 %</td></tr>
+        <tr><td>90–100 %</td><td>22</td><td>97,4 %</td><td>100,0 %</td></tr>
+      </tbody>
       </table></div>
-    </details>
 
     <h3>Brier-score</h3>
     <p>Brier-score måler hvor nær sannsynlighetene var de faktiske utfallene. Lavere er bedre, og 0 er perfekt. Modellen sammenlignes med tre enklere alternativer:</p>
@@ -1043,7 +1007,7 @@
       </tbody>
     </table></div>
 
-    <p class="note">Det aller meste av avstanden til basisraten kommer av å lese tabellen: tabellmodellen, som ikke vet noe om lagene, tar nesten hele veien. Forskjellen fra tabellmodellen til den fulle modellen er reell, men liten, og for topp 4 er ren Poisson faktisk litt dårligere enn tabellmodellen (0,0663 mot 0,0615). Det er odds og tabell sammen som gjør jobben, ikke lagstyrke fra mål alene.</p>
+    <p class="note">Det meste av treffsikkerheten kommer av å spille resten av sesongen tusenvis av ganger fra dagens tabell: tabellmodellen gjør nettopp det, med like sterke lag, og kommer nesten hele veien fra basisraten. At modellen i tillegg vet hvor gode lagene er, er verdt mindre enn man skulle tro. Målt parvis mot tabellmodellen er den bedre på nedrykk med 0,0054 ± 0,0018, altså tre standardfeil og klart utenfor støyen. For gull er den bedre med 0,0029 ± 0,0021 (1,4 standardfeil), og for topp 4 er forskjellen 0,0008 ± 0,0028 (0,3 standardfeil), altså ingen målbar forskjell. Ren Poisson er til og med litt dårligere enn tabellmodellen på topp 4 (0,0663 mot 0,0615): det er odds og tabell sammen som gjør jobben, ikke lagstyrke fra mål alene.</p>
 
     <h3>Ablasjonstest</h3>
     <p>Samme test, bygget stegvis: hva tilfører hver enkelt del av modellen faktisk sluttplassprediksjonen? Hvert steg legger til én ting på steget over. Forskjellene er målt parvis, på samme lag og kuttpunkt, og "ingen målbar forskjell" betyr at avviket er mindre enn to standardfeil, altså innenfor testens egen støy.</p>
@@ -1055,17 +1019,41 @@
         <tr><td>3. + formoppdatering</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0611</td><td data-l="Nedrykk">0,0488</td><td>Ingen målbar forskjell</td></tr>
         <tr><td>4. + Dixon-Coles</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0613</td><td data-l="Nedrykk">0,0490</td><td>Ingen målbar forskjell (retter mest enkeltkamp-uavgjort)</td></tr>
         <tr><td>5. Full modell (l1/l2=16/48)</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0607</td><td data-l="Nedrykk">0,0488</td><td>Ingen målbar forskjell</td></tr>
-        <tr><td>Sidegren: + rekke-rampe (på steg 3)</td><td data-l="Seriemester">0,0158</td><td data-l="Topp 4">0,0608</td><td data-l="Nedrykk">0,0490</td><td>Ingen målbar forskjell -- <strong>ikke i bruk</strong></td></tr>
+        <tr><td>Sidegren: + rekke-rampe (på steg 3)</td><td data-l="Seriemester">0,0158</td><td data-l="Topp 4">0,0608</td><td data-l="Nedrykk">0,0490</td><td>Ingen målbar forskjell. <strong>Ikke i bruk.</strong></td></tr>
       </tbody>
     </table></div>
-    <p class="note">Rekke-rampen ble lagt inn fordi Brann fikk høyere Form enn Fredrikstad etter ti strake tap. Den løser fortsatt det, og Form-kolonnen bruker den fremdeles. Men den gjør ikke sluttplassprediksjonen målbart bedre, så simuleringen bruker den ikke: et ekstra ledd som ikke kan vises å hjelpe, hører ikke hjemme i tallene.</p>
-    <p class="note">Oddssteget er det klareste enkeltsteget, men heller ikke det er slått fast av testen alene. Hovedfunnet i denne tabellen er hvor små stegene er. Bare spranget fra basisraten til en modell som kjenner tabellen, er klart utenfor usikkerheten. Med 640 lag-observasjoner er testen rett og slett ikke stor nok til å skille de siste leddene fra hverandre, og tallene bør leses som "ikke dårligere", ikke som "bevist bedre".</p>
+    <p class="note">Hovedfunnet i denne tabellen er hvor små de enkelte stegene er. Ingen av dem er alene utenfor to standardfeil, og oddssteget er det klareste. Det betyr ikke at de ikke virker: lagt sammen gir de en modell som slår tabellmodellen klart på nedrykk (tre standardfeil, se over). Stegene peker samme vei og forsterker hverandre, men testen er ikke stor nok til å måle hvert av dem, så radene bør leses som "ikke dårligere", ikke som "bevist bedre" hver for seg.</p>
+
+    <h4>Forbedring mot tabellmodellen, per kuttpunkt</h4>
+    <p>Negativt tall betyr at modellen er bedre enn å lese tabellen. 160 lag-observasjoner per kuttpunkt.</p>
+    <div class="tblscroll"><table class="mt brier">
+      <thead><tr><th>Spilt</th><th>Gull</th><th>Topp 4</th><th>Nedrykk</th></tr></thead>
+      <tbody>
+        <tr><td>40 %</td><td>−0,0128 ± 0,0058</td><td>−0,0017 ± 0,0088</td><td>−0,0102 ± 0,0050</td></tr>
+        <tr><td>55 %</td><td>−0,0016 ± 0,0048</td><td>+0,0016 ± 0,0053</td><td>−0,0048 ± 0,0034</td></tr>
+        <tr><td>70 %</td><td>+0,0007 ± 0,0034</td><td>−0,0019 ± 0,0036</td><td>−0,0025 ± 0,0027</td></tr>
+        <tr><td>85 %</td><td>+0,0022 ± 0,0019</td><td>−0,0010 ± 0,0022</td><td>−0,0041 ± 0,0028</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">Bare de to punktene ved 40 prosent spilt er tydelig utenfor støyen (gull 2,2 og nedrykk 2,0 standardfeil). De tolv andre ligger innenfor to standardfeil og bør leses som et mønster, ikke som målte effekter hver for seg. Mønsteret er at gevinsten ligger tidlig i sesongen: for gull snur den til og med svakt i tabellmodellens favør ved 70 og 85 prosent.</p>
+
+    <h4>Enkeltkamper: hva er det verdt å vite hvem som spiller?</h4>
+    <p>Samme type test, men på hver enkelt kamp i stedet for sluttplassen, over 1574 kamper i sesongene 2016–2025 (scripts/evaluate_model.py, samme rullerende tilpasning). Modellen sammenlignes med en variant der alle lag er like sterke og bare hjemmefordelen er med.</p>
+    <div class="tblscroll"><table class="mt brier">
+      <thead><tr><th>Modell</th><th><span class="lg">Log loss</span><span class="sm">Log loss</span></th><th><span class="lg">Traff utfallet</span><span class="sm">Traff</span></th></tr></thead>
+      <tbody>
+        <tr><td>Alle lag like sterke</td><td>1,0734</td><td>47,0 %</td></tr>
+        <tr><td>Full modell (i bruk)</td><td>1,0080</td><td>50,3 %</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">På enkeltkamper er altså lagstyrken tydelig verdt noe: 3,3 prosentpoeng flere riktige utfall. At det likevel betyr lite for sluttplassen, er fordi tabellen som er spilt inn allerede bærer den samme informasjonen, og fordi 30 kamper jevner ut mye.</p>
 
     <h3>Hvordan testen er gjort</h3>
     <p>Modellen testes på framtiden, ikke på kampene den allerede har sett. Ved flere tidspunkter i hver sesong tilpasses modellen kun på kampene som var spilt fram til dette tidspunktet. Deretter simuleres resten av sesongen, og sannsynlighetene sammenlignes med det som faktisk skjedde.</p>
 
     <h3>Begrensninger</h3>
-    <p>Innbyrdes oppgjør brukes ikke som fjerde rangeringskriterium hvis lag står likt på poeng, målforskjell og scorede mål. Med 10&nbsp;000 simuleringer er usikkerheten høyst omtrent ±1 prosentpoeng, og mindre for lave og høye sannsynligheter, så prosentene på siden bør ikke tolkes på desimalnivå.</p>
+    <p>Med 10&nbsp;000 simuleringer er usikkerheten høyst omtrent ±1 prosentpoeng, og mindre for lave og høye sannsynligheter, så prosentene på siden bør ikke tolkes på desimalnivå.</p>
+    </details>
   </div>
 </details>
 </div>
@@ -1957,7 +1945,7 @@ function computeOneBadge(byname, remaining, name, budgetMs){
   var badge=null;
   if(above.exact){
     if(above.count<1) badge={cls:'champ', text:'Seriemester'};
-    else if(above.count<4) badge={cls:'europe', text:'Klar for Europa'};
+    else if(above.count<4) badge={cls:'europe', text:'Sikret topp 4'};
     else if(above.count<13) badge={cls:'safe', text:'Sikret plass'};
   }
   if(!badge){
@@ -2494,7 +2482,7 @@ function fillOdds(){
     : `<div class="odds-row" title="Sannsynlighet for sluttplassering, ut fra modellen. Klikk et tall for å se hvorfor.">
       ${gull>0.01?`<button class="odds-jump" data-zone="gull"><strong>${pctTxt(gull)}</strong>Gull</button>`:''}
       ${cl>0.01&&cl<0.99?`<button class="odds-jump" data-zone="cl"><strong>${pctTxt(cl)}</strong>Champions League</button>`:''}
-      <button class="odds-jump" data-zone="europa"><strong>${pctTxt(europa)}</strong>Europa</button>
+      <button class="odds-jump" data-zone="europa"><strong>${pctTxt(europa)}</strong>Topp 4</button>
       <button class="odds-jump" data-zone="kvalik"><strong>${pctTxt(kvalik)}</strong>Kvalik</button>
       <button class="odds-jump n" data-zone="nedrykk"><strong>${pctTxt(nedrykk)}</strong>Nedrykk</button></div>`;
   // Fordelingsstripen over alle 16 plassene sier lite når Europa, kvalik og
@@ -3115,7 +3103,7 @@ function qaZoneByKey(team, key){
   // Nås bare ved å klikke tallet i lagboksen -- qaTargetZone velger den aldri
   // automatisk, så "mest aktuelt" er uendret.
   if(key==='cl') return {key:'cl', label:'Champions League', lo:1, hi:2, boundary:2, dir:'front', pct:d[0]+d[1]};
-  if(key==='europa') return {key:'europa', label:'Europa', lo:1, hi:4, boundary:4, dir:'front', pct:d[0]+d[1]+d[2]+d[3]};
+  if(key==='europa') return {key:'europa', label:'topp 4', lo:1, hi:4, boundary:4, dir:'front', pct:d[0]+d[1]+d[2]+d[3]};
   if(key==='nedrykk') return {key:'nedrykk', label:'nedrykk', lo:15, hi:16, boundary:13, dir:'back', pct:d[14]+d[15]};
   if(key==='kvalik') return {key:'kvalik', label:'kvalik', lo:14, hi:14, boundary:13, dir:'back', pct:d[13]};
   return null;
@@ -3131,7 +3119,7 @@ function qaTargetZone(team){
   if(nedrykk>0.05) return qaZoneByKey(team,'nedrykk');
   return qaZoneByKey(team,'kvalik');
 }
-const QA_REACH_PHRASE = {gull:'vinne serien', cl:'nå Champions League-kvalifiseringen', europa:'nå Europa', kvalik:'sikre plassen direkte', nedrykk:'sikre plassen direkte'};
+const QA_REACH_PHRASE = {gull:'vinne serien', cl:'nå Champions League-kvalifiseringen', europa:'nå topp 4', kvalik:'sikre plassen direkte', nedrykk:'sikre plassen direkte'};
 // Spørsmålsteksten (knapp og banner) for bakre soner sier også "uten kvalik",
 // så det er tydelig at grensen er 13. plass og hvorfor tallet er lavere enn
 // nedrykksprosenten i tabellen (14. plass er kvalik, ikke sikret).
@@ -3162,8 +3150,8 @@ function qaKeyBannerStale(){
 const kampTxt = n => n===1 ? '1 kamp' : `${n} kamper`;
 const fmtSigned = v => (v<0?'−':'+') + Math.abs(v).toFixed(1).replace('.',',');
 const ppTxt = d => { const r=Math.round(d*100); return r===0 ? '±0' : (r>0?'+':'−')+Math.abs(r); };
-const QA_SAFE_PHRASE = {gull:'sikret gull', cl:'sikret Champions League-kvalifisering', europa:'sikret Europa', kvalik:'sikret plassen direkte', nedrykk:'sikret plassen direkte'};
-const QA_VERB = {gull:'vinner serien', cl:'tar Champions League-plass', europa:'tar Europa-plass', kvalik:'sikrer plassen direkte (13. plass eller bedre)', nedrykk:'sikrer plassen direkte (13. plass eller bedre)'};
+const QA_SAFE_PHRASE = {gull:'sikret gull', cl:'sikret Champions League-kvalifisering', europa:'sikret topp 4', kvalik:'sikret plassen direkte', nedrykk:'sikret plassen direkte'};
+const QA_VERB = {gull:'vinner serien', cl:'tar Champions League-plass', europa:'ender i topp 4', kvalik:'sikrer plassen direkte (13. plass eller bedre)', nedrykk:'sikrer plassen direkte (13. plass eller bedre)'};
 
 // Er saken avgjort? Gjelder "sonen" i den betydningen alle spørsmålene bruker
 // for suksess: plass <= grensen (gull 1, Europa 4, for kvalik/nedrykk 13 eller
@@ -3340,7 +3328,7 @@ function runZoneTasks(payload, tasks, onTask){
   });
 }
 const QA_CHEER_N = 2500; // som spørsmål 5
-const QA_CHANCE = {gull:'gullsjansen', cl:'Champions League-sjansen', europa:'Europa-sjansen', kvalik:'kvaliksjansen', nedrykk:'nedrykkssjansen'};
+const QA_CHANCE = {gull:'gullsjansen', cl:'Champions League-sjansen', europa:'topp 4-sjansen', kvalik:'kvaliksjansen', nedrykk:'nedrykkssjansen'};
 async function qaCheerFor(team, onPartial){
   const zone = qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
@@ -3541,6 +3529,55 @@ function lastMatchEntry(team){
   return {gf:isHome?m.hg:m.ag, ga:isHome?m.ag:m.hg, opp:isHome?m.away:m.home, pp:null};
 }
 
+// ---- Eksempelet i "Hvordan vet vi at modellen virker?": den kommende kampen
+// der tabellen og modellen er mest uenige. Tabellen peker på laget med flest
+// poeng; modellen kan se kampen helt annerledes på grunn av form, hjemmebane
+// og odds. Velges automatisk, så eksempelet alltid er fra dagens tabell:
+// poengavstanden ganget med hvor LITE forsprang modellen gir favoritten.
+function modelVsTableExample(){
+  const {rows} = compute();
+  if(!rows.length) return null;
+  const pts = {}, form = {};
+  const liveForm = formScores(Array.from(LIVE_FORM.att), Array.from(LIVE_FORM.con));
+  rows.forEach(r=>{ pts[r.name] = r.pts; form[r.name] = liveForm[TI[r.name]]; });
+  let best = null;
+  matches.filter(m=>m.hg==null).forEach(m=>{
+    const gap = Math.abs(pts[m.home] - pts[m.away]);
+    if(gap < 6) return; // uten en tydelig tabellforskjell er det ikke noe poeng
+    const [lh,la] = rateFor(m.home, m.away), o = outcome(lh,la);
+    const favHome = pts[m.home] >= pts[m.away];
+    const fav = favHome ? m.home : m.away, dog = favHome ? m.away : m.home;
+    const pFav = favHome ? o.H : o.B, pDog = favHome ? o.B : o.H;
+    const score = gap * (1 - (pFav - pDog));
+    if(!best || score > best.score) best = {m, o, fav, dog, gap, pFav, pDog, score, favHome};
+  });
+  return best;
+}
+function renderModelExample(){
+  const el = document.getElementById('modelExample');
+  if(!el) return;
+  const x = modelVsTableExample();
+  if(!x){ el.hidden = true; return; }
+  el.hidden = false;
+  const {m, o, fav, dog, gap, pFav, pDog} = x;
+  const liveForm = formScores(Array.from(LIVE_FORM.att), Array.from(LIVE_FORM.con));
+  const form = {}; TEAMS.forEach(t=>form[t] = liveForm[TI[t]]);
+  // Hvor uenige er de? Under 8 prosentpoeng mellom lagene er kampen jevn.
+  const edge = pFav - pDog;
+  // Under 8 prosentpoeng mellom lagene er kampen åpen, uansett hvem som ligger
+  // marginalt foran: 35 mot 33 skal ikke kalles "med X som favoritt".
+  const how = Math.abs(edge) < 0.08 ? 'som helt åpen'
+    : pDog > pFav ? `med ${dog} som favoritt` : 'som langt jevnere';
+  // Begrunnelsen sier bare det tallene faktisk viser.
+  const why = [];
+  if(dog === m.home) why.push(`${dog} har hjemmebane`);
+  if(form[dog] > form[fav]) why.push(`${dog} er i bedre form (${f1(form[dog])} mot ${f1(form[fav])})`);
+  const whyTxt = why.length ? `, fordi ${why.join(' og ')}` : '';
+  el.textContent = `${fav} ligger ${gap} poeng foran ${dog}, så ut fra tabellen ville de fleste regnet ${fav} som klar favoritt. `+
+    `Modellen ser kampen hjemme hos ${m.home} ${formatDateNo(m.date)} ${how}: `+
+    `${pctTxt(o.H)} på ${m.home}, ${pctTxt(o.U)} uavgjort og ${pctTxt(o.B)} på ${m.away}${whyTxt}.`;
+}
+
 // ---- Hva er rundens viktigste kamp? Trenger ikke noe valgt lag. For hver
 // kamp i neste runde (også lagenes egne) låses kampen til hjemmeseier,
 // uavgjort og borteseier, og for HVERT av de 16 lagene måles hvor mye
@@ -3569,7 +3606,7 @@ const QA_KEY_N = 6000;
 const QA_KEY_CLOSE = 0.93;
 const QA_KEY_ZONES = [
   {key:'gull', strid:'gullstriden', chance:'gullsjansen', lo:1, hi:1},
-  {key:'europa', strid:'Europa-striden', chance:'Europa-sjansen', lo:1, hi:4},
+  {key:'europa', strid:'kampen om topp 4', chance:'topp 4-sjansen', lo:1, hi:4},
   {key:'nedrykk', strid:'nedrykksstriden', chance:'nedrykkssjansen', lo:15, hi:16},
 ];
 // Sjansen for sonen, for hvert lag, ut av en wantAll-fordeling.
@@ -3653,8 +3690,11 @@ function qaZoneNow(team, key){
 function qaKeyBanner(data){
   if(!data || !data.best || !data.best.teams.length) return null;
   const b = data.best, k = data.close.length;
-  const tett = k ? `, tett foran ${QA_NUM[k]||k} ${k===1?'annen':'andre'}` : '';
-  return `Rundens viktigste kamp: ${b.m.home} mot ${b.m.away}${tett}. Den flytter mest for ${b.topZone.strid}.`;
+  // Er flere kamper omtrent like viktige, sies DET, i stedet for et "tett foran
+  // to andre" som ikke forteller leseren hva det betyr. Listen står i svaret.
+  if(k){ const ord = QA_NUM[k+1] || String(k+1);
+    return `${ord.charAt(0).toUpperCase()+ord.slice(1)} kamper betyr omtrent like mye denne runden. Mest av alt flytter ${b.m.home} mot ${b.m.away}, for ${b.topZone.strid}.`; }
+  return `Rundens viktigste kamp: ${b.m.home} mot ${b.m.away}. Den flytter mest for ${b.topZone.strid}.`;
 }
 async function qaKeyRound(){
   const data = await qaKeyRoundData();
@@ -4140,7 +4180,7 @@ async function qaHowTo(team){
       if(data.totalAtPts[p]>=10 && data.successAtPts[p]/data.totalAtPts[p]>=0.95){ safe=p; break; }
     }
     const verb = zone.key==='gull' ? 'vinner serien' : zone.key==='cl' ? 'tar Champions League-plassen'
-      : zone.key==='europa' ? 'tar Europa-plassen' : 'sikrer plassen direkte';
+      : zone.key==='europa' ? 'ender i topp 4' : 'sikrer plassen direkte';
     const fails = zone.dir==='front' ? 'det glipper' : 'det ryker';
     const all = Math.round(successShare*100)>=100 ? 'alle' : 'nesten alle';
     const need = safe==null ? null : Math.max(0, safe-myPts);
@@ -4156,7 +4196,7 @@ async function qaHowTo(team){
   // "Da når Brann Europa i ..." -- lagnavnet, ikke "laget", og to korte
   // setninger i stedet for én med kolon.
   const daTxt = {gull:`vinner ${team} serien`, cl:`når ${team} Champions League`,
-    europa:`når ${team} Europa`, kvalik:`sikrer ${team} plassen direkte`,
+    europa:`når ${team} topp 4`, kvalik:`sikrer ${team} plassen direkte`,
     nedrykk:`sikrer ${team} plassen direkte`}[zone.key];
   const thrTxt = (threshold==null || myPts>=threshold ? '' :
     ` Som tommelfingerregel trengs omtrent ${threshold} poeng totalt, ${threshold-myPts} til fra i dag.`+
@@ -4644,6 +4684,7 @@ function render(){
     document.getElementById('tblInfo').textContent = played? `${played} kamper lagt inn` : `etter ${formatDateNo(MATCHES[MATCHES.length-1].date)}`;
   }
   document.getElementById('simNote').hidden = !matches.some(m=>m.sim);
+  renderModelExample();
   document.getElementById('fxInfo').textContent = `${matches.length-played} av ${matches.length} uten resultat`;
 
   matches.forEach(m=>{
@@ -4682,7 +4723,7 @@ function render(){
     const seasonDone = played===matches.length;
     let line2, line2Title;
     if(seasonDone){
-      line2 = pos<=4 ? `Sesongen er ferdig i dette scenariet: ${SELECTED_TEAM} tar europaplass.`
+      line2 = pos<=4 ? `Sesongen er ferdig i dette scenariet: ${SELECTED_TEAM} ender i topp 4.`
         : pos<=13 ? `Sesongen er ferdig i dette scenariet: ${SELECTED_TEAM} har ny kontrakt.`
         : pos===14 ? `Sesongen er ferdig i dette scenariet: ${SELECTED_TEAM} må spille kvalik.`
         : `Sesongen er ferdig i dette scenariet: ${SELECTED_TEAM} rykker ned.`;
@@ -4782,7 +4823,7 @@ async function updateCheckStamp(fixturesIn){
     } else {
       const {anyStarted, next} = findPendingAndNext(fixturesIn);
       clause = (!anyStarted && next)
-        ? `Neste sjekk etter kampen ${shortTeam(next.home)}-${shortTeam(next.away)} kl. ${next.time.replace(':','.')}.`
+        ? `Neste sjekk etter kampen ${shortTeam(next.home)}-${shortTeam(next.away)} ${formatDateNo(next.date)} kl. ${next.time.replace(':','.')}.`
         : `Sist sjekket ${formatOsloDT(t)}.`;
     }
     // Rødt bare ved en faktisk feil. En gammel sjekk er ikke en feil: vises
