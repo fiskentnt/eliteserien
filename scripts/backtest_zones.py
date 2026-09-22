@@ -38,6 +38,40 @@ sys.path.insert(0, str(Path(__file__).parent))
 import fit_fast
 from evaluate_model import load_seasons, season_range
 
+# Sonene per liga. lo/hi er plasseringer, 1-indeksert; "bunn 2" uttrykkes med
+# negative tall fra slutten (n-1, n).
+LEAGUES = {
+    "eliteserien": {
+        "targets": [("gull", 1, 1), ("topp4", 1, 4), ("nedrykk", -2, -1)],
+        "csv": "football-data",
+    },
+    "obos": {
+        # 1. og 2. plass rykker direkte opp, 3.-6. spiller opprykksspill,
+        # 15. og 16. rykker ned (14. plass er kvalik, ikke egen Brier-sone her).
+        "targets": [("opprykk", 1, 2), ("topp6", 1, 6), ("nedrykk", -2, -1)],
+        "csv": "obos",
+    },
+}
+
+
+def load_obos_csv(path):
+    """obos/data/obos_2012-2026.csv -> samme form som load_seasons(): sesong ->
+    liste av kamper med dato, lag, mål og odds=None (ingen odds før 2026)."""
+    import csv as _csv
+    by_season = {}
+    with open(path, encoding="utf-8-sig") as f:
+        for r in _csv.DictReader(f):
+            if not r["hjemmemaal"] or not r["bortemaal"]:
+                continue  # kamp uten resultat
+            by_season.setdefault(r["sesong"], []).append({
+                "date": r["dato"], "home": r["hjemme"], "away": r["borte"],
+                "hg": int(float(r["hjemmemaal"])), "ag": int(float(r["bortemaal"])),
+                "odds": None,
+            })
+    for s in by_season:
+        by_season[s].sort(key=lambda m: m["date"])
+    return by_season
+
 GMAX = 15
 # Samme verdier som eliteserien/index.html og scripts/fit_model.py.
 ODDS_WEIGHT, HALF_LIFE, L1_FULL, L2_FULL = 40.0, 35.0, 16.0, 48.0
@@ -165,16 +199,21 @@ def simulate(remaining, TI, n, pts0, gd0, gf0, N, rng, *, mu, Hp,
     return pos
 
 
-def zone_probs(pos, n):
-    """Sannsynlighet for seriemester, topp 4 og nedrykk (to siste plasser)."""
-    return (np.mean(pos == 1, axis=0),
-            np.mean(pos <= 4, axis=0),
-            np.mean(pos >= n - 1, axis=0))
+def zone_probs(pos, n, targets):
+    """Sannsynlighet for hver sone. lo/hi < 0 betyr plasser fra slutten."""
+    out = []
+    for _, lo, hi in targets:
+        a = lo if lo > 0 else n + lo + 1
+        b = hi if hi > 0 else n + hi + 1
+        out.append(np.mean((pos >= a) & (pos <= b), axis=0))
+    return out
 
 
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", required=True)
+    ap.add_argument("--league-zones", default="eliteserien", choices=sorted(LEAGUES),
+                    help="hvilke soner og hvilket CSV-format")
     ap.add_argument("--league", default="Eliteserien")
     ap.add_argument("--seasons", default="2016-2025")
     ap.add_argument("--cuts", default="0.4,0.55,0.7,0.85",
@@ -188,7 +227,12 @@ def main():
     name_map = {}
     if Path(args.name_map).exists():
         name_map = json.loads(Path(args.name_map).read_text(encoding="utf-8"))
-    by_season = load_seasons(args.csv, args.league, name_map)
+    lcfg = LEAGUES[args.league_zones]
+    targets = [t[0] for t in lcfg["targets"]]
+    if lcfg["csv"] == "obos":
+        by_season = load_obos_csv(args.csv)
+    else:
+        by_season = load_seasons(args.csv, args.league, name_map)
     seasons = season_range(args.seasons)
     cuts = [float(c) for c in args.cuts.split(",")]
     rng = np.random.default_rng(args.seed)
@@ -196,21 +240,27 @@ def main():
     # Varianter: (oddsvekt, l1, l2, form_k, dc_rho). Tilpasningen deles av
     # varianter med samme (oddsvekt, l1, l2), så en ekstra variant som bare
     # endrer simuleringen er nesten gratis.
+    has_odds = lcfg["csv"] != "obos"   # OBOS-historikken har ingen odds
+    ow = ODDS_WEIGHT if has_odds else 0.0
     VARIANTS = {
         "tabell":    None,  # egen sak: alle lag like sterke
         "poisson":   (0.0,  L1_PLAIN, L2_PLAIN, 0.0,    0.0),
-        "+odds":     (ODDS_WEIGHT, L1_PLAIN, L2_PLAIN, 0.0,    0.0),
-        "+form":     (ODDS_WEIGHT, L1_PLAIN, L2_PLAIN, FORM_K, 0.0),
-        "+dc":       (ODDS_WEIGHT, L1_PLAIN, L2_PLAIN, FORM_K, DC_RHO),
-        "full":      (ODDS_WEIGHT, L1_FULL,  L2_FULL,  FORM_K, DC_RHO),
+        "+form":     (ow, L1_PLAIN, L2_PLAIN, FORM_K, 0.0),
+        "+dc":       (ow, L1_PLAIN, L2_PLAIN, FORM_K, DC_RHO),
+        "full":      (ow, L1_FULL,  L2_FULL,  FORM_K, DC_RHO),
         # Sidegren, ikke del av kjeden: rampen er IKKE med i modellen som brukes.
-        "+rampe":    (ODDS_WEIGHT, L1_PLAIN, L2_PLAIN, FORM_K, 0.0, True),
+        "+rampe":    (ow, L1_PLAIN, L2_PLAIN, FORM_K, 0.0, True),
     }
+    if has_odds:
+        # Oddssteget settes inn mellom ren Poisson og formoppdateringen.
+        VARIANTS = {"tabell": VARIANTS["tabell"], "poisson": VARIANTS["poisson"],
+                    "+odds": (ODDS_WEIGHT, L1_PLAIN, L2_PLAIN, 0.0, 0.0),
+                    "+form": VARIANTS["+form"], "+dc": VARIANTS["+dc"],
+                    "full": VARIANTS["full"], "+rampe": VARIANTS["+rampe"]}
     if args.variants:
         keep = set(args.variants.split(",")) | {"basisrate"}
         VARIANTS = {k: v for k, v in VARIANTS.items() if k in keep}
     models = ["basisrate"] + list(VARIANTS)
-    targets = ["gull", "topp4", "nedrykk"]
     # Per observasjon, ikke bare summen: da kan forskjellen mellom to modeller
     # måles PARVIS (samme lag, samme kuttpunkt), og usikkerheten i forskjellen
     # regnes ut. Uten det kan man ikke si om en rad faktisk er bedre enn raden
@@ -243,9 +293,11 @@ def main():
         n = len(teams)
         pts_f, gd_f, gf_f = standings(matches, TI, n)
         pos_f = final_positions(pts_f, gd_f, gf_f, teams)
-        actual = {"gull": (pos_f == 1).astype(float),
-                  "topp4": (pos_f <= 4).astype(float),
-                  "nedrykk": (pos_f >= n - 1).astype(float)}
+        actual = {}
+        for name, lo, hi in lcfg["targets"]:
+            a = lo if lo > 0 else n + lo + 1
+            b = hi if hi > 0 else n + hi + 1
+            actual[name] = ((pos_f >= a) & (pos_f <= b)).astype(float)
 
         for frac in cuts:
             k = int(round(frac * len(matches)))
@@ -255,8 +307,10 @@ def main():
             pts0, gd0, gf0 = standings(played, TI, n)
             ref = played[-1]["date"]
 
-            probs = {"basisrate": {"gull": np.full(n, 1.0 / n), "topp4": np.full(n, 4.0 / n),
-                                   "nedrykk": np.full(n, 2.0 / n)}}
+            # Basisraten kjenner bare hvor mange plasser sonen har.
+            probs = {"basisrate": {name: np.full(n, ((hi if hi > 0 else n + hi + 1) -
+                                                    (lo if lo > 0 else n + lo + 1) + 1) / n)
+                                   for name, lo, hi in lcfg["targets"]}}
             fits = {}
             for name, cfg in VARIANTS.items():
                 if cfg is None:  # tabellmodellen: målnivå fra sesongen så langt
@@ -277,8 +331,7 @@ def main():
                                    mu=r["mu"], Hp=r["H"], att=np.array(r["att"]), con=np.array(r["con"]),
                                    ha=np.array(r["ha"]), hc=np.array(r["hc"]), form_k=fk,
                                    dc_rho=dcr, ramp=rmp)
-                g, t4, nd = zone_probs(pos, n)
-                probs[name] = {"gull": g, "topp4": t4, "nedrykk": nd}
+                probs[name] = dict(zip(targets, zone_probs(pos, n, lcfg["targets"])))
 
             for name in models:
                 for t in targets:
@@ -296,13 +349,14 @@ def main():
     print(f"\nBrier-score, {cnt} lag-observasjoner, {args.sims} simuleringer, "
           f"sesongene {seasons[0]}-{seasons[-1]}, kuttpunkt {args.cuts}")
     E = {m: {t: np.array(err[m][t]) for t in targets} for m in models}
-    print(f"{'Modell':<12}{'Seriemester':>12}{'Topp 4':>10}{'Nedrykk':>10}")
+    print(f"{'Modell':<12}" + "".join(f"{t:>12}" for t in targets))
     for m in models:
-        print(f"{m:<12}" + "".join(f"{E[m][t].mean():>10.4f}" if t != 'gull' else f"{E[m][t].mean():>12.4f}" for t in targets))
+        print(f"{m:<12}" + "".join(f"{E[m][t].mean():>12.4f}" for t in targets))
     # Hver sammenligning skal skille seg fra referansen på PRESIS én ting.
     # Rampen er en sidegren: den sammenlignes med +form, ikke med raden over.
     BASE_OF = {"tabell": "basisrate", "poisson": "tabell", "+odds": "poisson",
-               "+form": "+odds", "+dc": "+form", "full": "+dc", "+rampe": "+form"}
+               "+form": "+odds" if "+odds" in E else "poisson",
+               "+dc": "+form", "full": "+dc", "+rampe": "+form"}
     # Per kuttpunkt: hvor mye modellen slår tabellmodellen når det er mye igjen
     # å spille, mot når det nesten er over.
     if "tabell" in E and "full" in E:
