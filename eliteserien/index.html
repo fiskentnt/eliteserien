@@ -611,6 +611,7 @@
   .qa-item > button:hover{text-decoration:underline}
   .qa-item.active > button::before{content:"▾"}
   .qa-answer{scroll-margin-bottom:16px;margin:0 0 12px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
+  .qa-more{display:flex;align-items:center;gap:9px;margin-top:8px;color:var(--muted)}
   .qa-answer.loading{color:var(--muted);display:flex;align-items:center;gap:9px}
   .qa-spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--muted);animation:qa-spin .7s linear infinite;flex:none}
   @keyframes qa-spin{to{transform:rotate(360deg)}}
@@ -1548,14 +1549,24 @@ function outcomeProbs(lh, la){
 // uavhengige poisSample()-kall. Uavhengig trekking kan ikke reprodusere
 // tau-korreksjonen, som nettopp handler om at de to målene IKKE er helt
 // uavhengige ved lave resultater.
+// Gjenbrukte Float64Array-er (ingen allokering per kamp) og dcTau bare i de fire
+// cellene den avviker fra 1 (tau=1 gir eksakt samme produkt), så tallene er
+// bit-for-bit de samme som med den rene løkka, bare raskere.
+var SC_PH=new Float64Array(GMAX+1), SC_PA=new Float64Array(GMAX+1), SC_CUM=new Float64Array((GMAX+1)*(GMAX+1));
 function sampleScoreDC(lh, la, rnd){
-  var ph=new Array(GMAX+1), pa=new Array(GMAX+1);
+  var ph=SC_PH, pa=SC_PA, cum=SC_CUM, n=GMAX+1;
   ph[0]=Math.exp(-lh); pa[0]=Math.exp(-la);
   for(var i=1;i<=GMAX;i++){ ph[i]=ph[i-1]*lh/i; pa[i]=pa[i-1]*la/i; }
-  var cum=new Array((GMAX+1)*(GMAX+1)), total=0, idx=0;
-  for(var h=0;h<=GMAX;h++) for(var a=0;a<=GMAX;a++){ total+=ph[h]*pa[a]*dcTau(h,a,lh,la); cum[idx++]=total; }
+  var total=0, idx=0;
+  for(var h=0;h<=GMAX;h++){
+    var ph_h=ph[h];
+    for(var a=0;a<=GMAX;a++){
+      total += (h<2 && a<2) ? ph_h*pa[a]*dcTau(h,a,lh,la) : ph_h*pa[a];
+      cum[idx++]=total;
+    }
+  }
   var r=rnd()*total;
-  for(var k2=0;k2<cum.length;k2++){ if(cum[k2]>=r) return [Math.floor(k2/(GMAX+1)), k2%(GMAX+1)]; }
+  for(var k2=0;k2<cum.length;k2++){ if(cum[k2]>=r) return [Math.floor(k2/n), k2%n]; }
   return [GMAX, GMAX];
 }
 
@@ -1565,6 +1576,7 @@ self.onmessage = function(e){
   else if(d.mode==='badges'){ runBadges(d); }
   else if(d.mode==='insights'){ runInsights(d); }
   else if(d.mode==='matchImpact'){ runMatchImpact(d); }
+  else if(d.mode==='zoneTask'){ postMessage({runId:d.runId, mode:'zoneTask', taskId:d.taskId, prob:simulateZoneProb(d, d.forcedIdx, d.forcedScore, d.seed)}); }
   else { runProb(d); }
 };
 
@@ -2080,7 +2092,9 @@ function runInsights(d){
 // låst til hver av de to utfallene, og forskjellen i lagets sonesannsynlig-
 // het (samme sone som spørsmål 1) måles. Samme frø for begge retninger av
 // SAMME kamp (variansreduksjon -- støyen kansellerer bedre i differansen enn
-// med to uavhengige frø), men ulikt frø per kamp.
+// med to uavhengige frø). Frøet er felles for alle kampene i scenarioet (se
+// runMatchImpactAsync), så utgangspunktet er det samme for alle og samme kamp
+// gir samme tall i spørsmål 3, 5 og "heie på".
 function runMatchImpact(d){
   var results = d.candidates.map(function(c){
     var homeProb = simulateZoneProb(d, c.idx, c.homeScore, c.seed);
@@ -2147,6 +2161,9 @@ function simulateZoneProb(d, forcedIdx, forcedScore, seed){
 }
 `;
 let mcWorker=null, mcRunId=0, mcTimer=null, lastMC=null, lastMCScenarioKey=null;
+// True når lastMC kommer fra den fullførte kjøringen (ikke førsteanslaget etter 1 000).
+// Leses av scripts/snapshot_probs.js, som lagrer sannsynlighetene etter hver oppdatering.
+let lastMCFinal=false, lastMCN=0; // lastMCN: antall simuleringer bak lastMC
 // Fast, avledet av det låste scenarioet (samme streng-mønster som
 // encodeScenario()) i stedet for Math.random() -- samme scenario skal alltid
 // gi samme prosenter i tabellen, ikke rundt ±1 prosentpoeng støy hver gang render()
@@ -2196,7 +2213,7 @@ function getWorker(){
       const {runId,out}=data;
       if(runId!==mcRunId) return; // scenariet er endret siden denne kjøringen startet — forkast
       const outObj={}; TEAMS.forEach((t,i)=>outObj[t]=out[i]);
-      lastMC=outObj; fillOdds();
+      lastMC=outObj; lastMCN = data.done; lastMCFinal = data.done>=data.total; fillOdds();
     };
   }
   return mcWorker;
@@ -2235,6 +2252,7 @@ function runMCAsync(N){
   const scenarioKey = scenarioParts.join('_');
   if(scenarioKey===lastMCScenarioKey && lastMC) return;
   lastMCScenarioKey = scenarioKey;
+  lastMCFinal = false;
   mcRunId++;
   getWorker().postMessage({
     runId:mcRunId, seed:hashStr(scenarioKey), mu:MODEL.mu, H:MODEL.H, k:FORM_K,
@@ -3028,8 +3046,49 @@ function qaNextRoundMatches(openMatches){
   Object.keys(cnt).forEach(r=>{ if(R===null || cnt[r]>cnt[R] || (cnt[r]===cnt[R] && +r<+R)) R = r; });
   return {round:+R, list:openMatches.filter(m=>m.round===+R)};
 }
+// Workerbasseng til "heie på": oppgavene (én kjøring hver: utgangspunktet og
+// hjemmeseier/uavgjort/borteseier for hver kamp) fordeles på like mange
+// Workere som prosessorkjerner (maks 8) og trekkes fra én felles kø, så en
+// rask kjerne tar flere oppgaver. Et nytt spørsmål forkaster oppgaver som
+// ikke er startet (poolEpoch), og resultater fra kjøringer som pågikk
+// ignoreres.
+let poolWorkers = [], poolQueue = [], poolEpoch = 0, poolUrl = null;
+const poolSize = () => Math.max(1, Math.min(8, navigator.hardwareConcurrency || 4));
+function pumpPool(){
+  for(const w of poolWorkers){
+    if(w.job) continue;
+    let job;
+    while((job = poolQueue.shift()) && job.epoch!==poolEpoch){ /* forkastet */ }
+    if(!job) return;
+    w.job = job; w.postMessage(job.msg);
+  }
+}
+function ensurePool(n){
+  if(!poolUrl) poolUrl = URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'}));
+  while(poolWorkers.length<n){
+    const w = new Worker(poolUrl);
+    w.onmessage = e=>{ const job=w.job; w.job=null; if(job && job.epoch===poolEpoch) job.done(e.data.prob); pumpPool(); };
+    poolWorkers.push(w);
+  }
+}
+// tasks: [{id, idx, score}] (idx -1 = ingen låst kamp). onTask kalles etter
+// hver ferdige oppgave; løftet løses med {id: sannsynlighet} når alle er ferdige.
+function runZoneTasks(payload, tasks, onTask){
+  poolEpoch++;
+  const epoch = poolEpoch, results = {};
+  ensurePool(Math.min(poolSize(), tasks.length));
+  return new Promise(resolve=>{
+    let left = tasks.length;
+    tasks.forEach(t=>{
+      poolQueue.push({epoch, msg:{...payload, mode:'zoneTask', runId:epoch, taskId:t.id, forcedIdx:t.idx, forcedScore:t.score},
+        done:prob=>{ results[t.id]=prob; if(onTask) onTask(t.id, results); if(--left===0) resolve(results); }});
+    });
+    pumpPool();
+  });
+}
+const QA_CHEER_N = 2500; // som spørsmål 5
 const QA_CHANCE = {gull:'gullsjansen', europa:'Europa-sjansen', kvalik:'kvaliksjansen', nedrykk:'nedrykkssjansen'};
-async function qaCheerFor(team){
+async function qaCheerFor(team, onPartial){
   const zone = qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
   const st = qaSettled(team, zone);
@@ -3037,30 +3096,59 @@ async function qaCheerFor(team){
   const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
   const nr = qaNextRoundMatches(openMatches);
   if(!nr.list.length) return `${team} har ingen gjenstående kamper i dette scenariet.`;
-  const specs = nr.list.map(m=>({idx:openMatches.indexOf(m), match:m, needsDraw:true}));
-  const data = await runMatchImpactAsync(team, zone, specs, scenarioKey, {P0,G0,F0,open,oddsOverride,N:2500,wantBaseline:true});
+  // Lagets egen kamp tas ut: at laget bør heie på seg selv er gitt, og hva den
+  // betyr svarer "Hva betyr neste kamp" på.
+  const others = nr.list.filter(m=>m.home!==team && m.away!==team);
+  if(!others.length) return `Det er ingen andre kamper i runde ${nr.round} enn ${team} sin egen. «Hva betyr neste kamp for ${team}?» viser hva den betyr.`;
+  // Ett frø for alle kjøringene (samme som spørsmål 3 og 5): utgangspunktet
+  // regnes bare én gang, og støyen kansellerer i differansene (se
+  // simulateZoneProb). Oppgave-id: 'base' eller `${kampindeks}:${H|U|B}`.
+  const tasks = [{id:'base', idx:-1, score:null}];
+  others.forEach(m=>{
+    const idx = openMatches.indexOf(m);
+    tasks.push({id:idx+':H', idx, score:forcedScoreline(m.home,m.away,true)},
+               {id:idx+':U', idx, score:forcedDrawScoreline(m.home,m.away)},
+               {id:idx+':B', idx, score:forcedScoreline(m.home,m.away,false)});
+  });
+  const payload = {
+    mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
+    N:QA_CHEER_N, ti:TI[team], zone, seed:hashStr(scenarioKey+'|impact')
+  };
   const tableP = zone.pct;
   // "Bra for laget": høyere sjanse for gull/Europa, lavere for kvalik/nedrykk.
   const good = d => zone.dir==='front' ? d : -d;
-  const rows = data.results.map(r=>{
-    const m = openMatches[r.idx];
-    const outs = [
-      {d:r.homeProb-r.baseProb, txt:`${m.home} slår ${m.away}`},
-      {d:r.drawProb-r.baseProb, txt:`${m.home} og ${m.away} uavgjort`},
-      {d:r.awayProb-r.baseProb, txt:`${m.away} slår ${m.home}`},
-    ];
-    let best = outs[0];
-    outs.forEach(o=>{ if(good(o.d)>good(best.d)) best = o; });
-    return {m, best, effect:good(best.d)};
-  }).filter(x=>x.effect>=0.02) // under 2 prosentpoeng er innenfor støyen (som i spørsmål 3 og 5)
-    .sort((a,b)=>b.effect-a.effect || a.m.date.localeCompare(b.m.date));
-  const roundTxt = `runde ${nr.round}`;
-  if(!rows.length){
-    return `Ingen kamp i ${roundTxt} flytter sjansen for ${zone.label} med minst to prosentpoeng for ${team}, uansett hvordan de ender. Den er ${pctTxt(tableP)} nå.`;
-  }
   const chance = QA_CHANCE[zone.key];
-  const lines = rows.map(x=>`${x.best.txt}: ${chance} ${ppTxt(x.best.d)}`);
-  return `Sjansen for ${zone.label} er ${pctTxt(tableP)} nå. Beste resultat for ${team} i hver kamp i ${roundTxt}, med endring i prosentpoeng (${zone.dir==='front'?'økning':'nedgang'} er bra for ${team}):\n`+lines.join('\n');
+  const head = `Sjansen for ${zone.label} er ${pctTxt(tableP)} nå. Beste resultat for ${team} i hver av de andre kampene i runde ${nr.round}, med endring i prosentpoeng (${zone.dir==='front'?'økning':'nedgang'} er bra for ${team}):\n`;
+  // Rader for kampene som er ferdige simulert (utgangspunktet og alle tre utfall).
+  const rowsFrom = res=>{
+    if(res.base===undefined) return [];
+    const rows = [];
+    others.forEach(m=>{
+      const idx = openMatches.indexOf(m), h=res[idx+':H'], u=res[idx+':U'], a=res[idx+':B'];
+      if(h===undefined || u===undefined || a===undefined) return;
+      const outs = [
+        {d:h-res.base, txt:`${m.home} slår ${m.away}`},
+        {d:u-res.base, txt:`${m.home} og ${m.away} uavgjort`},
+        {d:a-res.base, txt:`${m.away} slår ${m.home}`},
+      ];
+      let best = outs[0];
+      outs.forEach(o=>{ if(good(o.d)>good(best.d)) best = o; });
+      if(good(best.d)>=0.02) rows.push({m, best, effect:good(best.d)}); // under 2 prosentpoeng er innenfor støyen (som i spørsmål 3 og 5)
+    });
+    return rows.sort((x,y)=>y.effect-x.effect || x.m.date.localeCompare(y.m.date));
+  };
+  const textFor = rows=>head+rows.map(x=>`${x.best.txt}: ${chance} ${ppTxt(x.best.d)}`).join('\n');
+  const results = await runZoneTasks(payload, tasks, (id, res)=>{
+    const rows = rowsFrom(res);
+    if(onPartial && rows.length) onPartial(textFor(rows));
+  });
+  const rows = rowsFrom(results);
+  if(!rows.length){
+    return `Ingen av de andre kampene i runde ${nr.round} flytter sjansen for ${zone.label} med minst to prosentpoeng for ${team}, uansett hvordan de ender. Den er ${pctTxt(tableP)} nå.`;
+  }
+  return textFor(rows);
 }
 
 // ---- Hvor kan laget realistisk ende? Bare fordelingen over sluttplasser fra
@@ -3097,12 +3185,29 @@ function qaRange(team){
   if(hi===null) hi = d.length;
   let cover = 0; for(let i=lo-1;i<hi;i++) cover += d[i];
   const now = `${team} ligger på ${idx+1}. plass nå. `;
-  const possible = (best>1 || worst<rows.length) ? ` Matematisk mulig er ${best}. til ${worst}. plass.` : '';
+  const ext = qaRangeExtremes(d, best, worst, team);
   if(lo===hi){
-    return `${now}Nesten sikkert ${lo}. plass (${qaPctCap(d[lo-1])} av simuleringene).${possible}`;
+    return `${now}Nesten sikkert ${lo}. plass (${qaPctCap(d[lo-1])} av simuleringene).\n${ext}`;
   }
   return `${now}Mest sannsynlig ender ${team} på ${mode+1}. plass (${qaPctCap(d[mode])}). `+
-    `I ${qaPctCap(cover)} av simuleringene havner det mellom ${lo}. og ${hi}. plass.${possible}`;
+    `I ${qaPctCap(cover)} av simuleringene havner det mellom ${lo}. og ${hi}. plass.\n${ext}`;
+}
+// Høyeste og laveste plass som er matematisk mulig, og hvor ofte simuleringene
+// faktisk kom dit: der eller bedre (høyeste) / der eller dårligere (laveste),
+// altså akkurat den plassen, siden ingenting er mulig utenfor. Antall (ikke
+// prosent) når det er under 1 %, og rett ut når det ikke skjedde i noen
+// simulering, sammen med den mest ekstreme plassen som faktisk forekom.
+const qaNum = n => String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '\u00A0');
+function qaRangeExtremes(d, best, worst, team){
+  const N = lastMCN, cnt = d.map(v=>Math.round(v*N));
+  const nTxt = qaNum(N);
+  const share = c => c/N>=0.01 ? `i ${qaPctCap(c/N)} av simuleringene` : `i ${qaNum(c)} av ${nTxt} simuleringer`;
+  const one = (label, mathPos, c, actualPos, actualLabel) => c>0
+    ? `${label} plass for ${team} er ${mathPos}., og laget endte der ${share(c)}.`
+    : `${label} plass for ${team} er ${mathPos}., men det skjedde ikke i noen av de ${nTxt} simuleringene. ${actualLabel} plass i simuleringene var ${actualPos}. (i ${qaNum(cnt[actualPos-1])} av ${nTxt}).`;
+  let bestSim = cnt.findIndex(c=>c>0)+1, worstSim = 0;
+  cnt.forEach((c,i)=>{ if(c>0) worstSim = i+1; });
+  return one('Høyeste mulige', best, cnt[best-1], bestSim, 'Beste')+'\n'+one('Laveste mulige', worst, cnt[worst-1], worstSim, 'Dårligste');
 }
 
 // ---- Spørsmål 8: hell/uhell -- ingen simulering. Sammenligner FAKTISKE
@@ -3213,7 +3318,7 @@ function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base){
     homeScore: forcedScoreline(c.match.home, c.match.away, true),
     awayScore: forcedScoreline(c.match.home, c.match.away, false),
     drawScore: c.needsDraw ? forcedDrawScoreline(c.match.home, c.match.away) : null,
-    seed: hashStr(scenarioKey+'|'+c.match.id)
+    seed: hashStr(scenarioKey+'|impact')
   }));
   matchImpactRunId++;
   const runId = matchImpactRunId;
@@ -3734,7 +3839,19 @@ async function runQaQuestion(id, keepZoneOverride){
   const myRequestId = ++qaRequestSeq;
   let text;
   try{
-    text = await q.run(SELECTED_TEAM);
+    text = await q.run(SELECTED_TEAM, partial=>{
+      // Delsvar underveis (spørsmål som streamer): linjene som er ferdige, med
+      // en liten "regner"-linje under til resten er klar.
+      if(myRequestId !== qaRequestSeq) return;
+      const el = document.getElementById('qaAnswer');
+      if(!el) return;
+      el.className = 'qa-answer';
+      el.textContent = partial;
+      const more = document.createElement('div');
+      more.className = 'qa-more';
+      more.innerHTML = '<span class="qa-spinner"></span> Regner resten…';
+      el.appendChild(more);
+    });
   }catch(err){
     console.error('Spør om tabellen', err);
     text = 'Klarte ikke regne ut svaret akkurat nå.';

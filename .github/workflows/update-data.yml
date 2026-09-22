@@ -50,6 +50,22 @@ jobs:
         if: steps.gate.outputs.should_fetch == 'true'
         run: python3 scripts/update_data.py
 
+      - uses: actions/setup-node@v4
+        if: steps.gate.outputs.should_fetch == 'true'
+        with:
+          node-version: "22"
+
+      - name: Lagre sannsynlighetene etter nye resultater (historikk)
+        if: steps.gate.outputs.should_fetch == 'true'
+        continue-on-error: true  # historikken skal aldri stoppe datoppdateringen
+        run: |
+          # Åpner selve siden i Chrome (ligger på kjøreren) og leser tallene tabellen
+          # viser, se scripts/snapshot_probs.js. Legger bare til et punkt når
+          # resultatene er endret siden forrige.
+          npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pp" puppeteer-core@25.11.0
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
+          NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/snapshot_probs.js
+
       - name: Lag delingsbilde (toppen av tabellen) og sitemap
         if: steps.gate.outputs.should_fetch == 'true'
         continue-on-error: true  # et feilet bilde skal ikke stoppe datoppdateringen
@@ -65,6 +81,7 @@ jobs:
           git add eliteserien/data/matches.json eliteserien/data/fixtures.json eliteserien/data/odds_fd.json eliteserien/data/odds.json eliteserien/data/model.json eliteserien/data/status.json
           [ -f eliteserien/data/ffk_cache.json ] && git add eliteserien/data/ffk_cache.json
           [ -f eliteserien/data/audit_state.json ] && git add eliteserien/data/audit_state.json
+          [ -f eliteserien/data/history.json ] && git add eliteserien/data/history.json
           git add eliteserien/og.png sitemap.xml
           if git diff --cached --quiet; then
             echo "Ingen endringer i kampdata."
