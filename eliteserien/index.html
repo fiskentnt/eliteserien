@@ -1513,6 +1513,20 @@ function drawScoreGivenOutcome(home, away, q){
   for(const [h,a,p] of cells){ r -= p; if(r<=0) return [h,a]; }
   const last = cells[cells.length-1]; return [last[0], last[1]];
 }
+// Samme rutenett som drawScoreGivenOutcome, men TAR det mest sannsynlige
+// resultatet i stedet for å trekke tilfeldig: brukt av "hva betydde forrige
+// kamp", der de to andre utfallene skal representeres av ett fast, typisk
+// resultat (ikke et tilfeldig et, som ville gitt nytt svar for hvert klikk).
+function likelyScoreGivenOutcome(home, away, q){
+  const [lh,la] = rateFor(home, away);
+  let best=null, bestP=-1;
+  for(let h=0;h<=GMAX;h++) for(let a=0;a<=GMAX;a++){
+    if(!(q==='H' ? h>a : q==='U' ? h===a : h<a)) continue;
+    const pr = pois(lh,h)*pois(la,a)*dcTau(h,a,lh,la);
+    if(pr>bestP){ bestP=pr; best=[h,a]; }
+  }
+  return best;
+}
 function stateRate(state,home,away){
   const h=TI[home], a=TI[away];
   let eh=MODEL.mu+MODEL.H+state.att[h]+state.ha[h]+state.con[a]-state.hc[a];
@@ -3187,7 +3201,10 @@ function runZoneTasks(payload, tasks, onTask){
   return new Promise(resolve=>{
     let left = tasks.length;
     tasks.forEach(t=>{
-      poolQueue.push({epoch, msg:{...payload, mode:'zoneTask', runId:epoch, taskId:t.id, forcedIdx:t.idx, forcedScore:t.score},
+      // t.over: egen utgangsstilling for AKKURAT denne kjøringen (brukes av
+      // "hva betydde forrige kamp", der det er startpunktet som varieres, ikke
+      // en gjenstående kamp). Samme frø som de andre, så støyen kansellerer.
+      poolQueue.push({epoch, msg:{...payload, ...(t.over||{}), mode:'zoneTask', runId:epoch, taskId:t.id, forcedIdx:t.idx, forcedScore:t.score},
         done:data=>{ results[t.id]={prob:data.prob, pos:data.pos}; if(onTask) onTask(t.id, results); if(--left===0) resolve(results); }});
     });
     pumpPool();
@@ -3256,6 +3273,109 @@ async function qaCheerFor(team, onPartial){
     return `Ingen av de andre kampene i runde ${nr.round} flytter sjansen for ${zone.label} med minst to prosentpoeng for ${team}, uansett hvordan de ender. Den er ${pctTxt(tableP)} nå.`;
   }
   return textFor(rows);
+}
+
+// ---- Hva betydde forrige kamp for laget? Tar lagets siste FAKTISK spilte
+// kamp (fra MATCHES, kampdataene -- ikke et resultat brukeren selv har fylt
+// inn), bytter resultatet med de to andre utfallene og simulerer resten av
+// sesongen fra dagens situasjon. Alt brukeren har fylt inn i senere kamper
+// står fortsatt fast: utgangsstillingen bygges av buildQaOpen (som låser alle
+// utfylte resultater), og bare denne ene kampens bidrag byttes ut.
+//   Lagstyrkene (LIVE) holdes som i dag og tilpasses IKKE på nytt for det
+// alternative resultatet -- svaret sier det, så tallet leses som et anslag.
+// Samme workerbasseng og frø som de andre spørsmålene, og bare tre kjøringer,
+// så antallet simuleringer kan være høyere enn i "heie på".
+const QA_LAST_N = 6000;
+// Lagets siste faktisk spilte kamp.
+function lastPlayedFor(team){
+  let best = null;
+  MATCHES.forEach(m=>{
+    if(m.home!==team && m.away!==team) return;
+    if(!best || m.date>best.date) best = m;
+  });
+  return best;
+}
+// Legger et resultat til (sign 1) eller trekker det fra (sign -1) i en
+// utgangsstilling: poeng, målforskjell og scorede mål, samme tre tallene
+// runMCAsync/buildQaOpen bygger.
+function applyResultDelta(P0,G0,F0,h,a,hg,ag,sign){
+  G0[h]+=sign*(hg-ag); G0[a]+=sign*(ag-hg); F0[h]+=sign*hg; F0[a]+=sign*ag;
+  if(hg>ag) P0[h]+=sign*3; else if(hg<ag) P0[a]+=sign*3; else { P0[h]+=sign; P0[a]+=sign; }
+}
+const QA_OUT_LABEL = {win:'seier', draw:'uavgjort', loss:'tap'};
+async function qaLastMatch(team){
+  const zone = qaTargetZone(team);
+  if(!zone) return 'Ingen data å regne på ennå.';
+  const m = lastPlayedFor(team);
+  if(!m) return `${team} har ingen spilte kamper ennå i kampdataene.`;
+  const isHome = m.home===team, opp = isHome ? m.away : m.home;
+  const gf = isHome ? m.hg : m.ag, ga = isHome ? m.ag : m.hg;
+  const actual = gf>ga ? 'win' : gf<ga ? 'loss' : 'draw';
+  // Utfallet sett fra KAMPEN (H/U/B), som modellens rutenett bruker.
+  const qFor = o => o==='draw' ? 'U' : (o==='win')===isHome ? 'H' : 'B';
+  const {P0,G0,F0,open,oddsOverride,scenarioKey} = buildQaOpen();
+  const h0 = TI[m.home], a0 = TI[m.away];
+  const others = ['win','draw','loss'].filter(o=>o!==actual);
+  const tasks = [{id:'actual', idx:-1, score:null}];
+  const scores = {};
+  others.forEach(o=>{
+    const [hg,ag] = likelyScoreGivenOutcome(m.home, m.away, qFor(o));
+    scores[o] = [hg,ag];
+    const P=Float64Array.from(P0), G=Float64Array.from(G0), F=Float64Array.from(F0);
+    applyResultDelta(P,G,F,h0,a0,m.hg,m.ag,-1); // det faktiske resultatet ut
+    applyResultDelta(P,G,F,h0,a0,hg,ag,1);      // det alternative inn
+    tasks.push({id:o, idx:-1, score:null, over:{P0:Array.from(P), G0:Array.from(G), F0:Array.from(F)}});
+  });
+  const res = await runZoneTasks({
+    mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
+    N:QA_LAST_N, ti:TI[team], zone, seed:hashStr(scenarioKey+'|impact')
+  }, tasks);
+
+  // Tabellens tall er "det som faktisk skjedde"; alternativene legges oppå som
+  // endring fra den samme kjøringen (samme frø), som i spørsmål 3 og 5.
+  const tableP = zone.pct;
+  const chance = QA_CHANCE[zone.key];
+  const clamp = v => Math.min(1, Math.max(0, v));
+  const alts = others.map(o=>({o, d: res[o].prob - res.actual.prob}));
+  // Under to prosentpoeng er innenfor støyen og vises ikke (som i de andre svarene).
+  const shown = alts.filter(x=>Math.abs(x.d)>=0.02);
+  const head = actual==='win' ? `Seieren mot ${opp}` : actual==='loss' ? `Tapet mot ${opp}` : `Poengdelingen mot ${opp}`;
+  const anslag = ` Lagstyrkene holdes som i dag, så tallet er et anslag.`;
+  if(!shown.length){
+    const navn = others.map(o=>QA_OUT_LABEL[o]);
+    return `Resultatet betydde lite for sjansen: verken ${navn[0]} eller ${navn[1]} ville endret ${chance} mer enn to prosentpoeng fra dagens ${pctTxt(tableP)}.`+anslag;
+  }
+  // "Bra for laget": høyere sjanse for gull/Europa, lavere for kvalik/nedrykk.
+  const good = d => zone.dir==='front' ? d : -d;
+  // Sammenligningen er mot det BESTE av de to andre utfallene: det er det
+  // resultatet faktisk vant eller kostet.
+  // Sammenligningen gjøres mot det beste av de utfallene som faktisk VISES,
+  // så tallet i første setning alltid stemmer med tallene i den andre.
+  const bestAlt = shown.slice().sort((x,y)=>good(y.d)-good(x.d))[0];
+  // Regnet fra de VISTE (avrundede) prosentene, ikke fra råverdiene: ellers
+  // kan det stå "9 prosentpoeng" over "21 % i stedet for 13 %".
+  const r0 = Math.round(tableP*100), r1 = Math.round(clamp(tableP+bestAlt.d)*100);
+  const pp = Math.abs(r0-r1);
+  const front = zone.dir==='front';
+  let first;
+  if(pp===0){
+    first = `${head} var omtrent like bra som ${QA_OUT_LABEL[bestAlt.o]} for ${chance}.`;
+  } else if(good(-bestAlt.d)>0){ // det faktiske var bedre enn begge alternativene
+    first = front ? `${head} ga ${team} ${pp} prosentpoeng i ${chance}.`
+                  : `${head} senket ${chance} for ${team} med ${pp} prosentpoeng.`;
+  } else {
+    first = front ? `${head} kostet ${team} ${pp} prosentpoeng i ${chance}.`
+                  : `${head} økte ${chance} for ${team} med ${pp} prosentpoeng.`;
+  }
+  // Rekkefølge: seier, uavgjort, tap (det faktiske utfallet er alt utelatt).
+  const order = ['win','draw','loss'].filter(o=>shown.some(x=>x.o===o));
+  const val = o => pctTxt(clamp(tableP + shown.find(x=>x.o===o).d));
+  const second = order.length>1
+    ? `Med ${QA_OUT_LABEL[order[0]]} hadde den vært ${val(order[0])} i stedet for ${pctTxt(tableP)}, med ${QA_OUT_LABEL[order[1]]} ${val(order[1])}.`
+    : `Med ${QA_OUT_LABEL[order[0]]} hadde den vært ${val(order[0])} i stedet for ${pctTxt(tableP)}.`;
+  return `${first} ${second}${anslag}`;
 }
 
 // ---- Hva er rundens viktigste kamp? Trenger ikke noe valgt lag. For hver
@@ -4007,6 +4127,7 @@ const QA_QUESTIONS = [
   {id:'keymatches', needsTeam:true, run:qaKeyMatches, label:team=>`Hvilke kamper betyr mest for ${team}?`},
   {id:'keyround', needsTeam:false, run:(team,onPartial)=>qaKeyRound(), label:()=>'Hva er rundens viktigste kamp?'},
   {id:'runin', needsTeam:false, run:()=>qaToughestRunIn(), label:()=>'Hvem har tyngst avslutning?'},
+  {id:'lastmatch', needsTeam:true, run:qaLastMatch, label:team=>`Hva betydde forrige kamp for ${team}?`},
   {id:'nextmatch', needsTeam:true, run:team=>qaNextMatch(team), label:team=>`Hva betyr neste kamp for ${team}?`},
   {id:'cheer', needsTeam:true, run:qaCheerFor, label:team=>`Hvem bør ${team} heie på denne runden?`},
   {id:'range', needsTeam:true, run:qaRange, label:team=>`Hvor kan ${team} realistisk ende?`},
