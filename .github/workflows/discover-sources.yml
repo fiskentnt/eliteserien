@@ -1,0 +1,17 @@
+name: Finn liga-ID-er (manuell)
+
+# Kjøres bare manuelt, og bare når vi trenger å slå opp ID-er hos kildene.
+# Nøklene ligger som secrets og skrives aldri ut -- se scripts/discover_sources.py.
+on:
+  workflow_dispatch: {}
+
+jobs:
+  discover:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Slå opp ligaer hos API-Football og OddsPapi
+        env:
+          API_FOOTBALL_KEY: ${{ secrets.API_FOOTBALL_KEY }}
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+        run: python3 scripts/discover_sources.py
