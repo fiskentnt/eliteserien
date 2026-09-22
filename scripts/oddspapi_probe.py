@@ -76,12 +76,19 @@ def unwrap(d):
     return []
 
 
-def account(key, when):
+def account(key, when, raw=False):
     d, err = get("/v4/account", {}, key, label=f"/v4/account ({when})")
     if err:
         print(f"   FEIL: {err}")
         return None
     a = d.get("data", d) if isinstance(d, dict) else d
+    if raw:
+        # Feltnavnene i dokumentasjonen stemte ikke, så skriv ut alt (maskert).
+        blob = json.dumps(d, ensure_ascii=False, indent=1)
+        blob = blob.replace(key, "***")
+        print("   RÅDATA:")
+        for line in blob.splitlines()[:80]:
+            print("    " + line)
     limit, count = a.get("request_limit"), a.get("request_count")
     print(f"   kvote: {count} av {limit} brukt", end="")
     if a.get("last_request"):
@@ -113,7 +120,7 @@ def main():
 
     print("=" * 70)
     print("1. KONTO OG BOOKMAKERE")
-    before = account(key, "før")
+    before = account(key, "før", raw=True)
     if not before:
         print("\n   Kom ikke forbi kontooppslaget, avbryter for å ikke brenne kall.")
         return 1
@@ -121,19 +128,9 @@ def main():
 
     print("\n" + "=" * 70)
     print("2. TURNERINGER: NORSK 1. DIVISJON OG ELITESERIEN")
-    sports, err = get("/v4/sports", {}, key, label="/v4/sports")
-    sport_id = None
-    if err:
-        print(f"   FEIL: {err}")
-    else:
-        items = unwrap(sports)
-        foot = [s for s in items if "football" in json.dumps(s).lower() or "soccer" in json.dumps(s).lower()]
-        print(f"   {len(items)} idretter, fotball-treff: {json.dumps(foot[:3], ensure_ascii=False)[:300]}")
-        if foot:
-            sport_id = foot[0].get("id") or foot[0].get("sportId")
-        elif items:
-            print(f"   fem første: {json.dumps(items[:5], ensure_ascii=False)[:400]}")
-    time.sleep(1.5)
+    # sportId=10 (Soccer) er slått opp i forrige kjøring, så /v4/sports spares.
+    sport_id = int(os.environ.get("SPORT_ID", "10"))
+    print(f"   bruker sportId={sport_id} (Soccer), slått opp tidligere")
 
     obos_id = elite_id = None
     if sport_id is not None:
@@ -149,12 +146,11 @@ def main():
             nor = [t for t in tl if "norw" in txt(t) or "norge" in txt(t) or "norsk" in txt(t)]
             print(f"   norske turneringer: {len(nor)}")
             for t in nor:
-                keep = {k: v for k, v in t.items()
-                        if k in ("id", "tournamentId", "name", "slug", "categoryName", "countryName", "country")}
-                print(f"     {json.dumps(keep, ensure_ascii=False)}")
+                print(f"     {json.dumps(t, ensure_ascii=False)}")
                 s = txt(t)
                 tid = t.get("id") or t.get("tournamentId")
-                if any(w in s for w in ("1. division", "1. divisjon", "first division", "obos", "division 1")):
+                if any(w in s for w in ("1. division", "1. divisjon", "first division", "obos",
+                                        "division 1", "1st division", "1.division")):
                     obos_id = tid
                 if "eliteserien" in s:
                     elite_id = tid
@@ -224,7 +220,7 @@ def main():
     print("\n" + "=" * 70)
     print("4. TELLER HISTORISKE ODDS MOT KVOTEN?")
     time.sleep(1.5)
-    after = account(key, "etter")
+    after = account(key, "etter") if os.environ.get("CHECK_AFTER", "1") == "1" else None
     if before and after and before["count"] is not None and after["count"] is not None:
         used = after["count"] - before["count"]
         print(f"\n   request_count: {before['count']} -> {after['count']} (økning {used})")
