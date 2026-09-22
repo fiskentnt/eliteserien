@@ -1,0 +1,65 @@
+name: "Måling: hvor mye flytter oddsen seg før avspark?"
+
+# Manuell måling, ikke en del av datakjeden. Svarer på om en ekstra henting
+# nær avspark er verdt det: leser hele prisrekken fra /v4/historical-odds
+# (gratis) og sammenligner dagen før, den vanlige hentingen og
+# sluttoddsvinduet 60-15 minutter før avspark, mot resultatet.
+#
+# Kallbruk: terminlisten for OBOS ligger ferdig mellomlagret (0 tellende
+# kall). For Eliteserien hentes sesongens terminliste én gang og lagres, så
+# senere kjøringer også koster 0. Markedslisten leses fra mellomlageret.
+on:
+  workflow_dispatch:
+    inputs:
+      ligaer:
+        description: "Hvilke ligaer (mellomrom mellom)"
+        default: "obos eliteserien"
+
+permissions:
+  contents: write
+
+concurrency:
+  group: odds-drift
+  cancel-in-progress: false
+
+jobs:
+  mal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Mål flyttingen
+        env:
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+        run: |
+          for liga in ${{ inputs.ligaer || 'obos eliteserien' }}; do
+            echo "########## $liga ##########"
+            python3 scripts/odds_drift.py "$liga" --dump "drift_$liga.json" || true
+          done
+
+      - name: Ta vare på radene
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: odds-drift
+          path: drift_*.json
+          if-no-files-found: ignore
+
+      - name: Lagre kalltelleren og terminlisten
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          for f in data/oddspapi_usage.json eliteserien/data/oddspapi_fixtures_2026.json; do
+            if [ -e "$f" ]; then git add "$f"; fi
+          done
+          if git diff --cached --quiet; then
+            echo "Ingen endring."
+          else
+            git commit -m "Måling: oddsbevegelse før avspark (kallteller og terminliste)"
+            git pull --rebase --autostash origin main || true
+            git push origin HEAD:main
+          fi
