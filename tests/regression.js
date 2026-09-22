@@ -675,6 +675,101 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- 14. ligavelgeren i overskriften ----
+    // Tittelen er en meny som bytter liga. Den skal gå til samme del av siden,
+    // og laget du følger skal IKKE bli med over -- det spiller i den andre ligaen.
+    setGroup('Ligavelgeren');
+    const lp = await open(1400, 900, base);
+    await settle(lp);
+    const meny = await lp.evaluate(() => {
+      const btn = document.getElementById('leagueBtn');
+      const menu = document.getElementById('leagueMenu');
+      const skjult = menu.hidden;
+      btn.click();
+      return {
+        skjultFor: skjult, apenEtter: !menu.hidden,
+        tittel: document.getElementById('leagueName').textContent,
+        valg: [...menu.querySelectorAll('a')].map(a => ({
+          href: a.getAttribute('href'), her: a.getAttribute('aria-current') === 'page',
+        })),
+      };
+    });
+    check('menyen er lukket til den trykkes', meny.skjultFor && meny.apenEtter, JSON.stringify(meny));
+    check('tittelen er ligaens navn og sesong', /^Eliteserien \d{4}$/.test(meny.tittel), meny.tittel);
+    check('menyen har begge ligaene', meny.valg.length === 2
+      && meny.valg.some(v => v.href === '/eliteserien/') && meny.valg.some(v => v.href === '/obos/'),
+      JSON.stringify(meny.valg));
+    check('ligaen du er på er merket', meny.valg.filter(v => v.her).length === 1
+      && meny.valg.find(v => v.her).href === '/eliteserien/', JSON.stringify(meny.valg));
+    // Følg et lag, stå i kamplisten, og bytt.
+    await lp.evaluate(lag => {
+      const s = document.getElementById('teamSelect');
+      s.value = lag; s.dispatchEvent(new Event('change'));
+      location.hash = '#fxPanel';
+    }, fulgt);
+    await sleep(400);
+    await lp.evaluate(() => {
+      if (document.getElementById('leagueMenu').hidden) document.getElementById('leagueBtn').click();
+      document.querySelector('#leagueMenu a[data-league="obos"]').click();
+    });
+    await sleep(1500);
+    await lp.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
+    const etter = await lp.evaluate(() => ({
+      url: location.href, tittel: document.getElementById('leagueName').textContent,
+      lag: document.getElementById('teamSelect').value, tekst: document.body.innerText,
+    }));
+    check('byttet går til samme del av siden', /\/obos\/#fxPanel$/.test(etter.url), etter.url);
+    check('tittelen viser den nye ligaen', /^OBOS-ligaen \d{4}$/.test(etter.tittel), etter.tittel);
+    check('fulgt lag følger ikke med over', etter.lag === '' || obosLag.includes(etter.lag), `valgte "${etter.lag}"`);
+    check(`ingen tekst nevner ${fulgt} etter byttet`, !etter.tekst.includes(fulgt),
+      (etter.tekst.split('\n').find(l => l.includes(fulgt)) || '').slice(0, 120));
+    await lp.close();
+    await page.bringToFront();
+
+    // ---- 15. forsiden ----
+    // Folk sendes rett til ligaen de sist brukte, førstegangsbesøkende til
+    // Eliteserien. Teksten og lenkene skal likevel STÅ i HTML-en, for
+    // søkemotorer og for /?velg.
+    setGroup('Forsiden');
+    const rot = base.replace('/eliteserien/', '/');
+    const ferskt = async (url) => {
+      const ctx = await browser.createBrowserContext();
+      const p = await ctx.newPage();
+      await p.setViewport({width: 1400, height: 900});
+      await p.goto(url, {waitUntil: 'networkidle0'});
+      await sleep(900);
+      const u = p.url();
+      await ctx.close();
+      return u;
+    };
+    check('førstegangsbesøk sendes til Eliteserien', /\/eliteserien\/$/.test(await ferskt(rot)),
+      await ferskt(rot));
+    // Forsiden har ingen simulering, så den vanlige open() (som venter på
+    // lastMCFinal) kan ikke brukes her.
+    const oversikt = await browser.newPage();
+    oversikt.on('pageerror', e => errors.push(`${rot}?velg: ${e.message}`));
+    await oversikt.setViewport({width: 1400, height: 900});
+    await oversikt.goto(rot + '?velg', {waitUntil: 'networkidle0'});
+    await sleep(600);
+    const fp2 = await oversikt.evaluate(() => ({
+      url: location.href,
+      lenker: [...document.querySelectorAll('.leagues a')].map(a => a.getAttribute('href')),
+      tekst: document.body.innerText,
+    }));
+    check('/?velg blir stående på oversikten', /\?velg$/.test(fp2.url), fp2.url);
+    check('oversikten lenker til begge ligaene',
+      fp2.lenker.includes('/eliteserien/') && fp2.lenker.includes('/obos/'), fp2.lenker.join(', '));
+    check('oversikten omtaler begge ligaene',
+      /Eliteserien/.test(fp2.tekst) && /OBOS-ligaen/.test(fp2.tekst), fp2.tekst.slice(0, 120));
+    await oversikt.close();
+    // Og HTML-en selv, uten JS, slik en søkemotor først ser den.
+    const raa = await (await fetch(rot)).text().catch(() => '');
+    if (raa) {
+      check('lenkene står i HTML-en, ikke bare etter JS',
+        raa.includes('href="/eliteserien/"') && raa.includes('href="/obos/"'), 'fant dem ikke');
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();

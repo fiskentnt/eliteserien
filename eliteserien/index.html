@@ -239,6 +239,24 @@
   }
   .titlerow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
   h1{margin:0;font:800 clamp(26px,3.4vw,34px)/1 var(--cond);letter-spacing:-.01em}
+  /* Tittelen er samtidig ligavelgeren. Knappen skal se ut som overskriften,
+     ikke som en kontroll: bare en liten pil røper at det er noe å trykke på. */
+  .leaguepick{position:relative}
+  .leaguebtn{display:inline-flex;align-items:baseline;gap:7px;background:none;border:0;padding:0;
+    margin:0;color:inherit;font:inherit;cursor:pointer;border-radius:8px}
+  .leaguebtn:focus-visible{outline:2px solid var(--accent);outline-offset:4px}
+  .leaguebtn .caret{font-size:.5em;line-height:1;transform:translateY(-.25em);color:var(--muted);transition:transform .15s}
+  .leaguebtn:hover .caret{color:var(--ink)}
+  .leaguepick[data-open="1"] .leaguebtn .caret{transform:translateY(-.25em) rotate(180deg)}
+  .leaguemenu{position:absolute;top:calc(100% + 8px);left:0;z-index:60;min-width:210px;
+    background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:5px;
+    box-shadow:0 10px 30px rgba(0,0,0,.28)}
+  .leaguemenu[hidden]{display:none}
+  .leaguemenu a{display:block;padding:9px 11px;border-radius:8px;text-decoration:none;
+    color:var(--ink);font:700 15px/1.2 var(--cond)}
+  .leaguemenu a:hover{background:var(--input-bg)}
+  .leaguemenu a[aria-current="page"]{color:var(--eu-text)}
+  .leaguemenu a small{display:block;margin-top:2px;font:500 12px/1.3 var(--body);color:var(--muted)}
   .subtitle{font:600 clamp(13px,1.4vw,15px)/1.2 var(--cond);color:var(--muted);letter-spacing:.01em}
   .subline{margin:8px 0 0;font-size:12.5px}
   .stamp{display:inline-block;background:var(--input-bg);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:2px 10px;font-weight:600}
@@ -813,7 +831,18 @@
 
 <header class="pagehead">
   <!-- LIGA-TITTEL -->
-  <div class="titlerow"><h1>Eliteserien 2026</h1><span class="subtitle">Tabellkalkulator for Eliteserien</span></div>
+  <!-- Overskriften er den samme markupen på alle ligasidene; teksten settes av
+       applyLeagueToDom() fra LEAGUE. Den står her, ikke i en byttet region, så
+       ligavelgeren bare finnes ett sted. -->
+  <div class="titlerow">
+    <div class="leaguepick" id="leaguePick">
+      <h1><button class="leaguebtn" id="leagueBtn" aria-haspopup="menu" aria-expanded="false">
+        <span id="leagueName">Eliteserien 2026</span><span class="caret" aria-hidden="true">▼</span>
+      </button></h1>
+      <div class="leaguemenu" id="leagueMenu" role="menu" hidden></div>
+    </div>
+    <span class="subtitle" id="leagueSub">Tabellkalkulator for Eliteserien</span>
+  </div>
   <!-- /LIGA-TITTEL -->
   <p class="subline"><span class="stamp"></span></p>
   <div class="followpick">
@@ -1422,7 +1451,56 @@ const SORT_LABELS = Object.assign({form:'Form'}, Object.fromEntries(LEAGUE.cols.
   [c.key, c.headSm ? `<span class="lg">${c.head}</span><span class="sm">${c.headSm}</span>` : c.head])));
 // Fyller inn alt i markupen som er ligaspesifikt: kolonneoverskrifter,
 // fargeforklaringen under tabellen og titlene på oppsummeringskortene.
+// Ligaene på nettstedet. Står her, utenfor den byttede regionen, så begge
+// sidene har den samme listen og en ny liga bare legges inn ett sted.
+const SITE_LEAGUES = [
+  {id: 'eliteserien', name: 'Eliteserien', season: 2026, path: '/eliteserien/',
+   blurb: 'Gull, Europa og nedrykk'},
+  {id: 'obos', name: 'OBOS-ligaen', season: 2026, path: '/obos/',
+   blurb: 'Opprykk, opprykksspill og nedrykk'},
+];
+// Hvilken liga brukeren sist var på. Forsiden leser den og sender deg rett dit.
+const LAST_LEAGUE_KEY = 'tk:sisteLiga';
+function buildLeagueMenu(){
+  const pick = document.getElementById('leaguePick');
+  const btn = document.getElementById('leagueBtn');
+  const menu = document.getElementById('leagueMenu');
+  const name = document.getElementById('leagueName');
+  const sub = document.getElementById('leagueSub');
+  if(!pick || !btn || !menu) return;
+  name.textContent = `${LEAGUE.name} ${LEAGUE.season}`;
+  if(sub) sub.textContent = `Tabellkalkulator for ${LEAGUE.name}`;
+  try{ localStorage.setItem(LAST_LEAGUE_KEY, LEAGUE.id); }catch(e){}
+  // Samme del av siden følger med over, men ingenting annet: scenariet (s=) og
+  // det fulgte laget (team=) hører til ÉN liga og skal ikke dras med. Derfor
+  // bygges lenken av seksjonsankeret alene.
+  const section = () => {
+    const m = location.hash.match(/^#([a-zA-Z][\w-]*)/);
+    if(m && document.getElementById(m[1])) return '#' + m[1];
+    const active = document.querySelector('#navLinks a.active[data-target]');
+    return active ? '#' + active.dataset.target : '';
+  };
+  menu.innerHTML = SITE_LEAGUES.map(l => l.id===LEAGUE.id
+    ? `<a href="${l.path}" aria-current="page" role="menuitem">${l.name} ${l.season}<small>Du er her</small></a>`
+    : `<a href="${l.path}" role="menuitem" data-league="${l.id}">${l.name} ${l.season}<small>${l.blurb}</small></a>`).join('');
+  menu.querySelectorAll('a[data-league]').forEach(a=>{
+    a.addEventListener('click', e=>{
+      e.preventDefault();
+      location.href = a.getAttribute('href') + section();
+    });
+  });
+  const setOpen = open => {
+    menu.hidden = !open;
+    pick.dataset.open = open ? '1' : '0';
+    btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+  };
+  btn.addEventListener('click', e=>{ e.stopPropagation(); setOpen(menu.hidden); });
+  document.addEventListener('click', e=>{ if(!pick.contains(e.target)) setOpen(false); });
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape') setOpen(false); });
+  setOpen(false);
+}
 function applyLeagueToDom(){
+  buildLeagueMenu();
   const hdr = {gull:'gullHeader', europa:'europaHeader', ned:'nedHeader'};
   LEAGUE.cols.forEach(c=>{
     const el = document.getElementById(hdr[c.key]);

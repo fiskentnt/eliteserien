@@ -43,7 +43,19 @@
 // scenariet i behold, så eldre lenker fortsatt virker.
 (function(){
   var h = location.hash;
-  if(/[#&](s|team)=/.test(h)) location.replace('/eliteserien/' + h);
+  if(/[#&](s|team)=/.test(h)){ location.replace('/eliteserien/' + h); return; }
+
+  // Forsiden er en mellomstasjon for folk: de som har vært her før sendes rett
+  // til ligaen de sist brukte, førstegangsbesøkende til Eliteserien. Selve
+  // siden blir stående med lenker og tekst om begge ligaene, så søkemotorer
+  // (og alle som åpner /?velg) ser hele oversikten uten å klikke seg videre.
+  // location.replace, ikke assign: tilbakeknappen skal føre ut av nettstedet,
+  // ikke rett hit igjen.
+  if(location.search || h) return;         // /?velg og /#... viser oversikten
+  var LIGAER = {eliteserien: '/eliteserien/', obos: '/obos/'};
+  var siste = null;
+  try{ siste = localStorage.getItem('tk:sisteLiga'); }catch(e){}
+  location.replace(LIGAER[siste] || '/eliteserien/');
 })();
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -83,8 +95,8 @@
 
   <main>
     <h1>Sannsynligheter for fotballigaer</h1>
-    <p class="lead">Tabellkalkulator viser tabellen og sannsynligheten for at hvert lag vinner serien, tar en europaplass, havner i kvalik eller rykker ned.</p>
-    <p>Du fyller inn egne resultater eller lar modellen simulere resten av sesongen, og ser med en gang hvordan sjansene endrer seg. Tallene oppdateres automatisk etter hver kamp.</p>
+    <p class="lead">Tabellkalkulator viser tabellen og sannsynligheten for at hvert lag vinner serien, rykker opp, tar en europaplass, havner i kvalik eller rykker ned. To ligaer: Eliteserien og OBOS-ligaen.</p>
+    <p>Du fyller inn egne resultater eller lar modellen simulere resten av sesongen, og ser med en gang hvordan sjansene endrer seg. Tallene oppdateres automatisk etter hver kamp. Du kan bytte liga når som helst fra overskriften på ligasiden.</p>
 
     <h2>Velg liga</h2>
     <ul class="leagues" id="ligaer">

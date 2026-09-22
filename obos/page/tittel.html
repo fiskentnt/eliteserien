@@ -1,3 +1,14 @@
 <!-- LIGA-TITTEL -->
-  <div class="titlerow"><h1>OBOS-ligaen 2026</h1><span class="subtitle">Tabellkalkulator for OBOS-ligaen</span></div>
+  <!-- Overskriften er den samme markupen på alle ligasidene; teksten settes av
+       applyLeagueToDom() fra LEAGUE. Den står her, ikke i en byttet region, så
+       ligavelgeren bare finnes ett sted. -->
+  <div class="titlerow">
+    <div class="leaguepick" id="leaguePick">
+      <h1><button class="leaguebtn" id="leagueBtn" aria-haspopup="menu" aria-expanded="false">
+        <span id="leagueName">OBOS-ligaen 2026</span><span class="caret" aria-hidden="true">▼</span>
+      </button></h1>
+      <div class="leaguemenu" id="leagueMenu" role="menu" hidden></div>
+    </div>
+    <span class="subtitle" id="leagueSub">Tabellkalkulator for OBOS-ligaen</span>
+  </div>
   <!-- /LIGA-TITTEL -->
