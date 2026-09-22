@@ -61,6 +61,37 @@ def api_football(key):
                   f"statistikk={cov.get('statistics_fixtures')}, tabell={s26.get('coverage',{}).get('standings')}")
 
 
+def api_football_fixtures(key, league=104, season=2026):
+    """Terminlisten for én liga og sesong: 1 kall. Gir lagnavnene navnetabellen
+    trenger, og viser hvor mange kamper som har resultat."""
+    print(f"\n== API-Football: terminliste liga {league}, sesong {season} (1 kall) ==")
+    try:
+        d = get(f"{AF_BASE}/fixtures?league={league}&season={season}", {"x-apisports-key": key})
+    except Exception as e:
+        print(f"  FEIL: {type(e).__name__}: {e}")
+        return
+    if d.get("errors"):
+        print(f"  API svarte med feil: {d['errors']}")
+        return
+    rows = d.get("response", [])
+    teams, played, rounds = set(), 0, set()
+    last = ""
+    for r in rows:
+        teams.add(r["teams"]["home"]["name"]); teams.add(r["teams"]["away"]["name"])
+        rounds.add(r["league"].get("round", ""))
+        if r["goals"]["home"] is not None:
+            played += 1
+            last = max(last, r["fixture"]["date"][:10])
+    print(f"  {len(rows)} kamper, {len(teams)} lag, {len(rounds)} runder, "
+          f"{played} med resultat, siste {last or '-'}")
+    print(f"  lagnavn: {sorted(teams)}")
+    if rows:
+        f = rows[0]
+        print(f"  eksempel: {f['fixture']['date']} runde={f['league'].get('round')!r} "
+              f"{f['teams']['home']['name']} {f['goals']['home']}-{f['goals']['away']} {f['teams']['away']['name']} "
+              f"status={f['fixture']['status']['short']}")
+
+
 def oddspapi(key):
     print("\n== OddsPapi: turneringer (2 kall) ==")
     try:
@@ -107,6 +138,8 @@ def main():
     op = os.environ.get("ODDSPAPI_KEY", "").strip()
     if af:
         api_football(af)
+        if os.environ.get("WITH_FIXTURES", "").lower() in ("1", "true", "yes"):
+            api_football_fixtures(af)
     else:
         print("== API-Football: hopper over, API_FOOTBALL_KEY er ikke satt ==")
     if op:
