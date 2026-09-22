@@ -78,6 +78,11 @@ jobs:
           CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
           NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/snapshot_probs.js obos
 
+      - name: Treffsikkerhetslogg (lagrede sannsynligheter mot resultat)
+        if: ${{ !inputs.dry_run }}
+        continue-on-error: true  # skal aldri stoppe resultatene
+        run: python3 scripts/accuracy_log.py obos
+
       - name: Tegn delingsbildet på nytt
         if: ${{ !inputs.dry_run }}
         continue-on-error: true  # et feilet bilde skal ikke stoppe resultatene
@@ -98,6 +103,7 @@ jobs:
                    obos/data/odds_upcoming.json obos/data/oddspapi_upcoming_fixtures.json \
                    obos/data/keymatch.json obos/data/lastmatch.json \
                    obos/data/history.json obos/data/prekick.json \
+                   obos/data/accuracy.json \
                    data/oddspapi_usage.json; do
             if [ -e "$f" ]; then git add "$f"; fi
           done

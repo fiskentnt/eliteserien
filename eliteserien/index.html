@@ -1041,6 +1041,10 @@
     <p id="modelExample"></p>
     <p>Den ser ikke skader, suspensjoner, overganger eller trenerbytter, bare resultatene som er spilt og hva oddsen sier om kampene som kommer.</p>
 
+    <h3>Treffsikkerhet denne sesongen</h3>
+    <p>Tallene under er hentet fra sannsynlighetene som ble lagret FØR avspark, holdt opp mot resultatet. Ingenting er regnet på nytt i etterkant, så tallene kan ikke bli bedre av etterpåklokskap.</p>
+    <div id="accuracyLog"></div>
+
     <h3>Treffer den?</h3>
     <p>Bortover står modellens sannsynlighet, oppover hvor ofte det faktisk gikk slik. Ligger punktene nær den stiplede linjen, holder prosentene omtrent vann. Store punkter bygger på mange prediksjoner, små på få, og de små spretter mye av seg selv.</p>
     <details class="details-tech">
@@ -5187,6 +5191,44 @@ window.matchMedia('(min-width:1100px)').addEventListener('change', ()=>{ if(qaSt
   if(el.open !== apen) el.open = apen;
   el.addEventListener('toggle', ()=> lsSet('recentOpen', el.open ? '1' : '0'));
 })();
+// Treffsikkerhetsloggen under "Hvordan vet vi at modellen virker?". Tallene
+// kommer ferdig regnet fra data/accuracy.json (scripts/accuracy_log.py), som
+// bare bruker sannsynligheter lagret før avspark. Antall kamper står alltid,
+// og med få kamper sies det rett ut at tallene er usikre.
+const ACC_NAVN = {side:'Siden (odds og modell)', modell:'Modellen alene', odds:'Sluttoddsen alene'};
+function renderAccuracy(data){
+  const box = document.getElementById('accuracyLog');
+  if(!box) return;
+  const n = data && data.n || 0;
+  if(!n){
+    box.innerHTML = `<p class="note">Ingen kamper er lagret med sannsynlighet fra før avspark ennå. `
+      + `De første kommer etter neste runde, og tabellen fylles ut automatisk.</p>`;
+    return;
+  }
+  const pct = v => v==null ? '–' : `${Math.round(v*100)} %`;
+  const rows = Object.keys(ACC_NAVN).filter(k=>data.kilder[k] && data.kilder[k].n)
+    .map(k=>{ const v = data.kilder[k];
+      return `<tr><td>${ACC_NAVN[k]}</td><td>${v.n}</td><td>${pct(v.treff)}</td><td>${v.logloss.toFixed(4).replace('.',',')}</td></tr>`; })
+    .join('');
+  const kal = (data.kalibrering||[]).filter(b=>b.n>0).map(b=>
+    `<tr><td>${Math.round(b.lo*100)}–${Math.round(b.hi*100)} %</td><td>${b.n}</td>`
+    + `<td>${pct(b.ventet)}</td><td>${pct(b.faktisk)}</td></tr>`).join('');
+  const usikker = n < 50
+    ? `<strong>${n} kamper er få.</strong> Tallene svinger mye av seg selv så lenge de bygger på så lite, `
+      + `og en forskjell mellom kildene her betyr lite. De blir sikrere for hver runde.`
+    : `Tallene bygger på ${n} kamper.`;
+  box.innerHTML =
+    `<div class="tblscroll"><table class="mt">`
+    + `<thead><tr><th>Kilde</th><th>Kamper</th><th>Traff utfallet</th><th>Log loss</th></tr></thead>`
+    + `<tbody>${rows}</tbody></table></div>`
+    + `<p class="note">«Traff utfallet» er hvor ofte det mest sannsynlige utfallet ble det som skjedde. `
+    + `Log loss straffer sikre prediksjoner som bommer; lavere er bedre.</p>`
+    + (kal ? `<h4>Kalibrering denne sesongen</h4>`
+      + `<div class="tblscroll"><table class="mt calib">`
+      + `<thead><tr><th>Modellen sa</th><th>Tilfeller</th><th>Snitt</th><th>Skjedde</th></tr></thead>`
+      + `<tbody>${kal}</tbody></table></div>` : '')
+    + `<p class="note">${usikker}${data.fra ? ` Kampene er spilt mellom ${shortDateNo(data.fra)} og ${shortDateNo(data.til)}.` : ''}</p>`;
+}
 function qaJumpToSection(){
   qaSetOpen(true); // spørsmålslinjen i banneret åpner seksjonen selv om den er lukket
   document.querySelector('.panel.qa').scrollIntoView({behavior:'smooth', block:'start'});
@@ -5521,9 +5563,9 @@ async function updateOddsQuotaNote(){
 // Python-scriptene i scripts/ og lest inn her — ingen tilpasning skjer i
 // nettleseren, kun rask JSON-henting.
 async function boot(){
-  let MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN;
+  let MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN, ACCURACY_IN;
   try{
-    [MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN] = await Promise.all([
+    [MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN, ACCURACY_IN] = await Promise.all([
       fetch('data/matches.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/matches.json'); return r.json(); }),
       fetch('data/fixtures.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/fixtures.json'); return r.json(); }),
       fetch('data/model.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/model.json'); return r.json(); }),
@@ -5541,6 +5583,9 @@ async function boot(){
       // "forrige kamp" ingenting om hvor overraskende resultatet var.
       fetch('data/prekick.json').then(r=>r.ok?r.json():null).catch(()=>null),
       fetch(LEAGUE.closingOddsFile).then(r=>r.ok?r.json():null).catch(()=>null),
+      // Treffsikkerhetsloggen (scripts/accuracy_log.py). Mangler den, står
+      // seksjonen tom -- den er aldri kritisk for resten av siden.
+      fetch('data/accuracy.json').then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
   }catch(err){
     console.error('Klarte ikke hente kampdata', err);
@@ -5623,6 +5668,7 @@ async function boot(){
   KEYMATCH = KEYMATCH_IN && KEYMATCH_IN.banner && KEYMATCH_IN.match ? KEYMATCH_IN : null;
   LASTMATCH = LASTMATCH_IN && LASTMATCH_IN.teams ? LASTMATCH_IN : null;
   PREKICK = (PREKICK_IN && PREKICK_IN.matches) || null;
+  renderAccuracy(ACCURACY_IN);
   // De to ligaene lagrer sluttodds i hver sin form: Eliteserien en liste med
   // ferdige sannsynligheter (odds_captured.json), OBOS et oppslag med
   // desimalodds (odds_closing.json). Begge normaliseres til "lag|lag" ->

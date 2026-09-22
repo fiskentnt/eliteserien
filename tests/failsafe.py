@@ -188,6 +188,38 @@ def main():
     check("Brann mot Bodø/Glimt (hentet under kampen) er ikke lagret som sluttodds",
           not any(c["home"] == "Brann" and c["away"] == "Bodø/Glimt" for c in cap))
 
+    # 10. Treffsikkerhetsloggen: bare kamper som BÅDE har en frosset
+    #   sannsynlighet fra før avspark og et publisert resultat skal telles, og
+    #   tallene skal mangle så lenge det ikke finnes kamper.
+    import accuracy_log
+    for liga in ("eliteserien", "obos"):
+        acc_path = ROOT / liga / "data" / "accuracy.json"
+        if not acc_path.exists():
+            check(f"{liga}: accuracy.json finnes", False, "filen mangler")
+            continue
+        acc = json.loads(acc_path.read_text(encoding="utf-8"))
+        pre = json.loads((ROOT / liga / "data" / "prekick.json").read_text(encoding="utf-8"))["matches"]
+        spilte = {(m["home"], m["away"])
+                  for m in json.loads((ROOT / liga / "data" / "matches.json").read_text(encoding="utf-8"))}
+        ventet = sum(1 for e in pre.values()
+                     if e.get("frosset") and (e.get("home"), e.get("away")) in spilte)
+        check(f"{liga}: loggen teller bare frosne kamper med resultat",
+              acc["n"] == ventet, f"filen sier {acc['n']}, fant {ventet}")
+        tomme = [k for k, v in acc["kilder"].items()
+                 if (v["n"] == 0) != (v["treff"] is None)]
+        check(f"{liga}: ingen tall uten kamper bak seg", not tomme, ", ".join(tomme))
+        # Hver kamp gir nøyaktig tre kalibreringspunkter for modellen.
+        n_modell = acc["kilder"]["modell"]["n"]
+        check(f"{liga}: kalibreringen dekker alle utfall",
+              sum(b["n"] for b in acc["kalibrering"]) == 3 * n_modell,
+              f"{sum(b['n'] for b in acc['kalibrering'])} mot {3 * n_modell}")
+    # Sannsynlighetene normaliseres, også når kilden summerer til litt over 1.
+    p3 = accuracy_log.probs_for({"H": 0.5, "U": 0.3, "B": 0.4}, "side")
+    check("treffsikkerhet: sannsynlighetene normaliseres",
+          abs(sum(p3.values()) - 1) < 1e-9 and abs(p3["H"] - 0.5 / 1.2) < 1e-9, str(p3))
+    check("treffsikkerhet: kilde som mangler gir ingen rad",
+          accuracy_log.probs_for({"H": 0.5, "U": 0.3, "B": 0.2}, "odds") is None)
+
     print(f"\n{ok} av {ok + fail} failsafe-tester gikk gjennom.")
     return 1 if fail else 0
 

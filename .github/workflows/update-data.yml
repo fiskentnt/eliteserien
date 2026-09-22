@@ -66,6 +66,11 @@ jobs:
           CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
           NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/snapshot_probs.js
 
+      - name: Treffsikkerhetslogg (lagrede sannsynligheter mot resultat)
+        if: steps.gate.outputs.should_fetch == 'true'
+        continue-on-error: true  # skal aldri stoppe datoppdateringen
+        run: python3 scripts/accuracy_log.py eliteserien
+
       - name: Lag delingsbilde (toppen av tabellen) og sitemap
         if: steps.gate.outputs.should_fetch == 'true'
         continue-on-error: true  # et feilet bilde skal ikke stoppe datoppdateringen
@@ -85,6 +90,7 @@ jobs:
           [ -f eliteserien/data/keymatch.json ] && git add eliteserien/data/keymatch.json
           [ -f eliteserien/data/lastmatch.json ] && git add eliteserien/data/lastmatch.json
           [ -f eliteserien/data/prekick.json ] && git add eliteserien/data/prekick.json
+          [ -f eliteserien/data/accuracy.json ] && git add eliteserien/data/accuracy.json
           git add eliteserien/og.png sitemap.xml
           if git diff --cached --quiet; then
             echo "Ingen endringer i kampdata."
