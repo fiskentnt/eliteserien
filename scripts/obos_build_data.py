@@ -32,7 +32,12 @@ DATA = ROOT / "obos" / "data"
 CSV_PATH = DATA / "obos_2012-2026.csv"
 SEASON = "2026"
 HALF_LIFE, L1, L2 = 35.0, 16.0, 48.0
-ODDS_WEIGHT = 40.0    # samme vekt som Eliteserien (se eliteserien/data/model.json)
+# Samme vekt som Eliteserien. Målt på OBOS-tall 22. september 2026 med
+# scripts/obos_odds_weight.py (136 kamper ut av utvalg): vekt 80 målte best,
+# men 1,9 standardfeil fra 40 er innenfor støyen, og rekkefølgen mellom
+# vektene er ikke jevn. Vekten er derfor ikke endret. Måles på nytt når
+# sesongen er ferdigspilt, se TODO.md.
+ODDS_WEIGHT = 40.0
 ODDS_PATH = DATA / "odds_closing.json"
 
 
