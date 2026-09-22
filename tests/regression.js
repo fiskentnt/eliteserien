@@ -877,6 +877,38 @@ async function main() {
       // Og det skal faktisk finnes tall å bruke for minst ett lag.
       check(`${liga}: har lagrede tall å måle mot`,
         f.prekick + f.closing > 0, `prekick ${f.prekick}, sluttodds ${f.closing}`);
+      // Kjernen: tallet skal være endringen mot FORVENTNINGEN, ikke mot seier.
+      // Et tap som var ventet i 72 % av tilfellene kan ikke flytte sjansen
+      // mer enn avstanden fra forventningen til utfallet.
+      const regnestykke = await fk.evaluate(async () => {
+        const ut = [];
+        for (const t of TEAMS) {
+          const d = await qaLastMatchData(t);
+          if (!d || d.noMatch || d.pp == null) continue;
+          const sjanse = o => o === d.actual ? d.tableP
+            : Math.min(1, Math.max(0, d.tableP + d.alts.find(x => x.o === o).d));
+          const qFor = o => o === 'draw' ? 'U' : ((o === 'win') === d.isHome ? 'H' : 'B');
+          const E = ['win', 'draw', 'loss'].reduce((s, o) => s + (d.preKick[qFor(o)] || 0) * sjanse(o), 0);
+          // Avstanden fra forventningen til det beste/verste utfallet: pp kan
+          // aldri være større enn spennet mellom utfallene.
+          const alle = ['win', 'draw', 'loss'].map(sjanse);
+          ut.push({team: t, pp: d.pp, E, tableP: d.tableP,
+                   ventet: Math.round(d.tableP * 100) - Math.round(E * 100),
+                   spenn: (Math.max(...alle) - Math.min(...alle)) * 100,
+                   pSum: ['win', 'draw', 'loss'].reduce((s, o) => s + (d.preKick[qFor(o)] || 0), 0)});
+        }
+        return ut;
+      });
+      const feilPp = regnestykke.filter(r => r.pp !== r.ventet);
+      check(`${liga}: pp er endringen mot forventningen`, feilPp.length === 0,
+        feilPp.slice(0, 3).map(r => `${r.team}: pp ${r.pp}, mot forventning ${r.ventet}`).join('; '));
+      const forStort = regnestykke.filter(r => Math.abs(r.pp) > r.spenn + 1);
+      check(`${liga}: pp er aldri større enn spennet mellom utfallene`,
+        forStort.length === 0,
+        forStort.slice(0, 3).map(r => `${r.team}: pp ${r.pp}, spenn ${r.spenn.toFixed(0)}`).join('; '));
+      check(`${liga}: utfallssannsynlighetene før kampen summerer til 1`,
+        regnestykke.every(r => Math.abs(r.pSum - 1) < 1e-3),
+        regnestykke.filter(r => Math.abs(r.pSum - 1) >= 1e-3).map(r => `${r.team}: ${r.pSum}`).join('; '));
       await fk.close();
     }
     await page.bringToFront();

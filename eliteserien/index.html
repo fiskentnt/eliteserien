@@ -3804,14 +3804,29 @@ async function qaLastMatchData(team){
   // Sammenligningen gjøres mot det beste av de utfallene som faktisk VISES,
   // så tallet i første setning alltid stemmer med tallene i den andre.
   const bestAlt = shown.length ? shown.slice().sort((x,y)=>good(y.d)-good(x.d))[0] : null;
-  // Regnet fra de VISTE (avrundede) prosentene, ikke fra råverdiene: ellers
-  // kan det stå "9 prosentpoeng" over "21 % i stedet for 13 %".
-  const r0 = Math.round(tableP*100);
-  const pp = bestAlt ? r0 - Math.round(Math.min(1,Math.max(0,tableP+bestAlt.d))*100) : null;
+  // Endringen måles mot FORVENTNINGEN før kampen, ikke mot seier eller mot det
+  // beste alternativet. Forventningen er sjansen ved hvert utfall vektet med
+  // hvor sannsynlig utfallet var før avspark:
+  //     E = P(seier)*sjanse|seier + P(uavgjort)*sjanse|uavgjort + P(tap)*sjanse|tap
+  // Et tap som var ventet i 72 % av tilfellene flytter lite, selv om avstanden
+  // opp til en seier er stor. Uten lagrede tall fra før kampen (prekick.json
+  // eller sluttoddsen) finnes ingen forventning, og da vises BARE resultatet --
+  // aldri en sammenligning mot seier, som ville overdrevet tallet kraftig.
+  const pk = preKickProbs(m.home, m.away);
+  const qP = o => pk ? pk[qFor(o)] : null;
+  let expected = null, pp = null;
+  if(pk){
+    const sjanse = o => o===actual ? tableP : Math.min(1, Math.max(0, tableP + alts.find(x=>x.o===o).d));
+    expected = ['win','draw','loss'].reduce((sum,o)=> sum + (qP(o)||0)*sjanse(o), 0);
+    // Regnet fra de VISTE (avrundede) prosentene, så tallet stemmer med
+    // prosentene i setningen etter.
+    pp = Math.round(tableP*100) - Math.round(expected*100);
+  }
   return {team, m, opp, isHome, gf, ga, actual, zone, tableP, alts, shown, bestAlt,
-    // pp: endringen i SELVE sjansen som resultatet ga, med fortegn (negativ =
-    // sjansen ble lavere). Om det er bra eller dårlig avhenger av sonen.
-    pp, good: pp==null ? null : good(pp)>0};
+    // pp: hvor mye sjansen ble flyttet MOT FORVENTNINGEN før kampen, med
+    // fortegn. Om det er bra eller dårlig avhenger av sonen. null = vi har
+    // ingen sannsynligheter fra før kampen å måle mot.
+    pp, expected, preKick: pk, good: pp==null ? null : good(pp)>0};
 }
 async function qaLastMatch(team){
   const data = await qaLastMatchData(team);
@@ -3834,16 +3849,25 @@ async function qaLastMatch(team){
     return `Resultatet betydde lite for sjansen: verken ${navn[0]} eller ${navn[1]} ville endret ${chance} mer enn to prosentpoeng fra dagens ${pctTxt(tableP)}.`+surTxt+anslag;
   }
   const front = zone.dir==='front';
+  // Uten sannsynligheter fra før kampen finnes ingen forventning å måle mot.
+  // Da sies det, i stedet for å måle mot seier og overdrive tallet.
+  if(pp==null){
+    const navn = others.map(o=>QA_OUT_LABEL[o]);
+    return `${head} ga ${chance} ${pctTxt(tableP)}. Med ${navn[0]} eller ${navn[1]} `
+      + `hadde den vært ${shown.length?shown.map(x=>pctTxt(clamp(tableP+x.d))).join(' eller '):'omtrent den samme'}. `
+      + `Vi har ingen lagret sannsynlighet fra før kampen, så det står ikke hvor mye resultatet flyttet sjansen mot det som var ventet.`+anslag;
+  }
   const n = Math.abs(pp);
+  const ventet = ` Før kampen lå ${chance} an til ${pctTxt(data.expected)} i snitt over de tre utfallene, vektet med hvor sannsynlige de var.`;
   let first;
   if(n===0){
-    first = `${head} var omtrent like bra som ${QA_OUT_LABEL[bestAlt.o]} for ${chance}.`;
-  } else if(data.good){ // det faktiske var bedre enn alternativet
-    first = front ? `${head} ga ${team} ${n} prosentpoeng i ${chance}.`
-                  : `${head} senket ${chance} for ${team} med ${n} prosentpoeng.`;
+    first = `${head} traff omtrent det som var ventet for ${chance}.`;
+  } else if(data.good){
+    first = front ? `${head} ga ${team} ${n} prosentpoeng mer i ${chance} enn det som var ventet før kampen.`
+                  : `${head} senket ${chance} for ${team} ${n} prosentpoeng mer enn ventet.`;
   } else {
-    first = front ? `${head} kostet ${team} ${n} prosentpoeng i ${chance}.`
-                  : `${head} økte ${chance} for ${team} med ${n} prosentpoeng.`;
+    first = front ? `${head} kostet ${team} ${n} prosentpoeng i ${chance} mot det som var ventet.`
+                  : `${head} økte ${chance} for ${team} ${n} prosentpoeng mer enn ventet.`;
   }
   // Rekkefølge: seier, uavgjort, tap (det faktiske utfallet er alt utelatt).
   const order = others.filter(o=>shown.some(x=>x.o===o));
@@ -3851,7 +3875,7 @@ async function qaLastMatch(team){
   const second = order.length>1
     ? `Med ${QA_OUT_LABEL[order[0]]} hadde den vært ${val(order[0])} i stedet for ${pctTxt(tableP)}, med ${QA_OUT_LABEL[order[1]]} ${val(order[1])}.`
     : `Med ${QA_OUT_LABEL[order[0]]} hadde den vært ${val(order[0])} i stedet for ${pctTxt(tableP)}.`;
-  return `${first} ${second}${surTxt}${anslag}`;
+  return `${first}${surTxt} ${second}${ventet}${anslag}`;
 }
 // Den korte linja i lagboksen, bygget av det workflowen har lagret
 // (data/lastmatch.json). Betydde kampen under to prosentpoeng, står bare
@@ -3893,9 +3917,16 @@ function qaLastMatchLine(e){
   const res = `${e.gf}-${e.ga} mot ${e.opp}`;
   const s = qaSurpriseTxt(e);
   const hale = s ? ` <span class="muted">(${s})</span>` : '';
-  if(e.pp==null || e.pp===0) return {html:`Forrige kamp: ${res}${hale}`};
+  // pp er endringen MOT FORVENTNINGEN. Uten tall fra før kampen finnes ingen
+  // forventning, og da står bare resultatet -- aldri en sammenligning mot
+  // seier. basis-feltet skiller nye lastmatch.json-rader fra gamle, der pp
+  // betydde noe annet.
+  // basis må stå eksplisitt: en rad uten feltet er skrevet av en eldre
+  // workflow, der pp ble målt mot det beste alternative utfallet. Den skal
+  // ikke vises som om den var målt mot forventningen.
+  if(e.pp==null || e.pp===0 || e.basis!=='forventning') return {html:`Forrige kamp: ${res}${hale}`};
   const sign = (e.pp>0?'+':'−')+Math.abs(e.pp);
-  return {html:`Forrige kamp: ${QA_OUT_LABEL[e.actual]} ${res}, ${e.chance} <b class="${e.good?'good':'bad'}">${sign}</b>${hale}`};
+  return {html:`Forrige kamp: ${QA_OUT_LABEL[e.actual]} ${res}, ${e.chance} <b class="${e.good?'good':'bad'}">${sign}</b> mot ventet${hale}`};
 }
 // Lagets forrige kamp til linja: bruker det workflowen har regnet ut for den
 // VIRKELIGE situasjonen. Er den lagret kampen ikke lagets siste faktisk spilte

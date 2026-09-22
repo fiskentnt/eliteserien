@@ -14,8 +14,10 @@
    "actual": "loss",
    "zone": "gull",
    "chance": "gullsjansen",
-   "pp": -11,
-   "good": false
+   "pp": -4,
+   "good": false,
+   "basis": "forventning",
+   "expected": 0.8337
   },
   "Brann": {
    "date": "2026-09-20",
@@ -29,8 +31,10 @@
    "actual": "win",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": 6,
-   "good": true
+   "pp": 4,
+   "good": true,
+   "basis": "forventning",
+   "expected": 0.0668
   },
   "Fredrikstad": {
    "date": "2026-09-20",
@@ -44,8 +48,10 @@
    "actual": "draw",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": null,
-   "good": null
+   "pp": 0,
+   "good": false,
+   "basis": "forventning",
+   "expected": 0.0228
   },
   "HamKam": {
    "date": "2026-09-20",
@@ -59,8 +65,10 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 14,
-   "good": false
+   "pp": 3,
+   "good": false,
+   "basis": "forventning",
+   "expected": 0.1579
   },
   "KFUM Oslo": {
    "date": "2026-09-18",
@@ -74,8 +82,10 @@
    "actual": "win",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": -9,
-   "good": true
+   "pp": null,
+   "good": null,
+   "basis": "forventning",
+   "expected": null
   },
   "Kristiansund": {
    "date": "2026-09-19",
@@ -89,8 +99,10 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 26,
-   "good": false
+   "pp": null,
+   "good": null,
+   "basis": "forventning",
+   "expected": null
   },
   "Lillestrøm": {
    "date": "2026-09-20",
@@ -104,8 +116,10 @@
    "actual": "loss",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": -19,
-   "good": false
+   "pp": -4,
+   "good": false,
+   "basis": "forventning",
+   "expected": 0.2181
   },
   "Molde": {
    "date": "2026-09-19",
@@ -119,8 +133,10 @@
    "actual": "loss",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": -22,
-   "good": false
+   "pp": null,
+   "good": null,
+   "basis": "forventning",
+   "expected": null
   },
   "Rosenborg": {
    "date": "2026-09-19",
@@ -134,8 +150,10 @@
    "actual": "win",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": 16,
-   "good": true
+   "pp": null,
+   "good": null,
+   "basis": "forventning",
+   "expected": null
   },
   "Sandefjord": {
    "date": "2026-09-20",
@@ -149,8 +167,10 @@
    "actual": "win",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": -10,
-   "good": true
+   "pp": -8,
+   "good": true,
+   "basis": "forventning",
+   "expected": 0.1604
   },
   "Sarpsborg 08": {
    "date": "2026-09-18",
@@ -164,8 +184,10 @@
    "actual": "loss",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": 2,
-   "good": false
+   "pp": null,
+   "good": null,
+   "basis": "forventning",
+   "expected": null
   },
   "Start": {
    "date": "2026-09-20",
@@ -179,8 +201,10 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 29,
-   "good": false
+   "pp": 11,
+   "good": false,
+   "basis": "forventning",
+   "expected": 0.5974
   },
   "Tromsø": {
    "date": "2026-09-20",
@@ -194,8 +218,10 @@
    "actual": "win",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": 17,
-   "good": true
+   "pp": 7,
+   "good": true,
+   "basis": "forventning",
+   "expected": 0.5685
   },
   "Viking": {
    "date": "2026-09-20",
@@ -209,8 +235,10 @@
    "actual": "win",
    "zone": "gull",
    "chance": "gullsjansen",
-   "pp": 8,
-   "good": true
+   "pp": 3,
+   "good": true,
+   "basis": "forventning",
+   "expected": 0.1815
   },
   "Vålerenga": {
    "date": "2026-09-20",
@@ -224,8 +252,10 @@
    "actual": "draw",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 4,
-   "good": false
+   "pp": 1,
+   "good": false,
+   "basis": "forventning",
+   "expected": 0.0615
   },
   "Aalesund": {
    "date": "2026-09-19",
@@ -239,9 +269,11 @@
    "actual": "win",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": -17,
-   "good": true
+   "pp": null,
+   "good": null,
+   "basis": "forventning",
+   "expected": null
   }
  },
- "updated": "2026-09-22T10:25:30Z"
+ "updated": "2026-09-22T15:20:24Z"
 }
