@@ -323,7 +323,10 @@
   .nm-hub button.on{background:var(--team-fill);border-color:var(--team-fill);color:var(--team-fill-text)}
   /* Kamper-seksjonen (verktøy + siste runde + gjenstående) */
   .kamper{display:flex;flex-direction:column;gap:20px;min-width:0}
-  .kamper .tools{padding:0}
+  /* Verktøyknappene ligger nå INNE i "Gjenstående kamper"-panelet, rett over
+     kampene, og følger panelets egen sideluft (16 px) som h2 og avkryssings-
+     boksen -- ikke .tools sin gamle luft fra da de lå fritt i kolonnen. */
+  .kamper #fxPanel .tools{padding:0 16px 12px}
   /* Prosentkolonnene: grønt for høy sjanse, rødt for nedrykk, grått under 1 % */
   td.odds{font-weight:600}
   td.odds.pc-zero{color:var(--muted);font-weight:500}
@@ -338,7 +341,7 @@
   .about h2{font:700 16px/1.2 var(--cond);color:var(--ink);margin:0 0 6px}
   .about p{margin:0 0 8px;max-width:80ch;line-height:1.55}
   /* Seksjonene som hopplenkene går til */
-  #tabell,#kamper,#qaPanel,#omModellen{scroll-margin-top:calc(var(--nav-h) + 12px)}
+  #tabell,#kamper,#fxPanel,#qaPanel,#omModellen{scroll-margin-top:calc(var(--nav-h) + 12px)}
   .round{scroll-margin-top:calc(var(--nav-h) + 12px)}
   .round.flash{animation:roundflash 1.4s ease}
   @keyframes roundflash{0%,60%{background:var(--team-soft)}100%{background:transparent}}
@@ -588,7 +591,7 @@
   .clegend .cnedkey{background:var(--accent-text);opacity:.5;border:1.3px solid var(--accent-text)}
   .clegend .cnote{flex-basis:100%}
   details.shownums{margin:0 0 14px}
-  details.shownums > summary{cursor:pointer;color:var(--accent-text);font-weight:600;font-size:13.5px;width:fit-content}
+  details.shownums > summary{cursor:pointer;color:var(--team-text);font-weight:600;font-size:13.5px;width:fit-content}
   details.shownums > summary:hover{text-decoration:underline}
   details.shownums[open] > summary{margin-bottom:10px}
 
@@ -644,6 +647,14 @@
   .qa-item:first-child{border-top:none}
   .qa-item > button{display:block;width:100%;border:none;background:none;color:var(--ink);padding:10px 0;font:600 14px/1.35 var(--body);text-align:left;cursor:pointer}
   .qa-item > button::before{content:"▸";display:inline-block;width:1.1em;color:var(--muted)}
+  /* "Flere spørsmål": resten av spørsmålene, samme radstil som de tre øverste,
+     men med en åpne/lukke-linje som ser ut som en lenke. */
+  details.qa-extra{border-top:1px solid var(--line-soft)}
+  details.qa-extra > summary{list-style:none;cursor:pointer;padding:10px 0;font:600 14px/1.35 var(--body);color:var(--team-text)}
+  details.qa-extra > summary::-webkit-details-marker{display:none}
+  details.qa-extra > summary::before{content:"▸";display:inline-block;width:1.1em;color:var(--muted)}
+  details.qa-extra[open] > summary::before{content:"▾"}
+  details.qa-extra > summary:hover{text-decoration:underline}
   .qa-item > button:hover{text-decoration:underline}
   .qa-item.active > button::before{content:"▾"}
   .qa-answer{scroll-margin-bottom:16px;margin:0 0 12px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
@@ -739,7 +750,7 @@
     <a class="brand" href="#tabell" aria-label="Tabellkalkulator"><svg class="brand-mark" viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><rect x=".5" y=".5" width="15" height="15" rx="3.5" fill="#13305f" stroke="#4f7fc4" stroke-opacity=".6"/><rect x="3" y="4" width="10" height="2" rx="1" fill="#34d399"/><rect x="3" y="7" width="7" height="2" rx="1" fill="#e8f0fc"/><rect x="3" y="10" width="5" height="2" rx="1" fill="#e8f0fc"/></svg><span>Tabellkalkulator</span></a>
     <div class="nav-links" id="navLinks">
       <a href="#tabell" data-target="tabell" class="active">Tabell</a>
-      <a href="#kamper" data-target="kamper">Kamper</a>
+      <a href="#fxPanel" data-target="fxPanel"><span class="lg">Legg inn resultater</span><span class="sm">Resultater</span></a>
       <a href="#qaPanel" data-target="qaPanel"><span class="lg">Spør om tabellen</span><span class="sm">Spør</span></a>
       <a href="#omModellen" data-target="omModellen"><span class="lg">Om modellen</span><span class="sm">Modellen</span></a>
     </div>
@@ -848,19 +859,21 @@
     </details>
 
     <section class="kamper" id="kamper">
-      <div class="tools">
-  <button id="followWin"></button>
-  <button id="followLose"></button>
-  <button id="simRest" title="Fyller alle tomme kamper med ett plausibelt scenario">Simuler tomme kamper</button>
-  <button class="reset" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
-  <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
-</div>
       <section class="panel recent" aria-label="Siste runde">
       <h2>Siste runde <span class="count" id="lastRoundInfo"></span></h2>
       <div class="rounds" id="lastRound"></div>
     </section>
       <section class="panel" id="fxPanel">
       <h2>Gjenstående kamper <span class="count" id="fxInfo"></span></h2>
+      <!-- Knappene står her, rett over kampene de virker på, i stedet for øverst
+           i hele "kamper"-seksjonen (der de lå over "Siste runde"). -->
+      <div class="tools">
+        <button id="followWin"></button>
+        <button id="followLose"></button>
+        <button id="simRest" title="Fyller alle tomme kamper med ett plausibelt scenario">Simuler tomme kamper</button>
+        <button class="reset" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
+        <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
+      </div>
       <label class="autofill" id="autoFillLabel" title="De andre kampene i samme runde simuleres, så alle lagene har spilt like mange og tabellen er sammenlignbar.">
         <input type="checkbox" id="autoFillToggle" checked> Fyll ut runden når jeg legger inn et resultat
     </label>
@@ -2672,7 +2685,7 @@ document.getElementById('nmHub').addEventListener('click', e=>{
   const q = document.querySelector(`.match[data-id="${id}"] .quick button[data-q="${b.dataset.q}"]`);
   if(q) q.click();
 });
-document.getElementById('nmAll').addEventListener('click', ()=> scrollToSection('kamper'));
+document.getElementById('nmAll').addEventListener('click', ()=> scrollToSection('fxPanel'));
 
 // ---- Oppsummeringskortene under tabellen: leder for gull, Europa og
 // nedrykk (fra simuleringen) og lag med best form. "Se alle" sorterer tabellen. ----
@@ -4188,7 +4201,8 @@ const QA_QUESTIONS = [
   {id:'rivals', needsTeam:true, run:qaRivals, label:team=>`Hvem kjemper ${team} mot?`},
   {id:'luck', needsTeam:false, run:()=>qaLuck(), label:()=>'Hvem har vært heldig eller uheldig?'},
 ];
-let qaActiveId = null, qaRequestSeq = 0;
+const QA_TOP_N = 3;
+let qaActiveId = null, qaRequestSeq = 0, qaExtraOpen = false;
 // Svaret hører til en tilstand: valgt lag + de låste resultatene (samme nøkkel
 // som runMCAsync/buildQaOpen). Endres noe av det, er svaret utdatert og regnes
 // om for den nye tilstanden (se renderQaButtons), aldri stående igjen.
@@ -4207,10 +4221,26 @@ function renderQaButtons(){
   const keep = prev && !prev.hidden ? {cls:prev.className, html:prev.innerHTML} : null;
   // Aktivt spørsmål kan ha blitt utilgjengelig (f.eks. laget ble valgt bort) -- fjern svaret da.
   if(qaActiveId && !active.some(q=>q.id===qaActiveId)) qaActiveId = null;
-  box.innerHTML = active.map(q=>
+  // Bare de tre øverste står fremme; resten ligger bak "Flere spørsmål", så
+  // seksjonen ikke er en liste på tolv linjer. Rekkefølgen i QA_QUESTIONS er
+  // relevansrekkefølgen. Gruppen åpnes når svaret som vises hører til et
+  // spørsmål der inne, og den blir stående åpen når brukeren selv har åpnet den.
+  const itemHtml = q =>
     `<div class="qa-item${q.id===qaActiveId?' active':''}"><button data-id="${q.id}">${q.label(team)}</button>`+
-    (q.id===qaActiveId ? `<div class="qa-answer" id="qaAnswer"></div>` : '')+`</div>`
-  ).join('');
+    (q.id===qaActiveId ? `<div class="qa-answer" id="qaAnswer"></div>` : '')+`</div>`;
+  const top = active.slice(0, QA_TOP_N), rest = active.slice(QA_TOP_N);
+  const restOpen = qaExtraOpen || rest.some(q=>q.id===qaActiveId);
+  box.innerHTML = top.map(itemHtml).join('') + (rest.length
+    ? `<details class="qa-extra" id="qaExtra"${restOpen?' open':''}><summary>Flere spørsmål</summary>${rest.map(itemHtml).join('')}</details>`
+    : '');
+  const ex = document.getElementById('qaExtra');
+  // Elementet bygges på nytt ved hver render, så lytteren følger med det nye.
+  if(ex) ex.addEventListener('toggle', ()=>{
+    qaExtraOpen = ex.open;
+    // Lukker brukeren gruppen mens svaret ligger der inne, er svaret lukket
+    // vekk -- ellers ville neste render tvunget gruppen åpen igjen.
+    if(!ex.open && qaActiveId && rest.some(q=>q.id===qaActiveId)){ qaActiveId = null; renderQaButtons(); }
+  });
   const now = document.getElementById('qaAnswer');
   const stale = !!qaActiveId && qaAnswerKey!==null && qaAnswerKey!==qaStateKey();
   if(now && stale){
