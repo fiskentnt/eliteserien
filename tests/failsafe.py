@@ -147,6 +147,27 @@ def main():
     check("datasettet er fortsatt uendret etter alle testene",
           MATCHES.read_bytes() == before and len(json.loads(MATCHES.read_bytes())) == n_before)
 
+    # 8. Genererte ligasider. obos/index.html bygges fra eliteserien/index.html,
+    # og en rettelse i kilden når ikke ut før filen er bygget på nytt. Det har
+    # gått galt før: hjelpefunksjoner havnet inne i regionen som byttes ut, og
+    # OBOS-siden ble publisert uten dem.
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import build_league
+    for liga in ("obos",):
+        dest = ROOT / liga / "index.html"
+        try:
+            ventet = build_league.render(liga)
+        except FileNotFoundError as e:
+            check(f"{liga}/index.html: kildefilene finnes", False, f"mangler {e}")
+            continue
+        har = dest.read_text(encoding="utf-8") if dest.exists() else ""
+        check(f"{liga}/index.html er bygget fra dagens eliteserien/index.html",
+              har == ventet,
+              f"kjør: python3 scripts/build_league.py {liga}"
+              + (f" (filen er {len(har)} tegn, kilden gir {len(ventet)})" if har else " (filen mangler)"))
+        check(f"{liga}/index.html er merket som generert",
+              "GENERERT FIL -- IKKE REDIGER" in har[:1200], har[:80])
+
     print(f"\n{ok} av {ok + fail} failsafe-tester gikk gjennom.")
     return 1 if fail else 0
 

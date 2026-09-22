@@ -24,12 +24,11 @@ import espn_source
 import fetch_odds_history
 import merge_odds
 import fit_model
+import leaguedata
 
 ROOT = Path(__file__).parent.parent
 LEAGUE = ROOT / "eliteserien"  # ligamappen (data/ ligger under den, så flere ligaer kan komme ved siden av)
 OSLO = ZoneInfo("Europe/Oslo")
-MONTH_ABBR = {1: "jan", 2: "feb", 3: "mar", 4: "apr", 5: "mai", 6: "jun",
-              7: "jul", 8: "aug", 9: "sep", 10: "okt", 11: "nov", 12: "des"}
 
 FFK_CACHE_PATH = LEAGUE / "data" / "ffk_cache.json"
 FFK_MIN_INTERVAL_MIN = 60  # ffksupporter.net skrapes (16 sider) maks én gang i timen
@@ -41,19 +40,6 @@ class DataAuditError(Exception):
     """Avvik funnet i den daglige kontrollen mot ffksupporter.net (se
     run_daily_audit). Skal feile kjøringen synlig, som EspnDataError."""
     pass
-
-
-def month_range_label(dates):
-    """Formaterer en liste ISO-datoer til f.eks. '18. til 20. sep' eller '13. des'."""
-    days = sorted({d for d in dates})
-    parts = [(int(d[8:10]), int(d[5:7])) for d in days]
-    first, last = parts[0], parts[-1]
-    if first == last:
-        return f"{first[0]}. {MONTH_ABBR[first[1]]}"
-    joiner = "og" if len(parts) <= 2 or (last[0] - first[0] == 1 and first[1] == last[1]) else "til"
-    if first[1] == last[1]:
-        return f"{first[0]}. {joiner} {last[0]}. {MONTH_ABBR[first[1]]}"
-    return f"{first[0]}. {MONTH_ABBR[first[1]]} {joiner} {last[0]}. {MONTH_ABBR[last[1]]}"
 
 
 def reconcile(ffk_rows, espn_rows, log=lambda s: None):
@@ -85,40 +71,13 @@ def reconcile(ffk_rows, espn_rows, log=lambda s: None):
 
 
 def build(merged):
-    matches = [r for r in merged if r["hg"] is not None]
-    matches.sort(key=lambda r: (r["date"], r["round"], r["home"]))
-    matches_out = [{"date": r["date"], "time": r.get("time"), "round": r["round"], "home": r["home"],
-                     "away": r["away"], "hg": r["hg"], "ag": r["ag"]} for r in matches]
-
-    by_round = {}
-    for r in merged:
-        by_round.setdefault(r["round"], []).append(r)
-
-    # Sorter rundene kronologisk (etter tidligste kampdato i runden), ikke etter
-    # rundenummer — runde 12 er flyttet til oktober og skal vises der kronologisk,
-    # ikke først i listen fordi "12" er et lavt tall.
-    round_order = sorted(by_round, key=lambda rn: min(r["date"] for r in by_round[rn]))
-
-    fixtures_out = []
-    for round_no in round_order:
-        group = by_round[round_no]
-        if not any(r["hg"] is None for r in group):
-            continue  # runden er ferdigspilt, ikke ta den med
-        group.sort(key=lambda r: (r["date"], r.get("time") or "", r["home"]))
-        fixtures_out.append({
-            "round": round_no,
-            "when": month_range_label([r["date"] for r in group]),
-            "matches": [
-                {"home": r["home"], "away": r["away"], "date": r["date"], "time": r.get("time"),
-                 "played": r["hg"] is not None, "hg": r["hg"], "ag": r["ag"]}
-                for r in group
-            ],
-        })
-    return matches_out, fixtures_out
+    """matches.json og fixtures.json. Reglene er felles for ligaene, se
+    scripts/leaguedata.py."""
+    return leaguedata.build_matches(merged), leaguedata.build_fixtures(merged)
 
 
 def write_json(path, data):
-    path.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
+    leaguedata.write_json(path, data)
 
 
 def write_status(ok, now, error=None):

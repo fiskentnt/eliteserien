@@ -1,0 +1,46 @@
+name: "Bygg ligasidene"
+
+# obos/index.html genereres fra eliteserien/index.html (scripts/build_league.py).
+# Glemmer noen å bygge, når ikke rettelsen ut til OBOS-siden. Denne jobben
+# bygger den ved hver push som rører kilden, og committer hvis resultatet ble
+# et annet. Bygger den ingenting nytt, gjør jobben ingenting -- så committen
+# fra jobben selv utløser ingen ny runde.
+on:
+  push:
+    branches: [main]
+    paths:
+      - "eliteserien/index.html"
+      - "obos/page/**"
+      - "scripts/build_league.py"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-leagues
+  cancel-in-progress: false
+
+jobs:
+  bygg:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Bygg obos/index.html
+        run: python3 scripts/build_league.py obos
+
+      - name: Commit hvis den var utdatert
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          if git diff --quiet -- obos/index.html; then
+            echo "obos/index.html var allerede bygget fra dagens kilde."
+            exit 0
+          fi
+          echo "obos/index.html var utdatert -- bygget på nytt."
+          git add obos/index.html
+          git commit -m "Bygg obos/index.html fra eliteserien/index.html"
+          git pull --rebase --autostash origin main || true
+          git push origin HEAD:main

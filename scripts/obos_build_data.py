@@ -2,7 +2,7 @@
 """Bygger datafilene OBOS-siden leser, fra obos/data/obos_2012-2026.csv.
 
   obos/data/matches.json   spilte kamper i 2026 (dato, tid, runde, lag, mål)
-  obos/data/fixtures.json  hele terminlisten, runde for runde, med played-flagg
+  obos/data/fixtures.json  rundene det står kamper igjen i, med played-flagg
   obos/data/model.json     lagstyrkene, tilpasset på 2026-kampene (uten odds)
   obos/data/status.json    når filene sist ble bygget
 
@@ -21,16 +21,13 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 import fit_fast
+import leaguedata
 
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / "obos" / "data"
 CSV_PATH = DATA / "obos_2012-2026.csv"
 SEASON = "2026"
 HALF_LIFE, L1, L2 = 35.0, 16.0, 48.0
-MONTHS = ["januar", "februar", "mars", "april", "mai", "juni", "juli", "august",
-          "september", "oktober", "november", "desember"]
-MONTH_ABBR = {1: "jan", 2: "feb", 3: "mar", 4: "apr", 5: "mai", 6: "jun",
-              7: "jul", 8: "aug", 9: "sep", 10: "okt", 11: "nov", 12: "des"}
 
 
 def rows_for(season=SEASON):
@@ -46,19 +43,6 @@ def rows_for(season=SEASON):
         })
     out.sort(key=lambda m: (m["date"], m["time"], m["home"]))
     return out
-
-
-def when_label(dates):
-    """'9. til 12. okt' eller '13. des', som i Eliteserien-filene."""
-    days = sorted({d for d in dates})
-    parts = [(int(d[8:10]), int(d[5:7])) for d in days]
-    first, last = parts[0], parts[-1]
-    if first == last:
-        return f"{first[0]}. {MONTH_ABBR[first[1]]}"
-    joiner = "og" if len(parts) <= 2 or (last[0] - first[0] == 1 and first[1] == last[1]) else "til"
-    if first[1] == last[1]:
-        return f"{first[0]}. {joiner} {last[0]}. {MONTH_ABBR[first[1]]}"
-    return f"{first[0]}. {MONTH_ABBR[first[1]]} {joiner} {last[0]}. {MONTH_ABBR[last[1]]}"
 
 
 def main():
@@ -81,32 +65,12 @@ def main():
     print(f"{len(rows)} kamper i {SEASON}, {len(played)} spilte, {len(teams)} lag")
 
     DATA.mkdir(parents=True, exist_ok=True)
-    (DATA / "matches.json").write_text(json.dumps(
-        [{"date": m["date"], "time": m["time"], "round": m["round"],
-          "home": m["home"], "away": m["away"], "hg": m["hg"], "ag": m["ag"]}
-         for m in played], ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-
-    by_round = {}
-    for m in rows:
-        by_round.setdefault(m["round"], []).append(m)
-    # Kronologisk rekkefølge etter tidligste kampdato, ikke etter rundenummer:
-    # en flyttet runde skal stå der den faktisk spilles. Samme regel som
-    # Eliteserien, se scripts/update_data.py.
-    round_order = sorted(by_round, key=lambda rn: min(m["date"] for m in by_round[rn]))
-    fixtures = []
-    for rnd in round_order:
-        ms = by_round[rnd]
-        if not any(m["hg"] is None for m in ms):
-            continue  # runden er ferdigspilt; kamplisten viser bare gjenstående
-        ms = sorted(ms, key=lambda m: (m["date"], m["time"], m["home"]))
-        fixtures.append({
-            "round": rnd, "when": when_label([m["date"] for m in ms]),
-            "matches": [{"home": m["home"], "away": m["away"], "date": m["date"],
-                         "time": m["time"], "played": m["hg"] is not None,
-                         "hg": m["hg"], "ag": m["ag"]} for m in ms],
-        })
-    (DATA / "fixtures.json").write_text(json.dumps(fixtures, ensure_ascii=False, indent=1) + "\n",
-                                        encoding="utf-8")
+    # Formen på begge filene, og reglene for hvilke runder som blir med, er
+    # felles med Eliteserien -- se scripts/leaguedata.py.
+    leaguedata.write_json(DATA / "matches.json", leaguedata.build_matches(rows), indent=1)
+    fixtures = leaguedata.build_fixtures(rows)
+    leaguedata.write_json(DATA / "fixtures.json", fixtures, indent=1)
+    print(f"  {len(fixtures)} runder med kamper igjen")
 
     # Modellen: samme tilpasning som Eliteserien, men uten oddsleddet.
     TI = {t: i for i, t in enumerate(teams)}
