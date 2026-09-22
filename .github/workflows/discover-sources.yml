@@ -9,6 +9,10 @@ on:
         description: "Hent ogsa terminlisten for 1. divisjon 2026 (1 kall ekstra)"
         type: boolean
         default: false
+      oddspapi_probe:
+        description: "Kartlegg OddsPapi-kontoen (5 tellende kall)"
+        type: boolean
+        default: false
 
 jobs:
   discover:
@@ -21,3 +25,9 @@ jobs:
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
           WITH_FIXTURES: ${{ inputs.with_fixtures }}
         run: python3 scripts/discover_sources.py
+
+      - name: Kartlegg OddsPapi-kontoen
+        if: inputs.oddspapi_probe
+        env:
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+        run: python3 scripts/oddspapi_probe.py
