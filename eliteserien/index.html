@@ -607,6 +607,9 @@
   .clegend .ctopkey{background:var(--eu-text);opacity:.55;border:1.3px solid var(--eu-text)}
   .clegend .cnedkey{background:var(--accent-text);opacity:.5;border:1.3px solid var(--accent-text)}
   .clegend .cnote{flex-basis:100%}
+  ul.baselines{margin:0 0 12px;padding-left:20px;color:var(--muted);font-size:13.5px;line-height:1.5}
+  ul.baselines li{margin:0 0 5px}
+  ul.baselines strong{color:var(--ink)}
   details.shownums{margin:0 0 14px}
   details.shownums > summary{cursor:pointer;color:var(--team-text);font-weight:600;font-size:13.5px;width:fit-content}
   details.shownums > summary:hover{text-decoration:underline}
@@ -922,7 +925,7 @@
     <p>Cupvinneren får også en plass i Europa, men den cupfinalen spilles etter at serien er ferdig, så den er ikke med her. Går plassen til et lag som allerede er kvalifisert gjennom tabellen, kan 5. plass få Europa.</p>
     <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner alt", "...taper alt", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
     <p>Form viser hvor godt laget spiller nå, fra 0 til 10, der 5 er et gjennomsnittslag i Eliteserien. Form-kolonnen reagerer sterkere jo lengre en rekke med strake seire eller tap varer, siden markedet selv reagerer sterkere på rekker enn på spredte enkeltresultater.</p>
-    <p>Denne rekkeeffekten brukes bare i Form-kolonnen og formgrafen. Simuleringene, sannsynlighetene og H/U/B-tallene bruker en tilstand uten den, fordi tilbaketesten viste at rekkeeffekten gjør sluttplassprediksjonen svakt dårligere (se ablasjonstesten under "Hvordan vet vi at modellen virker?").</p>
+    <p>Denne rekkeeffekten brukes bare i Form-kolonnen og formgrafen. Simuleringene, sannsynlighetene og H/U/B-tallene bruker en tilstand uten den, fordi tilbaketesten ikke viser at rekkeeffekten gjør sluttplassprediksjonen bedre (se ablasjonstesten under "Hvordan vet vi at modellen virker?").</p>
     <hr>
     <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
     <div class="tblscroll"><table class="mt" id="modelTbl"></table></div>
@@ -932,7 +935,7 @@
 <details class="howitworks modelcheck">
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 20v-7M12 20V6M18 20v-11"/></svg></span>Hvordan vet vi at modellen virker?</summary>
   <div class="in">
-    <p class="note">Sist validert: 21. september 2026, mot NOR.csv (football-data.co.uk), sesongene 2016–2025. Tallene under er faste resultater fra den testen, ikke noe som regnes ut i nettleseren.</p>
+    <p class="note">Sist validert: 22. september 2026, mot NOR.csv (football-data.co.uk), sesongene 2016–2025. Modellen tilpasses ved fire kuttpunkter i hver sesong (etter 40, 55, 70 og 85 prosent av kampene), resten av sesongen simuleres 8000 ganger, og tallene er snittet over 640 lag-observasjoner. Kvalikkampene, som ligger i samme CSV-fil, er holdt utenfor. Hele kjøringen ligger i <code>scripts/backtest_zones.py</code> i kildekoden, så tallene kan reproduseres. De regnes ikke ut i nettleseren.</p>
     <p class="note">Kilder til dataene på siden: ffksupporter.net, ESPN, football-data.co.uk og The Odds API, alt hentet automatisk.</p>
 
     <h3>Kalibrering</h3>
@@ -1024,30 +1027,39 @@
     </details>
 
     <h3>Brier-score</h3>
-    <p>Brier-score måler hvor nær sannsynlighetene var de faktiske utfallene. Lavere er bedre, og 0 er perfekt. Sammenlignet med en naiv basisrate (samme faste sannsynlighet for alle lag, uansett form eller tabellplassering: 1/16 for gull, 4/16 for topp 4, 2/16 for nedrykk) og en ren Poisson-modell uten odds.</p>
+    <p>Brier-score måler hvor nær sannsynlighetene var de faktiske utfallene. Lavere er bedre, og 0 er perfekt. Modellen sammenlignes med tre enklere alternativer:</p>
+    <ul class="baselines">
+      <li><strong>Naiv basisrate:</strong> samme faste sannsynlighet for alle lag, uansett tabell og form: 1/16 for gull, 4/16 for topp 4, 2/16 for nedrykk.</li>
+      <li><strong>Tabellmodell:</strong> alle lag er like sterke, med samme forventede målnivå hjemme og borte (snittet i sesongen så langt). Bare dagens poeng, målforskjell og hvilke kamper som står igjen skiller lagene. Dette er den strenge sammenligningen: den viser hva kunnskap om lagene tilfører utover å lese tabellen.</li>
+      <li><strong>Ren Poisson:</strong> lagstyrke tilpasset på mål alene, uten odds, formoppdatering eller Dixon-Coles.</li>
+    </ul>
     <div class="tblscroll"><table class="mt brier">
       <thead><tr><th>Modell</th><th>Seriemester</th><th>Topp 4</th><th>Nedrykk</th></tr></thead>
       <tbody>
         <tr><td>Naiv basisrate</td><td>0,0586</td><td>0,1875</td><td>0,1094</td></tr>
-        <tr><td>Ren Poisson (uten odds)</td><td>0,0230</td><td>0,0896</td><td>0,0598</td></tr>
-        <tr><td>Full modell (i bruk)</td><td>0,0192</td><td>0,0795</td><td>0,0511</td></tr>
+        <tr><td>Tabellmodell (alle lag like sterke)</td><td>0,0186</td><td>0,0615</td><td>0,0542</td></tr>
+        <tr><td>Ren Poisson (uten odds)</td><td>0,0177</td><td>0,0663</td><td>0,0530</td></tr>
+        <tr><td>Full modell (i bruk)</td><td>0,0157</td><td>0,0607</td><td>0,0488</td></tr>
       </tbody>
     </table></div>
 
+    <p class="note">Det aller meste av avstanden til basisraten kommer av å lese tabellen: tabellmodellen, som ikke vet noe om lagene, tar nesten hele veien. Forskjellen fra tabellmodellen til den fulle modellen er reell, men liten, og for topp 4 er ren Poisson faktisk litt dårligere enn tabellmodellen (0,0663 mot 0,0615). Det er odds og tabell sammen som gjør jobben, ikke lagstyrke fra mål alene.</p>
+
     <h3>Ablasjonstest</h3>
-    <p>Samme test, bygget stegvis: hva tilfører hver enkelt del av modellen faktisk sluttplassprediksjonen? Hver rad sammenlignes med raden over, og "marginalt" betyr en forskjell på 0,0003 eller mindre i Brier-score.</p>
+    <p>Samme test, bygget stegvis: hva tilfører hver enkelt del av modellen faktisk sluttplassprediksjonen? Hvert steg legger til én ting på steget over. Forskjellene er målt parvis, på samme lag og kuttpunkt, og "ingen målbar forskjell" betyr at avviket er mindre enn to standardfeil, altså innenfor testens egen støy.</p>
     <div class="tblscroll"><table class="mt ablation">
       <thead><tr><th>Steg</th><th>Seriemester</th><th>Topp 4</th><th>Nedrykk</th><th>Effekt</th></tr></thead>
       <tbody>
-        <tr><td>1. Ren Poisson</td><td data-l="Seriemester">0,0230</td><td data-l="Topp 4">0,0896</td><td data-l="Nedrykk">0,0598</td><td>Utgangspunkt</td></tr>
-        <tr><td>2. + historiske sluttodds</td><td data-l="Seriemester">0,0195</td><td data-l="Topp 4">0,0814</td><td data-l="Nedrykk">0,0515</td><td>Bedre på alle tre</td></tr>
-        <tr><td>3. + formoppdatering</td><td data-l="Seriemester">0,0196</td><td data-l="Topp 4">0,0803</td><td data-l="Nedrykk">0,0518</td><td>Bedre på topp 4, marginalt dårligere på gull og nedrykk</td></tr>
-        <tr><td>4. + rekke-rampe</td><td data-l="Seriemester">0,0199</td><td data-l="Topp 4">0,0807</td><td data-l="Nedrykk">0,0517</td><td>Dårligere på gull og topp 4, marginalt bedre på nedrykk -- <strong>ikke i bruk</strong></td></tr>
-        <tr><td>5. + Dixon-Coles</td><td data-l="Seriemester">0,0195</td><td data-l="Topp 4">0,0807</td><td data-l="Nedrykk">0,0513</td><td>Bedre på gull og nedrykk, uendret på topp 4 (retter mest enkeltkamp-uavgjort)</td></tr>
-        <tr><td>6. Full modell (l1/l2=16/48)</td><td data-l="Seriemester">0,0192</td><td data-l="Topp 4">0,0795</td><td data-l="Nedrykk">0,0511</td><td>Bedre på alle tre, og best samlet</td></tr>
+        <tr><td>1. Ren Poisson</td><td data-l="Seriemester">0,0177</td><td data-l="Topp 4">0,0663</td><td data-l="Nedrykk">0,0530</td><td>Utgangspunkt</td></tr>
+        <tr><td>2. + historiske sluttodds</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0615</td><td data-l="Nedrykk">0,0488</td><td>Bedre på alle tre, men innenfor to standardfeil</td></tr>
+        <tr><td>3. + formoppdatering</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0611</td><td data-l="Nedrykk">0,0488</td><td>Ingen målbar forskjell</td></tr>
+        <tr><td>4. + Dixon-Coles</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0613</td><td data-l="Nedrykk">0,0490</td><td>Ingen målbar forskjell (retter mest enkeltkamp-uavgjort)</td></tr>
+        <tr><td>5. Full modell (l1/l2=16/48)</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0607</td><td data-l="Nedrykk">0,0488</td><td>Ingen målbar forskjell</td></tr>
+        <tr><td>Sidegren: + rekke-rampe (på steg 3)</td><td data-l="Seriemester">0,0158</td><td data-l="Topp 4">0,0608</td><td data-l="Nedrykk">0,0490</td><td>Ingen målbar forskjell -- <strong>ikke i bruk</strong></td></tr>
       </tbody>
     </table></div>
-    <p class="note">Rekke-rampen ble opprinnelig lagt inn fordi Brann fikk høyere Form enn Fredrikstad etter ti strake tap. Den løser fortsatt det -- Form-kolonnen bruker den fremdeles -- men gjør altså selve sluttplassprediksjonen svakt dårligere, så simuleringen bruker den ikke.</p>
+    <p class="note">Rekke-rampen ble lagt inn fordi Brann fikk høyere Form enn Fredrikstad etter ti strake tap. Den løser fortsatt det, og Form-kolonnen bruker den fremdeles. Men den gjør ikke sluttplassprediksjonen målbart bedre, så simuleringen bruker den ikke: et ekstra ledd som ikke kan vises å hjelpe, hører ikke hjemme i tallene.</p>
+    <p class="note">Oddssteget er det klareste enkeltsteget, men heller ikke det er slått fast av testen alene. Hovedfunnet i denne tabellen er hvor små stegene er. Bare spranget fra basisraten til en modell som kjenner tabellen, er klart utenfor usikkerheten. Med 640 lag-observasjoner er testen rett og slett ikke stor nok til å skille de siste leddene fra hverandre, og tallene bør leses som "ikke dårligere", ikke som "bevist bedre".</p>
 
     <h3>Hvordan testen er gjort</h3>
     <p>Modellen testes på framtiden, ikke på kampene den allerede har sett. Ved flere tidspunkter i hver sesong tilpasses modellen kun på kampene som var spilt fram til dette tidspunktet. Deretter simuleres resten av sesongen, og sannsynlighetene sammenlignes med det som faktisk skjedde.</p>
