@@ -62,7 +62,17 @@ def when_label(dates):
 
 
 def main():
+    from_matches = "--from-matches" in sys.argv
     rows = rows_for()
+    if from_matches and (DATA / "matches.json").exists():
+        # Resultatene kommer fra resultatkjeden, ikke fra CSV-en: CSV-en er bare
+        # terminlisten etter at sesongen er i gang.
+        pub = {(m["home"], m["away"]): (m["hg"], m["ag"])
+               for m in json.loads((DATA / "matches.json").read_text(encoding="utf-8"))}
+        for m in rows:
+            v = pub.get((m["home"], m["away"]))
+            m["hg"], m["ag"] = (v if v else (None, None))
+        print(f"  bruker {len(pub)} resultater fra matches.json")
     played = [m for m in rows if m["hg"] is not None]
     teams = sorted({m["home"] for m in rows} | {m["away"] for m in rows})
     if len(teams) != 16:

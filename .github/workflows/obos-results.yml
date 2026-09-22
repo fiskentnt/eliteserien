@@ -1,0 +1,61 @@
+name: "OBOS: hent resultater"
+
+# Én gang i døgnet, og manuelt ved behov. OddsPapi er hovedkilde (kampliste +
+# /v4/scores per nyspilt kamp), Wikipedia er kontroll og reserve. Ingenting
+# publiseres uten at valideringen går gjennom -- se scripts/obos_results.py.
+on:
+  schedule:
+    - cron: "17 5 * * *"   # 07.17 norsk sommertid
+  workflow_dispatch:
+    inputs:
+      forget_round:
+        description: "Glem denne runden først, for å vise at kjeden henter den på nytt"
+        default: ""
+      dry_run:
+        description: "Bare vis hva som ville skjedd"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: obos-results
+  cancel-in-progress: false
+
+jobs:
+  results:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: obos
+
+      - name: Hent og valider resultater
+        env:
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+        run: |
+          python3 scripts/obos_results.py \
+            ${{ inputs.forget_round && format('--forget-round {0}', inputs.forget_round) || '' }} \
+            ${{ inputs.dry_run && '--dry-run' || '' }}
+
+      - name: Bygg tabell og modell på nytt
+        if: ${{ !inputs.dry_run }}
+        run: python3 scripts/obos_build_data.py --from-matches
+
+      - name: Lagre hvis noe endret seg
+        if: ${{ always() && !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add obos/data/matches.json obos/data/fixtures.json obos/data/model.json \
+                  obos/data/status.json obos/data/results_state.json \
+                  obos/data/oddspapi_fixtures_2026.json data/oddspapi_usage.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Ingen endringer."
+          else
+            git commit -m "OBOS: resultater oppdatert $(date -u +%Y-%m-%dT%H:%MZ)"
+            git pull --rebase --autostash origin obos || true
+            git push origin HEAD:obos
+          fi
