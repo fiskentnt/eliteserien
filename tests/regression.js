@@ -944,6 +944,44 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- 18. rulling til svaret på iPad-bredder ----
+    // Trykker man på et spørsmål, skal SPØRSMÅLET stå øverst, rett under den
+    // faste menylinja, med svaret under. Før ble svaret rullet inn med
+    // block:'nearest', og på iPad havnet spørsmålet nederst på skjermen.
+    setGroup('Rulling til svaret');
+    for (const [w, h] of [[768, 1024], [820, 1180], [1024, 768], [1180, 820], [1366, 1024]]) {
+      const sp = await open(w, h, obosUrl);
+      await settle(sp);
+      await sp.evaluate(() => { qaSetOpen(true); });
+      await sleep(300);
+      await sp.evaluate(() => document.querySelector('#qaButtons button').click());
+      await sp.waitForFunction(
+        'document.getElementById("qaAnswer") && document.getElementById("qaAnswer").textContent.length > 20',
+        {timeout: 60000});
+      await sleep(1400);   // den myke rullingen må få gå ferdig
+      const r = await sp.evaluate(() => {
+        const item = document.querySelector('.qa-item.active');
+        const q = item.querySelector('button').getBoundingClientRect();
+        const nav = document.querySelector('.topnav').getBoundingClientRect();
+        const svar = document.getElementById('qaAnswer').getBoundingClientRect();
+        return {qTop: Math.round(q.top), navBunn: Math.round(nav.bottom),
+                svarTop: Math.round(svar.top), vh: innerHeight,
+                scroll: document.documentElement.scrollWidth - document.documentElement.clientWidth};
+      });
+      // Under menylinja, ikke bak den.
+      check(`${w} px: spørsmålet står under menylinja`, r.qTop >= r.navBunn - 2,
+        `spørsmål ${r.qTop}, menylinja slutter ${r.navBunn}`);
+      // Øverst, ikke nederst: godt over midten av skjermen.
+      check(`${w} px: spørsmålet står øverst, ikke nederst`, r.qTop < r.vh * 0.5,
+        `spørsmål ${r.qTop} av ${r.vh} px høyde`);
+      // Og svaret skal begynne på skjermen, ikke under kanten.
+      check(`${w} px: svaret begynner synlig`, r.svarTop < r.vh,
+        `svaret starter ${r.svarTop} av ${r.vh}`);
+      check(`${w} px: ingen sidelengs scroll`, r.scroll === 0, `${r.scroll} px`);
+      await sp.close();
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();

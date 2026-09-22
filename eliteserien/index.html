@@ -224,8 +224,10 @@
   }
   @media (max-width:760px){
     /* Fanene får en egen linje under logoen, så seksjonslenkene ikke blir
-       trangere enn de var. Menylinja er da to rader høy. */
-    :root{--nav-h:auto}
+       trangere enn de var. Menylinja er da to rader høy, og JS måler den og
+       setter --nav-h (se maalNavHoyde). --nav-h må ALDRI være "auto": den
+       brukes i calc() for scroll-margin-top på seksjonene, og calc(auto+12px)
+       er ugyldig -- da mister ankrene avstanden til menylinja. */
     .nav-in{flex-wrap:wrap;height:auto;padding:8px 12px;row-gap:6px}
     .brand{order:1}
     .theme-toggle{order:2;margin-left:auto}
@@ -3168,6 +3170,39 @@ document.getElementById('roundNext').addEventListener('click', ()=> stepRound(1)
 document.getElementById('roundReset').addEventListener('click', ()=>{ selRoundIdx = null; render(); });
 
 // ---- Navigasjonen: hopp til seksjon, og marker seksjonen du er i ----
+// Menylinja er sticky og dekker toppen av siden. På iPad og mobil er den to
+// rader høy (logo + ligafaner, så seksjonslenkene), så høyden må MÅLES, ikke
+// antas. Alt som skal stå "øverst" må legge seg rett under den.
+function navHeight(){
+  const nav = document.querySelector('.topnav');
+  if(!nav) return 0;
+  const r = nav.getBoundingClientRect();
+  // Bare den delen som faktisk ligger over innholdet teller (den er sticky på
+  // toppen, så r.top er 0 når man har scrollet).
+  return Math.max(0, r.bottom);
+}
+// Høyden på menylinja inn i --nav-h, som seksjonenes scroll-margin-top bruker.
+// På iPad og mobil er linja to rader, og hvor høy den er avhenger av skrift og
+// bredde -- derfor måles den i stedet for å gjettes i CSS.
+function maalNavHoyde(){
+  const nav = document.querySelector('.topnav');
+  if(!nav) return;
+  const h = Math.round(nav.getBoundingClientRect().height);
+  if(h > 0) document.documentElement.style.setProperty('--nav-h', h + 'px');
+}
+addEventListener('resize', maalNavHoyde);
+addEventListener('orientationchange', maalNavHoyde);
+if(document.readyState !== 'loading') maalNavHoyde();
+else addEventListener('DOMContentLoaded', maalNavHoyde);
+// Ruller slik at el havner rett under menylinja, ikke nederst på skjermen.
+// scrollIntoView kan ikke brukes: den kjenner ikke til den sticky menyen, og
+// med block:'nearest' stopper den så snart elementet så vidt er synlig -- da
+// havnet spørsmålet nederst på skjermen med svaret utenfor.
+function scrollUnderNav(el, luft=10){
+  if(!el) return;
+  const y = el.getBoundingClientRect().top + window.scrollY - navHeight() - luft;
+  window.scrollTo({top: Math.max(0, y), behavior:'smooth'});
+}
 function scrollToSection(id){
   if(id==='qaPanel') qaSetOpen(true); // spørsmålsseksjonen åpnes hvis den er lukket
   const el = document.getElementById(id);
@@ -4889,10 +4924,12 @@ async function runQaQuestion(id, keepZoneOverride, noScroll){
   if(!doneEl) return;
   doneEl.className = 'qa-answer';
   doneEl.textContent = text;
-  // Svaret skal ikke havne utenfor skjermen: "nearest" scroller bare hvis noe
-  // av det er utenfor, og ellers ikke i det hele tatt. Ved omregning scrolles
-  // det ikke i det hele tatt (noScroll).
-  if(!noScroll) doneEl.scrollIntoView({block:'nearest', behavior:'smooth'});
+  // Spørsmålet skal stå ØVERST, rett under menylinja, med svaret under. Før
+  // ble svaret rullet inn med block:'nearest', og på iPad havnet det da
+  // nederst på skjermen. Er svaret høyere enn skjermen, står spørsmålet
+  // fortsatt øverst -- det er starten av svaret man vil lese.
+  // Ved omregning rulles det ikke i det hele tatt (noScroll).
+  if(!noScroll) scrollUnderNav(doneEl.closest('.qa-item') || doneEl);
 }
 document.getElementById('qaButtons').addEventListener('click', e=>{
   const btn = e.target.closest('button'); if(!btn) return;
