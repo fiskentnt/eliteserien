@@ -3190,7 +3190,7 @@ function qaRange(team){
     return `${now}Nesten sikkert ${lo}. plass (${qaPctCap(d[lo-1])} av simuleringene).\n${ext}`;
   }
   return `${now}Mest sannsynlig ender ${team} på ${mode+1}. plass (${qaPctCap(d[mode])}). `+
-    `I ${qaPctCap(cover)} av simuleringene havner det mellom ${lo}. og ${hi}. plass.\n${ext}`;
+    `I ${qaPctCap(cover)} av simuleringene havner ${team} mellom ${lo}. og ${hi}. plass.\n${ext}`;
 }
 // Høyeste og laveste plass som er matematisk mulig, og hvor ofte simuleringene
 // faktisk kom dit: der eller bedre (høyeste) / der eller dårligere (laveste),
@@ -3204,7 +3204,7 @@ function qaRangeExtremes(d, best, worst, team){
   const share = c => c/N>=0.01 ? `i ${qaPctCap(c/N)} av simuleringene` : `i ${qaNum(c)} av ${nTxt} simuleringer`;
   const one = (label, mathPos, c, actualPos, actualLabel) => c>0
     ? `${label} plass for ${team} er ${mathPos}., og laget endte der ${share(c)}.`
-    : `${label} plass for ${team} er ${mathPos}., men det skjedde ikke i noen av de ${nTxt} simuleringene. ${actualLabel} plass i simuleringene var ${actualPos}. (i ${qaNum(cnt[actualPos-1])} av ${nTxt}).`;
+    : `${label} plass for ${team} er ${mathPos}., men det skjedde ikke i noen av de ${nTxt} simuleringene. ${actualLabel} plass i simuleringene var ${actualPos}. (${cnt[actualPos-1]/N>=0.01 ? qaPctCap(cnt[actualPos-1]/N) : `i ${qaNum(cnt[actualPos-1])} av ${nTxt}`}).`;
   let bestSim = cnt.findIndex(c=>c>0)+1, worstSim = 0;
   cnt.forEach((c,i)=>{ if(c>0) worstSim = i+1; });
   return one('Høyeste mulige', best, cnt[best-1], bestSim, 'Beste')+'\n'+one('Laveste mulige', worst, cnt[worst-1], worstSim, 'Dårligste');
@@ -3766,6 +3766,14 @@ const QA_QUESTIONS = [
   {id:'luck', needsTeam:false, run:()=>qaLuck(), label:()=>'Hvem har vært heldig eller uheldig?'},
 ];
 let qaActiveId = null, qaRequestSeq = 0;
+// Svaret hører til en tilstand: valgt lag + de låste resultatene (samme nøkkel
+// som runMCAsync/buildQaOpen). Endres noe av det, er svaret utdatert og regnes
+// om for den nye tilstanden (se renderQaButtons), aldri stående igjen.
+let qaAnswerKey = null, qaAnswerTeam = null;
+const qaScenarioKey = () => matches.filter(m=>m.hg!=null&&m.ag!=null).map(m=>`${TI[m.home]}.${TI[m.away]}.${m.hg}.${m.ag}`).join('_');
+const qaStateKey = () => `${SELECTED_TEAM}|${qaScenarioKey()}`;
+// Tabell-simuleringen for gjeldende scenario er ferdig (svarene bygger på den).
+const qaReady = () => !!(lastMC && lastMCFinal && lastMCScenarioKey===qaScenarioKey());
 function renderQaButtons(){
   const box = document.getElementById('qaButtons');
   const team = SELECTED_TEAM;
@@ -3781,7 +3789,17 @@ function renderQaButtons(){
     (q.id===qaActiveId ? `<div class="qa-answer" id="qaAnswer"></div>` : '')+`</div>`
   ).join('');
   const now = document.getElementById('qaAnswer');
-  if(now && keep){ now.className = keep.cls; now.innerHTML = keep.html; }
+  const stale = !!qaActiveId && qaAnswerKey!==null && qaAnswerKey!==qaStateKey();
+  if(now && stale){
+    // Utdatert (annet lag eller andre resultater): aldri vis det gamle svaret.
+    now.className = 'qa-answer loading';
+    now.innerHTML = '<span class="qa-spinner"></span> Regner svaret…';
+    // Regn om så snart tabell-simuleringen for den nye tilstanden er ferdig
+    // (renderQaButtons kalles igjen fra fillOdds når den kommer).
+    if(qaReady()) setTimeout(()=>{
+      if(qaActiveId && qaAnswerKey!==qaStateKey() && qaReady()) runQaQuestion(qaActiveId, qaAnswerTeam===SELECTED_TEAM);
+    }, 0);
+  } else if(now && keep){ now.className = keep.cls; now.innerHTML = keep.html; }
 }
 // Det mest aktuelle spørsmålet for valgt lag, som en klikkbar linje ved
 // lagvelgeren -- i stedet for en generisk lenke til seksjonen. Samme
@@ -3832,6 +3850,7 @@ async function runQaQuestion(id, keepZoneOverride){
   if(!q) return;
   if(!keepZoneOverride) qaWhyZoneOverride = null;
   qaActiveId = id;
+  qaAnswerKey = qaStateKey(); qaAnswerTeam = SELECTED_TEAM;
   renderQaButtons();
   const answerEl = document.getElementById('qaAnswer');
   answerEl.className = 'qa-answer loading';
@@ -3842,7 +3861,7 @@ async function runQaQuestion(id, keepZoneOverride){
     text = await q.run(SELECTED_TEAM, partial=>{
       // Delsvar underveis (spørsmål som streamer): linjene som er ferdige, med
       // en liten "regner"-linje under til resten er klar.
-      if(myRequestId !== qaRequestSeq) return;
+      if(myRequestId !== qaRequestSeq || qaAnswerKey!==qaStateKey()) return;
       const el = document.getElementById('qaAnswer');
       if(!el) return;
       el.className = 'qa-answer';
@@ -3857,6 +3876,7 @@ async function runQaQuestion(id, keepZoneOverride){
     text = 'Klarte ikke regne ut svaret akkurat nå.';
   }
   if(myRequestId !== qaRequestSeq) return; // et nytt spørsmål er stilt i mellomtiden
+  if(qaAnswerKey !== qaStateKey()) return; // lag eller resultater er endret mens det regnet: svaret regnes om (renderQaButtons)
   // Listen kan være bygd opp på nytt mens svaret regnet (renderQaButtons) --
   // slå opp svarboksen på nytt i stedet for å bruke den gamle referansen.
   const doneEl = document.getElementById('qaAnswer');
