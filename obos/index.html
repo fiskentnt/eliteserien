@@ -116,11 +116,13 @@
        (samme mønster som --accent-soft i mørk modus) i stedet for en fast,
        Brann-tilpasset rosa, slik at vasken faktisk følger valgt lag.
        Standardverdiene her er bare et fall-tilbake før boot() har satt de
-       ekte -- Brann sine farger, siden Brann er standardvalget. */
-    --team-fill:#c4111d; --team-deep:#8d0a13; --team-fill-text:#ffffff;
-    --team-text-light:#c4111d; --team-text-dark:#ff6b74;
+       ekte. De er sidens egen nøytrale blå (NEUTRAL_ACCENT), ikke et lags
+       farge: dette er delt CSS, og et Eliteserien-lag ville blinket til i
+       navigasjonen på OBOS-siden før JS rakk å sette den riktige. */
+    --team-fill:#2f6fed; --team-deep:#2251b8; --team-fill-text:#ffffff;
+    --team-text-light:#1f5fd6; --team-text-dark:#7aa8ff;
     --team-text: var(--team-text-light);
-    --team-soft-light:rgba(196,17,29,.08); --team-soft-dark:rgba(255,107,116,.12);
+    --team-soft-light:rgba(47,111,237,.08); --team-soft-dark:rgba(122,168,255,.12);
     --team-soft: var(--team-soft-light);
     --cond:"Barlow Condensed","Arial Narrow","Roboto Condensed",system-ui,sans-serif;
     --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -1130,6 +1132,40 @@ const LEAGUE = {
     'Kongsvinger': 'KIL', 'Strømsgodset': 'Godset', 'Sandnes Ulf': 'Sandnes',
     'Strømmen': 'Strømmen', 'Haugesund': 'FKH',
   },
+  // Klubbfarger, én per lag i DENNE ligaen. Draktfargen (trøyens hovedfarge)
+  // fra draktboksen på Wikipedia, krysssjekket mot NFFs lagsider. Tre valg
+  // som ikke kommer rett fra kilden, alle etter samme regel som Eliteserien:
+  //   Haugesund, Odd og Sogndal spiller i HVITT. Hvit gir 1:1 mot hvit tekst
+  //   og mot det lyse panelet, så de får andrefargen på drakten: Haugesund
+  //   blå (shorts), Odd og Sogndal nesten-sort, som Rosenborg.
+  //   Bryne, Kongsvinger og Lyn har alle ren rød (#ff0000) hos kilden. Ren rød
+  //   når ikke 4,5:1 mot noen tekstfarge, så alle tre er dempet like mye, til
+  //   #eb0000. De er fortsatt like, og det er greit: bare ett lag vises om
+  //   gangen (alle --team-*-variablene følger laget du følger), som med
+  //   Lillestrøm og Start i Eliteserien.
+  //   Strømmen sin grå er løftet fra #808080 til #828282 av samme grunn.
+  // Egersund fikk en drakt-gul i samme sjikt som Eliteserien-gulene i stedet
+  // for malens neongule #ffff33, og Åsane klubbens egen #f5821f i stedet for
+  // malens pastell. Variantene er laget med scripts/team_colors.py --json,
+  // og «--check» kontrollerer kontrasten på nytt.
+  teamColors: {
+    "Bryne": {fill:"#eb0000", deep:"#a90000", fillText:"#ffffff", textLight:"#eb0000", textDark:"#ff2525", topDark:"#741313", topDeepDark:"#530d0d"},
+    "Egersund": {fill:"#f7c800", deep:"#b29000", fillText:"#15191c", textLight:"#8f7400", textDark:"#f7c800", topDark:"#7a6614", topDeepDark:"#584a0e"},
+    "Haugesund": {fill:"#1b56a8", deep:"#133e79", fillText:"#ffffff", textLight:"#1b56a8", textDark:"#4083e0", topDark:"#1b3355", topDeepDark:"#13253d"},
+    "Hødd": {fill:"#0033cc", deep:"#002593", fillText:"#ffffff", textLight:"#0033cc", textDark:"#4e7aff", topDark:"#102565", topDeepDark:"#0c1b49"},
+    "Kongsvinger": {fill:"#eb0000", deep:"#a90000", fillText:"#ffffff", textLight:"#eb0000", textDark:"#ff2525", topDark:"#741313", topDeepDark:"#530d0d"},
+    "Lyn": {fill:"#eb0000", deep:"#a90000", fillText:"#ffffff", textLight:"#eb0000", textDark:"#ff2525", topDark:"#741313", topDeepDark:"#530d0d"},
+    "Moss": {fill:"#ffde00", deep:"#b8a000", fillText:"#15191c", textLight:"#887600", textDark:"#ffde00", topDark:"#7e7014", topDeepDark:"#5b510f"},
+    "Odd": {fill:"#2a2e32", deep:"#1e2124", fillText:"#ffffff", textLight:"#2a2e32", textDark:"#7a858f", topDark:"#191a1c", topDeepDark:"#121314"},
+    "Ranheim": {fill:"#0b3fd4", deep:"#082d99", fillText:"#ffffff", textLight:"#0b3fd4", textDark:"#517cf6", topDark:"#162c69", topDeepDark:"#101f4c"},
+    "Raufoss": {fill:"#ffcc00", deep:"#b89300", fillText:"#15191c", textLight:"#907300", textDark:"#ffcc00", topDark:"#7e6914", topDeepDark:"#5b4b0f"},
+    "Sandnes Ulf": {fill:"#6caddf", deep:"#2b81c4", fillText:"#15191c", textLight:"#297bbb", textDark:"#6caddf", topDark:"#33658b", topDeepDark:"#254864"},
+    "Sogndal": {fill:"#2a2e32", deep:"#1e2124", fillText:"#ffffff", textLight:"#2a2e32", textDark:"#7a858f", topDark:"#191a1c", topDeepDark:"#121314"},
+    "Stabæk": {fill:"#1130d6", deep:"#0c239a", fillText:"#ffffff", textLight:"#1130d6", textDark:"#6279f3", topDark:"#19266b", topDeepDark:"#121c4d"},
+    "Strømmen": {fill:"#828282", deep:"#5e5e5e", fillText:"#15191c", textLight:"#767676", textDark:"#838383", topDark:"#4a4a4a", topDeepDark:"#363636"},
+    "Strømsgodset": {fill:"#000060", deep:"#000045", fillText:"#ffffff", textLight:"#000060", textDark:"#7272ff", topDark:"#08082f", topDeepDark:"#050522"},
+    "Åsane": {fill:"#f5821f", deep:"#be5d08", fillText:"#15191c", textLight:"#bc5b08", textDark:"#f5821f", topDark:"#834b1b", topDeepDark:"#5e3613"},
+  },
   movedRounds: {},
 };
 const ZONE_KEYS = ['gull', 'cl', 'europa', 'kvalik', 'nedrykk'];
@@ -1486,29 +1522,15 @@ function cycleSort(key){
 // som --accent), textLight/textDark byttes med temaet (se --team-text).
 // topDark/topDeepDark er fill/deep dempet for toppbanneret i mørk modus
 // (samme lysstyrke/metnings-forhold som Brann sin opprinnelige, håndlagde
-// demping: L×0,573, S×0,722, samme fargetone) -- se
-// scratchpad/banner_colors.py. Alle 16 består ≥6:1 kontrast mot hvit tekst
-// dempet, så banneret bruker ALLTID hvit tekst i mørk modus, uansett lag
+// demping: L×0,573, S×0,722, samme fargetone). Alle lag består WCAG AA
+// (4,5:1) mot hvit tekst dempet -- de to gule, Lillestrøm og Start, ligger
+// lavest med 5,2 og 5,3:1. Kjør «python3 scripts/team_colors.py --check» for
+// tallene. Derfor bruker banneret ALLTID hvit tekst i mørk modus, uansett lag
 // (bare lys modus trenger å velge mørk ink for de lyseste fargene, se
 // fillText og TOP_TEXT_SCHEME).
-const TEAM_COLORS = {
-  "Aalesund": {fill:"#e6700f", deep:"#a6510b", fillText:"#15191c", textLight:"#b6590c", textDark:"#e6700f", topDark:"#73421a", topDeepDark:"#533013"},
-  "Bodø/Glimt": {fill:"#f0b400", deep:"#ad8200", fillText:"#15191c", textLight:"#946f00", textDark:"#f0b400", topDark:"#765e13", topDeepDark:"#55440e"},
-  "Brann": {fill:"#c5111d", deep:"#8e0c15", fillText:"#ffffff", textLight:"#c5111d", textDark:"#f04c57", topDark:"#63181d", topDeepDark:"#471115"},
-  "Fredrikstad": {fill:"#d6181f", deep:"#9a1116", fillText:"#ffffff", textLight:"#d6181f", textDark:"#ec565c", topDark:"#6b1d20", topDeepDark:"#4d1517"},
-  "HamKam": {fill:"#23783a", deep:"#19562a", fillText:"#ffffff", textLight:"#23783a", textDark:"#2e9e4d", topDark:"#1b3e24", topDeepDark:"#132d1a"},
-  "KFUM Oslo": {fill:"#cc1a22", deep:"#931318", fillText:"#ffffff", textLight:"#cc1a22", textDark:"#ea595f", topDark:"#671d20", topDeepDark:"#4a1517"},
-  "Kristiansund": {fill:"#2fadda", deep:"#1d7fa2", fillText:"#15191c", textLight:"#1c7a9c", textDark:"#2fadda", topDark:"#265e72", topDeepDark:"#1b4452"},
-  "Lillestrøm": {fill:"#fbd400", deep:"#b59900", fillText:"#15191c", textLight:"#8a7500", textDark:"#fbd400", topDark:"#7c6c14", topDeepDark:"#594e0e"},
-  "Molde": {fill:"#1942e6", deep:"#1230a6", fillText:"#ffffff", textLight:"#1942e6", textDark:"#6c86ef", topDark:"#1f3073", topDeepDark:"#162353"},
-  "Rosenborg": {fill:"#2a2e32", deep:"#1e2124", fillText:"#ffffff", textLight:"#2a2e32", textDark:"#808a94", topDark:"#191a1c", topDeepDark:"#121314"},
-  "Sandefjord": {fill:"#1852aa", deep:"#113b7a", fillText:"#ffffff", textLight:"#1852aa", textDark:"#4c89e6", topDark:"#193156", topDeepDark:"#12233e"},
-  "Sarpsborg 08": {fill:"#35728d", deep:"#265266", fillText:"#ffffff", textLight:"#35728d", textDark:"#4390b2", topDark:"#253f4a", topDeepDark:"#1b2d35"},
-  "Start": {fill:"#ffcf00", deep:"#b89500", fillText:"#15191c", textLight:"#8f7400", textDark:"#ffcf00", topDark:"#7e6a14", topDeepDark:"#5b4c0f"},
-  "Tromsø": {fill:"#d23754", deep:"#9c233a", fillText:"#ffffff", textLight:"#d23754", textDark:"#db6178", topDark:"#6f2936", topDeepDark:"#501e27"},
-  "Vålerenga": {fill:"#0a2c78", deep:"#072056", fillText:"#ffffff", textLight:"#0a2c78", textDark:"#5786f1", topDark:"#0e1d3c", topDeepDark:"#0a152b"},
-  "Viking": {fill:"#161f4b", deep:"#101636", fillText:"#ffffff", textLight:"#161f4b", textDark:"#7586d7", topDark:"#111527", topDeepDark:"#0c0f1c"},
-};
+// || {} så en liga uten farger gir den nøytrale aksenten i stedet for å
+// stoppe siden. Regresjonstesten slår ned på at fargene mangler.
+const TEAM_COLORS = LEAGUE.teamColors || {};
 // Uten valgt lag (item 3): banneret får en nøytral mørk grå i stedet for et
 // tilfeldig/forrige lags farge, i begge temaer -- se
 // scratchpad/banner_colors.py for kontrollen (hvit tekst >10:1 begge steder).

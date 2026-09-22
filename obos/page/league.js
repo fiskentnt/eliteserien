@@ -65,6 +65,40 @@ const LEAGUE = {
     'Kongsvinger': 'KIL', 'Strømsgodset': 'Godset', 'Sandnes Ulf': 'Sandnes',
     'Strømmen': 'Strømmen', 'Haugesund': 'FKH',
   },
+  // Klubbfarger, én per lag i DENNE ligaen. Draktfargen (trøyens hovedfarge)
+  // fra draktboksen på Wikipedia, krysssjekket mot NFFs lagsider. Tre valg
+  // som ikke kommer rett fra kilden, alle etter samme regel som Eliteserien:
+  //   Haugesund, Odd og Sogndal spiller i HVITT. Hvit gir 1:1 mot hvit tekst
+  //   og mot det lyse panelet, så de får andrefargen på drakten: Haugesund
+  //   blå (shorts), Odd og Sogndal nesten-sort, som Rosenborg.
+  //   Bryne, Kongsvinger og Lyn har alle ren rød (#ff0000) hos kilden. Ren rød
+  //   når ikke 4,5:1 mot noen tekstfarge, så alle tre er dempet like mye, til
+  //   #eb0000. De er fortsatt like, og det er greit: bare ett lag vises om
+  //   gangen (alle --team-*-variablene følger laget du følger), som med
+  //   Lillestrøm og Start i Eliteserien.
+  //   Strømmen sin grå er løftet fra #808080 til #828282 av samme grunn.
+  // Egersund fikk en drakt-gul i samme sjikt som Eliteserien-gulene i stedet
+  // for malens neongule #ffff33, og Åsane klubbens egen #f5821f i stedet for
+  // malens pastell. Variantene er laget med scripts/team_colors.py --json,
+  // og «--check» kontrollerer kontrasten på nytt.
+  teamColors: {
+    "Bryne": {fill:"#eb0000", deep:"#a90000", fillText:"#ffffff", textLight:"#eb0000", textDark:"#ff2525", topDark:"#741313", topDeepDark:"#530d0d"},
+    "Egersund": {fill:"#f7c800", deep:"#b29000", fillText:"#15191c", textLight:"#8f7400", textDark:"#f7c800", topDark:"#7a6614", topDeepDark:"#584a0e"},
+    "Haugesund": {fill:"#1b56a8", deep:"#133e79", fillText:"#ffffff", textLight:"#1b56a8", textDark:"#4083e0", topDark:"#1b3355", topDeepDark:"#13253d"},
+    "Hødd": {fill:"#0033cc", deep:"#002593", fillText:"#ffffff", textLight:"#0033cc", textDark:"#4e7aff", topDark:"#102565", topDeepDark:"#0c1b49"},
+    "Kongsvinger": {fill:"#eb0000", deep:"#a90000", fillText:"#ffffff", textLight:"#eb0000", textDark:"#ff2525", topDark:"#741313", topDeepDark:"#530d0d"},
+    "Lyn": {fill:"#eb0000", deep:"#a90000", fillText:"#ffffff", textLight:"#eb0000", textDark:"#ff2525", topDark:"#741313", topDeepDark:"#530d0d"},
+    "Moss": {fill:"#ffde00", deep:"#b8a000", fillText:"#15191c", textLight:"#887600", textDark:"#ffde00", topDark:"#7e7014", topDeepDark:"#5b510f"},
+    "Odd": {fill:"#2a2e32", deep:"#1e2124", fillText:"#ffffff", textLight:"#2a2e32", textDark:"#7a858f", topDark:"#191a1c", topDeepDark:"#121314"},
+    "Ranheim": {fill:"#0b3fd4", deep:"#082d99", fillText:"#ffffff", textLight:"#0b3fd4", textDark:"#517cf6", topDark:"#162c69", topDeepDark:"#101f4c"},
+    "Raufoss": {fill:"#ffcc00", deep:"#b89300", fillText:"#15191c", textLight:"#907300", textDark:"#ffcc00", topDark:"#7e6914", topDeepDark:"#5b4b0f"},
+    "Sandnes Ulf": {fill:"#6caddf", deep:"#2b81c4", fillText:"#15191c", textLight:"#297bbb", textDark:"#6caddf", topDark:"#33658b", topDeepDark:"#254864"},
+    "Sogndal": {fill:"#2a2e32", deep:"#1e2124", fillText:"#ffffff", textLight:"#2a2e32", textDark:"#7a858f", topDark:"#191a1c", topDeepDark:"#121314"},
+    "Stabæk": {fill:"#1130d6", deep:"#0c239a", fillText:"#ffffff", textLight:"#1130d6", textDark:"#6279f3", topDark:"#19266b", topDeepDark:"#121c4d"},
+    "Strømmen": {fill:"#828282", deep:"#5e5e5e", fillText:"#15191c", textLight:"#767676", textDark:"#838383", topDark:"#4a4a4a", topDeepDark:"#363636"},
+    "Strømsgodset": {fill:"#000060", deep:"#000045", fillText:"#ffffff", textLight:"#000060", textDark:"#7272ff", topDark:"#08082f", topDeepDark:"#050522"},
+    "Åsane": {fill:"#f5821f", deep:"#be5d08", fillText:"#15191c", textLight:"#bc5b08", textDark:"#f5821f", topDark:"#834b1b", topDeepDark:"#5e3613"},
+  },
   movedRounds: {},
 };
 const ZONE_KEYS = ['gull', 'cl', 'europa', 'kvalik', 'nedrykk'];

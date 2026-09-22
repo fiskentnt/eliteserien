@@ -790,6 +790,51 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- 16. lagfarger ----
+    // Hver liga har sine egne klubbfarger. Ingen lag skal falle til den
+    // nøytrale reservefargen -- da ville OBOS-lagene fått Tabellkalkulators
+    // egen blå i stedet for draktfargen sin.
+    setGroup('Lagfarger');
+    for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
+      const cp = await open(1400, 900, url);
+      const farger = await cp.evaluate(() => {
+        const felt = ['fill', 'deep', 'fillText', 'textLight', 'textDark', 'topDark', 'topDeepDark'];
+        const mangler = TEAMS.filter(t => !TEAM_COLORS[t]);
+        const ufullstendig = TEAMS.filter(t => TEAM_COLORS[t] &&
+          felt.some(f => !/^#[0-9a-f]{6}$/i.test(TEAM_COLORS[t][f] || '')));
+        // To lag KAN ha samme farge: bare ett lag vises om gangen, så de står
+        // aldri side om side (Lillestrøm og Start i Eliteserien, Bryne,
+        // Kongsvinger og Lyn i OBOS). Kravet er at hvert lag HAR en farge.
+        return {
+          lag: TEAMS.length, mangler, ufullstendig,
+          reserve: NEUTRAL_ACCENT.fill,
+          somReserve: TEAMS.filter(t => TEAM_COLORS[t] && TEAM_COLORS[t].fill === NEUTRAL_ACCENT.fill),
+          ekstra: Object.keys(TEAM_COLORS).filter(t => !TEAMS.includes(t)),
+        };
+      });
+      check(`${liga}: alle ${farger.lag} lag har en farge`, farger.mangler.length === 0,
+        `mangler: ${farger.mangler.join(', ')}`);
+      check(`${liga}: alle fargene har alle sju variantene`, farger.ufullstendig.length === 0,
+        farger.ufullstendig.join(', '));
+      check(`${liga}: ingen bruker reservefargen`, farger.somReserve.length === 0,
+        `${farger.somReserve.join(', ')} har ${farger.reserve}`);
+      check(`${liga}: ingen farger for lag som ikke er i ligaen`, farger.ekstra.length === 0,
+        farger.ekstra.join(', '));
+      // Og fargen skal faktisk bli brukt når laget følges, ikke bare finnes.
+      const brukt = await cp.evaluate(() => {
+        const t = TEAMS[0];
+        const s = document.getElementById('teamSelect');
+        s.value = t; s.dispatchEvent(new Event('change'));
+        const v = getComputedStyle(document.documentElement).getPropertyValue('--team-fill').trim();
+        return {t, v, ventet: TEAM_COLORS[t].fill};
+      });
+      check(`${liga}: fargen tas i bruk når laget følges`,
+        brukt.v.toLowerCase() === brukt.ventet.toLowerCase(),
+        `${brukt.t}: siden brukte ${brukt.v}, ventet ${brukt.ventet}`);
+      await cp.close();
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();
