@@ -6,7 +6,7 @@
 tests/run.sh
 ```
 
-Den tar under et minutt, skriver én linje per test og avslutter med kode 1
+Den tar rundt to minutter, skriver én linje per test og avslutter med kode 1
 hvis noe feiler. Trenger Node og Chrome (eller Chromium). `puppeteer-core`
 hentes automatisk til en midlertidig mappe, så repoet slipper `node_modules`.
 Ligger Chrome et uvanlig sted: `CHROME_PATH=/sti/til/chrome tests/run.sh`.
@@ -29,6 +29,8 @@ en bruker ville sett.
 | Datafiler | `keymatch.json`, `lastmatch.json` og `history.json` har riktig form, og banneret og lagboksen viser dem |
 | Tabellen på mobil | alle tallkolonnene synlige ved 390 px, merket som ikon med forklaring ved trykk, lengste lagnavn ikke klippet |
 | Lagbytte | bytte av lag flytter ikke siden, men et trykk på et spørsmål scroller til svaret (mobil og PC) |
+| OBOS-ligaen | riktig liga og kolonner (Opprykk, Topp 6, Nedrykk), sonefarger og stiplede linjer på plass 1–2, 3–6, 14 og 15–16, fargeforklaring og kort, og hvert spørsmål svarer med riktig størrelse uten å arve Eliteserien-sonene |
+| OBOS: grensene | kunstige scenarioer der et lag krysser 3.→2., 7.→6., 15.→14. og 14.→13. plass, og sonefargen følger den nye plasseringen |
 | JS-feil | ingen feil i konsollen gjennom hele kjøringen |
 
 Nye spørsmål i «Spør om tabellen» må legges inn i `QA_EXPECT` i

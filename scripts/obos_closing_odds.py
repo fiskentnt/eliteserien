@@ -26,6 +26,7 @@ import sys
 import time
 import unicodedata
 from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
@@ -36,6 +37,7 @@ DATA = ROOT / "obos" / "data"
 CSV_PATH = DATA / "obos_2012-2026.csv"
 FIXTURES_CACHE = DATA / "oddspapi_fixtures_2026.json"
 OUT_PATH = DATA / "odds_closing.json"
+MARKETS_CACHE = DATA / "oddspapi_markets.json"
 NAME_MAP_PATH = DATA / "name_map.json"
 
 OBOS_TOURNAMENT = 22          # "1st Division", menn -- 19272 er kvinneligaen
@@ -57,6 +59,17 @@ def norm(name):
     return " ".join(s.split())
 
 
+def oslo_of(iso):
+    """UTC-tidspunkt fra OddsPapi til norsk dato og klokkeslett."""
+    if not iso or len(iso) < 16:
+        return None, None
+    try:
+        dt = datetime.fromisoformat(iso.replace("Z", "+00:00")).astimezone(ZoneInfo("Europe/Oslo"))
+    except Exception:
+        return None, None
+    return dt.strftime("%Y-%m-%d"), dt.strftime("%H:%M")
+
+
 def load_name_map():
     if NAME_MAP_PATH.exists():
         return json.loads(NAME_MAP_PATH.read_text(encoding="utf-8"))
@@ -72,6 +85,12 @@ unwrap = oddspapi.unwrap
 
 
 def csv_2026():
+    """Terminlisten for 2026, med resultatene fra resultatkjeden lagt oppå.
+
+    CSV-en er terminlisten og står stille etter at sesongen er i gang, så
+    resultatene hentes fra matches.json når den finnes. Uten dette ville en
+    planlagt kjøring aldri se kampene som er spilt siden CSV-en ble laget.
+    """
     rows = []
     for r in csv.DictReader(CSV_PATH.open(encoding="utf-8-sig")):
         if r["sesong"] != "2026":
@@ -82,7 +101,28 @@ def csv_2026():
             "hg": int(float(r["hjemmemaal"])) if r["hjemmemaal"] else None,
             "ag": int(float(r["bortemaal"])) if r["bortemaal"] else None,
         })
+    pub_path = DATA / "matches.json"
+    if pub_path.exists():
+        pub = {(m["home"], m["away"]): (m["hg"], m["ag"])
+               for m in json.loads(pub_path.read_text(encoding="utf-8"))}
+        extra = 0
+        for r in rows:
+            v = pub.get((r["home"], r["away"]))
+            if v and r["hg"] is None:
+                extra += 1
+            if v:
+                r["hg"], r["ag"] = v
+        print(f"  {len(pub)} resultater fra matches.json ({extra} flere enn CSV-en)")
     return rows
+
+
+def match_id(row):
+    """Nøkkelen en kamp lagres under: sesong, hjemmelag og bortelag.
+
+    Datoen er ikke med. En flyttet kamp er den samme kampen, og skal aldri bli
+    to rader i filen.
+    """
+    return f"2026|{row['home']}|{row['away']}"
 
 
 def fetch_fixtures(key, force=False):
@@ -107,8 +147,9 @@ def fetch_fixtures(key, force=False):
 
 
 def match_fixtures(rows, fixtures, name_map):
-    """Kobler OddsPapi-kamper til terminlisten på lagnavn. Returnerer
-    (koblinger, kamper bare hos OddsPapi, kamper bare i terminlisten)."""
+    """Kobler OddsPapi-kamper til terminlisten på lagnavn. Navnetabellen brukes
+    på BEGGE sider, så både «Stroemsgodset IF» og «Strømsgodset» ender på samme
+    navn. Returnerer (koblinger, bare hos OddsPapi, bare i terminlisten)."""
     def key_of(h, a):
         return (norm(name_map.get(h, h)), norm(name_map.get(a, a)))
 
@@ -133,53 +174,80 @@ def match_fixtures(rows, fixtures, name_map):
     return links, only_odds, only_csv
 
 
-def closing_from(payload):
-    """Plukker sluttoddsen: siste pris per utfall, fra den best rangerte
-    bookmakeren som har odds (pinnacle, så bet365, så unibet). Returnerer
-    (bookmaker, {H,U,B}, tidspunkt) eller (None, None, None)."""
-    raw = payload.get("data", payload) if isinstance(payload, dict) else payload
-    if not isinstance(raw, dict):
-        return None, None, None
+def fetch_markets(key):
+    """Markedslisten: 1 tellende kall, mellomlagret. Trengs for å vite HVILKET
+    marked som er 1X2 -- flere markeder har tre utfall, og et feil valg ga
+    uavgjort til 1,61 i første forsøk."""
+    if MARKETS_CACHE.exists():
+        return json.loads(MARKETS_CACHE.read_text(encoding="utf-8"))
+    d, err = oddspapi.call("/v4/markets", {}, key)
+    if err:
+        print(f"  FEIL ved markedsliste: {err}")
+        return None
+    MARKETS_CACHE.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+    return d
+
+
+def find_1x2(markets):
+    """Finner markedsid-en for vanlig 1X2 (hjemme/uavgjort/borte i full tid),
+    og rekkefølgen på utfallene."""
+    if not markets:
+        return None
+    for m in oddspapi.unwrap(markets):
+        name = " ".join(str(m.get(k, "")) for k in ("marketName", "name", "slug")).lower()
+        if any(w in name for w in ("1x2", "match winner", "full time result", "match result",
+                                   "three way", "3way", "moneyline 3")):
+            if "half" in name or "period" in name or "corner" in name or "booking" in name:
+                continue
+            return m
+    return None
+
+
+def closing_from(payload, market_id=None, kickoff=None):
+    """Plukker sluttoddsen fra svaret. Strukturen er
+    bookmakers -> slug -> markets -> markedsid -> outcomes -> utfallsid ->
+    players -> "0" -> liste av priser med createdAt.
+
+    1X2-markedet kjennes igjen på at det har nøyaktig tre utfall; utfallene
+    kommer i rekkefølgen hjemme, uavgjort, borte sortert på utfallsid (bekreftet
+    mot oddsnivåene: favoritten har lavest pris). Returnerer
+    (bookmaker, {H,U,B}, tidspunkt) for den best rangerte bookmakeren med odds.
+    """
+    root = payload.get("data", payload) if isinstance(payload, dict) else {}
+    books = root.get("bookmakers") or {}
     for bm in BOOKMAKERS:
-        node = raw.get(bm)
-        if not node:
+        node = books.get(bm)
+        if not isinstance(node, dict):
             continue
-        # Struktur: bookmaker -> marked -> utfall -> liste av priser med createdAt.
-        best = {}
-        stamp = None
-        for market, outcomes in (node.items() if isinstance(node, dict) else []):
-            if not isinstance(outcomes, dict):
+        markets = node.get("markets") or {}
+        ids = [str(market_id)] if market_id is not None and str(market_id) in markets else []
+        if not ids:
+            continue   # uten kjent 1X2-marked gjettes det ikke
+        for mid in ids:
+            m = markets.get(mid)
+            outcomes = (m or {}).get("outcomes") or {}
+            if len(outcomes) != 3:
                 continue
-            # 1X2-markedet kan hete ulike ting; ta det som har tre utfall der
-            # navnene ser ut som hjemme/uavgjort/borte.
-            names = {k.lower(): k for k in outcomes}
-            trio = None
-            for h, d, a in (("1", "x", "2"), ("home", "draw", "away")):
-                if h in names and d in names and a in names:
-                    trio = (names[h], names[d], names[a])
-                    break
-            if not trio:
-                continue
-            vals = []
-            for key in trio:
-                entries = outcomes[key]
-                if isinstance(entries, dict):
-                    entries = entries.get("prices") or entries.get("history") or []
-                if not isinstance(entries, list) or not entries:
+            vals, stamp = [], None
+            for oid in sorted(outcomes, key=lambda x: str(x)):
+                players = (outcomes[oid] or {}).get("players") or {}
+                entries = []
+                for plist in players.values():
+                    if isinstance(plist, list):
+                        entries.extend(plist)
+                entries = [e for e in entries if isinstance(e, dict) and e.get("price")]
+                # Sluttodds = siste pris FØR avspark. Uten dette filteret kommer
+                # priser fra mens kampen pågår med, og de kjenner resultatet.
+                if kickoff:
+                    entries = [e for e in entries if (e.get("createdAt") or "") <= kickoff]
+                if not entries:
                     vals = []
                     break
-                last = sorted(entries, key=lambda e: e.get("createdAt") or "")[-1]
-                price = last.get("price")
-                if price in (None, 0):
-                    vals = []
-                    break
-                vals.append(float(price))
+                last = max(entries, key=lambda e: e.get("createdAt") or "")
+                vals.append(float(last["price"]))
                 stamp = max(stamp or "", last.get("createdAt") or "")
             if len(vals) == 3:
-                best = {"H": vals[0], "U": vals[1], "B": vals[2]}
-                break
-        if best:
-            return bm, best, stamp
+                return bm, {"H": vals[0], "U": vals[1], "B": vals[2]}, stamp
     return None, None, None
 
 
@@ -220,12 +288,12 @@ def main():
     print(f"  lagnavn hos OddsPapi: {[n for n in op_names if n]}")
 
     # Kampflytting: oddssvaret har tidspunktet, terminlisten kan være utdatert.
+    # OddsPapi oppgir UTC, terminlisten norsk tid, så tiden må regnes om først.
     moved = []
     for r, f in links:
-        st = f.get("startTime") or ""
-        if len(st) < 16:
+        d, t = oslo_of(f.get("startTime"))
+        if not d:
             continue
-        d, t = st[:10], st[11:16]
         if d != r["date"] or t != r["time"]:
             moved.append(f"{r['home']} mot {r['away']}: {r['date']} {r['time']} -> {d} {t}")
     print(f"\nFlyttede kamper i oddssvaret: {len(moved)}")
@@ -235,20 +303,35 @@ def main():
     if args.report:
         return 0
 
+    markets = fetch_markets(key)
+    mkt = find_1x2(markets)
+    mkt_id = (mkt or {}).get("marketId") or (mkt or {}).get("id")
+    print(f"\n1X2-marked: {json.dumps({k:v for k,v in (mkt or {}).items() if k in ('marketId','id','marketName','name','slug')}, ensure_ascii=False) if mkt else 'IKKE FUNNET -- henter ingen odds'}")
+    if mkt_id is None:
+        return 1
     out = {"version": 1, "source": "OddsPapi /v4/historical-odds",
-           "bookmakers": BOOKMAKERS, "matches": {}}
+           "note": "Siste tilgjengelige odds før kampstart. Utfallene er hjemme, uavgjort, borte.",
+           "market": mkt_id, "bookmakers": BOOKMAKERS, "matches": {}}
     if OUT_PATH.exists():
         out = json.loads(OUT_PATH.read_text(encoding="utf-8"))
         out.setdefault("matches", {})
+    # Eldre filer brukte dato i nøkkelen. Skriv dem om, så en flyttet kamp ikke
+    # blir liggende to ganger.
+    old = [k for k in out["matches"] if not k.startswith("2026|") or k.count("|") != 2
+           or k.split("|")[0] != "2026"]
+    for k in old:
+        parts = k.split("|")
+        out["matches"][f"2026|{parts[-2]}|{parts[-1]}"] = out["matches"].pop(k)
+    if old:
+        print(f"  skrev om {len(old)} gamle nøkler til sesong|hjemme|borte")
     have = set(out["matches"])
-    todo = [(r, f) for r, f in links if r["hg"] is not None
-            and f"{r['date']}|{r['home']}|{r['away']}" not in have]
+    todo = [(r, f) for r, f in links if r["hg"] is not None and match_id(r) not in have]
     print(f"\nSluttodds: {len(have)} hentet før, {len(todo)} gjenstår "
           f"(henter høyst {args.max} nå)")
 
     done = fail = 0
     for r, f in todo[:args.max]:
-        mid = f"{r['date']}|{r['home']}|{r['away']}"
+        mid = match_id(r)
         fid = f.get("fixtureId")
         d, err = get("/v4/historical-odds", {"fixtureId": fid, "bookmakers": ",".join(BOOKMAKERS)}, key)
         if err:
@@ -259,7 +342,7 @@ def main():
             else:
                 time.sleep(COOLDOWN)
             continue
-        bm, odds, stamp = closing_from(d)
+        bm, odds, stamp = closing_from(d, market_id=mkt_id, kickoff=f.get("startTime"))
         out["matches"][mid] = {
             "fixtureId": fid, "round": r["round"], "start": (f.get("startTime") or "")[:16],
             "bookmaker": bm, "odds": odds, "priced_at": stamp,
@@ -270,7 +353,7 @@ def main():
             print(f"  {mid}  {bm}  H {odds['H']}  U {odds['U']}  B {odds['B']}")
         else:
             print(f"  {mid}  ingen odds fra {', '.join(BOOKMAKERS)}"
-                  f"{' (svar: ' + json.dumps(d, ensure_ascii=False)[:160] + ')' if done + fail == 0 else ''}")
+                  f"{' (svar: ' + json.dumps(d, ensure_ascii=False)[:1500] + ')' if done + fail == 0 else ''}")
         # Lagre etter hver kamp, så en avbrutt kjøring kan fortsette.
         out["updated"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
         OUT_PATH.write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")

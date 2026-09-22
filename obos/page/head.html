@@ -1,0 +1,57 @@
+<!-- LIGA-HEAD: byttes ut per liga av scripts/build_league.py -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>OBOS-ligaen 2026: tabellkalkulator med sjanse for opprykk og nedrykk</title>
+<meta name="description" content="Tabellkalkulator for OBOS-ligaen: fyll inn resultater og se sannsynlighet for opprykk, opprykksspill og nedrykk for alle lag. Modellen oppdateres etter hver kamp.">
+<link rel="canonical" href="https://tabellkalkulator.no/obos/">
+<meta name="theme-color" content="#13305f">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<!-- Deling: Open Graph (Facebook, Messenger, Slack, iMessage m.fl.) og Twitter/X. -->
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="Tabellkalkulator">
+<meta property="og:locale" content="nb_NO">
+<meta property="og:url" content="https://tabellkalkulator.no/obos/">
+<meta property="og:title" content="OBOS-ligaen 2026: tabellkalkulator med sjanse for opprykk og nedrykk">
+<meta property="og:description" content="Tabellkalkulator for OBOS-ligaen: fyll inn resultater og se sannsynlighet for opprykk, opprykksspill og nedrykk for alle lag. Modellen oppdateres etter hver kamp.">
+<meta property="og:image" content="https://tabellkalkulator.no/obos/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta property="og:image:alt" content="Toppen av OBOS-tabellen i Tabellkalkulator">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="OBOS-ligaen 2026: tabellkalkulator med sjanse for opprykk og nedrykk">
+<meta name="twitter:description" content="Tabellkalkulator for OBOS-ligaen: fyll inn resultater og se sannsynlighet for opprykk, opprykksspill og nedrykk for alle lag. Modellen oppdateres etter hver kamp.">
+<meta name="twitter:image" content="https://tabellkalkulator.no/obos/og.png">
+<meta name="twitter:image:alt" content="Toppen av OBOS-tabellen i Tabellkalkulator">
+<!-- Strukturerte data: WebApplication, som hører til nettstedet Tabellkalkulator. -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "OBOS-ligaen 2026: tabellkalkulator",
+  "url": "https://tabellkalkulator.no/obos/",
+  "description": "Tabellkalkulator for OBOS-ligaen: fyll inn resultater og se sannsynlighet for opprykk, opprykksspill og nedrykk for alle lag. Modellen oppdateres etter hver kamp.",
+  "inLanguage": "nb",
+  "applicationCategory": "SportsApplication",
+  "operatingSystem": "Alle (kjører i nettleseren)",
+  "browserRequirements": "Krever JavaScript",
+  "image": "https://tabellkalkulator.no/obos/og.png",
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "NOK"},
+  "isPartOf": {"@type": "WebSite", "name": "Tabellkalkulator", "url": "https://tabellkalkulator.no/"}
+}
+</script>
+<script>
+// Kjøres synkront i <head>, før noe rekker å tegnes: leser et eventuelt lagret
+// temavalg og setter data-theme med en gang, slik at siden aldri først blinker
+// i systemfargen og så hopper til det lagrede valget et øyeblikk senere. Uten
+// lagret valg settes ingenting her -- CSS-en sin egen @media(prefers-color-
+// scheme) tar seg av systeminnstillingen helt av seg selv (se :root-reglene).
+(function(){
+  try{
+    const saved = localStorage.getItem('theme');
+    if(saved==='dark'||saved==='light') document.documentElement.dataset.theme = saved;
+  }catch(e){}
+})();
+</script>
+<!-- /LIGA-HEAD -->

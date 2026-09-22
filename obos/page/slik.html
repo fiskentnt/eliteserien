@@ -1,0 +1,23 @@
+<!-- LIGA-SLIK -->
+<details class="howitworks">
+  <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7"/></svg></span>Slik fungerer det</summary>
+  <div class="in">
+    <p class="plain-lead">Siden spiller resten av sesongen 10&nbsp;000 ganger og teller hvor ofte hvert lag ender hvor.</p>
+    <p>Hvert lag får en styrke fra målene sine og fra hva spillmarkedet har trodd om kampene deres, der nye kamper teller mest. Står det 52 prosent for topp 6, endte laget blant de seks beste i omtrent 5200 av de 10&nbsp;000 sesongene.</p>
+    <p>Fyller du inn et resultat selv, står det fast i alle 10&nbsp;000, så du ser hva akkurat det gjør. Form er et tall fra 0 til 10 for hvor godt laget spiller nå, der 5 er et gjennomsnittslag.</p>
+
+    <details class="details-tech">
+      <summary>Vis detaljer</summary>
+      <h3>Slik regnes sannsynlighetene</h3>
+      <p id="howP1"></p>
+      <p id="howP2"></p>
+      <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Opprykk, Topp 6, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
+      <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner alt", "...taper alt", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
+      <p>Form-kolonnen reagerer sterkere jo lengre en rekke med strake seire eller tap varer, siden markedet selv reagerer sterkere på rekker enn på spredte enkeltresultater.</p>
+      <p>Denne rekkeeffekten brukes bare i Form-kolonnen og formgrafen. Simuleringene, sannsynlighetene og H/U/B-tallene bruker en tilstand uten den, fordi tilbaketesten ikke viser at rekkeeffekten gjør sluttplassprediksjonen bedre (se tabellen under "Hvordan vet vi at modellen virker?").</p>
+      <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn, verken i tabellen eller i simuleringene. </p>
+      <div class="tblscroll"><table class="mt" id="modelTbl"></table></div>
+    </details>
+  </div>
+</details>
+<!-- /LIGA-SLIK -->

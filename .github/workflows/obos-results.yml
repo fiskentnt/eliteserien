@@ -30,7 +30,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: obos
+          ref: main
 
       - name: Hent og valider resultater
         env:
@@ -44,6 +44,13 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: python3 scripts/obos_build_data.py --from-matches
 
+      - name: Tegn delingsbildet på nytt
+        if: ${{ !inputs.dry_run }}
+        continue-on-error: true  # et feilet bilde skal ikke stoppe resultatene
+        run: |
+          python3 -m pip install --quiet Pillow
+          python3 scripts/make_og.py --obos
+
       - name: Lagre hvis noe endret seg
         if: ${{ always() && !inputs.dry_run }}
         run: |
@@ -51,11 +58,12 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add obos/data/matches.json obos/data/fixtures.json obos/data/model.json \
                   obos/data/status.json obos/data/results_state.json \
-                  obos/data/oddspapi_fixtures_2026.json data/oddspapi_usage.json 2>/dev/null || true
+                  obos/data/oddspapi_fixtures_2026.json obos/og.png \
+                  data/oddspapi_usage.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "Ingen endringer."
           else
             git commit -m "OBOS: resultater oppdatert $(date -u +%Y-%m-%dT%H:%MZ)"
-            git pull --rebase --autostash origin obos || true
-            git push origin HEAD:obos
+            git pull --rebase --autostash origin main || true
+            git push origin HEAD:main
           fi

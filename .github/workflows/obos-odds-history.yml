@@ -1,10 +1,14 @@
 name: "OBOS: hent historiske sluttodds"
 
-# Kjøres manuelt, og kan kjøres flere ganger: skriptet hopper over kamper som
+# Én gang i uken, etter at helgens runde er ferdigspilt og resultatene er inne,
+# og manuelt ved behov. Kan kjøres flere ganger: skriptet hopper over kamper som
 # alt er hentet, og lagrer etter hver kamp, så en avbrutt kjøring fortsetter.
-# /v4/historical-odds er gratis; bare terminlisten koster 1 kall, og den
-# mellomlagres i obos/data/oddspapi_fixtures_2026.json.
+# /v4/historical-odds er gratis, og terminlisten leses fra mellomlageret
+# obos/data/oddspapi_fixtures_2026.json, så en planlagt kjøring koster
+# 0 tellende kall. Bare --refresh-fixtures koster 1.
 on:
+  schedule:
+    - cron: "40 6 * * 1"   # mandag 08.40 norsk sommertid, etter resultatjobben
   workflow_dispatch:
     inputs:
       max:
@@ -29,14 +33,14 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: obos
+          ref: main
 
       - name: Hent sluttodds
         env:
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
         run: |
           python3 scripts/obos_closing_odds.py \
-            --max "${{ inputs.max }}" ${{ inputs.report_only && '--report' || '' }}
+            --max "${{ inputs.max || '250' }}" ${{ inputs.report_only && '--report' || '' }}
 
       - name: Lagre det som ble hentet
         if: always()
@@ -48,6 +52,6 @@ jobs:
             echo "Ingenting nytt."
           else
             git commit -m "OBOS: sluttodds hentet $(date -u +%Y-%m-%dT%H:%MZ)"
-            git pull --rebase --autostash origin obos || true
-            git push origin HEAD:obos
+            git pull --rebase --autostash origin main || true
+            git push origin HEAD:main
           fi
