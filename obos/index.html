@@ -4236,11 +4236,20 @@ function qaRange(team){
   const antall = c => `${QA_NUM[c] || c} ${c===1 ? 'gang' : 'ganger'}`;
   // Sonen laget kjemper om, med tabellens tall -- samme som resten av siden.
   const zone = qaTargetZone(team);
-  // Er sonen nøyaktig den plassen som alt er nevnt (gull = 1. plass), sier
-  // den det samme tallet en gang til.
-  const sone = (zone && !(zone.lo===zone.hi && zone.lo===mode+1))
-    ? `, og laget ${qaUtfallTxt(zone)} i ${qaPctCap(zone.pct)} av simuleringene` : '';
-  const oftest = `Oftest blir det ${mode+1}. plass (${qaPctCap(d[mode])})${sone}.`;
+  // To ulike tall, og de skal ikke blandes: d[mode] er sjansen for DEN
+  // plassen, og d[0] er sjansen for å vinne serien. Sonen (for eksempel
+  // direkte opprykk, 1. og 2. plass) hører ikke hjemme her -- den står i
+  // tabellen og i de andre svarene.
+  // "Oftest blir det ..." sies bare når den vanligste plassen ligger INNE i
+  // spennet: er den lik en av endene, er den alt nevnt.
+  const vanligst = (mode+1!==lo && mode+1!==hi) ? `Oftest blir det ${mode+1}. plass (${qaPctCap(d[mode])})` : '';
+  // Er førsteplass både den vanligste plassen og serieseieren, er det samme
+  // tall: da sies det bare én gang (og "Oftest ..." er alt utelatt over).
+  const vinner = d[0]>=0.01 && !(vanligst && mode===0)
+    ? `laget vinner serien i ${qaPctCap(d[0])} av simuleringene` : '';
+  const oftest = vanligst && vinner ? `${vanligst}, og ${vinner}.`
+    : vanligst ? `${vanligst}.`
+    : vinner ? `${qaStor(vinner)}.` : '';
   // Beste plass i simuleringene nevnes bare når den er sjelden: ellers står den
   // alt i spennet over.
   const sjelden = bestSim < lo && d[bestSim-1] < 0.01;
@@ -4250,7 +4259,7 @@ function qaRange(team){
   const ext = worst>hi
     ? ` Matematisk kan det ende så høyt som ${best}. plass og så lavt som ${worst}. plass.`
     : (best<lo ? ` Matematisk er ${best}. plass fortsatt mulig.` : '');
-  return `${team} ${naa}ender som regel mellom ${lo}. og ${hi}. plass. ${oftest}${bestTxt}${ext}`;
+  return `${team} ${naa}ender som regel mellom ${lo}. og ${hi}. plass.${oftest?' '+oftest:''}${bestTxt}${ext}`;
 }
 // ---- Spørsmål 8: hell/uhell -- ingen simulering. Sammenligner FAKTISKE
 // poeng i FAKTISK spilte kamper (MATCHES, ikke scenario-resultater -- "hell"
