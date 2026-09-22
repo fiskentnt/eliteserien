@@ -850,21 +850,15 @@
           <th class="hide-diff">Diff</th><th>P</th>
           <th class="sortable hh" id="formHeader" title="Form: forventede poeng per kamp mot et gjennomsnittslag, minus ligasnittet. 5 er snittet. Klikk for å sortere.">Form</th>
           <th class="hide-s" title="Siste fem seriekamper, eldst til venstre">Siste 5</th>
-          <th class="sortable hide-m hh" id="gullHeader" data-sort="gull" title="Sannsynlighet for å vinne serien. Klikk for å sortere.">Gull</th>
-          <th class="sortable hh" id="europaHeader" data-sort="europa" title="Sannsynlighet for 1. til 4. plass, altså Champions League- eller Conference League-kvalifisering. Europa kan også nås gjennom cupen, og det er ikke med i tallet. Klikk for å sortere.">Topp 4</th>
-          <th class="sortable hh" id="nedHeader" data-sort="ned" title="Sannsynlighet for nedrykk (plass 15 eller 16). Klikk for å sortere."><span class="lg">Nedrykk</span><span class="sm">Nedr.</span></th>
+          <th class="sortable hide-m hh" id="gullHeader" data-sort="gull" ></th>
+          <th class="sortable hh" id="europaHeader" data-sort="europa" ></th>
+          <th class="sortable hh" id="nedHeader" data-sort="ned" ></th>
         </tr></thead>
         <tbody></tbody>
       </table>
         </div>
         <div class="badge-tip" id="badgeTip" hidden></div>
-        <div class="legend">
-      <span class="cl"><i></i>Champions League-kvalifisering (1 og 2)</span>
-      <span class="eu"><i></i>Conference League-kvalifisering (3 og 4)</span>
-      <span class="q"><i></i>Kvalik (14)</span>
-      <span class="n"><i></i>Nedrykk (15 og 16)</span>
-      <span class="lnote">Europa League-plassen går til cupvinneren, ikke til en tabellplassering. Fordelingen gjelder europacupen 2027/28, som Eliteserien 2026 kvalifiserer til.</span>
-    </div>
+        <div class="legend" id="legend"></div>
       </section>
       <div class="cards" id="summaryCards">
       <div class="card c-gull" data-card="gull">
@@ -1138,22 +1132,22 @@ const LEAGUE = {
   zones: {
     gull: {lo: 1, hi: 1, label: 'gull', chance: 'gullsjansen', reach: 'vinne serien',
            safe: 'sikret gull', verb: 'vinner serien', strid: 'gullstriden',
-           da: 'vinner {team} serien', boxLabel: 'Gull'},
+           da: 'vinner {team} serien', boxLabel: 'Gull', boxRange: [0.01, 1.01]},
     cl: {lo: 1, hi: 2, label: 'Champions League', chance: 'Champions League-sjansen',
          reach: 'nå Champions League-kvalifiseringen', safe: 'sikret Champions League-kvalifisering',
          verb: 'tar Champions League-plass', strid: 'kampen om Champions League',
          da: 'når {team} Champions League', boxLabel: 'Champions League', boxRange: [0.01, 0.99]},
     europa: {lo: 1, hi: 4, label: 'topp 4', chance: 'topp 4-sjansen', reach: 'nå topp 4',
              safe: 'sikret topp 4', verb: 'ender i topp 4', strid: 'kampen om topp 4',
-             da: 'når {team} topp 4', boxLabel: 'Topp 4'},
+             da: 'når {team} topp 4', boxLabel: 'Topp 4', boxAlways: true},
     kvalik: {lo: 14, hi: 14, boundary: 13, label: 'kvalik', chance: 'kvaliksjansen',
              reach: 'sikre plassen direkte', safe: 'sikret plassen direkte',
              verb: 'sikrer plassen direkte (13. plass eller bedre)', strid: 'kvalikstriden',
-             da: 'sikrer {team} plassen direkte', boxLabel: 'Kvalik'},
+             da: 'sikrer {team} plassen direkte', boxLabel: 'Kvalik', boxAlways: true},
     nedrykk: {lo: 15, hi: 16, boundary: 13, label: 'nedrykk', chance: 'nedrykkssjansen',
               reach: 'sikre plassen direkte', safe: 'sikret plassen direkte',
               verb: 'sikrer plassen direkte (13. plass eller bedre)', strid: 'nedrykksstriden',
-              da: 'sikrer {team} plassen direkte', boxLabel: 'Nedrykk'},
+              da: 'sikrer {team} plassen direkte', boxLabel: 'Nedrykk', boxAlways: true},
   },
   // Merkene for matematisk avgjort: hvor mange lag som maks kan ende foran.
   badges: [
@@ -1371,7 +1365,30 @@ function probOf(team,key){
   if(!d) return 0;
   return key==='gull' ? d[0] : key==='europa' ? d[0]+d[1]+d[2]+d[3] : d[14]+d[15];
 }
-const SORT_LABELS = {form:'Form', gull:'Gull', europa:'Topp 4', ned:'<span class="lg">Nedrykk</span><span class="sm">Nedr.</span>'};
+// Kolonnenavnene i tabellen, både som overskrift og når kolonnen er sortert.
+const SORT_LABELS = Object.assign({form:'Form'}, Object.fromEntries(LEAGUE.cols.map(c =>
+  [c.key, c.headSm ? `<span class="lg">${c.head}</span><span class="sm">${c.headSm}</span>` : c.head])));
+// Fyller inn alt i markupen som er ligaspesifikt: kolonneoverskrifter,
+// fargeforklaringen under tabellen og titlene på oppsummeringskortene.
+function applyLeagueToDom(){
+  const hdr = {gull:'gullHeader', europa:'europaHeader', ned:'nedHeader'};
+  LEAGUE.cols.forEach(c=>{
+    const el = document.getElementById(hdr[c.key]);
+    if(!el) return;
+    el.innerHTML = SORT_LABELS[c.key];
+    el.title = c.title;
+  });
+  const lg = document.getElementById('legend');
+  if(lg){
+    lg.innerHTML = LEAGUE.bands.map(b=>`<span class="${{cl:'cl',eu:'eu',playoff:'q',ned:'n'}[b.cls]}"><i></i>${b.legend}</span>`).join('')
+      + (LEAGUE.legendNote ? `<span class="lnote">${LEAGUE.legendNote}</span>` : '');
+  }
+  LEAGUE.cols.forEach(c=>{
+    const t = document.querySelector(`.card[data-card="${c.key==='ned'?'ned':c.key}"] .card-title`);
+    if(t) t.textContent = c.card;
+  });
+  document.querySelectorAll('[data-league-name]').forEach(el=>{ el.textContent = LEAGUE.name; });
+}
 function updateSortHeaders(){
   const hdr = {form:'formHeader', gull:'gullHeader', europa:'europaHeader', ned:'nedHeader'};
   Object.keys(hdr).forEach(k=>{
@@ -2583,8 +2600,10 @@ function fillOdds(){
   const box=document.getElementById('odds'); if(!box || !SELECTED_TEAM) return;
   const d=lastMC[SELECTED_TEAM]; if(!d) return;
   const mx=Math.max(...d);
-  const gull=d[0], cl=d[0]+d[1], europa=d[0]+d[1]+d[2]+d[3], kvalik=d[13], nedrykk=d[14]+d[15];
-  const midtP=d.slice(4,13).reduce((x,y)=>x+y,0);
+
+  // Midtsjiktet: plassene mellom den fremre sonen og trygghetsgrensa.
+  const midLo = LEAGUE.zones.europa.hi, midHi = LEAGUE.zones.kvalik.boundary || 13;
+  const midtP=d.slice(midLo, midHi).reduce((x,y)=>x+y,0);
   // Når verken gull, Europa, kvalik eller nedrykk er reelle muligheter (alle
   // under 1%) sier de fire tallene ingenting — vis heller én forklarende
   // linje enn en rad med fire "<1 %"-verdier.
@@ -2592,19 +2611,27 @@ function fillOdds(){
   // har <lag> X% sjanse for ..." for AKKURAT den sonen (ikke bare den
   // "mest aktuelle" spørsmål 1 ellers velger automatisk) -- se
   // qaJumpToWhy()/qaZoneByKey().
-  const row = (gull<0.01 && europa<0.01 && kvalik<0.01 && nedrykk<0.01)
-    ? `<div class="odds-row flat" title="Sannsynlighet for sluttplassering, ut fra modellen">Ingenting er i spill: ${SELECTED_TEAM} ender mellom 5. og 13. plass i ${Math.round(midtP*100)} av 100 simuleringer.</div>`
+  // Tallene i boksen: én per sone som er i spill. boxRange begrenser når
+  // sonen vises (Champions League bare mellom 1 og 99 prosent).
+  const zoneVal = key => { const z = LEAGUE.zones[key]; if(!z) return null;
+    let v = 0; for(let q=z.lo; q<=z.hi; q++) v += d[q-1]; return v; };
+  // boxAlways: vises uansett verdi (Topp 4, Kvalik, Nedrykk). De andre bare
+  // når de er i spill: Gull over 1 prosent, Champions League mellom 1 og 99.
+  const shown = ZONE_KEYS.filter(k=>{
+    const z = LEAGUE.zones[k]; if(!z || !z.boxLabel) return false;
+    if(z.boxAlways) return true;
+    const v = zoneVal(k), rng = z.boxRange || [0.01, 1.01];
+    return v > rng[0] && v < rng[1];
+  });
+  const row = (shown.every(k=>zoneVal(k)<0.01))
+    ? `<div class="odds-row flat" title="Sannsynlighet for sluttplassering, ut fra modellen">Ingenting er i spill: ${SELECTED_TEAM} ender mellom ${LEAGUE.zones.europa.hi+1}. og ${(LEAGUE.zones.kvalik.boundary||13)}. plass i ${Math.round(midtP*100)} av 100 simuleringer.</div>`
     : `<div class="odds-row" title="Sannsynlighet for sluttplassering, ut fra modellen. Klikk et tall for å se hvorfor.">
-      ${gull>0.01?`<button class="odds-jump" data-zone="gull"><strong>${pctTxt(gull)}</strong>Gull</button>`:''}
-      ${cl>0.01&&cl<0.99?`<button class="odds-jump" data-zone="cl"><strong>${pctTxt(cl)}</strong>Champions League</button>`:''}
-      <button class="odds-jump" data-zone="europa"><strong>${pctTxt(europa)}</strong>Topp 4</button>
-      <button class="odds-jump" data-zone="kvalik"><strong>${pctTxt(kvalik)}</strong>Kvalik</button>
-      <button class="odds-jump n" data-zone="nedrykk"><strong>${pctTxt(nedrykk)}</strong>Nedrykk</button></div>`;
+      ${shown.map(k=>`<button class="odds-jump${k==='nedrykk'?' n':''}" data-zone="${k}"><strong>${pctTxt(zoneVal(k))}</strong>${LEAGUE.zones[k].boxLabel}</button>`).join('')}</div>`;
   // Fordelingsstripen over alle 16 plassene sier lite når Europa, kvalik og
   // nedrykk alle er fjerne — 12 nesten like små stolper mellom to knapt synlige.
   // Vis den bare når noe av det faktisk er i spill (over 5 %), ellers holder
   // posisjon, poeng og de tre tallene over.
-  const showHist = europa>=0.05 || kvalik>=0.05 || nedrykk>=0.05;
+  const showHist = ['europa','kvalik','nedrykk'].some(k=>zoneVal(k)>=0.05);
   // Forrige kamp: kort linje nederst i boksen, med lagets egen resultatside og
   // hva kampen betydde. Klikk åpner hele svaret i "Spør om tabellen".
   const lm = qaLastMatchLine(lastMatchEntry(SELECTED_TEAM));
@@ -5072,6 +5099,7 @@ async function boot(){
   // Modellen kommer ferdig tilpasset fra data/model.json (Python). ix bygges
   // fra MODEL.teams sin egen rekkefølge — ikke nødvendigvis lik TEAMS sin,
   // siden Python og JS kan sortere spesialtegn (æøå) ulikt.
+  applyLeagueToDom();
   MODEL = MODEL_IN;
   MTI = {}; MODEL.teams.forEach((t,i)=>MTI[t]=i);
 
