@@ -351,6 +351,7 @@
   .about p{margin:0 0 8px;max-width:80ch;line-height:1.55}
   /* Seksjonene som hopplenkene går til */
   #tabell,#kamper,#fxPanel,#qaPanel,#omModellen{scroll-margin-top:calc(var(--nav-h) + 12px)}
+  #tabell{position:relative}
   .round{scroll-margin-top:calc(var(--nav-h) + 12px)}
   .round.flash{animation:roundflash 1.4s ease}
   @keyframes roundflash{0%,60%{background:var(--team-soft)}100%{background:transparent}}
@@ -463,12 +464,29 @@
   .diff.up{color:var(--eu-text)}.diff.down{color:var(--accent-text)}
 
   /* Merker: matematisk avgjort (task 3a) */
-  .badge{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font:700 10px/1.7 var(--body);letter-spacing:.02em;vertical-align:middle;white-space:nowrap}
+  .badge{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font:700 10px/1.7 var(--body);letter-spacing:.02em;vertical-align:middle;white-space:nowrap;cursor:pointer}
   .badge:empty{display:none;margin-left:0}
+  .badge .bi{display:none}
+  .badge:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  /* Boblen med forklaringen på merket. Ligger i tabellpanelet, som er
+     position:relative, så den kan legges over uten å flytte noe i tabellen. */
+  .badge-tip{position:absolute;z-index:6;max-width:min(260px,calc(100% - 16px));background:var(--ink);color:var(--panel);
+    padding:7px 10px;border-radius:8px;font:600 12.5px/1.35 var(--body);box-shadow:0 6px 20px rgba(0,0,0,.25)}
+  .badge-tip[hidden]{display:none}
   .badge.champ{background:var(--q);color:#3a2c05}
   .badge.europe{background:var(--eu-soft);color:var(--eu-text)}
   .badge.safe{background:var(--line-soft);color:var(--muted)}
   .badge.relegated{background:var(--accent-soft);color:var(--accent-text)}
+  /* Mobil: bare ikonet, så lagkolonnen ikke spiser tallkolonnene. */
+  @media (max-width:640px){
+    .badge{margin-left:5px;padding:1px 5px;font-size:11px}
+    .badge .bt{display:none}
+    .badge .bi{display:inline}
+    .badge.champ .bi::before{content:"★"}
+    .badge.europe .bi::before{content:"✓"}
+    .badge.safe .bi::before{content:"✓"}
+    .badge.relegated .bi::before{content:"↓"}
+  }
 
   /* Team-navn: klikkbart, åpner formgrafen */
   .teamname{cursor:pointer}
@@ -834,6 +852,7 @@
         <tbody></tbody>
       </table>
         </div>
+        <div class="badge-tip" id="badgeTip" hidden></div>
         <div class="legend">
       <span class="cl"><i></i>Champions League-kvalifisering (1 og 2)</span>
       <span class="eu"><i></i>Conference League-kvalifisering (3 og 4)</span>
@@ -1465,9 +1484,17 @@ document.getElementById('sortNote').addEventListener('click', e=>{ if(e.target.c
   document.getElementById(id).addEventListener('click', e=> cycleSort(e.currentTarget.dataset.sort));
 });
 document.querySelector('#tbl tbody').addEventListener('click', e=>{
+  const bd=e.target.closest('.badge');
+  if(bd){ e.stopPropagation(); showBadgeTip(bd); return; }
   const el=e.target.closest('.teamname');
   if(el) openFormModal(el.dataset.team);
 });
+document.querySelector('#tbl tbody').addEventListener('keydown', e=>{
+  const bd=e.target.closest('.badge');
+  if(bd && (e.key==='Enter'||e.key===' ')){ e.preventDefault(); showBadgeTip(bd); }
+});
+// Et klikk utenfor merket lukker boblen.
+document.addEventListener('click', e=>{ if(!e.target.closest('.badge')) hideBadgeTip(); });
 document.getElementById('formModalClose').addEventListener('click', closeFormModal);
 document.getElementById('formModalBackdrop').addEventListener('click', e=>{
   if(e.target.id==='formModalBackdrop') closeFormModal();
@@ -2969,15 +2996,42 @@ let lastBadges = null, lastBadgeSignature = null, badgeRunId = 0;
 function badgeSignatureOf(rows){
   return rows.map(r=>r.name+':'+r.pts+':'+r.left).sort().join('|');
 }
+// Hva merket betyr, vist når det trykkes på (på mobil er merket bare et ikon).
+const BADGE_NOTE = {
+  champ: 'Seriemester: ingen kan ta dem igjen.',
+  europe: 'Sikret topp 4: kan ikke havne lavere enn 4. plass.',
+  safe: 'Sikret plass: kan verken rykke ned eller havne i kvalik.',
+  relegated: 'Rykket ned: kan ikke berge plassen.',
+};
 function applyBadgesToDom(){
   document.querySelectorAll('#tbl tbody tr').forEach(tr=>{
     const el = tr.querySelector('.badge');
     if(!el) return;
     const b = lastBadges && lastBadges[tr.dataset.team];
     el.className = 'badge'+(b?' '+b.cls:'');
-    el.textContent = b ? b.text : '';
+    // Ikonet vises alene på mobil (.bt skjules), teksten på PC. Begge steder
+    // gir et trykk forklaringen i en liten boble, se badgeTip.
+    el.innerHTML = b ? `<span class="bi" aria-hidden="true"></span><span class="bt">${b.text}</span>` : '';
+    if(b){ el.title = BADGE_NOTE[b.cls] || b.text; el.setAttribute('role','button');
+      el.setAttribute('tabindex','0'); el.setAttribute('aria-label', BADGE_NOTE[b.cls] || b.text); }
+    else { el.removeAttribute('title'); el.removeAttribute('role'); el.removeAttribute('tabindex'); el.removeAttribute('aria-label'); }
   });
 }
+// Boblen med forklaringen. Ligger i tabellpanelet (ikke i .tblwrap, som klipper),
+// og plasseres under merket som ble trykket. Flytter ingenting i tabellen.
+function showBadgeTip(badge){
+  const tip = document.getElementById('badgeTip'), panel = document.getElementById('tabell');
+  if(!tip || !panel) return;
+  const cls = [...badge.classList].find(c=>BADGE_NOTE[c]);
+  if(!cls){ tip.hidden = true; return; }
+  tip.textContent = BADGE_NOTE[cls];
+  tip.hidden = false;
+  const r = badge.getBoundingClientRect(), c = panel.getBoundingClientRect();
+  const w = tip.offsetWidth;
+  tip.style.left = Math.max(8, Math.min(c.width - w - 8, r.left - c.left)) + 'px';
+  tip.style.top = (r.bottom - c.top + 6) + 'px';
+}
+function hideBadgeTip(){ const t = document.getElementById('badgeTip'); if(t) t.hidden = true; }
 function computeBadgesAsync(rows){
   const sig = badgeSignatureOf(rows);
   if(sig===lastBadgeSignature) return; // ingenting som kan ha endret badge-utfallet
@@ -4395,7 +4449,7 @@ function renderQaButtons(){
     // Regn om så snart tabell-simuleringen for den nye tilstanden er ferdig
     // (renderQaButtons kalles igjen fra fillOdds når den kommer).
     if(qaReady()) setTimeout(()=>{
-      if(qaActiveId && qaAnswerKey!==qaStateKey() && qaReady()) runQaQuestion(qaActiveId, qaAnswerTeam===SELECTED_TEAM);
+      if(qaActiveId && qaAnswerKey!==qaStateKey() && qaReady()) runQaQuestion(qaActiveId, qaAnswerTeam===SELECTED_TEAM, true);
     }, 0);
   } else if(now && keep){ now.className = keep.cls; now.innerHTML = keep.html; }
 }
@@ -4452,7 +4506,10 @@ document.getElementById('qaHighlight').addEventListener('click', ()=>{
 // qaWhyZoneOverride, så "Hvorfor har ..."-knappen alltid går tilbake til
 // auto-valget) -- true bare når qaJumpToWhy() selv har satt overstyringen
 // rett før kallet, og IKKE vil at den skal nullstilles med det samme.
-async function runQaQuestion(id, keepZoneOverride){
+// noScroll: settes når svaret regnes om AV SEG SELV (lag eller scenario er
+// endret). Da skal siden bli stående der brukeren er. Bare et trykk på et
+// spørsmål, på banneret eller på et tall i lagboksen scroller til svaret.
+async function runQaQuestion(id, keepZoneOverride, noScroll){
   const q = QA_QUESTIONS.find(x=>x.id===id);
   if(!q) return;
   if(!keepZoneOverride) qaWhyZoneOverride = null;
@@ -4491,8 +4548,9 @@ async function runQaQuestion(id, keepZoneOverride){
   doneEl.className = 'qa-answer';
   doneEl.textContent = text;
   // Svaret skal ikke havne utenfor skjermen: "nearest" scroller bare hvis noe
-  // av det er utenfor, og ellers ikke i det hele tatt.
-  doneEl.scrollIntoView({block:'nearest', behavior:'smooth'});
+  // av det er utenfor, og ellers ikke i det hele tatt. Ved omregning scrolles
+  // det ikke i det hele tatt (noScroll).
+  if(!noScroll) doneEl.scrollIntoView({block:'nearest', behavior:'smooth'});
 }
 document.getElementById('qaButtons').addEventListener('click', e=>{
   const btn = e.target.closest('button'); if(!btn) return;

@@ -18,6 +18,9 @@
  *   7. delingslenker: scenario ut og inn igjen gir samme tabell
  *   8. datafilene workflowen skriver (keymatch/lastmatch) vises i banneret
  *      og i lagboksen
+ *   9. tabellen pa mobil: alle tallkolonnene synlige ved 390 px, ogsa med
+ *      merke og det lengste lagnavnet, og merket forklares ved trykk
+ *  10. bytte av lag scroller ikke siden; bare et trykk pa et sporsmal gjor det
  */
 const http = require('http');
 const fs = require('fs');
@@ -320,6 +323,78 @@ async function main() {
     });
     check('lagboksen viser forrige kamp', !!lm && /^Forrige kamp: /.test(lm || ''), String(lm));
     await fresh.close();
+
+    // ---- 9. tabellen på mobil ----
+    setGroup('Tabellen på mobil');
+    const mob = await open(390, 800);
+    const m9 = await mob.evaluate(() => {
+      const wrap = document.querySelector('.tblwrap');
+      const th = [...document.querySelectorAll('#tbl thead th')].filter(t => getComputedStyle(t).display !== 'none');
+      const withBadge = [...document.querySelectorAll('#tbl tbody tr')].filter(tr => tr.querySelector('.badge').className !== 'badge');
+      const longest = [...document.querySelectorAll('.teamname')].sort((a, b) => b.textContent.length - a.textContent.length)[0];
+      const nedCells = [...document.querySelectorAll('#tbl tbody td.ned')];
+      const wr = wrap.getBoundingClientRect();
+      return {
+        overflow: wrap.scrollWidth - wrap.clientWidth,
+        sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+        cols: th.map(t => t.innerText.trim()),
+        badges: withBadge.length,
+        badgeTextHidden: withBadge.length ? getComputedStyle(withBadge[0].querySelector('.bt')).display === 'none' : null,
+        badgeIconShown: withBadge.length ? getComputedStyle(withBadge[0].querySelector('.bi')).display !== 'none' : null,
+        longestName: longest.textContent,
+        longestClipped: longest.scrollWidth > longest.clientWidth + 1,
+        // siste tallkolonne må ligge helt innenfor tabellens synlige bredde
+        nedInside: nedCells.every(c => c.getBoundingClientRect().right <= wr.right + 0.5),
+      };
+    });
+    check('ingen sidelengs scroll i tabellen ved 390 px', m9.overflow === 0 && m9.sideways === 0,
+      `tabell ${m9.overflow} px, side ${m9.sideways} px`);
+    check('alle tallkolonnene er synlige', m9.cols.join(',').includes('Nedr.') && m9.nedInside,
+      `${m9.cols.join(' | ')} | siste kolonne innenfor: ${m9.nedInside}`);
+    check('merket vises som ikon, ikke tekst', m9.badges > 0 && m9.badgeTextHidden === true && m9.badgeIconShown === true,
+      `${m9.badges} merker, tekst skjult: ${m9.badgeTextHidden}, ikon: ${m9.badgeIconShown}`);
+    check('det lengste lagnavnet klippes ikke', !m9.longestClipped, m9.longestName);
+    await mob.evaluate(() => {
+      const tr = [...document.querySelectorAll('#tbl tbody tr')].find(x => x.querySelector('.badge').className !== 'badge');
+      tr.querySelector('.badge').click();
+    });
+    await sleep(300);
+    const tip = await mob.evaluate(() => {
+      const t = document.getElementById('badgeTip');
+      return {vist: t && !t.hidden, txt: t ? t.textContent : null};
+    });
+    check('trykk på merket forklarer det', tip.vist && /kan (ikke|verken)/.test(tip.txt || ''), JSON.stringify(tip));
+
+    // ---- 10. lagbytte skal ikke scrolle ----
+    setGroup('Lagbytte scroller ikke siden');
+    for (const [w, h, label] of [[390, 800, 'mobil'], [1400, 900, 'PC']]) {
+      const q = await open(w, h);
+      await q.select('#teamSelect', 'Brann');
+      await sleep(500);
+      await q.evaluate(() => { qaSetOpen(true); runQaQuestion('range'); });
+      await q.waitForFunction(`(()=>{const a=document.getElementById('qaAnswer');return a&&!a.classList.contains('loading')})()`, {timeout: 60000});
+      await sleep(700);
+      const afterClick = await q.evaluate(() => Math.round(window.scrollY));
+      check(`${label}: trykk på et spørsmål scroller til svaret`, afterClick > 50, `scrollY ${afterClick}`);
+      await q.evaluate(() => window.scrollBy(0, -300));
+      await sleep(500);
+      const before = await q.evaluate(() => Math.round(window.scrollY));
+      await q.evaluate(() => { window.__mx = 0; window.__mn = 1e9;
+        window.__iv = setInterval(() => { const y = Math.round(window.scrollY);
+          window.__mx = Math.max(window.__mx, y); window.__mn = Math.min(window.__mn, y); }, 20); });
+      await q.select('#teamSelect', 'Tromsø');
+      await q.waitForFunction(`(()=>{const a=document.getElementById('qaAnswer');return a&&!a.classList.contains('loading')&&qaAnswerKey===qaStateKey()})()`, {timeout: 60000});
+      await sleep(900);
+      const mv = await q.evaluate(() => { clearInterval(window.__iv); return {mx: window.__mx, mn: window.__mn}; });
+      check(`${label}: lagbytte flytter ikke siden`,
+        Math.abs(mv.mx - before) <= 5 && Math.abs(mv.mn - before) <= 5,
+        `sto på ${before}, spenn ${mv.mn}–${mv.mx}`);
+      const txt = await q.evaluate(() => document.getElementById('qaAnswer').textContent);
+      check(`${label}: svaret er regnet om for det nye laget`, txt.includes('Tromsø'), txt.slice(0, 90));
+      await q.close();
+    }
+    await mob.close();
+    await page.bringToFront();
 
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));

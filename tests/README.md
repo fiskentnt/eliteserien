@@ -6,7 +6,7 @@
 tests/run.sh
 ```
 
-Den tar rundt et halvt minutt, skriver én linje per test og avslutter med kode 1
+Den tar under et minutt, skriver én linje per test og avslutter med kode 1
 hvis noe feiler. Trenger Node og Chrome (eller Chromium). `puppeteer-core`
 hentes automatisk til en midlertidig mappe, så repoet slipper `node_modules`.
 Ligger Chrome et uvanlig sted: `CHROME_PATH=/sti/til/chrome tests/run.sh`.
@@ -27,6 +27,8 @@ en bruker ville sett.
 | Sortering | riktig retning per kolonne, merknaden vises, sonestrekene skjules, tredje klikk gir vanlig tabell, simulering nullstiller |
 | Delingslenker | scenario ut og inn igjen gir samme resultater og samme tabell, også for en simulert sesong |
 | Datafiler | `keymatch.json`, `lastmatch.json` og `history.json` har riktig form, og banneret og lagboksen viser dem |
+| Tabellen på mobil | alle tallkolonnene synlige ved 390 px, merket som ikon med forklaring ved trykk, lengste lagnavn ikke klippet |
+| Lagbytte | bytte av lag flytter ikke siden, men et trykk på et spørsmål scroller til svaret (mobil og PC) |
 | JS-feil | ingen feil i konsollen gjennom hele kjøringen |
 
 Nye spørsmål i «Spør om tabellen» må legges inn i `QA_EXPECT` i
