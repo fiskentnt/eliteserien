@@ -94,6 +94,9 @@
     --accent:#c4111d; --accent-deep:#8d0a13; --accent-soft:#fdecee; --accent-text:#c4111d;
     --formbox-red-bg:#c4111d;
     --eu:#1d7a63; --eu-soft:#e2f1ec; --eu-text:#1d7a63;
+    /* Champions League-plassene (1 og 2) har egen farge, som hos FotMob: blått
+       for mesterligakvalifisering, grønt (--eu) for Conference League. */
+    --cl:#1d5fb4; --cl-text:#1d5fb4;
     --q:#cf951a; --q-soft:#fbf1dc; --q-text:#9a6c08; --q-border:#d9b872; --q-note:#8a6a1f;
     --ned:#6c7479;
     --strong-bg:#0f1b2d; --strong-fg:#ffffff; --strong-bg-hover:#000000;
@@ -136,6 +139,7 @@
       --top-toggle-border:rgba(255,255,255,.4); --top-toggle-bg:rgba(255,255,255,.12); --top-toggle-hover:rgba(255,255,255,.24);
       --accent-soft:rgba(255,107,116,.12); --accent-text:#ff6b74; --formbox-red-bg:#d1272f;
       --eu-soft:rgba(79,211,171,.14); --eu-text:#4fd3ab;
+      --cl:#4f8fe0; --cl-text:#7db4ff;
       --q-soft:rgba(224,173,74,.12); --q-text:#e0ad4a; --q-border:#6b5220; --q-note:#caa059;
       --ned:#8b939a;
       --team-text: var(--team-text-dark);
@@ -155,6 +159,7 @@
     --top-toggle-border:rgba(255,255,255,.4); --top-toggle-bg:rgba(255,255,255,.12); --top-toggle-hover:rgba(255,255,255,.24);
     --accent-soft:rgba(255,107,116,.12); --accent-text:#ff6b74; --formbox-red-bg:#d1272f;
     --eu-soft:rgba(79,211,171,.14); --eu-text:#4fd3ab;
+    --cl:#4f8fe0; --cl-text:#7db4ff;
     --q-soft:rgba(224,173,74,.12); --q-text:#e0ad4a; --q-border:#6b5220; --q-note:#caa059;
     --ned:#8b939a;
     --team-text: var(--team-text-dark);
@@ -435,9 +440,11 @@
   td.team,th.team{text-align:left}
   td.pos{width:40px;text-align:center;padding-left:12px;font:700 17px/1 var(--cond);color:var(--muted);position:relative}
   td.pos::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px}
+  tr.cl td.pos::before{background:var(--cl)}
   tr.eu td.pos::before{background:var(--eu)}
   tr.playoff td.pos::before{background:var(--q)}
   tr.ned td.pos::before{background:repeating-linear-gradient(135deg,var(--ned) 0 3px,transparent 3px 6px)}
+  tr.cl td.pos{color:var(--cl-text)}
   tr.eu td.pos{color:var(--eu-text)}
   tr.playoff td.pos{color:var(--q-text)}
   tr.ned td{background:repeating-linear-gradient(135deg,var(--ned-row-a) 0 6px,var(--ned-row-b) 6px 12px)}
@@ -480,7 +487,9 @@
   .legend{padding:12px 16px;color:var(--muted);font-size:13px;display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line)}
   .legend span{display:inline-flex;align-items:center;gap:6px}
   .legend i{display:inline-block;width:12px;height:12px;border-radius:2px}
+  .legend .cl i{background:var(--cl)}
   .legend .eu i{background:var(--eu)}
+  .legend .lnote{flex-basis:100%;line-height:1.45}
   .legend .q i{background:var(--q)}
   .legend .n i{background:repeating-linear-gradient(135deg,var(--ned) 0 2px,transparent 2px 4px);border:1px solid var(--ned)}
   .note{padding:10px 16px 14px;color:var(--muted);font-size:13px}
@@ -807,16 +816,18 @@
           <th class="sortable hh" id="formHeader" title="Form: forventede poeng per kamp mot et gjennomsnittslag, minus ligasnittet. 5 er snittet. Klikk for å sortere.">Form</th>
           <th class="hide-s" title="Siste fem seriekamper, eldst til venstre">Siste 5</th>
           <th class="sortable hide-m hh" id="gullHeader" data-sort="gull" title="Sannsynlighet for å vinne serien. Klikk for å sortere.">Gull</th>
-          <th class="sortable hh" id="europaHeader" data-sort="europa" title="Sannsynlighet for europaplass (topp 4). Klikk for å sortere.">Europa</th>
+          <th class="sortable hh" id="europaHeader" data-sort="europa" title="Sannsynlighet for europaplass: topp 4, altså Champions League- eller Conference League-kvalifisering. Klikk for å sortere.">Europa</th>
           <th class="sortable hh" id="nedHeader" data-sort="ned" title="Sannsynlighet for nedrykk (plass 15 eller 16). Klikk for å sortere."><span class="lg">Nedrykk</span><span class="sm">Nedr.</span></th>
         </tr></thead>
         <tbody></tbody>
       </table>
         </div>
         <div class="legend">
-      <span class="eu"><i></i>Europa (1 til 4)</span>
+      <span class="cl"><i></i>Champions League-kvalifisering (1 og 2)</span>
+      <span class="eu"><i></i>Conference League-kvalifisering (3 og 4)</span>
       <span class="q"><i></i>Kvalik (14)</span>
       <span class="n"><i></i>Nedrykk (15 og 16)</span>
+      <span class="lnote">Europa League-plassen går til cupvinneren, ikke til en tabellplassering. Fordelingen gjelder europacupen 2027/28, som Eliteserien 2026 kvalifiserer til.</span>
     </div>
       </section>
       <div class="cards" id="summaryCards">
@@ -1087,7 +1098,14 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=
 
 // ---- Statiske hjelpetabeller (ikke avledet fra kampdata) ----
 const ODDS_W = 0.7; // oddsens vekt i kommende kamper. Resten er modellen.
-const EURO_TITLES = {1:'Champions League: playoff', 2:'Champions League: andre kvalifiseringsrunde', 3:'Europa League', 4:'Conference League'};
+// Hvilken turnering hver plass gir. Eliteserien 2026 kvalifiserer til
+// europacupen 2027/28, og med Norge rundt 13.-14. plass på UEFA-rankingen er
+// fordelingen to mesterligaplasser, én europaligaplass og to
+// conferenceligaplasser (TV 2, september 2026). Europaligaplassen går til
+// cupvinneren, så 3. OG 4. plass gir Conference League -- ikke Europa League,
+// som det sto her før. Runden for 4. plass er ikke fastsatt i kildene, så den
+// står uten rundenavn.
+const EURO_TITLES = {1:'Champions League: playoff-runden', 2:'Champions League: andre kvalifiseringsrunde', 3:'Conference League: andre kvalifiseringsrunde', 4:'Conference League: kvalifisering'};
 
 const NO_MONTH = ['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember'];
 const NO_WEEKDAY = ['søndag','mandag','tirsdag','onsdag','torsdag','fredag','lørdag'];
@@ -4550,7 +4568,7 @@ function render(){
       // Tabell for en annen runde: bare stillingen og siste fem for den runden.
       // Modellkolonnene (Form, Gull, Europa, Ned) og merkene gjelder bare nå-situasjonen.
       tr.dataset.team=r.name;
-      tr.className=[pos<=4?'eu':'',pos===14?'playoff':'',pos>=15?'ned':'',r.name===SELECTED_TEAM?'followed':'',(pos===4||pos===13)?'cut':''].join(' ').trim();
+      tr.className=[pos<=2?'cl':pos<=4?'eu':'',pos===14?'playoff':'',pos>=15?'ned':'',r.name===SELECTED_TEAM?'followed':'',(pos===4||pos===13)?'cut':''].join(' ').trim();
       tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}">${r.name}</span><span class="badge"></span></td><td class="hide-s">${r.p}</td>
         <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
         <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts">${r.pts}</td>
@@ -4559,7 +4577,7 @@ function render(){
       return;
     }
     tr.dataset.team=r.name;
-    tr.className=[pos<=4?'eu':'',pos===14?'playoff':'',pos>=15?'ned':'',r.name===SELECTED_TEAM?'followed':'',(pos===4||pos===13)?'cut':''].join(' ').trim();
+    tr.className=[pos<=2?'cl':pos<=4?'eu':'',pos===14?'playoff':'',pos>=15?'ned':'',r.name===SELECTED_TEAM?'followed':'',(pos===4||pos===13)?'cut':''].join(' ').trim();
     const mv=basePos[r.name]-pos;
     const diff = mv===0?'':`<span class="diff ${mv>0?'up':'down'}">${mv>0?'▲':'▼'}${Math.abs(mv)}</span>`;
     const posTitle = EURO_TITLES[pos]||'';
