@@ -8,6 +8,8 @@
  *                                   banner-setningen. Siden viser den med en
  *                                   gang ved innlasting i stedet for å regne
  *                                   den ut i nettleseren.
+ *   eliteserien/data/lastmatch.json hva forrige kamp betydde, for alle 16 lag
+ *                                   -- linja nederst i lagboksen.
  *
  * Tallene hentes fra selve siden (headless Chrome), ikke fra en egen
  * gjenskapning av modellen: da er de nøyaktig de samme som tabellen viser,
@@ -22,7 +24,7 @@
  * kampene (dato, lag og resultat) er et annet enn i forrige punkt, så filen
  * vokser bare når noe faktisk har skjedd. keymatch.json skrives når innholdet
  * er endret -- den avhenger også av oddsen, som oppdateres oftere enn
- * resultatene.
+ * resultatene. lastmatch.json skrives på samme vilkår.
  */
 const http = require('http');
 const fs = require('fs');
@@ -32,6 +34,7 @@ const crypto = require('crypto');
 const ROOT = path.join(__dirname, '..');
 const HISTORY = path.join(ROOT, 'eliteserien', 'data', 'history.json');
 const KEYMATCH = path.join(ROOT, 'eliteserien', 'data', 'keymatch.json');
+const LASTMATCH = path.join(ROOT, 'eliteserien', 'data', 'lastmatch.json');
 const MIME = {'.html':'text/html; charset=utf-8','.js':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.ttf':'font/ttf'};
 
 function serve() {
@@ -106,6 +109,33 @@ function chromePath() {
       }
     } else {
       console.log('Ingen viktigste kamp å lagre (ingen runde igjen, eller ingen kamp flytter nok).');
+    }
+    // Hva forrige kamp betydde, for alle 16 lag. Samme regnestykke som
+    // spørsmålet i "Spør om tabellen" (qaLastMatchData), og siden bygger selve
+    // linja av disse feltene (qaLastMatchLine), så ordlyden finnes ett sted.
+    const lastPer = await page.evaluate(async () => {
+      const out = {};
+      for (const t of TEAMS) {
+        const d = await qaLastMatchData(t);
+        if (!d || d.noMatch) continue;
+        out[t] = {
+          date: d.m.date, home: d.m.home, away: d.m.away, hg: d.m.hg, ag: d.m.ag,
+          opp: d.opp, gf: d.gf, ga: d.ga, actual: d.actual,
+          zone: d.zone.key, chance: QA_CHANCE[d.zone.key],
+          pp: d.pp, good: d.good
+        };
+      }
+      return out;
+    });
+    if (Object.keys(lastPer).length) {
+      const next = {version: 1, note: 'Hva forrige kamp betydde per lag, regnet ut av scripts/snapshot_probs.js. Siden bygger linja i lagboksen av feltene her.', teams: lastPer};
+      const cmp = o => JSON.stringify(Object.fromEntries(Object.entries(o || {}).sort()));
+      const old = fs.existsSync(LASTMATCH) ? JSON.parse(fs.readFileSync(LASTMATCH, 'utf8')) : null;
+      if (old && cmp(old.teams) === cmp(next.teams)) console.log('Forrige kamp uendret for alle lag.');
+      else {
+        fs.writeFileSync(LASTMATCH, JSON.stringify({...next, updated: new Date().toISOString().replace(/\.\d+Z$/, 'Z')}, null, 1) + '\n');
+        console.log(`Skrev lastmatch.json for ${Object.keys(lastPer).length} lag.`);
+      }
     }
     const fingerprint = crypto.createHash('sha1').update(snap.games.join('\n')).digest('hex').slice(0, 12);
     let hist = {version: 1, note: 'Sannsynligheter (0 til 1) etter hver oppdatering med nye resultater. Se scripts/snapshot_probs.js.', snapshots: []};

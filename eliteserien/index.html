@@ -494,6 +494,14 @@
      "Hvorfor har <lag> X% sjanse for ..." i spør-om-tabellen-seksjonen --
      knapper, ikke span, men tilbakestilt til å se ut som den vanlige teksten
      de erstattet (ellers helt vanlig knappe-fokus/tastatur-tilgjengelighet). */
+  /* Forrige kamp, nederst i lagboksen. Fargen på tallet sier om kampen var BRA
+     eller DÅRLIG for laget, ikke om tallet er pluss eller minus: for et bunnlag
+     er en lavere nedrykkssjanse bra, og da er minus grønt. */
+  .status .lastmatch{display:block;width:100%;margin:6px 0 0;padding:6px 0 0;border:none;border-top:1px solid var(--line);background:none;text-align:left;font:600 12.5px/1.35 var(--body);color:var(--muted);cursor:pointer}
+  .status .lastmatch b{font:800 14px/1 var(--cond);margin-left:1px}
+  .status .lastmatch b.good{color:var(--eu-text)}
+  .status .lastmatch b.bad{color:var(--accent-text)}
+  .status .lastmatch:hover,.status .lastmatch:focus-visible{text-decoration:underline}
   .odds-jump{font:inherit;color:inherit;background:none;border:none;padding:0;margin:0;text-align:left;cursor:pointer}
   .odds-jump:hover strong{text-decoration:underline}
   .hist{display:grid;grid-template-columns:repeat(16,1fr);gap:1px;align-items:end;height:20px;margin-top:6px}
@@ -2418,10 +2426,14 @@ function fillOdds(){
   // Vis den bare når noe av det faktisk er i spill (over 5 %), ellers holder
   // posisjon, poeng og de tre tallene over.
   const showHist = europa>=0.05 || kvalik>=0.05 || nedrykk>=0.05;
+  // Forrige kamp: kort linje nederst i boksen, med lagets egen resultatside og
+  // hva kampen betydde. Klikk åpner hele svaret i "Spør om tabellen".
+  const lm = qaLastMatchLine(lastMatchEntry(SELECTED_TEAM));
   box.innerHTML = row + (showHist
     ? `<div class="hist" aria-hidden="true" title="Sannsynlighet for sluttplassering, ut fra modellen">${d.map((v,i)=>`<i class="${i<4?'eu':i===13?'q':i>=14?'n':''}" style="height:${(v/mx*100).toFixed(1)}%" title="${i+1}. plass: ${pctTxt(v)}"></i>`).join('')}</div>
     <div class="hist-l">${d.map((v,i)=>`<span>${i+1}</span>`).join('')}</div>`
-    : '');
+    : '')
+    + (lm ? `<button class="lastmatch" title="Se hva kampen betydde">${lm.html}</button>` : '');
 }
 // Antall simulerte sesonger for Europa/Ned/lagboksen. 10 000 gir Monte Carlo-støy på
 // rundt 1 prosentpoeng (95 %-margin ved 50 %); målt ca. 0,4 s på en PC i Workeren
@@ -2592,7 +2604,12 @@ document.getElementById('teamSelect').addEventListener('change', e=>{
 // På mobil er fordelingsstripen skjult til man trykker på lagboksen (se
 // .status.expanded i CSS) — klassen ligger på #verdict selv, som render()
 // aldri bytter ut (bare innerHTML), så den overlever nye render()-kall.
-document.getElementById('verdict').addEventListener('click', ()=> document.getElementById('verdict').classList.toggle('expanded'));
+document.getElementById('verdict').addEventListener('click', e=>{
+  // "Forrige kamp" er en egen knapp som hopper til svaret -- den skal ikke
+  // samtidig slå fordelingsstripen av og på under fingeren.
+  if(e.target.closest('.lastmatch')) return;
+  document.getElementById('verdict').classList.toggle('expanded');
+});
 // Én felles, delegert handler for både tekstfelt og H/U/B/×-knappene i hele
 // kamplisten (også runder som kommer fra "Vis alle runder"), siden den er
 // bundet på #rounds og fungerer uansett hvor i undertreet elementet ligger.
@@ -3018,6 +3035,8 @@ let qaWhyZoneOverride = null;
 // Banneret viser den VIRKELIGE situasjonen, uavhengig av hva brukeren har
 // fylt inn -- derfor brukes filen som den er, aldri et scenario-tall.
 let KEYMATCH = null;
+// Forrige kamp per lag, samme kilde og begrunnelse (data/lastmatch.json).
+let LASTMATCH = null;
 // Er den lagret kampen alt spilt? Da er filen fra før forrige runde (workflowen
 // har ikke rukket å oppdatere den ennå), og banneret skal ikke stå og peke på
 // en kamp som er ferdig.
@@ -3303,11 +3322,15 @@ function applyResultDelta(P0,G0,F0,h,a,hg,ag,sign){
   if(hg>ag) P0[h]+=sign*3; else if(hg<ag) P0[a]+=sign*3; else { P0[h]+=sign; P0[a]+=sign; }
 }
 const QA_OUT_LABEL = {win:'seier', draw:'uavgjort', loss:'tap'};
-async function qaLastMatch(team){
+// Tallene bak svaret. Delt ut av qaLastMatch() fordi BÅDE svaret og den korte
+// linja i lagboksen (qaLastMatchLine) skal bygges av samme ordlyd -- og fordi
+// scripts/snapshot_probs.js kaller denne for alle 16 lag og lagrer resultatet
+// i data/lastmatch.json, slik at linja vises med en gang.
+async function qaLastMatchData(team){
   const zone = qaTargetZone(team);
-  if(!zone) return 'Ingen data å regne på ennå.';
+  if(!zone) return null;
   const m = lastPlayedFor(team);
-  if(!m) return `${team} har ingen spilte kamper ennå i kampdataene.`;
+  if(!m) return {noMatch:true};
   const isHome = m.home===team, opp = isHome ? m.away : m.home;
   const gf = isHome ? m.hg : m.ag, ga = isHome ? m.ag : m.hg;
   const actual = gf>ga ? 'win' : gf<ga ? 'loss' : 'draw';
@@ -3317,10 +3340,8 @@ async function qaLastMatch(team){
   const h0 = TI[m.home], a0 = TI[m.away];
   const others = ['win','draw','loss'].filter(o=>o!==actual);
   const tasks = [{id:'actual', idx:-1, score:null}];
-  const scores = {};
   others.forEach(o=>{
     const [hg,ag] = likelyScoreGivenOutcome(m.home, m.away, qFor(o));
-    scores[o] = [hg,ag];
     const P=Float64Array.from(P0), G=Float64Array.from(G0), F=Float64Array.from(F0);
     applyResultDelta(P,G,F,h0,a0,m.hg,m.ag,-1); // det faktiske resultatet ut
     applyResultDelta(P,G,F,h0,a0,hg,ag,1);      // det alternative inn
@@ -3332,50 +3353,82 @@ async function qaLastMatch(team){
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
     N:QA_LAST_N, ti:TI[team], zone, seed:hashStr(scenarioKey+'|impact')
   }, tasks);
-
   // Tabellens tall er "det som faktisk skjedde"; alternativene legges oppå som
   // endring fra den samme kjøringen (samme frø), som i spørsmål 3 og 5.
   const tableP = zone.pct;
-  const chance = QA_CHANCE[zone.key];
-  const clamp = v => Math.min(1, Math.max(0, v));
   const alts = others.map(o=>({o, d: res[o].prob - res.actual.prob}));
   // Under to prosentpoeng er innenfor støyen og vises ikke (som i de andre svarene).
   const shown = alts.filter(x=>Math.abs(x.d)>=0.02);
+  // "Bra for laget": høyere sjanse for gull/Europa, lavere for kvalik/nedrykk.
+  const good = d => zone.dir==='front' ? d : -d;
+  // Sammenligningen gjøres mot det beste av de utfallene som faktisk VISES,
+  // så tallet i første setning alltid stemmer med tallene i den andre.
+  const bestAlt = shown.length ? shown.slice().sort((x,y)=>good(y.d)-good(x.d))[0] : null;
+  // Regnet fra de VISTE (avrundede) prosentene, ikke fra råverdiene: ellers
+  // kan det stå "9 prosentpoeng" over "21 % i stedet for 13 %".
+  const r0 = Math.round(tableP*100);
+  const pp = bestAlt ? r0 - Math.round(Math.min(1,Math.max(0,tableP+bestAlt.d))*100) : null;
+  return {team, m, opp, isHome, gf, ga, actual, zone, tableP, alts, shown, bestAlt,
+    // pp: endringen i SELVE sjansen som resultatet ga, med fortegn (negativ =
+    // sjansen ble lavere). Om det er bra eller dårlig avhenger av sonen.
+    pp, good: pp==null ? null : good(pp)>0};
+}
+async function qaLastMatch(team){
+  const data = await qaLastMatchData(team);
+  if(!data) return 'Ingen data å regne på ennå.';
+  if(data.noMatch) return `${team} har ingen spilte kamper ennå i kampdataene.`;
+  const {m, opp, actual, zone, tableP, shown, bestAlt, pp} = data;
+  const chance = QA_CHANCE[zone.key];
+  const clamp = v => Math.min(1, Math.max(0, v));
   const head = actual==='win' ? `Seieren mot ${opp}` : actual==='loss' ? `Tapet mot ${opp}` : `Poengdelingen mot ${opp}`;
   const anslag = ` Lagstyrkene holdes som i dag, så tallet er et anslag.`;
+  const others = ['win','draw','loss'].filter(o=>o!==actual);
   if(!shown.length){
     const navn = others.map(o=>QA_OUT_LABEL[o]);
     return `Resultatet betydde lite for sjansen: verken ${navn[0]} eller ${navn[1]} ville endret ${chance} mer enn to prosentpoeng fra dagens ${pctTxt(tableP)}.`+anslag;
   }
-  // "Bra for laget": høyere sjanse for gull/Europa, lavere for kvalik/nedrykk.
-  const good = d => zone.dir==='front' ? d : -d;
-  // Sammenligningen er mot det BESTE av de to andre utfallene: det er det
-  // resultatet faktisk vant eller kostet.
-  // Sammenligningen gjøres mot det beste av de utfallene som faktisk VISES,
-  // så tallet i første setning alltid stemmer med tallene i den andre.
-  const bestAlt = shown.slice().sort((x,y)=>good(y.d)-good(x.d))[0];
-  // Regnet fra de VISTE (avrundede) prosentene, ikke fra råverdiene: ellers
-  // kan det stå "9 prosentpoeng" over "21 % i stedet for 13 %".
-  const r0 = Math.round(tableP*100), r1 = Math.round(clamp(tableP+bestAlt.d)*100);
-  const pp = Math.abs(r0-r1);
   const front = zone.dir==='front';
+  const n = Math.abs(pp);
   let first;
-  if(pp===0){
+  if(n===0){
     first = `${head} var omtrent like bra som ${QA_OUT_LABEL[bestAlt.o]} for ${chance}.`;
-  } else if(good(-bestAlt.d)>0){ // det faktiske var bedre enn begge alternativene
-    first = front ? `${head} ga ${team} ${pp} prosentpoeng i ${chance}.`
-                  : `${head} senket ${chance} for ${team} med ${pp} prosentpoeng.`;
+  } else if(data.good){ // det faktiske var bedre enn alternativet
+    first = front ? `${head} ga ${team} ${n} prosentpoeng i ${chance}.`
+                  : `${head} senket ${chance} for ${team} med ${n} prosentpoeng.`;
   } else {
-    first = front ? `${head} kostet ${team} ${pp} prosentpoeng i ${chance}.`
-                  : `${head} økte ${chance} for ${team} med ${pp} prosentpoeng.`;
+    first = front ? `${head} kostet ${team} ${n} prosentpoeng i ${chance}.`
+                  : `${head} økte ${chance} for ${team} med ${n} prosentpoeng.`;
   }
   // Rekkefølge: seier, uavgjort, tap (det faktiske utfallet er alt utelatt).
-  const order = ['win','draw','loss'].filter(o=>shown.some(x=>x.o===o));
+  const order = others.filter(o=>shown.some(x=>x.o===o));
   const val = o => pctTxt(clamp(tableP + shown.find(x=>x.o===o).d));
   const second = order.length>1
     ? `Med ${QA_OUT_LABEL[order[0]]} hadde den vært ${val(order[0])} i stedet for ${pctTxt(tableP)}, med ${QA_OUT_LABEL[order[1]]} ${val(order[1])}.`
     : `Med ${QA_OUT_LABEL[order[0]]} hadde den vært ${val(order[0])} i stedet for ${pctTxt(tableP)}.`;
   return `${first} ${second}${anslag}`;
+}
+// Den korte linja i lagboksen, bygget av det workflowen har lagret
+// (data/lastmatch.json). Betydde kampen under to prosentpoeng, står bare
+// resultatet. Fortegnet er endringen i selve sjansen, og fargen sier om det
+// var bra eller dårlig for laget -- ikke om tallet er pluss eller minus.
+function qaLastMatchLine(e){
+  if(!e) return null;
+  const res = `${e.gf}-${e.ga} mot ${e.opp}`;
+  if(e.pp==null || e.pp===0) return {html:`Forrige kamp: ${res}`};
+  const sign = (e.pp>0?'+':'−')+Math.abs(e.pp);
+  return {html:`Forrige kamp: ${QA_OUT_LABEL[e.actual]} ${res}, ${e.chance} <b class="${e.good?'good':'bad'}">${sign}</b>`};
+}
+// Lagets forrige kamp til linja: bruker det workflowen har regnet ut for den
+// VIRKELIGE situasjonen. Er den lagret kampen ikke lagets siste faktisk spilte
+// lenger (workflowen har ikke rukket å oppdatere), vises bare resultatet --
+// aldri et prosentpoengtall som hører til en annen kamp.
+function lastMatchEntry(team){
+  const m = lastPlayedFor(team);
+  if(!m) return null;
+  const e = LASTMATCH && LASTMATCH.teams && LASTMATCH.teams[team];
+  if(e && e.date===m.date && e.home===m.home && e.away===m.away && e.hg===m.hg && e.ag===m.ag) return e;
+  const isHome = m.home===team;
+  return {gf:isHome?m.hg:m.ag, ga:isHome?m.ag:m.hg, opp:isHome?m.away:m.home, pp:null};
 }
 
 // ---- Hva er rundens viktigste kamp? Trenger ikke noe valgt lag. For hver
@@ -4311,6 +4364,7 @@ function qaJumpToWhy(zoneKey){
   runQaQuestion('why', true);
 }
 document.getElementById('verdict').addEventListener('click', e=>{
+  if(e.target.closest('.lastmatch')){ qaJumpToSection(); runQaQuestion('lastmatch'); return; }
   const btn = e.target.closest('.odds-jump'); if(!btn) return;
   qaJumpToWhy(btn.dataset.zone);
 });
@@ -4627,9 +4681,9 @@ async function updateOddsQuotaNote(){
 // Python-scriptene i scripts/ og lest inn her — ingen tilpasning skjer i
 // nettleseren, kun rask JSON-henting.
 async function boot(){
-  let MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN;
+  let MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN;
   try{
-    [MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN] = await Promise.all([
+    [MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN] = await Promise.all([
       fetch('data/matches.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/matches.json'); return r.json(); }),
       fetch('data/fixtures.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/fixtures.json'); return r.json(); }),
       fetch('data/model.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/model.json'); return r.json(); }),
@@ -4640,6 +4694,7 @@ async function boot(){
       // er den for gammel, se qaKeyBannerStale), faller banneret tilbake til
       // spørsmålet om hell og uhell.
       fetch('data/keymatch.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch('data/lastmatch.json').then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
   }catch(err){
     console.error('Klarte ikke hente kampdata', err);
@@ -4712,6 +4767,7 @@ async function boot(){
   (ODDS_UP_IN.matches||[]).forEach(o=>{ ODDS_UP[o.home+"|"+o.away] = o; });
   ODDS_FETCHED_AT = ODDS_UP_IN.fetched_at ? formatOsloDT(new Date(ODDS_UP_IN.fetched_at)) : 'ukjent tidspunkt';
   KEYMATCH = KEYMATCH_IN && KEYMATCH_IN.banner && KEYMATCH_IN.match ? KEYMATCH_IN : null;
+  LASTMATCH = LASTMATCH_IN && LASTMATCH_IN.teams ? LASTMATCH_IN : null;
 
   // Stempel: dato for siste kamp som er lagt inn, pluss (asynkront, se
   // updateCheckStamp) tidspunktet for siste automatiske sjekk. Tooltip viser
