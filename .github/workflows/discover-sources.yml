@@ -13,6 +13,10 @@ on:
         description: "Kartlegg OddsPapi-kontoen (5 tellende kall)"
         type: boolean
         default: false
+      oddspapi_probe2:
+        description: "Runde to: bookmakere, OBOS-kamper, odds (2 tellende kall)"
+        type: boolean
+        default: false
 
 jobs:
   discover:
@@ -31,3 +35,9 @@ jobs:
         env:
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
         run: python3 scripts/oddspapi_probe.py
+
+      - name: OddsPapi runde to
+        if: inputs.oddspapi_probe2
+        env:
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+        run: python3 scripts/oddspapi_probe2.py
