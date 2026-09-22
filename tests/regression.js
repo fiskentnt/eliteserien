@@ -324,7 +324,7 @@ async function main() {
     // omtrent like mye (se qaKeyBanner).
     check('banneret viser rundens viktigste kamp fra datafilen',
       banner.qid === 'keyround' &&
-      /(Rundens viktigste kamp|kamper skiller seg ut som omtrent like viktige)/.test(banner.txt) &&
+      /påvirker .+ mest denne runden/.test(banner.txt) &&
       / mot /.test(banner.txt), JSON.stringify(banner));
     await fresh.select('#teamSelect', 'Bodø/Glimt');
     await sleep(500);

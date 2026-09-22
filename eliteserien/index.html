@@ -3967,9 +3967,10 @@ async function qaLastMatch(team){
   const first = `${head} ${verb} ${navn} til ${pctTxt(tableP)}.`;
   const tall = n===0
     ? ` Det var omtrent det de tre utfallene tilsa før kampen.`
-    : ` Før kampen tilsa de tre utfallene en forventet ${substantiv} på ${pctTxt(data.expected)} etterpå, `+
-      (front ? `så ${resultat} ga rundt ${n} prosentpoeng ${pp>0?'mer':'mindre'} enn ventet.`
-             : `så ${navn} ble rundt ${n} prosentpoeng ${pp>0?'høyere':'lavere'} enn ventet.`);
+    : ` Før kampen var den forventede ${navn} etter kampen ${pctTxt(data.expected)}, `+
+      `når alle tre mulige utfall ble tatt med. `+
+      (front ? `${qaStor(resultat)} ga dermed rundt ${n} prosentpoeng ${pp>0?'mer':'mindre'} enn ventet.`
+             : `${qaStor(navn)} ble dermed rundt ${n} prosentpoeng ${pp>0?'høyere':'lavere'} enn ventet.`);
   return `${first}${tall}${overrask}${alt}${anslag}`;
 }
 // Den korte linja i lagboksen, bygget av det workflowen har lagret
