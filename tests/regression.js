@@ -982,6 +982,33 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- 19. tokolonnesgrensen på 1100 px ----
+    // iPad Air på tvers (1180) får tabell og sidekolonne ved siden av hverandre,
+    // 1024 beholder én kolonne. Tabellen skal få plass uten å scrolle sidelengs
+    // -- målt på .tblwrap rundt #tbl, ikke på en av tabellene i forklaringene.
+    setGroup('Tokolonnesgrensen');
+    for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
+      for (const [w, h, kol] of [[1024, 768, 1], [1099, 800, 1], [1100, 800, 2], [1180, 820, 2], [1219, 900, 2], [1366, 1024, 2]]) {
+        const gp = await open(w, h, url);
+        await sleep(500);
+        const r = await gp.evaluate(() => {
+          const g = getComputedStyle(document.querySelector('.wrap')).gridTemplateColumns.split(' ').filter(Boolean).length;
+          const tw = document.getElementById('tbl').parentElement;
+          const ikon = [...document.querySelectorAll('#tbl .badge .bt')].some(b => b.offsetParent !== null);
+          return {g, scroll: tw.scrollWidth - tw.clientWidth, tekstmerke: ikon,
+                  side: document.documentElement.scrollWidth - document.documentElement.clientWidth};
+        });
+        check(`${liga} ${w} px: ${kol} kolonne${kol > 1 ? 'r' : ''}`, r.g === kol, `fikk ${r.g}`);
+        check(`${liga} ${w} px: tabellen scroller ikke sidelengs`, r.scroll <= 0 && r.side === 0,
+          `tabell ${r.scroll} px, side ${r.side} px`);
+        if (w >= 1100 && w <= 1219) {
+          check(`${liga} ${w} px: merket vises som ikon`, !r.tekstmerke, 'merketekst synlig');
+        }
+        await gp.close();
+      }
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();
