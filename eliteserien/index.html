@@ -944,6 +944,7 @@
 </div>
 
 <div class="bottomdetails" id="omModellen">
+<!-- LIGA-SLIK -->
 <details class="howitworks">
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7"/></svg></span>Slik fungerer det</summary>
   <div class="in">
@@ -966,6 +967,9 @@
   </div>
 </details>
 
+<!-- /LIGA-SLIK -->
+
+<!-- LIGA-MODELLSJEKK -->
 <details class="howitworks modelcheck">
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 20v-7M12 20V6M18 20v-11"/></svg></span>Hvordan vet vi at modellen virker?</summary>
   <div class="in">
@@ -1018,7 +1022,7 @@
     <p>Brier-score måler hvor nær sannsynlighetene var de faktiske utfallene. Lavere er bedre, og 0 er perfekt. Modellen sammenlignes med tre enklere alternativer:</p>
     <ul class="baselines">
       <li><strong>Naiv basisrate:</strong> samme faste sannsynlighet for alle lag, uansett tabell og form: 1/16 for gull, 4/16 for topp 4, 2/16 for nedrykk.</li>
-      <li><strong>Tabellmodell:</strong> alle lag er like sterke, med samme forventede målnivå hjemme og borte (snittet i sesongen så langt). Bare dagens poeng, målforskjell og hvilke kamper som står igjen skiller lagene. Dette er den strenge sammenligningen: den viser hva kunnskap om lagene tilfører utover å lese tabellen.</li>
+      <li><strong>Tabellmodell:</strong> starter fra dagens tabell og antar at alle lag er like sterke i de gjenstående kampene, med samme forventede målnivå hjemme og borte (snittet i sesongen så langt). Den bruker ikke tabellplasseringen til å anslå lagstyrke. Dette er den strenge sammenligningen: den viser hva kunnskap om lagene tilfører.</li>
       <li><strong>Ren Poisson:</strong> lagstyrke tilpasset på mål alene, uten odds, formoppdatering eller Dixon-Coles.</li>
     </ul>
     <div class="tblscroll"><table class="mt brier">
@@ -1031,7 +1035,7 @@
       </tbody>
     </table></div>
 
-    <p class="note">Det meste av treffsikkerheten kommer av å spille resten av sesongen tusenvis av ganger fra dagens tabell: tabellmodellen gjør nettopp det, med like sterke lag, og kommer nesten hele veien fra basisraten. At modellen i tillegg vet hvor gode lagene er, er verdt mindre enn man skulle tro. Målt parvis mot tabellmodellen er den bedre på nedrykk med 0,0054 ± 0,0018, altså tre standardfeil og klart utenfor støyen. For gull er den bedre med 0,0029 ± 0,0021 (1,4 standardfeil), og for topp 4 er forskjellen 0,0008 ± 0,0028 (0,3 standardfeil), altså ingen målbar forskjell. Ren Poisson er til og med litt dårligere enn tabellmodellen på topp 4 (0,0663 mot 0,0615): det er odds og tabell sammen som gjør jobben, ikke lagstyrke fra mål alene.</p>
+    <p class="note">Det meste av treffsikkerheten kommer av å spille resten av sesongen tusenvis av ganger fra dagens tabell: tabellmodellen gjør nettopp det, med like sterke lag i kampene som står igjen, og kommer nesten hele veien fra basisraten. At modellen i tillegg vet hvor gode lagene er, er verdt mindre enn man skulle tro. Målt parvis mot tabellmodellen er den bedre på nedrykk med 0,0054 ± 0,0018, altså tre standardfeil og klart utenfor støyen. For gull er den bedre med 0,0029 ± 0,0021 (1,4 standardfeil), og for topp 4 er forskjellen 0,0008 ± 0,0028 (0,3 standardfeil), altså ingen målbar forskjell. Ren Poisson er til og med litt dårligere enn tabellmodellen på topp 4 (0,0663 mot 0,0615): det er odds og tabell sammen som gjør jobben, ikke lagstyrke fra mål alene.</p>
 
     <h3>Ablasjonstest</h3>
     <p>Samme test, bygget stegvis: hva tilfører hver enkelt del av modellen faktisk sluttplassprediksjonen? Hvert steg legger til én ting på steget over. Forskjellene er målt parvis, på samme lag og kuttpunkt, og "ingen målbar forskjell" betyr at avviket er mindre enn to standardfeil, altså innenfor testens egen støy.</p>
@@ -1080,6 +1084,7 @@
     </details>
   </div>
 </details>
+<!-- /LIGA-MODELLSJEKK -->
 </div>
 
 

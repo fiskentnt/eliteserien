@@ -23,6 +23,8 @@ REGIONS = [
     ("<!-- LIGA-HEAD", "<!-- /LIGA-HEAD -->", "head.html"),
     ("<!-- LIGA-TITTEL -->", "<!-- /LIGA-TITTEL -->", "tittel.html"),
     ("<!-- LIGA-OM", "<!-- /LIGA-OM -->", "om.html"),
+    ("<!-- LIGA-SLIK -->", "<!-- /LIGA-SLIK -->", "slik.html"),
+    ("<!-- LIGA-MODELLSJEKK -->", "<!-- /LIGA-MODELLSJEKK -->", "modellsjekk.html"),
 ]
 
 
