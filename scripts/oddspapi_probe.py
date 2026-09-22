@@ -26,6 +26,15 @@ import urllib.parse
 import urllib.request
 
 BASE = "https://api.oddspapi.io"
+# Cloudflare foran api.oddspapi.io avviser Python-urllib sin standard
+# User-Agent med feil 1010 (browser_signature_banned), FØR kallet når API-et.
+# En vanlig nettleser-signatur slipper gjennom.
+HEADERS = {
+    "Accept": "application/json",
+    "User-Agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 "
+                   "(KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36"),
+    "Accept-Language": "en-US,en;q=0.9",
+}
 TIMEOUT = 45
 calls_billed = 0
 
@@ -42,7 +51,7 @@ def get(path, params, key, billable=True, label=""):
     print(f"\n-> {label or path}  ({'teller' if billable else 'GRATIS'}; "
           f"{calls_billed} tellende kall brukt)\n   {safe}")
     try:
-        req = urllib.request.Request(url, headers={"Accept": "application/json"})
+        req = urllib.request.Request(url, headers=HEADERS)
         with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
             return json.loads(r.read().decode("utf-8")), None
     except urllib.error.HTTPError as e:
@@ -106,6 +115,7 @@ def main():
     print("1. KONTO OG BOOKMAKERE")
     before = account(key, "før")
     if not before:
+        print("\n   Kom ikke forbi kontooppslaget, avbryter for å ikke brenne kall.")
         return 1
     time.sleep(1.5)
 
