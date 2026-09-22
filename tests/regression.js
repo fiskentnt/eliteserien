@@ -1015,6 +1015,55 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- 20. "Siste runde" sammenfoldet som standard, valget huskes per liga ----
+    setGroup('Forrige runde');
+    {
+      const ctx = await browser.createBrowserContext();   // rent localStorage
+      const nySide = async (url, w, h) => {
+        const p = await ctx.newPage();
+        p.on('pageerror', e => errors.push(`${url}: ${e.message}`));
+        await p.setViewport({width: w, height: h});
+        await p.goto(url, {waitUntil: 'networkidle0'});
+        await p.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
+        return p;
+      };
+      const tilstand = p => p.evaluate(() => {
+        const el = document.getElementById('recentPanel');
+        const s = el.querySelector('summary');
+        return {open: el.open, tittel: s.textContent.replace(/\s+/g, ' ').trim(),
+                // checkVisibility, ikke offsetParent: Chrome skjuler innholdet i en lukket
+                // <details> med content-visibility, og da er offsetParent fortsatt satt.
+                kamperSynlige: [...el.querySelectorAll('.match')].some(m => m.checkVisibility())};
+      });
+      for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
+        for (const [w, h, enhet] of [[1400, 900, 'PC'], [390, 844, 'mobil']]) {
+          const p = await nySide(url, w, h);
+          const t = await tilstand(p);
+          check(`${liga} ${enhet}: sammenfoldet som standard`, !t.open && !t.kamperSynlige, JSON.stringify(t));
+          check(`${liga} ${enhet}: overskriften viser runden`, /^Forrige runde .*Runde \d+/.test(t.tittel), t.tittel);
+          await p.close();
+        }
+      }
+      // Åpne på Eliteserien: huskes der, men ikke på OBOS.
+      let p = await nySide(base, 1400, 900);
+      await p.click('#recentPanel > summary');
+      await sleep(300);
+      const etterKlikk = await tilstand(p);
+      check('åpnes med et trykk på overskriften', etterKlikk.open && etterKlikk.kamperSynlige, JSON.stringify(etterKlikk));
+      await p.close();
+      p = await nySide(base, 1400, 900);
+      check('Eliteserien husker at den er åpnet', (await tilstand(p)).open);
+      await p.close();
+      p = await nySide(obosUrl, 1400, 900);
+      check('OBOS er fortsatt sammenfoldet (valget gjelder én liga)', !(await tilstand(p)).open);
+      const nokkel = await p.evaluate(() => Object.keys(localStorage).filter(k => /recentOpen/.test(k)));
+      check('valget lagres med ligaens id i nøkkelen', nokkel.length === 1 && nokkel[0] === 'eliteserien:recentOpen',
+        nokkel.join(', '));
+      await p.close();
+      await ctx.close();
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();

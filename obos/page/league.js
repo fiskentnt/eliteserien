@@ -107,6 +107,8 @@ const LEAGUE = {
     "Strømsgodset": {fill:"#000060", deep:"#000045", fillText:"#ffffff", textLight:"#000060", textDark:"#7272ff", topDark:"#08082f", topDeepDark:"#050522"},
     "Åsane": {fill:"#f5821f", deep:"#be5d08", fillText:"#15191c", textLight:"#bc5b08", textDark:"#f5821f", topDark:"#834b1b", topDeepDark:"#5e3613"},
   },
+  // "Forrige runde" sammenfoldet som standard, som i Eliteserien.
+  recentOpen: false,
   movedRounds: {},
 };
 const ZONE_KEYS = ['gull', 'cl', 'europa', 'kvalik', 'nedrykk'];

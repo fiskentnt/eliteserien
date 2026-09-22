@@ -372,7 +372,7 @@
   .nm-res{margin:12px 0 0;text-align:center;font:600 14px/1.2 var(--body);color:var(--ink)}
   .nm-res b{font:800 19px/1 var(--cond);margin:0 1px}
   .nm-round{display:block;margin:8px auto 0;text-align:center}
-  /* Kamper-seksjonen (verktøy + siste runde + gjenstående) */
+  /* Kamper-seksjonen (verktøy + forrige runde + gjenstående) */
   .kamper{display:flex;flex-direction:column;gap:20px;min-width:0}
   /* Verktøyknappene ligger nå INNE i "Gjenstående kamper"-panelet, rett over
      kampene, og følger panelets egen sideluft (16 px) som h2 og avkryssings-
@@ -438,7 +438,7 @@
     #verdict,.wrap > .leftcol,.wrap > .rightcol{grid-column:auto;grid-row:auto;margin-bottom:0}
   }
   .rightcol,.leftcol{display:flex;flex-direction:column;gap:20px;min-width:0}
-  /* "Siste runde": samme radstil som spilte kamper i kamplisten (.match.played),
+  /* "Forrige runde": samme radstil som spilte kamper i kamplisten (.match.played),
      se renderLastRound() -- bare selve panelet/overskriften er egen her. */
   .recent .round{margin-top:0}
   /* Tabellen blir stående (samme CSS-mekanisme som "sticky", men elementene
@@ -714,12 +714,13 @@
     .top{padding-left:16px;padding-right:16px}
     .top-in{grid-template-columns:1fr}
     .status{max-width:none;min-width:0}
-    .recent,.tools{padding-left:16px;padding-right:16px}
+    /* Innrykket gjelder kampene, ikke overskriften (som har sitt eget). */
+    .recent > .rounds,.tools{padding-left:16px;padding-right:16px}
     .wrap{padding-left:12px;padding-right:12px}
     th.hide-s,td.hide-s{display:none}
     th,td{padding-left:5px;padding-right:5px}
     td.pos{padding-left:9px;width:30px}
-    .panel > h2,.qa > summary{padding-left:12px;padding-right:12px}
+    .panel > h2,.qa > summary,.recent > summary{padding-left:12px;padding-right:12px}
   }
 
   /* Kamper */
@@ -736,6 +737,16 @@
      PC -- se qaApplyDefault(). Overskriften har samme utseende som .panel > h2. */
   .qa > summary{list-style:none;cursor:pointer;font:700 22px/1 var(--cond);padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:center;gap:12px;user-select:none}
   .qa > summary::-webkit-details-marker{display:none}
+  /* "Forrige runde": sammenfoldet som standard (LEAGUE.recentOpen), med samme
+     pil som "Spør om tabellen". Runden står til høyre, før pilen. */
+  .recent > summary{list-style:none;cursor:pointer;font:700 22px/1 var(--cond);padding:16px;display:flex;align-items:center;gap:12px;user-select:none}
+  .recent[open] > summary{padding-bottom:12px}
+  .recent > summary::-webkit-details-marker{display:none}
+  .recent > summary .count{margin-left:auto;font:500 14px var(--body);color:var(--muted)}
+  .recent > summary::after{content:"";flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;margin-right:4px}
+  .recent[open] > summary::after{transform:rotate(45deg)}
+  .recent > summary:hover::after{border-color:var(--ink)}
+  .recent > summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:10px}
   .qa > summary::after{content:"";flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;margin-right:4px}
   .qa[open] > summary::after{transform:rotate(45deg)}
   .qa > summary:hover::after{border-color:var(--ink)}
@@ -800,7 +811,7 @@
   .match.played .done{margin-left:6px;font-size:12.5px;font-weight:600;color:var(--played-fg);width:100px;text-align:center;white-space:nowrap}
   /* Etter .match.played, ikke før -- ellers vinner .match.played sin
      bakgrunn (samme spesifisitet, senere regel vinner) over markeringen for
-     en kamp som er BÅDE spilt OG følges (f.eks. alt i "Siste runde", som
+     en kamp som er BÅDE spilt OG følges (f.eks. alt i "Forrige runde", som
      alltid er spilte kamper). */
   .match.followed{background:var(--team-soft)}
   .quick{display:flex;gap:2px;margin-left:3px;align-items:flex-start}
@@ -964,14 +975,14 @@
     </details>
 
     <section class="kamper" id="kamper">
-      <section class="panel recent" aria-label="Siste runde">
-      <h2>Siste runde <span class="count" id="lastRoundInfo"></span></h2>
+      <details class="panel recent" id="recentPanel">
+      <summary>Forrige runde <span class="count" id="lastRoundInfo"></span></summary>
       <div class="rounds" id="lastRound"></div>
-    </section>
+    </details>
       <section class="panel" id="fxPanel">
       <h2>Gjenstående kamper <span class="count" id="fxInfo"></span></h2>
       <!-- Knappene står her, rett over kampene de virker på, i stedet for øverst
-           i hele "kamper"-seksjonen (der de lå over "Siste runde"). -->
+           i hele "kamper"-seksjonen (der de lå over "Forrige runde"). -->
       <div class="tools">
         <button id="followWin"></button>
         <button id="followLose"></button>
@@ -1199,6 +1210,8 @@ const LEAGUE = {
     "Strømsgodset": {fill:"#000060", deep:"#000045", fillText:"#ffffff", textLight:"#000060", textDark:"#7272ff", topDark:"#08082f", topDeepDark:"#050522"},
     "Åsane": {fill:"#f5821f", deep:"#be5d08", fillText:"#15191c", textLight:"#bc5b08", textDark:"#f5821f", topDark:"#834b1b", topDeepDark:"#5e3613"},
   },
+  // "Forrige runde" sammenfoldet som standard, som i Eliteserien.
+  recentOpen: false,
   movedRounds: {},
 };
 const ZONE_KEYS = ['gull', 'cl', 'europa', 'kvalik', 'nedrykk'];
@@ -3069,7 +3082,7 @@ function buildRoundSeq(){
 }
 let selRoundIdx = null; // null = gjeldende tabell (alle resultater)
 const hasResult = m => m.hg!=null && m.ag!=null;
-// Siste runde (i tidsrekkefølge) med minst ett resultat, spilt eller fylt inn:
+// Forrige runde (i tidsrekkefølge) med minst ett resultat, spilt eller fylt inn:
 // tabellen med alle resultater står etter denne runden.
 function currentRoundIdx(){
   const has = new Set(MATCHES.map(m=>m.round));
@@ -4725,7 +4738,7 @@ async function qaWhenDecided(team){
     if(cum > data.N/2){ answerRound=r; break; }
   }
   if(answerRound==null || answerRound>=lastRound){
-    // Avgjort først i siste runde: "senest runde N, i 100 %" ville vært en tautologi.
+    // Avgjort først i forrige runde: "senest runde N, i 100 %" ville vært en tautologi.
     return `For ${team} blir det som regel ikke avgjort før siste runde (runde ${lastRound}).`;
   }
   // Konklusjon først: "For Odd er topp 6 som regel avgjort innen runde 28."
@@ -4995,6 +5008,18 @@ qaPanel.addEventListener('toggle', ()=>{
 qaApplyDefault();
 // Krysser vinduet grensen uten et lagret valg, følger standarden med.
 window.matchMedia('(min-width:1100px)').addEventListener('change', ()=>{ if(qaStoredOpen()===null) qaApplyDefault(); });
+// "Forrige runde": standarden fra LEAGUE.recentOpen, men et valg brukeren har
+// gjort selv huskes per liga (lsKey gir "eliteserien:recentOpen" osv.).
+// Standarden er sammenfoldet, så en ny besøkende utløser ingen toggle-hendelse
+// her, og ingenting lagres før brukeren faktisk åpner eller lukker den.
+(function(){
+  const el = document.getElementById('recentPanel');
+  if(!el) return;
+  const lagret = lsGet('recentOpen');
+  const apen = lagret===null ? !!LEAGUE.recentOpen : lagret==='1';
+  if(el.open !== apen) el.open = apen;
+  el.addEventListener('toggle', ()=> lsSet('recentOpen', el.open ? '1' : '0'));
+})();
 function qaJumpToSection(){
   qaSetOpen(true); // spørsmålslinjen i banneret åpner seksjonen selv om den er lukket
   document.querySelector('.panel.qa').scrollIntoView({behavior:'smooth', block:'start'});
@@ -5354,7 +5379,7 @@ async function boot(){
     console.error('Klarte ikke hente kampdata', err);
     document.getElementById('verdict').innerHTML =
       `<div class="line">Kunne ikke laste kampdata.</div><div class="sub">${err.message}. Prøv å laste siden på nytt.</div>`;
-    // Ingen kampdata betyr ingenting for knappene og "Siste runde" å virke
+    // Ingen kampdata betyr ingenting for knappene og "Forrige runde" å virke
     // på — skjul dem heller enn å vise kontroller uten funksjon over den
     // eneste teksten som faktisk betyr noe her.
     document.querySelector('.recent').hidden = true;
@@ -5461,7 +5486,7 @@ async function boot(){
   // når oddsen sist ble hentet.
   const last = [...MATCHES].sort((x,y)=>x.date.localeCompare(y.date)).at(-1);
 
-  // "Siste runde": runden til den ferskeste spilte kampen. Er runden fortsatt
+  // "Forrige runde": runden til den ferskeste spilte kampen. Er runden fortsatt
   // i FIXTURES_IN har den minst én kamp igjen å spille (se merknaden ved
   // dayComplete under) — da vises bare de spilte kampene i den, med "X av Y
   // spilt" i overskriften. Er runden IKKE i FIXTURES_IN er den 100 %
