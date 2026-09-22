@@ -132,19 +132,13 @@ def oddspapi_score(key, fixture_id):
     for it in items:
         if not isinstance(it, dict):
             continue
-        # Feltnavnene er ikke dokumentert i detalj: let etter et par vanlige
-        # former, og bare på SLUTTresultat (ikke omgang eller delresultat).
-        for hk, ak in (("homeScore", "awayScore"), ("participant1Score", "participant2Score"),
-                       ("home", "away"), ("score1", "score2")):
-            h, a = it.get(hk), it.get(ak)
-            if isinstance(h, dict):
-                h, a = h.get("total") or h.get("fullTime"), (a or {}).get("total") or (a or {}).get("fullTime")
-            if isinstance(h, (int, float)) and isinstance(a, (int, float)):
-                return int(h), int(a)
-        sc = it.get("scores") or it.get("result")
-        if isinstance(sc, dict):
-            ft = sc.get("fullTime") or sc.get("ft") or sc
-            h, a = ft.get("home"), ft.get("away")
+        # Formen er scores -> periods -> result -> participant1Score/participant2Score.
+        # BARE "result" brukes: det er sluttresultatet. Andre perioder er
+        # omgangsresultater, og et delresultat skal aldri publiseres.
+        per = ((it.get("scores") or {}).get("periods") or {})
+        res = per.get("result")
+        if isinstance(res, dict):
+            h, a = res.get("participant1Score"), res.get("participant2Score")
             if isinstance(h, (int, float)) and isinstance(a, (int, float)):
                 return int(h), int(a)
     log(f"    fant ikke sluttresultat i svaret: {json.dumps(d, ensure_ascii=False)[:200]}")
