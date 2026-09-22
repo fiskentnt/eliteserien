@@ -835,6 +835,52 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- 17. forrige kamp mot forventningen før avspark ----
+    // Tallet skal komme fra det som var lagret FØR kampen (prekick.json),
+    // ellers sluttoddsen. Aldri regnet på nytt nå: dagens lagstyrker har sett
+    // resultatet, og da ville "overraskende" vært etterpåklokskap.
+    setGroup('Forrige kamp mot forventningen');
+    for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
+      const fk = await open(1400, 900, url);
+      await settle(fk);
+      const f = await fk.evaluate(() => {
+        // Kilden skal aldri være dagens modell.
+        const kilder = new Set();
+        const linjer = [];
+        for (const t of TEAMS) {
+          const e = lastMatchEntry(t);
+          if (!e) continue;
+          const p = e.home ? preKickProbs(e.home, e.away) : null;
+          if (p) kilder.add(p.kilde);
+          const l = qaLastMatchLine(e);
+          if (l) linjer.push({team: t, html: l.html, harTall: !!p,
+                              sum: p ? p.H + p.U + p.B : null});
+        }
+        return {kilder: [...kilder], linjer, prekick: PREKICK ? Object.keys(PREKICK).length : 0,
+                closing: CLOSING ? Object.keys(CLOSING).length : 0};
+      });
+      check(`${liga}: kildene er lagrede tall, ikke dagens modell`,
+        f.kilder.every(k => ['odds og modell', 'modellen', 'sluttoddsen'].includes(k)),
+        f.kilder.join(', '));
+      const medTall = f.linjer.filter(l => l.harTall);
+      check(`${liga}: sannsynlighetene summerer til 1`,
+        medTall.every(l => Math.abs(l.sum - 1) < 1e-3),
+        medTall.filter(l => Math.abs(l.sum - 1) >= 1e-3).map(l => `${l.team}: ${l.sum}`).join('; '));
+      // Der vi har tallet, skal linja si hvor overraskende resultatet var,
+      // fra lagets synsvinkel ("tap", ikke "borteseier").
+      const mangler = medTall.filter(l => !/(ventet i (<1|>99|\d+) % av tilfellene|med bare (<1|\d+) % sjanse)/.test(l.html));
+      check(`${liga}: linja sier hvor overraskende resultatet var`,
+        mangler.length === 0, mangler.slice(0, 3).map(l => `${l.team}: ${l.html}`).join(' | '));
+      const galtOrd = medTall.filter(l => /(hjemmeseier|borteseier) (som var ventet|med bare)/.test(l.html));
+      check(`${liga}: ordlyden er lagets egen (seier/tap/uavgjort)`,
+        galtOrd.length === 0, galtOrd.slice(0, 2).map(l => l.html).join(' | '));
+      // Og det skal faktisk finnes tall å bruke for minst ett lag.
+      check(`${liga}: har lagrede tall å måle mot`,
+        f.prekick + f.closing > 0, `prekick ${f.prekick}, sluttodds ${f.closing}`);
+      await fk.close();
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();

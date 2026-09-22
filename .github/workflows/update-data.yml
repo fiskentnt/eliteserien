@@ -84,6 +84,7 @@ jobs:
           [ -f eliteserien/data/history.json ] && git add eliteserien/data/history.json
           [ -f eliteserien/data/keymatch.json ] && git add eliteserien/data/keymatch.json
           [ -f eliteserien/data/lastmatch.json ] && git add eliteserien/data/lastmatch.json
+          [ -f eliteserien/data/prekick.json ] && git add eliteserien/data/prekick.json
           git add eliteserien/og.png sitemap.xml
           if git diff --cached --quiet; then
             echo "Ingen endringer i kampdata."

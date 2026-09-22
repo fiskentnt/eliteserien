@@ -1153,6 +1153,8 @@ const LEAGUE = {
   // Oddsen for OBOS kommer fra OddsPapi (sluttodds fra Pinnacle, bet365 og
   // unibet). Eliteserien bruker The Odds API.
   oddsSource: 'OddsPapi',
+  // Sluttodds for spilte kamper, reserve når prekick.json ikke har kampen.
+  closingOddsFile: 'data/odds_closing.json',
   // Klubbfarger, én per lag i DENNE ligaen. Draktfargen (trøyens hovedfarge)
   // fra draktboksen på Wikipedia, krysssjekket mot NFFs lagsider. Tre valg
   // som ikke kommer rett fra kilden, alle etter samme regel som Eliteserien:
@@ -3429,6 +3431,9 @@ let qaWhyZoneOverride = null;
 let KEYMATCH = null;
 // Forrige kamp per lag, samme kilde og begrunnelse (data/lastmatch.json).
 let LASTMATCH = null;
+// Sannsynligheten for hvert utfall før avspark (data/prekick.json) og
+// sluttoddsen som reserve. Se preKickProbs().
+let PREKICK = null, CLOSING = null;
 // Er den lagret kampen alt spilt? Da er filen fra før forrige runde (workflowen
 // har ikke rukket å oppdatere den ennå), og banneret skal ikke stå og peke på
 // en kamp som er ferdig.
@@ -3772,13 +3777,19 @@ async function qaLastMatch(team){
   if(data.noMatch) return `${team} har ingen spilte kamper ennå i kampdataene.`;
   const {m, opp, actual, zone, tableP, shown, bestAlt, pp} = data;
   const chance = QA_CHANCE[zone.key];
+  // Hvor overraskende resultatet var, sett med øynene man hadde før avspark.
+  // Kommer først, fordi det er det leseren ikke kan se av tabellen selv.
+  const isHome = m.home===team;
+  const sur = qaSurpriseTxt({home:m.home, away:m.away, hg:m.hg, ag:m.ag,
+                             gf:isHome?m.hg:m.ag, ga:isHome?m.ag:m.hg});
+  const surTxt = sur ? ` Før kampen var det ${sur}.` : '';
   const clamp = v => Math.min(1, Math.max(0, v));
   const head = actual==='win' ? `Seieren mot ${opp}` : actual==='loss' ? `Tapet mot ${opp}` : `Poengdelingen mot ${opp}`;
   const anslag = ` Lagstyrkene holdes som i dag, så tallet er et anslag.`;
   const others = ['win','draw','loss'].filter(o=>o!==actual);
   if(!shown.length){
     const navn = others.map(o=>QA_OUT_LABEL[o]);
-    return `Resultatet betydde lite for sjansen: verken ${navn[0]} eller ${navn[1]} ville endret ${chance} mer enn to prosentpoeng fra dagens ${pctTxt(tableP)}.`+anslag;
+    return `Resultatet betydde lite for sjansen: verken ${navn[0]} eller ${navn[1]} ville endret ${chance} mer enn to prosentpoeng fra dagens ${pctTxt(tableP)}.`+surTxt+anslag;
   }
   const front = zone.dir==='front';
   const n = Math.abs(pp);
@@ -3798,18 +3809,51 @@ async function qaLastMatch(team){
   const second = order.length>1
     ? `Med ${QA_OUT_LABEL[order[0]]} hadde den vært ${val(order[0])} i stedet for ${pctTxt(tableP)}, med ${QA_OUT_LABEL[order[1]]} ${val(order[1])}.`
     : `Med ${QA_OUT_LABEL[order[0]]} hadde den vært ${val(order[0])} i stedet for ${pctTxt(tableP)}.`;
-  return `${first} ${second}${anslag}`;
+  return `${first} ${second}${surTxt}${anslag}`;
 }
 // Den korte linja i lagboksen, bygget av det workflowen har lagret
 // (data/lastmatch.json). Betydde kampen under to prosentpoeng, står bare
 // resultatet. Fortegnet er endringen i selve sjansen, og fargen sier om det
 // var bra eller dårlig for laget -- ikke om tallet er pluss eller minus.
+// Hva som var ventet FØR kampen, som {H,U,B} og hvor tallet kommer fra.
+// Rekkefølge: det siden selv viste før avspark (prekick.json, lagret mens
+// kampen var uspilt), ellers sluttoddsen med margin fjernet. Aldri regnet på
+// nytt nå: dagens lagstyrker har sett resultatet.
+function preKickProbs(home, away){
+  const k = `${LEAGUE.season}|${home}|${away}`;
+  const p = PREKICK && PREKICK[k];
+  if(p && p.H!=null) return {H:p.H, U:p.U, B:p.B, kilde:p.kilde==='odds+modell'?'odds og modell':'modellen'};
+  const c = CLOSING && CLOSING[`${home}|${away}`];
+  if(c) return {H:c.H, U:c.U, B:c.B, kilde:'sluttoddsen'};
+  return null;
+}
+// "ventet i 62 % av tilfellene" eller "med bare 18 % sjanse": hvor overraskende
+// resultatet var, sett med øynene man hadde før avspark.
+function qaSurpriseTxt(e){
+  if(!e || !e.home || !e.away || e.hg==null) return null;
+  const p = preKickProbs(e.home, e.away);
+  if(!p) return null;
+  const utfall = e.hg>e.ag ? 'H' : (e.hg===e.ag ? 'U' : 'B');
+  const v = p[utfall];
+  if(v==null) return null;
+  const pct = v<0.005 ? '<1' : (v>0.995 ? '>99' : Math.round(v*100));
+  // Sett fra laget linja handler om, ikke fra hjemmelaget: "tap med bare 12 %
+  // sjanse" er det leseren kjenner igjen, ikke "borteseier".
+  const ord = e.gf==null || e.ga==null
+    ? {H:'hjemmeseier', U:'uavgjort', B:'borteseier'}[utfall]
+    : (e.gf>e.ga ? 'seier' : (e.gf===e.ga ? 'uavgjort' : 'tap'));
+  return v < 0.25
+    ? `${ord} med bare ${pct} % sjanse`
+    : `${ord} som var ventet i ${pct} % av tilfellene`;
+}
 function qaLastMatchLine(e){
   if(!e) return null;
   const res = `${e.gf}-${e.ga} mot ${e.opp}`;
-  if(e.pp==null || e.pp===0) return {html:`Forrige kamp: ${res}`};
+  const s = qaSurpriseTxt(e);
+  const hale = s ? ` <span class="muted">(${s})</span>` : '';
+  if(e.pp==null || e.pp===0) return {html:`Forrige kamp: ${res}${hale}`};
   const sign = (e.pp>0?'+':'−')+Math.abs(e.pp);
-  return {html:`Forrige kamp: ${QA_OUT_LABEL[e.actual]} ${res}, ${e.chance} <b class="${e.good?'good':'bad'}">${sign}</b>`};
+  return {html:`Forrige kamp: ${QA_OUT_LABEL[e.actual]} ${res}, ${e.chance} <b class="${e.good?'good':'bad'}">${sign}</b>${hale}`};
 }
 // Lagets forrige kamp til linja: bruker det workflowen har regnet ut for den
 // VIRKELIGE situasjonen. Er den lagret kampen ikke lagets siste faktisk spilte
@@ -3821,7 +3865,8 @@ function lastMatchEntry(team){
   const e = LASTMATCH && LASTMATCH.teams && LASTMATCH.teams[team];
   if(e && e.date===m.date && e.home===m.home && e.away===m.away && e.hg===m.hg && e.ag===m.ag) return e;
   const isHome = m.home===team;
-  return {gf:isHome?m.hg:m.ag, ga:isHome?m.ag:m.hg, opp:isHome?m.away:m.home, pp:null};
+  return {gf:isHome?m.hg:m.ag, ga:isHome?m.ag:m.hg, opp:isHome?m.away:m.home, pp:null,
+          home:m.home, away:m.away, hg:m.hg, ag:m.ag};
 }
 
 // ---- Eksempelet i "Hvordan vet vi at modellen virker?": den kommende kampen
@@ -5158,9 +5203,9 @@ async function updateOddsQuotaNote(){
 // Python-scriptene i scripts/ og lest inn her — ingen tilpasning skjer i
 // nettleseren, kun rask JSON-henting.
 async function boot(){
-  let MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN;
+  let MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN;
   try{
-    [MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN] = await Promise.all([
+    [MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN] = await Promise.all([
       fetch('data/matches.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/matches.json'); return r.json(); }),
       fetch('data/fixtures.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/fixtures.json'); return r.json(); }),
       fetch('data/model.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/model.json'); return r.json(); }),
@@ -5172,6 +5217,12 @@ async function boot(){
       // spørsmålet om hell og uhell.
       fetch('data/keymatch.json').then(r=>r.ok?r.json():null).catch(()=>null),
       fetch('data/lastmatch.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      // Sannsynlighetene som gjaldt FØR avspark (skrevet av snapshot_probs.js
+      // mens kampen var uspilt), og sluttoddsen som reserve for kamper som ble
+      // spilt før vi begynte å lagre dem. Begge er valgfrie: uten dem sier
+      // "forrige kamp" ingenting om hvor overraskende resultatet var.
+      fetch('data/prekick.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      fetch(LEAGUE.closingOddsFile).then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
   }catch(err){
     console.error('Klarte ikke hente kampdata', err);
@@ -5253,6 +5304,31 @@ async function boot(){
   ODDS_FETCHED_AT = ODDS_UP_IN.fetched_at ? formatOsloDT(new Date(ODDS_UP_IN.fetched_at)) : 'ukjent tidspunkt';
   KEYMATCH = KEYMATCH_IN && KEYMATCH_IN.banner && KEYMATCH_IN.match ? KEYMATCH_IN : null;
   LASTMATCH = LASTMATCH_IN && LASTMATCH_IN.teams ? LASTMATCH_IN : null;
+  PREKICK = (PREKICK_IN && PREKICK_IN.matches) || null;
+  // De to ligaene lagrer sluttodds i hver sin form: Eliteserien en liste med
+  // ferdige sannsynligheter (odds_captured.json), OBOS et oppslag med
+  // desimalodds (odds_closing.json). Begge normaliseres til "lag|lag" ->
+  // {H,U,B} med margin fjernet, så resten av koden slipper å vite forskjellen.
+  CLOSING = null;
+  if(CLOSING_IN){
+    const ut = {};
+    const liste = Array.isArray(CLOSING_IN.matches) ? CLOSING_IN.matches : null;
+    if(liste){
+      for(const m of liste){
+        if(m.H==null) continue;
+        ut[`${m.home}|${m.away}`] = {H:m.H, U:m.D, B:m.A};
+      }
+    } else {
+      for(const [k, v] of Object.entries(CLOSING_IN.matches || {})){
+        const o = v && v.odds;
+        if(!o || !o.H || !o.U || !o.B) continue;
+        const inv = 1/o.H + 1/o.U + 1/o.B;   // proporsjonal de-vigging
+        const p = k.split('|');
+        ut[`${p[p.length-2]}|${p[p.length-1]}`] = {H:(1/o.H)/inv, U:(1/o.U)/inv, B:(1/o.B)/inv};
+      }
+    }
+    if(Object.keys(ut).length) CLOSING = ut;
+  }
 
   // Stempel: dato for siste kamp som er lagt inn, pluss (asynkront, se
   // updateCheckStamp) tidspunktet for siste automatiske sjekk. Tooltip viser

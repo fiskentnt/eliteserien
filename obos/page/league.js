@@ -68,6 +68,8 @@ const LEAGUE = {
   // Oddsen for OBOS kommer fra OddsPapi (sluttodds fra Pinnacle, bet365 og
   // unibet). Eliteserien bruker The Odds API.
   oddsSource: 'OddsPapi',
+  // Sluttodds for spilte kamper, reserve når prekick.json ikke har kampen.
+  closingOddsFile: 'data/odds_closing.json',
   // Klubbfarger, én per lag i DENNE ligaen. Draktfargen (trøyens hovedfarge)
   // fra draktboksen på Wikipedia, krysssjekket mot NFFs lagsider. Tre valg
   // som ikke kommer rett fra kilden, alle etter samme regel som Eliteserien:

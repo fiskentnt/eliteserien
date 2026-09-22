@@ -67,6 +67,17 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: python3 scripts/obos_build_data.py --from-matches
 
+      # Rundens viktigste kamp, hva forrige kamp betydde, historikken, og
+      # sannsynlighetene før avspark. Leses ut av selve siden i Chrome, så
+      # tallene er de samme som tabellen viser. Samme skript som Eliteserien.
+      - name: Rundens viktigste kamp, forrige kamp og historikk
+        if: ${{ !inputs.dry_run }}
+        continue-on-error: true  # skal aldri stoppe resultatene
+        run: |
+          npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pp" puppeteer-core@25.11.0
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
+          NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/snapshot_probs.js obos
+
       - name: Tegn delingsbildet på nytt
         if: ${{ !inputs.dry_run }}
         continue-on-error: true  # et feilet bilde skal ikke stoppe resultatene
@@ -81,6 +92,8 @@ jobs:
                   obos/data/status.json obos/data/results_state.json \
                   obos/data/oddspapi_fixtures_2026.json obos/og.png \
                   obos/data/odds_upcoming.json obos/data/oddspapi_upcoming_fixtures.json \
+                  obos/data/keymatch.json obos/data/lastmatch.json \
+                  obos/data/history.json obos/data/prekick.json \
                   data/oddspapi_usage.json 2>/dev/null || true
           if git diff --cached --quiet; then
             echo "Ingen endringer."

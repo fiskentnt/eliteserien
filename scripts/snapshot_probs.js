@@ -32,9 +32,16 @@ const path = require('path');
 const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, '..');
-const HISTORY = path.join(ROOT, 'eliteserien', 'data', 'history.json');
-const KEYMATCH = path.join(ROOT, 'eliteserien', 'data', 'keymatch.json');
-const LASTMATCH = path.join(ROOT, 'eliteserien', 'data', 'lastmatch.json');
+// Hvilken liga. Alt som skiller ligaene ligger i LEAGUE på selve siden, så
+// dette skriptet trenger bare å vite hvilken mappe det skal lese og skrive:
+//   node scripts/snapshot_probs.js            -- Eliteserien
+//   node scripts/snapshot_probs.js obos       -- OBOS-ligaen
+const LEAGUE_DIR = process.argv[2] || 'eliteserien';
+const DATA = path.join(ROOT, LEAGUE_DIR, 'data');
+const HISTORY = path.join(DATA, 'history.json');
+const KEYMATCH = path.join(DATA, 'keymatch.json');
+const LASTMATCH = path.join(DATA, 'lastmatch.json');
+const PREKICK = path.join(DATA, 'prekick.json');
 const MIME = {'.html':'text/html; charset=utf-8','.js':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.ttf':'font/ttf'};
 
 function serve() {
@@ -66,7 +73,7 @@ function chromePath() {
     const page = await browser.newPage();
     const errs = [];
     page.on('pageerror', e => errs.push(e.message));
-    await page.goto(`http://127.0.0.1:${port}/eliteserien/`, {waitUntil: 'domcontentloaded'});
+    await page.goto(`http://127.0.0.1:${port}/${LEAGUE_DIR}/`, {waitUntil: 'domcontentloaded'});
     await page.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 180000});
     const snap = await page.evaluate(() => {
       if (matches.some(m => m.sim || (m.hg != null && !m.played && m.sim))) throw new Error('Siden har simulerte resultater');
@@ -112,6 +119,55 @@ function chromePath() {
       }
     } else {
       console.log('Ingen viktigste kamp å lagre (ingen runde igjen, eller ingen kamp flytter nok).');
+    }
+    // Sannsynlighetene for hvert utfall FØR avspark, per kamp. Lagres mens
+    // kampen fortsatt er uspilt, og fryses i det den er spilt: da er tallet
+    // fritt for etterpåklokskap. Uten dette måtte "forrige kamp" regne
+    // sannsynligheten med lagstyrker som alt hadde sett resultatet.
+    const pre = await page.evaluate(() => {
+      const ut = {};
+      for (const m of matches) {
+        if (m.hg != null) continue;              // spilt, eller fylt inn av noen
+        const [lh, la] = rateFor(m.home, m.away);
+        const o = outcome(lh, la);
+        const info = RATES[m.home + '|' + m.away] || {};
+        ut[`${LEAGUE.season}|${m.home}|${m.away}`] = {
+          home: m.home, away: m.away, date: m.date, round: m.round,
+          H: +o.H.toFixed(4), U: +o.U.toFixed(4), B: +o.B.toFixed(4),
+          kilde: info.odds ? 'odds+modell' : 'modell',
+          oddsvekt: info.odds ? ODDS_W : 0,
+          // Oddsen slik den sto, og modellen alene, så de kan skilles senere.
+          odds: info.odds ? {H: +info.mk[0].toFixed(4), U: +info.mk[1].toFixed(4), B: +info.mk[2].toFixed(4),
+                             bookmaker: (info.meta || {}).bookmaker || null} : null,
+          modell: {H: +(info.md ? info.md.H : o.H).toFixed(4),
+                   U: +(info.md ? info.md.U : o.U).toFixed(4),
+                   B: +(info.md ? info.md.B : o.B).toFixed(4)},
+        };
+      }
+      return ut;
+    });
+    {
+      const old = fs.existsSync(PREKICK) ? JSON.parse(fs.readFileSync(PREKICK, 'utf8')) : {version: 1, matches: {}};
+      old.matches = old.matches || {};
+      let nye = 0, oppdatert = 0;
+      for (const [k, v] of Object.entries(pre)) {
+        // En lagret kamp som nå er spilt, røres ikke: den skal beholde tallet
+        // som gjaldt før avspark. Er den fortsatt uspilt, holdes den fersk.
+        if (old.matches[k] && old.matches[k].frosset) continue;
+        if (old.matches[k]) oppdatert++; else nye++;
+        old.matches[k] = {...v, stamp: new Date().toISOString().replace(/\.\d+Z$/, 'Z')};
+      }
+      // Frys alt som er spilt nå.
+      const spilte = await page.evaluate(() =>
+        MATCHES.map(m => `${LEAGUE.season}|${m.home}|${m.away}`));
+      let frosne = 0;
+      for (const k of spilte) {
+        if (old.matches[k] && !old.matches[k].frosset) { old.matches[k].frosset = true; frosne++; }
+      }
+      old.version = 1;
+      old.note = 'Sannsynlighet for hvert utfall før avspark, per kamp. Skrevet mens kampen var uspilt og frosset da den ble spilt, så "forrige kamp" kan si hvor overraskende resultatet var uten etterpåklokskap.';
+      fs.writeFileSync(PREKICK, JSON.stringify(old, null, 1) + '\n');
+      console.log(`prekick.json: ${nye} nye, ${oppdatert} oppdatert, ${frosne} frosset, ${Object.keys(old.matches).length} totalt.`);
     }
     // Hva forrige kamp betydde, for alle 16 lag. Samme regnestykke som
     // spørsmålet i "Spør om tabellen" (qaLastMatchData), og siden bygger selve
