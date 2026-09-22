@@ -1196,29 +1196,31 @@ const LEAGUE = {
      title: 'Sannsynlighet for 15. eller 16. plass. Kvalik på 14. plass er ikke regnet med. Klikk for å sortere.'},
   ],
   // Sonene spørsmålene og lagboksen bruker. lo/hi er plasseringer; boundary er
-  // grensen for "sikret plass direkte" i de bakre sonene.
+  // siste plass som verken gir kvalik eller nedrykk. Ord i svarene:
+  //   decided  "For X er ___ som regel avgjort innen runde N" (ellers label)
+  //   kampOm   "Y er også med i kampen om ___"
   zones: {
-    gull: {lo: 1, hi: 1, label: 'gull', chance: 'gullsjansen', reach: 'vinne serien',
+    gull: {lo: 1, hi: 1, label: 'gull', decided: 'gullet', kampOm: 'gullet', chance: 'gullsjansen', reach: 'vinne serien',
            safe: 'sikret gull', verb: 'vinner serien', strid: 'gullstriden',
            da: 'vinner {team} serien', past: 'og vant serien', pastNot: 'og vant ikke serien',
            boxLabel: 'Gull', boxRange: [0.01, 1.01]},
-    cl: {lo: 1, hi: 2, label: 'Champions League', chance: 'Champions League-sjansen',
+    cl: {lo: 1, hi: 2, label: 'Champions League', kampOm: 'Champions League-plassene', chance: 'Champions League-sjansen',
          reach: 'nå Champions League-kvalifiseringen', safe: 'sikret Champions League-kvalifisering',
          verb: 'tar Champions League-plass', strid: 'kampen om Champions League',
          da: 'når {team} Champions League', past: 'og tok Champions League-plass',
          pastNot: 'og nådde ikke Champions League', boxLabel: 'Champions League', boxRange: [0.01, 0.99]},
-    europa: {lo: 1, hi: 4, label: 'topp 4', chance: 'topp 4-sjansen', reach: 'nå topp 4',
+    europa: {lo: 1, hi: 4, label: 'topp 4', kampOm: 'topp 4-plassene', chance: 'topp 4-sjansen', reach: 'nå topp 4',
              safe: 'sikret topp 4', verb: 'ender i topp 4', strid: 'kampen om topp 4',
              da: 'når {team} topp 4', past: 'og endte i topp 4', pastNot: 'og nådde ikke topp 4',
              boxLabel: 'Topp 4', boxAlways: true},
-    kvalik: {lo: 14, hi: 14, boundary: 13, label: 'kvalik', chance: 'kvaliksjansen',
-             reach: 'sikre plassen direkte', safe: 'sikret plassen direkte',
-             verb: 'sikrer plassen direkte (13. plass eller bedre)', strid: 'kvalikstriden',
-             da: 'sikrer {team} plassen direkte', boxLabel: 'Kvalik', boxAlways: true},
-    nedrykk: {lo: 15, hi: 16, boundary: 13, label: 'nedrykk', chance: 'nedrykkssjansen',
-              reach: 'sikre plassen direkte', safe: 'sikret plassen direkte',
-              verb: 'sikrer plassen direkte (13. plass eller bedre)', strid: 'nedrykksstriden',
-              da: 'sikrer {team} plassen direkte', boxLabel: 'Nedrykk', boxAlways: true},
+    kvalik: {lo: 14, hi: 14, boundary: 13, label: 'kvalik', kampOm: 'å unngå kvalik', chance: 'kvaliksjansen',
+             reach: 'unngå både nedrykk og kvalik', safe: 'sikret mot både nedrykk og kvalik',
+             verb: 'unngår både nedrykk og kvalik', strid: 'kvalikstriden',
+             da: 'unngår {team} både nedrykk og kvalik', boxLabel: 'Kvalik', boxAlways: true},
+    nedrykk: {lo: 15, hi: 16, boundary: 13, label: 'nedrykk', kampOm: 'å unngå nedrykk', chance: 'nedrykkssjansen',
+              reach: 'unngå både nedrykk og kvalik', safe: 'sikret mot både nedrykk og kvalik',
+              verb: 'unngår både nedrykk og kvalik', strid: 'nedrykksstriden',
+              da: 'unngår {team} både nedrykk og kvalik', boxLabel: 'Nedrykk', boxAlways: true},
   },
   // Merkene for matematisk avgjort: hvor mange lag som maks kan ende foran.
   badges: [
@@ -3527,7 +3529,7 @@ const QA_REACH_PHRASE = Object.fromEntries(ZONE_KEYS.filter(k=>LEAGUE.zones[k]).
 // Spørsmålsteksten (knapp og banner) for bakre soner sier også "uten kvalik",
 // så det er tydelig at grensen er 13. plass og hvorfor tallet er lavere enn
 // nedrykksprosenten i tabellen (14. plass er kvalik, ikke sikret).
-const qaReachQuestion = key => QA_REACH_PHRASE[key] + (key==='kvalik'||key==='nedrykk' ? ', uten kvalik' : '');
+const qaReachQuestion = key => QA_REACH_PHRASE[key];   // "unngå både nedrykk og kvalik" sier det selv
 // Satt av et klikk på et tall i lagboksen (qaJumpToWhy) -- spørsmål 1 bruker
 // DENNE sonen i stedet for å auto-velge "mest aktuelt" når den er satt.
 // Nullstilt av selve spørsmål-knappen (runQaQuestion) så et vanlig klikk på
@@ -3596,7 +3598,7 @@ function qaSettledText(team, zone, st){
     const ok = st.pos<=st.b;
     const res = zone.dir==='front'
       ? (ok ? LEAGUE.zones[zone.key].past : LEAGUE.zones[zone.key].pastNot)
-      : (st.pos<=(LEAGUE.zones.kvalik.boundary||13) ? 'og sikret plassen direkte'
+      : (st.pos<=(LEAGUE.zones.kvalik.boundary||13) ? 'og unngikk både nedrykk og kvalik'
          : st.pos===LEAGUE.zones.kvalik.lo ? 'og må i kvalik' : 'og rykket ned');
     return `Sesongen er ferdig: ${team} endte på ${st.pos}. plass med ${poengTxt(st.pts)} ${res}.`;
   }
@@ -3781,7 +3783,11 @@ async function qaCheerFor(team, onPartial){
   // Konklusjon først: hvilke resultater som hjelper, og hvor mye. For
   // kvalik og nedrykk er det faren som skal ned, og det sies rett ut.
   const navn = qaSjanse(zone);
-  const head = `Disse resultatene hjelper ${team} mest denne runden:\n`;
+  // Si hvilket mål tallene gjelder. For kvalik og nedrykk er det faren som
+  // skal ned, så da heter det "reduserer", ikke "hjelper".
+  const head = zone.dir==='front'
+    ? `Disse resultatene hjelper ${qaGen(team)} ${qaSjanseUbest(zone)} mest denne runden:\n`
+    : `Disse resultatene reduserer ${qaGen(team)} ${qaSjanseUbest(zone)} mest denne runden:\n`;
   // Rader for kampene som er ferdige simulert (utgangspunktet og alle tre utfall).
   const rowsFrom = res=>{
     if(!res.base) return [];
@@ -3923,11 +3929,14 @@ async function qaLastMatch(team){
   const others = ['win','draw','loss'].filter(o=>o!==actual);
   // Hvor sannsynlig selve resultatet var før avspark (prekick.json eller
   // sluttoddsen). Kommer etter konklusjonen, som forklaring.
+  // Si hva tallet er: "Modellen ga Kongsvinger 72 % sjanse til å vinne kampen."
+  // Kommer tallet fra sluttoddsen (ingen lagret modellverdi), sies det.
   const pk = data.preKick;
   const pRes = pk ? pk[m.hg>m.ag ? 'H' : (m.hg===m.ag ? 'U' : 'B')] : null;
-  const overrask = pRes==null ? ''
-    : pRes<0.25 ? ` Før kampen hadde et slikt resultat bare ${pctTxt(pRes)} sjanse.`
-    : ` Et slikt resultat var ventet i ${pctTxt(pRes)} av tilfellene.`;
+  const kilde = pk && pk.kilde==='sluttoddsen' ? 'Sluttoddsen' : 'Modellen';
+  const bare = pRes!=null && pRes<0.25 ? 'bare ' : '';
+  const hva = actual==='win' ? 'til å vinne kampen' : actual==='loss' ? 'for tap' : 'for uavgjort';
+  const overrask = pRes==null ? '' : ` ${kilde} ga ${team} ${bare}${pctTxt(pRes)} sjanse ${hva}.`;
   // Alternativene, i rekkefølgen seier, uavgjort, tap (det faktiske er utelatt).
   const order = others.filter(o=>shown.some(x=>x.o===o));
   const val = o => pctTxt(clamp(tableP + shown.find(x=>x.o===o).d));
@@ -3946,13 +3955,21 @@ async function qaLastMatch(team){
   }
   // Konklusjon først: "Seieren løftet topp 6-sjansen 10 prosentpoeng mer enn
   // ventet. Før kampen var den ventet å bli 63 %, nå er den 73 %."
+  // "Seieren mot Hødd løftet opprykkssjansen til 58 %. Før kampen tilsa de tre
+  // utfallene en forventet sjanse på 52 % etterpå, så seieren ga rundt 6
+  // prosentpoeng mer enn ventet." Forventningen er sjansen ETTER kampen, vektet
+  // med hvor sannsynlig hvert utfall var -- ikke sjansen før kampen.
   const n = Math.abs(pp);
   const front = zone.dir==='front';
-  const verb = front ? (pp>0 ? 'løftet' : 'senket') : (pp>0 ? 'økte' : 'reduserte');
-  const first = n===0
-    ? `${head} ga omtrent det som var ventet for ${navn}.`
-    : `${head} ${verb} ${navn} ${n} prosentpoeng mer enn ventet.`;
-  const tall = ` Før kampen var den ventet å bli ${pctTxt(data.expected)}, nå er den ${pctTxt(tableP)}.`;
+  const verb = front ? (pp>=0 ? 'løftet' : 'senket') : (pp>=0 ? 'økte' : 'reduserte');
+  const substantiv = front ? 'sjanse' : 'fare';
+  const resultat = actual==='win' ? 'seieren' : actual==='loss' ? 'tapet' : 'poengdelingen';
+  const first = `${head} ${verb} ${navn} til ${pctTxt(tableP)}.`;
+  const tall = n===0
+    ? ` Det var omtrent det de tre utfallene tilsa før kampen.`
+    : ` Før kampen tilsa de tre utfallene en forventet ${substantiv} på ${pctTxt(data.expected)} etterpå, `+
+      (front ? `så ${resultat} ga rundt ${n} prosentpoeng ${pp>0?'mer':'mindre'} enn ventet.`
+             : `så ${navn} ble rundt ${n} prosentpoeng ${pp>0?'høyere':'lavere'} enn ventet.`);
   return `${first}${tall}${overrask}${alt}${anslag}`;
 }
 // Den korte linja i lagboksen, bygget av det workflowen har lagret
@@ -4183,8 +4200,8 @@ function qaKeyBanner(data){
   // Er flere kamper omtrent like viktige, sies DET, i stedet for et "tett foran
   // to andre" som ikke forteller leseren hva det betyr. Listen står i svaret.
   if(k){ const ord = QA_NUM[k+1] || String(k+1);
-    return `${ord.charAt(0).toUpperCase()+ord.slice(1)} kamper skiller seg ut som omtrent like viktige denne runden. Mest flytter ${b.m.home} mot ${b.m.away}, for ${b.topZone.strid}.`; }
-  return `Rundens viktigste kamp: ${b.m.home} mot ${b.m.away}. Den flytter mest for ${b.topZone.strid}.`;
+    return `${b.m.home} mot ${b.m.away} påvirker ${b.topZone.strid} mest denne runden.`; }
+  return `${b.m.home} mot ${b.m.away} påvirker ${b.topZone.strid} mest denne runden.`;
 }
 async function qaKeyRound(){
   const data = await qaKeyRoundData();
@@ -4207,9 +4224,9 @@ async function qaKeyRound(){
   // Konklusjon først: er flere kamper omtrent like viktige, er DET svaret, og
   // den som flytter mest nevnes etterpå.
   const head = !k
-    ? `Rundens viktigste kamp er ${navn(b)} (${formatDateNo(b.m.date)}). Den flytter mest for ${b.topZone.strid}.`
+    ? `Rundens viktigste kamp er ${navn(b)} (${formatDateNo(b.m.date)}). Den påvirker ${b.topZone.strid} mest.`
     : `${tallord.charAt(0).toUpperCase()+tallord.slice(1)} kamper skiller seg ut som omtrent like viktige. `+
-      `Mest flytter ${navn(b)} (${formatDateNo(b.m.date)}), for ${b.topZone.strid}.`;
+      `${navn(b)} (${formatDateNo(b.m.date)}) påvirker ${b.topZone.strid} mest.`;
   const tett = !k ? '' : `\nLike bak følger ${joinNames(liste)}.`;
   return head+'\n'+b.teams.map(piece).join('\n')+tett;
 }
@@ -4247,26 +4264,35 @@ function qaRange(team){
   if(lo===null) lo = 1;
   if(hi===null) hi = d.length;
   let cover = 0; for(let i=lo-1;i<hi;i++) cover += d[i];
-  // Konklusjon først (hvor laget som regel havner), så den vanligste plassen,
-  // så hvor laget står nå, og til sist det matematisk mulige spennet. Hver
-  // plass nevnes i sin egen setning, så samme plass ikke står to ganger i én.
-  const naa = `Laget ligger på ${idx+1}. plass nå.`;
-  const ext = `Matematisk kan ${team} ende så høyt som ${best}. plass og så lavt som ${worst}.`;
+  // Rekkefølge: hvor laget står og havner som regel, så den vanligste plassen
+  // og sonen, så den beste plassen simuleringene faktisk nådde (bare når den
+  // er sjelden), og til sist det matematisk mulige.
+  const pos = idx+1;
+  const naa = (pos===lo || pos===hi) ? '' : `ligger på ${pos}. plass nå og `;
   if(lo===hi){
-    return `${ext} Nesten sikkert blir det ${lo}. plass (${qaPctCap(d[lo-1])} av simuleringene). ${naa}`;
+    return `${team} ender nesten sikkert på ${lo}. plass (${qaPctCap(d[lo-1])} av simuleringene).`
+      + (best<lo || worst>hi ? ` Matematisk kan det ende så høyt som ${best}. plass og så lavt som ${worst}. plass.` : '');
   }
-  // Beste plass laget faktisk nådde i simuleringene, og hvor ofte. Under 1 %
-  // sies antallet, ikke en prosent som ville blitt "<1 %".
   const N = lastMCN;
   const bestSim = d.findIndex(v=>Math.round(v*N)>0)+1;
-  const ofte = v => v>=0.01 ? `${qaPctCap(v)} av simuleringene` : `${Math.round(v*N)} av ${N.toLocaleString('nb-NO')}`;
-  // Er beste plass også nedre grense for spennet, gjentas ikke plassen.
-  const bestTxt = bestSim===lo
-    ? `, og den øverste i ${ofte(d[bestSim-1])}`
-    : `, og best ${bestSim}. plass (${ofte(d[bestSim-1])})`;
-  // Er beste plass også den vanligste, har setningen over alt sagt det.
-  const oftest = mode+1===bestSim ? '' : `Oftest blir det ${mode+1}. plass (${qaPctCap(d[mode])}). `;
-  return `${ext} I simuleringene havner laget som regel mellom ${lo}. og ${hi}. plass${bestTxt}. ${oftest}${naa}`;
+  const antall = c => `${QA_NUM[c] || c} ${c===1 ? 'gang' : 'ganger'}`;
+  // Sonen laget kjemper om, med tabellens tall -- samme som resten av siden.
+  const zone = qaTargetZone(team);
+  // Er sonen nøyaktig den plassen som alt er nevnt (gull = 1. plass), sier
+  // den det samme tallet en gang til.
+  const sone = (zone && !(zone.lo===zone.hi && zone.lo===mode+1))
+    ? `, og laget ${qaUtfallTxt(zone)} i ${qaPctCap(zone.pct)} av simuleringene` : '';
+  const oftest = `Oftest blir det ${mode+1}. plass (${qaPctCap(d[mode])})${sone}.`;
+  // Beste plass i simuleringene nevnes bare når den er sjelden: ellers står den
+  // alt i spennet over.
+  const sjelden = bestSim < lo && d[bestSim-1] < 0.01;
+  const bestTxt = sjelden
+    ? ` Beste plassering i ${N.toLocaleString('nb-NO')} simuleringer var ${bestSim}. plass, og det skjedde ${antall(Math.round(d[bestSim-1]*N))}.`
+    : '';
+  const ext = worst>hi
+    ? ` Matematisk kan det ende så høyt som ${best}. plass og så lavt som ${worst}. plass.`
+    : (best<lo ? ` Matematisk er ${best}. plass fortsatt mulig.` : '');
+  return `${team} ${naa}ender som regel mellom ${lo}. og ${hi}. plass. ${oftest}${bestTxt}${ext}`;
 }
 // ---- Spørsmål 8: hell/uhell -- ingen simulering. Sammenligner FAKTISKE
 // poeng i FAKTISK spilte kamper (MATCHES, ikke scenario-resultater -- "hell"
@@ -4503,6 +4529,11 @@ function qaSjanse(zone){
   return (LEAGUE.zones[zone.key] || zone).chance || `sjansen for ${zone.label}`;
 }
 const qaStor = t => t.charAt(0).toUpperCase()+t.slice(1);
+// Genitiv: "Kongsvingers", "Vikings", men "Moss'" (ender på s, x eller z).
+const qaGen = n => /[sxz]$/i.test(n) ? `${n}'` : `${n}s`;
+// Ubestemt form, til "Kongsvingers opprykkssjanse": "opprykkssjansen" ->
+// "opprykkssjanse", "nedrykksfaren" -> "nedrykksfare".
+const qaSjanseUbest = zone => qaSjanse(zone).replace(/n$/, '');
 function poengTxt(n){ n = Math.round(n); return `${n>=0 && n<10 ? QA_POENG_ORD[n] : n} poeng`; }
 function qaUtfallTxt(zone){
   const z = LEAGUE.zones[zone.key] || zone;
@@ -4560,11 +4591,15 @@ async function qaWhy(team){
     const rivalForm = liveForm[TI[field.nearest]];
     const diff = form - rivalForm;
     const d = Math.abs(field.nearestPts - row.pts);
-    const rel = d===0 ? `står på samme poeng som ${field.nearest}`
-      : `ligger ${poengTxt(d)} ${row.pts>field.nearestPts?'foran':'bak'} ${field.nearest}`;
+    // Holder laget førsteplassen, er det "serieleder X", ikke "X på førsteplassen".
+    const leder = field.refLabel==='førsteplassen';
+    const mot = leder ? `serieleder ${field.nearest}` : field.nearest;
+    const hvor = leder ? '' : ` på ${field.refLabel}`;
+    const rel = d===0 ? `har like mange poeng som ${mot}`
+      : `ligger ${poengTxt(d)} ${row.pts>field.nearestPts?'foran':'bak'} ${mot}`;
     const formPart = Math.abs(diff)<0.3 ? 'omtrent lik form'
       : `${Math.abs(diff)>=1.5?'klart':'litt'} ${diff>0?'bedre':'dårligere'} form`;
-    part1 = `${team} ${rel} på ${field.refLabel} og er i ${formPart} (${fmtForm(form)} mot ${fmtForm(rivalForm)}).`;
+    part1 = `${team} ${rel}${hvor} og er i ${formPart} (${fmtForm(form)} mot ${fmtForm(rivalForm)}).`;
   } else if(rival){
     part1 = row.pts===rivalRow.pts
       ? `${team} og ${rival.t} står likt på ${poengTxt(row.pts)}, med ${kampTxt(row.left)} igjen.`
@@ -4577,7 +4612,10 @@ async function qaWhy(team){
 
   let part2;
   if(field){
-    part2 = field.names.length ? `Også ${listNames(field.shown, field.more)} er med i kampen.` : '';
+    // Si hva de kjemper om: "Stabæk er også med i kampen om de to opprykksplassene."
+    const zc = LEAGUE.zones[zone.key] || {};
+    const om = zc.kampOm ? ` om ${zc.kampOm}` : '';
+    part2 = field.names.length ? `${listNames(field.shown, field.more)} er også med i kampen${om}.` : '';
   } else if(rival){
     const rivalForm = liveForm[TI[rival.t]];
     const diff = form - rivalForm;
@@ -4722,7 +4760,7 @@ async function qaHowTo(team){
   // hvem det også avhenger av.
   const reach = QA_REACH_PHRASE[zone.key];
   const curveTxt = threshold==null ? '' : qaPointCurve(data, threshold, zone);
-  const rivalTail = rivalName ? ` Det avhenger også av hva ${rivalName} gjør.` : '';
+  const rivalTail = rivalName ? ` Hvor mange poeng som trengs, avhenger av ${qaGen(rivalName)} resultater.` : '';
   let first;
   if(threshold!=null && myPts<threshold){
     first = `${team} trenger trolig rundt ${poengTxt(threshold)} for å ${reach}, altså ${poengTxt(threshold-myPts)} til.`;
@@ -4771,7 +4809,6 @@ async function qaKeyMatches(team){
   }
   // Konklusjon først, én linje per kamp: "Lillestrøm mot Brann: Brann-seier
   // 18 % (+7), Lillestrøm-seier 4 % (−7)." Utfallet navngis med vinneren.
-  const navn = qaSjanse(zone);
   const piece = o => Math.abs(o.d)<0.02
     ? `${o.who}-seier endrer lite`
     : `${o.who}-seier ${pctTxt(Math.min(1,Math.max(0,tableP+o.d)))} (${ppTxt(o.d)})`;
@@ -4779,7 +4816,8 @@ async function qaKeyMatches(team){
     const outs = x.outs.slice().sort((a,b)=>b.d-a.d);
     return `${x.m.home} mot ${x.m.away}: ${piece(outs[0])}, ${piece(outs[1])}.`;
   });
-  return `Disse kampene flytter ${navn} mest (${pctTxt(tableP)} nå, endring i prosentpoeng i parentes):\n`+lines.join('\n');
+  return `Disse kampene påvirker ${qaGen(team)} ${qaSjanseUbest(zone)} mest. Den er ${pctTxt(tableP)} nå:\n`+
+    lines.join('\n')+`\nTallet i parentes er endringen i prosentpoeng.`;
 }
 
 // ---- Spørsmål 6: når kan det være avgjort? decidedHist[runde] = antall
@@ -4809,7 +4847,8 @@ async function qaWhenDecided(team){
   // å motsi nedrykksprosenten, som gjelder 15. og 16. plass.
   const pct = pctTxt(cum/data.N);
   if(zone.dir==='front'){
-    const hva = zone.key==='gull' ? 'gullet' : LEAGUE.zones[zone.key].label;
+    const z = LEAGUE.zones[zone.key];
+    const hva = z.decided || z.label;   // "direkte opprykk" i OBOS, "gullet" i Eliteserien
     return `For ${team} er ${hva} som regel avgjort innen runde ${answerRound}. Det skjer i ${pct} av simuleringene.`;
   }
   return `For ${team} er det som regel avgjort innen runde ${answerRound} om laget ${QA_VERB[zone.key]}. Det skjer i ${pct} av simuleringene.`;
@@ -4839,7 +4878,12 @@ async function qaRivals(team){
   // saken er avgjort.
   const field = qaFieldInWay(team, zone);
   const rivalName = qaSettled(team, zone) ? null : (field ? field.nearest : (qaFindRival(team, zone)||{}).t);
-  const rivalTxt = rivalName ? ` Den nærmeste konkurrenten er ${rivalName}.` : '';
+  // "Nærmeste konkurrent" er noe annet enn laget som oftest ender rett ved
+  // siden av: det er laget som konkurrerer tettest om sonen (samme valg som
+  // spørsmål 1 og 2). Derfor sies sonen.
+  const omSone = zone.dir==='front' ? `om ${LEAGUE.zones[zone.key] ? LEAGUE.zones[zone.key].label : zone.label}`
+    : `om å unngå ${zone.label}`;
+  const rivalTxt = rivalName ? ` ${rivalName} er laget som konkurrerer tettest med ${team} ${omSone}.` : '';
   // Under 1 %: ingen ligger der (laget leder eller ligger sist), og "oftest
   // foran/bak (0 %)" ville vært feil.
   const hasAhead = aheadShare>=0.01, hasBehind = behindShare>=0.01;
@@ -4872,8 +4916,8 @@ const QA_QUESTIONS = [
     return `Hva må ${team} gjøre for å ${z?qaReachQuestion(z.key):'nå målet'}?`;
   }},
   {id:'keymatches', needsTeam:true, run:qaKeyMatches, label:team=>`Hvilke kamper betyr mest for ${team}?`},
-  {id:'keyround', needsTeam:false, run:(team,onPartial)=>qaKeyRound(), label:()=>'Hva er rundens viktigste kamp?'},
-  {id:'runin', needsTeam:false, run:()=>qaToughestRunIn(), label:()=>'Hvem har tyngst avslutning?'},
+  {id:'keyround', needsTeam:false, run:(team,onPartial)=>qaKeyRound(), label:()=>'Hva er rundens viktigste kamp i ligaen?'},
+  {id:'runin', needsTeam:false, run:()=>qaToughestRunIn(), label:()=>'Hvem har det tøffeste restprogrammet?'},
   {id:'lastmatch', needsTeam:true, run:qaLastMatch, label:team=>`Hva betydde forrige kamp for ${team}?`},
   {id:'nextmatch', needsTeam:true, run:team=>qaNextMatch(team), label:team=>`Hva betyr neste kamp for ${team}?`},
   {id:'cheer', needsTeam:true, run:qaCheerFor, label:team=>`Hvem bør ${team} heie på denne runden?`},
