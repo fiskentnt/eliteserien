@@ -23,4 +23,9 @@ if ! node -e "require('puppeteer-core')" >/dev/null 2>&1; then
   fi
 fi
 
+# Failsafe-testene for resultatkjeden kjører først: de trenger verken nett,
+# nøkkel eller nettleser.
+python3 tests/failsafe.py || exit 1
+echo
+
 exec node tests/regression.js "$@"

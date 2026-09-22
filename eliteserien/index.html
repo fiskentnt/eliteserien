@@ -4980,7 +4980,7 @@ function findPendingAndNext(fixturesIn){
       if(m.played || !m.time) return;
       const kickoffMs = osloDateTimeToMs(m.date, m.time);
       if(kickoffMs <= now) anyStarted = true;
-      else if(!next || kickoffMs < next.kickoffMs) next = {home:m.home, away:m.away, time:m.time, kickoffMs};
+      else if(!next || kickoffMs < next.kickoffMs) next = {home:m.home, away:m.away, date:m.date, time:m.time, kickoffMs};
     });
   });
   return {anyStarted, next};

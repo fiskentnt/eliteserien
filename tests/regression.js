@@ -512,6 +512,18 @@ async function main() {
     await ob.close();
     await page.bringToFront();
 
+    // stempelet: dato og klokkeslett skal være ekte tekst, aldri undefined
+    setGroup('Stempelet');
+    for (const [url, navn] of [[base, 'Eliteserien'], [base.replace('/eliteserien/', '/obos/'), 'OBOS']]) {
+      const sp = await open(1400, 900, url);
+      await sleep(1200);
+      const txt = await sp.evaluate(() => document.querySelector('.stamp').textContent);
+      check(`${navn}: stempelet har ingen hull`, !/undefined|NaN|null/.test(txt), txt.slice(0, 140));
+      check(`${navn}: neste sjekk har dato`, !/Neste sjekk/.test(txt) || /\d+\. \w+/.test(txt), txt.slice(0, 140));
+      await sp.close();
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();

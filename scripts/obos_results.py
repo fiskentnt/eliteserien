@@ -145,6 +145,62 @@ def oddspapi_score(key, fixture_id):
     return None
 
 
+def finished_without_result(fixtures, prev, names, teams):
+    """Kampene som er FERDIGSPILT hos OddsPapi og mangler resultat hos oss.
+
+    Bare statusId 2 (ferdigspilt) er med: en kamp som pågår, er utsatt eller
+    avbrutt skal aldri gi resultat. Kampen identifiseres på lagene, ikke dato,
+    så en flyttet kamp ikke blir to."""
+    hn = {norm(t): t for t in teams}
+    out = []
+    for f in fixtures:
+        h = hn.get(norm(names.get(f.get("participant1Name"), f.get("participant1Name"))))
+        a = hn.get(norm(names.get(f.get("participant2Name"), f.get("participant2Name"))))
+        if not h or not a or (h, a) in prev:
+            continue
+        if f.get("statusId") != STATUS_FINISHED:
+            continue
+        out.append(((h, a), f))
+    return out
+
+
+def decide(op_scores, wiki, sched, prev, now):
+    """Avgjør hva som kan publiseres. Regelen:
+
+      begge kilder enige            -> publiser
+      begge uenige                  -> hold tilbake, konflikt
+      bare én kilde, under 24 timer -> vent (den andre er ikke oppdatert ennå)
+      bare én kilde, over 24 timer  -> publiser den kilden
+
+    Returnerer (publiser, konflikter, venter)."""
+    publish, conflicts, waiting = dict(prev), [], []
+    cand = set(op_scores) | {k for k in (wiki or {}) if k not in prev}
+    for k in sorted(cand):
+        if k in prev or k not in sched:
+            continue
+        o, w = op_scores.get(k), (wiki or {}).get(k)
+        s2 = sched[k]
+        try:
+            kickoff = datetime.fromisoformat(f"{s2['date']}T{s2['time']}").replace(
+                tzinfo=ZoneInfo("Europe/Oslo")).astimezone(timezone.utc)
+        except Exception:
+            kickoff = now
+        old_enough = (now - kickoff) > timedelta(hours=WAIT_HOURS)
+        if o and w:
+            if o == w:
+                publish[k] = o
+            else:
+                conflicts.append(f"{k[0]} mot {k[1]}: OddsPapi {o[0]}-{o[1]}, Wikipedia {w[0]}-{w[1]}")
+        elif o or w:
+            src, val = ("OddsPapi", o) if o else ("Wikipedia", w)
+            if old_enough:
+                publish[k] = val
+                log(f"  bare {src} har {k[0]} mot {k[1]} ({val[0]}-{val[1]}), over {WAIT_HOURS} t siden: publiseres")
+            else:
+                waiting.append(f"{k[0]} mot {k[1]}: bare {src} har det ennå, venter på den andre")
+    return publish, conflicts, waiting
+
+
 # ---------------------------------------------------------------- Wikipedia
 def wikipedia_results(names):
     """Resultatrutenettet fra Wikipedia: (hjemme, borte) -> (hg, ag).
@@ -261,16 +317,8 @@ def main():
     op_scores, fixtures = {}, []
     if key:
         fixtures = oddspapi_fixtures(key) or []
-        by_pair = {}
-        for f in fixtures:
-            h = names.get(f.get("participant1Name"), f.get("participant1Name"))
-            a = names.get(f.get("participant2Name"), f.get("participant2Name"))
-            hn = {norm(x): x for x in {t for k in sched for t in k}}
-            h, a = hn.get(norm(h)), hn.get(norm(a))
-            if h and a:
-                by_pair[(h, a)] = f
-        missing = [(k2, f) for k2, f in by_pair.items()
-                   if k2 not in prev and f.get("statusId") == STATUS_FINISHED]
+        teams = {t for k2 in sched for t in k2}
+        missing = finished_without_result(fixtures, prev, names, teams)
         log(f"  ferdigspilte kamper uten publisert resultat: {len(missing)}")
         for k2, f in missing[: args.max_scores]:
             sc = oddspapi_score(key, f.get("fixtureId"))
@@ -302,31 +350,7 @@ def main():
 
     # ---- sammenlign og avgjør
     now = datetime.now(timezone.utc)
-    publish, conflicts, waiting = dict(prev), [], []
-    cand = set(op_scores) | {k2 for k2 in (wiki or {}) if k2 not in prev}
-    for k2 in sorted(cand):
-        if k2 in prev or k2 not in sched:
-            continue
-        o, w = op_scores.get(k2), (wiki or {}).get(k2)
-        s = sched[k2]
-        try:
-            kickoff = datetime.fromisoformat(f"{s['date']}T{s['time']}").replace(
-                tzinfo=ZoneInfo("Europe/Oslo")).astimezone(timezone.utc)
-        except Exception:
-            kickoff = now
-        old_enough = (now - kickoff) > timedelta(hours=WAIT_HOURS)
-        if o and w:
-            if o == w:
-                publish[k2] = o
-            else:
-                conflicts.append(f"{k2[0]} mot {k2[1]}: OddsPapi {o[0]}-{o[1]}, Wikipedia {w[0]}-{w[1]}")
-        elif o or w:
-            src, val = ("OddsPapi", o) if o else ("Wikipedia", w)
-            if old_enough:
-                publish[k2] = val
-                log(f"  bare {src} har {k2[0]} mot {k2[1]} ({val[0]}-{val[1]}), over {WAIT_HOURS} t siden: publiseres")
-            else:
-                waiting.append(f"{k2[0]} mot {k2[1]}: bare {src} har det ennå")
+    publish, conflicts, waiting = decide(op_scores, wiki, sched, prev, now)
     log(f"\nNye resultater: {len(publish) - len(prev)}. Venter: {len(waiting)}. Konflikter: {len(conflicts)}.")
     for c in conflicts:
         log(f"  KONFLIKT {c}")
