@@ -104,7 +104,7 @@
     --input-bg:#f4f7fb; --sim-bg:#e6ecf4; --sim-border:#c5d0e0;
     --played-bg:#f2f5f9; --played-fg:#7d8ca1; --played-score-bg:#dfe6ef; --played-score-fg:#66768c;
     --ned-row-a:#f5f7fb; --ned-row-b:#fafbfd;
-    --hist-flat:#e3c3c6; --hist-eu:#8cc3b3; --hist-q:#e8c374; --hist-n:#c98a90;
+    --hist-flat:#e3c3c6; --hist-eu:#8cc3b3; --hist-q:#e8c374; --hist-n:#c98a90; --hist-cl:#7ea8d8;
     /* --team*: DYNAMISK, satt av JS (applyTeamColors()) fra TEAM_COLORS ut
        fra valgt lag. --team-fill/-deep/-fill-text er unthemet (samme "fyll
        med hvit/mørk tekst"-logikk som --accent), --team-text-light/-dark og
@@ -149,7 +149,7 @@
       --input-bg:#16243a; --sim-bg:#1a2a44; --sim-border:#2f4262;
       --played-bg:#0f1a2b; --played-fg:#8697ae; --played-score-bg:#1a2940; --played-score-fg:#93a3ba;
       --ned-row-a:#0f1a2b; --ned-row-b:#121f33;
-      --hist-flat:#4d4142; --hist-eu:#427c66; --hist-q:#8d6e2e; --hist-n:#8d4e52;
+      --hist-flat:#4d4142; --hist-eu:#427c66; --hist-q:#8d6e2e; --hist-n:#8d4e52; --hist-cl:#3f6a9e;
     }
   }
   :root[data-theme="dark"]{
@@ -169,7 +169,7 @@
     --input-bg:#16243a; --sim-bg:#1a2a44; --sim-border:#2f4262;
     --played-bg:#0f1a2b; --played-fg:#8697ae; --played-score-bg:#1a2940; --played-score-fg:#93a3ba;
     --ned-row-a:#0f1a2b; --ned-row-b:#121f33;
-    --hist-flat:#4d4142; --hist-eu:#427c66; --hist-q:#8d6e2e; --hist-n:#8d4e52;
+    --hist-flat:#4d4142; --hist-eu:#427c66; --hist-q:#8d6e2e; --hist-n:#8d4e52; --hist-cl:#3f6a9e;
   }
   html{background:var(--bg)}
   * { transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
@@ -522,7 +522,11 @@
   .odds-jump:hover strong{text-decoration:underline}
   .hist{display:grid;grid-template-columns:repeat(16,1fr);gap:1px;align-items:end;height:20px;margin-top:6px}
   .hist i{display:block;background:var(--hist-flat);border-radius:1px 1px 0 0;min-height:1px}
-  .hist i.eu{background:var(--hist-eu)}.hist i.q{background:var(--hist-q)}.hist i.n{background:var(--hist-n)}
+  /* Samme soneinndeling som tabellen: blått for plass 1 og 2, grønt for 3 og 4,
+     gult for 14, skravert for 15 og 16. */
+  .hist i.cl{background:var(--hist-cl)}
+  .hist i.eu{background:var(--hist-eu)}.hist i.q{background:var(--hist-q)}
+  .hist i.n{background:repeating-linear-gradient(135deg,var(--hist-n) 0 2px,transparent 2px 4px)}
   .hist-l{display:none} /* aksetallene tar for mye plass i den smale stripen — samme info står i title på hver stolpe */
   @media (max-width:640px){
     .status{cursor:pointer}
@@ -1098,13 +1102,18 @@ window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', ()=
 
 // ---- Statiske hjelpetabeller (ikke avledet fra kampdata) ----
 const ODDS_W = 0.7; // oddsens vekt i kommende kamper. Resten er modellen.
-// Hvilken turnering hver plass gir. Eliteserien 2026 kvalifiserer til
-// europacupen 2027/28, og med Norge rundt 13.-14. plass på UEFA-rankingen er
-// fordelingen to mesterligaplasser, én europaligaplass og to
-// conferenceligaplasser (TV 2, september 2026). Europaligaplassen går til
-// cupvinneren, så 3. OG 4. plass gir Conference League -- ikke Europa League,
-// som det sto her før. Runden for 4. plass er ikke fastsatt i kildene, så den
-// står uten rundenavn.
+// Hvilken turnering hver plass gir. Fordelingen med Norge på 14. plass på
+// UEFA-rankingen, fra Norsk Toppfotball (eliteserien.no): "To lag i
+// mesterligakvalifiseringen (1.- og 2.-plass i ligaen)", "Ett lag i
+// europaligakvalifiseringen (cupvinner)", "To lag i conferenceligakvalifiseringen
+// (3.- og 4.-plass i ligaen)". TV 2 (september 2026) sier det samme for
+// europacupen 2027/28, som Eliteserien 2026 kvalifiserer til: "13.- eller
+// 14.-plass vil bety to mesterligaplasser, én europaligaplass og to
+// conferenceligaplasser året etter".
+//   3. plass gir altså Conference League, ikke Europa League som det sto her
+// før -- europaligaplassen går til cupvinneren. Rundene for 1., 2. og 3. plass
+// er fra Wikipedia (Eliteserien 2026); for 4. plass oppgir ingen av kildene
+// runde, så den står uten.
 const EURO_TITLES = {1:'Champions League: playoff-runden', 2:'Champions League: andre kvalifiseringsrunde', 3:'Conference League: andre kvalifiseringsrunde', 4:'Conference League: kvalifisering'};
 
 const NO_MONTH = ['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember'];
@@ -2457,7 +2466,7 @@ function fillOdds(){
   const box=document.getElementById('odds'); if(!box || !SELECTED_TEAM) return;
   const d=lastMC[SELECTED_TEAM]; if(!d) return;
   const mx=Math.max(...d);
-  const gull=d[0], europa=d[0]+d[1]+d[2]+d[3], kvalik=d[13], nedrykk=d[14]+d[15];
+  const gull=d[0], cl=d[0]+d[1], europa=d[0]+d[1]+d[2]+d[3], kvalik=d[13], nedrykk=d[14]+d[15];
   const midtP=d.slice(4,13).reduce((x,y)=>x+y,0);
   // Når verken gull, Europa, kvalik eller nedrykk er reelle muligheter (alle
   // under 1%) sier de fire tallene ingenting — vis heller én forklarende
@@ -2470,6 +2479,7 @@ function fillOdds(){
     ? `<div class="odds-row flat" title="Sannsynlighet for sluttplassering, ut fra modellen">Ingenting er i spill: ${SELECTED_TEAM} ender mellom 5. og 13. plass i ${Math.round(midtP*100)} av 100 simuleringer.</div>`
     : `<div class="odds-row" title="Sannsynlighet for sluttplassering, ut fra modellen. Klikk et tall for å se hvorfor.">
       ${gull>0.01?`<button class="odds-jump" data-zone="gull"><strong>${pctTxt(gull)}</strong>Gull</button>`:''}
+      ${cl>0.01&&cl<0.99?`<button class="odds-jump" data-zone="cl"><strong>${pctTxt(cl)}</strong>Champions League</button>`:''}
       <button class="odds-jump" data-zone="europa"><strong>${pctTxt(europa)}</strong>Europa</button>
       <button class="odds-jump" data-zone="kvalik"><strong>${pctTxt(kvalik)}</strong>Kvalik</button>
       <button class="odds-jump n" data-zone="nedrykk"><strong>${pctTxt(nedrykk)}</strong>Nedrykk</button></div>`;
@@ -2482,7 +2492,7 @@ function fillOdds(){
   // hva kampen betydde. Klikk åpner hele svaret i "Spør om tabellen".
   const lm = qaLastMatchLine(lastMatchEntry(SELECTED_TEAM));
   box.innerHTML = row + (showHist
-    ? `<div class="hist" aria-hidden="true" title="Sannsynlighet for sluttplassering, ut fra modellen">${d.map((v,i)=>`<i class="${i<4?'eu':i===13?'q':i>=14?'n':''}" style="height:${(v/mx*100).toFixed(1)}%" title="${i+1}. plass: ${pctTxt(v)}"></i>`).join('')}</div>
+    ? `<div class="hist" aria-hidden="true" title="Sannsynlighet for sluttplassering, ut fra modellen">${d.map((v,i)=>`<i class="${i<2?'cl':i<4?'eu':i===13?'q':i>=14?'n':''}" style="height:${(v/mx*100).toFixed(1)}%" title="${i+1}. plass: ${pctTxt(v)}"></i>`).join('')}</div>
     <div class="hist-l">${d.map((v,i)=>`<span>${i+1}</span>`).join('')}</div>`
     : '')
     + (lm ? `<button class="lastmatch" title="Se hva kampen betydde">${lm.html}</button>` : '');
@@ -3087,6 +3097,10 @@ function qaZoneByKey(team, key){
   const d = lastMC && lastMC[team];
   if(!d) return null;
   if(key==='gull') return {key:'gull', label:'gull', lo:1, hi:1, boundary:1, dir:'front', pct:d[0]};
+  // Champions League-kvalifisering = topp 2 (se fargeforklaringen under tabellen).
+  // Nås bare ved å klikke tallet i lagboksen -- qaTargetZone velger den aldri
+  // automatisk, så "mest aktuelt" er uendret.
+  if(key==='cl') return {key:'cl', label:'Champions League', lo:1, hi:2, boundary:2, dir:'front', pct:d[0]+d[1]};
   if(key==='europa') return {key:'europa', label:'Europa', lo:1, hi:4, boundary:4, dir:'front', pct:d[0]+d[1]+d[2]+d[3]};
   if(key==='nedrykk') return {key:'nedrykk', label:'nedrykk', lo:15, hi:16, boundary:13, dir:'back', pct:d[14]+d[15]};
   if(key==='kvalik') return {key:'kvalik', label:'kvalik', lo:14, hi:14, boundary:13, dir:'back', pct:d[13]};
@@ -3103,7 +3117,7 @@ function qaTargetZone(team){
   if(nedrykk>0.05) return qaZoneByKey(team,'nedrykk');
   return qaZoneByKey(team,'kvalik');
 }
-const QA_REACH_PHRASE = {gull:'vinne serien', europa:'nå Europa', kvalik:'sikre plassen direkte', nedrykk:'sikre plassen direkte'};
+const QA_REACH_PHRASE = {gull:'vinne serien', cl:'nå Champions League-kvalifiseringen', europa:'nå Europa', kvalik:'sikre plassen direkte', nedrykk:'sikre plassen direkte'};
 // Spørsmålsteksten (knapp og banner) for bakre soner sier også "uten kvalik",
 // så det er tydelig at grensen er 13. plass og hvorfor tallet er lavere enn
 // nedrykksprosenten i tabellen (14. plass er kvalik, ikke sikret).
@@ -3134,8 +3148,8 @@ function qaKeyBannerStale(){
 const kampTxt = n => n===1 ? '1 kamp' : `${n} kamper`;
 const fmtSigned = v => (v<0?'−':'+') + Math.abs(v).toFixed(1).replace('.',',');
 const ppTxt = d => { const r=Math.round(d*100); return r===0 ? '±0' : (r>0?'+':'−')+Math.abs(r); };
-const QA_SAFE_PHRASE = {gull:'sikret gull', europa:'sikret Europa', kvalik:'sikret plassen direkte', nedrykk:'sikret plassen direkte'};
-const QA_VERB = {gull:'vinner serien', europa:'tar Europa-plass', kvalik:'sikrer plassen direkte (13. plass eller bedre)', nedrykk:'sikrer plassen direkte (13. plass eller bedre)'};
+const QA_SAFE_PHRASE = {gull:'sikret gull', cl:'sikret Champions League-kvalifisering', europa:'sikret Europa', kvalik:'sikret plassen direkte', nedrykk:'sikret plassen direkte'};
+const QA_VERB = {gull:'vinner serien', cl:'tar Champions League-plass', europa:'tar Europa-plass', kvalik:'sikrer plassen direkte (13. plass eller bedre)', nedrykk:'sikrer plassen direkte (13. plass eller bedre)'};
 
 // Er saken avgjort? Gjelder "sonen" i den betydningen alle spørsmålene bruker
 // for suksess: plass <= grensen (gull 1, Europa 4, for kvalik/nedrykk 13 eller
@@ -3312,7 +3326,7 @@ function runZoneTasks(payload, tasks, onTask){
   });
 }
 const QA_CHEER_N = 2500; // som spørsmål 5
-const QA_CHANCE = {gull:'gullsjansen', europa:'Europa-sjansen', kvalik:'kvaliksjansen', nedrykk:'nedrykkssjansen'};
+const QA_CHANCE = {gull:'gullsjansen', cl:'Champions League-sjansen', europa:'Europa-sjansen', kvalik:'kvaliksjansen', nedrykk:'nedrykkssjansen'};
 async function qaCheerFor(team, onPartial){
   const zone = qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
@@ -4111,7 +4125,8 @@ async function qaHowTo(team){
     for(let p=0;p<data.totalAtPts.length;p++){
       if(data.totalAtPts[p]>=10 && data.successAtPts[p]/data.totalAtPts[p]>=0.95){ safe=p; break; }
     }
-    const verb = zone.key==='gull' ? 'vinner serien' : zone.key==='europa' ? 'tar Europa-plassen' : 'sikrer plassen direkte';
+    const verb = zone.key==='gull' ? 'vinner serien' : zone.key==='cl' ? 'tar Champions League-plassen'
+      : zone.key==='europa' ? 'tar Europa-plassen' : 'sikrer plassen direkte';
     const fails = zone.dir==='front' ? 'det glipper' : 'det ryker';
     const all = Math.round(successShare*100)>=100 ? 'alle' : 'nesten alle';
     const need = safe==null ? null : Math.max(0, safe-myPts);
