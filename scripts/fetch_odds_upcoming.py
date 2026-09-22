@@ -134,10 +134,22 @@ def main():
     # siden forrige kjøring, inn i vår egen historikk.
     captured_keys = {(m["home"], m["away"]) for m in captured["matches"]}
     newly_captured = 0
+    hentet = existing_upcoming.get("fetched_at") or ""
     for m in existing_upcoming.get("matches", []):
         key = (m["home"], m["away"])
         if key in played_keys and key not in captured_keys:
-            captured["matches"].append({k: v for k, v in m.items() if k != "commence_time"} | {"date": m["commence_time"][:10]})
+            # Bare odds hentet FØR avspark er sluttodds. Endepunktet gir også
+            # kamper som pågår, og en henting under kampen gir odds som alt
+            # kjenner stillingen. Det skjedde med Brann mot Bodø/Glimt 20.
+            # september (hentet 91 minutter etter avspark), og de oddsene
+            # trakk Glimts gullsjanse ned fem prosentpoeng i tilpasningen.
+            if not hentet or hentet[:19] >= m["commence_time"][:19]:
+                log(f"Hopper over {key[0]}-{key[1]}: oddsen ble hentet {hentet or 'ukjent tid'}, "
+                    f"etter avspark {m['commence_time']}, og er ikke sluttodds.")
+                continue
+            captured["matches"].append({k: v for k, v in m.items() if k != "commence_time"}
+                                       | {"date": m["commence_time"][:10], "fetched_at": hentet,
+                                          "kickoff": m["commence_time"]})
             newly_captured += 1
     if newly_captured:
         log(f"Fanget opp siste odds før avspark for {newly_captured} nylig spilte kamper.")
@@ -168,8 +180,16 @@ def main():
         return
 
     matches = parse(raw)
-    # Et svar kan inneholde en kamp som alt er spilt; den hører ikke hjemme her.
-    matches = [m for m in matches if (m["home"], m["away"]) not in played_keys]
+    # Et svar kan inneholde en kamp som alt er spilt, eller en som PÅGÅR. Ingen
+    # av dem hører hjemme her: oddsen under en kamp kjenner stillingen, og ville
+    # både blitt blandet inn på siden og fanget opp som "sluttodds" etterpå.
+    naa = datetime.now(timezone.utc).isoformat(timespec="seconds")[:19]
+    pagar = [m for m in matches if m.get("commence_time", "")[:19] <= naa]
+    if pagar:
+        log(f"Tar ut {len(pagar)} kamper som alt har startet: "
+            + ", ".join(f"{m['home']}-{m['away']}" for m in pagar))
+    matches = [m for m in matches if (m["home"], m["away"]) not in played_keys
+               and m.get("commence_time", "")[:19] > naa]
     # Ikke overskriv gode data med tomme, med mindre alle de gamle kampene nå er spilt
     # (da er en tom liste riktig, ikke en feil).
     old_still_unplayed, fjernet = uten_spilte(existing_upcoming)

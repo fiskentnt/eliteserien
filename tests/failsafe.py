@@ -168,6 +168,26 @@ def main():
         check(f"{liga}/index.html er merket som generert",
               "GENERERT FIL -- IKKE REDIGER" in har[:1200], har[:80])
 
+    # 9. Modellen og oddsen står stille når ingen kamper spilles.
+    #   Tidsvektingen skal regnes fra siste spilte kamp, ikke fra dagens dato:
+    #   ellers krymper lagforskjellene i hver pause uten at noe har skjedd.
+    #   Og en lagret "sluttodds" må være hentet FØR avspark -- Brann mot
+    #   Bodø/Glimt ble fanget opp 91 minutter etter avspark og trakk Glimts
+    #   gullsjanse ned fem prosentpoeng.
+    for liga in ("eliteserien", "obos"):
+        mdl = json.loads((ROOT / liga / "data" / "model.json").read_text(encoding="utf-8"))
+        kamper = json.loads((ROOT / liga / "data" / "matches.json").read_text(encoding="utf-8"))
+        siste = max(k["date"] for k in kamper)
+        ref = (mdl.get("meta") or {}).get("ref_date")
+        check(f"{liga}: modellen er tilpasset med siste spilte kamp som referanse",
+              ref == siste, f"ref_date={ref}, siste kamp {siste}")
+    cap = json.loads((ROOT / "eliteserien" / "data" / "odds_captured.json").read_text(encoding="utf-8"))["matches"]
+    etter = [f"{c['home']}-{c['away']}" for c in cap
+             if c.get("fetched_at") and c.get("kickoff") and c["fetched_at"][:19] >= c["kickoff"][:19]]
+    check("ingen lagret sluttodds er hentet etter avspark", not etter, ", ".join(etter))
+    check("Brann mot Bodø/Glimt (hentet under kampen) er ikke lagret som sluttodds",
+          not any(c["home"] == "Brann" and c["away"] == "Bodø/Glimt" for c in cap))
+
     print(f"\n{ok} av {ok + fail} failsafe-tester gikk gjennom.")
     return 1 if fail else 0
 

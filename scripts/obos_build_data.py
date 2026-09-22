@@ -120,7 +120,7 @@ def main():
         "att": list(res["att"]), "con": list(res["con"]),
         "ha": list(res["ha"]), "hc": list(res["hc"]),
         "meta": {"league": "OBOS-ligaen", "season": int(SEASON), "matches": len(played),
-                 "odds_weight": odds_weight, "n_odds_matches": n_odds,
+                 "odds_weight": odds_weight, "n_odds_matches": n_odds, "ref_date": ref,
                  "half_life_days": HALF_LIFE, "l1": L1, "l2": L2,
                  "note": ("Sluttodds fra Pinnacle via OddsPapi, samme vekt som Eliteserien."
                           if n_odds else

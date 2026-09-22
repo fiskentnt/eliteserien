@@ -324,7 +324,7 @@ async function main() {
     // omtrent like mye (se qaKeyBanner).
     check('banneret viser rundens viktigste kamp fra datafilen',
       banner.qid === 'keyround' &&
-      /(Rundens viktigste kamp|kamper betyr omtrent like mye)/.test(banner.txt) &&
+      /(Rundens viktigste kamp|kamper skiller seg ut som omtrent like viktige)/.test(banner.txt) &&
       / mot /.test(banner.txt), JSON.stringify(banner));
     await fresh.select('#teamSelect', 'Bodø/Glimt');
     await sleep(500);
@@ -414,17 +414,23 @@ async function main() {
       check(`${label}: trykk på et spørsmål scroller til svaret`, afterClick > 50, `scrollY ${afterClick}`);
       await q.evaluate(() => window.scrollBy(0, -300));
       await sleep(500);
-      const before = await q.evaluate(() => Math.round(window.scrollY));
-      await q.evaluate(() => { window.__mx = 0; window.__mn = 1e9;
-        window.__iv = setInterval(() => { const y = Math.round(window.scrollY);
-          window.__mx = Math.max(window.__mx, y); window.__mn = Math.min(window.__mn, y); }, 20); });
+      // Det som måles, er hvor det aktive spørsmålet står PÅ SKJERMEN, ikke
+      // scrollY. Blir noe over skjermkanten høyere ved lagbyttet (lagboksen,
+      // en lengre linje), justerer nettleseren scrollY nettopp for at det man
+      // ser skal stå stille -- da endres scrollY uten at siden flytter seg.
+      const topp = 'Math.round(document.querySelector(".qa-item.active").getBoundingClientRect().top)';
+      const before = await q.evaluate(topp);
+      await q.evaluate(t => { window.__mx = -1e9; window.__mn = 1e9;
+        window.__iv = setInterval(() => { const el = document.querySelector('.qa-item.active'); if (!el) return;
+          const y = Math.round(el.getBoundingClientRect().top);
+          window.__mx = Math.max(window.__mx, y); window.__mn = Math.min(window.__mn, y); }, 20); }, topp);
       await q.select('#teamSelect', 'Tromsø');
       await q.waitForFunction(`(()=>{const a=document.getElementById('qaAnswer');return a&&!a.classList.contains('loading')&&qaAnswerKey===qaStateKey()})()`, {timeout: 60000});
       await sleep(900);
       const mv = await q.evaluate(() => { clearInterval(window.__iv); return {mx: window.__mx, mn: window.__mn}; });
       check(`${label}: lagbytte flytter ikke siden`,
         Math.abs(mv.mx - before) <= 5 && Math.abs(mv.mn - before) <= 5,
-        `sto på ${before}, spenn ${mv.mn}–${mv.mx}`);
+        `spørsmålet sto ${before} px fra toppen av skjermen, spenn ${mv.mn}–${mv.mx}`);
       const txt = await q.evaluate(() => document.getElementById('qaAnswer').textContent);
       check(`${label}: svaret er regnet om for det nye laget`, txt.includes('Tromsø'), txt.slice(0, 90));
       await q.close();

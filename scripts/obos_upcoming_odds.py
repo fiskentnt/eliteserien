@@ -118,7 +118,10 @@ def main():
         return 1
 
     links, only_odds, only_csv = match_fixtures(rows, fixtures, load_name_map())
-    kommende = [(r, f) for r, f in links if (r["home"], r["away"]) not in played]
+    # Bare kamper som ikke har startet: oddsen under en kamp kjenner stillingen.
+    naa = datetime.now(timezone.utc).isoformat(timespec="seconds")[:19]
+    kommende = [(r, f) for r, f in links if (r["home"], r["away"]) not in played
+                and (f.get("startTime") or "")[:19] > naa]
     print(f"  {len(fixtures)} kamper hos OddsPapi, {len(kommende)} uspilte og koblet til terminlisten")
     for x in only_odds:
         print(f"  BARE HOS ODDSPAPI: {x}")
@@ -134,7 +137,7 @@ def main():
         bm, odds, stamp = closing_from(oddspapi.call(
             "/v4/historical-odds",
             {"fixtureId": f.get("fixtureId"), "bookmakers": ",".join(BOOKMAKERS)}, key)[0] or {},
-            market_id=mkt_id, kickoff=None)
+            market_id=mkt_id, kickoff=f.get("startTime"))   # aldri priser etter avspark
         if not bm:
             print(f"  {r['home']} mot {r['away']}: ingen odds fra {', '.join(BOOKMAKERS)}")
             time.sleep(COOLDOWN)

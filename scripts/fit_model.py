@@ -69,11 +69,17 @@ def main():
         m["odds"] = odds_by_key.get((m["home"], m["away"]))
     n_odds = sum(1 for m in matches if m["odds"])
 
-    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    # Referansen for tidsvektingen er datoen for siste spilte kamp, ikke dagens
+    # dato. Med dagens dato veier alle kamper litt mindre for hver dag uten
+    # kamper, mens regulariseringen står stille -- så lagforskjellene krymper
+    # og sjansene flyter mot midten i hver pause, uten at noe har skjedd. Målt
+    # 22. september: to uker fram ville Glimts gullsjanse falt fra 78 til 75 %
+    # bare av dette. OBOS har alltid brukt siste kamp (obos_build_data.py).
+    ref = max((m["date"] for m in matches), default=datetime.now(timezone.utc).strftime("%Y-%m-%d"))
     res = fit_fast.fit_model_fast(
         matches, teams, TI, odds_weight=ODDS_WEIGHT,
         half_life_goals=HALF_LIFE_DAYS, half_life_odds=HALF_LIFE_DAYS,
-        l1=L1, l2=L2, ref_date=today, isolate_global=True,
+        l1=L1, l2=L2, ref_date=ref, isolate_global=True,
     )
     log(f"Tilpasset mot {len(matches)} kamper ({n_odds} med odds). Konvergerte: {res['success']} "
         f"({res['nit']} iterasjoner).")
@@ -90,6 +96,7 @@ def main():
         "meta": {
             "odds_weight": ODDS_WEIGHT, "half_life_days": HALF_LIFE_DAYS,
             "l1": L1, "l2": L2, "n_matches": len(matches), "n_odds_matches": n_odds,
+            "ref_date": ref,
         },
     }
     (LEAGUE / "data" / "model.json").write_text(json.dumps(out, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")

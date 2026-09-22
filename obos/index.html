@@ -583,6 +583,11 @@
      er en lavere nedrykkssjanse bra, og da er minus grønt. */
   .status .lastmatch{display:block;width:100%;margin:6px 0 0;padding:6px 0 0;border:none;border-top:1px solid var(--line);background:none;text-align:left;font:600 12.5px/1.35 var(--body);color:var(--muted);cursor:pointer}
   .status .lastmatch b{font:800 14px/1 var(--cond);margin-left:1px}
+  /* To kolonner: lagboksen står over "Spør om tabellen" i samme kolonne, og
+     linja over bryter til to linjer for noen lag og ikke for andre. Uten fast
+     høyde flyttet alt under seg 17 px når man byttet lag. Plass til to linjer
+     (padding 6 + kant 1 + 2 x 1,35em) holder boksen like høy for alle lag. */
+  @media (min-width:1100px){ .status .lastmatch{min-height:calc(7px + 2.7em)} }
   .status .lastmatch b.good{color:var(--eu-text)}
   .status .lastmatch b.bad{color:var(--accent-text)}
   .status .lastmatch:hover,.status .lastmatch:focus-visible{text-decoration:underline}
