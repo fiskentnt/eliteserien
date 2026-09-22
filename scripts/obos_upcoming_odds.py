@@ -134,9 +134,19 @@ def main():
 
     ut = []
     for r, f in kommende:
-        bm, odds, stamp = closing_from(oddspapi.call(
-            "/v4/historical-odds",
-            {"fixtureId": f.get("fixtureId"), "bookmakers": ",".join(BOOKMAKERS)}, key)[0] or {},
+        params = {"fixtureId": f.get("fixtureId"), "bookmakers": ",".join(BOOKMAKERS)}
+        svar, err = oddspapi.call("/v4/historical-odds", params, key)
+        if err and "RATE_LIMITED" in str(err):
+            # Kortvarig grense på endepunktet. Oppslaget er gratis, så ett
+            # forsøk til koster ingenting -- uten det falt en kamp eller to ut
+            # av hver kjøring, og siden sto uten odds på kamper som hadde dem.
+            time.sleep(COOLDOWN)
+            svar, err = oddspapi.call("/v4/historical-odds", params, key)
+        if err:
+            print(f"  {r['home']} mot {r['away']}: FEIL {err}")
+            time.sleep(COOLDOWN)
+            continue
+        bm, odds, stamp = closing_from(svar or {},
             market_id=mkt_id, kickoff=f.get("startTime"))   # aldri priser etter avspark
         if not bm:
             print(f"  {r['home']} mot {r['away']}: ingen odds fra {', '.join(BOOKMAKERS)}")

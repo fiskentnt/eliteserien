@@ -789,6 +789,10 @@
   .match .home,.match .away{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:12.5px}
   .match .when{text-align:center;font-size:10.5px;line-height:1;white-space:nowrap}
   .match .when .t{font-weight:700;color:var(--ink)}
+  /* Én utsatt kamp i en runde: merkes på kampen, så datospennet i
+     rundeoverskriften (som regnes uten den, se scripts/leaguedata.py) ikke
+     ser ut som en feil. */
+  .match .when .ut{display:block;margin-top:2px;color:var(--muted);font-size:9.5px;font-weight:600;letter-spacing:.02em}
   .match.played .when .t{color:var(--played-fg)}
   .match .followed-name{color:var(--team-text);font-weight:700}
   .match input{width:40px;height:34px;text-align:center;font:700 19px/1 var(--cond);border:1px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--ink);padding:0}
@@ -809,7 +813,9 @@
   .quick .q{display:flex;flex-direction:column;align-items:center;gap:2px;width:25px}
   .quick .pct{font:500 10.5px/1 var(--body);letter-spacing:-.01em;color:var(--muted);height:11px;white-space:nowrap}
   .quick .pct.best{color:var(--ink);font-weight:700}
-  .quick .pct.odds{color:var(--accent-text);font-weight:700;font-size:10px;letter-spacing:.02em}
+  /* "odds" er en opplysning om hvor tallene kommer fra, ikke en advarsel:
+     samme dempede farge som klokkeslettet, ikke aksentfargen (rød). */
+  .quick .pct.odds{color:var(--muted);font-weight:600;font-size:10px;letter-spacing:.02em}
   .match.locked .quick .pct{visibility:hidden}
   .quick button{padding:4px 0;font-size:12.5px;width:28px;border:1px solid var(--line);background:var(--panel);border-radius:5px;font-weight:600;color:var(--ink)}
   .quick button:hover{border-color:var(--ink)}
@@ -5674,7 +5680,7 @@ async function boot(){
       row.className='match played';
       row.dataset.home=m.home; row.dataset.away=m.away;
       row.title=`Spilt ${formatDateNo(m.date)}, ligger i tabellen`;
-      row.innerHTML=`<span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">${shortDateNo(m.date)}</span>`;
+      row.innerHTML=`<span class="when">${m.time?`<span class="t">${m.time}</span>`:''}${m.moved?'<span class="ut" title="Utsatt kamp, flyttet til denne datoen">utsatt</span>':''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">${shortDateNo(m.date)}</span>`;
       d.appendChild(row);
     });
     box.innerHTML=''; box.appendChild(d);
@@ -5737,7 +5743,7 @@ async function boot(){
         row.className='match played';
         row.dataset.home=m.home; row.dataset.away=m.away;
         row.title=`Spilt ${formatDateNo(m.date)}, ligger i tabellen`;
-        row.innerHTML=`<span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">Spilt ${shortDateNo(m.date)}</span>`;
+        row.innerHTML=`<span class="when">${m.time?`<span class="t">${m.time}</span>`:''}${m.moved?'<span class="ut" title="Utsatt kamp, flyttet til denne datoen">utsatt</span>':''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">Spilt ${shortDateNo(m.date)}</span>`;
         d.appendChild(row);
         return;
       }
@@ -5746,7 +5752,7 @@ async function boot(){
       const row = document.createElement('div'); row.className='match'; row.dataset.id=id;
       row.dataset.home=m.home; row.dataset.away=m.away;
       row.innerHTML = `
-        <span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span>
+        <span class="when">${m.time?`<span class="t">${m.time}</span>`:''}${m.moved?'<span class="ut" title="Utsatt kamp, flyttet til denne datoen">utsatt</span>':''}</span>
         <span class="home">${shortTeam(m.home)}</span>
         <input inputmode="numeric" data-side="h" aria-label="${m.home} mål">
         <span class="colon">-</span>

@@ -1138,6 +1138,37 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- 23. kamplisten: odds-merket og utsatte kamper ----
+    setGroup('Kamplisten');
+    for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
+      const kl = await open(1400, 900, url);
+      const r = await kl.evaluate(() => {
+        const merke = document.querySelector('#rounds .pct.src.odds');
+        const muted = getComputedStyle(document.documentElement).getPropertyValue('--muted').trim();
+        const hex = c => '#' + (c.match(/\d+/g) || []).slice(0, 3)
+          .map(x => (+x).toString(16).padStart(2, '0')).join('');
+        // Runder der en kamp er merket utsatt: datospennet i overskriften skal
+        // ikke dekke den kampen.
+        const runder = [...document.querySelectorAll('#rounds .round')].map(d => ({
+          tittel: d.querySelector('h3').textContent.replace(/\s+/g, ' ').trim(),
+          utsatte: [...d.querySelectorAll('.match .when .ut')].length,
+          datoer: [...d.querySelectorAll('.match')].map(m => m.dataset.date || ''),
+        }));
+        return {harMerke: !!merke, farge: merke ? hex(getComputedStyle(merke).color) : null,
+                muted, utsatte: runder.reduce((a, x) => a + x.utsatte, 0), runder};
+      });
+      if (r.harMerke) {
+        check(`${liga}: "odds"-merket er dempet, ikke rødt`, r.farge === r.muted.toLowerCase(),
+          `merket ${r.farge}, dempet ${r.muted}`);
+      }
+      // Alle utsatte kamper ligger etter datospennet i overskriften sin.
+      const feil = r.runder.filter(x => x.utsatte > 0 && !/\d+\. \w+/.test(x.tittel));
+      check(`${liga}: runder med utsatt kamp har fortsatt et datospenn`, feil.length === 0,
+        feil.map(x => x.tittel).join('; '));
+      await kl.close();
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();

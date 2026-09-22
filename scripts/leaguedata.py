@@ -65,16 +65,50 @@ def build_fixtures(rows):
         if not any(r["hg"] is None for r in group):
             continue
         group = sorted(group, key=lambda r: (r["date"], r.get("time") or "", r["home"]))
+        moved = flyttede(group)
+        # Datospennet i overskriften regnes uten de utsatte kampene. Ellers sto
+        # det "2. til 21. okt" på en runde som spilles 2. til 5. oktober, fordi
+        # én kamp var utsatt -- og det ser ut som en feil.
+        rest = [r for r in group if id(r) not in moved] or group
         out.append({
             "round": round_no,
-            "when": month_range_label([r["date"] for r in group]),
+            "when": month_range_label([r["date"] for r in rest]),
             "matches": [
                 {"home": r["home"], "away": r["away"], "date": r["date"], "time": r.get("time"),
-                 "played": r["hg"] is not None, "hg": r["hg"], "ag": r["ag"]}
+                 "played": r["hg"] is not None, "hg": r["hg"], "ag": r["ag"],
+                 **({"moved": True} if id(r) in moved else {})}
                 for r in group
             ],
         })
     return out
+
+
+MOVED_GAP_DAYS = 4
+
+
+def flyttede(group):
+    """Kampene i runden som er utsatt, som en mengde av id().
+
+    En runde spilles normalt over noen dager. Ligger en kamp MOVED_GAP_DAYS
+    eller mer etter den siste av de andre, er den utsatt -- ikke en del av
+    rundens vanlige spenn. Regelen ser bare på datoene som alt ligger i
+    terminlisten; ingenting hentes eller gjettes.
+    """
+    from datetime import date as _date
+
+    def d(r):
+        y, m, dd = (int(x) for x in r["date"].split("-"))
+        return _date(y, m, dd)
+
+    if len(group) < 2:
+        return set()
+    ut = set()
+    for r in group:
+        andre = [x for x in group if x is not r]
+        siste_andre = max(d(x) for x in andre)
+        if (d(r) - siste_andre).days >= MOVED_GAP_DAYS:
+            ut.add(id(r))
+    return ut
 
 
 def write_json(path, data, indent=2):
