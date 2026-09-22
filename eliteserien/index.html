@@ -4139,7 +4139,14 @@ async function qaHowTo(team){
   // snittet er av de vellykkede sesongene (også de som tar mer enn nødvendig),
   // terskelen er der det tipper over 50 %.
   const curveTxt = threshold==null ? '' : qaPointCurve(data, threshold, zone);
-  const thrTxt = (threshold==null || myPts>=threshold ? '' : ` Som tommelfingerregel trengs omtrent ${threshold} poeng totalt (${threshold-myPts} til fra i dag): fra den poengsummen er det mer sannsynlig enn ikke at laget ${zone.dir==='front'?`når ${zone.label}`:'sikrer plassen direkte'}.`) + curveTxt;
+  // "Da når Brann Europa i ..." -- lagnavnet, ikke "laget", og to korte
+  // setninger i stedet for én med kolon.
+  const daTxt = {gull:`vinner ${team} serien`, cl:`når ${team} Champions League`,
+    europa:`når ${team} Europa`, kvalik:`sikrer ${team} plassen direkte`,
+    nedrykk:`sikrer ${team} plassen direkte`}[zone.key];
+  const thrTxt = (threshold==null || myPts>=threshold ? '' :
+    ` Som tommelfingerregel trengs omtrent ${threshold} poeng totalt, ${threshold-myPts} til fra i dag.`+
+    ` Da ${daTxt} i mer enn halvparten av simuleringene.`) + curveTxt;
   // Lang sjanse: "typisk holder det" ville leses som et krav laget sjelden når.
   if(successShare<0.25){
     return `Det skal mye til: ${team} klarer å ${QA_REACH_PHRASE[zone.key]} i bare ${pctTxt(successShare)} av de simulerte sesongene. `+
