@@ -144,18 +144,42 @@ def main():
         CAPTURED_PATH.parent.mkdir(exist_ok=True)
         CAPTURED_PATH.write_text(json.dumps(captured, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
+    # Spilte kamper skal ut av "kommende", uansett hva hentingen gjør. Klarte
+    # den ikke å hente, ble filen før liggende urørt, og en spilt kamp ble
+    # stående som kommende i dagevis (Brann mot Bodø/Glimt 20. september).
+    # Oddsen for den er alt tatt vare på i odds_captured.json over.
+    def uten_spilte(d):
+        beholdt = [m for m in d.get("matches", []) if (m["home"], m["away"]) not in played_keys]
+        fjernet = len(d.get("matches", [])) - len(beholdt)
+        if fjernet:
+            log(f"Ryddet ut {fjernet} spilte kamper fra data/odds_upcoming.json.")
+        return beholdt, fjernet
+
     try:
         raw = fetch_odds(api_key, log)
     except Exception as e:
         log(f"ADVARSEL: klarte ikke hente fra The Odds API ({e}), beholder eksisterende data/odds_upcoming.json")
+        beholdt, fjernet = uten_spilte(existing_upcoming)
+        if fjernet:
+            UPCOMING_PATH.write_text(json.dumps({
+                "fetched_at": existing_upcoming.get("fetched_at"),
+                "matches": beholdt,
+            }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         return
 
     matches = parse(raw)
+    # Et svar kan inneholde en kamp som alt er spilt; den hører ikke hjemme her.
+    matches = [m for m in matches if (m["home"], m["away"]) not in played_keys]
     # Ikke overskriv gode data med tomme, med mindre alle de gamle kampene nå er spilt
     # (da er en tom liste riktig, ikke en feil).
-    old_still_unplayed = [m for m in existing_upcoming.get("matches", []) if (m["home"], m["away"]) not in played_keys]
+    old_still_unplayed, fjernet = uten_spilte(existing_upcoming)
     if not matches and old_still_unplayed:
         log("ADVARSEL: The Odds API ga 0 kamper, men det finnes fortsatt uspilte kamper vi hadde odds for — beholder eksisterende data.")
+        if fjernet:
+            UPCOMING_PATH.write_text(json.dumps({
+                "fetched_at": existing_upcoming.get("fetched_at"),
+                "matches": old_still_unplayed,
+            }, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         return
 
     UPCOMING_PATH.parent.mkdir(exist_ok=True)

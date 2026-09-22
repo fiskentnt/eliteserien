@@ -1,0 +1,46 @@
+name: "OddsPapi: har de Eliteserien?"
+
+# Manuell engangssjekk. Bruker 2 tellende kall (fixtures + markets); resten av
+# oppslagene er gratis. Svarer på om OddsPapi har odds for kommende
+# Eliteserien-kamper, og hvilke av pinnacle/bet365/unibet som har dem.
+on:
+  workflow_dispatch:
+    inputs:
+      from:
+        description: "Fra dato"
+        default: "2026-10-01"
+      to:
+        description: "Til dato"
+        default: "2026-10-15"
+
+permissions:
+  contents: write
+
+jobs:
+  sjekk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Spør OddsPapi
+        env:
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+        run: |
+          python3 scripts/oddspapi_elite_check.py \
+            --from "${{ inputs.from || '2026-10-01' }}" \
+            --to "${{ inputs.to || '2026-10-15' }}"
+
+      - name: Lagre kalltelleren
+        if: always()
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/oddspapi_usage.json 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Ingen endring i telleren."
+          else
+            git commit -m "OddsPapi: kalltelleren oppdatert etter Eliteserien-sjekk"
+            git pull --rebase --autostash origin main || true
+            git push origin HEAD:main
+          fi
