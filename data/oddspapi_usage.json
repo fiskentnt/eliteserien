@@ -3,15 +3,16 @@
  "monthly_limit": 250,
  "months": {
   "2026-09": {
-   "billable": 8,
+   "billable": 9,
    "free": 0,
    "endpoints": {
     "/v4/account": 4,
     "/v4/sports": 2,
     "/v4/tournaments": 2,
-    "/v4/fixtures": 2
+    "/v4/fixtures": 3
    },
-   "note": "8 kall brukt pa kartlegging 22. september: kontooppslag, sports, tournaments og fixtures"
+   "note": "8 kall brukt pa kartlegging 22. september: kontooppslag, sports, tournaments og fixtures",
+   "last": "2026-09-22T12:13:56+00:00"
   }
  }
 }
