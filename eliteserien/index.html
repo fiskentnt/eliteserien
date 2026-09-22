@@ -532,6 +532,14 @@
   th.sortable{cursor:pointer;user-select:none}
   th.sortable:hover,th.sortable.active{color:var(--ink)}
   td.formcol{padding-right:10px}
+  /* Poeng per kamp siste fem: tallet står foran rutene, i samme celle. */
+  .ppk5{display:inline-block;min-width:20px;margin-right:6px;font:700 12.5px/1 var(--cond);color:var(--ink)}
+  /* Smalt tokolonnesoppsett (1100 til 1219 px): tallet blir stående, rutene
+     vikes. De sier det samme, og uten dette ble tabellen for bred. */
+  @media (min-width:1100px) and (max-width:1219px){
+    #tbl td .form{display:none}
+    .ppk5{margin-right:0}
+  }
   .formbox{display:inline-block;min-width:30px;padding:2px 7px;border-radius:5px;font:700 13px/1.3 var(--cond);text-align:center;color:#fff}
   /* Form-tallet er en knapp som åpner formgrafen, som tallene i lagboksen
      åpner et svar: samme utseende som før, men den kan trykkes på. */
@@ -915,8 +923,8 @@
           <th></th><th class="team">Lag</th><th class="hide-s">K</th>
           <th class="hide-s">V</th><th class="hide-s">U</th><th class="hide-s">T</th><th class="hide-s">Mål</th>
           <th class="hide-diff">Diff</th><th>P</th>
-          <th class="sortable hh" id="formHeader" title="Form: forventede poeng per kamp mot et gjennomsnittslag, minus ligasnittet. 5 er snittet. Klikk for å sortere.">Form</th>
-          <th class="hide-s" title="Siste fem seriekamper, eldst til venstre">Siste 5</th>
+          <th class="sortable hh" id="formHeader" title="Styrke: modellens vurdering av hvor sterkt laget er, over hele sesongen. 5 er et gjennomsnittslag. Klikk for å sortere.">Styrke</th>
+          <th class="sortable hide-s hh" id="form5Header" data-sort="form5" title="Poeng per kamp i de fem siste seriekampene, med resultatene til høyre (eldst først). Klikk for å sortere.">Siste 5</th>
           <th class="sortable hide-m hh" id="gullHeader" data-sort="gull" ></th>
           <th class="sortable hh" id="europaHeader" data-sort="europa" ></th>
           <th class="sortable hh" id="nedHeader" data-sort="ned" ></th>
@@ -941,7 +949,7 @@
         <ul class="card-list"></ul>
       </div>
       <div class="card c-form" data-card="form">
-        <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 16.5 5.5-5.5 3.5 3.5 7.5-8"/><path d="M15.5 6.5h5v5"/></svg><span class="card-title">Form</span><button type="button" class="card-link" data-sort="form">Se alle →</button></div>
+        <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 16.5 5.5-5.5 3.5 3.5 7.5-8"/><path d="M15.5 6.5h5v5"/></svg><span class="card-title">Styrke</span><button type="button" class="card-link" data-sort="form">Se alle →</button></div>
         <ul class="card-list"></ul>
       </div>
       </div>
@@ -999,7 +1007,7 @@
     <section class="about" id="om-siden" aria-labelledby="omSidenTittel">
       <h2 id="omSidenTittel">Om tabellkalkulatoren for Eliteserien</h2>
       <p>Tabellkalkulator for Eliteserien 2026 viser dagens tabell og sannsynligheten for at hvert lag vinner serien, tar en europaplass (topp 4), havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 10&nbsp;000 ganger.</p>
-      <p>Du kan fylle inn egne resultater, la modellen simulere tomme kamper, følge ett lag og se hvordan tabellen og sjansene endrer seg. Tabellen kan også vises slik den var, eller blir, etter en valgt runde. Tallene oppdateres automatisk etter hver kamp.</p>
+      <p>Du kan fylle inn egne resultater, la modellen simulere tomme kamper, følge ett lag og se hvordan tabellen og sjansene endrer seg. Tabellen viser både modellens styrkevurdering for hele sesongen og poeng per kamp i de fem siste kampene, så du ser forskjellen på hvor sterkt et lag er og hvordan det går akkurat nå. Tabellen kan også vises slik den var, eller blir, etter en valgt runde. Tallene oppdateres automatisk etter hver kamp.</p>
       <noscript><p><strong>Tabellen og sannsynlighetene regnes ut i nettleseren og krever JavaScript.</strong> Slå på JavaScript for å bruke kalkulatoren.</p></noscript>
     </section>
     <!-- /LIGA-OM -->
@@ -1012,8 +1020,8 @@
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7"/></svg></span>Slik fungerer det</summary>
   <div class="in">
     <p class="plain-lead">Siden spiller resten av sesongen 10&nbsp;000 ganger og teller hvor ofte hvert lag ender hvor.</p>
-    <p>Hvert lag får en styrke fra målene sine og fra hva spillmarkedet har trodd om kampene deres, der nye kamper teller mest. Står det 52 prosent for topp 4, endte laget blant de fire beste i omtrent 5200 av de 10&nbsp;000 sesongene.</p>
-    <p>Fyller du inn et resultat selv, står det fast i alle 10&nbsp;000, så du ser hva akkurat det gjør. Form er et tall fra 0 til 10 for hvor godt laget spiller nå, der 5 er et gjennomsnittslag.</p>
+    <p>Hvert lag får en styrke fra målene sine og fra hva spillmarkedet har trodd om kampene deres, der nye kamper teller mest. Den er et mål på hele sesongen, ikke på de siste ukene. Står det 52 prosent for topp 4, endte laget blant de fire beste i omtrent 5200 av de 10&nbsp;000 sesongene.</p>
+    <p>Fyller du inn et resultat selv, står det fast i alle 10&nbsp;000, så du ser hva akkurat det gjør. Styrke er modellens vurdering av hvor sterkt laget er, over hele sesongen, på en skala fra 0 til 10, der 5 er et gjennomsnittslag. Tallet ved siden av «Siste 5» er poeng per kamp i de fem siste kampene, altså formen akkurat nå.</p>
 
     <details class="details-tech">
       <summary>Vis detaljer</summary>
@@ -1022,8 +1030,8 @@
       <p id="howP2"></p>
       <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Topp 4, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
       <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner alt", "...taper alt", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
-      <p>Form-kolonnen reagerer sterkere jo lengre en rekke med strake seire eller tap varer, siden markedet selv reagerer sterkere på rekker enn på spredte enkeltresultater.</p>
-      <p>Denne rekkeeffekten brukes bare i Form-kolonnen og formgrafen. Simuleringene, sannsynlighetene og H/U/B-tallene bruker en tilstand uten den, fordi tilbaketesten ikke viser at rekkeeffekten gjør sluttplassprediksjonen bedre (se ablasjonstesten under "Hvordan vet vi at modellen virker?").</p>
+      <p>Styrketallet flytter seg lite fra kamp til kamp. Hver kamp justerer det litt, ut fra hvor mange mål laget scoret og slapp inn mot det modellen ventet, og justeringen reagerer sterkere jo lengre en rekke med strake seire eller tap varer. Men justeringene trekkes samtidig tilbake mot utgangspunktet, og modellen tilpasses på nytt på alle kampene hver dag. Over en sesong står derfor styrketallet omtrent stille: sju kamper uten seier flyttet Sarpsborg 08 fra 4,80 til 4,65 i september 2026. Vil du se de siste kampene, er det poengene per kamp under «Siste 5» som sier det.</p>
+      <p>Rekkeeffekten brukes bare i Styrke-kolonnen og styrkegrafen. Simuleringene, sannsynlighetene og H/U/B-tallene bruker en tilstand uten den, fordi tilbaketesten ikke viser at rekkeeffekten gjør sluttplassprediksjonen bedre (se ablasjonstesten under "Hvordan vet vi at modellen virker?").</p>
       <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn, verken i tabellen eller i simuleringene. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
       <div class="tblscroll"><table class="mt" id="modelTbl"></table></div>
     </details>
@@ -1515,7 +1523,7 @@ function probOf(team,key){
   return zoneSum(d, key);
 }
 // Kolonnenavnene i tabellen, både som overskrift og når kolonnen er sortert.
-const SORT_LABELS = Object.assign({form:'Form'}, Object.fromEntries(LEAGUE.cols.map(c =>
+const SORT_LABELS = Object.assign({form:'Styrke', form5:'Siste 5'}, Object.fromEntries(LEAGUE.cols.map(c =>
   [c.key, c.headSm ? `<span class="lg">${c.head}</span><span class="sm">${c.headSm}</span>` : c.head])));
 // Fyller inn alt i markupen som er ligaspesifikt: kolonneoverskrifter,
 // fargeforklaringen under tabellen og titlene på oppsummeringskortene.
@@ -1594,12 +1602,14 @@ function updateSortHeaders(){
 // der nedrykkslagene står nederst. Ved lik verdi (prosent avrundet til hele tall, form
 // til én desimal, altså slik de vises) avgjør tabellplasseringen.
 function compareForSort(a,b,sort){
-  const v = x => sort.key==='form' ? Math.round(x.form*10) : Math.round(probOf(x.name,sort.key)*100);
+  const v = x => sort.key==='form' ? Math.round(x.form*10)
+    : sort.key==='form5' ? Math.round((x.form5==null?-1:x.form5)*100)
+    : Math.round(probOf(x.name,sort.key)*100);
   let d = v(b)-v(a);
   if(sort.key==='ned') d = -d;
   return sort.dir*d || a.pos-b.pos;
 }
-const SORT_NOTE = {form:'form', gull:'gullsjanse', europa:'europasjanse', ned:'nedrykkssjanse'};
+const SORT_NOTE = {form:'styrke', form5:'poeng siste fem', gull:'gullsjanse', europa:'europasjanse', ned:'nedrykkssjanse'};
 function cycleSort(key){
   if(!tableSort || tableSort.key!==key) tableSort={key,dir:1};
   else if(tableSort.dir===1) tableSort={key,dir:-1};
@@ -1753,6 +1763,7 @@ document.querySelectorAll('.wrap > .leftcol, .wrap > .rightcol, .tblzone, .follo
 // lagnavn åpner formgrafen (delegert på tbody, siden radene bygges på nytt
 // hver render()).
 document.getElementById('formHeader').addEventListener('click', ()=> cycleSort('form'));
+document.getElementById('form5Header').addEventListener('click', ()=> cycleSort('form5'));
 document.getElementById('sortNote').addEventListener('click', e=>{ if(e.target.closest('#unsortBtn')){ tableSort=null; render(); } });
 ['gullHeader','europaHeader','nedHeader'].forEach(id=>{
   document.getElementById(id).addEventListener('click', e=> cycleSort(e.currentTarget.dataset.sort));
@@ -1985,6 +1996,11 @@ function rateFor(home,away){
 }
 function predict(home,away){ const [lh,la]=rateFor(home,away); return [Math.round(lh), Math.round(la)]; }
 
+// Poeng per kamp i de fem siste kampene: det ekte formtallet, ved siden av
+// rutene som viser det samme visuelt. null når laget ikke har spilt ennå.
+const ppk5From = arr => { const s=(arr||[]).slice(-5);
+  return s.length ? s.reduce((a,r)=>a+(r==='W'?3:r==='D'?1:0),0)/s.length : null; };
+const ppk5Html = v => v==null ? '' : `<b class="ppk5" title="${f1(v)} poeng per kamp i de fem siste">${f1(v)}</b>`;
 const formHtmlFrom=arr=>`<span class="form">${arr.slice(-5).map(r=>`<b class="${r}" title="${{W:'Seier',D:'Uavgjort',L:'Tap'}[r]}"></b>`).join('')}</span>`;
 const formHtml=t=>formHtmlFrom(STATS[t].form);
 const f1=x=>x.toFixed(1).replace('.',',');
@@ -3492,7 +3508,7 @@ function openFormModal(team){
   const points=teamFormHistory(team);
   document.getElementById('formModalTitle').textContent=team;
   document.getElementById('formModalSub').textContent=points.length
-    ? 'Formutvikling denne sesongen, etter hver spilte kamp. Skalaen er 0 til 10, aksen er zoomet inn på 3 til 8.'
+    ? 'Styrkeutvikling denne sesongen, etter hver spilte kamp. Skalaen er 0 til 10, aksen er zoomet inn på 3 til 8.'
     : 'Ingen spilte kamper å vise ennå.';
   document.getElementById('formChart').innerHTML=points.length?buildFormChartSvg(points):'';
   document.getElementById('formModalBackdrop').hidden=false;
@@ -4090,7 +4106,7 @@ function renderModelExample(){
   // Begrunnelsen sier bare det tallene faktisk viser.
   const why = [];
   if(dog === m.home) why.push(`${dog} har hjemmebane`);
-  if(form[dog] > form[fav]) why.push(`${dog} er i bedre form (${f1(form[dog])} mot ${f1(form[fav])})`);
+  if(form[dog] > form[fav]) why.push(`${dog} er sterkere ifølge modellen (${f1(form[dog])} mot ${f1(form[fav])})`);
   const whyTxt = why.length ? `, fordi ${why.join(' og ')}` : '';
   el.textContent = `${fav} ligger ${poengTxt(gap)} foran ${dog}, så ut fra tabellen ville de fleste regnet ${fav} som klar favoritt. `+
     `Modellen ser kampen hjemme hos ${m.home} ${formatDateNo(m.date)} ${how}: `+
@@ -4587,6 +4603,9 @@ function qaUtfallFor(team, m, k){
 }
 // Navnet på tallet svaret handler om: "topp 4-sjansen", "gullsjansen", men
 // "nedrykksfaren" og "kvalikfaren" -- det er ingen sjanse man ønsker seg.
+// Poeng per kamp i de fem siste kampene -- det ekte formtallet, til svarene
+// som virkelig handler om form. Styrketallet sier noe annet (se Styrke-kolonnen).
+const qaPoengSiste5 = team => ppk5From((STATS[team]||{}).form);
 function qaSjanse(zone){
   if(zone.key==='nedrykk') return 'nedrykksfaren';
   if(zone.key==='kvalik') return 'kvalikfaren';
@@ -4661,9 +4680,11 @@ async function qaWhy(team){
     const hvor = leder ? '' : ` på ${field.refLabel}`;
     const rel = d===0 ? `har like mange poeng som ${mot}`
       : `ligger ${poengTxt(d)} ${row.pts>field.nearestPts?'foran':'bak'} ${mot}`;
-    const formPart = Math.abs(diff)<0.3 ? 'omtrent lik form'
-      : `${Math.abs(diff)>=1.5?'klart':'litt'} ${diff>0?'bedre':'dårligere'} form`;
-    part1 = `${team} ${rel}${hvor} og er i ${formPart} (${fmtForm(form)} mot ${fmtForm(rivalForm)}).`;
+    // Tallet er modellens styrkevurdering over hele sesongen, ikke form, og
+    // sies derfor som det: "er litt sterkere ifølge modellen".
+    const formPart = Math.abs(diff)<0.3 ? 'omtrent like sterke ifølge modellen'
+      : `${Math.abs(diff)>=1.5?'klart':'litt'} ${diff>0?'sterkere':'svakere'} ifølge modellen`;
+    part1 = `${team} ${rel}${hvor} og er ${formPart} (${fmtForm(form)} mot ${fmtForm(rivalForm)}).`;
   } else if(rival){
     part1 = row.pts===rivalRow.pts
       ? `${team} og ${rival.t} står likt på ${poengTxt(row.pts)}, med ${kampTxt(row.left)} igjen.`
@@ -4684,25 +4705,30 @@ async function qaWhy(team){
     const rivalForm = liveForm[TI[rival.t]];
     const diff = form - rivalForm;
     const ptsGap = Math.abs(row.pts - rivalRow.pts);
-    const formTxt = `form ${fmtForm(form)} mot ${fmtForm(rivalForm)}`;
+    const formTxt = `styrke ${fmtForm(form)} mot ${fmtForm(rivalForm)}`;
     if(ptsGap>=4){
       // Stor poengforskjell: si noe om marginen, ikke om "overtak" -- 7 poeng
-      // er et stort forsprang uansett hvem som har best form.
+      // er et stort forsprang uansett hvem modellen mener er sterkest.
       const leader = row.pts>rivalRow.pts ? team : rival.t, trailer = leader===team ? rival.t : team;
       const leaderFormEdge = leader===team ? diff : -diff;
       const seier = ptsGap>=7 ? 'mer enn to seire' : 'mer enn én seier';
-      // Formtallene i samme rekkefølge som lagene nevnes (leder først).
+      // Styrketallene i samme rekkefølge som lagene nevnes (leder først).
       const lf = fmtForm(leader===team ? form : rivalForm), tf = fmtForm(leader===team ? rivalForm : form);
-      const formPart = Math.abs(diff)<0.3 ? `formen er lik (${lf} mot ${tf})`
-        : leaderFormEdge>0 ? `${leader} er også i best form (${lf} mot ${tf})`
-        : `${trailer} er likevel i bedre form (${tf} mot ${lf})`;
+      const formPart = Math.abs(diff)<0.3 ? `styrken er lik (${lf} mot ${tf})`
+        : leaderFormEdge>0 ? `${leader} er også sterkest ifølge modellen (${lf} mot ${tf})`
+        : `${trailer} er likevel sterkest ifølge modellen (${tf} mot ${lf})`;
       part2 = `Marginen er ${poengTxt(ptsGap)} (${seier}), og ${formPart}.`;
     } else if(Math.abs(diff)<0.3){
-      part2 = `Modellen ser dem som like sterke om dagen (${formTxt}).`;
+      part2 = `Modellen ser dem som like sterke (${formTxt}).`;
     } else {
       const better = diff>0 ? team : rival.t;
       const edge = Math.abs(diff)>=1.5 ? 'et klart overtak' : 'et lite overtak';
-      part2 = `Modellen gir ${better} ${edge}, fordi de har spilt bedre den siste tiden (${formTxt}).`;
+      // Styrketallet er modellens grunn. Formen, altså de fem siste kampene,
+      // er et annet tall og sies for seg.
+      const p5a = qaPoengSiste5(team), p5b = qaPoengSiste5(rival.t);
+      const siste = (p5a!=null && p5b!=null)
+        ? ` Siste fem: ${fmtForm(p5a)} mot ${fmtForm(p5b)} poeng per kamp.` : '';
+      part2 = `Modellen gir ${better} ${edge} (${formTxt}).${siste}`;
     }
   } else {
     const diff = form - 5.0;
@@ -4711,7 +4737,7 @@ async function qaWhy(team){
       : diff<=-1.0 ? `klart svakere enn et gjennomsnittslag`
       : diff<=-0.3 ? `under snittet`
       : `om lag som et gjennomsnittslag`;
-    part2 = `Formen er ${fmtForm(form)} av 10 – ${strengthTxt}.`;
+    part2 = `Styrken er ${fmtForm(form)} av 10 – ${strengthTxt}.`;
   }
 
   // "I simuleringene ender Bryne i snitt på 46 poeng mot 42 for Hødd, og
@@ -5317,10 +5343,13 @@ function render(){
     r.pos=i+1;
     r.form=liveForm[TI[r.name]];
     r.formChange=r.form-baseForm[TI[r.name]];
+    // Rutene i "Siste 5" viser de ekte resultatene (STATS), ikke scenariet --
+    // tallet skal vise det samme.
+    r.form5=ppk5From(STATS[r.name].form);
   });
 
   let displayRows=rows;
-  if(tableSort && (tableSort.key==='form' || PROB_KEYS.includes(tableSort.key))){
+  if(tableSort && (tableSort.key==='form' || tableSort.key==='form5' || PROB_KEYS.includes(tableSort.key))){
     // Gull/Europa/Nedrykk sorteres på sannsynlighetene fra siste simulering (lastMC).
     // Er de ikke klare ennå, sorteres på nytt av fillOdds() når de kommer.
     displayRows=[...rows].sort((a,b)=> compareForSort(a,b,tableSort));
@@ -5348,7 +5377,7 @@ function render(){
       tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="hide-s">${r.p}</td>
         <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
         <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts">${r.pts}</td>
-        <td class="formcol hh"></td><td class="hide-s">${formHtmlFrom(r.results)}</td><td class="odds gull hide-m hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
+        <td class="formcol hh"></td><td class="hide-s">${ppk5Html(ppk5From(r.results))}${formHtmlFrom(r.results)}</td><td class="odds gull hide-m hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
       tb.appendChild(tr);
       return;
     }
@@ -5364,8 +5393,8 @@ function render(){
     tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span>${diff}</td><td class="hide-s">${r.p}</td>
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
       <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.pts} poeng nå. Maks mulig sluttsum: ${r.max}.">${r.pts}</td>
-      <td class="formcol"><button type="button" class="formbox ${formCls}" data-team="${r.name}" title="${f1(r.form)} av 10. ${changeTxt} Trykk for formgrafen." aria-label="Form ${f1(r.form)} av 10 for ${r.name}. Vis formgrafen.">${f1(r.form)}</button></td>
-      <td class="hide-s">${formHtml(r.name)}</td><td class="odds gull hide-m"></td><td class="odds p3"></td><td class="odds ned"></td>`;
+      <td class="formcol"><button type="button" class="formbox ${formCls}" data-team="${r.name}" title="${f1(r.form)} av 10. ${changeTxt} Trykk for styrkegrafen." aria-label="Styrke ${f1(r.form)} av 10 for ${r.name}. Vis styrkegrafen.">${f1(r.form)}</button></td>
+      <td class="hide-s">${ppk5Html(r.form5)}${formHtml(r.name)}</td><td class="odds gull hide-m"></td><td class="odds p3"></td><td class="odds ned"></td>`;
     tb.appendChild(tr);
   });
   applyBadgesToDom(); // viser cachen (tom første gang) med en gang, uten å vente

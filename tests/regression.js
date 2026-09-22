@@ -1169,6 +1169,49 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- 24. Styrke og Siste 5 er to ulike tall ----
+    setGroup('Styrke og Siste 5');
+    for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
+      const sp = await open(1400, 900, url);
+      await settle(sp);
+      const r = await sp.evaluate(() => {
+        const hd = [...document.querySelectorAll('#tbl thead th')].map(t => t.textContent.trim());
+        const rader = [...document.querySelectorAll('#tbl tbody tr')].map(tr => ({
+          lag: tr.dataset.team,
+          styrke: parseFloat((tr.querySelector('.formbox') || {}).textContent.replace(',', '.')),
+          siste5: parseFloat(((tr.querySelector('.ppk5') || {}).textContent || '').replace(',', '.')),
+        }));
+        // Poeng per kamp regnet på nytt fra resultatrutene, som fasit.
+        const fasit = {};
+        [...document.querySelectorAll('#tbl tbody tr')].forEach(tr => {
+          const res = [...tr.querySelectorAll('.form b')].map(b => b.className);
+          fasit[tr.dataset.team] = res.length
+            ? res.reduce((a, c) => a + (c === 'W' ? 3 : c === 'D' ? 1 : 0), 0) / res.length : null;
+        });
+        return {hd, rader, fasit, kort: [...document.querySelectorAll('.card .card-title')].map(e => e.textContent)};
+      });
+      check(`${liga}: kolonnen heter Styrke`, r.hd.includes('Styrke'), r.hd.join(' | '));
+      check(`${liga}: ingen kolonne heter Form lenger`, !r.hd.includes('Form'), r.hd.join(' | '));
+      check(`${liga}: kortet heter Styrke`, r.kort.includes('Styrke'), r.kort.join(', '));
+      const feil = r.rader.filter(x => Math.abs(x.siste5 - r.fasit[x.lag]) > 0.051);
+      check(`${liga}: "Siste 5" er poeng per kamp fra de samme rutene`, feil.length === 0,
+        feil.slice(0, 3).map(x => `${x.lag}: ${x.siste5} mot ${r.fasit[x.lag]}`).join('; '));
+      // De to tallene er ikke det samme: det er hele poenget med å vise begge.
+      const ulike = r.rader.filter(x => Math.abs(x.styrke - 5) > 0.3 || x.siste5 != null).length;
+      check(`${liga}: begge tallene finnes for alle lagene`,
+        r.rader.every(x => !Number.isNaN(x.styrke) && !Number.isNaN(x.siste5)), `${ulike}`);
+      // Sortering på det nye tallet
+      const sortert = await sp.evaluate(() => {
+        cycleSort('form5');
+        return [...document.querySelectorAll('#tbl tbody tr')]
+          .map(tr => parseFloat(((tr.querySelector('.ppk5') || {}).textContent || '').replace(',', '.')));
+      });
+      check(`${liga}: "Siste 5" kan sorteres`,
+        sortert.every((v, i) => i === 0 || sortert[i - 1] >= v), sortert.join(' '));
+      await sp.close();
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();
