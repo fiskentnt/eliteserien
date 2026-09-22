@@ -85,6 +85,12 @@ unwrap = oddspapi.unwrap
 
 
 def csv_2026():
+    """Terminlisten for 2026, med resultatene fra resultatkjeden lagt oppå.
+
+    CSV-en er terminlisten og står stille etter at sesongen er i gang, så
+    resultatene hentes fra matches.json når den finnes. Uten dette ville en
+    planlagt kjøring aldri se kampene som er spilt siden CSV-en ble laget.
+    """
     rows = []
     for r in csv.DictReader(CSV_PATH.open(encoding="utf-8-sig")):
         if r["sesong"] != "2026":
@@ -95,7 +101,28 @@ def csv_2026():
             "hg": int(float(r["hjemmemaal"])) if r["hjemmemaal"] else None,
             "ag": int(float(r["bortemaal"])) if r["bortemaal"] else None,
         })
+    pub_path = DATA / "matches.json"
+    if pub_path.exists():
+        pub = {(m["home"], m["away"]): (m["hg"], m["ag"])
+               for m in json.loads(pub_path.read_text(encoding="utf-8"))}
+        extra = 0
+        for r in rows:
+            v = pub.get((r["home"], r["away"]))
+            if v and r["hg"] is None:
+                extra += 1
+            if v:
+                r["hg"], r["ag"] = v
+        print(f"  {len(pub)} resultater fra matches.json ({extra} flere enn CSV-en)")
     return rows
+
+
+def match_id(row):
+    """Nøkkelen en kamp lagres under: sesong, hjemmelag og bortelag.
+
+    Datoen er ikke med. En flyttet kamp er den samme kampen, og skal aldri bli
+    to rader i filen.
+    """
+    return f"2026|{row['home']}|{row['away']}"
 
 
 def fetch_fixtures(key, force=False):
@@ -288,15 +315,23 @@ def main():
     if OUT_PATH.exists():
         out = json.loads(OUT_PATH.read_text(encoding="utf-8"))
         out.setdefault("matches", {})
+    # Eldre filer brukte dato i nøkkelen. Skriv dem om, så en flyttet kamp ikke
+    # blir liggende to ganger.
+    old = [k for k in out["matches"] if not k.startswith("2026|") or k.count("|") != 2
+           or k.split("|")[0] != "2026"]
+    for k in old:
+        parts = k.split("|")
+        out["matches"][f"2026|{parts[-2]}|{parts[-1]}"] = out["matches"].pop(k)
+    if old:
+        print(f"  skrev om {len(old)} gamle nøkler til sesong|hjemme|borte")
     have = set(out["matches"])
-    todo = [(r, f) for r, f in links if r["hg"] is not None
-            and f"{r['date']}|{r['home']}|{r['away']}" not in have]
+    todo = [(r, f) for r, f in links if r["hg"] is not None and match_id(r) not in have]
     print(f"\nSluttodds: {len(have)} hentet før, {len(todo)} gjenstår "
           f"(henter høyst {args.max} nå)")
 
     done = fail = 0
     for r, f in todo[:args.max]:
-        mid = f"{r['date']}|{r['home']}|{r['away']}"
+        mid = match_id(r)
         fid = f.get("fixtureId")
         d, err = get("/v4/historical-odds", {"fixtureId": fid, "bookmakers": ",".join(BOOKMAKERS)}, key)
         if err:

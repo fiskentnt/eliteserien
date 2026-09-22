@@ -36,6 +36,18 @@ GREEN = (52, 211, 153)     # #34d399
 NAVY = (19, 48, 95)        # #13305f
 LIGHT = (232, 240, 252)    # #e8f0fc
 RIM = (79, 127, 196)       # #4f7fc4
+BLUE = (96, 165, 250)      # #60a5fa, samme blåtone som øverste sone på siden
+
+ELITE_OG = {
+    "dir": "eliteserien", "name": "Eliteserien",
+    "sub": "Tabellkalkulator med sjanse for gull, Europa og nedrykk",
+    "zones": [(1, 4, GREEN)],
+}
+OBOS_OG = {
+    "dir": "obos", "name": "OBOS-ligaen", "size": 88,
+    "sub": "Tabellkalkulator med sjanse for opprykk, opprykksspill og nedrykk",
+    "zones": [(1, 2, BLUE), (3, 6, GREEN)],
+}
 
 MONTHS = ["januar", "februar", "mars", "april", "mai", "juni", "juli", "august",
           "september", "oktober", "november", "desember"]
@@ -102,20 +114,34 @@ def dato_no(iso):
     return f"{d}. {MONTHS[m - 1]}"
 
 
-def league_card():
-    matches = json.loads((LEAGUE / "data" / "matches.json").read_text(encoding="utf-8"))
+def league_card(cfg=None):
+    """Toppen av tabellen for én liga.
+
+    cfg beskriver ligaen: mappe, navn, undertekst og hvilke plasseringer som
+    skal ha farget merke til venstre. Eliteserien har én sone (1 til 4), OBOS
+    har to (1 til 2 direkte opprykk, 3 til 6 opprykksspill), som på siden.
+    """
+    cfg = cfg or ELITE_OG
+    folder = ROOT / cfg["dir"]
+    matches = json.loads((folder / "data" / "matches.json").read_text(encoding="utf-8"))
     rows = standings(matches)[:8]
     last = max(matches, key=lambda m: (m["date"], m["round"]))
     im = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(im)
 
+    def zone_color(pos):
+        for lo, hi, col in cfg["zones"]:
+            if lo <= pos <= hi:
+                return col
+        return None
+
     # Venstre: navn og beskrivelse
     x0 = 56
-    d.text((x0, 62), "Eliteserien", font=font("BarlowCondensed-ExtraBold", 104), fill=INK)
+    d.text((x0, 62), cfg["name"], font=font("BarlowCondensed-ExtraBold", cfg.get("size", 104)), fill=INK)
     d.text((x0, 168), "2026", font=font("BarlowCondensed-ExtraBold", 104), fill=GREEN)
     sub = font("Barlow-Medium", 31)
     y = 318
-    for line in wrap(d, "Tabellkalkulator med sjanse for gull, Europa og nedrykk", sub, 400):
+    for line in wrap(d, cfg["sub"], sub, 400):
         d.text((x0, y), line, font=sub, fill=MUTED)
         y += 42
     im.paste(icon(52), (x0, 528), icon(52))
@@ -142,9 +168,10 @@ def league_card():
     for i, r in enumerate(rows):
         top = ry + i * rh
         mid = top + rh // 2
-        if i < 4:  # Europa-plassene (1 til 4)
-            d.rounded_rectangle((px0 + 20, top + 6, px0 + 25, top + rh - 6), radius=2, fill=GREEN)
-        d.text((px0 + 52, mid), str(i + 1), font=nf, fill=GREEN if i < 4 else MUTED, anchor="mm")
+        col = zone_color(i + 1)
+        if col:
+            d.rounded_rectangle((px0 + 20, top + 6, px0 + 25, top + rh - 6), radius=2, fill=col)
+        d.text((px0 + 52, mid), str(i + 1), font=nf, fill=col or MUTED, anchor="mm")
         d.text((px0 + 92, mid), r["name"], font=tf, fill=INK, anchor="lm")
         d.text((cols["k"], mid), str(r["k"]), font=nf, fill=MUTED, anchor="rm")
         gd = f"+{r['gd']}" if r["gd"] > 0 else f"−{abs(r['gd'])}" if r["gd"] < 0 else "0"
@@ -152,7 +179,7 @@ def league_card():
         d.text((cols["p"], mid), str(r["pts"]), font=pf, fill=INK, anchor="rm")
         if i < len(rows) - 1:
             d.line((px0 + 20, top + rh, px1 - 20, top + rh), fill=LINE, width=1)
-    out = LEAGUE / "og.png"
+    out = folder / "og.png"
     im.save(out, optimize=True)
     return out
 
@@ -164,7 +191,7 @@ def root_card():
     im.paste(big, (90, 165), big)
     d.text((470, 200), "Tabellkalkulator", font=font("BarlowCondensed-ExtraBold", 100), fill=INK)
     d.text((474, 322), "Sannsynligheter for fotballigaer", font=font("Barlow-Medium", 42), fill=MUTED)
-    d.text((474, 392), "Gull, Europa og nedrykk", font=font("Barlow-Medium", 34), fill=GREEN)
+    d.text((474, 392), "Eliteserien og OBOS-ligaen", font=font("Barlow-Medium", 34), fill=GREEN)
     d.text((W - 56, H - 44), "tabellkalkulator.no", font=font("Barlow-SemiBold", 28), fill=MUTED, anchor="rs")
     out = ROOT / "og.png"
     im.save(out, optimize=True)
@@ -173,9 +200,10 @@ def root_card():
 
 if __name__ == "__main__":
     args = set(sys.argv[1:])
-    do_league = "--league" in args or not args
-    do_root = "--root" in args or not args
-    if do_league:
-        print("Skrev", league_card())
-    if do_root:
+    alle = not args
+    if "--league" in args or alle:
+        print("Skrev", league_card(ELITE_OG))
+    if "--obos" in args or alle:
+        print("Skrev", league_card(OBOS_OG))
+    if "--root" in args or alle:
         print("Skrev", root_card())
