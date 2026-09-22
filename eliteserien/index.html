@@ -248,6 +248,8 @@
      halvfet) trenger bare 3:1 mot banneret; alle klubbfarger har over 4,5:1. */
   .qa-highlight{display:block;margin:18px 0 6px;background:none;border:none;padding:0;color:var(--team-text);font:600 19px/1.25 var(--cond);letter-spacing:.005em;text-align:left;cursor:pointer;max-width:100%}
   .qa-highlight::before{content:"\00AB"}
+  .qa-highlight.plain::before{content:none}
+  .qa-highlight.plain::after{content:"\00A0\00A0\2192"}
   .qa-highlight::after{content:"\00BB\00A0\00A0\2192"}
   .qa-highlight:hover,.qa-highlight:focus-visible{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
   .qa-highlight:empty{display:none}
@@ -555,6 +557,32 @@
   table.mt.ablation td,table.mt.ablation th{text-align:left}
   table.mt.ablation td:nth-child(2),table.mt.ablation td:nth-child(3),table.mt.ablation td:nth-child(4),
   table.mt.ablation th:nth-child(2),table.mt.ablation th:nth-child(3),table.mt.ablation th:nth-child(4){text-align:right}
+
+  /* Kalibreringsgrafen i "Hvordan vet vi at modellen virker?": statisk inline
+     SVG (tallene er faste testresultater, ingenting regnes i nettleseren).
+     Alle farger er CSS-variabler, så grafen følger lys/mørk modus -- --eu-text
+     og --accent-text er nettopp de themede tekstvariantene som er lesbare mot
+     --panel i begge moduser. Punktradius ~ kvadratroten av antallet, så
+     AREALET er proporsjonalt med antall prediksjoner. */
+  .calibchart{display:block;width:100%;max-width:440px;height:auto;margin:2px 0 6px;overflow:visible}
+  .calibchart .cgrid{stroke:var(--line-soft);stroke-width:1}
+  .calibchart .caxis{stroke:var(--line);stroke-width:1.5}
+  .calibchart .cdiag{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:5 4;opacity:.8}
+  .calibchart .cdlbl{fill:var(--muted);font:500 10px var(--body);opacity:.9}
+  .calibchart .ctick{fill:var(--muted);font:500 10.5px var(--body)}
+  .calibchart .cax{fill:var(--muted);font:600 11px var(--body)}
+  .calibchart .ctop{fill:var(--eu-text);fill-opacity:.32;stroke:var(--eu-text);stroke-width:1.3}
+  .calibchart .cned{fill:var(--accent-text);fill-opacity:.28;stroke:var(--accent-text);stroke-width:1.3}
+  .clegend{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:13px;color:var(--muted);padding:0 0 12px}
+  .clegend .ckey{width:11px;height:11px;border-radius:50%;flex:none}
+  .clegend .ckey+*{margin-right:6px}
+  .clegend .ctopkey{background:var(--eu-text);opacity:.55;border:1.3px solid var(--eu-text)}
+  .clegend .cnedkey{background:var(--accent-text);opacity:.5;border:1.3px solid var(--accent-text)}
+  .clegend .cnote{flex-basis:100%}
+  details.shownums{margin:0 0 14px}
+  details.shownums > summary{cursor:pointer;color:var(--accent-text);font-weight:600;font-size:13.5px;width:fit-content}
+  details.shownums > summary:hover{text-decoration:underline}
+  details.shownums[open] > summary{margin-bottom:10px}
 
   /* Formgraf: modal med SVG-graf, åpnes ved klikk på et lag i tabellen */
   .modal-backdrop{position:fixed;inset:0;background:rgba(10,12,13,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
@@ -865,40 +893,94 @@
     <p class="note">Kilder til dataene på siden: ffksupporter.net, ESPN, football-data.co.uk og The Odds API, alt hentet automatisk.</p>
 
     <h3>Kalibrering</h3>
-    <p>Prediksjonene delt i sannsynlighetsintervaller på ti prosentpoeng: hvis modellen er godt kalibrert, skal "faktisk andel" ligge nær "snitt predikert" i hver rad. Intervaller med få prediksjoner (under ca. 15) svinger mer og bør leses varsomt.</p>
-    <div class="tblscroll"><table class="mt calib">
-      <thead><tr><th colspan="4">Topp 4</th></tr><tr><th>Intervall</th><th>Antall</th><th><span class="lg">Snitt predikert</span><span class="sm">Snitt pred.</span></th><th><span class="lg">Faktisk andel</span><span class="sm">Faktisk</span></th></tr></thead>
-      <tbody>
-        <tr><td>0–10 %</td><td>282</td><td>1,7 %</td><td>2,8 %</td></tr>
-        <tr><td>10–20 %</td><td>34</td><td>14,8 %</td><td>17,6 %</td></tr>
-        <tr><td>20–30 %</td><td>24</td><td>24,3 %</td><td>29,2 %</td></tr>
-        <tr><td>30–40 %</td><td>14</td><td>33,9 %</td><td>35,7 %</td></tr>
-        <tr><td>40–50 %</td><td>15</td><td>45,8 %</td><td>13,3 %</td></tr>
-        <tr><td>50–60 %</td><td>15</td><td>54,8 %</td><td>66,7 %</td></tr>
-        <tr><td>60–70 %</td><td>9</td><td>64,5 %</td><td>66,7 %</td></tr>
-        <tr><td>70–80 %</td><td>20</td><td>75,8 %</td><td>75,0 %</td></tr>
-        <tr><td>80–90 %</td><td>16</td><td>86,7 %</td><td>68,8 %</td></tr>
-        <tr><td>90–100 %</td><td>51</td><td>97,4 %</td><td>98,0 %</td></tr>
-      </tbody>
-    </table></div>
-    <div class="tblscroll"><table class="mt calib">
-      <thead><tr><th colspan="4">Nedrykk</th></tr><tr><th>Intervall</th><th>Antall</th><th><span class="lg">Snitt predikert</span><span class="sm">Snitt pred.</span></th><th><span class="lg">Faktisk andel</span><span class="sm">Faktisk</span></th></tr></thead>
-      <tbody>
-        <tr><td>0–10 %</td><td>339</td><td>1,3 %</td><td>2,1 %</td></tr>
-        <tr><td>10–20 %</td><td>46</td><td>14,7 %</td><td>6,5 %</td></tr>
-        <tr><td>20–30 %</td><td>22</td><td>24,2 %</td><td>22,7 %</td></tr>
-        <tr><td>30–40 %</td><td>19</td><td>34,7 %</td><td>21,1 %</td></tr>
-        <tr><td>40–50 %</td><td>15</td><td>45,3 %</td><td>40,0 %</td></tr>
-        <tr><td>50–60 %</td><td>10</td><td>54,8 %</td><td>80,0 %</td></tr>
-        <tr><td>60–70 %</td><td>5</td><td>65,3 %</td><td>60,0 %</td></tr>
-        <tr><td>70–80 %</td><td>6</td><td>75,7 %</td><td>100,0 %</td></tr>
-        <tr><td>80–90 %</td><td>7</td><td>86,0 %</td><td>100,0 %</td></tr>
-        <tr><td>90–100 %</td><td>11</td><td>97,9 %</td><td>100,0 %</td></tr>
-      </tbody>
-    </table></div>
+    <p>Hvert punkt er ett sannsynlighetsintervall på ti prosentpoeng: modellens sannsynlighet bortover, andelen som faktisk skjedde oppover. Er modellen godt kalibrert, ligger punktene nær den stiplede diagonalen. Punktstørrelsen viser hvor mange prediksjoner intervallet bygger på, så de små punktene svinger mest og bør leses varsomt.</p>
+    <svg class="calibchart" viewBox="0 0 380 300" role="img" aria-labelledby="calibTitle calibDesc">
+    <title id="calibTitle">Kalibrering: modellens sannsynlighet mot faktisk andel</title>
+    <desc id="calibDesc">Punktene ligger nær den stiplede diagonalen når modellen er godt kalibrert. Store punkter er sannsynlighetsintervaller med mange prediksjoner, små punkter har få og svinger mer. Tallene står i tabellene under "Vis tall".</desc>
+    <line class="cgrid" x1="50.0" y1="16" x2="50.0" y2="260"/>
+    <line class="cgrid" x1="50" y1="260.0" x2="366" y2="260.0"/>
+    <text class="ctick" x="50.0" y="276" text-anchor="middle">0</text>
+    <text class="ctick" x="42" y="264.0" text-anchor="end">0</text>
+    <line class="cgrid" x1="129.0" y1="16" x2="129.0" y2="260"/>
+    <line class="cgrid" x1="50" y1="199.0" x2="366" y2="199.0"/>
+    <text class="ctick" x="129.0" y="276" text-anchor="middle">25</text>
+    <text class="ctick" x="42" y="203.0" text-anchor="end">25</text>
+    <line class="cgrid" x1="208.0" y1="16" x2="208.0" y2="260"/>
+    <line class="cgrid" x1="50" y1="138.0" x2="366" y2="138.0"/>
+    <text class="ctick" x="208.0" y="276" text-anchor="middle">50</text>
+    <text class="ctick" x="42" y="142.0" text-anchor="end">50</text>
+    <line class="cgrid" x1="287.0" y1="16" x2="287.0" y2="260"/>
+    <line class="cgrid" x1="50" y1="77.0" x2="366" y2="77.0"/>
+    <text class="ctick" x="287.0" y="276" text-anchor="middle">75</text>
+    <text class="ctick" x="42" y="81.0" text-anchor="end">75</text>
+    <line class="cgrid" x1="366.0" y1="16" x2="366.0" y2="260"/>
+    <line class="cgrid" x1="50" y1="16.0" x2="366" y2="16.0"/>
+    <text class="ctick" x="366.0" y="276" text-anchor="middle">100</text>
+    <text class="ctick" x="42" y="20.0" text-anchor="end">100</text>
+    <line class="caxis" x1="50" y1="16" x2="50" y2="260"/>
+    <line class="caxis" x1="50" y1="260" x2="366" y2="260"/>
+    <line class="cdiag" x1="50.0" y1="260.0" x2="366.0" y2="16.0"/>
+    <text class="cdlbl" x="296.5" y="55.0" transform="rotate(-39.5 296.5 55.0)" text-anchor="middle">perfekt kalibrering</text>
+    <circle class="cned" cx="54.1" cy="254.9" r="8.5"><title>1,3 % predikert, 2,1 % faktisk, 339 prediksjoner</title></circle>
+    <circle class="cned" cx="96.5" cy="244.1" r="4.7"><title>14,7 % predikert, 6,5 % faktisk, 46 prediksjoner</title></circle>
+    <circle class="cned" cx="126.5" cy="204.6" r="4.0"><title>24,2 % predikert, 22,7 % faktisk, 22 prediksjoner</title></circle>
+    <circle class="cned" cx="159.7" cy="208.5" r="3.9"><title>34,7 % predikert, 21,1 % faktisk, 19 prediksjoner</title></circle>
+    <circle class="cned" cx="193.1" cy="162.4" r="3.8"><title>45,3 % predikert, 40,0 % faktisk, 15 prediksjoner</title></circle>
+    <circle class="cned" cx="223.2" cy="64.8" r="3.5"><title>54,8 % predikert, 80,0 % faktisk, 10 prediksjoner</title></circle>
+    <circle class="cned" cx="256.3" cy="113.6" r="3.2"><title>65,3 % predikert, 60,0 % faktisk, 5 prediksjoner</title></circle>
+    <circle class="cned" cx="289.2" cy="16.0" r="3.3"><title>75,7 % predikert, 100,0 % faktisk, 6 prediksjoner</title></circle>
+    <circle class="cned" cx="321.8" cy="16.0" r="3.4"><title>86,0 % predikert, 100,0 % faktisk, 7 prediksjoner</title></circle>
+    <circle class="cned" cx="359.4" cy="16.0" r="3.6"><title>97,9 % predikert, 100,0 % faktisk, 11 prediksjoner</title></circle>
+    <circle class="ctop" cx="55.4" cy="253.2" r="8.0"><title>1,7 % predikert, 2,8 % faktisk, 282 prediksjoner</title></circle>
+    <circle class="ctop" cx="96.8" cy="217.1" r="4.4"><title>14,8 % predikert, 17,6 % faktisk, 34 prediksjoner</title></circle>
+    <circle class="ctop" cx="126.8" cy="188.8" r="4.1"><title>24,3 % predikert, 29,2 % faktisk, 24 prediksjoner</title></circle>
+    <circle class="ctop" cx="157.1" cy="172.9" r="3.7"><title>33,9 % predikert, 35,7 % faktisk, 14 prediksjoner</title></circle>
+    <circle class="ctop" cx="194.7" cy="227.5" r="3.8"><title>45,8 % predikert, 13,3 % faktisk, 15 prediksjoner</title></circle>
+    <circle class="ctop" cx="223.2" cy="97.3" r="3.8"><title>54,8 % predikert, 66,7 % faktisk, 15 prediksjoner</title></circle>
+    <circle class="ctop" cx="253.8" cy="97.3" r="3.5"><title>64,5 % predikert, 66,7 % faktisk, 9 prediksjoner</title></circle>
+    <circle class="ctop" cx="289.5" cy="77.0" r="4.0"><title>75,8 % predikert, 75,0 % faktisk, 20 prediksjoner</title></circle>
+    <circle class="ctop" cx="324.0" cy="92.1" r="3.8"><title>86,7 % predikert, 68,8 % faktisk, 16 prediksjoner</title></circle>
+    <circle class="ctop" cx="357.8" cy="20.9" r="4.8"><title>97,4 % predikert, 98,0 % faktisk, 51 prediksjoner</title></circle>
+    <text class="cax" x="208" y="294" text-anchor="middle">Modellens sannsynlighet (%)</text>
+    <text class="cax" x="12" y="138" text-anchor="middle" transform="rotate(-90 12 138)">Faktisk andel (%)</text>
+    </svg>
+    <p class="clegend"><span class="ckey ctopkey"></span>Topp 4<span class="ckey cnedkey"></span>Nedrykk<span class="cnote">Punktstørrelse = antall prediksjoner (5 til 339)</span></p>
+    <details class="shownums">
+      <summary>Vis tall</summary>
+      <div class="tblscroll"><table class="mt calib">
+        <thead><tr><th colspan="4">Topp 4</th></tr><tr><th>Intervall</th><th>Antall</th><th><span class="lg">Snitt predikert</span><span class="sm">Snitt pred.</span></th><th><span class="lg">Faktisk andel</span><span class="sm">Faktisk</span></th></tr></thead>
+        <tbody>
+          <tr><td>0–10 %</td><td>282</td><td>1,7 %</td><td>2,8 %</td></tr>
+          <tr><td>10–20 %</td><td>34</td><td>14,8 %</td><td>17,6 %</td></tr>
+          <tr><td>20–30 %</td><td>24</td><td>24,3 %</td><td>29,2 %</td></tr>
+          <tr><td>30–40 %</td><td>14</td><td>33,9 %</td><td>35,7 %</td></tr>
+          <tr><td>40–50 %</td><td>15</td><td>45,8 %</td><td>13,3 %</td></tr>
+          <tr><td>50–60 %</td><td>15</td><td>54,8 %</td><td>66,7 %</td></tr>
+          <tr><td>60–70 %</td><td>9</td><td>64,5 %</td><td>66,7 %</td></tr>
+          <tr><td>70–80 %</td><td>20</td><td>75,8 %</td><td>75,0 %</td></tr>
+          <tr><td>80–90 %</td><td>16</td><td>86,7 %</td><td>68,8 %</td></tr>
+          <tr><td>90–100 %</td><td>51</td><td>97,4 %</td><td>98,0 %</td></tr>
+        </tbody>
+      </table></div>
+      <div class="tblscroll"><table class="mt calib">
+        <thead><tr><th colspan="4">Nedrykk</th></tr><tr><th>Intervall</th><th>Antall</th><th><span class="lg">Snitt predikert</span><span class="sm">Snitt pred.</span></th><th><span class="lg">Faktisk andel</span><span class="sm">Faktisk</span></th></tr></thead>
+        <tbody>
+          <tr><td>0–10 %</td><td>339</td><td>1,3 %</td><td>2,1 %</td></tr>
+          <tr><td>10–20 %</td><td>46</td><td>14,7 %</td><td>6,5 %</td></tr>
+          <tr><td>20–30 %</td><td>22</td><td>24,2 %</td><td>22,7 %</td></tr>
+          <tr><td>30–40 %</td><td>19</td><td>34,7 %</td><td>21,1 %</td></tr>
+          <tr><td>40–50 %</td><td>15</td><td>45,3 %</td><td>40,0 %</td></tr>
+          <tr><td>50–60 %</td><td>10</td><td>54,8 %</td><td>80,0 %</td></tr>
+          <tr><td>60–70 %</td><td>5</td><td>65,3 %</td><td>60,0 %</td></tr>
+          <tr><td>70–80 %</td><td>6</td><td>75,7 %</td><td>100,0 %</td></tr>
+          <tr><td>80–90 %</td><td>7</td><td>86,0 %</td><td>100,0 %</td></tr>
+          <tr><td>90–100 %</td><td>11</td><td>97,9 %</td><td>100,0 %</td></tr>
+        </tbody>
+      </table></div>
+    </details>
 
     <h3>Brier-score</h3>
-    <p>Brier-score er snittet av (predikert sannsynlighet − faktisk utfall, 0 eller 1) i annen. Lavere er bedre: 0 er perfekt, og en modell som alltid gjetter 50 % gir 0,25. Sammenlignet med en naiv basisrate (samme faste sannsynlighet for alle lag, uansett form eller tabellplassering: 1/16 for gull, 4/16 for topp 4, 2/16 for nedrykk) og en ren Poisson-modell uten odds.</p>
+    <p>Brier-score måler hvor nær sannsynlighetene var de faktiske utfallene. Lavere er bedre, og 0 er perfekt. Sammenlignet med en naiv basisrate (samme faste sannsynlighet for alle lag, uansett form eller tabellplassering: 1/16 for gull, 4/16 for topp 4, 2/16 for nedrykk) og en ren Poisson-modell uten odds.</p>
     <div class="tblscroll"><table class="mt brier">
       <thead><tr><th>Modell</th><th>Seriemester</th><th>Topp 4</th><th>Nedrykk</th></tr></thead>
       <tbody>
@@ -1576,7 +1658,10 @@ self.onmessage = function(e){
   else if(d.mode==='badges'){ runBadges(d); }
   else if(d.mode==='insights'){ runInsights(d); }
   else if(d.mode==='matchImpact'){ runMatchImpact(d); }
-  else if(d.mode==='zoneTask'){ postMessage({runId:d.runId, mode:'zoneTask', taskId:d.taskId, prob:simulateZoneProb(d, d.forcedIdx, d.forcedScore, d.seed)}); }
+  else if(d.mode==='zoneTask'){
+    var zr = simulateZoneProb(d, d.forcedIdx, d.forcedScore, d.seed, d.wantAll);
+    postMessage({runId:d.runId, mode:'zoneTask', taskId:d.taskId, prob:d.wantAll?zr.prob:zr, pos:d.wantAll?zr.pos:null});
+  }
   else { runProb(d); }
 };
 
@@ -2111,7 +2196,11 @@ function runMatchImpact(d){
   });
   postMessage({runId:d.runId, mode:'matchImpact', results:results});
 }
-function simulateZoneProb(d, forcedIdx, forcedScore, seed){
+// wantAll: ta også vare på HELE plasseringsfordelingen for ALLE lag (til
+// "rundens viktigste kamp", som trenger gull/Europa/nedrykk for hvert lag,
+// ikke bare ett lags sone). Tellingen ligger etter at plasseringen er avgjort
+// og rører ikke tilfeldighetsstrømmen, så tallene blir identiske med og uten.
+function simulateZoneProb(d, forcedIdx, forcedScore, seed, wantAll){
   var n=d.P0.length, k=d.k, zone=d.zone, ti=d.ti;
   var P0=Float64Array.from(d.P0), G0=Float64Array.from(d.G0), F0=Float64Array.from(d.F0);
   // Den låste kampen står igjen i lista (hoppes over i løkka under, men bruker
@@ -2128,7 +2217,7 @@ function simulateZoneProb(d, forcedIdx, forcedScore, seed){
   var P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
   var attS=new Float64Array(n), conS=new Float64Array(n), haS=new Float64Array(n), hcS=new Float64Array(n);
   var ord=[]; for(var i2=0;i2<n;i2++) ord.push(i2);
-  var hitCount=0;
+  var hitCount=0, posCount = wantAll ? new Float64Array(n*n) : null;
   for(var s=0;s<d.N;s++){
     P.set(P0); G.set(G0); F.set(F0);
     attS.set(d.att); conS.set(d.con); haS.set(d.ha); hcS.set(d.hc);
@@ -2156,6 +2245,11 @@ function simulateZoneProb(d, forcedIdx, forcedScore, seed){
     ord.sort(function(p,q){ return P[q]-P[p] || G[q]-G[p] || F[q]-F[p] || R[q]-R[p]; });
     var pos = ord.indexOf(ti)+1;
     if(pos>=zone.lo && pos<=zone.hi) hitCount++;
+    if(wantAll) for(var i5=0;i5<n;i5++) posCount[ord[i5]*n+i5]++;
+  }
+  if(wantAll){
+    var out=new Array(n*n); for(var i6=0;i6<n*n;i6++) out[i6]=posCount[i6]/d.N;
+    return {prob:hitCount/d.N, pos:out};
   }
   return hitCount/d.N;
 }
@@ -2906,6 +3000,18 @@ const qaReachQuestion = key => QA_REACH_PHRASE[key] + (key==='kvalik'||key==='ne
 // Nullstilt av selve spørsmål-knappen (runQaQuestion) så et vanlig klikk på
 // "Hvorfor har ..."-knappen alltid går tilbake til auto-valget.
 let qaWhyZoneOverride = null;
+// Rundens viktigste kamp, ferdig utregnet i workflowen (data/keymatch.json).
+// Banneret viser den VIRKELIGE situasjonen, uavhengig av hva brukeren har
+// fylt inn -- derfor brukes filen som den er, aldri et scenario-tall.
+let KEYMATCH = null;
+// Er den lagret kampen alt spilt? Da er filen fra før forrige runde (workflowen
+// har ikke rukket å oppdatere den ennå), og banneret skal ikke stå og peke på
+// en kamp som er ferdig.
+function qaKeyBannerStale(){
+  if(!KEYMATCH) return true;
+  const m = KEYMATCH.match;
+  return MATCHES.some(x=>x.home===m.home && x.away===m.away);
+}
 
 // ---- Felles hjelpere for svarene ----
 // Tallformat: komma som desimaltegn, ekte minustegn (−), tankestrek (–), og
@@ -3067,12 +3173,13 @@ function ensurePool(n){
   if(!poolUrl) poolUrl = URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'}));
   while(poolWorkers.length<n){
     const w = new Worker(poolUrl);
-    w.onmessage = e=>{ const job=w.job; w.job=null; if(job && job.epoch===poolEpoch) job.done(e.data.prob); pumpPool(); };
+    w.onmessage = e=>{ const job=w.job; w.job=null; if(job && job.epoch===poolEpoch) job.done(e.data); pumpPool(); };
     poolWorkers.push(w);
   }
 }
 // tasks: [{id, idx, score}] (idx -1 = ingen låst kamp). onTask kalles etter
-// hver ferdige oppgave; løftet løses med {id: sannsynlighet} når alle er ferdige.
+// hver ferdige oppgave; løftet løses med {id: {prob, pos}} når alle er ferdige
+// (pos = hele plasseringsfordelingen, bare når payload.wantAll er satt).
 function runZoneTasks(payload, tasks, onTask){
   poolEpoch++;
   const epoch = poolEpoch, results = {};
@@ -3081,7 +3188,7 @@ function runZoneTasks(payload, tasks, onTask){
     let left = tasks.length;
     tasks.forEach(t=>{
       poolQueue.push({epoch, msg:{...payload, mode:'zoneTask', runId:epoch, taskId:t.id, forcedIdx:t.idx, forcedScore:t.score},
-        done:prob=>{ results[t.id]=prob; if(onTask) onTask(t.id, results); if(--left===0) resolve(results); }});
+        done:data=>{ results[t.id]={prob:data.prob, pos:data.pos}; if(onTask) onTask(t.id, results); if(--left===0) resolve(results); }});
     });
     pumpPool();
   });
@@ -3123,15 +3230,15 @@ async function qaCheerFor(team, onPartial){
   const head = `Sjansen for ${zone.label} er ${pctTxt(tableP)} nå. Beste resultat for ${team} i hver av de andre kampene i runde ${nr.round}, med endring i prosentpoeng (${zone.dir==='front'?'økning':'nedgang'} er bra for ${team}):\n`;
   // Rader for kampene som er ferdige simulert (utgangspunktet og alle tre utfall).
   const rowsFrom = res=>{
-    if(res.base===undefined) return [];
+    if(!res.base) return [];
     const rows = [];
     others.forEach(m=>{
       const idx = openMatches.indexOf(m), h=res[idx+':H'], u=res[idx+':U'], a=res[idx+':B'];
-      if(h===undefined || u===undefined || a===undefined) return;
+      if(!h || !u || !a) return;
       const outs = [
-        {d:h-res.base, txt:`${m.home} slår ${m.away}`},
-        {d:u-res.base, txt:`${m.home} og ${m.away} uavgjort`},
-        {d:a-res.base, txt:`${m.away} slår ${m.home}`},
+        {d:h.prob-res.base.prob, txt:`${m.home} slår ${m.away}`},
+        {d:u.prob-res.base.prob, txt:`${m.home} og ${m.away} uavgjort`},
+        {d:a.prob-res.base.prob, txt:`${m.away} slår ${m.home}`},
       ];
       let best = outs[0];
       outs.forEach(o=>{ if(good(o.d)>good(best.d)) best = o; });
@@ -3149,6 +3256,147 @@ async function qaCheerFor(team, onPartial){
     return `Ingen av de andre kampene i runde ${nr.round} flytter sjansen for ${zone.label} med minst to prosentpoeng for ${team}, uansett hvordan de ender. Den er ${pctTxt(tableP)} nå.`;
   }
   return textFor(rows);
+}
+
+// ---- Hva er rundens viktigste kamp? Trenger ikke noe valgt lag. For hver
+// kamp i neste runde (også lagenes egne) låses kampen til hjemmeseier,
+// uavgjort og borteseier, og for HVERT av de 16 lagene måles hvor mye
+// sjansen for gull, Europa og nedrykk flytter seg fra utgangspunktet
+// (simulateZoneProb med wantAll, som gir hele plasseringsfordelingen).
+//   Viktighet = sum over alle lag og de tre sonene av den FORVENTEDE
+//   bevegelsen: |endring| for hvert utfall, vektet med hvor sannsynlig
+//   utfallet er (modellens H/U/B for kampen). Vekting er poenget: en kamp
+//   der bare et lite sannsynlig utfall ville flyttet noe, betyr mindre enn
+//   en der det jevne utfallet gjør det. Gull ligger inni Europa, så et lag
+//   som rykker på gulltoppen teller i begge -- det er to reelle spørsmål,
+//   ikke dobbelttelling av samme.
+// Samme workerbasseng, antall simuleringer og frø som "heie på", så tallene
+// for samme kamp stemmer med det svaret. ----
+// Flere simuleringer enn "heie på" (2 500): viktigheten summerer 48 ledd
+// (16 lag x 3 soner) av |endring|, og der legger støyen seg oppå i stedet for
+// å kansellere, siden alle leddene er positive. Målt sprik mellom frø faller
+// fra rundt 1,6 til 0,6 prosentpoeng når antallet firedobles. 6 000 tar rundt
+// 0,55 sekunder på PC, og banneret regnes uansett ut i workflowen.
+const QA_KEY_N = 6000;
+// Kamper innenfor denne andelen av lederen regnes som omtrent like viktige.
+// Spriket mellom frø er rundt 3 prosent av totalen ved 6 000 simuleringer, så
+// grensa er satt på to standardavvik: en ledelse under 7 prosent er ikke til å
+// skille fra tilfeldig utslag, og da skal svaret si det i stedet for å kåre
+// én vinner.
+const QA_KEY_CLOSE = 0.93;
+const QA_KEY_ZONES = [
+  {key:'gull', strid:'gullstriden', chance:'gullsjansen', lo:1, hi:1},
+  {key:'europa', strid:'Europa-striden', chance:'Europa-sjansen', lo:1, hi:4},
+  {key:'nedrykk', strid:'nedrykksstriden', chance:'nedrykkssjansen', lo:15, hi:16},
+];
+// Sjansen for sonen, for hvert lag, ut av en wantAll-fordeling.
+function qaZoneFromPos(pos, n, zone){
+  const out = new Array(n).fill(0);
+  for(let t=0;t<n;t++) for(let k=zone.lo-1;k<=zone.hi-1;k++) out[t] += pos[t*n+k];
+  return out;
+}
+async function qaKeyRoundData(){
+  if(!lastMC) return null;
+  const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
+  const nr = qaNextRoundMatches(openMatches);
+  if(!nr.list.length) return {round:null, list:[]};
+  const n = TEAMS.length;
+  const tasks = [{id:'base', idx:-1, score:null}];
+  nr.list.forEach(m=>{
+    const idx = openMatches.indexOf(m);
+    tasks.push({id:idx+':H', idx, score:forcedScoreline(m.home,m.away,true)},
+               {id:idx+':U', idx, score:forcedDrawScoreline(m.home,m.away)},
+               {id:idx+':B', idx, score:forcedScoreline(m.home,m.away,false)});
+  });
+  const res = await runZoneTasks({
+    mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
+    N:QA_KEY_N, ti:0, zone:QA_KEY_ZONES[0], seed:hashStr(scenarioKey+'|impact'), wantAll:true
+  }, tasks);
+  const zoneOf = key => QA_KEY_ZONES.find(z=>z.key===key);
+  const probs = id => { const o={}; QA_KEY_ZONES.forEach(z=>o[z.key]=qaZoneFromPos(res[id].pos, n, z)); return o; };
+  const base = probs('base');
+  const rows = nr.list.map(m=>{
+    const idx = openMatches.indexOf(m);
+    const [lh,la] = rateFor(m.home, m.away), o = outcome(lh,la);
+    const outs = [{w:o.H, p:probs(idx+':H'), txt:`hvis ${m.home} vinner`},
+                  {w:o.U, p:probs(idx+':U'), txt:'ved uavgjort'},
+                  {w:o.B, p:probs(idx+':B'), txt:`hvis ${m.away} vinner`}];
+    let total = 0;
+    const byZone = {}, byTeam = {};
+    const detail = [];
+    QA_KEY_ZONES.forEach(z=>{ byZone[z.key] = 0; });
+    TEAMS.forEach((t,ti)=>{
+      byTeam[t] = 0;
+      QA_KEY_ZONES.forEach(z=>{
+        let move = 0, lo = outs[0], hi = outs[0];
+        outs.forEach(ou=>{
+          move += ou.w * Math.abs(ou.p[z.key][ti] - base[z.key][ti]);
+          if(ou.p[z.key][ti] < lo.p[z.key][ti]) lo = ou;
+          if(ou.p[z.key][ti] > hi.p[z.key][ti]) hi = ou;
+        });
+        total += move; byZone[z.key] += move; byTeam[t] += move;
+        // Spennet som vises: laveste og høyeste utfall, lagt oppå tabellens tall.
+        detail.push({team:t, zone:z.key,
+          span: Math.abs(hi.p[z.key][ti] - lo.p[z.key][ti]),
+          dLo: lo.p[z.key][ti] - base[z.key][ti], loTxt: lo.txt,
+          dHi: hi.p[z.key][ti] - base[z.key][ti], hiTxt: hi.txt});
+      });
+    });
+      const topZone = QA_KEY_ZONES.slice().sort((a,b)=>byZone[b.key]-byZone[a.key])[0];
+    // De mest berørte lagene: hvert lags STØRSTE sone, og bare lag der
+    // spennet mellom utfallene er minst to prosentpoeng (som ellers på siden).
+    const teams = TEAMS.slice().sort((a,b)=>byTeam[b]-byTeam[a]).slice(0,3).map(t=>{
+      const d = detail.filter(x=>x.team===t).sort((a,b)=>b.span-a.span)[0];
+      return {...d, now: qaZoneNow(t, d.zone)};
+    }).filter(x=>x.span>=0.02);
+    const maxSpan = Math.max(...detail.map(x=>x.span));
+    return {m, total, topZone, teams, maxSpan};
+  }).sort((a,b)=>b.total-a.total);
+  // Jevn runde: kampene som ligger nær lederen skal ikke skjules bak en
+  // påstand om ÉN viktigste kamp (se QA_KEY_CLOSE).
+  const close = rows.slice(1).filter(r=>r.total >= rows[0].total*QA_KEY_CLOSE);
+  return {round:nr.round, list:rows, best:rows[0], close};
+}
+// Tabellens tall for sonen (utgangspunktet svarene regner endringen oppå).
+function qaZoneNow(team, key){
+  const d = lastMC && lastMC[team];
+  if(!d) return 0;
+  return key==='gull' ? d[0] : key==='europa' ? d[0]+d[1]+d[2]+d[3] : d[14]+d[15];
+}
+// Banner-linja (én setning). Bygges her, ikke i workflowen, så ordlyden bare
+// finnes ett sted -- scripts/snapshot_probs.js kaller denne.
+function qaKeyBanner(data){
+  if(!data || !data.best || !data.best.teams.length) return null;
+  const b = data.best, k = data.close.length;
+  const tett = k ? `, tett foran ${QA_NUM[k]||k} ${k===1?'annen':'andre'}` : '';
+  return `Rundens viktigste kamp: ${b.m.home} mot ${b.m.away}${tett}. Den flytter mest for ${b.topZone.strid}.`;
+}
+async function qaKeyRound(){
+  const data = await qaKeyRoundData();
+  if(!data) return 'Ingen data å regne på ennå.';
+  if(!data.list.length) return 'Alle kampene har resultat i dette scenariet, så det er ingen runde igjen å regne på.';
+  const b = data.best;
+  const roundTxt = `runde ${data.round}`;
+  if(!b.teams.length){
+    return `Ingen kamp i ${roundTxt} betyr mye: ingen utfall flytter noe lag mer enn to prosentpoeng for gull, Europa eller nedrykk.`;
+  }
+  const piece = x=>{
+    const z = QA_KEY_ZONES.find(q=>q.key===x.zone);
+    const v = d => pctTxt(Math.min(1,Math.max(0,x.now+d)));
+    return `${x.team}: ${z.chance} ${pctTxt(x.now)} nå, ${v(x.dHi)} ${x.hiTxt} og ${v(x.dLo)} ${x.loTxt}.`;
+  };
+  const navn = x => `${x.m.home} mot ${x.m.away}`;
+  const k = data.close.length;
+  const liste = data.close.map(navn);
+  const tallord = QA_NUM[k+1] || String(k+1);
+  const tett = !k ? '' :
+    `\n${tallord.charAt(0).toUpperCase()+tallord.slice(1)} kamper betyr omtrent like mye, så rekkefølgen er ikke sikker: `+
+    (liste.length>1 ? liste.slice(0,-1).join(', ')+' og '+liste[liste.length-1] : liste[0])+
+    ` ligger like bak.`;
+  return `Rundens viktigste kamp er ${navn(b)} (${formatDateNo(b.m.date)}). `+
+    `Den flytter mest for ${b.topZone.strid}.\n`+b.teams.map(piece).join('\n')+tett;
 }
 
 // ---- Hvor kan laget realistisk ende? Bare fordelingen over sluttplasser fra
@@ -3757,6 +4005,7 @@ const QA_QUESTIONS = [
     return `Hva må ${team} gjøre for å ${z?qaReachQuestion(z.key):'nå målet'}?`;
   }},
   {id:'keymatches', needsTeam:true, run:qaKeyMatches, label:team=>`Hvilke kamper betyr mest for ${team}?`},
+  {id:'keyround', needsTeam:false, run:(team,onPartial)=>qaKeyRound(), label:()=>'Hva er rundens viktigste kamp?'},
   {id:'runin', needsTeam:false, run:()=>qaToughestRunIn(), label:()=>'Hvem har tyngst avslutning?'},
   {id:'nextmatch', needsTeam:true, run:team=>qaNextMatch(team), label:team=>`Hva betyr neste kamp for ${team}?`},
   {id:'cheer', needsTeam:true, run:qaCheerFor, label:team=>`Hvem bør ${team} heie på denne runden?`},
@@ -3814,16 +4063,25 @@ function renderQaHighlight(){
   const el = document.getElementById('qaHighlight');
   if(!el) return;
   if(!SELECTED_TEAM){
-    el.textContent = 'Hvem har vært heldig eller uheldig?';
-    el.dataset.qid = 'luck';
+    // Rundens viktigste kamp når den er regnet ut og fersk, ellers hell/uhell.
+    if(!qaKeyBannerStale()){
+      el.textContent = KEYMATCH.banner;
+      el.dataset.qid = 'keyround';
+      el.classList.add('plain'); // hel setning: ingen «...» rundt
+    } else {
+      el.textContent = 'Hvem har vært heldig eller uheldig?';
+      el.dataset.qid = 'luck';
+      el.classList.remove('plain');
+    }
     return;
   }
+  el.classList.remove('plain');
   const zone = qaTargetZone(SELECTED_TEAM);
   if(!zone){
     // lastMC ikke klar ennå (rett etter sideinnlasting) -- vis samme
     // fallback som uten lag til den er det, i stedet for en tom knapp.
-    el.textContent = 'Hvem har vært heldig eller uheldig?';
-    el.dataset.qid = 'luck';
+    if(!qaKeyBannerStale()){ el.textContent = KEYMATCH.banner; el.dataset.qid = 'keyround'; el.classList.add('plain'); }
+    else { el.textContent = 'Hvem har vært heldig eller uheldig?'; el.dataset.qid = 'luck'; }
     return;
   }
   // Front-soner og avgjorte saker: spørsmål 1 ("Hvorfor …"), med tekst som ikke
@@ -4248,13 +4506,19 @@ async function updateOddsQuotaNote(){
 // Python-scriptene i scripts/ og lest inn her — ingen tilpasning skjer i
 // nettleseren, kun rask JSON-henting.
 async function boot(){
-  let MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN;
+  let MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN;
   try{
-    [MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN] = await Promise.all([
+    [MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN] = await Promise.all([
       fetch('data/matches.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/matches.json'); return r.json(); }),
       fetch('data/fixtures.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/fixtures.json'); return r.json(); }),
       fetch('data/model.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/model.json'); return r.json(); }),
       fetch('data/odds_upcoming.json').then(r=>r.ok?r.json():{matches:[],fetched_at:null}).catch(()=>({matches:[],fetched_at:null})),
+      // Rundens viktigste kamp: regnet ut i workflowen etter hver oppdatering
+      // (scripts/snapshot_probs.js), ikke i nettleseren -- banneret skal stå
+      // der med en gang, uten å vente på en simulering. Mangler filen (eller
+      // er den for gammel, se qaKeyBannerStale), faller banneret tilbake til
+      // spørsmålet om hell og uhell.
+      fetch('data/keymatch.json').then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
   }catch(err){
     console.error('Klarte ikke hente kampdata', err);
@@ -4326,6 +4590,7 @@ async function boot(){
   ODDS_UP = {};
   (ODDS_UP_IN.matches||[]).forEach(o=>{ ODDS_UP[o.home+"|"+o.away] = o; });
   ODDS_FETCHED_AT = ODDS_UP_IN.fetched_at ? formatOsloDT(new Date(ODDS_UP_IN.fetched_at)) : 'ukjent tidspunkt';
+  KEYMATCH = KEYMATCH_IN && KEYMATCH_IN.banner && KEYMATCH_IN.match ? KEYMATCH_IN : null;
 
   // Stempel: dato for siste kamp som er lagt inn, pluss (asynkront, se
   // updateCheckStamp) tidspunktet for siste automatiske sjekk. Tooltip viser

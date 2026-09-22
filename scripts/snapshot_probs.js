@@ -1,6 +1,13 @@
 #!/usr/bin/env node
-/* Lagrer lagenes sannsynligheter (gull, Europa, kvalik, nedrykk) i
- * eliteserien/data/history.json hver gang nye resultater har kommet inn.
+/* Lagrer to ting, begge lest ut av selve siden:
+ *
+ *   eliteserien/data/history.json   lagenes sannsynligheter (gull, Europa,
+ *                                   kvalik, nedrykk) hver gang nye resultater
+ *                                   har kommet inn -- ett punkt per runde.
+ *   eliteserien/data/keymatch.json  rundens viktigste kamp, med den ferdige
+ *                                   banner-setningen. Siden viser den med en
+ *                                   gang ved innlasting i stedet for å regne
+ *                                   den ut i nettleseren.
  *
  * Tallene hentes fra selve siden (headless Chrome), ikke fra en egen
  * gjenskapning av modellen: da er de nøyaktig de samme som tabellen viser,
@@ -11,9 +18,11 @@
  *   NODE_PATH=<mappe med puppeteer-core> node scripts/snapshot_probs.js
  *   CHROME_PATH=/sti/til/chrome  (valgfritt; ellers letes vanlige steder)
  *
- * Et nytt punkt legges til bare når fingeravtrykket av de spilte kampene
- * (dato, lag og resultat) er et annet enn i forrige punkt. Ellers skjer
- * ingenting, så filen vokser bare når noe faktisk har skjedd.
+ * Et nytt historikkpunkt legges til bare når fingeravtrykket av de spilte
+ * kampene (dato, lag og resultat) er et annet enn i forrige punkt, så filen
+ * vokser bare når noe faktisk har skjedd. keymatch.json skrives når innholdet
+ * er endret -- den avhenger også av oddsen, som oppdateres oftere enn
+ * resultatene.
  */
 const http = require('http');
 const fs = require('fs');
@@ -22,6 +31,7 @@ const crypto = require('crypto');
 
 const ROOT = path.join(__dirname, '..');
 const HISTORY = path.join(ROOT, 'eliteserien', 'data', 'history.json');
+const KEYMATCH = path.join(ROOT, 'eliteserien', 'data', 'keymatch.json');
 const MIME = {'.html':'text/html; charset=utf-8','.js':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.ttf':'font/ttf'};
 
 function serve() {
@@ -70,7 +80,33 @@ function chromePath() {
         teams
       };
     });
+    // Rundens viktigste kamp. Samme regnestykke som spørsmålet i "Spør om
+    // tabellen" (qaKeyRoundData), og banner-setningen bygges av sidens egen
+    // qaKeyBanner, så ordlyden finnes bare ett sted.
+    const key = await page.evaluate(async () => {
+      const d = await qaKeyRoundData();
+      const banner = qaKeyBanner(d);
+      if (!d || !d.best || !banner) return null;
+      return {round: d.round, banner,
+        match: {home: d.best.m.home, away: d.best.m.away, date: d.best.m.date},
+        zone: d.best.topZone.key,
+        teams: d.best.teams.map(t => t.team)};
+    });
     if (errs.length) console.warn('Sidefeil:', errs.join('; '));
+    if (key) {
+      const next = {version: 1, note: 'Rundens viktigste kamp, regnet ut av scripts/snapshot_probs.js etter hver oppdatering. Banneret på siden viser "banner" som den er.', ...key};
+      const same = fs.existsSync(KEYMATCH) && (() => {
+        const old = JSON.parse(fs.readFileSync(KEYMATCH, 'utf8'));
+        return old.banner === next.banner && old.round === next.round && JSON.stringify(old.teams) === JSON.stringify(next.teams);
+      })();
+      if (same) console.log('Rundens viktigste kamp uendret.');
+      else {
+        fs.writeFileSync(KEYMATCH, JSON.stringify({...next, updated: new Date().toISOString().replace(/\.\d+Z$/, 'Z')}, null, 1) + '\n');
+        console.log('Skrev keymatch.json:', next.banner);
+      }
+    } else {
+      console.log('Ingen viktigste kamp å lagre (ingen runde igjen, eller ingen kamp flytter nok).');
+    }
     const fingerprint = crypto.createHash('sha1').update(snap.games.join('\n')).digest('hex').slice(0, 12);
     let hist = {version: 1, note: 'Sannsynligheter (0 til 1) etter hver oppdatering med nye resultater. Se scripts/snapshot_probs.js.', snapshots: []};
     if (fs.existsSync(HISTORY)) hist = JSON.parse(fs.readFileSync(HISTORY, 'utf8'));
