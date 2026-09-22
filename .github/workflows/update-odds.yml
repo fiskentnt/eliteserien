@@ -44,6 +44,18 @@ jobs:
           ODDS_API_KEY: ${{ secrets.ODDS_API_KEY }}
         run: python3 scripts/update_odds.py
 
+      # Parallellkjøring: samme kamper hentet fra OddsPapi (Pinnacle og
+      # bet365 hver for seg) og lagret side om side med The Odds API-snittet.
+      # Modellen bruker fortsatt The Odds API -- dette samler bare inn, så
+      # kildene kan sammenlignes på ekte kamper. Terminlisten koster 1 kall og
+      # mellomlagres; oddsoppslagene er gratis.
+      - name: Samle OddsPapi ved siden av, til sammenligning
+        if: steps.gate.outputs.should_fetch == 'true'
+        continue-on-error: true  # sammenligningen skal aldri stoppe oddsene
+        env:
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+        run: python3 scripts/odds_compare.py
+
       - name: Committer og pusher hvis noe endret seg
         if: always() && steps.gate.outputs.should_fetch == 'true'
         run: |
@@ -52,6 +64,9 @@ jobs:
           git add eliteserien/data/odds_upcoming.json eliteserien/data/odds.json eliteserien/data/model.json
           [ -f eliteserien/data/odds_quota.json ] && git add eliteserien/data/odds_quota.json
           [ -f eliteserien/data/odds_captured.json ] && git add eliteserien/data/odds_captured.json
+          [ -f eliteserien/data/odds_sources.json ] && git add eliteserien/data/odds_sources.json
+          [ -f eliteserien/data/oddspapi_fixtures.json ] && git add eliteserien/data/oddspapi_fixtures.json
+          [ -f data/oddspapi_usage.json ] && git add data/oddspapi_usage.json
           if git diff --cached --quiet; then
             echo "Ingen endringer i odds."
           else
