@@ -141,13 +141,10 @@ def main():
     ut = []
     for r, f in kommende:
         params = {"fixtureId": f.get("fixtureId"), "bookmakers": ",".join(BOOKMAKERS)}
-        svar, err = oddspapi.call("/v4/historical-odds", params, key)
-        if err and "RATE_LIMITED" in str(err):
-            # Kortvarig grense på endepunktet. Oppslaget er gratis, så ett
-            # forsøk til koster ingenting -- uten det falt en kamp eller to ut
-            # av hver kjøring, og siden sto uten odds på kamper som hadde dem.
-            time.sleep(COOLDOWN)
-            svar, err = oddspapi.call("/v4/historical-odds", params, key)
+        # call_retry følger serverens egen ventetid ved 429. En fast pause og
+        # ett forsøk til holdt ikke: da samme kjøring nettopp hadde hentet
+        # sluttodds fra samme endepunkt, falt seks av åtte kamper ut.
+        svar, err = oddspapi.call_retry("/v4/historical-odds", params, key)
         if err:
             print(f"  {r['home']} mot {r['away']}: FEIL {err}")
             time.sleep(COOLDOWN)

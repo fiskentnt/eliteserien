@@ -876,6 +876,26 @@
   /* Selve oddsen vises her, ikke i listen: listen skal fortsatt vise
      sannsynligheter. Popover og ikke title, fordi et title-tips ikke finnes
      på berøringsskjerm -- og merket skal kunne trykkes på. */
+  /* Reserve når nettleseren nekter å skrive til utklippstavlen. Ingen
+     prompt(): den fryser siden i Chrome. */
+  .tools button[hidden], .share[hidden]{display:none}
+  .kopiboks{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:80;
+    width:min(560px,calc(100vw - 24px));padding:12px 14px;border-radius:10px;
+    border:1px solid var(--line);background:var(--panel);color:var(--ink);
+    box-shadow:0 8px 30px rgba(0,0,0,.25);font-size:13px}
+  .kopiboks[hidden]{display:none}
+  .kopiboks p{margin:0 0 8px}
+  .kopiboks textarea{width:100%;box-sizing:border-box;font:400 12.5px/1.45 var(--body);
+    color:var(--ink);background:var(--input-bg);border:1px solid var(--line);
+    border-radius:7px;padding:7px 9px;resize:vertical}
+  .kopiboks button{margin-top:8px;padding:5px 12px;border-radius:7px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);font-weight:600;cursor:pointer}
+  /* Hva utfallene betyr for laget man følger, sett fra DET laget. Vises bare
+     når laget spiller kampen. */
+  .nm-impact{margin:8px 0 0;font-size:12.5px;line-height:1.5;color:var(--muted);
+    min-height:calc(2 * 1.5 * 12.5px)}
+  .nm-impact b{color:var(--ink);font-weight:700}
+  .nm-impact[hidden]{display:none}
   .oddspop{position:absolute;z-index:60;width:max-content;max-width:min(280px,calc(100vw - 20px));
     padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
     color:var(--ink);box-shadow:0 6px 24px rgba(0,0,0,.18);font:400 12.5px/1.45 var(--body)}
@@ -1047,6 +1067,7 @@
         <div class="nm-hub" id="nmHub">
           <button type="button" data-q="H"></button><button type="button" data-q="U"></button><button type="button" data-q="B"></button>
         </div>
+        <p class="nm-impact" id="nmImpact" hidden></p>
         <p class="nm-res" id="nmRes" hidden></p>
         <button type="button" class="head-link nm-round" id="nmRound" hidden></button>
       </div>
@@ -1072,8 +1093,12 @@
         <button id="simRest" title="Fyller inn et plausibelt resultat i alle tomme kamper">Simuler tomme kamper</button>
         <button class="reset" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
         <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
-        <button class="share" id="shareText" title="Kopierer en kort beskrivelse av scenarioet og lenken">Kopier tekst</button>
-        <button class="share" id="shareBB" title="Kopierer samme tekst med BB-kode, til forum">Kopier for forum</button>
+        <!-- Skjult til kopieringen er bekreftet stabil i Chrome på PC. Koden
+             bak er rettet (ingen prompt, og teksten beskriver brukerens egne
+             valg), men knappene står ute til det er prøvd i praksis.
+             "Del scenario" er upåvirket og virker som før. -->
+        <button class="share" id="shareText" hidden title="Kopierer en kort beskrivelse av scenarioet og lenken">Kopier tekst</button>
+        <button class="share" id="shareBB" hidden title="Kopierer samme tekst med BB-kode, til forum">Kopier for forum</button>
         <button class="share" id="shareSystem" hidden title="Deler scenarioet med appene på telefonen">Del …</button>
       </div>
       <label class="autofill" id="autoFillLabel" title="De andre kampene i samme runde simuleres, så alle lagene har spilt like mange og tabellen er sammenlignbar.">
@@ -3397,6 +3422,43 @@ function renderNextMatch(){
   if(set) res.innerHTML = `${m.home} <b>${m.hg}</b>-<b>${m.ag}</b> ${m.away}`;
   rl.hidden = !set;
   if(set){ rl.textContent = `Se hele runde ${m.round} →`; rl.dataset.round = m.round; }
+  oppdaterNesteKampLinje(m);
+}
+// Linja under utfallene: hva seier, uavgjort og tap gjør med sjansen til
+// laget man FØLGER -- ikke hjemmelaget. Samme tall som svaret "Hva betyr
+// neste kamp": den kaller samme simulering (runMatchImpactAsync), og
+// resultatet mellomlagres på scenarioet, så den ikke kjøres på nytt ved hver
+// render(). Vises bare når laget man følger spiller kampen.
+let nmImpactKey = null;
+async function oppdaterNesteKampLinje(m){
+  const el = document.getElementById('nmImpact');
+  if(!el) return;
+  const lag = SELECTED_TEAM;
+  const spiller = lag && (m.home===lag || m.away===lag);
+  if(!spiller || (m.hg!=null && m.ag!=null)){ el.hidden = true; nmImpactKey = null; return; }
+  const zone = qaTargetZone(lag);
+  if(!zone || qaSettled(lag, zone)){ el.hidden = true; nmImpactKey = null; return; }
+  const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
+  const idx = openMatches.indexOf(openMatches.find(x=>x.id===m.id));
+  if(idx<0){ el.hidden = true; return; }
+  const key = `${lag}|${zone.key}|${m.id}|${scenarioKey}`;
+  if(key===nmImpactKey) return;          // alt vist for dette scenarioet
+  nmImpactKey = key;
+  try{
+    const data = await runMatchImpactAsync(lag, zone, [{idx, match:m, needsDraw:true}], scenarioKey,
+      {P0,G0,F0,open,oddsOverride,N:2500,wantBaseline:true});
+    if(nmImpactKey!==key) return;        // scenarioet er endret mens det regnet
+    const r = data.results[0];
+    const isHome = m.home===lag;
+    const tableP = zone.pct;
+    const p = d => pctTxt(Math.min(1,Math.max(0,tableP+d)));
+    const dW = (isHome ? r.homeProb : r.awayProb) - r.baseProb;
+    const dL = (isHome ? r.awayProb : r.homeProb) - r.baseProb;
+    const dD = r.drawProb - r.baseProb;
+    el.innerHTML = `${qaStor(qaSjanse(zone))} for ${lag}: `+
+      `seier <b>${p(dW)}</b>, uavgjort <b>${p(dD)}</b>, tap <b>${p(dL)}</b>.`;
+    el.hidden = false;
+  }catch(_){ el.hidden = true; nmImpactKey = null; }
 }
 // Kortets H/U/B trekker resultatet her, i stedet for å sende klikket videre
 // til kampraden nede i lista: siden skal ikke flytte seg: resultatet vises i
@@ -5125,7 +5187,10 @@ async function qaWhy(team){
     ? `I simuleringene ender ${team} i snitt på ${poengTxt(data.avgFinalPts)} mot ${Math.round(data.avgRivalFinalPts)} for ${rival.t}, og ${utfall}.`
     : `I simuleringene ender ${team} i snitt på ${poengTxt(data.avgFinalPts)} og ${utfall}.`;
 
-  return [part1, part2, partRest, part3].filter(Boolean).join(' ');
+  // To avsnitt: situasjonen nå i det første, simuleringene i det andre.
+  // Svaret ble langt å lese i én blokk.
+  return [[part1, part2, partRest].filter(Boolean).join(' '), part3]
+    .filter(Boolean).join('\n\n');
 }
 
 // Poengkurve til spørsmål 2: sjansen for målet ved noen sluttpoengsummer rundt
@@ -5885,8 +5950,11 @@ function render(){
 function encodeScenario(){
   const filled = matches.filter(m=>m.hg!=null&&m.ag!=null);
   const full = filled.map(m=>`${TI[m.home]}.${TI[m.away]}.${m.hg}.${m.ag}${m.sim?'s':''}`).join('_');
-  if(full.length<=1500) return full;
   const simIds = new Set(filled.filter(m=>m.sim).map(m=>m.id));
+  // Er hele det simulerte settet fra ett og samme kall, holder det å ta med
+  // frøet. Før ble snarveien bare brukt når lenken passerte 1500 tegn, så en
+  // simulert sesong ga en lenke på rundt 1400 tegn helt unødvendig.
+  if(!simIds.size) return full;
   const seedValid = lastSimSeed!=null && lastSimMatchIds && simIds.size===lastSimMatchIds.size &&
     [...simIds].every(id=>lastSimMatchIds.has(id));
   if(!seedValid) return full; // kan ikke bruke frø-snarveien trygt -- lang men riktig lenke
@@ -5940,20 +6008,31 @@ function deleLag(){
 }
 // Er scenarioet "laget vinner/taper alt", og ingenting annet? Da sies det
 // med ord. Ellers beskrives det kort med antallet.
+// Teksten skal beskrive det BRUKEREN har valgt, ikke hva modellen fylte ut.
+// "72 resultater lagt inn" var misvisende når 63 av dem var simulert.
 function scenarioForm(lag){
   const fylte = matches.filter(m=>m.hg!=null && m.ag!=null);
   if(!fylte.length) return null;
+  const valgt = fylte.filter(m=>!m.sim);
+  const simulert = fylte.length - valgt.length;
+  const altSimulert = simulert>0 && fylte.length===matches.length;
+  const hale = !simulert ? ''
+    : altSimulert ? ', resten av sesongen simulert'
+    : `, ${tallOrd(simulert)} kamp${simulert===1?'':'er'} simulert`;
+  if(!valgt.length){
+    return {type: altSimulert ? 'altSimulert' : 'simulert', n: simulert, hale: ''};
+  }
   if(lag){
-    const egne = fylte.filter(m=>m.home===lag || m.away===lag);
+    const egne = valgt.filter(m=>m.home===lag || m.away===lag);
     const alleEgne = matches.filter(m=>m.home===lag || m.away===lag);
-    if(egne.length===fylte.length && egne.length===alleEgne.length && egne.length>1){
+    if(egne.length===valgt.length && egne.length===alleEgne.length && egne.length>1){
       const utfall = egne.map(m=>{ const h=m.home===lag; const gf=h?m.hg:m.ag, ga=h?m.ag:m.hg;
                                    return gf>ga?'W':(gf===ga?'D':'L'); });
-      if(utfall.every(x=>x==='W')) return {type:'vinner', n:egne.length};
-      if(utfall.every(x=>x==='L')) return {type:'taper', n:egne.length};
+      if(utfall.every(x=>x==='W')) return {type:'vinner', n:egne.length, hale};
+      if(utfall.every(x=>x==='L')) return {type:'taper', n:egne.length, hale};
     }
   }
-  return {type:'sammensatt', n:fylte.length};
+  return {type:'sammensatt', n:valgt.length, hale};
 }
 // Teksten. Tallene leses av lastMC og BASE_MC, altså nøyaktig det siden
 // viser for scenarioet og for basissituasjonen. Ingenting simuleres her.
@@ -5986,12 +6065,17 @@ function deleTekst(){
     : (fra==null
         ? `${qaStor(qaGen(lag))} ${qaSjanseUbest(z)} er ${pst(til)} prosent.`
         : `${qaStor(qaGen(lag))} ${qaSjanseUbest(z)} går fra ${pst(fra)} til ${pst(til)} prosent.`);
+  if(form.type==='altSimulert' || form.type==='simulert'){
+    const hode = form.type==='altSimulert' ? 'Hele sesongen simulert.'
+      : `${qaStor(tallOrd(form.n))} kamp${form.n===1?'':'er'} simulert.`;
+    return endring ? `${hode} ${endring}` : hode;
+  }
   if(form.type==='sammensatt'){
-    const hode = `${qaStor(tallOrd(form.n))} resultat${form.n===1?'':'er'} lagt inn.`;
+    const hode = `${qaStor(tallOrd(form.n))} resultat${form.n===1?'':'er'} lagt inn${form.hale}.`;
     return endring ? `${hode} ${endring}` : hode;
   }
   // "Brann vinner alle ni: topp 4-sjansen går fra 11 til 63 prosent."
-  const hode = `${lag} ${form.type} alle ${tallOrd(form.n)}`;
+  const hode = `${lag} ${form.type} alle ${tallOrd(form.n)}${form.hale}`;
   if(!endring) return `${hode}.`;
   const kort = (fra==null)
     ? `${qaSjanse(z)} er ${pst(til)} prosent`
@@ -6005,13 +6089,42 @@ function deleBBKode(){ const t=deleTekst(); const u=scenarioUrl();
   const lenke = `[url=${u}]Se scenarioet i Tabellkalkulator[/url]`;
   return t ? `${t}\n${lenke}` : lenke; }
 
-// Kopiering med tilbakemelding på knappen, og prompt som reserve der
-// utklippstavlen er sperret.
+// Kopiering. Chrome avviser navigator.clipboard.writeText med
+// "Document is not focused" hvis vinduet ikke har fokus -- da havnet vi før i
+// en prompt(), som fryser siden i Chrome. Ingen prompt lenger: vi prøver
+// utklippstavlen, så det gamle execCommand (som virker på en markert tekst
+// uten fokuskravet), og til sist vises teksten i et felt som alt er markert,
+// så den kan kopieres med Ctrl+C.
+function visKopifelt(tekst){
+  let boks = document.getElementById('kopiBoks');
+  if(!boks){
+    boks = document.createElement('div');
+    boks.id = 'kopiBoks';
+    boks.className = 'kopiboks';
+    boks.innerHTML = `<p>Nettleseren lot oss ikke skrive til utklippstavlen. Teksten er markert — trykk Ctrl+C (eller Cmd+C).</p>`+
+      `<textarea readonly rows="3" id="kopiFelt"></textarea>`+
+      `<button type="button" id="kopiLukk">Lukk</button>`;
+    document.body.appendChild(boks);
+    boks.querySelector('#kopiLukk').addEventListener('click', ()=>{ boks.hidden = true; });
+  }
+  boks.hidden = false;
+  const felt = boks.querySelector('#kopiFelt');
+  felt.value = tekst;
+  felt.focus(); felt.select();
+  return felt;
+}
 async function kopier(btn, tekst, ferdigTekst){
   const opprinnelig = btn.dataset.label || btn.textContent;
   btn.dataset.label = opprinnelig;
-  try{ await navigator.clipboard.writeText(tekst); btn.textContent = ferdigTekst; }
-  catch(_){ prompt('Kopier:', tekst); btn.textContent = 'Klar'; }
+  let ok = false;
+  try{ await navigator.clipboard.writeText(tekst); ok = true; }
+  catch(_){
+    // Andre forsøk: marker teksten i et felt og be nettleseren kopiere den.
+    try{ const felt = visKopifelt(tekst); ok = document.execCommand('copy'); if(ok) document.getElementById('kopiBoks').hidden = true; }
+    catch(_2){ ok = false; }
+    if(!ok) visKopifelt(tekst);
+  }
+  btn.textContent = ok ? ferdigTekst : 'Merk og kopier';
   btn.classList.add('done');
   clearTimeout(btn._t);
   btn._t = setTimeout(()=>{ btn.textContent = opprinnelig; btn.classList.remove('done'); }, 2500);
@@ -6023,9 +6136,7 @@ document.getElementById('share').addEventListener('click',async e=>{
   const url=scenarioUrl();
   history.replaceState(null,'',url);
   const btn=document.getElementById('share');
-  try{ await navigator.clipboard.writeText(url); btn.textContent='Lenke kopiert'; }
-  catch(_){ prompt('Kopier lenken:',url); btn.textContent='Lenke klar'; }
-  btn.classList.add('done'); setTimeout(()=>{btn.textContent='Del scenario';btn.classList.remove('done');},2500);
+  await kopier(btn, url, 'Lenke kopiert');
 });
 document.getElementById('shareText').addEventListener('click',async e=>{
   e.stopPropagation();

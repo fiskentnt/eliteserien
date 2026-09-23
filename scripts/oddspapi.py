@@ -85,6 +85,32 @@ def call(path, params=None, key=None, timeout=TIMEOUT):
         return None, f"{type(e).__name__}: {e}"
 
 
+def call_retry(path, params=None, key=None, timeout=TIMEOUT, forsok=4):
+    """Som call(), men følger serverens egen ventetid ved 429.
+
+    /v4/historical-odds har en kortvarig grense, og svaret sier nøyaktig hvor
+    lenge man skal vente ("retryMs"). Vi ventet før en fast pause og prøvde én
+    gang til; da ble seks av åtte OBOS-kamper stående uten odds fordi samme
+    kjøring nettopp hadde hentet sluttodds fra samme endepunkt. Nå leses
+    ventetiden ut av svaret, med et lite påslag.
+
+    Returnerer (data, feilmelding), som call().
+    """
+    import re
+    import time as _time
+    siste = None
+    for n in range(forsok):
+        d, err = call(path, params, key, timeout=timeout)
+        if not err or "RATE_LIMITED" not in str(err) and "429" not in str(err):
+            return d, err
+        siste = err
+        m = re.search(r'"retryMs"\s*:\s*(\d+)', str(err))
+        vent = (int(m.group(1)) / 1000.0 + 0.4) if m else 5.0
+        # Aldri mer enn et halvt minutt: da er det noe annet galt.
+        _time.sleep(min(vent, 30))
+    return None, siste
+
+
 def unwrap(d):
     if isinstance(d, list):
         return d

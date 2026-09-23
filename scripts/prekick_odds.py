@@ -145,14 +145,9 @@ def main():
         if not f:
             print(f"  {m['home']} mot {m['away']}: ikke i terminlisten -- hoppet over")
             continue
-        d, err = oddspapi.call("/v4/historical-odds",
-                               {"fixtureId": f.get("fixtureId"),
-                                "bookmakers": ",".join(BOOKMAKERS)}, key)
-        if err and "RATE_LIMITED" in str(err):
-            time.sleep(COOLDOWN)
-            d, err = oddspapi.call("/v4/historical-odds",
-                                   {"fixtureId": f.get("fixtureId"),
-                                    "bookmakers": ",".join(BOOKMAKERS)}, key)
+        d, err = oddspapi.call_retry("/v4/historical-odds",
+                                     {"fixtureId": f.get("fixtureId"),
+                                      "bookmakers": ",".join(BOOKMAKERS)}, key)
         if err:
             print(f"  {m['home']} mot {m['away']}: FEIL {err}")
             time.sleep(COOLDOWN)

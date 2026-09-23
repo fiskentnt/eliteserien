@@ -167,12 +167,8 @@ def main(argv=None):
         truffet, siste_feil = None, None
         for f in fs:
             fid, ko = f.get("fixtureId"), f.get("startTime")
-            d, err = oddspapi.call("/v4/historical-odds",
-                                   {"fixtureId": fid, "bookmakers": ",".join(BOOKMAKERS)}, key)
-            if err and "RATE_LIMITED" in str(err):
-                time.sleep(COOLDOWN)
-                d, err = oddspapi.call("/v4/historical-odds",
-                                       {"fixtureId": fid, "bookmakers": ",".join(BOOKMAKERS)}, key)
+            d, err = oddspapi.call_retry("/v4/historical-odds",
+                                         {"fixtureId": fid, "bookmakers": ",".join(BOOKMAKERS)}, key)
             time.sleep(COOLDOWN)
             if err:
                 siste_feil = str(err)[:120]
