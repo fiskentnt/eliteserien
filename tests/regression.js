@@ -1413,7 +1413,7 @@ const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
         for (const t of TEAMS) ut.push([t, await qaLastMatch(t)]);
         return ut;
       });
-      const medForventning = svar.filter(([, tx]) => /forventede/.test(tx));
+      const medForventning = svar.filter(([, tx]) => /forventet etter kampen/.test(tx));
       check(`${liga}: svarene har en forventning å måle mot`,
         medForventning.length >= TEAMS_MIN, `${medForventning.length} av ${svar.length}`);
       const avsnitt = medForventning.filter(([, tx]) => tx.split('\n\n').length === 3);
@@ -1421,13 +1421,14 @@ const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
         avsnitt.length === medForventning.length,
         `${avsnitt.length} av ${medForventning.length}`);
       const ordlyd = medForventning.filter(([, tx]) =>
-        /beregnet ut fra sannsynligheten for seier, uavgjort og tap/.test(tx) &&
-        /\d+ prosentpoeng (høyere|lavere) enn forventet/.test(tx) &&
+        /Ut fra sannsynligheten for seier, uavgjort og tap var .+ forventet etter kampen/.test(tx) &&
+        /\d+ prosentpoeng (mer|mindre) enn forventet/.test(tx) &&
         /Med \w+ ville .+ vært /.test(tx));
       check(`${liga}: ny ordlyd i alle svarene`, ordlyd.length === medForventning.length,
         (medForventning.find(([, tx]) => !ordlyd.some(([t2]) => t2 === tx)) || ['', ''])[1].slice(0, 120));
       const gamle = svar.filter(([, tx]) =>
         /enn ventet/.test(tx) || /når alle tre mulige utfall/.test(tx) ||
+        /Før kampen var den forventede/.test(tx) ||
         /ga \w+ bare \d/.test(tx) || /mest sannsynlige/.test(tx));
       check(`${liga}: ingen rester av gammel ordlyd`, gamle.length === 0,
         (gamle[0] || ['', ''])[1].slice(0, 120));

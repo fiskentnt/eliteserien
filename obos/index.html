@@ -1104,6 +1104,7 @@
       <p>Tabellkalkulator for OBOS-ligaen 2026 viser dagens tabell og sannsynligheten for at hvert lag rykker direkte opp, havner i topp 6 og får spille opprykksspill, havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 10&nbsp;000 ganger.</p>
       <p>De to øverste rykker direkte opp i Eliteserien. Lagene på 3. til 6. plass spiller opprykksspill, og de kampene er ikke regnet inn her: siden sier hvor sannsynlig det er å komme dit, ikke hvor sannsynlig det er å vinne det. 14. plass må spille kvalik, og de to nederste rykker ned.</p>
       <p>Du kan fylle inn egne resultater, la modellen simulere tomme kamper, følge ett lag og se hvordan tabellen og sjansene endrer seg. Tabellen viser både modellens styrkevurdering for hele sesongen og formen i de fem siste kampene, så du ser forskjellen på hvor sterkt et lag er og hvordan det går akkurat nå. Tallene oppdateres automatisk etter hver kamp.</p>
+            <p>Tallene i «Hvem har vært heldig eller uheldig» er faktiske poeng minus modellens forventede poeng i de samme kampene. Modellen er tilpasset på nettopp de kampene, og den har derfor allerede tatt opp i seg en del av avviket. Tallene er altså trolig litt for <strong>små</strong>: et lag har sannsynligvis vært enda heldigere, eller enda uheldigere, enn tallet viser.</p>
       <noscript><p><strong>Tabellen og sannsynlighetene regnes ut i nettleseren og krever JavaScript.</strong> Slå på JavaScript for å bruke kalkulatoren.</p></noscript>
     </section>
     <!-- /LIGA-OM -->
@@ -3894,16 +3895,22 @@ function qaCanCross(a, b){ return a.pts+3*a.left >= b.pts && b.pts+3*b.left >= a
 // ellers bruker) i hver gjenstående kamp, i riktig hjemme/borte-retning.
 // Gjelder alle 16 lag, ikke bare det fulgte -- vises derfor også uten valgt
 // lag. ----
-function qaToughestRunIn(){
+// Hvor tungt restprogrammet er, per lag: motstanderens vinnersjanse i hver
+// gjenstående kamp, i snitt. ETT mål, brukt både av "Hvem har det tøffeste
+// restprogrammet?" og av forklaringen i "Hvorfor har X sjanse for ...".
+function restprogram(){
   const oppWin = {}; TEAMS.forEach(t=>oppWin[t]=[]);
   matches.filter(isEmpty).forEach(m=>{
     const [lh,la] = rateFor(m.home, m.away), o = outcome(lh,la);
     oppWin[m.home].push(o.B); // motstanderen (bortelaget) sin vinnersjanse i DENNE kampen for hjemmelaget
     oppWin[m.away].push(o.H);
   });
-  const rows = TEAMS.filter(t=>oppWin[t].length).map(t=>({
+  return TEAMS.filter(t=>oppWin[t].length).map(t=>({
     team:t, avg: oppWin[t].reduce((a,b)=>a+b,0)/oppWin[t].length, n: oppWin[t].length
   }));
+}
+function qaToughestRunIn(){
+  const rows = restprogram();
   if(!rows.length) return 'Det er ingen kamper igjen å sammenligne.';
   rows.sort((a,b)=>b.avg-a.avg);
   // Få lag igjen: del listen i to, så samme lag ikke står både tyngst og lettest.
@@ -4253,12 +4260,14 @@ async function qaLastMatch(team){
   // utfallene vektet med sannsynlighet, og det nivået var ikke sannsynlig i
   // seg selv. Samme form for fremre og bakre soner -- "høyere"/"lavere" sier
   // hvilken vei selve sjansen gikk, ikke om det var bra for laget.
+  // Ikke "Før kampen var den forventede X etter kampen ...": leddet har både
+  // "før" og "etter", og må leses to ganger. At forventningen gjaldt før
+  // kampen sier seg selv.
   const tall = n===0
     ? ` Det var omtrent det de tre utfallene tilsa før kampen.`
-    : ` Før kampen var den forventede ${navn} etter kampen ${pctTxt(data.expected)}, `+
-      `beregnet ut fra sannsynligheten for seier, uavgjort og tap. `+
-      `${qaStor(resultat)} ga dermed en ${qaSjanseUbest(zone)} ${n} prosentpoeng `+
-      `${pp>0?'høyere':'lavere'} enn forventet.`;
+    : ` Ut fra sannsynligheten for seier, uavgjort og tap var ${pctTxt(data.expected)} `+
+      `forventet etter kampen, så ${resultat} ga ${n} prosentpoeng `+
+      `${pp>0?'mer':'mindre'} enn forventet.`;
   // Tre avsnitt: hva som skjedde, hva som var ventet av markedet og hva de
   // andre utfallene ville gitt, og forbeholdet. .qa-answer har pre-line.
   const midt = [overrask, alt].filter(Boolean).join(' ');
@@ -4615,9 +4624,21 @@ function qaRange(team){
   // er sjelden), og til sist det matematisk mulige.
   const pos = idx+1;
   const naa = (pos===lo || pos===hi) ? '' : `ligger på ${pos}. plass nå og `;
+  // Når SIMULERINGSINTERVALLET alt strekker seg til ytterpunktet, sier den
+  // matematiske grensen ingenting: når intervallet begynner på 1. plass, er
+  // "så høyt som 1. plass" ren gjentakelse. Det er intervallet (lo/hi) som
+  // avgjør, ikke hvor den matematiske grensen ligger.
+  const sisteP = d.length;
+  const matematisk = (b, w) => {
+    const oppe = b<lo && lo>1, nede = w>hi && hi<sisteP;
+    if(oppe && nede) return ` Matematisk kan ${team} ende så høyt som ${b}. plass og så lavt som ${w}. plass.`;
+    if(nede) return ` Matematisk kan ${team} fortsatt ende så lavt som ${w}. plass.`;
+    if(oppe) return ` Matematisk kan ${team} fortsatt ende så høyt som ${b}. plass.`;
+    return '';
+  };
   if(lo===hi){
     return `${team} ender nesten sikkert på ${lo}. plass (${qaPctCap(d[lo-1])} av simuleringene).`
-      + (best<lo || worst>hi ? ` Matematisk kan ${team} ende så høyt som ${best}. plass og så lavt som ${worst}. plass.` : '');
+      + matematisk(best, worst);
   }
   const N = lastMCN;
   const bestSim = d.findIndex(v=>Math.round(v*N)>0)+1;
@@ -4644,10 +4665,16 @@ function qaRange(team){
   const bestTxt = sjelden
     ? ` Beste plassering i ${N.toLocaleString('nb-NO')} simuleringer var ${bestSim}. plass, og det skjedde ${antall(Math.round(d[bestSim-1]*N))}.`
     : '';
-  const ext = worst>hi
-    ? ` Matematisk kan ${team} ende så høyt som ${best}. plass og så lavt som ${worst}. plass.`
-    : (best<lo ? ` Matematisk er ${best}. plass fortsatt mulig.` : '');
-  return `${team} ${naa}ender som regel mellom ${lo}. og ${hi}. plass.${oftest?' '+oftest:''}${bestTxt}${ext}`;
+  const ext = matematisk(best, worst);
+  // "ender som regel mellom 1. og 2. plass" leses som en generell påstand om
+  // laget. Tallet bak intervallet er der alt: det dekker MINST 90 prosent av
+  // simuleringene (plasseringer er hele tall, så intervallet dekker minst så
+  // mye, ikke nøyaktig).
+  // Tallet bak intervallet står i setningen: det dekker MINST 90 prosent av
+  // simuleringene (plasseringer er hele tall, så intervallet dekker minst så
+  // mye, ikke nøyaktig).
+  return `${team} ${naa}ender i minst 90 % av simuleringene mellom ${lo}. og ${hi}. plass.`
+    + `${oftest?' '+oftest:''}${bestTxt}${ext}`;
 }
 // ---- Spørsmål 8: hell/uhell -- ingen simulering. Sammenligner FAKTISKE
 // poeng i FAKTISK spilte kamper (MATCHES, ikke scenario-resultater -- "hell"
@@ -4673,11 +4700,13 @@ function qaLuck(){
   rows.sort((a,b)=>b.diff-a.diff);
   const lucky=rows.slice(0,3), unlucky=rows.slice(-3).reverse();
   const fmt = r => `${r.team} ${fmtSigned(r.diff)}`;
+  // Forbeholdet -- at modellen er tilpasset på de samme kampene, og at
+  // avvikene derfor trolig er litt for SMÅ -- står i "Om modellen". Her ville
+  // det gjentatt "de samme kampene" to ganger og tynget svaret.
   const over = lucky[0], under = unlucky[0];
   return `${over.team} har tatt ${fmtSigned(over.diff).replace('+','')} poeng mer enn modellen forventet, mest i ligaen. `+
     `${under.team} ligger ${fmtSigned(-under.diff).replace('+','')} poeng under forventning. `+
-    `Tallet er faktiske poeng minus modellens forventede poeng i de samme kampene. `+
-    `Modellen er tilpasset på de samme kampene, så avvikene er trolig litt for små.`;
+    `Det er forskjellen mellom faktiske og forventede poeng.`;
 }
 
 // ---- Spørsmål 1, 2, 3, 6, 7: krever simulering, kjøres i Workeren (se
@@ -4967,8 +4996,8 @@ async function qaWhy(team){
     part1 = row.pts===rivalRow.pts
       ? `${team} og ${rival.t} står likt på ${poengTxt(row.pts)}, med ${kampTxt(row.left)} igjen.`
       : row.pts>rivalRow.pts
-        ? `${team} leder ${rival.t} ${row.pts}–${rivalRow.pts} i poeng, med ${kampTxt(row.left)} igjen.`
-        : `${team} ligger bak ${rival.t} ${row.pts}–${rivalRow.pts} i poeng, med ${kampTxt(row.left)} igjen.`;
+        ? `${team} leder ${rival.t} ${row.pts}-${rivalRow.pts} i poeng, med ${kampTxt(row.left)} igjen.`
+        : `${team} ligger bak ${rival.t} ${row.pts}-${rivalRow.pts} i poeng, med ${kampTxt(row.left)} igjen.`;
   } else {
     part1 = `${team} ligger på ${pos}. plass med ${poengTxt(row.pts)} og ${kampTxt(row.left)} igjen.`;
   }
@@ -5021,12 +5050,30 @@ async function qaWhy(team){
   // "I simuleringene ender Bryne i snitt på 46 poeng mot 42 for Hødd, og
   // havner i topp 6 i 73 % av dem." Laget er subjekt hele veien, så det
   // nevnes bare én gang.
+  // Restprogrammet inngår i simuleringen, så det hører med i forklaringen --
+  // men bare når det faktisk skiller lagene. Under fem prosentpoeng sier
+  // setningen ingenting, og da tas den ikke med. Samme mål som svaret om
+  // tøffeste restprogram; ingen ny beregning.
+  const motpart = field ? field.nearest : (rival ? rival.t : null);
+  let partRest = '';
+  if(motpart){
+    const rp = restprogram();
+    const a = rp.find(x=>x.team===team), b = rp.find(x=>x.team===motpart);
+    if(a && b){
+      const pa = Math.round(a.avg*100), pb = Math.round(b.avg*100);
+      if(Math.abs(pa-pb) >= 5){
+        const tyngre = pa > pb;
+        partRest = `${team} har også et ${tyngre?'tøffere':'lettere'} restprogram: `+
+          `motstanderne har i snitt ${pctTxt(a.avg)} vinnersjanse, mot ${pctTxt(b.avg)} for ${motpart}.`;
+      }
+    }
+  }
   const utfall = `${qaUtfallTxt(zone)} i ${pctTxt(zone.pct)} av dem`;
   const part3 = rival && data.avgRivalFinalPts!=null
     ? `I simuleringene ender ${team} i snitt på ${poengTxt(data.avgFinalPts)} mot ${Math.round(data.avgRivalFinalPts)} for ${rival.t}, og ${utfall}.`
     : `I simuleringene ender ${team} i snitt på ${poengTxt(data.avgFinalPts)} og ${utfall}.`;
 
-  return [part1, part2, part3].filter(Boolean).join(' ');
+  return [part1, part2, partRest, part3].filter(Boolean).join(' ');
 }
 
 // Poengkurve til spørsmål 2: sjansen for målet ved noen sluttpoengsummer rundt
@@ -5261,7 +5308,9 @@ async function qaRivals(team){
     // disjunkte (laget kan ikke være både rett foran og rett bak i samme
     // sesong), og summen av de avrundede delene brukes, så tallene stemmer.
     const ahead=Math.round(aheadShare*100), behind=Math.round(behindShare*100);
-    return `${team} ender oftest rett ved siden av ${aheadTop.t}, i ${ahead+behind} % av simuleringene `+
+    // Forbeholdet først: "X ender oftest rett ved siden av Y" påstår noe om
+    // virkeligheten, mens det bare er noe som skjer i simuleringene.
+    return `I ${ahead+behind} % av simuleringene ender ${team} rett ved siden av ${aheadTop.t} `+
       `(rett bak i ${ahead} %, rett foran i ${behind} %).`+(rivalName && rivalName!==aheadTop.t ? rivalTxt : '');
   }
   if(!hasAhead && hasBehind){
