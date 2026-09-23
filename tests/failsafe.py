@@ -361,6 +361,19 @@ def main():
         check(f"statistikk: {navn} setter ingen informasjonskapsel",
               "document.cookie" not in tekst)
 
+    # 16. Innleggsforslagene er et LOKALT verktøy. Repoet er offentlig, så
+    #   hverken tekstene, bildene eller hvilke lag som er brukt skal kunne
+    #   havne der. Et .gitignore-mønster er hele vernet -- det testes.
+    ignorert = subprocess.run(["git", "check-ignore",
+                               "innlegg/index.html", "innlegg/tilstand.json",
+                               "innlegg/eliteserien-for.png"],
+                              capture_output=True, text=True, cwd=ROOT)
+    check("innlegg: mappa er utenfor repoet",
+          len(ignorert.stdout.split()) == 3, ignorert.stdout.strip() or "ingen treff")
+    sporet = subprocess.run(["git", "ls-files", "innlegg"],
+                            capture_output=True, text=True, cwd=ROOT)
+    check("innlegg: ingenting er sporet", not sporet.stdout.strip(), sporet.stdout.strip())
+
     print(f"\n{ok} av {ok + fail} failsafe-tester gikk gjennom.")
     return 1 if fail else 0
 
