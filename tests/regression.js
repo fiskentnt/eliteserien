@@ -79,6 +79,8 @@ const QA_EXPECT = {
   keyround:   {what: 'kamp og prosent', pat: new RegExp(String.raw`\S+ mot \S+[\s\S]*${PCT}`)},
   lastmatch:  {what: 'prosent',       pat: new RegExp(PCT)},
   nextmatch:  {what: 'prosent',       pat: new RegExp(PCT)},
+  // Vanskeligst/lettest: begge ytterpunktene skal ha et tall.
+  hardest:    {what: 'prosent',       pat: new RegExp(PCT)},
   cheer:      {what: 'prosentpoeng',  pat: new RegExp(PP)},
   // Spennet, ikke bare ordet "plass": svaret nevner plasseringer flere steder,
   // så et løsere mønster ville ikke merket om selve spennet forsvant.
@@ -1539,6 +1541,60 @@ async function main() {
       check(`${liga}: linja er skjult uten fulgt lag`,
         await u.evaluate(() => !document.getElementById('nmImpact').checkVisibility({visibilityProperty: true})));
       await u.close();
+    }
+    await page.bringToFront();
+
+    // ---- 29. "Hvilken kamp blir vanskeligst?" ----
+    setGroup('Vanskeligste kamp');
+    for (const [url, liga, lag] of [[base, 'Eliteserien', 'Brann'], [obosUrl, 'OBOS', 'Bryne']]) {
+      const sp = await open(1400, 900, url);
+      await settle(sp);
+      // Uten fulgt lag skal spørsmålet ikke vises i det hele tatt.
+      await sp.evaluate(() => { const s = document.getElementById('teamSelect');
+        s.value = ''; s.dispatchEvent(new Event('change', {bubbles: true})); });
+      await new Promise(r => setTimeout(r, 1500));
+      const utenLag = await sp.evaluate(() =>
+        [...document.querySelectorAll('.qa-item button')].some(b => /vanskeligst/i.test(b.textContent)));
+      check(`${liga}: spørsmålet vises ikke uten fulgt lag`, !utenLag);
+
+      await sp.evaluate(t => { const s = document.getElementById('teamSelect');
+        s.value = t; s.dispatchEvent(new Event('change', {bubbles: true})); }, lag);
+      await new Promise(r => setTimeout(r, 2000));
+      const r = await sp.evaluate(async t => {
+        const q = QA_QUESTIONS.find(x => x.id === 'hardest');
+        // Fasit regnet av de SAMME vinnersjansene svaret skal bruke.
+        const egne = matches.filter(m => isEmpty(m) && (m.home === t || m.away === t))
+          .map(m => { const [lh, la] = rateFor(m.home, m.away), o = outcome(lh, la);
+                      const hjemme = m.home === t;
+                      return {opp: hjemme ? m.away : m.home, p: hjemme ? o.H : o.B}; })
+          .sort((a, b) => a.p - b.p);
+        return {svar: String(await q.run(t, () => {})), label: q.label(t),
+                verst: egne[0], best: egne[egne.length - 1], n: egne.length};
+      }, lag);
+      check(`${liga}: spørsmålet heter det det skal`,
+        r.label === `Hvilken kamp blir vanskeligst for ${lag}?`, r.label);
+      check(`${liga}: svaret har begge ytterpunktene`,
+        /^Vanskeligst blir (hjemme|borte) mot .+ \d+\. \w+, der modellen gir .+ sjanse for seier\. Lettest blir (hjemme|borte) mot .+ \d+\. \w+, med .+\.$/.test(r.svar),
+        r.svar);
+      check(`${liga}: vanskeligste kamp er den med lavest vinnersjanse`,
+        r.svar.includes(`mot ${r.verst.opp} `) &&
+        r.svar.indexOf(r.verst.opp) < r.svar.indexOf('Lettest'),
+        `ventet ${r.verst.opp} (${Math.round(r.verst.p * 100)} %)`);
+      check(`${liga}: letteste kamp er den med høyest vinnersjanse`,
+        r.svar.indexOf(r.best.opp) > r.svar.indexOf('Lettest'),
+        `ventet ${r.best.opp} (${Math.round(r.best.p * 100)} %)`);
+      // En kamp man har fylt inn selv står ikke igjen, og skal ut av listen.
+      const etter = await sp.evaluate(async t => {
+        const m = matches.filter(x => isEmpty(x) && (x.home === t || x.away === t))[0];
+        const opp = m.home === t ? m.away : m.home;
+        setMatch(m, 1, 1); render();
+        await new Promise(r => setTimeout(r, 600));
+        const q = QA_QUESTIONS.find(x => x.id === 'hardest');
+        return {opp, svar: String(await q.run(t, () => {}))};
+      }, lag);
+      check(`${liga}: en utfylt kamp regnes ikke som gjenstående`,
+        !etter.svar.includes(`mot ${etter.opp} `), `${etter.opp}: ${etter.svar.slice(0, 80)}`);
+      await sp.close();
     }
     await page.bringToFront();
 

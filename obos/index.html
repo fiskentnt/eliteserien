@@ -4032,6 +4032,26 @@ function restprogram(){
     team:t, avg: oppWin[t].reduce((a,b)=>a+b,0)/oppWin[t].length, n: oppWin[t].length
   }));
 }
+// ---- Hvilken kamp blir vanskeligst? Ingen ny simulering: vinnersjansene er
+// de samme som kamplisten og "tøffeste restprogram" bruker (rateFor +
+// outcome), bare sortert for det ene laget. Gjelder kampene som står igjen,
+// så et scenario man har fylt inn selv tas ut av listen.
+function qaHardestMatch(team){
+  const egne = matches.filter(m => isEmpty(m) && (m.home===team || m.away===team));
+  if(!egne.length) return `${team} har ingen kamper igjen.`;
+  const med = egne.map(m => {
+    const [lh,la] = rateFor(m.home, m.away), o = outcome(lh,la);
+    const hjemme = m.home===team;
+    return {m, hjemme, opp: hjemme ? m.away : m.home, p: hjemme ? o.H : o.B};
+  }).sort((a,b) => a.p - b.p);
+  const beskriv = x => `${x.hjemme?'hjemme':'borte'} mot ${x.opp} ${dateNoLong(x.m.date)}`;
+  const verst = med[0], best = med[med.length-1];
+  if(med.length===1)
+    return `${team} har bare én kamp igjen: ${beskriv(verst)}, der modellen gir `+
+      `${pctTxt(verst.p)} sjanse for seier.`;
+  return `Vanskeligst blir ${beskriv(verst)}, der modellen gir ${pctTxt(verst.p)} sjanse for seier. `+
+    `Lettest blir ${beskriv(best)}, med ${pctTxt(best.p)}.`;
+}
 function qaToughestRunIn(){
   const rows = restprogram();
   if(!rows.length) return 'Det er ingen kamper igjen å sammenligne.';
@@ -5499,6 +5519,7 @@ const QA_QUESTIONS = [
   {id:'runin', needsTeam:false, run:()=>qaToughestRunIn(), label:()=>'Hvem har det tøffeste restprogrammet?'},
   {id:'lastmatch', needsTeam:true, run:qaLastMatch, label:team=>`Hva betydde forrige kamp for ${team}?`},
   {id:'nextmatch', needsTeam:true, run:team=>qaNextMatch(team), label:team=>`Hva betyr neste kamp for ${team}?`},
+  {id:'hardest', needsTeam:true, run:team=>qaHardestMatch(team), label:team=>`Hvilken kamp blir vanskeligst for ${team}?`},
   {id:'cheer', needsTeam:true, run:qaCheerFor, label:team=>`Hvem bør ${team} heie på denne runden?`},
   {id:'range', needsTeam:true, run:qaRange, label:team=>`Hvor kan ${team} realistisk ende?`},
   {id:'decided', needsTeam:true, run:qaWhenDecided, label:()=>'Når kan det være avgjort?'},
