@@ -4260,14 +4260,15 @@ async function qaLastMatch(team){
   // utfallene vektet med sannsynlighet, og det nivået var ikke sannsynlig i
   // seg selv. Samme form for fremre og bakre soner -- "høyere"/"lavere" sier
   // hvilken vei selve sjansen gikk, ikke om det var bra for laget.
-  // Ikke "Før kampen var den forventede X etter kampen ...": leddet har både
-  // "før" og "etter", og må leses to ganger. At forventningen gjaldt før
-  // kampen sier seg selv.
+  // "bedre"/"verre", ikke "høyere"/"lavere": ordet sier hva tallet betyr FOR
+  // LAGET, så leseren slipper å snu retningen selv for nedrykk. En seier som
+  // senker nedrykksfaren mer enn ventet er "bedre enn ventet", selv om tallet
+  // gikk ned.
+  const bra = zone.dir==='front' ? pp>0 : pp<0;
   const tall = n===0
     ? ` Det var omtrent det de tre utfallene tilsa før kampen.`
-    : ` Ut fra sannsynligheten for seier, uavgjort og tap var ${pctTxt(data.expected)} `+
-      `forventet etter kampen, så ${resultat} ga ${n} prosentpoeng `+
-      `${pp>0?'mer':'mindre'} enn forventet.`;
+    : ` Før kampen var ${pctTxt(data.expected)} ventet når alle mulige utfall ble tatt med. `+
+      `${qaStor(resultat)} var dermed ${n} prosentpoeng ${bra?'bedre':'verre'} enn ventet.`;
   // Tre avsnitt: hva som skjedde, hva som var ventet av markedet og hva de
   // andre utfallene ville gitt, og forbeholdet. .qa-answer har pre-line.
   const midt = [overrask, alt].filter(Boolean).join(' ');
@@ -5299,7 +5300,7 @@ async function qaRivals(team){
   // spørsmål 1 og 2). Derfor sies sonen.
   const omSone = zone.dir==='front' ? `om ${LEAGUE.zones[zone.key] ? LEAGUE.zones[zone.key].label : zone.label}`
     : `om å unngå ${zone.label}`;
-  const rivalTxt = rivalName ? ` ${rivalName} er laget som konkurrerer tettest med ${team} ${omSone}.` : '';
+  const rivalTxt = rivalName ? ` ${rivalName} er den nærmeste konkurrenten i kampen ${omSone}.` : '';
   // Under 1 %: ingen ligger der (laget leder eller ligger sist), og "oftest
   // foran/bak (0 %)" ville vært feil.
   const hasAhead = aheadShare>=0.01, hasBehind = behindShare>=0.01;
@@ -5313,13 +5314,16 @@ async function qaRivals(team){
     return `I ${ahead+behind} % av simuleringene ender ${team} rett ved siden av ${aheadTop.t} `+
       `(rett bak i ${ahead} %, rett foran i ${behind} %).`+(rivalName && rivalName!==aheadTop.t ? rivalTxt : '');
   }
+  // Alle variantene begynner med simuleringene: "Viking ender oftest rett bak
+  // Bodø/Glimt" påstår noe om virkeligheten, ikke om simuleringene. Står det
+  // to prosenter, hører hver av dem til sitt eget lag.
   if(!hasAhead && hasBehind){
-    return `${team} ender øverst i nesten alle simuleringene, oftest rett foran ${behindTop.t} (${pctTxt(behindShare)}).${rivalTxt}`;
+    return `I simuleringene ender ${team} øverst nesten hver gang, som oftest rett foran ${behindTop.t} (${pctTxt(behindShare)}).${rivalTxt}`;
   }
   if(hasAhead && !hasBehind){
-    return `${team} ender nederst i nesten alle simuleringene, oftest rett bak ${aheadTop.t} (${pctTxt(aheadShare)}).${rivalTxt}`;
+    return `I simuleringene ender ${team} nederst nesten hver gang, som oftest rett bak ${aheadTop.t} (${pctTxt(aheadShare)}).${rivalTxt}`;
   }
-  return `${team} ender oftest rett bak ${aheadTop.t} (${pctTxt(aheadShare)} av simuleringene) og rett foran ${behindTop.t} (${pctTxt(behindShare)}).${rivalTxt}`;
+  return `I simuleringene ender ${team} som oftest rett bak ${aheadTop.t} (${pctTxt(aheadShare)}) og rett foran ${behindTop.t} (${pctTxt(behindShare)}).${rivalTxt}`;
 }
 
 // ---- Knappene selv. Uten valgt lag vises bare de to som ikke trenger et
