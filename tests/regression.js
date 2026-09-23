@@ -1169,8 +1169,8 @@ async function main() {
     }
     await page.bringToFront();
 
-    // ---- 24. Styrke og Siste 5 er to ulike tall ----
-    setGroup('Styrke og Siste 5');
+    // ---- 24. Styrke og Form er to ulike tall ----
+    setGroup('Styrke og Form');
     for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
       const sp = await open(1400, 900, url);
       await settle(sp);
@@ -1179,34 +1179,67 @@ async function main() {
         const rader = [...document.querySelectorAll('#tbl tbody tr')].map(tr => ({
           lag: tr.dataset.team,
           styrke: parseFloat((tr.querySelector('.formbox') || {}).textContent.replace(',', '.')),
-          siste5: parseFloat(((tr.querySelector('.ppk5') || {}).textContent || '').replace(',', '.')),
+          form: parseFloat(((tr.querySelector('.form5') || {}).textContent || '').replace(',', '.')),
+          tips: ((tr.querySelector('.form5') || {}).title || ''),
         }));
-        // Poeng per kamp regnet på nytt fra resultatrutene, som fasit.
+        // Fasit regnet på nytt fra resultatrutene: vanlige poeng, 3 for seier
+        // og 1 for uavgjort, delt på maks mulige og ganget med 10.
         const fasit = {};
         [...document.querySelectorAll('#tbl tbody tr')].forEach(tr => {
           const res = [...tr.querySelectorAll('.form b')].map(b => b.className);
           fasit[tr.dataset.team] = res.length
-            ? res.reduce((a, c) => a + (c === 'W' ? 3 : c === 'D' ? 1 : 0), 0) / res.length : null;
+            ? res.reduce((a, c) => a + (c === 'W' ? 3 : c === 'D' ? 1 : 0), 0) / (3 * res.length) * 10
+            : null;
         });
-        return {hd, rader, fasit, kort: [...document.querySelectorAll('.card .card-title')].map(e => e.textContent)};
+        // Selve regnestykket, mot tallene oppgaven navngir.
+        const skala = {
+          femSeirer: form5From(['W', 'W', 'W', 'W', 'W']),
+          femUavgjort: form5From(['D', 'D', 'D', 'D', 'D']),
+          femTap: form5From(['L', 'L', 'L', 'L', 'L']),
+          toKamper: form5From(['W', 'D']),
+          ingen: form5From([]),
+        };
+        return {hd, rader, fasit, skala,
+                kort: [...document.querySelectorAll('.card .card-title')].map(e => e.textContent)};
       });
-      check(`${liga}: kolonnen heter Styrke`, r.hd.includes('Styrke'), r.hd.join(' | '));
-      check(`${liga}: ingen kolonne heter Form lenger`, !r.hd.includes('Form'), r.hd.join(' | '));
+      check(`${liga}: kolonnen heter Form`, r.hd.includes('Form'), r.hd.join(' | '));
+      check(`${liga}: kolonnen Styrke står ved siden av`, r.hd.includes('Styrke'), r.hd.join(' | '));
+      check(`${liga}: ingen kolonne heter "Siste 5" lenger`, !r.hd.includes('Siste 5'), r.hd.join(' | '));
       check(`${liga}: kortet heter Styrke`, r.kort.includes('Styrke'), r.kort.join(', '));
-      const feil = r.rader.filter(x => Math.abs(x.siste5 - r.fasit[x.lag]) > 0.051);
-      check(`${liga}: "Siste 5" er poeng per kamp fra de samme rutene`, feil.length === 0,
-        feil.slice(0, 3).map(x => `${x.lag}: ${x.siste5} mot ${r.fasit[x.lag]}`).join('; '));
-      // De to tallene er ikke det samme: det er hele poenget med å vise begge.
-      const ulike = r.rader.filter(x => Math.abs(x.styrke - 5) > 0.3 || x.siste5 != null).length;
+
+      // Skalaen: fem seirer = 15 av 15 = 10,0, fem uavgjorte = 5 av 15 = 3,3.
+      check(`${liga}: fem seirer gir 10,0`, Math.abs(r.skala.femSeirer - 10) < 1e-9, `${r.skala.femSeirer}`);
+      check(`${liga}: fem uavgjorte gir 3,3`, Math.abs(r.skala.femUavgjort - 10 / 3) < 1e-9, `${r.skala.femUavgjort}`);
+      check(`${liga}: fem tap gir 0,0`, r.skala.femTap === 0, `${r.skala.femTap}`);
+      // Uavgjort er en tredjedel av en seier, ikke en halv: en 2-1-0-skala
+      // ville gitt 5,0 for fem uavgjorte.
+      check(`${liga}: uavgjort teller en tredjedel, ikke en halv`,
+        Math.abs(r.skala.femUavgjort - 5) > 1, `${r.skala.femUavgjort}`);
+      check(`${liga}: færre enn fem kamper regnes av dem som er spilt`,
+        Math.abs(r.skala.toKamper - 4 / 6 * 10) < 1e-9, `${r.skala.toKamper}`);
+      check(`${liga}: ingen kamper gir ingen tall`, r.skala.ingen === null, `${r.skala.ingen}`);
+
+      const feil = r.rader.filter(x => Math.abs(x.form - r.fasit[x.lag]) > 0.051);
+      check(`${liga}: Form er regnet av de samme rutene`, feil.length === 0,
+        feil.slice(0, 3).map(x => `${x.lag}: ${x.form} mot ${r.fasit[x.lag]}`).join('; '));
       check(`${liga}: begge tallene finnes for alle lagene`,
-        r.rader.every(x => !Number.isNaN(x.styrke) && !Number.isNaN(x.siste5)), `${ulike}`);
-      // Sortering på det nye tallet
+        r.rader.every(x => !Number.isNaN(x.styrke) && !Number.isNaN(x.form)),
+        `${r.rader.length} rader`);
+      // Tipsteksten viser regnestykket, og sier antallet når det er under fem.
+      const tipsFeil = r.rader.filter(x => !/^\d+ av \d+ poeng i (den siste kampen|de (to|tre|fire|fem) siste)$/.test(x.tips));
+      check(`${liga}: tipsteksten viser regnestykket`, tipsFeil.length === 0,
+        tipsFeil.slice(0, 3).map(x => `${x.lag}: "${x.tips}"`).join('; '));
+      // De to tallene er ikke det samme: det er hele poenget med å vise begge.
+      const like = r.rader.filter(x => Math.abs(x.styrke - x.form) < 0.05).length;
+      check(`${liga}: Styrke og Form er ikke samme tall`, like < r.rader.length / 2,
+        `${like} av ${r.rader.length} rader like`);
+
       const sortert = await sp.evaluate(() => {
         cycleSort('form5');
         return [...document.querySelectorAll('#tbl tbody tr')]
-          .map(tr => parseFloat(((tr.querySelector('.ppk5') || {}).textContent || '').replace(',', '.')));
+          .map(tr => parseFloat(((tr.querySelector('.form5') || {}).textContent || '').replace(',', '.')));
       });
-      check(`${liga}: "Siste 5" kan sorteres`,
+      check(`${liga}: Form kan sorteres`,
         sortert.every((v, i) => i === 0 || sortert[i - 1] >= v), sortert.join(' '));
       await sp.close();
     }
