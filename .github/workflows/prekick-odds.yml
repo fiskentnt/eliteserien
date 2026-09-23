@@ -1,0 +1,73 @@
+name: "Odds nær avspark"
+
+# Henter oddsen på nytt for kamper som starter om 15 til 60 minutter, så
+# laguttaket er priset inn i tallene siden viser. Samme vindu som definerer
+# sluttodds -- se scripts/oddswindow.py.
+#
+# Hvorfor så tett en plan: de vanlige jobbene går på faste klokkeslett og
+# treffer kampen i snitt sju timer før avspark. Målt på 351 kamper flytter
+# sannsynlighetene seg 2,8-3,0 prosentpoeng fra dagen før til vinduet, og
+# odds fra dagen før traff 2,0 standardfeil dårligere.
+#
+# Kvote: 0 tellende kall i normal drift. Porten leser terminlisten fra disk
+# og gjør ingen kall når ingen kamp er nær avspark; oddsoppslagene er gratis.
+# Sikkerhetsventilen henter terminlisten på nytt bare hvis en kamp som
+# starter snart mangler i den, og høyst én gang i døgnet.
+#
+# Tidsvinduet i cronen er UTC og dekker avspark fra kl. 11 til 21 UTC, altså
+# 12-23 norsk vintertid og 13-24 norsk sommertid. Kampene i 2026 starter
+# mellom 12 og 18 UTC.
+on:
+  schedule:
+    - cron: "3,13,23,33,43,53 10-21 * * *"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Bare vis hva som ville skjedd"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: prekick-odds
+  cancel-in-progress: false
+
+jobs:
+  hent:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Hent odds nær avspark
+        env:
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+        run: |
+          for liga in eliteserien obos; do
+            echo "--- $liga ---"
+            python3 scripts/prekick_odds.py "$liga" \
+              ${{ inputs.dry_run && '--dry-run' || '' }} || true
+          done
+
+      - name: Lagre hvis noe endret seg
+        if: ${{ always() && !inputs.dry_run }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          for f in eliteserien/data/odds_upcoming.json obos/data/odds_upcoming.json \
+                   eliteserien/data/oddspapi_fixtures_2026.json \
+                   obos/data/oddspapi_fixtures_2026.json \
+                   data/oddspapi_usage.json; do
+            if [ -e "$f" ]; then git add "$f"; fi
+          done
+          if git diff --cached --quiet; then
+            echo "Ingen kamper nær avspark, eller ingen nye priser."
+          else
+            git commit -m "Odds nær avspark $(date -u +%Y-%m-%dT%H:%MZ)"
+            git pull --rebase --autostash origin main || true
+            git push origin HEAD:main
+          fi

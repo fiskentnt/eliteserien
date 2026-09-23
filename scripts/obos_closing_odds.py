@@ -31,6 +31,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).parent))
 import oddspapi
+import oddswindow
 
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / "obos" / "data"
@@ -309,12 +310,27 @@ def main():
     print(f"\n1X2-marked: {json.dumps({k:v for k,v in (mkt or {}).items() if k in ('marketId','id','marketName','name','slug')}, ensure_ascii=False) if mkt else 'IKKE FUNNET -- henter ingen odds'}")
     if mkt_id is None:
         return 1
-    out = {"version": 1, "source": "OddsPapi /v4/historical-odds",
-           "note": "Siste tilgjengelige odds før kampstart. Utfallene er hjemme, uavgjort, borte.",
+    definisjon = (f"siste observasjon {oddswindow.CLOSE_FROM_MIN} til "
+                  f"{oddswindow.CLOSE_TO_MIN} minutter før avspark")
+    out = {"version": 2, "source": "OddsPapi /v4/historical-odds",
+           "note": ("Sluttodds er " + definisjon + ". Kamper uten observasjon i "
+                    "vinduet står med bookmaker null og odds null -- de har INGEN "
+                    "sluttodds, og skal ikke erstattes med en eldre pris. "
+                    "Utfallene er hjemme, uavgjort, borte."),
+           "definisjon": definisjon,
            "market": mkt_id, "bookmakers": BOOKMAKERS, "matches": {}}
     if OUT_PATH.exists():
-        out = json.loads(OUT_PATH.read_text(encoding="utf-8"))
-        out.setdefault("matches", {})
+        gammel = json.loads(OUT_PATH.read_text(encoding="utf-8"))
+        if gammel.get("definisjon") == definisjon:
+            out = gammel
+            out.setdefault("matches", {})
+        else:
+            # Definisjonen er endret. De gamle radene er sluttodds etter en
+            # annen regel, og å blande to regler i samme fil ville gitt et
+            # tall ingen kan gjøre rede for. Alt hentes på nytt -- gratis.
+            print(f"  definisjonen er endret til: {definisjon}")
+            print(f"  henter alle {len(gammel.get('matches', {}))} kampene på nytt "
+                  f"(/v4/historical-odds er gratis)")
     # Eldre filer brukte dato i nøkkelen. Skriv dem om, så en flyttet kamp ikke
     # blir liggende to ganger.
     old = [k for k in out["matches"] if not k.startswith("2026|") or k.count("|") != 2
@@ -342,18 +358,25 @@ def main():
             else:
                 time.sleep(COOLDOWN)
             continue
-        bm, odds, stamp = closing_from(d, market_id=mkt_id, kickoff=f.get("startTime"))
-        out["matches"][mid] = {
-            "fixtureId": fid, "round": r["round"], "start": (f.get("startTime") or "")[:16],
+        ko = f.get("startTime")
+        bm, odds, stamp = oddswindow.closing_from(d, mkt_id, ko, BOOKMAKERS)
+        rad = {
+            "fixtureId": fid, "round": r["round"], "start": (ko or "")[:16],
             "bookmaker": bm, "odds": odds, "priced_at": stamp,
             "result": f"{r['hg']}-{r['ag']}",
         }
         if bm:
-            done += 1
-            print(f"  {mid}  {bm}  H {odds['H']}  U {odds['U']}  B {odds['B']}")
+            rad["minutter_for"] = round(oddswindow.minutter_for(ko, stamp) or 0, 1)
         else:
-            print(f"  {mid}  ingen odds fra {', '.join(BOOKMAKERS)}"
-                  f"{' (svar: ' + json.dumps(d, ensure_ascii=False)[:1500] + ')' if done + fail == 0 else ''}")
+            rad["uten_sluttodds"] = True
+        out["matches"][mid] = rad
+        if bm:
+            done += 1
+            print(f"  {mid}  {bm}  H {odds['H']}  U {odds['U']}  B {odds['B']}  "
+                  f"({rad['minutter_for']:.0f} min før)")
+        else:
+            print(f"  {mid}  INGEN sluttodds: ingen pris i vinduet "
+                  f"({oddswindow.CLOSE_FROM_MIN}-{oddswindow.CLOSE_TO_MIN} min før avspark)")
         # Lagre etter hver kamp, så en avbrutt kjøring kan fortsette.
         out["updated"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
         OUT_PATH.write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")

@@ -247,6 +247,64 @@ def main():
     check("gitignore fanger xG-filnavn",
           len(ignorert.stdout.split()) == 4, ignorert.stdout.strip() or "ingen treff")
 
+    # 12. Sluttoddsvinduet: siste observasjon 60 til 15 minutter før avspark.
+    #   Reglene her er de som holder in-play-priser ute. 22. september kom en
+    #   pris hentet 91 minutter ETTER avspark inn som "sluttodds" for Brann mot
+    #   Bodø/Glimt og kostet Glimt 5,3 prosentpoeng på gullsjansen.
+    import oddswindow
+    KO = "2026-09-20T17:00:00Z"
+
+    def payload(tider, bm="pinnacle"):
+        """Ett OddsPapi-svar der alle tre utfall har pris på de gitte tidene."""
+        utfall = {str(i): {"players": {"0": [{"price": 2.0 + i, "createdAt": t}
+                                             for t in tider]}} for i in (1, 2, 3)}
+        return {"data": {"bookmakers": {bm: {"markets": {"101": {"outcomes": utfall}}}}}}
+
+    def kjor(tider, bm="pinnacle", bms=("pinnacle", "bet365")):
+        return oddswindow.closing_from(payload(tider, bm), 101, KO, list(bms))
+
+    bm, odds, stamp = kjor(["2026-09-20T16:30:00.000Z"])
+    check("sluttodds: pris 30 min før avspark godtas", bm == "pinnacle" and odds is not None)
+    check("sluttodds: for sen pris (10 min før) forkastes",
+          kjor(["2026-09-20T16:50:00.000Z"])[0] is None)
+    check("sluttodds: for tidlig pris (90 min før) forkastes",
+          kjor(["2026-09-20T15:30:00.000Z"])[0] is None)
+    check("sluttodds: pris ETTER avspark forkastes",
+          kjor(["2026-09-20T18:31:00.000Z"])[0] is None)
+    check("sluttodds: pris fra dagen før forkastes",
+          kjor(["2026-09-19T16:30:00.000Z"])[0] is None)
+    # Innenfor vinduet skal den SISTE prisen vinne, ikke den første.
+    bm2, odds2, stamp2 = kjor(["2026-09-20T16:05:00.000Z", "2026-09-20T16:40:00.000Z"])
+    check("sluttodds: siste pris i vinduet vinner", stamp2 == "2026-09-20T16:40:00.000Z", str(stamp2))
+    # Grensene er med: nøyaktig 60 og nøyaktig 15 minutter før skal godtas.
+    check("sluttodds: nøyaktig 60 min før er innenfor",
+          kjor(["2026-09-20T16:00:00.000Z"])[0] == "pinnacle")
+    check("sluttodds: nøyaktig 15 min før er innenfor",
+          kjor(["2026-09-20T16:45:00.000Z"])[0] == "pinnacle")
+    # Ett utfall uten pris i vinduet ødelegger hele kampen: to priser fra
+    # vinduet og én fra i går er ikke en sluttodds.
+    delvis = payload(["2026-09-20T16:30:00.000Z"])
+    delvis["data"]["bookmakers"]["pinnacle"]["markets"]["101"]["outcomes"]["2"] = {
+        "players": {"0": [{"price": 3.4, "createdAt": "2026-09-19T12:00:00.000Z"}]}}
+    check("sluttodds: ett utfall utenfor vinduet forkaster hele kampen",
+          oddswindow.closing_from(delvis, 101, KO, ["pinnacle"])[0] is None)
+    # Rekkefølgen på bookmakerne: Pinnacle først, så bet365.
+    bare_b365 = payload(["2026-09-20T16:30:00.000Z"], bm="bet365")
+    check("sluttodds: faller ned på bet365 når Pinnacle mangler",
+          oddswindow.closing_from(bare_b365, 101, KO, ["pinnacle", "bet365"])[0] == "bet365")
+    check("sluttodds: ukjent avspark gir ingen sluttodds",
+          oddswindow.closing_from(payload(["2026-09-20T16:30:00.000Z"]), 101, "", ["pinnacle"])[0] is None)
+
+    # 13. En kamp uten sluttodds skal ALDRI bæres videre med en eldre pris.
+    import merge_odds
+    rader = merge_odds.load_window.__doc__ or ""
+    check("merge: vindusfilen dokumenterer at tomme rader hoppes over",
+          "eldre pris" in rader.lower() or "aldri" in rader.lower(), rader[:60])
+    check("merge: OddsPapi-vinduet ligger over football-data",
+          "odds_closing.json" in (merge_odds.__doc__ or "") and
+          (merge_odds.__doc__ or "").index("odds_closing.json")
+          < (merge_odds.__doc__ or "").index("odds_fd.json"))
+
     print(f"\n{ok} av {ok + fail} failsafe-tester gikk gjennom.")
     return 1 if fail else 0
 

@@ -1053,11 +1053,14 @@
     <p>Tallene under er hentet fra sannsynlighetene som ble lagret FØR avspark, holdt opp mot resultatet. Ingenting er regnet på nytt i etterkant, så tallene kan ikke bli bedre av etterpåklokskap.</p>
     <div id="accuracyLog"></div>
 
+    <h3>Hvorfor oddsen hentes rett før avspark</h3>
+    <p>Sluttoddsen er siste pris mellom 60 og 15 minutter før avspark, så laguttaket er priset inn. Det er målt, ikke antatt: på 351 spilte kamper i de to ligaene flyttet sannsynlighetene seg i snitt 2,8 prosentpoeng fra dagen før til dette vinduet, favoritten byttet i 2 til 4 prosent av kampene, og odds fra dagen før traff dårligere – 0,0082 ± 0,0041 i log loss, altså 2,0 standardfeil. Har en kamp ingen pris i vinduet, står den uten sluttodds; en eldre pris brukes aldri i stedet.</p>
+
     <h3>Treffer den?</h3>
     <p>Bortover står modellens sannsynlighet, oppover hvor ofte det faktisk gikk slik. Ligger punktene nær den stiplede linjen, holder prosentene omtrent vann. Store punkter bygger på mange prediksjoner, små på få, og de små spretter mye av seg selv.</p>
     <details class="details-tech">
       <summary>Vis detaljer</summary>
-    <p class="note">Kilder til dataene på siden: ffksupporter.net, ESPN, football-data.co.uk og The Odds API, alt hentet automatisk.</p>
+    <p class="note">Kilder til dataene på siden: ffksupporter.net, ESPN, football-data.co.uk, OddsPapi og The Odds API, alt hentet automatisk. Sluttoddsen kommer fra OddsPapi (Pinnacle, ellers bet365, ellers Unibet), med football-data.co.uk som reserve der vinduet er tomt.</p>
     <p class="note">Sist validert: 22. september 2026, mot NOR.csv (football-data.co.uk), sesongene 2016–2025. Modellen tilpasses ved fire kuttpunkter i hver sesong (etter 40, 55, 70 og 85 prosent av kampene), resten av sesongen simuleres 8000 ganger, og tallene er snittet over 640 lag-observasjoner. Kvalikkampene, som ligger i samme CSV-fil, er holdt utenfor. Hele kjøringen ligger i <code>scripts/backtest_zones.py</code> i kildekoden, så tallene kan reproduseres. De regnes ikke ut i nettleseren.</p>
     <p class="note">To forbehold om grafen over: intervaller med få prediksjoner svinger mye av seg selv, så et punkt som ligger langt fra diagonalen behøver ikke betyde at modellen er skjev der. Og prediksjonene er ikke uavhengige av hverandre: samme sesong måles ved flere kuttpunkter, og de samme lagene går igjen, så et lag som overrasker gjennom en sesong flytter flere punkter samtidig.</p>
 

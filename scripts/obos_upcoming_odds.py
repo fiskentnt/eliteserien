@@ -8,8 +8,9 @@ så sidekoden er felles.
 Kilderekkefølge: Pinnacle, ellers bet365, ellers Unibet. ALDRI et snitt av
 flere bookmakere -- én kilde per kamp, og hvilken står i filen.
 
-Kallbruk: terminlisten (/v4/fixtures) koster 1 tellende kall og mellomlagres
-en time; oddsoppslagene (/v4/historical-odds) er gratis. Spilte kamper ryddes
+Kallbruk: 0 tellende kall i normal drift. Terminlisten leses fra sesonglisten
+obos_results.py oppdaterer i samme kjøring, og oddsoppslagene
+(/v4/historical-odds) er gratis. Spilte kamper ryddes
 ut ved hver kjøring, også når hentingen feiler.
 
   python3 scripts/obos_upcoming_odds.py
@@ -32,22 +33,32 @@ from obos_closing_odds import (BOOKMAKERS, OBOS_TOURNAMENT, closing_from, fetch_
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / "obos" / "data"
 OUT_PATH = DATA / "odds_upcoming.json"
-UPCOMING_CACHE = DATA / "oddspapi_upcoming_fixtures.json"
-CACHE_MINUTES = 60
+SEASON_CACHE = DATA / "oddspapi_fixtures_2026.json"
+SEASON_CACHE_HOURS = 30   # obos_results.py oppdaterer den hver dag
 COOLDOWN = 4.5
 
 
 def fetch_upcoming_fixtures(key, frm, to, force=False):
-    """Kommende kamper hos OddsPapi. 1 tellende kall, mellomlagret en time, så
-    en tettere kjøreplan ikke spiser kvoten."""
-    if UPCOMING_CACHE.exists() and not force:
-        d = json.loads(UPCOMING_CACHE.read_text(encoding="utf-8"))
+    """Kommende kamper hos OddsPapi.
+
+    Sesongens terminliste ligger alt i obos/data/oddspapi_fixtures_2026.json,
+    hentet av obos_results.py i samme kjøring, minutter før denne. Vi hentet
+    likevel en EGEN liste her, med eget mellomlager på en time -- 30 tellende
+    kall i måneden for en liste vi allerede hadde. Nå leses sesonglisten, og
+    kampene i vinduet plukkes ut av den. 0 tellende kall.
+
+    Er sesonglisten borte eller for gammel, hentes vinduet som før.
+    """
+    if SEASON_CACHE.exists() and not force:
+        d = json.loads(SEASON_CACHE.read_text(encoding="utf-8"))
         alder = datetime.now(timezone.utc) - datetime.fromisoformat(d["fetched_at"])
-        if alder < timedelta(minutes=CACHE_MINUTES) and d.get("from") == frm and d.get("to") == to:
-            print(f"  terminliste fra mellomlager ({len(d['fixtures'])} kamper, "
-                  f"{int(alder.total_seconds()/60)} min gammel)")
-            return d["fixtures"]
-    print("  henter kommende kamper fra OddsPapi (1 tellende kall)")
+        if alder < timedelta(hours=SEASON_CACHE_HOURS):
+            i_vinduet = [f for f in (d.get("fixtures") or [])
+                         if frm <= (f.get("startTime") or "")[:10] <= to]
+            print(f"  terminliste fra sesonglisten ({len(i_vinduet)} kamper i vinduet, "
+                  f"{int(alder.total_seconds()/3600)} t gammel, 0 tellende kall)")
+            return i_vinduet
+    print("  sesonglisten mangler eller er for gammel -- henter vinduet (1 tellende kall)")
     d, err = oddspapi.call("/v4/fixtures", {"tournamentId": OBOS_TOURNAMENT,
                                             "from": frm, "to": to}, key)
     if err and "FIXTURE_NOT_FOUND" in str(err):
@@ -57,12 +68,7 @@ def fetch_upcoming_fixtures(key, frm, to, force=False):
     elif err:
         print(f"  FEIL: {err}")
         return None
-    fl = oddspapi.unwrap(d)
-    DATA.mkdir(parents=True, exist_ok=True)
-    UPCOMING_CACHE.write_text(json.dumps(
-        {"fetched_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
-         "from": frm, "to": to, "fixtures": fl}, ensure_ascii=False, indent=1), encoding="utf-8")
-    return fl
+    return oddspapi.unwrap(d)
 
 
 def les_gammel():

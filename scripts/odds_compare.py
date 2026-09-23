@@ -43,7 +43,9 @@ ELITE_TOURNAMENT = 20
 BOOKMAKERS = ["pinnacle", "bet365", "unibet"]
 KILDER = BOOKMAKERS + ["oddsapi"]
 COOLDOWN = 4.5
-CACHE_MINUTES = 60
+# Terminlisten endrer seg sjelden, og jobben går hver 8. time. 60 minutter
+# betydde at hver eneste kjøring hentet den på nytt: 30 kall i måneden.
+CACHE_MINUTES = 12 * 60
 SEASON = 2026
 
 
@@ -249,7 +251,18 @@ def main():
         spilte_keys = {key_of(m["home"], m["away"])
                        for m in json.loads(MATCHES_PATH.read_text(encoding="utf-8"))}
 
-    markets, err = oddspapi.call("/v4/markets", {"sportId": 10}, key)
+    # Markedslisten står stille: markeds-id-en for 1X2 er den samme hver gang.
+    # Den ble hentet på nytt ved hver kjøring og kostet 60 tellende kall i
+    # måneden helt uten grunn. Nå ligger den på disk, som i OBOS-kjeden.
+    MARKETS_CACHE = DATA / "oddspapi_markets.json"
+    if MARKETS_CACHE.exists():
+        markets, err = json.loads(MARKETS_CACHE.read_text(encoding="utf-8")), None
+        print("  markedsliste fra mellomlager (0 tellende kall)")
+    else:
+        markets, err = oddspapi.call("/v4/markets", {"sportId": 10}, key)
+        if not err:
+            MARKETS_CACHE.write_text(json.dumps(markets, ensure_ascii=False, indent=1),
+                                     encoding="utf-8")
     mkt_id = None
     if not err:
         for m in oddspapi.unwrap(markets):

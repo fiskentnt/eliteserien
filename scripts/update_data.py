@@ -13,6 +13,7 @@ lokalt for verifisering. Skriver kun til disk — commit/push håndteres av
 workflowen (kun hvis noe faktisk endret seg).
 """
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -240,6 +241,18 @@ def main(cache_dir=None):
 
         log("--- Sluttodds (football-data.co.uk, maks én gang i døgnet) ---")
         fetch_odds_history.main()
+        # Sluttodds fra OddsPapi-vinduet: 60 til 15 minutter før avspark, den
+        # eneste kilden vi vet tidspunktet for. Gratis oppslag, og bare for
+        # kamper som ikke alt er hentet. Skal ALDRI kunne stoppe kjeden: uten
+        # nøkkel eller ved feil faller alt tilbake på football-data.
+        if os.environ.get("ODDSPAPI_KEY", "").strip():
+            log("--- Sluttodds (OddsPapi, vinduet 60-15 min før avspark) ---")
+            try:
+                import elite_closing_odds
+                elite_closing_odds.main([])
+            except Exception as e:
+                log(f"  OddsPapi-sluttodds feilet ({type(e).__name__}: {e}) "
+                    f"-- fortsetter med football-data")
         log("--- Slår sammen oddskilder ---")
         merge_odds.main()
         log("--- Tilpasser modellen ---")

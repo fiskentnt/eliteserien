@@ -48,6 +48,10 @@ jobs:
 
       - name: Kjør oppdateringsscript (kamper, sluttodds og modell)
         if: steps.gate.outputs.should_fetch == 'true'
+        env:
+          # Sluttodds fra OddsPapi-vinduet. Gratis oppslag. Mangler nøkkelen,
+          # hopper update_data.py over steget og bruker football-data som før.
+          ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
         run: python3 scripts/update_data.py
 
       - uses: actions/setup-node@v4
@@ -84,6 +88,10 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add eliteserien/data/matches.json eliteserien/data/fixtures.json eliteserien/data/odds_fd.json eliteserien/data/odds.json eliteserien/data/model.json eliteserien/data/status.json
+          [ -f eliteserien/data/odds_closing.json ] && git add eliteserien/data/odds_closing.json
+          [ -f eliteserien/data/oddspapi_fixtures_2026.json ] && git add eliteserien/data/oddspapi_fixtures_2026.json
+          [ -f eliteserien/data/oddspapi_markets.json ] && git add eliteserien/data/oddspapi_markets.json
+          [ -f data/oddspapi_usage.json ] && git add data/oddspapi_usage.json
           [ -f eliteserien/data/ffk_cache.json ] && git add eliteserien/data/ffk_cache.json
           [ -f eliteserien/data/audit_state.json ] && git add eliteserien/data/audit_state.json
           [ -f eliteserien/data/history.json ] && git add eliteserien/data/history.json
