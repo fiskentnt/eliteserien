@@ -222,6 +222,11 @@
     :root:not([data-theme="light"]) .theme-toggle .icon-sun{display:none}
     :root:not([data-theme="light"]) .theme-toggle .icon-moon{display:block}
   }
+  @media (max-width:380px){
+    /* Helt smalt (320px): navnet krympes heller enn å forsvinne. */
+    .brand{font-size:17px;gap:6px}
+    .brand-mark{width:22px;height:22px}
+  }
   @media (max-width:760px){
     /* Fanene får en egen linje under logoen, så seksjonslenkene ikke blir
        trangere enn de var. Menylinja er da to rader høy, og JS måler den og
@@ -237,7 +242,11 @@
     .nav-links a{padding:8px 10px 8px}
   }
   @media (max-width:640px){
-    .brand span{display:none} /* mobil: bare ikonet, så lenkene får plass */
+    /* Navnet ble skjult her den gangen logo, faner og seksjonslenker delte
+       én rad. Fra 760px og ned ligger fanene og lenkene på egne rader, så
+       logoraden er bare merkenavn og lysbryter -- da er det plass. Navnet er
+       det eneste som sier hvor man er, så det skal stå. */
+    .brand{font-size:19px;gap:8px}
     .brand-mark{width:26px;height:26px}
     .nav-links{justify-content:flex-start}
     .nav-links a{padding:8px 10px;font-size:13.5px}
@@ -300,6 +309,23 @@
   .head-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
   .head-link{background:none;border:none;padding:0;color:var(--team-text);font-size:13px;font-weight:600;cursor:pointer}
   .head-link:hover{text-decoration:underline}
+  /* Nullstill i overskriftsraden: vises bare når et scenario er aktivt, så
+     man slipper å scrolle ned til kamplisten. Den ligger FØRST i .head-tools,
+     som er høyrestilt -- da vokser raden mot venstre når knappen dukker opp,
+     og rundevelgeren står stille i stedet for å hoppe. */
+  .head-reset{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);font:600 12.5px/1 var(--cond);cursor:pointer}
+  .head-reset:hover{border-color:var(--ink)}
+  .head-reset:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .head-reset svg{width:14px;height:14px;flex:none;display:block}
+  .reset-said{margin:-2px 16px 8px;color:var(--muted);font-size:12.5px;font-weight:600}
+  @media (max-width:499px){
+    /* For trangt til tekst: bare ikonet. Forklaringen kommer ved trykk, i
+       .reset-said, siden et title-tips ikke finnes på berøringsskjerm. */
+    .head-reset span{display:none}
+    .head-reset{width:30px;padding:0}
+  }
   .roundnav{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted)}
   .roundnav button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:18px;line-height:1;padding:0}
   .roundnav button:hover{border-color:var(--ink)}
@@ -905,6 +931,12 @@
         <div class="panel-head">
           <h2>Tabell <span class="count" id="tblInfo"></span></h2>
           <div class="head-tools">
+            <button type="button" id="headReset" class="head-reset" hidden
+              aria-label="Nullstill scenarioet"
+              title="Fjerner alle resultatene du har fylt inn">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
+              <span>Nullstill</span></button>
             <div class="roundnav" id="roundNav" aria-label="Velg runde">
               <button type="button" id="roundPrev" aria-label="Forrige runde">‹</button>
               <span id="roundLabel">Runde – av 30</span>
@@ -913,6 +945,7 @@
             </div>
           </div>
         </div>
+        <p class="reset-said" id="resetSaid" role="status" hidden></p>
         <p class="sort-note" id="sortNote" hidden></p>
         <p class="round-note" id="roundNote" hidden></p>
         <p class="scenario-line" id="scenarioLine" hidden></p>
@@ -3029,7 +3062,22 @@ roundsEl.addEventListener('click', async e=>{
   await simulateRound(round, state==='resimulate');
   render();
 });
-document.getElementById('reset').onclick=()=>{ tableSort=null; matches.forEach(m=>setMatch(m,null,null)); render(); };
+function nullstillScenario(sivilisert){
+  tableSort=null;
+  matches.forEach(m=>setMatch(m,null,null));
+  const said=document.getElementById('resetSaid');
+  if(sivilisert){
+    // Under 500px har knappen ingen tekst, så forklaringen kommer her, ved
+    // trykk. Den står også på bredere skjermer: den bekrefter hva som skjedde.
+    said.textContent='Nullstilt: resultatene du fylte inn er fjernet, og tabellen viser de spilte kampene igjen.';
+    said.hidden=false;
+    clearTimeout(nullstillScenario._t);
+    nullstillScenario._t=setTimeout(()=>{ said.hidden=true; }, 7000);
+  } else said.hidden=true;
+  render();
+}
+document.getElementById('reset').onclick=()=>nullstillScenario(false);
+document.getElementById('headReset').onclick=()=>nullstillScenario(true);
 document.getElementById('autoFillToggle').addEventListener('change',async ()=>{ await updateAutoFill(); render(); });
 document.getElementById('teamSelect').addEventListener('change', e=>{
   SELECTED_TEAM = e.target.value;
@@ -5426,6 +5474,9 @@ function render(){
     document.getElementById('tblInfo').textContent = played? `${played} kamper lagt inn` : `etter ${formatDateNo(MATCHES[MATCHES.length-1].date)}`;
   }
   document.getElementById('simNote').hidden = !matches.some(m=>m.sim);
+  // Et scenario er aktivt når minst én uspilt kamp har fått et resultat --
+  // enten fylt inn selv eller simulert. Nøyaktig det knappen nede fjerner.
+  document.getElementById('headReset').hidden = !matches.some(m=>m.hg!=null&&m.ag!=null);
   renderModelExample();
   document.getElementById('fxInfo').textContent = `${matches.length-played} av ${matches.length} uten resultat`;
 
