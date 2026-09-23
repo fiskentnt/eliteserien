@@ -330,6 +330,15 @@ def main():
           "encodeURIComponent('/')" in f0)
     check("statistikk: forsiden sender henvisningen med",
           "document.referrer" in f0.split("location.replace")[0])
+    # 15. Google Search Console-verifiseringen skal stå permanent. Fjernes den,
+    #   mister nettstedet verifiseringen, og det skjer uten noe varsel.
+    hode = sider["forsiden"]
+    hode = hode[hode.index("<head>"):hode.index("</head>")]
+    check("søk: forsiden har Search Console-verifiseringen i head",
+          'name="google-site-verification"' in hode)
+    check("søk: verifiseringskoden er uendret",
+          'content="hKUGnlXBnP0c37c5KbXAR2N_sb2zTmH1zIjcYckB8h8"' in hode)
+
     check("statistikk: forsiden teller FØR den videresender",
           f0.index("goatcounter.com/count") < f0.index("location.replace('/eliteserien/'"))
     for navn in ("eliteserien", "obos"):
