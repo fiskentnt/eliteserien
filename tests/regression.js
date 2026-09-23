@@ -905,7 +905,9 @@ async function main() {
         medTall.filter(l => Math.abs(l.sum - 1) >= 1e-3).map(l => `${l.team}: ${l.sum}`).join('; '));
       // Der vi har tallet, skal linja si hvor overraskende resultatet var,
       // fra lagets synsvinkel ("tap", ikke "borteseier").
-      const mangler = medTall.filter(l => !/(ventet i (<1|>99|\d+) % av tilfellene|med bare (<1|\d+) % sjanse)/.test(l.html));
+      // "bare" er fjernet fra ordlyden: siden oppgir sannsynligheten, den
+      // vurderer den ikke.
+      const mangler = medTall.filter(l => !/(ventet i (<1|>99|\d+) % av tilfellene|med (<1|\d+) % sjanse)/.test(l.html));
       check(`${liga}: linja sier hvor overraskende resultatet var`,
         mangler.length === 0, mangler.slice(0, 3).map(l => `${l.team}: ${l.html}`).join(' | '));
       const galtOrd = medTall.filter(l => /(hjemmeseier|borteseier) (som var ventet|med bare)/.test(l.html));
@@ -1121,7 +1123,7 @@ async function main() {
       check(`${liga}: andre linje sier hvem det står mest på spill for`,
         /^Mest står på spill for .+:$/.test(l[1]), l[1]);
       // Nøyaktig tre utfallslinjer, og bare ett lag får tall.
-      const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
+const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
       const utfall = l.slice(2, 5);
       const egen = utfall.every((x, i) => new RegExp(`^${['Seier', 'Uavgjort', 'Tap'][i]}: ${PCTL}$`).test(x));
       const annet = utfall.every((x, i) => new RegExp(i === 1 ? `^Uavgjort: ${PCTL}$` : `^.+-seier: ${PCTL}$`).test(x));
@@ -1336,6 +1338,97 @@ async function main() {
         return {n: rader.filter(x => x.begge).length, ok: rader.filter(x => x.begge).every(x => x.hoyre)};
       });
       check(`${liga}: formtallet står til høyre for rutene`, fm.n > 0 && fm.ok, `${fm.n} rader`);
+      await sp.close();
+    }
+    await page.bringToFront();
+
+    // ---- 26. Nullstill begge veier, ny ordlyd, og "Ditt scenario" ----
+    // Ikke alle lag har en forventning: en kamp uten pris i sluttoddsvinduet
+    // har ingen, og da sier svaret det i stedet for å gjette.
+    const TEAMS_MIN = 10;
+    setGroup('Nullstill, ordlyd og scenariosum');
+    for (const [url, liga, lag] of [[base, 'Eliteserien', 'Brann'], [obosUrl, 'OBOS', 'Bryne']]) {
+      for (const w of [390, 1400]) {
+        const sp = await open(w, 900, url);
+        await settle(sp);
+        const synlig = () => sp.evaluate(() =>
+          document.getElementById('headReset').checkVisibility({visibilityProperty: true}));
+        check(`${liga} ${w}px: Nullstill skjult på frisk side`, !(await synlig()));
+        // Simuler slik en bruker gjør: klikk knappen, ikke sett matches direkte.
+        await sp.evaluate(() => document.getElementById('simRest').click());
+        await new Promise(r => setTimeout(r, 2500));
+        const etterSim = await sp.evaluate(() => ({
+          synlig: document.getElementById('headReset').checkVisibility({visibilityProperty: true}),
+          sim: matches.filter(m => m.sim).length,
+        }));
+        check(`${liga} ${w}px: Nullstill kommer fram når man simulerer`,
+          etterSim.synlig && etterSim.sim > 0, `synlig=${etterSim.synlig} sim=${etterSim.sim}`);
+        // ... og forsvinner igjen når man nullstiller.
+        await sp.evaluate(() => document.getElementById('headReset').click());
+        await new Promise(r => setTimeout(r, 1200));
+        const etterNull = await sp.evaluate(() => ({
+          synlig: document.getElementById('headReset').checkVisibility({visibilityProperty: true}),
+          igjen: matches.filter(m => m.hg != null).length,
+        }));
+        check(`${liga} ${w}px: Nullstill forsvinner når scenarioet tømmes`,
+          !etterNull.synlig && etterNull.igjen === 0,
+          `synlig=${etterNull.synlig} igjen=${etterNull.igjen}`);
+
+        // "Ditt scenario": bare når alle lagets egne kamper er fylt inn selv.
+        await sp.evaluate((t) => {
+          const s = document.getElementById('teamSelect');
+          s.value = t; s.dispatchEvent(new Event('change', {bubbles: true}));
+        }, lag);
+        await new Promise(r => setTimeout(r, 2200));
+        const tom = await sp.evaluate(() => !!document.querySelector('.scenario-sum'));
+        check(`${liga} ${w}px: ingen scenariosum uten resultater`, !tom);
+        await sp.evaluate((t) => {
+          matches.filter(m => m.home === t || m.away === t)
+            .forEach(m => setMatch(m, m.home === t ? 2 : 0, m.home === t ? 0 : 2));
+          render();
+        }, lag);
+        await new Promise(r => setTimeout(r, 2800));
+        const sum = await sp.evaluate(() => {
+          const el = document.querySelector('.scenario-sum');
+          return el ? el.textContent.trim() : null;
+        });
+        check(`${liga} ${w}px: scenariosum vises når lagets kamper er fylt`,
+          !!sum && /^Ditt scenario: med disse resultatene ender .+ på \d+ poeng\. .+ sjanse for .+\.$/.test(sum),
+          sum || '(mangler)');
+        // Simuleres resten, er hele sesongen fylt og prosenten sier ingenting.
+        await sp.evaluate(() => document.getElementById('simRest').click());
+        await new Promise(r => setTimeout(r, 2800));
+        const etter = await sp.evaluate(() => !!document.querySelector('.scenario-sum'));
+        check(`${liga} ${w}px: scenariosum borte når hele sesongen er fylt`, !etter);
+        await sp.close();
+      }
+
+      // Ordlyden i "Hva betydde forrige kamp": tre avsnitt, riktige ord.
+      const sp = await open(1400, 900, url);
+      await settle(sp);
+      const svar = await sp.evaluate(async () => {
+        const ut = [];
+        for (const t of TEAMS) ut.push([t, await qaLastMatch(t)]);
+        return ut;
+      });
+      const medForventning = svar.filter(([, tx]) => /forventede/.test(tx));
+      check(`${liga}: svarene har en forventning å måle mot`,
+        medForventning.length >= TEAMS_MIN, `${medForventning.length} av ${svar.length}`);
+      const avsnitt = medForventning.filter(([, tx]) => tx.split('\n\n').length === 3);
+      check(`${liga}: svaret står i tre avsnitt`,
+        avsnitt.length === medForventning.length,
+        `${avsnitt.length} av ${medForventning.length}`);
+      const ordlyd = medForventning.filter(([, tx]) =>
+        /beregnet ut fra sannsynligheten for seier, uavgjort og tap/.test(tx) &&
+        /\d+ prosentpoeng (høyere|lavere) enn forventet/.test(tx) &&
+        /Med \w+ ville .+ vært /.test(tx));
+      check(`${liga}: ny ordlyd i alle svarene`, ordlyd.length === medForventning.length,
+        (medForventning.find(([, tx]) => !ordlyd.some(([t2]) => t2 === tx)) || ['', ''])[1].slice(0, 120));
+      const gamle = svar.filter(([, tx]) =>
+        /enn ventet/.test(tx) || /når alle tre mulige utfall/.test(tx) ||
+        /ga \w+ bare \d/.test(tx) || /mest sannsynlige/.test(tx));
+      check(`${liga}: ingen rester av gammel ordlyd`, gamle.length === 0,
+        (gamle[0] || ['', ''])[1].slice(0, 120));
       await sp.close();
     }
     await page.bringToFront();

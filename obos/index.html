@@ -584,7 +584,9 @@
   td.formcol{padding-right:10px}
   /* Formtallet står til HØYRE for resultatrutene, i samme celle: rutene
      leses eldst til venstre, og tallet oppsummerer dem til slutt. */
-  .form5{display:inline-block;min-width:20px;margin-left:7px;font:700 12.5px/1 var(--cond);color:var(--ink)}
+  /* Samme størrelse som de andre tallene i raden (15px). Var 12,5px, og
+     ble da det minste tallet i tabellen enda det er et hovedtall. */
+  .form5{display:inline-block;min-width:18px;margin-left:6px;font:700 15px/1 var(--cond);color:var(--ink)}
   /* Smalt tokolonnesoppsett (1100 til 1219 px): tallet blir stående, rutene
      vikes. De sier det samme, og uten dette ble tabellen for bred. */
   @media (min-width:1100px) and (max-width:1219px){
@@ -816,6 +818,11 @@
   details.qa-extra > summary:hover{text-decoration:underline}
   .qa-item > button:hover{text-decoration:underline}
   .qa-item.active > button::before{content:"▾"}
+  /* "Ditt scenario": lagets sluttsum når alle kampene deres er fylt inn.
+     Samme plass som "Forrige kamp", rett over den. */
+  .scenario-sum{margin:8px 0 0;padding:8px 10px;border-radius:7px;background:var(--team-soft);
+    color:var(--ink);font-size:12.5px;line-height:1.45;font-weight:600}
+  .scenario-sum b{font-weight:800}
   .qa-answer{scroll-margin-bottom:16px;margin:0 0 12px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
   .qa-more{display:flex;align-items:center;gap:9px;margin-top:8px;color:var(--muted)}
   .qa-answer.loading{color:var(--muted);display:flex;align-items:center;gap:9px}
@@ -1097,7 +1104,7 @@
   <div class="in">
     <p class="plain-lead">Siden spiller resten av sesongen 10&nbsp;000 ganger og teller hvor ofte hvert lag ender hvor.</p>
     <p>Hvert lag får en styrke fra målene sine og fra hva spillmarkedet har trodd om kampene deres, der nye kamper teller mest. Den er et mål på hele sesongen, ikke på de siste ukene. Står det 52 prosent for topp 6, endte laget blant de seks beste i omtrent 5200 av de 10&nbsp;000 sesongene.</p>
-    <p>Fyller du inn et resultat selv, står det fast i alle 10&nbsp;000, så du ser hva akkurat det gjør. Styrke er modellens vurdering av hvor sterkt laget er, over hele sesongen, på en skala fra 0 til 10, der 5 er et gjennomsnittslag. Form står på samme skala, men er regnet rett ut av de fem siste kampene: vanlige poeng, 3 for seier og 1 for uavgjort, delt på de 15 som var mulige og ganget med 10. Fem seirer gir 10,0, fem uavgjorte 3,3 og fem tap 0,0.</p>
+    <p>Fyller du inn et resultat selv, brukes det i alle 10&nbsp;000 simuleringene, så du ser hvordan det påvirker sjansene. Styrke er modellens vurdering av hvor sterkt laget er, over hele sesongen, på en skala fra 0 til 10, der 5 er et gjennomsnittslag. Form står på samme skala, men er regnet rett ut av de fem siste kampene: vanlige poeng, 3 for seier og 1 for uavgjort, delt på de 15 som var mulige og ganget med 10. Fem seirer gir 10,0, fem uavgjorte 3,3 og fem tap 0,0.</p>
 
     <details class="details-tech">
       <summary>Vis detaljer</summary>
@@ -2966,10 +2973,34 @@ function fillOdds(){
   // Forrige kamp: kort linje nederst i boksen, med lagets egen resultatside og
   // hva kampen betydde. Klikk åpner hele svaret i "Spør om tabellen".
   const lm = qaLastMatchLine(lastMatchEntry(SELECTED_TEAM));
+  // "Ditt scenario": når ALLE lagets gjenstående kamper er fylt inn selv,
+  // ligger sluttsummen fast, og da er den verdt å si. Vises ikke når
+  // resultatene kommer fra "Simuler runden"/"Simuler tomme kamper" (m.sim):
+  // da er tallet ett tilfeldig utfall, ikke brukerens eget scenario. Vises
+  // heller ikke når hele sesongen er fylt, for da er prosenten 0 eller 100 og
+  // sier ingenting.
+  const egneKamper = matches.filter(m=>m.home===SELECTED_TEAM || m.away===SELECTED_TEAM);
+  const alleEgneFylt = egneKamper.length>0 && egneKamper.every(m=>m.hg!=null && m.ag!=null);
+  const ingenSimulert = egneKamper.every(m=>!m.sim);
+  const noeStaarTomt = matches.some(m=>m.hg==null || m.ag==null);
+  let scenarioSum = '';
+  if(alleEgneFylt && ingenSimulert && noeStaarTomt){
+    const rad = compute().rows.find(r=>r.name===SELECTED_TEAM);
+    const z = qaTargetZone(SELECTED_TEAM);
+    const merke = z && LEAGUE.zones[z.key] && LEAGUE.zones[z.key].boxLabel;
+    if(rad && merke){
+      // "disse resultatene", ikke "53 poeng gir 78 %": prosenten gjelder
+      // AKKURAT dette scenarioet, ikke poengsummen generelt.
+      scenarioSum = `<p class="scenario-sum">Ditt scenario: med disse resultatene ender `+
+        `${SELECTED_TEAM} på <b>${rad.pts}</b> poeng. `+
+        `<b>${pctTxt(zoneVal(z.key))}</b> sjanse for ${merke.toLowerCase()}.</p>`;
+    }
+  }
   box.innerHTML = row + (showHist
     ? `<div class="hist" aria-hidden="true" title="Sannsynlighet for sluttplassering, ut fra modellen">${d.map((v,i)=>`<i class="${histClass(i+1)}" style="height:${(v/mx*100).toFixed(1)}%" title="${i+1}. plass: ${pctTxt(v)}"></i>`).join('')}</div>
     <div class="hist-l">${d.map((v,i)=>`<span>${i+1}</span>`).join('')}</div>`
     : '')
+    + scenarioSum
     + (lm ? `<button class="lastmatch" title="Se hva kampen betydde">${lm.html}</button>` : '');
 }
 // Antall simulerte sesonger for Europa/Ned/lagboksen. 10 000 gir Monte Carlo-støy på
@@ -4085,24 +4116,26 @@ async function qaLastMatch(team){
   const pk = data.preKick;
   const pRes = pk ? pk[m.hg>m.ag ? 'H' : (m.hg===m.ag ? 'U' : 'B')] : null;
   const kilde = pk && pk.kilde==='sluttoddsen' ? 'Sluttoddsen' : 'Modellen';
-  const bare = pRes!=null && pRes<0.25 ? 'bare ' : '';
   const hva = actual==='win' ? 'til å vinne kampen' : actual==='loss' ? 'for tap' : 'for uavgjort';
-  const overrask = pRes==null ? '' : ` ${kilde} ga ${team} ${bare}${pctTxt(pRes)} sjanse ${hva}.`;
+  // Ingen "bare" foran tallet: siden oppgir sannsynligheten, den vurderer den ikke.
+  const overrask = pRes==null ? '' : `${kilde} ga ${team} ${pctTxt(pRes)} sjanse ${hva}.`;
   // Alternativene, i rekkefølgen seier, uavgjort, tap (det faktiske er utelatt).
   const order = others.filter(o=>shown.some(x=>x.o===o));
   const val = o => pctTxt(clamp(tableP + shown.find(x=>x.o===o).d));
   const alt = !order.length ? ''
-    : ` Med ${QA_OUT_LABEL[order[0]]} hadde den vært ${val(order[0])}`+
+    : `Med ${QA_OUT_LABEL[order[0]]} ville ${navn} vært ${val(order[0])}`+
       (order.length>1 ? `, med ${QA_OUT_LABEL[order[1]]} ${val(order[1])}.` : '.');
   if(!shown.length){
     const ord = others.map(o=>QA_OUT_LABEL[o]);
-    return `Resultatet betydde lite for ${navn}: verken ${ord[0]} eller ${ord[1]} ville endret den mer enn to prosentpoeng fra dagens ${pctTxt(tableP)}.`+overrask+anslag;
+    return [`Resultatet betydde lite for ${navn}: verken ${ord[0]} eller ${ord[1]} ville endret den mer enn to prosentpoeng fra dagens ${pctTxt(tableP)}.`,
+            overrask, anslag.trim()].filter(Boolean).join('\n\n');
   }
   // Uten sannsynligheter fra før kampen finnes ingen forventning å måle mot.
   // Da sies det, i stedet for å måle mot seier og overdrive tallet.
   if(pp==null){
-    return `Etter ${headLiten} er ${navn} ${pctTxt(tableP)}.${alt} `+
-      `Vi har ikke lagret hva som var ventet før kampen, så vi kan ikke si hvor mye resultatet flyttet den mot forventningen.`+anslag;
+    return [`Etter ${headLiten} er ${navn} ${pctTxt(tableP)}. ${alt}`.trim()+
+            ` Vi vet ikke hva som var ventet før kampen, så vi kan ikke si hvor mye resultatet flyttet sjansen.`,
+            anslag.trim()].filter(Boolean).join('\n\n');
   }
   // Konklusjon først: "Seieren løftet topp 6-sjansen 10 prosentpoeng mer enn
   // ventet. Før kampen var den ventet å bli 63 %, nå er den 73 %."
@@ -4116,13 +4149,20 @@ async function qaLastMatch(team){
   const substantiv = front ? 'sjanse' : 'fare';
   const resultat = actual==='win' ? 'seieren' : actual==='loss' ? 'tapet' : 'poengdelingen';
   const first = `${head} ${verb} ${navn} til ${pctTxt(tableP)}.`;
+  // "Forventet", ikke "mest sannsynlige nivå": tallet er snittet av de tre
+  // utfallene vektet med sannsynlighet, og det nivået var ikke sannsynlig i
+  // seg selv. Samme form for fremre og bakre soner -- "høyere"/"lavere" sier
+  // hvilken vei selve sjansen gikk, ikke om det var bra for laget.
   const tall = n===0
     ? ` Det var omtrent det de tre utfallene tilsa før kampen.`
     : ` Før kampen var den forventede ${navn} etter kampen ${pctTxt(data.expected)}, `+
-      `når alle tre mulige utfall ble tatt med. `+
-      (front ? `${qaStor(resultat)} ga dermed rundt ${n} prosentpoeng ${pp>0?'mer':'mindre'} enn ventet.`
-             : `${qaStor(navn)} ble dermed rundt ${n} prosentpoeng ${pp>0?'høyere':'lavere'} enn ventet.`);
-  return `${first}${tall}${overrask}${alt}${anslag}`;
+      `beregnet ut fra sannsynligheten for seier, uavgjort og tap. `+
+      `${qaStor(resultat)} ga dermed en ${qaSjanseUbest(zone)} ${n} prosentpoeng `+
+      `${pp>0?'høyere':'lavere'} enn forventet.`;
+  // Tre avsnitt: hva som skjedde, hva som var ventet av markedet og hva de
+  // andre utfallene ville gitt, og forbeholdet. .qa-answer har pre-line.
+  const midt = [overrask, alt].filter(Boolean).join(' ');
+  return [`${first}${tall}`, midt, anslag.trim()].filter(Boolean).join('\n\n');
 }
 // Den korte linja i lagboksen, bygget av det workflowen har lagret
 // (data/lastmatch.json). Betydde kampen under to prosentpoeng, står bare
@@ -4156,7 +4196,7 @@ function qaSurpriseTxt(e){
     ? {H:'hjemmeseier', U:'uavgjort', B:'borteseier'}[utfall]
     : (e.gf>e.ga ? 'seier' : (e.gf===e.ga ? 'uavgjort' : 'tap'));
   return v < 0.25
-    ? `${ord} med bare ${pct} % sjanse`
+    ? `${ord} med ${pct} % sjanse`
     : `${ord} som var ventet i ${pct} % av tilfellene`;
 }
 function qaLastMatchLine(e){
