@@ -66,6 +66,8 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 // fordi saken er avgjort, ingenting er i spill, eller sesongen er ferdig.
 const PCT = String.raw`(?:\d+\s%|<1\s%|>99\s%|\d+ prosent)`;
 const PP = String.raw`(?:[+−±]\d+|\d+ prosentpoeng|to prosentpoeng)`;
+// Prosenttall med vanlig mellomrom, slik utfallslinjene i rundesvaret skriver dem.
+const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
 const SETTLED = /(sikret|kan ikke lenger|Sesongen er ferdig|så godt som|ingen gjenstående|Ingen kamper igjen|Ingen data|betydde lite|betyr lite|ingen spilte kamper|ingen runde|har ingen|Alle kampene|Ingen av de|Ingen kamp i|Ingenting er i spill)/i;
 const QA_EXPECT = {
   why:        {what: 'prosent',       pat: new RegExp(PCT)},
@@ -907,9 +909,10 @@ async function main() {
         medTall.filter(l => Math.abs(l.sum - 1) >= 1e-3).map(l => `${l.team}: ${l.sum}`).join('; '));
       // Der vi har tallet, skal linja si hvor overraskende resultatet var,
       // fra lagets synsvinkel ("tap", ikke "borteseier").
-      // "bare" er fjernet fra ordlyden: siden oppgir sannsynligheten, den
-      // vurderer den ikke.
-      const mangler = medTall.filter(l => !/(ventet i (<1|>99|\d+) % av tilfellene|med (<1|\d+) % sjanse)/.test(l.html));
+      // Linja sier hvor sannsynlig utfallet var, i én av to former: den korte
+      // "(74 % sjanse for seier)" når vi har en forventning å måle mot, ellers
+      // "ventet i 61 % av tilfellene" / "med 19 % sjanse".
+      const mangler = medTall.filter(l => !/(ventet i (<1|>99|\d+) % av tilfellene|med (<1|\d+) % sjanse|\((<1|>99|\d+) % sjanse for (seier|uavgjort|tap|hjemmeseier|borteseier)\))/.test(l.html));
       check(`${liga}: linja sier hvor overraskende resultatet var`,
         mangler.length === 0, mangler.slice(0, 3).map(l => `${l.team}: ${l.html}`).join(' | '));
       const galtOrd = medTall.filter(l => /(hjemmeseier|borteseier) (som var ventet|med bare)/.test(l.html));
@@ -1119,20 +1122,25 @@ async function main() {
         const q = QA_QUESTIONS.find(x => x.id === 'keyround');
         return await q.run('');
       });
-      const l = svar.split('\n');
-      check(`${liga}: første linje sier kamp og strid`,
-        /^Rundens viktigste kamp er .+ mot .+ \S+ \d+\. \w+\. Den påvirker .+ mest\.$/.test(l[0]), l[0]);
-      check(`${liga}: andre linje sier hvem kampen betyr mest for`,
-        /^Kampen betyr mest for .+:$/.test(l[1]), l[1]);
+      // Leses som AVSNITT, ikke linjeindekser: svaret står nå i fire avsnitt,
+      // og en indeks ville brutt neste gang ordlyden deles opp.
+      const avsnitt = svar.split('\n\n');
+      check(`${liga}: fire avsnitt`, avsnitt.length === 4, `${avsnitt.length}`);
+      check(`${liga}: første avsnitt sier kamp og strid`,
+        /^Rundens viktigste kamp er .+ mot .+ \S+ \d+\. \w+\. Den påvirker .+ mest\.$/.test(avsnitt[0]),
+        avsnitt[0]);
+      const l = (avsnitt[1] || '').split('\n');
+      check(`${liga}: andre avsnitt sier hvem kampen betyr mest for`,
+        /^Kampen betyr mest for .+:$/.test(l[0]), l[0]);
       // Nøyaktig tre utfallslinjer, og bare ett lag får tall.
-const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
-      const utfall = l.slice(2, 5);
+      const utfall = l.slice(1, 4);
       const egen = utfall.every((x, i) => new RegExp(`^${['Seier', 'Uavgjort', 'Tap'][i]}: ${PCTL}$`).test(x));
       const annet = utfall.every((x, i) => new RegExp(i === 1 ? `^Uavgjort: ${PCTL}$` : `^.+-seier: ${PCTL}$`).test(x));
       check(`${liga}: tre utfall, i rekkefølgen seier, uavgjort, tap`, egen || annet, utfall.join(' | '));
-      check(`${liga}: så dagens nivå`, new RegExp(`^.+(sjansen|faren) er ${PCTL} før kampen\.$`).test(l[5]), l[5]);
-      // Resten: retning uten tall.
-      const rest = l.slice(6).join(' ');
+      check(`${liga}: så dagens nivå`,
+        new RegExp(`^.+(sjansen|faren) er ${PCTL} før kampen\.$`).test(l[4]), l[4]);
+      // De øvrige avsnittene: retning uten tall.
+      const rest = avsnitt.slice(2).join(' ');
       check(`${liga}: de andre lagene får ingen tall`,
         !rest || !new RegExp(PCTL).test(rest.replace(/ligger like bak.*/, '')), rest.slice(0, 160));
       check(`${liga}: bare ett lag har utfallstall`,
@@ -1430,7 +1438,7 @@ const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
         `${avsnitt.length} av ${medForventning.length}`);
       const ordlyd = medForventning.filter(([, tx]) =>
         /Før kampen var .+ ventet når alle mulige utfall ble tatt med/.test(tx) &&
-        /\d+ prosentpoeng (bedre|verre) enn ventet/.test(tx) &&
+        /\d+ prosentpoeng (bedre|verre) enn modellen ventet/.test(tx) &&
         /Med \w+ ville .+ vært /.test(tx));
       check(`${liga}: ny ordlyd i alle svarene`, ordlyd.length === medForventning.length,
         (medForventning.find(([, tx]) => !ordlyd.some(([t2]) => t2 === tx)) || ['', ''])[1].slice(0, 120));

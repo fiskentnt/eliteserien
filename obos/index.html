@@ -4360,7 +4360,7 @@ async function qaLastMatch(team){
   const tall = n===0
     ? ` Det var omtrent det de tre utfallene tilsa før kampen.`
     : ` Før kampen var ${pctTxt(data.expected)} ventet når alle mulige utfall ble tatt med. `+
-      `${qaStor(resultat)} var dermed ${n} prosentpoeng ${bra?'bedre':'verre'} enn ventet.`;
+      `${qaStor(resultat)} var dermed ${n} prosentpoeng ${bra?'bedre':'verre'} enn modellen ventet.`;
   // Tre avsnitt: hva som skjedde, hva som var ventet av markedet og hva de
   // andre utfallene ville gitt, og forbeholdet. .qa-answer har pre-line.
   const midt = [overrask, alt].filter(Boolean).join(' ');
@@ -4401,6 +4401,21 @@ function qaSurpriseTxt(e){
     ? `${ord} med ${pct} % sjanse`
     : `${ord} var ventet i ${pct} % av tilfellene`;
 }
+// "(74 % sjanse for seier)": hvor sannsynlig DET utfallet var før kampen,
+// sett fra laget linja handler om. Kortere enn qaSurpriseTxt, som fortsatt
+// brukes når vi ikke har en forventning å måle mot.
+function qaSjanseKort(e){
+  const p = preKickProbs(e.home, e.away);
+  if(!p) return '';
+  const utfall = e.hg>e.ag ? 'H' : (e.hg===e.ag ? 'U' : 'B');
+  const v = p[utfall];
+  if(v==null) return '';
+  const pct = v<0.005 ? '<1' : (v>0.995 ? '>99' : Math.round(v*100));
+  const ord = e.gf==null || e.ga==null
+    ? {H:'hjemmeseier', U:'uavgjort', B:'borteseier'}[utfall]
+    : (e.gf>e.ga ? 'seier' : (e.gf===e.ga ? 'uavgjort' : 'tap'));
+  return ` (${pct} % sjanse for ${ord})`;
+}
 function qaLastMatchLine(e){
   if(!e) return null;
   const res = `${e.gf}-${e.ga} mot ${e.opp}`;
@@ -4414,14 +4429,15 @@ function qaLastMatchLine(e){
   // workflow, der pp ble målt mot det beste alternative utfallet. Den skal
   // ikke vises som om den var målt mot forventningen.
   if(e.pp==null || e.pp===0 || e.basis!=='forventning') return {html:`Forrige kamp: ${res}${hale}`};
-  // "ble 4 prosentpoeng høyere enn forventet", ikke "økte med 4": tallet er
-  // forskjellen mellom sjansen nå og den FORVENTEDE sjansen etter kampen.
-  // Sjansen kan godt ha steget selv om den ble lavere enn forventet, så
-  // "økte"/"falt" ville sagt noe annet. Ordet bærer retningen, derfor står
-  // tallet uten fortegn -- fargen sier fortsatt om det var bra for laget.
-  const retning = e.pp>0 ? 'høyere' : 'lavere';
-  return {html:`Forrige kamp: ${QA_OUT_LABEL[e.actual]} ${res}, ${e.chance} ble `+
-    `<b class="${e.good?'good':'bad'}">${Math.abs(e.pp)}</b> prosentpoeng ${retning} enn forventet${hale}`};
+  // Tallet differansen gjelder skal stå: "Gullsjansen ble 21 %, 3
+  // prosentpoeng bedre enn modellen ventet". Nivået regnes av de samme to
+  // lagrede tallene som differansen, altså round(expected)+pp, så de tre
+  // tallene i setningen alltid stemmer med hverandre -- et ferskt tall fra
+  // simuleringen kunne gitt 22 − 18 = 4 mot en lagret differanse på 3.
+  const naa = Math.max(0, Math.min(100, Math.round((e.expected||0)*100) + e.pp));
+  return {html:`Forrige kamp: ${QA_OUT_LABEL[e.actual]} ${res}. ${qaStor(e.chance)} ble ${naa} %, `+
+    `<b class="${e.good?'good':'bad'}">${Math.abs(e.pp)}</b> prosentpoeng `+
+    `${e.good?'bedre':'verre'} enn modellen ventet${qaSjanseKort(e)}.`};
 }
 // Lagets forrige kamp til linja: bruker det workflowen har regnet ut for den
 // VIRKELIGE situasjonen. Er den lagret kampen ikke lagets siste faktisk spilte
@@ -4659,21 +4675,24 @@ async function qaKeyRound(){
     if(sammeSone && (!ned.length || !opp.length)){
       const svekket = ned.length>0;
       andreTxt = z0.dir==='front'
-        ? `\n${navnene} påvirkes også. En ${refNavn}-seier ${svekket?'svekker':'styrker'} ${z0.chance.replace(/n$/, 'ne')} deres, `+
+        ? `\n\n${navnene} påvirkes også. En ${refNavn}-seier ${svekket?'svekker':'styrker'} ${z0.chance.replace(/n$/, 'ne')} deres, `+
           `mens poengtap for ${refNavn} ${svekket?'styrker':'svekker'} dem.`
-        : `\n${navnene} påvirkes også. En ${refNavn}-seier ${svekket?'øker':'senker'} ${z0.chance} deres, `+
+        : `\n\n${navnene} påvirkes også. En ${refNavn}-seier ${svekket?'øker':'senker'} ${z0.chance} deres, `+
           `mens poengtap for ${refNavn} ${svekket?'senker':'øker'} den.`;
     } else {
-      andreTxt = `\n${navnene} påvirkes også. En ${refNavn}-seier er dårlig for ${joinNames(ned.map(x=>x.team))||'ingen av dem'}`+
+      andreTxt = `\n\n${navnene} påvirkes også. En ${refNavn}-seier er dårlig for ${joinNames(ned.map(x=>x.team))||'ingen av dem'}`+
         ` og bra for ${joinNames(opp.map(x=>x.team))||'ingen av dem'}; poengtap virker motsatt.`;
     }
   }
   // Tallet teller bare de ANDRE kampene, ikke kampen over: "Tre andre kamper
   // er omtrent like viktige: A, B og C."
   const tett = !k ? ''
-    : k===1 ? `\nÉn annen kamp er omtrent like viktig: ${liste[0]}.`
-    : `\n${qaStor(QA_NUM[k] || String(k))} andre kamper er omtrent like viktige: ${joinNames(liste)}.`;
-  return `Rundens viktigste kamp er ${navn(b)} ${formatDateNo(m.date)}. Den påvirker ${b.topZone.strid} mest.\n`+
+    : k===1 ? `\n\nÉn annen kamp er omtrent like viktig: ${liste[0]}.`
+    : `\n\n${qaStor(QA_NUM[k] || String(k))} andre kamper er omtrent like viktige: ${joinNames(liste)}.`;
+  // Fire avsnitt: kampen, hva den betyr for laget det står mest på spill for
+  // (med utfallslinjene), de andre lagene, og de like viktige kampene. Sju
+  // setninger i én blokk var tungt.
+  return `Rundens viktigste kamp er ${navn(b)} ${formatDateNo(m.date)}. Den påvirker ${b.topZone.strid} mest.\n\n`+
     `Kampen betyr mest for ${hoved.team}${spiller?'':', som ikke spiller selv'}:\n`+
     `${rader}\n`+
     `${qaStor(hz.chance)} er ${pctTxt(hoved.now)} før kampen.`+andreTxt+tett;
@@ -5272,6 +5291,12 @@ async function qaHowTo(team){
   const reach = QA_REACH_PHRASE[zone.key];
   const curveTxt = threshold==null ? '' : qaPointCurve(data, threshold, zone);
   const rivalTail = rivalName ? ` Hvor mange poeng som trengs, avhenger av ${qaGen(rivalName)} resultater.` : '';
+  // Poengkurven og forbeholdet om konkurrenten hører sammen, men er en annen
+  // sak enn terskelen: eget avsnitt.
+  const avsnitt = (kurve, hale) => {
+    const rest = `${kurve}${hale}`.trim();
+    return rest ? `\n\n${rest}` : '';
+  };
   let first;
   if(threshold!=null && myPts<threshold){
     first = `${team} trenger trolig rundt ${poengTxt(threshold)} for å ${reach}, altså ${poengTxt(threshold-myPts)} til.`;
@@ -5285,9 +5310,10 @@ async function qaHowTo(team){
     // QA_VERB er presens ("ender i topp 4", "vinner serien"); reach er
     // infinitiv ("nå topp 4") og ville gitt "Brann nå topp 4".
     return `Det skal mye til: ${team} ${QA_VERB[zone.key]} i ${pctTxt(successShare)} av simuleringene. `+
-      `I dem tar laget i snitt ${avgPts} av ${maxPts} mulige poeng.${curveTxt}${rivalTail}`;
+      `I dem tar laget i snitt ${avgPts} av ${maxPts} mulige poeng.`+
+      avsnitt(curveTxt, rivalTail);
   }
-  return `${first}${curveTxt}${rivalTail}`;
+  return `${first}`+avsnitt(curveTxt, rivalTail);
 }
 
 // ---- Spørsmål 3: hvilke kamper betyr mest? Se buildMatchImpactCandidates()
@@ -5329,8 +5355,9 @@ async function qaKeyMatches(team){
     const outs = x.outs.slice().sort((a,b)=>b.d-a.d);
     return `${x.m.home} mot ${x.m.away}: ${piece(outs[0])}, ${piece(outs[1])}.`;
   });
-  return `Disse kampene påvirker ${qaGen(team)} ${qaSjanseUbest(zone)} mest. Den er ${pctTxt(tableP)} nå:\n`+
-    lines.join('\n')+`\nTallet i parentes er endringen i prosentpoeng.`;
+  // Tre avsnitt: innledningen, listen, og forklaringen av parentesen.
+  return `Disse kampene påvirker ${qaGen(team)} ${qaSjanseUbest(zone)} mest. Den er ${pctTxt(tableP)} nå:\n\n`+
+    lines.join('\n')+`\n\nTallet i parentes er endringen i prosentpoeng.`;
 }
 
 // ---- Spørsmål 6: når kan det være avgjort? decidedHist[runde] = antall
