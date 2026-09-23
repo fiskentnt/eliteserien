@@ -975,6 +975,12 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/></svg>
               <span>Nullstill</span></button>
+            <button type="button" id="headShare" class="head-reset" hidden
+              aria-label="Del scenarioet"
+              title="Deler scenarioet: systemets delingsmeny der den finnes, ellers kopieres teksten">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
+              <span>Del</span></button>
             <div class="roundnav" id="roundNav" aria-label="Velg runde">
               <button type="button" id="roundPrev" aria-label="Forrige runde">‹</button>
               <span id="roundLabel">Runde av 30</span>
@@ -1066,6 +1072,9 @@
         <button id="simRest" title="Fyller inn et plausibelt resultat i alle tomme kamper">Simuler tomme kamper</button>
         <button class="reset" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
         <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
+        <button class="share" id="shareText" title="Kopierer en kort beskrivelse av scenarioet og lenken">Kopier tekst</button>
+        <button class="share" id="shareBB" title="Kopierer samme tekst med BB-kode, til forum">Kopier for forum</button>
+        <button class="share" id="shareSystem" hidden title="Deler scenarioet med appene på telefonen">Del …</button>
       </div>
       <label class="autofill" id="autoFillLabel" title="De andre kampene i samme runde simuleres, så alle lagene har spilt like mange og tabellen er sammenlignbar.">
         <input type="checkbox" id="autoFillToggle" checked> Fyll ut runden når jeg legger inn et resultat
@@ -1099,7 +1108,7 @@
       <h3>Slik regnes sannsynlighetene</h3>
       <p id="howP1"></p>
       <p id="howP2"></p>
-      <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Topp 4, nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
+      <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Topp 4, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
       <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner resten", "...taper resten", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
       <p>Styrketallet flytter seg lite fra kamp til kamp. Hver kamp justerer det litt, ut fra hvor mange mål laget scoret og slapp inn mot det modellen ventet. Men justeringene trekkes samtidig tilbake mot utgangspunktet, og modellen tilpasses på nytt på alle kampene hver dag. Over en sesong står derfor styrketallet omtrent stille: sju kamper uten seier flyttet Sarpsborg 08 fra 4,80 til 4,65 i september 2026. Det er meningen. Styrke viser nivå. Vil du se de siste kampene, er det formtallet som sier det.</p>
       <p>Tabellen, kamplisten, simuleringene og svarene bygger alle på nøyaktig den samme lagstyrken. Det finnes ikke lenger en egen variant for visning: ett tall, ett sted.</p>
@@ -2922,6 +2931,13 @@ function simulateZoneProb(d, forcedIdx, forcedScore, seed, wantAll){
 }
 `;
 let mcWorker=null, mcRunId=0, mcTimer=null, lastMC=null, lastMCScenarioKey=null;
+// Sannsynlighetene UTEN scenario, til delingsteksten. Dette er ikke en ny
+// beregning: det er den samme kjøringen siden alt gjør, fanget den gangen
+// scenarioet var tomt. Derfor er "fra"-tallet nøyaktig det siden viser for
+// basissituasjonen, aldri et tilfeldig utslag fra en egen simulering.
+let BASE_MC = null;
+const mcScenarioFor = new Map();   // runId -> scenarioKey, så en kjøring som
+                                   // blir forbigått likevel kan gi basis
 // True når lastMC kommer fra den fullførte kjøringen (ikke førsteanslaget etter 1 000).
 // Leses av scripts/snapshot_probs.js, som lagrer sannsynlighetene etter hver oppdatering.
 let lastMCFinal=false, lastMCN=0; // lastMCN: antall simuleringer bak lastMC
@@ -2972,6 +2988,12 @@ function getWorker(){
         return;
       }
       const {runId,out}=data;
+      // Basis fanges FØR forkastingen under: åpner man en delt lenke, rekker
+      // den tomme kjøringen ofte å bli forbigått av scenarioet før den er
+      // ferdig, men tallene den gir er like fullt basissituasjonen.
+      if(mcScenarioFor.get(runId)==='' && data.done>=data.total){
+        const b={}; TEAMS.forEach((t,i)=>b[t]=out[i]); BASE_MC=b;
+      }
       if(runId!==mcRunId) return; // scenariet er endret siden denne kjøringen startet — forkast
       const outObj={}; TEAMS.forEach((t,i)=>outObj[t]=out[i]);
       lastMC=outObj; lastMCN = data.done; lastMCFinal = data.done>=data.total; fillOdds();
@@ -3024,6 +3046,7 @@ function runMCAsync(N){
   lastMCScenarioKey = scenarioKey;
   lastMCFinal = false;
   mcRunId++;
+  mcScenarioFor.set(mcRunId, scenarioKey);
   getWorker().postMessage({
     runId:mcRunId, seed:hashStr(scenarioKey), mu:MODEL.mu, H:MODEL.H, k:FORM_K,
     att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
@@ -5731,6 +5754,10 @@ function render(){
   // tastaturrekkefølgen og skjermleseren på annen måte enn av display:none.
   hr.setAttribute('aria-hidden', harScenario?'false':'true');
   hr.setAttribute('tabindex', harScenario?'0':'-1');
+  const hs=document.getElementById('headShare');
+  hs.hidden=!harScenario;
+  hs.setAttribute('aria-hidden', harScenario?'false':'true');
+  hs.setAttribute('tabindex', harScenario?'0':'-1');
   renderModelExample();
   document.getElementById('fxInfo').textContent = `${matches.length-played} av ${matches.length} uten resultat`;
 
@@ -5825,21 +5852,158 @@ async function applyScenario(){
     if(Number.isFinite(seed)) await simulateTypicalAsync(matches.filter(isEmpty), seed);
   }
 }
-document.getElementById('share').addEventListener('click',async e=>{
-  e.stopPropagation();
+// ---- Deling: lenke, tekst og BB-kode ----
+// Lenken bygges ETT sted, så "Del scenario" (som før bare kopierer adressen)
+// og de nye knappene aldri kan peke på ulike scenarier.
+function scenarioUrl(){
   const code=encodeScenario();
   // team= tas alltid med (også tomt, for "ingen lag"), så lenken alltid
   // gjenskaper lagvalget -- se hashTeam-parsingen i boot() for hvordan en
   // GAMMEL lenke uten team= i stedet faller tilbake på mottakerens egen
   // localStorage/Brann-standard.
   const hashParts=[code?'s='+code:'', 'team='+encodeURIComponent(SELECTED_TEAM)].filter(Boolean);
-  const url=location.href.split('#')[0]+'#'+hashParts.join('&');
+  return location.href.split('#')[0]+'#'+hashParts.join('&');
+}
+// Sonesjansen fra én fordeling. Samme summering som lagboksen bruker.
+const sonesjanse = (dist, key) => { const z = LEAGUE.zones[key];
+  if(!z || !dist) return null;
+  let v=0; for(let q=z.lo; q<=z.hi; q++) v += dist[q-1]; return v; };
+const DELE_TALL = ['','én','to','tre','fire','fem','seks','sju','åtte','ni'];
+const tallOrd = n => n<DELE_TALL.length ? DELE_TALL[n] : String(n);
+// Laget teksten handler om: det man følger, ellers det som flytter seg mest
+// i sin egen mest aktuelle sone.
+function deleLag(){
+  if(SELECTED_TEAM) return SELECTED_TEAM;
+  if(!lastMC || !BASE_MC) return null;
+  let best=null;
+  TEAMS.forEach(t=>{
+    const z = qaTargetZone(t); if(!z) return;
+    const a = sonesjanse(BASE_MC[t], z.key), b = sonesjanse(lastMC[t], z.key);
+    if(a==null || b==null) return;
+    const d = Math.abs(b-a);
+    if(!best || d>best.d) best={t,d};
+  });
+  return best && best.d>=0.01 ? best.t : null;
+}
+// Er scenarioet "laget vinner/taper alt", og ingenting annet? Da sies det
+// med ord. Ellers beskrives det kort med antallet.
+function scenarioForm(lag){
+  const fylte = matches.filter(m=>m.hg!=null && m.ag!=null);
+  if(!fylte.length) return null;
+  if(lag){
+    const egne = fylte.filter(m=>m.home===lag || m.away===lag);
+    const alleEgne = matches.filter(m=>m.home===lag || m.away===lag);
+    if(egne.length===fylte.length && egne.length===alleEgne.length && egne.length>1){
+      const utfall = egne.map(m=>{ const h=m.home===lag; const gf=h?m.hg:m.ag, ga=h?m.ag:m.hg;
+                                   return gf>ga?'W':(gf===ga?'D':'L'); });
+      if(utfall.every(x=>x==='W')) return {type:'vinner', n:egne.length};
+      if(utfall.every(x=>x==='L')) return {type:'taper', n:egne.length};
+    }
+  }
+  return {type:'sammensatt', n:fylte.length};
+}
+// Teksten. Tallene leses av lastMC og BASE_MC, altså nøyaktig det siden
+// viser for scenarioet og for basissituasjonen. Ingenting simuleres her.
+// Sonen teksten handler om: den mest aktuelle for laget, som ellers på siden.
+// Men lander den på et tall som ikke rører seg (0 til 0 etter avrunding), sier
+// setningen ingenting -- da velges heller sonen som faktisk flyttet seg. Dette
+// er et valg av HVA som vises, ingen ny beregning.
+function deleSone(lag){
+  const z = qaTargetZone(lag);
+  if(!z || !lastMC || !BASE_MC) return z;
+  const endring = k => { const a=sonesjanse(BASE_MC[lag],k), b=sonesjanse(lastMC[lag],k);
+    return (a==null||b==null) ? 0 : Math.round(b*100)-Math.round(a*100); };
+  if(endring(z.key)!==0) return z;
+  let best=null;
+  ZONE_KEYS.filter(k=>LEAGUE.zones[k]).forEach(k=>{
+    const d=Math.abs(endring(k));
+    if(d>=2 && (!best || d>best.d)) best={k,d};
+  });
+  return best ? qaZoneByKey(lag, best.k) : z;
+}
+function deleTekst(){
+  const lag = deleLag();
+  const form = scenarioForm(lag);
+  if(!form) return null;
+  const z = lag && deleSone(lag);
+  const til = (lag && z && lastMC) ? sonesjanse(lastMC[lag], z.key) : null;
+  const fra = (lag && z && BASE_MC) ? sonesjanse(BASE_MC[lag], z.key) : null;
+  const pst = v => Math.round(v*100);
+  const endring = (til==null) ? ''
+    : (fra==null
+        ? `${qaStor(qaGen(lag))} ${qaSjanseUbest(z)} er ${pst(til)} prosent.`
+        : `${qaStor(qaGen(lag))} ${qaSjanseUbest(z)} går fra ${pst(fra)} til ${pst(til)} prosent.`);
+  if(form.type==='sammensatt'){
+    const hode = `${qaStor(tallOrd(form.n))} resultat${form.n===1?'':'er'} lagt inn.`;
+    return endring ? `${hode} ${endring}` : hode;
+  }
+  // "Brann vinner alle ni: topp 4-sjansen går fra 11 til 63 prosent."
+  const hode = `${lag} ${form.type} alle ${tallOrd(form.n)}`;
+  if(!endring) return `${hode}.`;
+  const kort = (fra==null)
+    ? `${qaSjanse(z)} er ${pst(til)} prosent`
+    : `${qaSjanse(z)} går fra ${pst(fra)} til ${pst(til)} prosent`;
+  return `${hode}: ${kort}.`;
+}
+function deleTekstMedLenke(){ const t=deleTekst(); const u=scenarioUrl();
+  return t ? `${t}\n${u}` : u; }
+function deleBBKode(){ const t=deleTekst(); const u=scenarioUrl();
+  // Den lange adressen skal ikke stå i innlegget; lenken er lesbar og klikkbar.
+  const lenke = `[url=${u}]Se scenarioet i Tabellkalkulator[/url]`;
+  return t ? `${t}\n${lenke}` : lenke; }
+
+// Kopiering med tilbakemelding på knappen, og prompt som reserve der
+// utklippstavlen er sperret.
+async function kopier(btn, tekst, ferdigTekst){
+  const opprinnelig = btn.dataset.label || btn.textContent;
+  btn.dataset.label = opprinnelig;
+  try{ await navigator.clipboard.writeText(tekst); btn.textContent = ferdigTekst; }
+  catch(_){ prompt('Kopier:', tekst); btn.textContent = 'Klar'; }
+  btn.classList.add('done');
+  clearTimeout(btn._t);
+  btn._t = setTimeout(()=>{ btn.textContent = opprinnelig; btn.classList.remove('done'); }, 2500);
+}
+
+// UENDRET oppførsel: kopierer bare nettadressen.
+document.getElementById('share').addEventListener('click',async e=>{
+  e.stopPropagation();
+  const url=scenarioUrl();
   history.replaceState(null,'',url);
   const btn=document.getElementById('share');
   try{ await navigator.clipboard.writeText(url); btn.textContent='Lenke kopiert'; }
   catch(_){ prompt('Kopier lenken:',url); btn.textContent='Lenke klar'; }
   btn.classList.add('done'); setTimeout(()=>{btn.textContent='Del scenario';btn.classList.remove('done');},2500);
 });
+document.getElementById('shareText').addEventListener('click',async e=>{
+  e.stopPropagation();
+  const url=scenarioUrl(); history.replaceState(null,'',url);
+  await kopier(e.currentTarget, deleTekstMedLenke(), 'Tekst kopiert');
+});
+document.getElementById('shareBB').addEventListener('click',async e=>{
+  e.stopPropagation();
+  const url=scenarioUrl(); history.replaceState(null,'',url);
+  await kopier(e.currentTarget, deleBBKode(), 'BB-kode kopiert');
+});
+// Systemets egen delingsmeny, der den finnes. Den kommer I TILLEGG: knappene
+// for tekst og BB-kode står uansett.
+async function delViaSystem(btn){
+  const url=scenarioUrl(); history.replaceState(null,'',url);
+  const tekst=deleTekst();
+  if(navigator.share){
+    try{ await navigator.share({title:document.title, text:tekst||undefined, url}); return true; }
+    catch(_){ return false; }   // avbrutt av brukeren -- ingen feilmelding
+  }
+  if(btn) await kopier(btn, deleTekstMedLenke(), 'Tekst kopiert');
+  return false;
+}
+{
+  const sys=document.getElementById('shareSystem');
+  if(navigator.share) sys.hidden=false;
+  sys.addEventListener('click', e=>{ e.stopPropagation(); delViaSystem(e.currentTarget); });
+  document.getElementById('headShare').addEventListener('click', e=>{
+    e.stopPropagation(); delViaSystem(e.currentTarget);
+  });
+}
 
 // Finner om noen uspilt kamp allerede har startet (avspark <= nå) og, hvis
 // ikke, den nærmeste kommende avsparken — brukt til å velge mellom "Sist
@@ -6171,6 +6335,18 @@ async function boot(){
   // Bare kjør auto-fyllingen ved vanlig sidelasting, ikke når en lenke
   // allerede satte scenariet.
   const hadScenario = /s=/.test(location.hash);
+  // Basissannsynlighetene til delingsteksten: sett i gang den tomme kjøringen
+  // FØR scenarioet legges på. Ved vanlig sidelasting skjer dette av seg selv
+  // (render() nedenfor kjører med tomt scenario), men åpner man en delt
+  // lenke, ville den aldri kjørt -- og da hadde mottakeren ikke hatt noe å
+  // sammenligne med når hun deler videre. Kjøringen blir forbigått av
+  // scenarioet med en gang; tallene fanges likevel (se mcScenarioFor).
+  if(hadScenario){
+    // LIVE bygges normalt av render(), som ikke har kjørt ennå. Den er
+    // avledet av de låste resultatene, og de er tomme her -- altså basis.
+    try{ refreshLiveState(); runMCAsync(MC_N); }
+    catch(_){ /* basis er en bonus i delingsteksten, aldri noe som skal stoppe siden */ }
+  }
   await applyScenario();
   if(!hadScenario) await updateAutoFill();
   render();
