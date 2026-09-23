@@ -31,9 +31,7 @@ const MIME = {'.html':'text/html; charset=utf-8','.js':'text/javascript','.json'
 // som er omtrent like store (innenfor to prosentpoeng).
 const STORE = {
   eliteserien: ['Brann', 'Rosenborg', 'Vålerenga', 'Viking', 'Bodø/Glimt'],
-  // OBOS-listen er et anslag og bør overstyres: si fra hvilke klubber som
-  // faktisk har størst miljø, så rettes den.
-  obos: ['Lyn', 'Stabæk', 'Odd', 'Strømsgodset', 'Sogndal'],
+  obos: ['Lyn', 'Stabæk', 'Strømsgodset', 'Sandnes Ulf', 'Bryne'],
 };
 const NAVN = {eliteserien: 'Eliteserien', obos: 'OBOS-ligaen'};
 // "Omtrent like store": innenfor så mange prosentpoeng.
@@ -156,10 +154,28 @@ function velg(kandidater, liga, brukt, laast){
 }
 
 // ---- Tekstene ----
+// Hvilket utfall setningen skal lede med: det som flytter tallet mest. Ofte
+// er det tapet, og da sier setningen mer om kampen enn en seier som knapt
+// endrer noe.
+function vinkel(x){
+  const naa = pst(x.naa), s = pst(x.seier), t = pst(x.tap);
+  const forst = Math.abs(t - naa) > Math.abs(s - naa)
+    ? {ord: 'tap', v: t, annet: {ord: 'seier', v: s}}
+    : {ord: 'seier', v: s, annet: {ord: 'tap', v: t}};
+  return {
+    naa, forst,
+    // "går" når tallet stiger, "faller" når det synker -- som i de to
+    // formene som ble avtalt.
+    verb: forst.v < naa ? 'faller' : forst.v > naa ? 'går' : 'står',
+    // Retningen for det andre utfallet, sett fra dagens tall.
+    retning: forst.annet.v > naa ? 'opp til' : forst.annet.v < naa ? 'ned til' : 'til',
+  };
+}
 function tekstFor(x, liga){
   const dag = x.dag ? ` ${x.dag}` : '';
-  return `${x.kamp}${dag}: med seier går ${x.lag} fra ${pst(x.naa)} til ${pst(x.seier)} % `
-    + `for ${x.sonenavn}, med tap ned til ${pst(x.tap)} %.`;
+  const v = vinkel(x);
+  return `${x.kamp}${dag}: med ${v.forst.ord} ${v.verb} ${x.lag} fra ${v.naa} til ${v.forst.v} % `
+    + `for ${x.sonenavn}, med ${v.forst.annet.ord} ${v.retning} ${v.forst.annet.v} %.`;
 }
 function tekstEtter(x, liga){
   const m = x.kamp;
@@ -235,9 +251,11 @@ function kortHtml(tittel, hovedtall, undertekst, liga){
         if(!v) mangler.push(`${NAVN[liga]} før runden: fant ingen kamp som flytter nok.`);
         if(v) forslag.push({liga, naar: 'for', lag: v.lag,
           tekst: tekstFor(v, liga),
-          kort: {tittel: `${v.kamp}`, tall: `${pst(v.naa)} → ${pst(v.seier)} %`,
-                 // Si HVA prosenten gjelder -- uten sonen er tallet meningsløst.
-                 under: `${v.lag} for ${v.sonenavn}, med seier. Med tap: ${pst(v.tap)} %.`}});
+          kort: (() => { const a = vinkel(v);
+                   return {tittel: `${v.kamp}`, tall: `${a.naa} → ${a.forst.v} %`,
+                     // Si HVA prosenten gjelder -- uten sonen er tallet meningsløst.
+                     under: `${v.lag} for ${v.sonenavn}, med ${a.forst.ord}. `
+                       + `Med ${a.forst.annet.ord}: ${a.forst.annet.v} %.`}; })()});
       }
       if(!barestFor){
         const k = etterRunden(liga);
