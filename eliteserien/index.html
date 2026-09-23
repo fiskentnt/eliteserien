@@ -3335,9 +3335,20 @@ roundsEl.addEventListener('click', async e=>{
   await simulateRound(round, state==='resimulate');
   render();
 });
+// Nullstill må også rydde adressen. Har man trykket "Del scenario", ligger
+// scenariet i hashen, og en oppfriskning etter nullstilling leste det inn
+// igjen -- tabellen fylte seg selv på nytt. Bare s=-delen fjernes; team= og
+// et eventuelt seksjonsanker står, så lagvalget og hoppet i siden beholdes.
+function fjernScenarioFraAdressen(){
+  const h = location.hash.replace(/^#/, '');
+  if(!h) return;
+  const rest = h.split('&').filter(x => !/^s=/.test(x)).join('&');
+  history.replaceState(null, '', location.pathname + location.search + (rest ? '#'+rest : ''));
+}
 function nullstillScenario(sivilisert){
   tableSort=null;
   matches.forEach(m=>setMatch(m,null,null));
+  fjernScenarioFraAdressen();
   const said=document.getElementById('resetSaid');
   if(sivilisert){
     // Under 500px har knappen ingen tekst, så forklaringen kommer her, ved

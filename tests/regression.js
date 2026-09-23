@@ -1445,6 +1445,46 @@ const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
     }
     await page.bringToFront();
 
+    // ---- 27. Nullstill rydder også adressen ----
+    // "Del scenario" legger scenariet i hashen. Nullstill tømte tabellen, men
+    // lot s= stå -- og en oppfriskning leste scenariet inn igjen, så tabellen
+    // fylte seg selv på nytt.
+    setGroup('Nullstill rydder adressen');
+    for (const [url, liga, lag] of [[base, 'Eliteserien', 'Brann'], [obosUrl, 'OBOS', 'Bryne']]) {
+      for (const knapp of ['reset', 'headReset']) {
+        const sp = await open(1400, 900, url);
+        await settle(sp);
+        await sp.evaluate(t => { const s = document.getElementById('teamSelect');
+          s.value = t; s.dispatchEvent(new Event('change', {bubbles: true})); }, lag);
+        await new Promise(r => setTimeout(r, 1800));
+        await sp.evaluate(t => { matches.filter(m => m.home === t || m.away === t).slice(0, 3)
+          .forEach(m => setMatch(m, m.home === t ? 2 : 0, m.home === t ? 0 : 2)); render(); }, lag);
+        await new Promise(r => setTimeout(r, 2200));
+        await sp.evaluate(() => document.getElementById('share').click());
+        await new Promise(r => setTimeout(r, 700));
+        const med = await sp.evaluate(() => location.hash);
+        check(`${liga}/${knapp}: "Del scenario" legger scenariet i adressen`, /s=/.test(med), med.slice(0, 40));
+        await sp.evaluate(i => document.getElementById(i).click(), knapp);
+        await new Promise(r => setTimeout(r, 1200));
+        const etter = await sp.evaluate(() => ({hash: location.hash,
+          fylte: matches.filter(m => m.hg != null).length}));
+        check(`${liga}/${knapp}: nullstill tømmer tabellen`, etter.fylte === 0, `${etter.fylte}`);
+        check(`${liga}/${knapp}: nullstill fjerner scenariet fra adressen`,
+          !/s=/.test(etter.hash), etter.hash || '(tom)');
+        // Det avgjørende: en oppfriskning skal ikke hente scenariet tilbake.
+        await sp.reload({waitUntil: 'networkidle0', timeout: 60000});
+        await settle(sp);
+        await new Promise(r => setTimeout(r, 1500));
+        const igjen = await sp.evaluate(() => ({fylte: matches.filter(m => m.hg != null).length,
+                                                lag: SELECTED_TEAM}));
+        check(`${liga}/${knapp}: oppfriskning gir ikke scenariet tilbake`, igjen.fylte === 0,
+          `${igjen.fylte} fylte`);
+        check(`${liga}/${knapp}: fulgt lag er beholdt`, igjen.lag === lag, igjen.lag);
+        await sp.close();
+      }
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();
