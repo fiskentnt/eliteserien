@@ -862,7 +862,10 @@
   .scenario-sum{margin:8px 0 0;padding:8px 10px;border-radius:7px;background:var(--team-soft);
     color:var(--ink);font-size:12.5px;line-height:1.45;font-weight:600}
   .scenario-sum b{font-weight:800}
-  .qa-answer{scroll-margin-bottom:16px;margin:0 0 12px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-line;overflow-wrap:anywhere}
+  /* break-word, ikke anywhere: anywhere delte ord midt inni, så
+     "Kristiansund-seier" kunne brekke etter "Kristian". break-word deler
+     bare et ord som ikke får plass i det hele tatt. */
+  .qa-answer{scroll-margin-bottom:16px;margin:0 0 12px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-line;overflow-wrap:break-word}
   .qa-more{display:flex;align-items:center;gap:9px;margin-top:8px;color:var(--muted)}
   .qa-answer.loading{color:var(--muted);display:flex;align-items:center;gap:9px}
   .qa-spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--muted);animation:qa-spin .7s linear infinite;flex:none}
@@ -5431,12 +5434,25 @@ async function qaKeyMatches(team){
   }
   // Konklusjon først, én linje per kamp: "Lillestrøm mot Brann: Brann-seier
   // 18 % (+7), Lillestrøm-seier 4 % (−7)." Utfallet navngis med vinneren.
-  const piece = o => Math.abs(o.d)<0.02
-    ? `${o.who}-seier endrer lite`
-    : `${o.who}-seier ${pctTxt(Math.min(1,Math.max(0,tableP+o.d)))} (${ppTxt(o.d)})`;
+  // Bindestrek, ikke minustegn: linjene er lange, og et − brakk ordet i to
+  // når nettleseren måtte dele linja.
+  const ppKort = d => { const r=Math.round(d*100); return r===0 ? '0' : (r>0?'+':'-')+Math.abs(r); };
+  // Spiller laget selv, er utfallet lagets eget ("seier", "tap") -- da slipper
+  // linja å gjenta motstanderens navn, og den blir kort nok til å stå på én.
+  // Spiller det ikke, trengs begge navnene for at "seier" skal bety noe.
+  const bit = (o, egen) => {
+    const hva = egen ? (o.who===team ? 'seier' : 'tap') : `${o.who}-seier`;
+    return Math.abs(o.d)<0.02
+      ? `${hva} endrer lite`
+      : `${hva} ${pctTxt(Math.min(1,Math.max(0,tableP+o.d)))} (${ppKort(o.d)})`;
+  };
   const lines = shown.map(x=>{
-    const outs = x.outs.slice().sort((a,b)=>b.d-a.d);
-    return `${x.m.home} mot ${x.m.away}: ${piece(outs[0])}, ${piece(outs[1])}.`;
+    const egen = x.m.home===team || x.m.away===team;
+    // Spiller laget selv: lagets eget utfall først, så motstanderens.
+    const outs = egen
+      ? x.outs.slice().sort((a,b)=> (b.who===team?1:0) - (a.who===team?1:0))
+      : x.outs.slice().sort((a,b)=>b.d-a.d);
+    return `${x.m.home} mot ${x.m.away}: ${bit(outs[0], egen)}, ${bit(outs[1], egen)}.`;
   });
   // Tre avsnitt: innledningen, listen, og forklaringen av parentesen.
   return `Disse kampene påvirker ${qaGen(team)} ${qaSjanseUbest(zone)} mest. Den er ${pctTxt(tableP)} nå:\n\n`+
