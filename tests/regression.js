@@ -1245,6 +1245,101 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- 25. Merkenavn, Nullstill i overskriften, oddsmerket, formtallet ----
+    // Synlighet måles med checkVisibility({visibilityProperty:true}), ALDRI med
+    // .hidden-egenskapen: Nullstill-knappen sto synlig i produksjon fordi
+    // .head-reset{display:inline-flex} slår nettleserens [hidden]{display:none},
+    // og en test som leste .hidden så ingenting galt.
+    setGroup('Toppmeny, Nullstill, odds og form');
+    for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
+      for (const w of [320, 500, 1400]) {
+        const sp = await open(w, 900, url);
+        await settle(sp);
+        const synlig = 'checkVisibility({visibilityProperty:true})';
+        const f = await sp.evaluate(() => {
+          const el = document.querySelector('.brand span');
+          const hr = document.getElementById('headReset');
+          const rn = document.getElementById('roundNav').getBoundingClientRect();
+          return {navn: el.checkVisibility({visibilityProperty:true}) && el.getBoundingClientRect().width > 10,
+                  navnTekst: el.textContent.trim(),
+                  knapp: hr.checkVisibility({visibilityProperty:true}),
+                  rnL: Math.round(rn.left), rnT: Math.round(rn.top),
+                  scroll: document.documentElement.scrollWidth - document.documentElement.clientWidth};
+        });
+        check(`${liga} ${w}px: merkenavnet vises`, f.navn && f.navnTekst === 'Tabellkalkulator', f.navnTekst);
+        check(`${liga} ${w}px: ingen vannrett sidescroll`, f.scroll <= 0, `${f.scroll}`);
+        check(`${liga} ${w}px: Nullstill er skjult uten scenario`, !f.knapp);
+
+        const e = await sp.evaluate(() => { setMatch(matches[0], 2, 1); render(); return null; });
+        await new Promise(r => setTimeout(r, 900));
+        const g = await sp.evaluate(() => {
+          const hr = document.getElementById('headReset');
+          const rn = document.getElementById('roundNav').getBoundingClientRect();
+          const b = hr.getBoundingClientRect();
+          return {knapp: hr.checkVisibility({visibilityProperty:true}),
+                  tekst: hr.querySelector('span').checkVisibility(),
+                  rnL: Math.round(rn.left), rnT: Math.round(rn.top),
+                  overlapp: b.right > rn.left + 0.5};
+        });
+        check(`${liga} ${w}px: Nullstill vises når et scenario er aktivt`, g.knapp);
+        check(`${liga} ${w}px: rundevelgeren står stille`,
+          g.rnL === f.rnL && g.rnT === f.rnT, `${f.rnL},${f.rnT} -> ${g.rnL},${g.rnT}`);
+        check(`${liga} ${w}px: Nullstill dekker ikke rundevelgeren`, !g.overlapp);
+        check(`${liga} ${w}px: ${w >= 500 ? 'tekst ved siden av ikonet' : 'bare ikon'}`,
+          g.tekst === (w >= 500));
+        // Knappen gjør samme jobb som den nede ved kamplisten.
+        const h = await sp.evaluate(() => {
+          document.getElementById('headReset').click();
+          return {igjen: matches.filter(m => m.hg != null).length,
+                  forklaring: document.getElementById('resetSaid').textContent};
+        });
+        check(`${liga} ${w}px: Nullstill tømmer scenarioet`, h.igjen === 0, `${h.igjen}`);
+        check(`${liga} ${w}px: forklaringen vises ved trykk`,
+          /nullstilt/i.test(h.forklaring), h.forklaring);
+        await sp.close();
+      }
+
+      // Oddsmerket: popoveren viser desimaloddsen, kilden og tidspunktet.
+      const sp = await open(1400, 900, url);
+      await settle(sp);
+      const o = await sp.evaluate(() => {
+        const merker = [...document.querySelectorAll('.pct.odds[data-mid]')];
+        if (!merker.length) return {antall: 0};
+        merker[0].click();
+        const pop = document.getElementById('oddsPop');
+        const m = matches.find(x => String(x.id) === String(merker[0].dataset.mid));
+        const info = RATES[m.home + '|' + m.away];
+        return {antall: merker.length, apen: !pop.hidden,
+                tall: [...pop.querySelectorAll('.rad b')].map(x => parseFloat(x.textContent.replace(',', '.'))),
+                fasit: info.mk.map(x => +(1 / x).toFixed(2)),
+                tekst: pop.textContent.replace(/\s+/g, ' '),
+                liste: [...document.querySelectorAll('.match .pct[data-o]')].slice(0, 3).map(x => x.textContent.trim())};
+      });
+      check(`${liga}: oddsmerket åpner oddsen`, o.antall > 0 && o.apen, `${o.antall} merker`);
+      check(`${liga}: desimaloddsen er 1 delt på sannsynligheten`,
+        o.tall && o.tall.every((v, i) => Math.abs(v - o.fasit[i]) < 0.011),
+        `${(o.tall || []).join('/')} mot ${(o.fasit || []).join('/')}`);
+      check(`${liga}: det står at marginen er fjernet`,
+        /uten bookmakerens margin/i.test(o.tekst || '') && /ikke prisen du får/i.test(o.tekst || ''),
+        (o.tekst || '').slice(0, 90));
+      check(`${liga}: listen viser fortsatt sannsynligheter`,
+        (o.liste || []).every(t => /%$/.test(t)), (o.liste || []).join(' '));
+
+      // Formtallet står til HØYRE for resultatrutene.
+      const fm = await sp.evaluate(() => {
+        const rader = [...document.querySelectorAll('#tbl tbody tr')].map(tr => {
+          const t = tr.querySelector('.form5'), r = tr.querySelector('.form');
+          if (!t || !r) return null;
+          const tb = t.getBoundingClientRect(), rb = r.getBoundingClientRect();
+          return {begge: tb.width > 0 && rb.width > 0, hoyre: tb.left >= rb.right - 0.5};
+        }).filter(Boolean);
+        return {n: rader.filter(x => x.begge).length, ok: rader.filter(x => x.begge).every(x => x.hoyre)};
+      });
+      check(`${liga}: formtallet står til høyre for rutene`, fm.n > 0 && fm.ok, `${fm.n} rader`);
+      await sp.close();
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();

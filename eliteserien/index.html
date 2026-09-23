@@ -316,6 +316,14 @@
   .head-reset{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;
     height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--line);
     background:var(--panel);color:var(--ink);font:600 12.5px/1 var(--cond);cursor:pointer}
+  /* Når knappen ikke gjelder, skjules den med visibility og ikke display:
+     da beholder den plassen sin, og rundevelgeren står nøyaktig der den sto
+     i stedet for å hoppe idet et scenario starter. (display:none her flyttet
+     rundevelgeren 40px på skjermer under 640px, der raden brytes og er
+     venstrestilt.) Merk at hidden-attributtet alene ikke holder: nettleserens
+     display:none for [hidden] taper mot display-regelen over, så knappen sto
+     synlig hele tiden før denne regelen kom. */
+  .head-reset[hidden]{visibility:hidden;pointer-events:none}
   .head-reset:hover{border-color:var(--ink)}
   .head-reset:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .head-reset svg{width:14px;height:14px;flex:none;display:block}
@@ -1082,8 +1090,8 @@
       <p id="howP2"></p>
       <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Topp 4, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
       <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner alt", "...taper alt", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
-      <p>Styrketallet flytter seg lite fra kamp til kamp. Hver kamp justerer det litt, ut fra hvor mange mål laget scoret og slapp inn mot det modellen ventet, og justeringen reagerer sterkere jo lengre en rekke med strake seire eller tap varer. Men justeringene trekkes samtidig tilbake mot utgangspunktet, og modellen tilpasses på nytt på alle kampene hver dag. Over en sesong står derfor styrketallet omtrent stille: sju kamper uten seier flyttet Sarpsborg 08 fra 4,80 til 4,65 i september 2026. Vil du se de siste kampene, er det formtallet som sier det.</p>
-      <p>Rekkeeffekten brukes bare i Styrke-kolonnen og styrkegrafen. Simuleringene, sannsynlighetene og H/U/B-tallene bruker en tilstand uten den, fordi tilbaketesten ikke viser at rekkeeffekten gjør sluttplassprediksjonen bedre (se ablasjonstesten under "Hvordan vet vi at modellen virker?").</p>
+      <p>Styrketallet flytter seg lite fra kamp til kamp. Hver kamp justerer det litt, ut fra hvor mange mål laget scoret og slapp inn mot det modellen ventet. Men justeringene trekkes samtidig tilbake mot utgangspunktet, og modellen tilpasses på nytt på alle kampene hver dag. Over en sesong står derfor styrketallet omtrent stille: sju kamper uten seier flyttet Sarpsborg 08 fra 4,80 til 4,65 i september 2026. Det er meningen — Styrke viser nivå. Vil du se de siste kampene, er det formtallet som sier det.</p>
+      <p>Tabellen, kamplisten, simuleringene og svarene bygger alle på nøyaktig den samme lagstyrken. Det finnes ikke lenger en egen variant for visning: ett tall, ett sted.</p>
       <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn, verken i tabellen eller i simuleringene. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
       <div class="tblscroll"><table class="mt" id="modelTbl"></table></div>
     </details>
@@ -1177,7 +1185,7 @@
         <tr><td>3. + formoppdatering</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0611</td><td data-l="Nedrykk">0,0488</td><td>Ingen målbar forskjell</td></tr>
         <tr><td>4. + Dixon-Coles</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0613</td><td data-l="Nedrykk">0,0490</td><td>Ingen målbar forskjell (retter mest enkeltkamp-uavgjort)</td></tr>
         <tr><td>5. Full modell (l1/l2=16/48)</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0607</td><td data-l="Nedrykk">0,0488</td><td>Ingen målbar forskjell</td></tr>
-        <tr><td>Sidegren: + rekke-rampe (på steg 3)</td><td data-l="Seriemester">0,0158</td><td data-l="Topp 4">0,0608</td><td data-l="Nedrykk">0,0490</td><td>Ingen målbar forskjell. <strong>Ikke i bruk.</strong></td></tr>
+        <tr><td>Sidegren: + rekke-rampe (på steg 3)</td><td data-l="Seriemester">0,0158</td><td data-l="Topp 4">0,0608</td><td data-l="Nedrykk">0,0490</td><td>Ga ingen målbar forskjell, og ble <strong>fjernet</strong> i september 2026.</td></tr>
       </tbody>
     </table></div>
     <p class="note">Hovedfunnet i denne tabellen er hvor små de enkelte stegene er. Ingen av dem er alene utenfor to standardfeil, og oddssteget er det klareste. Det betyr ikke at de ikke virker: lagt sammen gir de en modell som slår tabellmodellen klart på nedrykk (tre standardfeil, se over). Stegene peker samme vei og forsterker hverandre, men testen er ikke stor nok til å måle hvert av dem, så radene bør leses som "ikke dårligere", ikke som "bevist bedre" hver for seg.</p>
@@ -1505,39 +1513,17 @@ const RATES = {};
 // målt direkte per kamp (ikke glattet) mot 14 sesonger historiske odds
 // (NOR.csv 2012-2026, 7054 lag-kamp-observasjoner, 95% KI [0,0100, 0,0209]).
 const FORM_K = 0.015;
-// Rekke-forsterkning: BARE i Form-visningen (Form-kolonnen, via LIVE_FORM, og
-// formgrafen, via teamFormHistory), IKKE i simuleringen (runProb/runTypical i Workeren, eller
-// spør-om-tabellen sine runInsights/simulateZoneProb) lenger. Ble opprinnelig
-// lagt inn fordi k=0,015 alene ga Brann høyere Form enn Fredrikstad etter ti
-// strake tap -- en rampe som forsterker k for påfølgende like resultater
-// retter opp akkurat DEN saken (Form skal vise hvordan laget spiller NÅ, og
-// en ti-kampers taperekke skal synes), og forbedrer også rullerende
-// enkeltkamp-log-loss (-0,0030). Men en ablasjonstest av hele modellen (10
-// sesonger 2016-2025, tre kuttpunkt per sesong, 480 lag-sesong-datapunkt)
-// viste at rampen IKKE forbedrer selve sluttplassprediksjonen (Brier for
-// gull/topp4 begge svakt dårligere med rampen enn uten, nedrykk uendret) --
-// bedre enkeltkamp-kalibrering ga ikke bedre sesongutfall der. Se
-// scratchpad/ablation_study.py fra undersøkelsen. Formelen er derfor delt:
-// ekte, lest resultater (Form) bruker rampen: kFor() her. Simulerte
-// sesonger (prediksjon) bruker flat FORM_K. Alt som regner sannsynligheter
-// (simuleringen, prosentene under H/U/B i kamplisten, "Spør om tabellen",
-// H/U/B-trekkene, "Simuler tomme kamper") bruker LIVE, som er uten rampe, så
-// kamplisten og simuleringen alltid bygger på samme sannsynligheter for samme
-// kamp. Rampen ligger bare i LIVE_FORM, som kun Form-visningen leser.
-const STREAK_BONUS = 0.6, STREAK_CAP = 5;
-function kFor(streakLen){ return FORM_K*(1+STREAK_BONUS*(Math.min(streakLen,STREAK_CAP)-1)); }
-// Starttilstand for rekke-sporing: et lags NÅVÆRENDE strake W/L-rekke fra
-// ekte resultater (STATS[t].form, kronologisk), FØR eventuelle scenario-
-// eller sesong-kamper legges til oppå. En uavgjort nullstiller rekken.
-function trailingStreak(formArr){
-  const n=formArr.length;
-  if(n===0) return {len:0, res:null};
-  const last=formArr[n-1];
-  if(last==='D') return {len:0, res:null};
-  let len=1;
-  for(let i=n-2;i>=0 && formArr[i]===last;i--) len++;
-  return {len, res:last};
-}
+// Rekke-rampen er fjernet. Den forsterket FORM_K for påfølgende like
+// resultater, og fantes bare fordi den gamle Form-kolonnen -- som i
+// virkeligheten viste sesongstyrke -- skulle reagere på lange rekker.
+// Kolonnen heter nå Styrke og skal vise nivå; formen kommer fra den egne
+// Form-kolonnen, som er poeng i de fem siste kampene og ikke har noe med
+// lagstyrkene å gjøre. Ablasjonstesten (10 sesonger, 480 lag-sesong-punkt)
+// viste dessuten at rampen ikke gjorde sluttplassprediksjonen bedre, og den
+// var derfor allerede koblet ut av alt som regnet sannsynligheter. Da den
+// bare drev en kolonne som ikke lenger finnes, ble den stående uten oppgave.
+// LIVE er nå den ENE tilstanden: forskjellen mellom LIVE og LIVE_FORM var
+// rampen, og ingenting annet.
 // Grense for hvor langt en lagstyrke kan bevege seg fra SESONGSTART (modellens
 // eget anslag) i én simulert sesong, pluss en svak tilbaketrekking mot det
 // samme anslaget hver kamp. Uten dette kan den "varme" oppdateringen (over)
@@ -1567,8 +1553,7 @@ function applyDrift(arr, base, i, delta, cap){
 // "forventning" som aldri kan være riktig uansett hva som skulle drive
 // lagstyrkene opp seinere.
 const MAX_LAMBDA_LOG = Math.log(6);
-let LIVE = null; // {att,con,ha,hc} i TI-indeksrekkefølge — kopi av MODEL, oppdatert av alle låste resultater i inneværende scenario, med flat FORM_K (UTEN rekke-rampe). Brukes av ALT som regner sannsynligheter.
-let LIVE_FORM = null; // samme, men MED rekke-rampen (kFor). Bare til Form-visningen (Form-kolonnen og kortet "Form"); aldri til sannsynligheter.
+let LIVE = null; // {att,con,ha,hc} i TI-indeksrekkefølge — kopi av MODEL, oppdatert av alle låste resultater i inneværende scenario, med flat FORM_K. Den ENE tilstanden: Styrke-kolonnen, sannsynlighetene, simuleringen og svarene leser alle denne.
 let tableSort = null; // null = standings-rekkefølge, ellers {key:'form'|'gull'|'europa'|'ned', dir:1|-1}
 const PROB_KEYS = ['gull','europa','ned'];
 // Sannsynlighet for sonen fra siste simulering (lastMC: sjanse per sluttplass).
@@ -1996,7 +1981,7 @@ function stateRate(state,home,away){
 // koden kan bruke én felles indeksering), deretter kjøres alle resultater som
 // står i kamplisten nå (også de grå simulerte, se item 7) gjennom
 // oppdateringsregelen i kronologisk rekkefølge.
-function computeLiveState(useRamp){
+function computeLiveState(){
   const n=TEAMS.length;
   const att=new Float64Array(n), con=new Float64Array(n), ha=new Float64Array(n), hc=new Float64Array(n);
   TEAMS.forEach((t,i)=>{ const mi=MTI[t]; att[i]=MODEL.att[mi]; con[i]=MODEL.con[mi]; ha[i]=MODEL.ha[mi]; hc[i]=MODEL.hc[mi]; });
@@ -2007,23 +1992,12 @@ function computeLiveState(useRamp){
   // videre (resten av det som fylles inn i scenariet) grensen skal dempe.
   const att0=Float64Array.from(att), con0=Float64Array.from(con), ha0=Float64Array.from(ha), hc0=Float64Array.from(hc);
   const state={att,con,ha,hc};
-  // Rekke-sporing starter fra ekte resultater (ikke fra 0 her), slik at en
-  // scenario-forlengelse av en pågående ekte rekke fortsetter den riktig.
-  // Rampen (kFor) brukes her -- Form skal reagere på en pågående rekke -- se
-  // kommentaren ved FORM_K/kFor for hvorfor SIMULERINGEN (runMCAsync etc.,
-  // som starter FRA denne tilstanden) likevel går videre med flat FORM_K.
-  const streakLen={}, streakRes={};
-  TEAMS.forEach(t=>{ const s=trailingStreak(STATS[t].form); streakLen[t]=s.len; streakRes[t]=s.res; });
+  // Flat FORM_K for alle kamper. Samme tilstand driver tabellen, kamplisten,
+  // simuleringen og svarene, så de aldri kan si ulike ting om samme kamp.
   matches.filter(m=>m.hg!=null&&m.ag!=null).sort((x,y)=>x.date.localeCompare(y.date)).forEach(m=>{
     const h=TI[m.home], a=TI[m.away], [lh,la]=stateRate(state,m.home,m.away);
     const rh=m.hg-lh, ra=m.ag-la;
-    const resH=m.hg>m.ag?'W':m.hg<m.ag?'L':'D', resA=m.hg<m.ag?'W':m.hg>m.ag?'L':'D';
-    streakLen[m.home]=(resH!=='D'&&streakRes[m.home]===resH)?streakLen[m.home]+1:(resH==='D'?0:1);
-    streakRes[m.home]=resH==='D'?null:resH;
-    streakLen[m.away]=(resA!=='D'&&streakRes[m.away]===resA)?streakLen[m.away]+1:(resA==='D'?0:1);
-    streakRes[m.away]=resA==='D'?null:resA;
-    // Med rampe (LIVE_FORM, til Form-visningen) eller flat FORM_K (LIVE, til alt annet).
-    const kH=useRamp?kFor(streakLen[m.home]):FORM_K, kA=useRamp?kFor(streakLen[m.away]):FORM_K;
+    const kH=FORM_K, kA=FORM_K;
     applyDrift(att,att0,h,kH*rh,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,h,kH*rh,DRIFT_CAP_HAHC);
     applyDrift(con,con0,a,kH*rh,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,a,-kH*rh,DRIFT_CAP_HAHC);
     applyDrift(att,att0,a,kA*ra,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,a,-kA*ra,DRIFT_CAP_HAHC);
@@ -2031,7 +2005,7 @@ function computeLiveState(useRamp){
   });
   return state;
 }
-function refreshLiveState(){ LIVE=computeLiveState(false); LIVE_FORM=computeLiveState(true); for(const k in RATES) delete RATES[k]; }
+function refreshLiveState(){ LIVE=computeLiveState(); for(const k in RATES) delete RATES[k]; }
 
 function fitRates(pH,pB,start){
   let best=[start[0],start[1]], err=1e9;
@@ -3338,10 +3312,10 @@ function updateSummaryCards(){
     // Nedrykk: de tre mest utsatte.
     fill('ned', all('ned').slice(0,3).map(txt));
   }
-  if(typeof LIVE_FORM!=='undefined' && LIVE_FORM){
-    // Form: modellens vurdering av hvor godt laget spiller nå (0 til 10), de tre beste.
-    // Fra LIVE_FORM (med rampe), så tallene er de samme som i Form-kolonnen.
-    const form = formScores(Array.from(LIVE_FORM.att), Array.from(LIVE_FORM.con));
+  if(typeof LIVE!=='undefined' && LIVE){
+    // Styrke: modellens vurdering av lagets nivå (0 til 10), de tre beste.
+    // Fra LIVE, samme tilstand som Styrke-kolonnen.
+    const form = formScores(Array.from(LIVE.att), Array.from(LIVE.con));
     fill('form', TEAMS.map((t,i)=>({t,v:form[i]})).sort((a,b)=>b.v-a.v).slice(0,3).map(x=>({...x, txt:f1(x.v)})));
   }
 }
@@ -3655,16 +3629,12 @@ function teamFormHistory(team){
   const att0=Float64Array.from(att), con0=Float64Array.from(con), ha0=Float64Array.from(ha), hc0=Float64Array.from(hc);
   const state={att,con,ha,hc};
   const points=[];
-  const streakLen={}, streakRes={}; TEAMS.forEach(t=>{ streakLen[t]=0; streakRes[t]=null; });
+  // Samme flate FORM_K som computeLiveState, så kurven ender på nøyaktig det
+  // tallet Styrke-kolonnen viser. Med rampen lå den litt høyere i toppene.
   [...MATCHES].sort((x,y)=>x.date.localeCompare(y.date)).forEach(m=>{
     const h=TI[m.home], a=TI[m.away], [lh,la]=stateRate(state,m.home,m.away);
     const rh=m.hg-lh, ra=m.ag-la;
-    const resH=m.hg>m.ag?'W':m.hg<m.ag?'L':'D', resA=m.hg<m.ag?'W':m.hg>m.ag?'L':'D';
-    streakLen[m.home]=(resH!=='D'&&streakRes[m.home]===resH)?streakLen[m.home]+1:(resH==='D'?0:1);
-    streakRes[m.home]=resH==='D'?null:resH;
-    streakLen[m.away]=(resA!=='D'&&streakRes[m.away]===resA)?streakLen[m.away]+1:(resA==='D'?0:1);
-    streakRes[m.away]=resA==='D'?null:resA;
-    const kH=kFor(streakLen[m.home]), kA=kFor(streakLen[m.away]);
+    const kH=FORM_K, kA=FORM_K;
     applyDrift(att,att0,h,kH*rh,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,h,kH*rh,DRIFT_CAP_HAHC);
     applyDrift(con,con0,a,kH*rh,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,a,-kH*rh,DRIFT_CAP_HAHC);
     applyDrift(att,att0,a,kA*ra,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,a,-kA*ra,DRIFT_CAP_HAHC);
@@ -4274,7 +4244,7 @@ function modelVsTableExample(){
   const {rows} = compute();
   if(!rows.length) return null;
   const pts = {}, form = {};
-  const liveForm = formScores(Array.from(LIVE_FORM.att), Array.from(LIVE_FORM.con));
+  const liveForm = formScores(Array.from(LIVE.att), Array.from(LIVE.con));
   rows.forEach(r=>{ pts[r.name] = r.pts; form[r.name] = liveForm[TI[r.name]]; });
   let best = null;
   matches.filter(m=>m.hg==null).forEach(m=>{
@@ -4296,7 +4266,7 @@ function renderModelExample(){
   if(!x){ el.hidden = true; return; }
   el.hidden = false;
   const {m, o, fav, dog, gap, pFav, pDog} = x;
-  const liveForm = formScores(Array.from(LIVE_FORM.att), Array.from(LIVE_FORM.con));
+  const liveForm = formScores(Array.from(LIVE.att), Array.from(LIVE.con));
   const form = {}; TEAMS.forEach(t=>form[t] = liveForm[TI[t]]);
   // Hvor uenige er de? Under 8 prosentpoeng mellom lagene er kampen jevn.
   const edge = pFav - pDog;
@@ -4861,9 +4831,9 @@ async function qaWhy(team){
   const {rows} = compute();
   const row = rows.find(r=>r.name===team);
   const pos = rows.indexOf(row)+1;
-  // Formtallene som vises i svaret er de samme som i Form-kolonnen (LIVE_FORM); selve
-  // simuleringen bak svaret bruker LIVE (uten rampe).
-  const liveForm = formScores(Array.from(LIVE_FORM.att), Array.from(LIVE_FORM.con));
+  // Styrketallene i svaret kommer fra samme tilstand som Styrke-kolonnen og
+  // som simuleringen bak svaret: LIVE.
+  const liveForm = formScores(Array.from(LIVE.att), Array.from(LIVE.con));
   const form = liveForm[TI[team]];
   const rivalRow = rival ? rows.find(r=>r.name===rival.t) : null;
 
@@ -5538,7 +5508,7 @@ function render(){
   // Badge (matematisk avgjort) og Form regnes ut fra "rows" i standings-
   // rekkefølge (pos = ekte tabellplassering), FØR en eventuell Form-sortering
   // bare endrer visningsrekkefølgen av selve radene.
-  const liveForm=formScores(Array.from(LIVE_FORM.att),Array.from(LIVE_FORM.con)); // Form-kolonnen: med rampe
+  const liveForm=formScores(Array.from(LIVE.att),Array.from(LIVE.con)); // Styrke-kolonnen
   const baseForm=formScores(TEAMS.map(t=>MODEL.att[MTI[t]]), TEAMS.map(t=>MODEL.con[MTI[t]]));
   rows.forEach((r,i)=>{
     r.pos=i+1;
@@ -5616,7 +5586,13 @@ function render(){
   document.getElementById('simNote').hidden = !matches.some(m=>m.sim);
   // Et scenario er aktivt når minst én uspilt kamp har fått et resultat --
   // enten fylt inn selv eller simulert. Nøyaktig det knappen nede fjerner.
-  document.getElementById('headReset').hidden = !matches.some(m=>m.hg!=null&&m.ag!=null);
+  const hr=document.getElementById('headReset');
+  const harScenario=matches.some(m=>m.hg!=null&&m.ag!=null);
+  hr.hidden=!harScenario;
+  // Plassen beholdes (se .head-reset[hidden]), så knappen må tas ut av
+  // tastaturrekkefølgen og skjermleseren på annen måte enn av display:none.
+  hr.setAttribute('aria-hidden', harScenario?'false':'true');
+  hr.setAttribute('tabindex', harScenario?'0':'-1');
   renderModelExample();
   document.getElementById('fxInfo').textContent = `${matches.length-played} av ${matches.length} uten resultat`;
 
