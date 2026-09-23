@@ -305,6 +305,39 @@ def main():
           (merge_odds.__doc__ or "").index("odds_closing.json")
           < (merge_odds.__doc__ or "").index("odds_fd.json"))
 
+    # 14. Besøksstatistikken: samme oppsett på alle tre sidene, og den skal
+    #   aldri telle fra localhost -- ellers ville hver testkjøring sendt treff.
+    sider = {navn: (ROOT / f).read_text(encoding="utf-8")
+             for navn, f in (("forsiden", "index.html"),
+                             ("eliteserien", "eliteserien/index.html"),
+                             ("obos", "obos/index.html"))}
+    for navn, tekst in sider.items():
+        check(f"statistikk: {navn} har GoatCounter",
+              "gc.zgo.at/count.js" in tekst and "tabellkalkulator.goatcounter.com" in tekst)
+        check(f"statistikk: {navn} teller bare på det publiserte domenet",
+              "location.hostname !== 'tabellkalkulator.no'" in tekst)
+        check(f"statistikk: {navn} laster skriptet async",
+              "s.async = true" in tekst)
+    for navn in ("eliteserien", "obos"):
+        # Uten path-funksjonen ville hver delte lenke (#s=...) blitt sin egen side.
+        check(f"statistikk: {navn} teller stien, ikke scenariet",
+              "path: function()" in sider[navn] and "location.pathname" in sider[navn])
+        # Forsiden videresender med location.replace, og da blir referrer
+        # forsiden selv. Den ytre henvisningen må hentes fra det forsiden la unna.
+        check(f"statistikk: {navn} beholder den ytre henvisningen",
+              "referrer: function()" in sider[navn] and "tk:henvisning" in sider[navn])
+    check("statistikk: forsiden legger unna henvisningen før den videresender",
+          "sessionStorage.setItem('tk:henvisning'" in sider["forsiden"])
+    # Rekkefølgen er det som avgjør: legges den unna ETTER location.replace,
+    # rekker den aldri å bli lagret.
+    f = sider["forsiden"]
+    check("statistikk: henvisningen lagres før videresendingen",
+          f.index("tk:henvisning") < f.index("location.replace('/eliteserien/'"))
+    # Ingen informasjonskapsler, ingen samtykkebanner.
+    for navn, tekst in sider.items():
+        check(f"statistikk: {navn} setter ingen informasjonskapsel",
+              "document.cookie" not in tekst)
+
     print(f"\n{ok} av {ok + fail} failsafe-tester gikk gjennom.")
     return 1 if fail else 0
 

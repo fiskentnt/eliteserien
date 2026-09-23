@@ -59,6 +59,41 @@
 })();
 </script>
 <!-- /LIGA-HEAD -->
+<!-- Besøksstatistikk: GoatCounter. Ingen informasjonskapsler, ingen
+     kryssidesporing, ingen samtykkebanner -- derfor heller ingen banner her.
+     Lastes BARE på det publiserte domenet: lokale kjøringer og testene skal
+     aldri telles med, og da slipper vi også en blokkert forespørsel i
+     konsollen når man jobber lokalt. -->
+<script>
+  (function(){
+    if(location.hostname !== 'tabellkalkulator.no') return;
+    window.goatcounter = {
+      // Delingslenkene legger scenariet i hashen (#s=...). Uten dette ville
+      // hver eneste delte lenke blitt talt som sin egen side. Vi teller
+      // stien -- /eliteserien/ og /obos/ hver for seg, som ønsket.
+      path: function(){ return location.pathname.replace(/index\.html$/, '') || '/'; },
+      // Kom besøkende via forsiden, er document.referrer forsiden selv (se
+      // location.replace der). Da brukes den opprinnelige henvisningen den
+      // la til side, så en lenke fra diskutopia.no ikke ser ut som intern
+      // trafikk. Brukes én gang, så et nytt sidebesøk ikke arver den.
+      referrer: function(){
+        try{
+          var r = document.referrer;
+          if(r && new URL(r).hostname !== location.hostname) return r;
+          var lagret = sessionStorage.getItem('tk:henvisning');
+          if(lagret){ sessionStorage.removeItem('tk:henvisning'); return lagret; }
+        }catch(e){}
+        return document.referrer;
+      }
+    };
+    var s = document.createElement('script');
+    s.async = true;                       // blokkerer aldri tegningen av siden
+    s.src = '//gc.zgo.at/count.js';
+    s.setAttribute('data-goatcounter', 'https://tabellkalkulator.goatcounter.com/count');
+    s.onerror = function(){};             // blokkert av en utvidelse: ikke en feil for oss
+    document.head.appendChild(s);
+  })();
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">

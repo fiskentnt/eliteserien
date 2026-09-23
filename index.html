@@ -3,6 +3,28 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Besøksstatistikk: GoatCounter. Ingen informasjonskapsler, ingen
+     kryssidesporing, ingen samtykkebanner -- derfor heller ingen banner her.
+     Lastes BARE på det publiserte domenet: lokale kjøringer og testene skal
+     aldri telles med, og da slipper vi også en blokkert forespørsel i
+     konsollen når man jobber lokalt. -->
+<script>
+  (function(){
+    if(location.hostname !== 'tabellkalkulator.no') return;
+    window.goatcounter = {
+      // Delingslenkene legger scenariet i hashen (#s=...). Uten dette ville
+      // hver eneste delte lenke blitt talt som sin egen side. Vi teller
+      // stien -- /eliteserien/ og /obos/ hver for seg, som ønsket.
+      path: function(){ return location.pathname.replace(/index\.html$/, '') || '/'; }
+    };
+    var s = document.createElement('script');
+    s.async = true;                       // blokkerer aldri tegningen av siden
+    s.src = '//gc.zgo.at/count.js';
+    s.setAttribute('data-goatcounter', 'https://tabellkalkulator.goatcounter.com/count');
+    s.onerror = function(){};             // blokkert av en utvidelse: ikke en feil for oss
+    document.head.appendChild(s);
+  })();
+</script>
 <title>Hvem vinner serien? | Tabellkalkulator</title>
 <meta name="description" content="Simuler resten av sesongen og se sjansene for gull, opprykk, Europa og nedrykk. Eliteserien og OBOS-ligaen.">
 <link rel="canonical" href="https://tabellkalkulator.no/">
@@ -43,6 +65,15 @@
 // scenariet i behold, så eldre lenker fortsatt virker.
 (function(){
   var h = location.hash;
+  // Forsiden videresender med location.replace, og da blir document.referrer
+  // på ligasiden FORSIDEN SELV -- den opprinnelige henvisningen går tapt.
+  // Nettopp den er det som er interessant (diskutopia.no). Den legges derfor
+  // til side her, og ligasiden melder den videre til besøksstatistikken.
+  try{
+    var r = document.referrer;
+    if(r && new URL(r).hostname !== location.hostname)
+      sessionStorage.setItem('tk:henvisning', r);
+  }catch(e){}
   if(/[#&](s|team)=/.test(h)){ location.replace('/eliteserien/' + h); return; }
 
   // Forsiden er en mellomstasjon for folk: de som har vært her før sendes rett
