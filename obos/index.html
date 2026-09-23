@@ -6261,6 +6261,10 @@ async function updateCheckStamp(fixturesIn){
 // The Odds API-kvoten: hvis den nylig ble lav (data/odds_quota.json, skrevet
 // av fetch_odds_upcoming.py), legges "Odds ikke oppdatert." til i tooltipen.
 async function updateOddsQuotaNote(){
+  // Kvotefilen finnes bare for ligaen som bruker The Odds API. OBOS hentet
+  // den likevel og fikk en 404 i nettverksloggen ved hver sidelasting --
+  // fanget og ufarlig, men ren støy.
+  if(LEAGUE.oddsSource !== 'The Odds API') return;
   try{
     const res = await fetch('data/odds_quota.json');
     if(!res.ok) return;

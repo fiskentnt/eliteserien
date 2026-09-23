@@ -312,12 +312,26 @@ def main():
                              ("eliteserien", "eliteserien/index.html"),
                              ("obos", "obos/index.html"))}
     for navn, tekst in sider.items():
-        check(f"statistikk: {navn} har GoatCounter",
-              "gc.zgo.at/count.js" in tekst and "tabellkalkulator.goatcounter.com" in tekst)
+        check(f"statistikk: {navn} sender til GoatCounter",
+              "tabellkalkulator.goatcounter.com/count" in tekst)
         check(f"statistikk: {navn} teller bare på det publiserte domenet",
               "location.hostname !== 'tabellkalkulator.no'" in tekst)
-        check(f"statistikk: {navn} laster skriptet async",
-              "s.async = true" in tekst)
+    # Ligasidene bruker count.js; forsiden sender treffet selv, fordi den som
+    # regel videresender før et async skript rekker å telle.
+    for navn in ("eliteserien", "obos"):
+        check(f"statistikk: {navn} laster count.js async",
+              "gc.zgo.at/count.js" in sider[navn] and "s.async = true" in sider[navn])
+    f0 = sider["forsiden"]
+    check("statistikk: forsiden laster ikke count.js",
+          "gc.zgo.at" not in f0)
+    check("statistikk: forsiden bruker keepalive, så treffet overlever videresendingen",
+          "keepalive:true" in f0.replace(" ", ""))
+    check("statistikk: forsiden teller seg selv som /",
+          "encodeURIComponent('/')" in f0)
+    check("statistikk: forsiden sender henvisningen med",
+          "document.referrer" in f0.split("location.replace")[0])
+    check("statistikk: forsiden teller FØR den videresender",
+          f0.index("goatcounter.com/count") < f0.index("location.replace('/eliteserien/'"))
     for navn in ("eliteserien", "obos"):
         # Uten path-funksjonen ville hver delte lenke (#s=...) blitt sin egen side.
         check(f"statistikk: {navn} teller stien, ikke scenariet",
