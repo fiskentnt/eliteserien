@@ -21,7 +21,7 @@
 <!-- LIGA-HEAD: byttes ut per liga av scripts/build_league.py -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>OBOS-ligaen 2026: tabellkalkulator med sjanse for opprykk og nedrykk</title>
-<meta name="description" content="Tabellkalkulator for OBOS-ligaen: fyll inn resultater og se sannsynlighet for opprykk, opprykksspill og nedrykk for alle lag. Modellen oppdateres etter hver kamp.">
+<meta name="description" content="Tabellkalkulator for OBOS-ligaen: fyll inn resultater og se sannsynlighet for opprykk, opprykkskvalifisering og nedrykk for alle lag. Modellen oppdateres etter hver kamp.">
 <link rel="canonical" href="https://tabellkalkulator.no/obos/">
 <meta name="theme-color" content="#13305f">
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
@@ -33,15 +33,15 @@
 <meta property="og:site_name" content="Tabellkalkulator">
 <meta property="og:locale" content="nb_NO">
 <meta property="og:url" content="https://tabellkalkulator.no/obos/">
-<meta property="og:title" content="OBOS-ligaen 2026: tabellkalkulator med sjanse for opprykk og nedrykk">
-<meta property="og:description" content="Tabellkalkulator for OBOS-ligaen: fyll inn resultater og se sannsynlighet for opprykk, opprykksspill og nedrykk for alle lag. Modellen oppdateres etter hver kamp.">
+<meta property="og:title" content="Hvem rykker opp fra OBOS-ligaen 2026?">
+<meta property="og:description" content="Fyll inn resultater og se hvordan de påvirker sjansene for opprykk, opprykkskvalifisering og nedrykk.">
 <meta property="og:image" content="https://tabellkalkulator.no/obos/og.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta property="og:image:alt" content="Toppen av OBOS-tabellen i Tabellkalkulator">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="OBOS-ligaen 2026: tabellkalkulator med sjanse for opprykk og nedrykk">
-<meta name="twitter:description" content="Tabellkalkulator for OBOS-ligaen: fyll inn resultater og se sannsynlighet for opprykk, opprykksspill og nedrykk for alle lag. Modellen oppdateres etter hver kamp.">
+<meta name="twitter:title" content="Hvem rykker opp fra OBOS-ligaen 2026?">
+<meta name="twitter:description" content="Fyll inn resultater og se hvordan de påvirker sjansene for opprykk, opprykkskvalifisering og nedrykk.">
 <meta name="twitter:image" content="https://tabellkalkulator.no/obos/og.png">
 <meta name="twitter:image:alt" content="Toppen av OBOS-tabellen i Tabellkalkulator">
 <!-- Strukturerte data: WebApplication, som hører til nettstedet Tabellkalkulator. -->
@@ -51,7 +51,7 @@
   "@type": "WebApplication",
   "name": "OBOS-ligaen 2026: tabellkalkulator",
   "url": "https://tabellkalkulator.no/obos/",
-  "description": "Tabellkalkulator for OBOS-ligaen: fyll inn resultater og se sannsynlighet for opprykk, opprykksspill og nedrykk for alle lag. Modellen oppdateres etter hver kamp.",
+  "description": "Tabellkalkulator for OBOS-ligaen: fyll inn resultater og se sannsynlighet for opprykk, opprykkskvalifisering og nedrykk for alle lag. Modellen oppdateres etter hver kamp.",
   "inLanguage": "nb",
   "applicationCategory": "SportsApplication",
   "operatingSystem": "Alle (kjører i nettleseren)",
@@ -1101,8 +1101,8 @@
     <!-- LIGA-OM: byttes ut per liga -->
     <section class="about" id="om-siden" aria-labelledby="omSidenTittel">
       <h2 id="omSidenTittel">Om tabellkalkulatoren for OBOS-ligaen</h2>
-      <p>Tabellkalkulator for OBOS-ligaen 2026 viser dagens tabell og sannsynligheten for at hvert lag rykker direkte opp, havner i topp 6 og får spille opprykksspill, havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 10&nbsp;000 ganger.</p>
-      <p>De to øverste rykker direkte opp i Eliteserien. Lagene på 3. til 6. plass spiller opprykksspill, og de kampene er ikke regnet inn her: siden sier hvor sannsynlig det er å komme dit, ikke hvor sannsynlig det er å vinne det. 14. plass må spille kvalik, og de to nederste rykker ned.</p>
+      <p>Tabellkalkulator for OBOS-ligaen 2026 viser dagens tabell og sannsynligheten for at hvert lag rykker direkte opp, havner i topp 6 og får spille opprykkskvalifisering, havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 10&nbsp;000 ganger.</p>
+      <p>De to øverste rykker direkte opp i Eliteserien. Lagene på 3. til 6. plass spiller opprykkskvalifisering, og de kampene er ikke regnet inn her: siden sier hvor sannsynlig det er å komme dit, ikke hvor sannsynlig det er å vinne det. 14. plass må spille kvalik, og de to nederste rykker ned.</p>
       <p>Du kan fylle inn egne resultater, la modellen simulere tomme kamper, følge ett lag og se hvordan tabellen og sjansene endrer seg. Tabellen viser både modellens styrkevurdering for hele sesongen og formen i de fem siste kampene, så du ser forskjellen på hvor sterkt et lag er og hvordan det går akkurat nå. Tallene oppdateres automatisk etter hver kamp.</p>
             <p>Tallene i «Hvem har vært heldig eller uheldig» er faktiske poeng minus modellens forventede poeng i de samme kampene. Modellen er tilpasset på nettopp de kampene, og den har derfor allerede tatt opp i seg en del av avviket. Tallene er altså trolig litt for <strong>små</strong>: et lag har sannsynligvis vært enda heldigere, eller enda uheldigere, enn tallet viser.</p>
       <noscript><p><strong>Tabellen og sannsynlighetene regnes ut i nettleseren og krever JavaScript.</strong> Slå på JavaScript for å bruke kalkulatoren.</p></noscript>
@@ -1221,16 +1221,16 @@ const LEAGUE = {
   path: '/obos/',
   bands: [
     {cls: 'cl', lo: 1, hi: 2, legend: 'Direkte opprykk (1 og 2)'},
-    {cls: 'eu', lo: 3, hi: 6, legend: 'Opprykksspill (3 til 6)'},
+    {cls: 'eu', lo: 3, hi: 6, legend: 'Opprykkskvalifisering (3 til 6)'},
     {cls: 'playoff', lo: 14, hi: 14, legend: 'Kvalik (14)'},
     {cls: 'ned', lo: 15, hi: 16, legend: 'Nedrykk (15 og 16)'},
   ],
   cuts: [2, 6, 13],
-  legendNote: 'Lagene på 3. til 6. plass spiller opprykksspill mot et lag fra Eliteserien. ' +
+  legendNote: 'Lagene på 3. til 6. plass spiller opprykkskvalifisering mot et lag fra Eliteserien. ' +
     'Det er ikke det samme som opprykk: de kampene er ikke regnet inn her, så tallene sier ' +
     'hvor sannsynlig det er å komme dit, ikke hvor sannsynlig det er å rykke opp gjennom dem.',
   posTitles: {1: 'Direkte opprykk til Eliteserien', 2: 'Direkte opprykk til Eliteserien',
-              3: 'Opprykksspill', 4: 'Opprykksspill', 5: 'Opprykksspill', 6: 'Opprykksspill',
+              3: 'Opprykkskvalifisering', 4: 'Opprykkskvalifisering', 5: 'Opprykkskvalifisering', 6: 'Opprykkskvalifisering',
               14: 'Kvalik mot nedrykk'},
   cols: [
     // Kortform i det smale tokolonnesområdet (1100 til 1219 px), som «Nedr.»:
@@ -1239,7 +1239,7 @@ const LEAGUE = {
     {key: 'gull', head: 'Opprykk', headSm: 'Oppr.', card: 'Direkte opprykk', cls: 'gull hide-m',
      title: 'Sannsynlighet for direkte opprykk, altså 1. eller 2. plass. Klikk for å sortere.'},
     {key: 'europa', head: 'Topp 6', card: 'Topp 6', cls: 'p3',
-     title: 'Sannsynlighet for 1. til 6. plass, altså direkte opprykk eller opprykksspill. Klikk for å sortere.'},
+     title: 'Sannsynlighet for 1. til 6. plass, altså direkte opprykk eller opprykkskvalifisering. Klikk for å sortere.'},
     {key: 'ned', head: 'Nedrykk', headSm: 'Nedr.', card: 'Nedrykk', cls: 'ned',
      title: 'Sannsynlighet for 15. eller 16. plass. Kvalik på 14. plass er ikke regnet med. Klikk for å sortere.'},
   ],
@@ -1266,8 +1266,8 @@ const LEAGUE = {
   badges: [
     {above: 1, cls: 'champ', text: 'Vinner ligaen', note: 'Vinner OBOS-ligaen: ingen kan ta dem igjen.'},
     {above: 2, cls: 'champ', text: 'Sikret opprykk', note: 'Sikret direkte opprykk: kan ikke havne lavere enn 2. plass.'},
-    {above: 6, cls: 'europe', text: 'Sikret topp 6', note: 'Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykksspill.'},
-    // Vises ikke for lag som fortsatt kan nå topp 6: for dem er opprykksspill
+    {above: 6, cls: 'europe', text: 'Sikret topp 6', note: 'Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.'},
+    // Vises ikke for lag som fortsatt kan nå topp 6: for dem er opprykkskvalifisering
     // saken, ikke at de har berget plassen.
     {above: 13, cls: 'safe', text: 'Sikret plass', note: 'Sikret plass: kan verken rykke ned eller havne i kvalik.',
      hideIfChance: {zone: 'europa', over: 0.01}},
@@ -1548,7 +1548,7 @@ const SITE_LEAGUES = [
   {id: 'eliteserien', name: 'Eliteserien', season: 2026, path: '/eliteserien/',
    blurb: 'Gull, Europa og nedrykk'},
   {id: 'obos', name: 'OBOS-ligaen', season: 2026, path: '/obos/',
-   blurb: 'Opprykk, opprykksspill og nedrykk'},
+   blurb: 'Opprykk, opprykkskvalifisering og nedrykk'},
 ];
 // Hvilken liga brukeren sist var på. Forsiden leser den og sender deg rett dit.
 const LAST_LEAGUE_KEY = 'tk:sisteLiga';

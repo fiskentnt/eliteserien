@@ -460,12 +460,12 @@ async function main() {
       o1.cols.join(' | '));
     check('OBOS: ingen Gull- eller Topp 4-kolonne',
       !o1.cols.includes('Gull') && !o1.cols.includes('Topp 4'), o1.cols.join(' | '));
-    check('OBOS: fargeforklaringen nevner opprykksspill',
+    check('OBOS: fargeforklaringen nevner opprykkskvalifisering',
       o1.legend.some(l => /Direkte opprykk \(1 og 2\)/.test(l)) &&
-      o1.legend.some(l => /Opprykksspill \(3 til 6\)/.test(l)), o1.legend.join(' / '));
+      o1.legend.some(l => /Opprykkskvalifisering \(3 til 6\)/.test(l)), o1.legend.join(' / '));
     check('OBOS: kortene heter Direkte opprykk, Topp 6, Nedrykk',
       o1.cards.slice(0, 3).join(',') === 'Direkte opprykk,Topp 6,Nedrykk', o1.cards.join(','));
-    // sonene: 1-2 direkte opprykk, 3-6 opprykksspill, 14 kvalik, 15-16 ned,
+    // sonene: 1-2 direkte opprykk, 3-6 opprykkskvalifisering, 14 kvalik, 15-16 ned,
     // med stiplet linje etter 2, 6 og 13
     const vent = ['1:cl','2:cl+cut','3:eu','4:eu','5:eu','6:eu+cut','7:','8:','9:','10:','11:','12:','13:cut','14:playoff','15:ned','16:ned'];
     check('OBOS: sonefarger og stiplede linjer på riktige plasser',

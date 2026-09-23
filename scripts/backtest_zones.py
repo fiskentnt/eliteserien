@@ -46,7 +46,7 @@ LEAGUES = {
         "csv": "football-data",
     },
     "obos": {
-        # 1. og 2. plass rykker direkte opp, 3.-6. spiller opprykksspill,
+        # 1. og 2. plass rykker direkte opp, 3.-6. spiller opprykkskvalifisering,
         # 15. og 16. rykker ned (14. plass er kvalik, ikke egen Brier-sone her).
         "targets": [("opprykk", 1, 2), ("topp6", 1, 6), ("nedrykk", -2, -1)],
         "csv": "obos",

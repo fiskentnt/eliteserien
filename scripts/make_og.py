@@ -45,7 +45,7 @@ ELITE_OG = {
 }
 OBOS_OG = {
     "dir": "obos", "name": "OBOS-ligaen", "size": 88,
-    "sub": "Tabellkalkulator med sjanse for opprykk, opprykksspill og nedrykk",
+    "sub": "Tabellkalkulator med sjanse for opprykk, opprykkskvalifisering og nedrykk",
     "zones": [(1, 2, BLUE), (3, 6, GREEN)],
 }
 
@@ -119,7 +119,7 @@ def league_card(cfg=None):
 
     cfg beskriver ligaen: mappe, navn, undertekst og hvilke plasseringer som
     skal ha farget merke til venstre. Eliteserien har én sone (1 til 4), OBOS
-    har to (1 til 2 direkte opprykk, 3 til 6 opprykksspill), som på siden.
+    har to (1 til 2 direkte opprykk, 3 til 6 opprykkskvalifisering), som på siden.
     """
     cfg = cfg or ELITE_OG
     folder = ROOT / cfg["dir"]
