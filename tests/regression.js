@@ -1315,17 +1315,25 @@ const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
         const info = RATES[m.home + '|' + m.away];
         return {antall: merker.length, apen: !pop.hidden,
                 tall: [...pop.querySelectorAll('.rad b')].map(x => parseFloat(x.textContent.replace(',', '.'))),
-                fasit: info.mk.map(x => +(1 / x).toFixed(2)),
+                // Er råoddsen lagret, skal DEN vises. Ellers den marginfrie,
+                // og da SKAL forbeholdet stå.
+                raa: (info.meta && info.meta.odds) || null,
+                fasit: ((info.meta && info.meta.odds)
+                  ? [info.meta.odds.H, info.meta.odds.U, info.meta.odds.B]
+                  : info.mk.map(x => 1 / x)).map(x => +x.toFixed(2)),
                 tekst: pop.textContent.replace(/\s+/g, ' '),
                 liste: [...document.querySelectorAll('.match .pct[data-o]')].slice(0, 3).map(x => x.textContent.trim())};
       });
       check(`${liga}: oddsmerket åpner oddsen`, o.antall > 0 && o.apen, `${o.antall} merker`);
-      check(`${liga}: desimaloddsen er 1 delt på sannsynligheten`,
+      check(`${liga}: oddsen i boksen er den lagrede`,
         o.tall && o.tall.every((v, i) => Math.abs(v - o.fasit[i]) < 0.011),
         `${(o.tall || []).join('/')} mot ${(o.fasit || []).join('/')}`);
-      check(`${liga}: det står at marginen er fjernet`,
-        /uten bookmakerens margin/i.test(o.tekst || '') && /ikke prisen du får/i.test(o.tekst || ''),
-        (o.tekst || '').slice(0, 90));
+      // Med råodds: ingen forklaring, for tallet ER prisen. Uten: forbeholdet
+      // må stå, så et marginfritt tall ikke leses som en pris.
+      const harForbehold = /Råoddsen er ikke lagret/.test(o.tekst || '');
+      check(`${liga}: forbeholdet står bare når råoddsen mangler`,
+        o.raa ? !harForbehold : harForbehold,
+        o.raa ? 'råodds lagret' : 'ingen råodds');
       check(`${liga}: listen viser fortsatt sannsynligheter`,
         (o.liste || []).every(t => /%$/.test(t)), (o.liste || []).join(' '));
 
