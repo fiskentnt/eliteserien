@@ -914,6 +914,11 @@
   /* Reserve når nettleseren nekter å skrive til utklippstavlen. Ingen
      prompt(): den fryser siden i Chrome. */
   .tools button[hidden], .share[hidden]{display:none}
+  .faq-panel{padding:14px 16px 16px}
+  .faq-panel h2{margin:0 0 10px;font:700 22px/1 var(--cond)}
+  .faq-list h3{margin:12px 0 3px;font:700 15px/1.35 var(--cond);color:var(--ink)}
+  .faq-list h3:first-child{margin-top:0}
+  .faq-list p{margin:0;font-size:13.5px;line-height:1.55;color:var(--muted)}
   .kopiboks{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:80;
     width:min(560px,calc(100vw - 24px));padding:12px 14px;border-radius:10px;
     border:1px solid var(--line);background:var(--panel);color:var(--ink);
@@ -1304,6 +1309,14 @@
   </div>
 </details>
 <!-- /LIGA-MODELLSJEKK -->
+
+<!-- Ofte spurt: en inngang for folk som kommer rett fra Google. Innholdet
+     ligger i LEAGUE.faq, så hver liga har sine egne spørsmål. Tegnes av
+     renderFaq(), som også skriver FAQPage-schemaet av NØYAKTIG samme tekst. -->
+<section class="panel faq-panel" id="faq" hidden>
+  <h2>Ofte spurt</h2>
+  <div class="faq-list" id="faqList"></div>
+</section>
 </div>
 
 
@@ -1344,6 +1357,23 @@ const LEAGUE = {
   ],
   cuts: [4, 13],
   legendNote: 'Europa League-plassen går til cupvinneren, ikke til en tabellplassering.',
+  // Ofte spurt, nederst på siden: for folk som kommer rett fra Google. Korte
+  // svar, med tall fra modellen der det gir mening. Skal IKKE gjenta "Om
+  // siden" -- dette er en inngang, ikke en forklaring.
+  faq: [
+    {q: 'Hvem vinner Eliteserien 2026?',
+     a: () => { const t = faqTopp('gull', 2);
+       return t.length ? `${t[0].t} er størst favoritt med ${pctTxt(t[0].v)}`
+         + (t[1] ? `, foran ${t[1].t} med ${pctTxt(t[1].v)}.` : '.')
+         : 'Tabellen over viser sjansen for hvert lag.'; }},
+    {q: 'Hvem rykker ned fra Eliteserien 2026?',
+     a: () => { const t = faqTopp('nedrykk', 3);
+       const hale = 'De to siste plassene rykker rett ned, og nummer 14 må spille kvalifisering.';
+       return t.length ? `Størst nedrykksfare har ${faqListe(t)}. ${hale}` : hale; }},
+    {q: 'Hvordan regnes sannsynlighetene ut?',
+     a: () => `Resten av sesongen spilles ${MC_N.toLocaleString('nb-NO')} ganger med en modell `
+       + 'tilpasset på mål og sluttodds. Tallet er andelen av de sesongene laget endte der.'},
+  ],
   // Hva hver plass gir, vist som tittel på plassifferet.
   posTitles: {1: 'Champions League: playoff-runden', 2: 'Champions League: andre kvalifiseringsrunde',
               3: 'Conference League: andre kvalifiseringsrunde', 4: 'Conference League: kvalifisering'},
@@ -3122,6 +3152,7 @@ function fillOdds(){
   // tegnes kortet FØR simuleringen er ferdig, og uten dette kallet kom linja
   // først når noe annet utløste en ny render -- for eksempel et lagbytte.
   oppdaterNesteKampLinjeFraDom();
+  renderFaq();   // svarene henter tall fra lastMC
   document.querySelectorAll('#tbl tbody tr').forEach(tr=>{
     const d=lastMC[tr.dataset.team]; if(!d) return;
     const gull=zoneSum(d,'gull'), top=zoneSum(d,'europa'), ned=zoneSum(d,'ned');
@@ -6085,6 +6116,43 @@ async function applyScenario(){
     if(Number.isFinite(seed)) await simulateTypicalAsync(matches.filter(isEmpty), seed);
   }
 }
+// ---- Ofte spurt ----
+// Lagene med størst sjanse i en sone, til FAQ-svarene. Samme summering som
+// resten av siden (sonesjanse), ingen egen beregning.
+function faqTopp(key, n){
+  if(!lastMC) return [];
+  return TEAMS.map(t => ({t, v: sonesjanse(lastMC[t], key)}))
+    .filter(x => x.v != null && x.v >= 0.005)
+    .sort((a,b) => b.v - a.v).slice(0, n);
+}
+const faqListe = a => a.map(x => `${x.t} (${pctTxt(x.v)})`).join(', ');
+// Teksten skrives ETT sted og brukes to: den synlige lista og JSON-LD-en.
+// Da kan de to aldri si ulike ting, som ville vært et brudd på Googles krav
+// om at schemaet skal speile det brukeren ser.
+function renderFaq(){
+  const boks = document.getElementById('faqList');
+  if(!boks || !LEAGUE.faq || !LEAGUE.faq.length) return;
+  const par = LEAGUE.faq.map(x => ({q: x.q, a: x.a()}));
+  boks.innerHTML = par.map(x =>
+    `<h3>${x.q}</h3><p>${x.a}</p>`).join('');
+  document.getElementById('faq').hidden = false;
+  let el = document.getElementById('faqSchema');
+  if(!el){
+    el = document.createElement('script');
+    el.type = 'application/ld+json';
+    el.id = 'faqSchema';
+    document.head.appendChild(el);
+  }
+  el.textContent = JSON.stringify({
+    '@context': 'https://schema.org',
+    '@type': 'FAQPage',
+    mainEntity: par.map(x => ({
+      '@type': 'Question', name: x.q,
+      acceptedAnswer: {'@type': 'Answer', text: x.a}
+    }))
+  });
+}
+
 // ---- Deling: lenke, tekst og BB-kode ----
 // Lenken bygges ETT sted, så "Del scenario" (som før bare kopierer adressen)
 // og de nye knappene aldri kan peke på ulike scenarier.

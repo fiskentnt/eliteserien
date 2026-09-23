@@ -20,6 +20,20 @@ const LEAGUE = {
   legendNote: 'Lagene på 3. til 6. plass spiller opprykkskvalifisering mot et lag fra Eliteserien. ' +
     'Det er ikke det samme som opprykk: de kampene er ikke regnet inn her, så tallene sier ' +
     'hvor sannsynlig det er å komme dit, ikke hvor sannsynlig det er å rykke opp gjennom dem.',
+  // Ofte spurt, nederst på siden: for folk som kommer rett fra Google.
+  faq: [
+    {q: 'Hvem rykker opp fra OBOS-ligaen 2026?',
+     a: () => { const t = faqTopp('gull', 2);
+       const hale = 'De to øverste rykker rett opp; 3. til 6. plass spiller opprykkskvalifisering.';
+       return t.length ? `Størst sjanse for direkte opprykk har ${faqListe(t)}. ${hale}` : hale; }},
+    {q: 'Hvem rykker ned fra OBOS-ligaen 2026?',
+     a: () => { const t = faqTopp('nedrykk', 3);
+       const hale = 'De to siste plassene rykker rett ned, og nummer 14 må spille kvalifisering.';
+       return t.length ? `Størst nedrykksfare har ${faqListe(t)}. ${hale}` : hale; }},
+    {q: 'Hvordan regnes sannsynlighetene ut?',
+     a: () => `Resten av sesongen spilles ${MC_N.toLocaleString('nb-NO')} ganger med en modell `
+       + 'tilpasset på mål og sluttodds. Tallet er andelen av de sesongene laget endte der.'},
+  ],
   posTitles: {1: 'Direkte opprykk til Eliteserien', 2: 'Direkte opprykk til Eliteserien',
               3: 'Opprykkskvalifisering', 4: 'Opprykkskvalifisering', 5: 'Opprykkskvalifisering', 6: 'Opprykkskvalifisering',
               14: 'Kvalik mot nedrykk'},

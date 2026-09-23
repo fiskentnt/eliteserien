@@ -1598,6 +1598,52 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- 30. Ofte spurt (FAQ) ----
+    setGroup('Ofte spurt');
+    for (const [url, liga, ventet] of [
+        [base, 'Eliteserien', ['Hvem vinner Eliteserien 2026?', 'Hvem rykker ned fra Eliteserien 2026?']],
+        [obosUrl, 'OBOS', ['Hvem rykker opp fra OBOS-ligaen 2026?', 'Hvem rykker ned fra OBOS-ligaen 2026?']]]) {
+      const sp = await open(1400, 900, url);
+      await settle(sp);
+      await new Promise(r => setTimeout(r, 1200));
+      const r = await sp.evaluate(() => {
+        const sp3 = [...document.querySelectorAll('#faqList h3')].map(h => h.textContent);
+        const sv = [...document.querySelectorAll('#faqList p')].map(p => p.textContent);
+        let schema = null;
+        try { schema = JSON.parse(document.getElementById('faqSchema').textContent); } catch (e) {}
+        // Fasit for tallene: samme summering som resten av siden.
+        const topp = k => TEAMS.map(t => ({t, v: sonesjanse(lastMC[t], k)}))
+          .filter(x => x.v != null && x.v >= 0.005).sort((a, b) => b.v - a.v)[0];
+        return {
+          synlig: document.getElementById('faq').checkVisibility({visibilityProperty: true}),
+          sp3, sv, schema,
+          gull: topp('gull'), ned: topp('nedrykk'),
+          antallLd: document.querySelectorAll('script[type="application/ld+json"]').length,
+        };
+      });
+      check(`${liga}: FAQ-seksjonen vises`, r.synlig && r.sp3.length >= 3, `${r.sp3.length} spørsmål`);
+      for (const q of ventet)
+        check(`${liga}: har spørsmålet "${q}"`, r.sp3.includes(q), r.sp3.join(' | '));
+      check(`${liga}: svarene er korte`, r.sv.every(x => x.length > 0 && x.length < 260),
+        r.sv.map(x => x.length).join(', '));
+      // Schemaet må speile det brukeren ser -- ellers er det et brudd på
+      // Googles krav, og et tall kan bli stående feil i søkeresultatet.
+      check(`${liga}: FAQPage-schema finnes ved siden av det gamle`,
+        r.schema && r.schema['@type'] === 'FAQPage' && r.antallLd === 2, `${r.antallLd} blokker`);
+      const fraSchema = (r.schema ? r.schema.mainEntity : []).map(x => ({q: x.name, a: x.acceptedAnswer.text}));
+      const fraSiden = r.sp3.map((q, i) => ({q, a: r.sv[i]}));
+      check(`${liga}: schemaet er identisk med den synlige teksten`,
+        JSON.stringify(fraSchema) === JSON.stringify(fraSiden),
+        JSON.stringify(fraSchema.slice(0, 1)));
+      // Tallene skal komme fra modellen, ikke være skrevet inn.
+      const alle = r.sv.join(' ');
+      check(`${liga}: laget med størst sjanse i sonen står i svaret`,
+        alle.includes(r.gull.t) && alle.includes(r.ned.t),
+        `ventet ${r.gull.t} og ${r.ned.t}`);
+      await sp.close();
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();
