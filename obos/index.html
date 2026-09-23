@@ -617,6 +617,10 @@
   .form{display:inline-flex;gap:2px;vertical-align:middle}
   .form b{width:9px;height:9px;border-radius:2px;display:inline-block}
   .form .W{background:var(--eu)} .form .D{background:#b3babd} .form .L{background:var(--accent-text)}
+  /* Kamper fra scenarioet skilles fra de ekte, slik resultatfeltene i
+     kamplisten gjør: dempet og med ramme, så rekken viser hva som er spilt
+     og hva som er fylt inn. */
+  .form b.scen{opacity:.55;box-shadow:0 0 0 1.5px var(--sim-border);border-radius:3px}
   td.odds{font-size:13px;color:var(--muted);text-align:right;min-width:44px}
   td.odds.hot{color:var(--ink);font-weight:700}
   tr.followed td.odds{color:var(--team-text)}
@@ -1993,14 +1997,49 @@ function predict(home,away){ const [lh,la]=rateFor(home,away); return [Math.roun
 // som en 2-1-0-skala ville gjort. Har laget spilt færre enn fem kamper,
 // regnes det av dem som er spilt, og antallet står i tipsteksten.
 // null når laget ikke har spilt ennå.
+// De fem siste kampene for et lag: de ekte først, så scenarioets i datorekke-
+// følge. Scenariokampene ER de siste, så de skal telle med -- ellers ville
+// Form sagt noe annet enn Styrke, som følger scenarioet.
+function femSiste(team){
+  const ekte = ((STATS[team] || {}).form || []).map(r => ({res:r, scen:false, sim:false}));
+  const scen = matches
+    .filter(m => (m.home===team || m.away===team) && m.hg!=null && m.ag!=null)
+    .sort((a,b) => a.date.localeCompare(b.date))
+    .map(m => { const hjemme = m.home===team;
+                const gf = hjemme?m.hg:m.ag, ga = hjemme?m.ag:m.hg;
+                return {res: gf>ga?'W':(gf===ga?'D':'L'), scen:true, sim:!!m.sim}; });
+  return ekte.concat(scen).slice(-5);
+}
 const form5Poeng = arr => { const s=(arr||[]).slice(-5);
   return {p: s.reduce((a,r)=>a+(r==='W'?3:r==='D'?1:0),0), maks: 3*s.length, n: s.length}; };
 const form5From = arr => { const {p,maks} = form5Poeng(arr);
   return maks ? p/maks*10 : null; };
 const ANTALL_KAMPER = ['','den siste kampen','de to siste','de tre siste','de fire siste','de fem siste'];
-const form5Html = (v, arr) => { if(v==null) return '';
-  const {p,maks,n} = form5Poeng(arr);
-  return `<b class="form5" title="${p} av ${maks} poeng i ${ANTALL_KAMPER[n]}">${f1(v)}</b>`; };
+// Tall, ruter og tipstekst bygges av SAMME liste, så de aldri kan vise ulike
+// kamper. Tipsteksten sier hva tallet bygger på.
+const form5AvListe = liste => {
+  const s = (liste||[]).slice(-5);
+  if(!s.length) return null;
+  const p = s.reduce((a,x)=>a+(x.res==='W'?3:x.res==='D'?1:0),0);
+  return p/(3*s.length)*10;
+};
+const form5Tips = liste => {
+  const s = (liste||[]).slice(-5);
+  const p = s.reduce((a,x)=>a+(x.res==='W'?3:x.res==='D'?1:0),0);
+  const simulert = s.filter(x=>x.sim).length, lagtInn = s.filter(x=>x.scen && !x.sim).length;
+  let hale = '';
+  if(simulert && lagtInn) hale = `, ${ANTALL[simulert+lagtInn]} av dem fra scenarioet`;
+  else if(simulert) hale = `, ${ANTALL[simulert]} av ${simulert===1?'dem':'dem'} simulert`;
+  else if(lagtInn) hale = `, ${ANTALL[lagtInn]} av dem lagt inn`;
+  return `${p} av ${3*s.length} poeng i ${ANTALL_KAMPER[s.length]}${hale}`;
+};
+const ANTALL = ['','én','to','tre','fire','fem'];
+// Ablasjonsraden har en ren W/D/L-liste uten kilde; alt regnes som ekte der.
+const somListe = arr => (arr||[]).map(r => ({res:r, scen:false, sim:false}));
+const form5Html = (v, liste) => { if(v==null) return '';
+  return `<b class="form5" title="${form5Tips(liste)}">${f1(v)}</b>`; };
+const femSisteHtml = liste => `<span class="form">${(liste||[]).slice(-5).map(x =>
+  `<b class="${x.res}${x.scen?' scen':''}" title="${{W:'Seier',D:'Uavgjort',L:'Tap'}[x.res]}${x.sim?' (simulert)':(x.scen?' (lagt inn)':'')}"></b>`).join('')}</span>`;
 const formHtmlFrom=arr=>`<span class="form">${arr.slice(-5).map(r=>`<b class="${r}" title="${{W:'Seier',D:'Uavgjort',L:'Tap'}[r]}"></b>`).join('')}</span>`;
 const formHtml=t=>formHtmlFrom(STATS[t].form);
 const f1=x=>x.toFixed(1).replace('.',',');
@@ -4456,7 +4495,11 @@ async function qaKeyRound(){
   const m = b.m;
   const navn = x => `${x.m.home} mot ${x.m.away}`;
   const k = data.close.length;
-  const liste = data.close.map(navn);
+  // Kampene rangeres på SAMLET påvirkning over alle sonene, mens overskriften
+  // bare nevner den største sonen for toppkampen. Da kunne en nedrykkskamp
+  // stå listet under en overskrift om topp 4, uten at det gikk fram. Derfor
+  // står hver kamps egen strid i parentes.
+  const liste = data.close.map(r => `${navn(r)} (${r.topZone.strid})`);
   const clamp = v => Math.min(1, Math.max(0, v));
   // Laget kampen betyr mest for -- størst samlet utslag, ikke laget man følger:
   // spørsmålet gjelder hele ligaen.
@@ -4817,7 +4860,7 @@ function qaUtfallFor(team, m, k){
 // "nedrykksfaren" og "kvalikfaren" -- det er ingen sjanse man ønsker seg.
 // Poeng per kamp i de fem siste kampene -- det ekte formtallet, til svarene
 // som virkelig handler om form. Styrketallet sier noe annet (se Styrke-kolonnen).
-const qaPoengSiste5 = team => form5From((STATS[team]||{}).form);
+const qaPoengSiste5 = team => form5AvListe(femSiste(team));
 function qaSjanse(zone){
   if(zone.key==='nedrykk') return 'nedrykksfaren';
   if(zone.key==='kvalik') return 'kvalikfaren';
@@ -5556,9 +5599,11 @@ function render(){
     r.pos=i+1;
     r.form=liveForm[TI[r.name]];
     r.formChange=r.form-baseForm[TI[r.name]];
-    // Rutene i formkolonnen viser de ekte resultatene (STATS), ikke scenariet --
-    // tallet skal vise det samme.
-    r.form5=form5From(STATS[r.name].form);
+    // Form følger scenarioet, som Styrke: simulerer man at laget vinner de ni
+    // siste, ER de fem siste kampene simulerte seire, og tallet skal si 10,0.
+    // Rutene bygges av nøyaktig samme liste, så de aldri kan vise andre
+    // kamper enn tallet, og scenariokampene er merket.
+    r.femSiste=femSiste(r.name); r.form5=form5AvListe(r.femSiste);
   });
 
   let displayRows=rows;
@@ -5590,7 +5635,7 @@ function render(){
       tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="hide-s">${r.p}</td>
         <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
         <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts">${r.pts}</td>
-        <td class="formcol hh"></td><td class="hide-s">${formHtmlFrom(r.results)}${form5Html(form5From(r.results), r.results)}</td><td class="odds gull hide-m hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
+        <td class="formcol hh"></td><td class="hide-s">${femSisteHtml(somListe(r.results))}${form5Html(form5AvListe(somListe(r.results)), somListe(r.results))}</td><td class="odds gull hide-m hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
       tb.appendChild(tr);
       return;
     }
@@ -5607,7 +5652,7 @@ function render(){
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
       <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.pts} poeng nå. Maks mulig sluttsum: ${r.max}.">${r.pts}</td>
       <td class="formcol"><button type="button" class="formbox ${formCls}" data-team="${r.name}" title="${f1(r.form)} av 10. ${changeTxt} Trykk for styrkegrafen." aria-label="Styrke ${f1(r.form)} av 10 for ${r.name}. Vis styrkegrafen.">${f1(r.form)}</button></td>
-      <td class="hide-s">${formHtml(r.name)}${form5Html(r.form5, STATS[r.name].form)}</td><td class="odds gull hide-m"></td><td class="odds p3"></td><td class="odds ned"></td>`;
+      <td class="hide-s">${femSisteHtml(r.femSiste)}${form5Html(r.form5, r.femSiste)}</td><td class="odds gull hide-m"></td><td class="odds p3"></td><td class="odds ned"></td>`;
     tb.appendChild(tr);
   });
   applyBadgesToDom(); // viser cachen (tom første gang) med en gang, uten å vente
