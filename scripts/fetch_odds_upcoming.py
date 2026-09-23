@@ -108,6 +108,11 @@ def parse(raw):
         out.append({
             "home": home, "away": away, "commence_time": m["commence_time"],
             "H": round(h, 4), "D": round(d, 4), "A": round(a, 4), "n_bookmakers": n,
+            # Desimaloddsen slik den sto, FØR margin fjernes. Siden regner
+            # fortsatt på de marginfrie tallene; dette er bare til visning,
+            # så leseren ser prisen han kjenner igjen. Her er det snittet
+            # over de n bookmakerne.
+            "odds": {"H": round(avgH, 3), "U": round(avgD, 3), "B": round(avgA, 3)},
         })
     if problems:
         raise UnmappedTeamError(

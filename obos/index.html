@@ -988,7 +988,7 @@
               <span>Nullstill</span></button>
             <div class="roundnav" id="roundNav" aria-label="Velg runde">
               <button type="button" id="roundPrev" aria-label="Forrige runde">‹</button>
-              <span id="roundLabel">Runde – av 30</span>
+              <span id="roundLabel">Runde av 30</span>
               <button type="button" id="roundNext" aria-label="Neste runde">›</button>
               <button type="button" id="roundReset" class="head-link" hidden>Til gjeldende</button>
             </div>
@@ -1074,7 +1074,7 @@
       <div class="tools">
         <button id="followWin"></button>
         <button id="followLose"></button>
-        <button id="simRest" title="Fyller alle tomme kamper med ett plausibelt scenario">Simuler tomme kamper</button>
+        <button id="simRest" title="Fyller inn et plausibelt resultat i alle tomme kamper">Simuler tomme kamper</button>
         <button class="reset" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
         <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
       </div>
@@ -1102,7 +1102,7 @@
 <details class="howitworks">
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7"/></svg></span>Slik fungerer det</summary>
   <div class="in">
-    <p class="plain-lead">Siden spiller resten av sesongen 10&nbsp;000 ganger og teller hvor ofte hvert lag ender hvor.</p>
+    <p class="plain-lead">Siden spiller resten av sesongen 10&nbsp;000 ganger og teller hvor ofte hvert lag ender på hver plass.</p>
     <p>Hvert lag får en styrke fra målene sine og fra hva spillmarkedet har trodd om kampene deres, der nye kamper teller mest. Den er et mål på hele sesongen, ikke på de siste ukene. Står det 52 prosent for topp 6, endte laget blant de seks beste i omtrent 5200 av de 10&nbsp;000 sesongene.</p>
     <p>Fyller du inn et resultat selv, brukes det i alle 10&nbsp;000 simuleringene, så du ser hvordan det påvirker sjansene. Styrke er modellens vurdering av hvor sterkt laget er, over hele sesongen, på en skala fra 0 til 10, der 5 er et gjennomsnittslag. Form står på samme skala, men er regnet rett ut av de fem siste kampene: vanlige poeng, 3 for seier og 1 for uavgjort, delt på de 15 som var mulige og ganget med 10. Fem seirer gir 10,0, fem uavgjorte 3,3 og fem tap 0,0.</p>
 
@@ -1111,9 +1111,9 @@
       <h3>Slik regnes sannsynlighetene</h3>
       <p id="howP1"></p>
       <p id="howP2"></p>
-      <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Opprykk, Topp 6, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
-      <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner alt", "...taper alt", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
-      <p>Styrketallet flytter seg lite fra kamp til kamp. Hver kamp justerer det litt, ut fra hvor mange mål laget scoret og slapp inn mot det modellen ventet. Men justeringene trekkes samtidig tilbake mot utgangspunktet, og modellen tilpasses på nytt på alle kampene hver dag. Over en sesong står derfor styrketallet omtrent stille: sju kamper uten seier flyttet Sarpsborg 08 fra 4,80 til 4,65 i september 2026. Det er meningen — Styrke viser nivå. Vil du se de siste kampene, er det formtallet som sier det.</p>
+      <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Opprykk, Topp 6, nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
+      <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner resten", "...taper resten", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
+      <p>Styrketallet flytter seg lite fra kamp til kamp. Hver kamp justerer det litt, ut fra hvor mange mål laget scoret og slapp inn mot det modellen ventet. Men justeringene trekkes samtidig tilbake mot utgangspunktet, og modellen tilpasses på nytt på alle kampene hver dag. Over en sesong står derfor styrketallet omtrent stille: sju kamper uten seier flyttet Sarpsborg 08 fra 4,80 til 4,65 i september 2026. Det er meningen. Styrke viser nivå. Vil du se de siste kampene, er det formtallet som sier det.</p>
       <p>Tabellen, kamplisten, simuleringene og svarene bygger alle på nøyaktig den samme lagstyrken. Det finnes ikke lenger en egen variant for visning: ett tall, ett sted.</p>
       <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn, verken i tabellen eller i simuleringene. </p>
       <p class="note">Oddsen kommer fra Pinnacle (ellers bet365, ellers Unibet) via OddsPapi, med bookmakerens margin fjernet. Den brukes på to måter, som i Eliteserien: sluttoddsen for spilte kamper er med når lagstyrkene tilpasses, og oddsen for en kommende kamp blandes inn i H/U/B-tallene for den kampen. Ut av utvalg, på 136 kamper der modellen bare er tilpasset på kamper spilt før runden, hadde Pinnacles sluttodds log loss 0,980 mot 1,014 for modellen uten odds. Blandingsvekten er 70 prosent odds, som i Eliteserien; 100 prosent målte 0,980 mot 0,984 for 70, en forskjell på 0,6 standardfeil.</p>
@@ -2024,8 +2024,12 @@ function fillProb(){
       src.removeAttribute('role'); src.removeAttribute('tabindex');
       src.removeAttribute('aria-label'); delete src.dataset.mid;
     }
+    // Tidspunktet er da PRISEN ble satt (meta.priced_at), ikke da vi hentet
+    // filen (ODDS_FETCHED_AT). De to spriket med timer for samme kamp, og
+    // popoveren viste det ene mens dette tipset viste det andre.
+    const naar = oddsHentet(info.meta);
     const oddsTxt = info.odds
-      ? ` Blandet ${Math.round(ODDS_W*100)} % odds (${oddsKilde(info.meta)}, hentet ${ODDS_FETCHED_AT}: ${Math.round(info.mk[0]*100)}/${Math.round(info.mk[1]*100)}/${Math.round(info.mk[2]*100)}) og ${Math.round((1-ODDS_W)*100)} % modell (${Math.round(info.md.H*100)}/${Math.round(info.md.U*100)}/${Math.round(info.md.B*100)}).`
+      ? ` Blandet ${Math.round(ODDS_W*100)} % odds (${oddsKilde(info.meta)}, hentet ${naar}: ${Math.round(info.mk[0]*100)}/${Math.round(info.mk[1]*100)}/${Math.round(info.mk[2]*100)}) og ${Math.round((1-ODDS_W)*100)} % modell (${Math.round(info.md.H*100)}/${Math.round(info.md.U*100)}/${Math.round(info.md.B*100)}).`
       : '';
     el.title=`${m.home} seier ${Math.round(o.H*100)} %, uavgjort ${Math.round(o.U*100)} %, ${m.away} seier ${Math.round(o.B*100)} %. Forventede mål ${f1(lh)}-${f1(la)}.`+oddsTxt;
   });
@@ -2038,21 +2042,33 @@ function fillProb(){
 // kassa, som alltid er lavere. Det står i popoveren, med vilje: forvekslingen
 // er lett å gjøre, og et tall som ser ut som en pris blir lest som en pris.
 const desimalOdds = p => (p>0 ? (1/p) : 0).toFixed(2).replace('.',',');
+// Ett sted for "når er oddsen fra": prisens eget tidspunkt når vi har det,
+// ellers når filen ble hentet. Brukes av BÅDE tipset på kampen og popoveren.
+function oddsHentet(meta){
+  return (meta && meta.priced_at) ? formatOsloDT(new Date(meta.priced_at)) : ODDS_FETCHED_AT;
+}
 
 function oddsPopHtml(m, info){
   const mk = info.mk, meta = info.meta || {};
-  const naar = meta.priced_at ? formatOsloDT(new Date(meta.priced_at)) : ODDS_FETCHED_AT;
+  const naar = oddsHentet(meta);
   const forAvspark = (typeof meta.minutter_for === 'number' && meta.minutter_for > 0)
     ? `, ${Math.round(meta.minutter_for)} minutter før avspark` : '';
-  const kort = t => shortTeam ? shortTeam(t) : t;
+  // Den EKTE oddsen fra bookmakeren, med margin -- den leseren kjenner igjen
+  // fra kupongen. Sannsynlighetene siden regner med er fortsatt marginfrie;
+  // det er bare visningen her som er rå. Er råoddsen ikke lagret ennå (filer
+  // skrevet før dette ble innført), vises den marginfrie i stedet, og da SKAL
+  // det stå, så tallet ikke leses som en pris.
+  const raa = meta.odds && meta.odds.H && meta.odds.U && meta.odds.B ? meta.odds : null;
+  const vis = raa ? [raa.H, raa.U, raa.B] : mk.map(p => p > 0 ? 1 / p : 0);
+  const tall = v => v.toFixed(2).replace('.', ',');
   return `<div class="kilde">${oddsKilde(meta)}</div>
     <div class="rad">
-      <span><i>H</i><b>${desimalOdds(mk[0])}</b></span>
-      <span><i>U</i><b>${desimalOdds(mk[1])}</b></span>
-      <span><i>B</i><b>${desimalOdds(mk[2])}</b></span>
+      <span><i>H</i><b>${tall(vis[0])}</b></span>
+      <span><i>U</i><b>${tall(vis[1])}</b></span>
+      <span><i>B</i><b>${tall(vis[2])}</b></span>
     </div>
-    <div class="naar">Hentet ${naar}${forAvspark}.</div>
-    <p class="marg">Vist <b>uten bookmakerens margin</b>: de tre tallene er regnet om så sannsynlighetene summerer til 100 %. Dette er altså ikke prisen du får hos bookmakeren – den er alltid lavere.</p>`;
+    <div class="naar">Hentet ${naar}${forAvspark}.</div>`
+    + (raa ? '' : `<p class="marg">Råoddsen er ikke lagret for denne kampen ennå. Tallene over er regnet om uten bookmakerens margin, så de er ikke prisen du får.</p>`);
 }
 
 let oddsPopEl = null, oddsPopFestet = false, oddsPopFor = null;
@@ -2067,6 +2083,23 @@ function oddsPop(){
   }
   return oddsPopEl;
 }
+// Nettleserens eget tips ligger på .quick (sannsynlighetene). Peker man på
+// oddsmerket inni, kom BEGGE fram, oppå hverandre. Tittelen legges derfor til
+// side mens popoveren er oppe, og settes tilbake etterpå.
+let tittelParkert = null;
+function parkerTittel(merke){
+  hentTittelTilbake();
+  const eier = merke.closest('.quick');
+  if(eier && eier.title){ tittelParkert = {eier, tekst: eier.title}; eier.removeAttribute('title'); }
+}
+function hentTittelTilbake(){
+  // fillProb() setter tittelen på nytt ved hver render. Da skal den nye stå,
+  // ikke den vi parkerte -- derfor settes den bare tilbake hvis feltet er tomt.
+  if(tittelParkert){
+    if(!tittelParkert.eier.title) tittelParkert.eier.title = tittelParkert.tekst;
+    tittelParkert = null;
+  }
+}
 function visOddsPop(merke, festet){
   const id = merke.dataset.mid;
   const m = matches.find(x=>String(x.id)===String(id));
@@ -2074,6 +2107,7 @@ function visOddsPop(merke, festet){
   const info = RATES[m.home+"|"+m.away];
   if(!info || !info.odds) return;
   const el = oddsPop();
+  parkerTittel(merke);
   el.innerHTML = oddsPopHtml(m, info);
   el.hidden = false;
   oddsPopFestet = !!festet;
@@ -2096,6 +2130,7 @@ function skjulOddsPop(tvang){
   if(oddsPopFestet && !tvang) return;
   oddsPopEl.hidden = true;
   oddsPopFestet = false;
+  hentTittelTilbake();
   if(oddsPopFor){
     oddsPopFor.removeAttribute('aria-describedby');
     oddsPopFor.removeAttribute('aria-expanded');
@@ -3245,7 +3280,7 @@ function renderNextMatch(){
   // Resultatet står i kortet når kampen er fylt ut, med lenke til runden.
   const res = document.getElementById('nmRes'), rl = document.getElementById('nmRound');
   res.hidden = !set;
-  if(set) res.innerHTML = `${m.home} <b>${m.hg}</b> – <b>${m.ag}</b> ${m.away}`;
+  if(set) res.innerHTML = `${m.home} <b>${m.hg}</b>-<b>${m.ag}</b> ${m.away}`;
   rl.hidden = !set;
   if(set){ rl.textContent = `Se hele runde ${m.round} →`; rl.dataset.round = m.round; }
 }
@@ -3807,7 +3842,7 @@ function qaToughestRunIn(){
   const rows = TEAMS.filter(t=>oppWin[t].length).map(t=>({
     team:t, avg: oppWin[t].reduce((a,b)=>a+b,0)/oppWin[t].length, n: oppWin[t].length
   }));
-  if(!rows.length) return 'Ingen kamper igjen, så det er ingen avslutning å sammenligne.';
+  if(!rows.length) return 'Det er ingen kamper igjen å sammenligne.';
   rows.sort((a,b)=>b.avg-a.avg);
   // Få lag igjen: del listen i to, så samme lag ikke står både tyngst og lettest.
   const k = Math.min(3, Math.floor(rows.length/2)) || 1;
@@ -3817,7 +3852,7 @@ function qaToughestRunIn(){
   const [t0, ...tRest] = toughest;
   const neste = tRest.length ? ` Deretter følger ${joinNames(tRest.map(fmt))}.` : '';
   return `${t0.team} har det tøffeste restprogrammet: motstanderne har i snitt ${pctTxt(t0.avg)} vinnersjanse i kampene som gjenstår.`+
-    `${neste} Lettest har ${joinNames(easiest.map(fmt))}. Vinnersjansene bygger på dagens lagstyrker.`;
+    `${neste} Det letteste restprogrammet har ${joinNames(easiest.map(fmt))}. Vinnersjansene bygger på dagens lagstyrker.`;
 }
 
 // ---- Spørsmål 5: IKKE kampens egen H/U/B (den står allerede i kamplisten,
@@ -3853,17 +3888,20 @@ async function qaNextMatch(team){
   // "Med seier øker topp 4-sjansen til 63 % (+9 prosentpoeng). Uavgjort gir
   // 54 %, mens tap senker den til 41 %."
   const navn = qaSjanse(zone);
-  const kamp = `mot ${opp} ${isHome?'hjemme':'borte'} ${formatDateNo(next.date)}`;
+  const kamp = `mot ${opp}`;
+  // Hvor og når kampen spilles hører hjemme i en egen setning til slutt:
+  // konklusjonen skal komme først, og én ting per setning.
+  const naar = `Kampen spilles ${isHome?'hjemme':'borte'} ${formatDateNo(next.date)}.`;
   const p = d => pctTxt(Math.min(1,Math.max(0,tableP+d)));
   if(Math.abs(dWin)<0.02 && Math.abs(dDraw)<0.02 && Math.abs(dLose)<0.02){
-    return `Kampen ${kamp} betyr lite: ${navn} holder seg ${/^[<>]/.test(pctTxt(tableP)) ? '' : 'rundt '}${pctTxt(tableP)} uansett utfall.`;
+    return `Kampen ${kamp} betyr lite: ${navn} holder seg ${/^[<>]/.test(pctTxt(tableP)) ? '' : 'rundt '}${pctTxt(tableP)} uansett utfall. ${naar}`;
   }
   const seier = Math.abs(dWin)<0.02
-    ? `Med seier ${kamp} endrer ${navn} seg lite (${p(dWin)}).`
-    : `Med seier ${kamp} ${dWin>0?'øker':'synker'} ${navn} til ${p(dWin)} (${ppTxt(dWin)} prosentpoeng).`;
+    ? `Seier ${kamp} endrer ${navn} lite (${p(dWin)}).`
+    : `Seier ${kamp} ${dWin>0?'øker':'senker'} ${navn} til ${p(dWin)} (${ppTxt(dWin)} prosentpoeng).`;
   const tap = Math.abs(dLose)<0.02 ? 'mens tap endrer den lite'
     : `mens tap ${dLose<0?'senker':'øker'} den til ${p(dLose)}`;
-  return `${seier} Uavgjort gir ${p(dDraw)}, ${tap}. ${qaStor(navn)} er ${pctTxt(tableP)} nå.`;
+  return `${seier} Uavgjort gir ${p(dDraw)}, ${tap}. ${qaStor(navn)} er ${pctTxt(tableP)} nå. ${naar}`;
 }
 
 // ---- Hvem bør laget heie på denne runden? Neste runde = runden med flest
@@ -3998,7 +4036,7 @@ async function qaCheerFor(team, onPartial){
   });
   const rows = rowsFrom(results);
   if(!rows.length){
-    return `Ingen av de andre kampene i runde ${nr.round} flytter ${navn} med minst to prosentpoeng, uansett hvordan de ender. Den er ${pctTxt(tableP)} nå.`;
+    return `Ingen av de andre kampene i runde ${nr.round} endrer ${navn} med minst to prosentpoeng, uansett hvordan de ender. Den er ${pctTxt(tableP)} nå.`;
   }
   return textFor(rows);
 }
@@ -4100,7 +4138,7 @@ async function qaLastMatchData(team){
 async function qaLastMatch(team){
   const data = await qaLastMatchData(team);
   if(!data) return 'Ingen data å regne på ennå.';
-  if(data.noMatch) return `${team} har ingen spilte kamper ennå i kampdataene.`;
+  if(data.noMatch) return `${team} har ingen spilte kamper ennå.`;
   const {m, opp, actual, zone, tableP, shown, pp} = data;
   // "topp 6-sjansen", men "nedrykksfaren": ingen ønsker seg nedrykk.
   const navn = qaSjanse(zone);
@@ -4197,7 +4235,7 @@ function qaSurpriseTxt(e){
     : (e.gf>e.ga ? 'seier' : (e.gf===e.ga ? 'uavgjort' : 'tap'));
   return v < 0.25
     ? `${ord} med ${pct} % sjanse`
-    : `${ord} som var ventet i ${pct} % av tilfellene`;
+    : `${ord} var ventet i ${pct} % av tilfellene`;
 }
 function qaLastMatchLine(e){
   if(!e) return null;
@@ -4212,8 +4250,14 @@ function qaLastMatchLine(e){
   // workflow, der pp ble målt mot det beste alternative utfallet. Den skal
   // ikke vises som om den var målt mot forventningen.
   if(e.pp==null || e.pp===0 || e.basis!=='forventning') return {html:`Forrige kamp: ${res}${hale}`};
-  const sign = (e.pp>0?'+':'−')+Math.abs(e.pp);
-  return {html:`Forrige kamp: ${QA_OUT_LABEL[e.actual]} ${res}, ${e.chance} <b class="${e.good?'good':'bad'}">${sign}</b> mot ventet${hale}`};
+  // "ble 4 prosentpoeng høyere enn forventet", ikke "økte med 4": tallet er
+  // forskjellen mellom sjansen nå og den FORVENTEDE sjansen etter kampen.
+  // Sjansen kan godt ha steget selv om den ble lavere enn forventet, så
+  // "økte"/"falt" ville sagt noe annet. Ordet bærer retningen, derfor står
+  // tallet uten fortegn -- fargen sier fortsatt om det var bra for laget.
+  const retning = e.pp>0 ? 'høyere' : 'lavere';
+  return {html:`Forrige kamp: ${QA_OUT_LABEL[e.actual]} ${res}, ${e.chance} ble `+
+    `<b class="${e.good?'good':'bad'}">${Math.abs(e.pp)}</b> prosentpoeng ${retning} enn forventet${hale}`};
 }
 // Lagets forrige kamp til linja: bruker det workflowen har regnet ut for den
 // VIRKELIGE situasjonen. Er den lagret kampen ikke lagets siste faktisk spilte
@@ -4403,11 +4447,11 @@ function qaKeyBanner(data){
 async function qaKeyRound(){
   const data = await qaKeyRoundData();
   if(!data) return 'Ingen data å regne på ennå.';
-  if(!data.list.length) return 'Alle kampene har resultat i dette scenariet, så det er ingen runde igjen å regne på.';
+  if(!data.list.length) return 'Alle kampene i scenariet har resultat.';
   const b = data.best;
   const roundTxt = `runde ${data.round}`;
   if(!b.teams.length){
-    return `Ingen kamp i ${roundTxt} betyr mye: ingen utfall flytter noe lag mer enn to prosentpoeng for ${QA_KEY_ZONES.map(z=>z.key==='gull'?LEAGUE.zones.gull.label:LEAGUE.zones[z.key].label).join(', ')}.`;
+    return `Ingen kamp i ${roundTxt} betyr mye: ingen utfall endrer noe lag mer enn to prosentpoeng for ${QA_KEY_ZONES.map(z=>z.key==='gull'?LEAGUE.zones.gull.label:LEAGUE.zones[z.key].label).join(', ')}.`;
   }
   const m = b.m;
   const navn = x => `${x.m.home} mot ${x.m.away}`;
@@ -4462,7 +4506,7 @@ async function qaKeyRound(){
     : k===1 ? `\nÉn annen kamp er omtrent like viktig: ${liste[0]}.`
     : `\n${qaStor(QA_NUM[k] || String(k))} andre kamper er omtrent like viktige: ${joinNames(liste)}.`;
   return `Rundens viktigste kamp er ${navn(b)} ${formatDateNo(m.date)}. Den påvirker ${b.topZone.strid} mest.\n`+
-    `Mest står på spill for ${hoved.team}${spiller?'':', som ikke spiller selv'}:\n`+
+    `Kampen betyr mest for ${hoved.team}${spiller?'':', som ikke spiller selv'}:\n`+
     `${rader}\n`+
     `${qaStor(hz.chance)} er ${pctTxt(hoved.now)} før kampen.`+andreTxt+tett;
 }
@@ -4507,7 +4551,7 @@ function qaRange(team){
   const naa = (pos===lo || pos===hi) ? '' : `ligger på ${pos}. plass nå og `;
   if(lo===hi){
     return `${team} ender nesten sikkert på ${lo}. plass (${qaPctCap(d[lo-1])} av simuleringene).`
-      + (best<lo || worst>hi ? ` Matematisk kan det ende så høyt som ${best}. plass og så lavt som ${worst}. plass.` : '');
+      + (best<lo || worst>hi ? ` Matematisk kan ${team} ende så høyt som ${best}. plass og så lavt som ${worst}. plass.` : '');
   }
   const N = lastMCN;
   const bestSim = d.findIndex(v=>Math.round(v*N)>0)+1;
@@ -4535,7 +4579,7 @@ function qaRange(team){
     ? ` Beste plassering i ${N.toLocaleString('nb-NO')} simuleringer var ${bestSim}. plass, og det skjedde ${antall(Math.round(d[bestSim-1]*N))}.`
     : '';
   const ext = worst>hi
-    ? ` Matematisk kan det ende så høyt som ${best}. plass og så lavt som ${worst}. plass.`
+    ? ` Matematisk kan ${team} ende så høyt som ${best}. plass og så lavt som ${worst}. plass.`
     : (best<lo ? ` Matematisk er ${best}. plass fortsatt mulig.` : '');
   return `${team} ${naa}ender som regel mellom ${lo}. og ${hi}. plass.${oftest?' '+oftest:''}${bestTxt}${ext}`;
 }
@@ -4563,8 +4607,11 @@ function qaLuck(){
   rows.sort((a,b)=>b.diff-a.diff);
   const lucky=rows.slice(0,3), unlucky=rows.slice(-3).reverse();
   const fmt = r => `${r.team} ${fmtSigned(r.diff)}`;
-  return `Flest poeng over det ventede: ${joinNames(lucky.map(fmt))}. Flest under: ${joinNames(unlucky.map(fmt))}. `+
-    `Tallet er poengene hvert lag faktisk har tatt, minus poengene modellen ventet i de samme kampene. Modellen er tilpasset på de kampene, så avvikene er trolig litt for små.`;
+  const over = lucky[0], under = unlucky[0];
+  return `${over.team} har tatt ${fmtSigned(over.diff).replace('+','')} poeng mer enn modellen forventet, mest i ligaen. `+
+    `${under.team} ligger ${fmtSigned(-under.diff).replace('+','')} poeng under forventning. `+
+    `Tallet er faktiske poeng minus modellens forventede poeng i de samme kampene. `+
+    `Modellen er tilpasset på de samme kampene, så avvikene er trolig litt for små.`;
 }
 
 // ---- Spørsmål 1, 2, 3, 6, 7: krever simulering, kjøres i Workeren (se
@@ -4902,7 +4949,7 @@ async function qaWhy(team){
       : diff<=-1.0 ? `klart svakere enn et gjennomsnittslag`
       : diff<=-0.3 ? `under snittet`
       : `om lag som et gjennomsnittslag`;
-    part2 = `Styrken er ${fmtForm(form)} av 10 – ${strengthTxt}.`;
+    part2 = `Styrken er ${fmtForm(form)} av 10, ${strengthTxt}.`;
   }
 
   // "I simuleringene ender Bryne i snitt på 46 poeng mot 42 for Hødd, og
@@ -5020,13 +5067,15 @@ async function qaHowTo(team){
   if(threshold!=null && myPts<threshold){
     first = `${team} trenger trolig rundt ${poengTxt(threshold)} for å ${reach}, altså ${poengTxt(threshold-myPts)} til.`;
   } else if(threshold!=null){
-    first = `${team} har alt ${poengTxt(myPts)}, og med det klarer laget å ${reach} i mer enn halvparten av simuleringene.`;
+    first = `${team} har allerede ${poengTxt(myPts)}, og med det klarer laget å ${reach} i mer enn halvparten av simuleringene.`;
   } else {
     first = `I simuleringene der ${team} klarer å ${reach}, tar laget i snitt ${avgPts} av ${maxPts} mulige poeng.`;
   }
   // Lang sjanse: si det først, så ingen leser terskelen som noe laget ofte når.
   if(successShare<0.25){
-    return `Det skal mye til: ${team} klarer å ${reach} i bare ${pctTxt(successShare)} av simuleringene. `+
+    // QA_VERB er presens ("ender i topp 4", "vinner serien"); reach er
+    // infinitiv ("nå topp 4") og ville gitt "Brann nå topp 4".
+    return `Det skal mye til: ${team} ${QA_VERB[zone.key]} i ${pctTxt(successShare)} av simuleringene. `+
       `I dem tar laget i snitt ${avgPts} av ${maxPts} mulige poeng.${curveTxt}${rivalTail}`;
   }
   return `${first}${curveTxt}${rivalTail}`;
@@ -5060,7 +5109,7 @@ async function qaKeyMatches(team){
     return {m, outs, impact:Math.max(Math.abs(outs[0].d), Math.abs(outs[1].d))};
   }).sort((a,b)=>b.impact-a.impact).filter(x=>x.impact>=0.02);
   if(!shown.length){
-    return `Ingen enkeltkamp betyr mye for ${team}: ingen utfall flytter ${qaSjanse(zone)} mer enn to prosentpoeng fra dagens ${pctTxt(tableP)}.`;
+    return `Ingen enkeltkamp betyr mye for ${team}: ingen utfall endrer ${qaSjanse(zone)} mer enn to prosentpoeng fra dagens ${pctTxt(tableP)}.`;
   }
   // Konklusjon først, én linje per kamp: "Lillestrøm mot Brann: Brann-seier
   // 18 % (+7), Lillestrøm-seier 4 % (−7)." Utfallet navngis med vinneren.
@@ -5097,16 +5146,15 @@ async function qaWhenDecided(team){
     // Avgjort først i forrige runde: "senest runde N, i 100 %" ville vært en tautologi.
     return `For ${team} blir det som regel ikke avgjort før siste runde (runde ${lastRound}).`;
   }
-  // Konklusjon først: "For Odd er topp 6 som regel avgjort innen runde 28."
+  // Konklusjon først: "I 72 % av simuleringene er det avgjort innen runde 28
+  // om Odd ender i topp 6." Samme konstruksjon i begge grenene.
   // I bakre soner sies grensen (13. plass eller bedre), så det ikke ser ut til
   // å motsi nedrykksprosenten, som gjelder 15. og 16. plass.
+  // Én form for alle sonene: QA_VERB sier utfallet som verb ("ender i topp 4",
+  // "vinner serien", "unngår både nedrykk og kvalik"), så fremre og bakre
+  // soner leses likt. Grenene var ulike før, og skilte seg bare i ordlyden.
   const pct = pctTxt(cum/data.N);
-  if(zone.dir==='front'){
-    const z = LEAGUE.zones[zone.key];
-    const hva = z.decided || z.label;   // "direkte opprykk" i OBOS, "gullet" i Eliteserien
-    return `For ${team} er ${hva} som regel avgjort innen runde ${answerRound}. Det skjer i ${pct} av simuleringene.`;
-  }
-  return `For ${team} er det som regel avgjort innen runde ${answerRound} om laget ${QA_VERB[zone.key]}. Det skjer i ${pct} av simuleringene.`;
+  return `I ${pct} av simuleringene er det avgjort innen runde ${answerRound} om ${team} ${QA_VERB[zone.key]}.`;
 }
 
 // ---- Spørsmål 7: hvem kjemper laget mot? aheadOfT/behindT talt fra den
@@ -5405,8 +5453,8 @@ function renderAccuracy(data){
     `<tr><td>${Math.round(b.lo*100)}–${Math.round(b.hi*100)} %</td><td>${b.n}</td>`
     + `<td>${pct(b.ventet)}</td><td>${pct(b.faktisk)}</td></tr>`).join('');
   const usikker = n < 50
-    ? `<strong>${n} kamper er få.</strong> Tallene svinger mye av seg selv så lenge de bygger på så lite, `
-      + `og en forskjell mellom kildene her betyr lite. De blir sikrere for hver runde.`
+    ? `<strong>${n} kamper er et lite grunnlag.</strong> Tallene vil derfor variere en del, `
+      + `og små forskjeller mellom kildene betyr foreløpig lite. Grunnlaget blir bedre for hver runde.`
     : `Tallene bygger på ${n} kamper.`;
   box.innerHTML =
     `<div class="tblscroll"><table class="mt">`
@@ -5470,8 +5518,8 @@ function updateToolButtons(){
   const winBtn=document.getElementById('followWin'), loseBtn=document.getElementById('followLose');
   winBtn.hidden = loseBtn.hidden = !hasTeam;
   if(hasTeam){
-    winBtn.textContent = `${SELECTED_TEAM} vinner alt`;
-    loseBtn.textContent = `${SELECTED_TEAM} taper alt`;
+    winBtn.textContent = `${SELECTED_TEAM} vinner resten`;
+    loseBtn.textContent = `${SELECTED_TEAM} taper resten`;
     winBtn.title = `Fyller ${SELECTED_TEAM}-kampene med seier til ${SELECTED_TEAM} og resten med et plausibelt scenario`;
     loseBtn.title = `Fyller ${SELECTED_TEAM}-kampene med tap for ${SELECTED_TEAM} og resten med et plausibelt scenario`;
   }
@@ -5480,9 +5528,9 @@ function updateToolButtons(){
   mark('simRest', other==='typical', 'on-other');
 
   const parts=[];
-  if(followed==='win') parts.push(`Scenario: ${SELECTED_TEAM} vinner alt.`);
-  else if(followed==='lose') parts.push(`Scenario: ${SELECTED_TEAM} taper alt.`);
-  if(other==='typical') parts.push('Andre kamper: plausibelt scenario.');
+  if(followed==='win') parts.push(`Scenario: ${SELECTED_TEAM} vinner resten.`);
+  else if(followed==='lose') parts.push(`Scenario: ${SELECTED_TEAM} taper resten.`);
+  if(other==='typical') parts.push('Andre kamper er simulert.');
   const line=document.getElementById('scenarioLine');
   if(parts.length){ line.textContent=parts.join(' '); line.hidden=false; }
   else line.hidden=true;
@@ -5642,7 +5690,7 @@ function render(){
       line2Title = [verdictTxt, sub, `Sjekken regner tomme kamper som tap for ${SELECTED_TEAM} og seier for alle andre. Sier den «sikret», er det sikkert.`].filter(Boolean).join(' ');
     }
     // Lagnavn øverst på egen linje (item 2b), så plass og poeng/kamper igjen (eller sluttresultatet).
-    const posLine = seasonDone ? `<b>${pos}.</b> plass — ${line2}` : `<b>${pos}.</b> plass, ${line2}`;
+    const posLine = seasonDone ? `<b>${pos}.</b> plass, ${line2}` : `<b>${pos}.</b> plass, ${line2}`;
     verdictEl.innerHTML=
       `<span class="teamname-lg">${SELECTED_TEAM}</span>
        <div class="posline"${line2Title?` title="${line2Title}"`:''}>${posLine}</div>

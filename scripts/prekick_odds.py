@@ -182,6 +182,8 @@ def main():
         pH, pU, pB = oddslib.devig(*vals)
         fra_f = f"{m.get('H')}/{m.get('D')}/{m.get('A')}"
         m.update({"H": round(pH, 4), "D": round(pU, 4), "A": round(pB, 4),
+                  # Desimaloddsen med margin, til visning i kamplisten.
+                  "odds": {"H": vals[0], "U": vals[1], "B": vals[2]},
                   "n_bookmakers": 1, "bookmaker": bm, "priced_at": stamp,
                   "prekick": True,
                   "minutter_for": round(oddswindow.minutter_for(ko, stamp) or 0, 1)})

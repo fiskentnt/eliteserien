@@ -83,7 +83,9 @@ const QA_EXPECT = {
   range:      {what: 'plasseringsspenn', pat: /mellom \d+\. og \d+\. plass|Nesten sikkert \d+\. plass|ender på \d+\. plass uansett/},
   decided:    {what: 'runde',         pat: /runde \d+/},
   rivals:     {what: 'prosent',       pat: new RegExp(PCT)},
-  luck:       {what: 'poengavvik',    pat: /[+−]\d+,\d/},
+  // Fortegnet er ute av ordlyden: tallet står nå som "9,3 poeng mer enn
+  // modellen forventet" / "5,6 poeng under forventning".
+  luck:       {what: 'poengavvik',    pat: /\d+,\d poeng (mer enn modellen forventet|under forventning)/},
 };
 
 async function main() {
@@ -1120,8 +1122,8 @@ async function main() {
       const l = svar.split('\n');
       check(`${liga}: første linje sier kamp og strid`,
         /^Rundens viktigste kamp er .+ mot .+ \S+ \d+\. \w+\. Den påvirker .+ mest\.$/.test(l[0]), l[0]);
-      check(`${liga}: andre linje sier hvem det står mest på spill for`,
-        /^Mest står på spill for .+:$/.test(l[1]), l[1]);
+      check(`${liga}: andre linje sier hvem kampen betyr mest for`,
+        /^Kampen betyr mest for .+:$/.test(l[1]), l[1]);
       // Nøyaktig tre utfallslinjer, og bare ett lag får tall.
 const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
       const utfall = l.slice(2, 5);

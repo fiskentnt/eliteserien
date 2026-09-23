@@ -190,7 +190,7 @@ def root_card():
     big = icon(300)
     im.paste(big, (90, 165), big)
     d.text((470, 200), "Tabellkalkulator", font=font("BarlowCondensed-ExtraBold", 100), fill=INK)
-    d.text((474, 322), "Sannsynligheter for fotballigaer", font=font("Barlow-Medium", 42), fill=MUTED)
+    d.text((474, 322), "Simuler sesongen. Se hva som kan skje.", font=font("Barlow-Medium", 42), fill=MUTED)
     d.text((474, 392), "Eliteserien og OBOS-ligaen", font=font("Barlow-Medium", 34), fill=GREEN)
     d.text((W - 56, H - 44), "tabellkalkulator.no", font=font("Barlow-SemiBold", 28), fill=MUTED, anchor="rs")
     out = ROOT / "og.png"

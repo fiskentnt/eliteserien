@@ -164,6 +164,9 @@ def main():
             "home": r["home"], "away": r["away"],
             "commence_time": (f.get("startTime") or "")[:19] + "Z",
             "H": round(H, 4), "D": round(D, 4), "A": round(A, 4),
+            # Desimaloddsen slik bookmakeren satte den, med margin. Bare til
+            # visning: sannsynlighetene over er marginfrie, som før.
+            "odds": {"H": odds["H"], "U": odds["U"], "B": odds["B"]},
             # Én kilde per kamp, aldri et snitt. n_bookmakers=1 er det siden viser.
             "n_bookmakers": 1, "bookmaker": bm, "priced_at": stamp,
         })
