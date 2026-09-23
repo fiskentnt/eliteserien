@@ -558,13 +558,14 @@
   th.sortable{cursor:pointer;user-select:none}
   th.sortable:hover,th.sortable.active{color:var(--ink)}
   td.formcol{padding-right:10px}
-  /* Poeng per kamp siste fem: tallet står foran rutene, i samme celle. */
-  .form5{display:inline-block;min-width:20px;margin-right:6px;font:700 12.5px/1 var(--cond);color:var(--ink)}
+  /* Formtallet står til HØYRE for resultatrutene, i samme celle: rutene
+     leses eldst til venstre, og tallet oppsummerer dem til slutt. */
+  .form5{display:inline-block;min-width:20px;margin-left:7px;font:700 12.5px/1 var(--cond);color:var(--ink)}
   /* Smalt tokolonnesoppsett (1100 til 1219 px): tallet blir stående, rutene
      vikes. De sier det samme, og uten dette ble tabellen for bred. */
   @media (min-width:1100px) and (max-width:1219px){
     #tbl td .form{display:none}
-    .form5{margin-right:0}
+    .form5{margin-left:0}
   }
   .formbox{display:inline-block;min-width:30px;padding:2px 7px;border-radius:5px;font:700 13px/1.3 var(--cond);text-align:center;color:#fff}
   /* Form-tallet er en knapp som åpner formgrafen, som tallene i lagboksen
@@ -849,7 +850,25 @@
   .quick .pct.best{color:var(--ink);font-weight:700}
   /* "odds" er en opplysning om hvor tallene kommer fra, ikke en advarsel:
      samme dempede farge som klokkeslettet, ikke aksentfargen (rød). */
-  .quick .pct.odds{color:var(--muted);font-weight:600;font-size:10px;letter-spacing:.02em}
+  .quick .pct.odds{color:var(--muted);font-weight:600;font-size:10px;letter-spacing:.02em;
+    cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
+  .quick .pct.odds:hover{color:var(--ink)}
+  .quick .pct.odds:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+  /* Selve oddsen vises her, ikke i listen: listen skal fortsatt vise
+     sannsynligheter. Popover og ikke title, fordi et title-tips ikke finnes
+     på berøringsskjerm -- og merket skal kunne trykkes på. */
+  .oddspop{position:absolute;z-index:60;width:max-content;max-width:min(280px,calc(100vw - 20px));
+    padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink);box-shadow:0 6px 24px rgba(0,0,0,.18);font:400 12.5px/1.45 var(--body)}
+  .oddspop[hidden]{display:none}
+  .oddspop .kilde{font-weight:700}
+  .oddspop .rad{display:flex;gap:14px;margin:7px 0 6px}
+  .oddspop .rad span{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .oddspop .rad b{font:700 16px/1 var(--cond)}
+  .oddspop .rad i{font:600 10.5px/1 var(--body);font-style:normal;color:var(--muted);letter-spacing:.04em}
+  .oddspop .naar{color:var(--muted)}
+  .oddspop .marg{margin:7px 0 0;padding-top:7px;border-top:1px solid var(--line);
+    color:var(--muted);font-size:11.5px;line-height:1.4}
   .match.locked .quick .pct{visibility:hidden}
   .quick button{padding:4px 0;font-size:12.5px;width:28px;border:1px solid var(--line);background:var(--panel);border-radius:5px;font-weight:600;color:var(--ink)}
   .quick button:hover{border-color:var(--ink)}
@@ -2059,12 +2078,133 @@ function fillProb(){
     const best=o.H>=o.U&&o.H>=o.B?'H':o.B>=o.U?'B':'U';
     el.querySelectorAll('.pct[data-o]').forEach(p=>{ const k=p.dataset.o; p.textContent=Math.round(o[k]*100)+' %'; p.classList.toggle('best',k===best); });
     const src=el.querySelector('.pct.src'); src.textContent=info.odds?'odds':''; src.classList.toggle('odds',info.odds);
+    // Merket viser oddsen ved hover eller trykk. Selve listen viser fortsatt
+    // sannsynligheter -- oddsen er en opplysning om hvor de kommer fra.
+    if(info.odds){
+      src.setAttribute('role','button');
+      src.setAttribute('tabindex','0');
+      src.setAttribute('aria-label',`Vis oddsen for ${m.home} mot ${m.away}`);
+      src.dataset.mid=m.id;
+    } else {
+      src.removeAttribute('role'); src.removeAttribute('tabindex');
+      src.removeAttribute('aria-label'); delete src.dataset.mid;
+    }
     const oddsTxt = info.odds
       ? ` Blandet ${Math.round(ODDS_W*100)} % odds (${oddsKilde(info.meta)}, hentet ${ODDS_FETCHED_AT}: ${Math.round(info.mk[0]*100)}/${Math.round(info.mk[1]*100)}/${Math.round(info.mk[2]*100)}) og ${Math.round((1-ODDS_W)*100)} % modell (${Math.round(info.md.H*100)}/${Math.round(info.md.U*100)}/${Math.round(info.md.B*100)}).`
       : '';
     el.title=`${m.home} seier ${Math.round(o.H*100)} %, uavgjort ${Math.round(o.U*100)} %, ${m.away} seier ${Math.round(o.B*100)} %. Forventede mål ${f1(lh)}-${f1(la)}.`+oddsTxt;
   });
 }
+
+// ---- Oddsen bak "odds"-merket i kamplisten ----
+// Tallene som vises er DE-VIGGEDE: bookmakerens margin er fjernet, så de tre
+// sannsynlighetene summerer til 100 %. Desimaloddsen under er 1 delt på den
+// sannsynligheten, altså den "rettferdige" oddsen -- ikke prisen man får i
+// kassa, som alltid er lavere. Det står i popoveren, med vilje: forvekslingen
+// er lett å gjøre, og et tall som ser ut som en pris blir lest som en pris.
+const desimalOdds = p => (p>0 ? (1/p) : 0).toFixed(2).replace('.',',');
+
+function oddsPopHtml(m, info){
+  const mk = info.mk, meta = info.meta || {};
+  const naar = meta.priced_at ? formatOsloDT(new Date(meta.priced_at)) : ODDS_FETCHED_AT;
+  const forAvspark = (typeof meta.minutter_for === 'number' && meta.minutter_for > 0)
+    ? `, ${Math.round(meta.minutter_for)} minutter før avspark` : '';
+  const kort = t => shortTeam ? shortTeam(t) : t;
+  return `<div class="kilde">${oddsKilde(meta)}</div>
+    <div class="rad">
+      <span><i>H</i><b>${desimalOdds(mk[0])}</b></span>
+      <span><i>U</i><b>${desimalOdds(mk[1])}</b></span>
+      <span><i>B</i><b>${desimalOdds(mk[2])}</b></span>
+    </div>
+    <div class="naar">Hentet ${naar}${forAvspark}.</div>
+    <p class="marg">Vist <b>uten bookmakerens margin</b>: de tre tallene er regnet om så sannsynlighetene summerer til 100 %. Dette er altså ikke prisen du får hos bookmakeren – den er alltid lavere.</p>`;
+}
+
+let oddsPopEl = null, oddsPopFestet = false, oddsPopFor = null;
+function oddsPop(){
+  if(!oddsPopEl){
+    oddsPopEl = document.createElement('div');
+    oddsPopEl.className = 'oddspop';
+    oddsPopEl.hidden = true;
+    oddsPopEl.setAttribute('role','tooltip');
+    oddsPopEl.id = 'oddsPop';
+    document.body.appendChild(oddsPopEl);
+  }
+  return oddsPopEl;
+}
+function visOddsPop(merke, festet){
+  const id = merke.dataset.mid;
+  const m = matches.find(x=>String(x.id)===String(id));
+  if(!m) return;
+  const info = RATES[m.home+"|"+m.away];
+  if(!info || !info.odds) return;
+  const el = oddsPop();
+  el.innerHTML = oddsPopHtml(m, info);
+  el.hidden = false;
+  oddsPopFestet = !!festet;
+  oddsPopFor = merke;
+  merke.setAttribute('aria-describedby','oddsPop');
+  if(festet) merke.setAttribute('aria-expanded','true');
+  // Plasser under merket, men hold den innenfor vinduet i begge retninger.
+  const r = merke.getBoundingClientRect();
+  const b = el.getBoundingClientRect();
+  let left = window.scrollX + r.left + r.width/2 - b.width/2;
+  left = Math.max(window.scrollX + 8, Math.min(left, window.scrollX + document.documentElement.clientWidth - b.width - 8));
+  let top = window.scrollY + r.bottom + 8;
+  if(r.bottom + 8 + b.height > window.innerHeight && r.top - 8 - b.height > 0)
+    top = window.scrollY + r.top - 8 - b.height;
+  el.style.left = left+'px';
+  el.style.top = top+'px';
+}
+function skjulOddsPop(tvang){
+  if(!oddsPopEl || oddsPopEl.hidden) return;
+  if(oddsPopFestet && !tvang) return;
+  oddsPopEl.hidden = true;
+  oddsPopFestet = false;
+  if(oddsPopFor){
+    oddsPopFor.removeAttribute('aria-describedby');
+    oddsPopFor.removeAttribute('aria-expanded');
+    oddsPopFor = null;
+  }
+}
+// Hendelsene ligger på dokumentet, ikke på hvert merke: radene tegnes på nytt
+// ved hver render(), og da ville lyttere på merkene forsvunnet med dem.
+document.addEventListener('pointerover', e=>{
+  const merke = e.target.closest && e.target.closest('.pct.odds[data-mid]');
+  if(merke && !oddsPopFestet) visOddsPop(merke, false);
+});
+document.addEventListener('pointerout', e=>{
+  const merke = e.target.closest && e.target.closest('.pct.odds[data-mid]');
+  if(merke && !oddsPopFestet) skjulOddsPop();
+});
+document.addEventListener('click', e=>{
+  const merke = e.target.closest && e.target.closest('.pct.odds[data-mid]');
+  if(merke){
+    e.preventDefault(); e.stopPropagation();
+    if(oddsPopFestet && oddsPopFor===merke) skjulOddsPop(true);
+    else visOddsPop(merke, true);
+    return;
+  }
+  if(!(e.target.closest && e.target.closest('.oddspop'))) skjulOddsPop(true);
+});
+document.addEventListener('keydown', e=>{
+  if(e.key==='Escape'){ skjulOddsPop(true); return; }
+  if(e.key!=='Enter' && e.key!==' ') return;
+  const merke = e.target.closest && e.target.closest('.pct.odds[data-mid]');
+  if(merke){ e.preventDefault(); visOddsPop(merke, true); }
+});
+// Ved scrolling: en popover man har TRYKKET på skal ikke forsvinne -- et
+// trykk på mobil gir ofte en liten scroll av seg selv, og da ville den lukket
+// seg i samme bevegelse. Den flyttes med merket i stedet. En som bare ble
+// vist ved hover lukkes, som et vanlig tips.
+window.addEventListener('scroll', ()=>{
+  if(!oddsPopEl || oddsPopEl.hidden) return;
+  if(oddsPopFestet && oddsPopFor) visOddsPop(oddsPopFor, true);
+  else skjulOddsPop(true);
+}, {passive:true});
+window.addEventListener('resize', ()=>{
+  if(oddsPopFestet && oddsPopFor) visOddsPop(oddsPopFor, true); else skjulOddsPop(true);
+});
 
 // ---- Europa/Ned/lagboksen: 10 000 simulerte sesonger, "hot" (lagstyrkene
 // oppdateres etter hver simulerte kamp i hver sesong, se FORM_K). Kjøres i en
@@ -5438,7 +5578,7 @@ function render(){
       tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="hide-s">${r.p}</td>
         <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
         <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts">${r.pts}</td>
-        <td class="formcol hh"></td><td class="hide-s">${form5Html(form5From(r.results), r.results)}${formHtmlFrom(r.results)}</td><td class="odds gull hide-m hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
+        <td class="formcol hh"></td><td class="hide-s">${formHtmlFrom(r.results)}${form5Html(form5From(r.results), r.results)}</td><td class="odds gull hide-m hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
       tb.appendChild(tr);
       return;
     }
@@ -5455,7 +5595,7 @@ function render(){
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
       <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.pts} poeng nå. Maks mulig sluttsum: ${r.max}.">${r.pts}</td>
       <td class="formcol"><button type="button" class="formbox ${formCls}" data-team="${r.name}" title="${f1(r.form)} av 10. ${changeTxt} Trykk for styrkegrafen." aria-label="Styrke ${f1(r.form)} av 10 for ${r.name}. Vis styrkegrafen.">${f1(r.form)}</button></td>
-      <td class="hide-s">${form5Html(r.form5, STATS[r.name].form)}${formHtml(r.name)}</td><td class="odds gull hide-m"></td><td class="odds p3"></td><td class="odds ned"></td>`;
+      <td class="hide-s">${formHtml(r.name)}${form5Html(r.form5, STATS[r.name].form)}</td><td class="odds gull hide-m"></td><td class="odds p3"></td><td class="odds ned"></td>`;
     tb.appendChild(tr);
   });
   applyBadgesToDom(); // viser cachen (tom første gang) med en gang, uten å vente
