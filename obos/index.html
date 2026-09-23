@@ -3033,6 +3033,10 @@ function fillOdds(){
   if(!lastMC) return;
   renderQaButtons(); // spørsmål 1/2 sine knappetekster trenger lastMC (se qaTargetZone) -- oppdater så snart det er klart, ikke bare på neste fulle render()
   renderQaHighlight();
+  // Linja under "Neste kamp" trenger lastMC på samme måte. Ved sidelasting
+  // tegnes kortet FØR simuleringen er ferdig, og uten dette kallet kom linja
+  // først når noe annet utløste en ny render -- for eksempel et lagbytte.
+  oppdaterNesteKampLinjeFraDom();
   document.querySelectorAll('#tbl tbody tr').forEach(tr=>{
     const d=lastMC[tr.dataset.team]; if(!d) return;
     const gull=zoneSum(d,'gull'), top=zoneSum(d,'europa'), ned=zoneSum(d,'ned');
@@ -3390,6 +3394,14 @@ function renderNextMatch(){
 // resultatet mellomlagres på scenarioet, så den ikke kjøres på nytt ved hver
 // render(). Vises bare når laget man følger spiller kampen.
 let nmImpactKey = null;
+// Slår opp kampen kortet viser nå, så fillOdds() kan oppdatere linja uten å
+// tegne hele kortet på nytt.
+function oppdaterNesteKampLinjeFraDom(){
+  const boks = document.getElementById('nextMatch');
+  if(!boks || boks.hidden) return;
+  const m = matches.find(x => x.id === boks.dataset.id);
+  if(m) oppdaterNesteKampLinje(m);
+}
 async function oppdaterNesteKampLinje(m){
   const el = document.getElementById('nmImpact');
   if(!el) return;
@@ -3415,8 +3427,11 @@ async function oppdaterNesteKampLinje(m){
     const dW = (isHome ? r.homeProb : r.awayProb) - r.baseProb;
     const dL = (isHome ? r.awayProb : r.homeProb) - r.baseProb;
     const dD = r.drawProb - r.baseProb;
+    // Tallet først, utfallet etter: H/U/B over står for HJEMMELAGET, så
+    // "seier 5 %" ble lest som hjemmeseier når man følger bortelaget.
+    // "5 % med seier" kan bare leses som lagets egen seier.
     el.innerHTML = `${qaStor(qaSjanse(zone))} for ${lag}: `+
-      `seier <b>${p(dW)}</b>, uavgjort <b>${p(dD)}</b>, tap <b>${p(dL)}</b>.`;
+      `<b>${p(dW)}</b> med seier, <b>${p(dD)}</b> med uavgjort, <b>${p(dL)}</b> med tap.`;
     el.hidden = false;
   }catch(_){ el.hidden = true; nmImpactKey = null; }
 }

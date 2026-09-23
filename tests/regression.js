@@ -1485,6 +1485,55 @@ const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
     }
     await page.bringToFront();
 
+    // ---- 28. Linja under "Neste kamp" ----
+    // Lagvalget settes via adressen, så det gjelder ALLEREDE ved sidelasting:
+    // linja manglet nettopp da, fordi kortet tegnes før simuleringen er ferdig
+    // og fillOdds() ikke oppdaterte den. Et lagbytte i testen ville skjult det.
+    setGroup('Neste kamp: hva utfallene betyr');
+    for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
+      const finn = await open(1400, 900, url);
+      await settle(finn);
+      const valg = await finn.evaluate(() => {
+        let hjemme = null, borte = null;
+        for (const t of TEAMS) {
+          const m = matches.find(x => x.home === t || x.away === t);
+          if (!m) continue;
+          if (m.home === t && !hjemme) hjemme = t;
+          if (m.away === t && !borte) borte = t;
+        }
+        return {hjemme, borte};
+      });
+      await finn.close();
+      for (const [rolle, lag] of [['hjemmelag', valg.hjemme], ['bortelag', valg.borte]]) {
+        if (!lag) continue;
+        const sp = await open(1400, 900, url + '#team=' + encodeURIComponent(lag));
+        await settle(sp);
+        await new Promise(r => setTimeout(r, 1500));
+        const r = await sp.evaluate(() => ({
+          lag: SELECTED_TEAM,
+          synlig: document.getElementById('nmImpact').checkVisibility({visibilityProperty: true}),
+          tekst: document.getElementById('nmImpact').textContent,
+        }));
+        check(`${liga}: linja er der ved sidelasting (fulgt ${rolle})`,
+          r.synlig && r.tekst.trim().length > 10, r.tekst.trim().slice(0, 60) || '(tom)');
+        // Utfallet etter tallet: H/U/B over gjelder hjemmelaget, så "seier 5 %"
+        // ble lest som hjemmeseier når man fulgte bortelaget.
+        check(`${liga}: utfallet står etter tallet (fulgt ${rolle})`,
+          /% med seier, .+% med uavgjort, .+% med tap\.$/.test(r.tekst.trim()), r.tekst.trim());
+        check(`${liga}: sjansen er lagets egen (fulgt ${rolle})`,
+          r.tekst.includes(`for ${r.lag}`), `${r.lag}`);
+        await sp.close();
+      }
+      // Uten fulgt lag skal linja ikke vises.
+      const u = await open(1400, 900, url + '#team=');
+      await settle(u);
+      await new Promise(r => setTimeout(r, 1200));
+      check(`${liga}: linja er skjult uten fulgt lag`,
+        await u.evaluate(() => !document.getElementById('nmImpact').checkVisibility({visibilityProperty: true})));
+      await u.close();
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();
