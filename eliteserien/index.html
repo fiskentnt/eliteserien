@@ -1318,7 +1318,12 @@ const LEAGUE = {
   // leverandører, så navnet kan ikke stå i den delte koden.
   oddsSource: 'The Odds API',
   // Sluttodds for spilte kamper, reserve når prekick.json ikke har kampen.
-  closingOddsFile: 'data/odds_captured.json',
+  // Sluttodds for spilte kamper, brukt som reserve når prekick.json ikke har
+  // kampen (den lagrer bare kamper som var uspilte da siden sist ble lest).
+  // Pekte på odds_captured.json, som bare har de fire kampene The Odds API
+  // rakk å fange -- derfor sto "vi vet ikke hva som var ventet" på kamper vi
+  // faktisk hadde sluttodds for. odds_closing.json har 167 av 168.
+  closingOddsFile: 'data/odds_closing.json',
   // Klubbfarger, én per lag i DENNE ligaen. Variantene er laget med
   // scripts/team_colors.py; se kommentaren ved TEAM_COLORS for metoden.
   teamColors: {
