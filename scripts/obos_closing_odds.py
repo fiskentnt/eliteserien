@@ -340,47 +340,77 @@ def main():
         out["matches"][f"2026|{parts[-2]}|{parts[-1]}"] = out["matches"].pop(k)
     if old:
         print(f"  skrev om {len(old)} gamle nøkler til sesong|hjemme|borte")
-    have = set(out["matches"])
-    todo = [(r, f) for r, f in links if r["hg"] is not None and match_id(r) not in have]
-    print(f"\nSluttodds: {len(have)} hentet før, {len(todo)} gjenstår "
+    # OddsPapi har av og til flere oppføringer for samme kamp (3 i denne
+    # sesongen). Uten gruppering avgjorde den første oppføringen alene, og var
+    # den tom, ble kampen stående uten sluttodds selv om den andre hadde pris.
+    per_kamp = {}
+    for r, f in links:
+        if r["hg"] is None:
+            continue
+        per_kamp.setdefault(match_id(r), (r, []))[1].append(f)
+
+    def maa_hentes(mid):
+        rad = out["matches"].get(mid)
+        if rad is None:
+            return True
+        if rad.get("bookmaker") or rad.get("uten_sluttodds"):
+            return False
+        return rad.get("forsok", 0) < 3
+
+    todo = [mid for mid in per_kamp if maa_hentes(mid)]
+    print(f"\nSluttodds: {len(out['matches'])} hentet før, {len(todo)} gjenstår "
           f"(henter høyst {args.max} nå)")
 
     done = fail = 0
-    for r, f in todo[:args.max]:
-        mid = match_id(r)
-        fid = f.get("fixtureId")
-        d, err = get("/v4/historical-odds", {"fixtureId": fid, "bookmakers": ",".join(BOOKMAKERS)}, key)
-        if err:
-            print(f"  FEIL {mid}: {err}")
-            fail += 1
-            if "RATE_LIMITED" in str(err) or "429" in str(err):
-                time.sleep(COOLDOWN * 2)
-            else:
-                time.sleep(COOLDOWN)
-            continue
-        ko = f.get("startTime")
-        bm, odds, stamp = oddswindow.closing_from(d, mkt_id, ko, BOOKMAKERS)
-        rad = {
-            "fixtureId": fid, "round": r["round"], "start": (ko or "")[:16],
-            "bookmaker": bm, "odds": odds, "priced_at": stamp,
-            "result": f"{r['hg']}-{r['ag']}",
-        }
-        if bm:
-            rad["minutter_for"] = round(oddswindow.minutter_for(ko, stamp) or 0, 1)
-        else:
-            rad["uten_sluttodds"] = True
-        out["matches"][mid] = rad
-        if bm:
+    for mid in todo[:args.max]:
+        r, fs = per_kamp[mid]
+        truffet, siste_feil = None, None
+        for f in fs:
+            d, err = get("/v4/historical-odds",
+                         {"fixtureId": f.get("fixtureId"),
+                          "bookmakers": ",".join(BOOKMAKERS)}, key)
+            if err:
+                siste_feil = str(err)[:120]
+                time.sleep(COOLDOWN * (2 if "RATE_LIMITED" in str(err) or "429" in str(err) else 1))
+                continue
+            time.sleep(COOLDOWN)
+            ko = f.get("startTime")
+            bm, odds, stamp = oddswindow.closing_from(d, mkt_id, ko, BOOKMAKERS)
+            siste_feil = None
+            if bm:
+                truffet = (f, bm, odds, stamp)
+                break
+
+        if truffet:
+            f, bm, odds, stamp = truffet
+            ko = f.get("startTime")
+            out["matches"][mid] = {
+                "fixtureId": f.get("fixtureId"), "round": r["round"], "start": (ko or "")[:16],
+                "bookmaker": bm, "odds": odds, "priced_at": stamp,
+                "result": f"{r['hg']}-{r['ag']}",
+                "minutter_for": round(oddswindow.minutter_for(ko, stamp) or 0, 1)}
             done += 1
             print(f"  {mid}  {bm}  H {odds['H']}  U {odds['U']}  B {odds['B']}  "
-                  f"({rad['minutter_for']:.0f} min før)")
+                  f"({out['matches'][mid]['minutter_for']:.0f} min før)")
+        elif siste_feil:
+            rad = out["matches"].get(mid) or {"round": r["round"],
+                                              "start": (fs[0].get("startTime") or "")[:16],
+                                              "result": f"{r['hg']}-{r['ag']}"}
+            rad.update({"bookmaker": None, "odds": None,
+                        "feil": siste_feil, "forsok": rad.get("forsok", 0) + 1})
+            out["matches"][mid] = rad
+            fail += 1
+            print(f"  {mid}  FEIL (forsøk {rad['forsok']} av 3): {siste_feil}")
         else:
+            out["matches"][mid] = {
+                "fixtureId": fs[0].get("fixtureId"), "round": r["round"],
+                "start": (fs[0].get("startTime") or "")[:16], "bookmaker": None, "odds": None,
+                "result": f"{r['hg']}-{r['ag']}", "uten_sluttodds": True}
             print(f"  {mid}  INGEN sluttodds: ingen pris i vinduet "
                   f"({oddswindow.CLOSE_FROM_MIN}-{oddswindow.CLOSE_TO_MIN} min før avspark)")
         # Lagre etter hver kamp, så en avbrutt kjøring kan fortsette.
         out["updated"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
         OUT_PATH.write_text(json.dumps(out, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-        time.sleep(COOLDOWN)
 
     used, limit = oddspapi.usage()
     print(f"\n  OddsPapi-forbruk denne måneden: {used} av {limit} tellende kall")
