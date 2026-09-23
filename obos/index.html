@@ -3982,8 +3982,12 @@ function qaToughestRunIn(){
   const fmt = r => `${r.team} (${pctTxt(r.avg)})`;
   const [t0, ...tRest] = toughest;
   const neste = tRest.length ? ` Deretter følger ${joinNames(tRest.map(fmt))}.` : '';
-  return `${t0.team} har det tøffeste restprogrammet: motstanderne har i snitt ${pctTxt(t0.avg)} vinnersjanse i kampene som gjenstår.`+
-    `${neste} Det letteste restprogrammet har ${joinNames(easiest.map(fmt))}. Vinnersjansene bygger på dagens lagstyrker.`;
+  // Tre avsnitt: de tøffeste, de letteste, og forbeholdet.
+  return [
+    `${t0.team} har det tøffeste restprogrammet: motstanderne har i snitt ${pctTxt(t0.avg)} vinnersjanse i kampene som gjenstår.${neste}`,
+    `Det letteste restprogrammet har ${joinNames(easiest.map(fmt))}.`,
+    `Vinnersjansene bygger på dagens lagstyrker.`,
+  ].join('\n\n');
 }
 
 // ---- Spørsmål 5: IKKE kampens egen H/U/B (den står allerede i kamplisten,
