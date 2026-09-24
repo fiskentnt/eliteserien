@@ -178,3 +178,65 @@ skal aldri lese `current_season`. Legg en failsafe-test som håndhever det --
 det er nettopp den feilen som ville ødelagt reproduserbarheten av de
 publiserte tallene.
 
+### Reserve for terminlisten
+
+**ffksupporter.net er eneste kilde til rundenummer for Eliteserien.** Den
+skrapes fra 16 sider, og sesongen står i URL-en:
+
+    scripts/ffk_source.py:18
+    BASE_URL = "https://ffksupporter.net/terminliste/2026-eliteserien/{slug}/"
+
+Forsvinner siden, eller bytter den struktur, står vi uten terminliste. Det som
+er kartlagt om alternativene:
+
+| Kilde | Kampoppsett | Rundenummer |
+|---|---|---|
+| ffksupporter | hele sesongen | **ja** |
+| ESPN | bare dagens kamper, ett kall per kjøring | **nei** (`espn_source.py:7`) |
+| OddsPapi | 256 kamper med `startTime` | **nei**, ikke noe rundefelt |
+| OBOS-løsningen | CSV i repoet | ja, `runde`-kolonne |
+
+**Rundenummer kan ikke utledes av datoer.** Runde 12 i 2026 ble flyttet fra
+juli til 24.–25. oktober, og runde 15 gikk fra 15. april til 27. juli. En
+grådig gruppering på dato ville gitt runde 12 nummeret 24. Siden viser
+«Runde 12 (utsatt fra juli)» eksplisitt, med egen CSS for det
+(`eliteserien/index.html:872`).
+
+**Men rundenummer er statisk per sesong.** Når kartet (hjemme, borte) → runde
+først er hentet, endrer det seg aldri -- heller ikke når kamper flyttes.
+
+**Derfor bør reserven være å hente terminlisten ÉN gang per sesong og
+committe den**, slik OBOS alt gjør med sin CSV. Da er avhengigheten til
+ffksupporter redusert fra daglig til årlig, og et utfall midt i sesongen gjør
+ingenting. Rundeselektoren («Runde N av 30») bruker rundenummer 193 steder i
+`index.html`, så det er ikke en avhengighet vi kan droppe.
+
+Faller alt bort, er nødløsningen å gruppere på kampdag i stedet for runde
+(«Kamper 9.–12. oktober»). Det er en forringelse, ikke en krise, men
+rundeselektoren må da bygges om.
+
+### Varsel når hovedkilden feiler flere dager
+
+I dag er dette usynlig, og verre: det kan ikke skilles fra normal drift.
+
+`data/status.json` har `{"last_checked", "ok"}`, men skrives **kun når
+`update_data.py` faktisk kjører** (`scripts/update_data.py:85`).
+`should_fetch.py` stopper kjøringen når det ikke er kamper på en stund. Per
+25. september sier filen `last_checked: 2026-09-23` -- ikke fordi kilden er
+nede, men fordi neste runde er 9. oktober.
+
+**En foreldet `last_checked` kan altså bety «ikke forsøkt» eller «forsøkt og
+feilet», og vi kan ikke se forskjell.**
+
+Det som trengs:
+
+- en teller som bare øker ved **reelle forsøk** som feilet, ikke når porten
+  sa nei
+- varsel i `$GITHUB_STEP_SUMMARY` og `::warning` etter N dager på rad, med
+  hvilken kilde og hvor lenge
+- `update-data.yml` har i dag verken `$GITHUB_STEP_SUMMARY` eller
+  `::warning` noe sted
+
+Samme mønster som arkiveringssteget i `update-odds.yml` bruker: jobben skal
+ikke velte, men feilen skal ikke forsvinne stille heller.
+
