@@ -1212,7 +1212,7 @@
   <div class="in">
     <p class="plain-lead">Modellen er prøvd på OBOS-sesongene 2012 til 2025: vi later som om bare en del av sesongen er spilt, lar den spå resten, og sammenligner med det som faktisk skjedde.</p>
     <p>Det meste av treffsikkerheten kommer av å spille resten av sesongen tusenvis av ganger fra dagens tabell. At modellen i tillegg vet hvor gode lagene er, hjelper tydelig på nedrykk, og omtrent ingenting på opprykk og topp 6.</p>
-    <p>Den ser ikke skader, suspensjoner, overganger eller trenerbytter, bare resultatene som er spilt og hva oddsen sier om kampene som kommer.</p>
+    <p>Lagstyrken beregnes ut fra både resultatene og oddsen på kampene som er spilt. Dermed får modellen indirekte med seg ting som skader, suspensjoner og lagoppstillinger. På kommende kamper brukes markedsoddsen også direkte når den er tilgjengelig.</p>
 
     <h3>Treffsikkerhet denne sesongen</h3>
     <p>Tallene under er hentet fra sannsynlighetene som ble lagret FØR avspark, holdt opp mot resultatet. Ingenting er regnet på nytt i etterkant, så tallene kan ikke bli bedre av etterpåklokskap.</p>
@@ -4570,22 +4570,22 @@ function renderModelExample(){
   if(!x){ el.hidden = true; return; }
   el.hidden = false;
   const {m, o, fav, dog, gap, pFav, pDog} = x;
-  const liveForm = formScores(Array.from(LIVE.att), Array.from(LIVE.con));
-  const form = {}; TEAMS.forEach(t=>form[t] = liveForm[TI[t]]);
-  // Hvor uenige er de? Under 8 prosentpoeng mellom lagene er kampen jevn.
+  // Hvor mye foran er favoritten i denne ene kampen?
   const edge = pFav - pDog;
-  // Under 8 prosentpoeng mellom lagene er kampen åpen, uansett hvem som ligger
-  // marginalt foran: 35 mot 33 skal ikke kalles "med X som favoritt".
-  const how = Math.abs(edge) < 0.08 ? 'som helt åpen'
-    : pDog > pFav ? `med ${dog} som favoritt` : 'som langt jevnere';
-  // Begrunnelsen sier bare det tallene faktisk viser.
-  const why = [];
-  if(dog === m.home) why.push(`${dog} har hjemmebane`);
-  if(form[dog] > form[fav]) why.push(`${dog} er sterkere ifølge modellen (${f1(form[dog])} mot ${f1(form[fav])})`);
-  const whyTxt = why.length ? `, fordi ${why.join(' og ')}` : '';
-  el.textContent = `${fav} ligger ${poengTxt(gap)} foran ${dog}, så ut fra tabellen ville de fleste regnet ${fav} som klar favoritt. `+
-    `Modellen ser kampen hjemme hos ${m.home} ${formatDateNo(m.date)} ${how}: `+
-    `${pctTxt(o.H)} på ${m.home}, ${pctTxt(o.U)} uavgjort og ${pctTxt(o.B)} på ${m.away}${whyTxt}.`;
+  // Poenget i avsnittet er at et stort forsprang på tabellen ikke gjør laget
+  // til stor favoritt i en enkelt kamp. Kampen som velges er den der modellen
+  // gir favoritten MINST forsprang, så det stemmer nesten alltid. Men det er
+  // ikke garantert: finnes det ingen jevn kamp, ville setningen blitt usann.
+  // Over 20 prosentpoeng mellom lagene sier vi derfor det motsatte.
+  const påstand = edge < 0.20
+    ? `men det betyr ikke at ${fav} er stor favoritt i en enkelt kamp`
+    : `og modellen gir ${fav} et klart forsprang også i denne kampen`;
+  // "prosent" skrives ut her, ikke "%": avsnittet over i samme seksjon sier
+  // "rundt 20 prosent", og de to skal lese likt. Resten av siden bruker %.
+  const pTxt = x => pctTxt(x).replace(' %', ' prosent');
+  el.textContent = `${fav} ligger ${poengTxt(gap)} foran ${dog}, ${påstand}. `+
+    `Hjemme mot ${m.away} ${formatDateNo(m.date)} gir modellen ${m.home} `+
+    `${pTxt(o.H)} sjanse til seier, ${pTxt(o.U)} for uavgjort og ${m.away} ${pTxt(o.B)}.`;
 }
 
 // ---- Hva er rundens viktigste kamp? Trenger ikke noe valgt lag. For hver

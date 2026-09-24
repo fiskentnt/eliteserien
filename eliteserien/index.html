@@ -1193,10 +1193,10 @@
 <details class="howitworks modelcheck">
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 20v-7M12 20V6M18 20v-11"/></svg></span>Hvordan vet vi at modellen virker?</summary>
   <div class="in">
-    <p class="plain-lead">Modellen er prøvd på de ti forrige sesongene, og treffer omtrent så ofte som den sier: da den ga rundt 20 prosent, skjedde det i 18 prosent av tilfellene.</p>
-    <p>Det meste av treffsikkerheten kommer av å spille resten av sesongen tusenvis av ganger fra dagens tabell. At modellen i tillegg vet hvor gode lagene er, gjør mest nytte tidlig i sesongen. Mot slutten betyr poengene så mye at lagstyrken spiller liten rolle.</p>
+    <p class="plain-lead">Modellen er testet på tidligere sesonger ved å stoppe sesongen på ulike tidspunkt og beregne hvordan tabellen vil ende. Resultatene viser at sannsynlighetene treffer ganske godt. Når modellen for eksempel har gitt rundt 20 prosent sjanse, har det skjedd i omtrent 18 prosent av tilfellene.</p>
+    <p>Beregningen tar utgangspunkt i både tabellen og hvor gode modellen mener lagene er. Lagstyrken betyr mest tidlig og midt i sesongen. Mot slutten betyr poengene stadig mer, fordi det er færre kamper igjen.</p>
     <p id="modelExample"></p>
-    <p>Den ser ikke skader, suspensjoner, overganger eller trenerbytter, bare resultatene som er spilt og hva oddsen sier om kampene som kommer.</p>
+    <p>Lagstyrken beregnes ut fra både resultatene og oddsen på kampene som er spilt. Dermed får modellen indirekte med seg ting som skader, suspensjoner og lagoppstillinger. På kommende kamper brukes markedsoddsen også direkte når den er tilgjengelig.</p>
 
     <h3>Treffsikkerhet denne sesongen</h3>
     <p>Tallene under er hentet fra sannsynlighetene som ble lagret FØR avspark, holdt opp mot resultatet. Ingenting er regnet på nytt i etterkant, så tallene kan ikke bli bedre av etterpåklokskap.</p>
@@ -1210,7 +1210,7 @@
     <details class="details-tech">
       <summary>Vis detaljer</summary>
     <p class="note">Kilder til dataene på siden: ffksupporter.net, ESPN, football-data.co.uk, OddsPapi og The Odds API, alt hentet automatisk. Sluttoddsen kommer fra OddsPapi (Pinnacle, ellers bet365, ellers Unibet), med football-data.co.uk som reserve der vinduet er tomt.</p>
-    <p class="note">Sist validert: 22. september 2026, mot NOR.csv (football-data.co.uk), sesongene 2016–2025. Modellen tilpasses ved fire kuttpunkter i hver sesong (etter 40, 55, 70 og 85 prosent av kampene), resten av sesongen simuleres 8000 ganger, og tallene er snittet over 640 lag-observasjoner. Kvalikkampene, som ligger i samme CSV-fil, er holdt utenfor. Hele kjøringen ligger i <code>scripts/backtest_zones.py</code> i kildekoden, så tallene kan reproduseres. De regnes ikke ut i nettleseren.</p>
+    <p class="note">Sist validert: 24. september 2026, mot NOR.csv (football-data.co.uk), sesongene 2016–2025. Modellen tilpasses ved fire kuttpunkter i hver sesong (etter 40, 55, 70 og 85 prosent av kampene), resten av sesongen simuleres 100 000 ganger, og tallene er snittet over 640 lag-observasjoner. Standardfeilene er klustret på sesong. Lagene i en sesong er ikke uavhengige forsøk &ndash; bare ett lag kan vinne serien, og de samme sesongene måles ved fire kuttpunkter. Regner man hver lag-observasjon som et eget forsøk, blir standardfeilene rundt halvparten så store, og forskjeller ser mer sikre ut enn de er. Kvalikkampene, som ligger i samme CSV-fil, er holdt utenfor. Hele kjøringen ligger i <code>scripts/backtest_zones.py</code> i kildekoden, så tallene kan reproduseres. De regnes ikke ut i nettleseren.</p>
     <p class="note">To forbehold om grafen over: intervaller med få prediksjoner svinger mye av seg selv, så et punkt som ligger langt fra diagonalen behøver ikke betyde at modellen er skjev der. Og prediksjonene er ikke uavhengige av hverandre: samme sesong måles ved flere kuttpunkter, og de samme lagene går igjen, så et lag som overrasker gjennom en sesong flytter flere punkter samtidig.</p>
 
     <h4>Kalibrering, tall</h4>
@@ -1262,7 +1262,7 @@
       </tbody>
     </table></div>
 
-    <p class="note">Det meste av treffsikkerheten kommer av å spille resten av sesongen tusenvis av ganger fra dagens tabell: tabellmodellen gjør nettopp det, med like sterke lag i kampene som står igjen, og kommer nesten hele veien fra basisraten. At modellen i tillegg vet hvor gode lagene er, er verdt mindre enn man skulle tro. Målt parvis mot tabellmodellen er den bedre på nedrykk med 0,0054 ± 0,0018, altså tre standardfeil og klart utenfor støyen. For gull er den bedre med 0,0029 ± 0,0021 (1,4 standardfeil), og for topp 4 er forskjellen 0,0008 ± 0,0028 (0,3 standardfeil), altså ingen målbar forskjell. Ren Poisson er til og med litt dårligere enn tabellmodellen på topp 4 (0,0663 mot 0,0615): det er odds og tabell sammen som gjør jobben, ikke lagstyrke fra mål alene.</p>
+    <p class="note">Det meste av treffsikkerheten kommer av å spille resten av sesongen tusenvis av ganger fra dagens tabell: tabellmodellen gjør nettopp det, med like sterke lag i kampene som står igjen, og kommer nesten hele veien fra basisraten. At modellen i tillegg vet hvor gode lagene er, er verdt mindre enn man skulle tro. Målt parvis mot tabellmodellen er den bedre på nedrykk med 0,0054 ± 0,0027, altså 2,0 standardfeil, nøyaktig på grensen siden bruker ellers. Retningen er den samme ved alle fire kuttpunktene, men ti sesonger er for lite til å si det sikkert. For gull er den bedre med 0,0028 ± 0,0044, altså 0,6 standardfeil, og det er ingen målbar forskjell. For topp 4 er forskjellen 0,0008 ± 0,0044 (0,2 standardfeil), altså ingen målbar forskjell. Ren Poisson er til og med litt dårligere enn tabellmodellen på topp 4 (0,0663 mot 0,0615): det er odds og tabell sammen som gjør jobben, ikke lagstyrke fra mål alene.</p>
 
     <h3>Ablasjonstest</h3>
     <p>Samme test, bygget stegvis: hva tilfører hver enkelt del av modellen faktisk sluttplassprediksjonen? Hvert steg legger til én ting på steget over. Forskjellene er målt parvis, på samme lag og kuttpunkt, og "ingen målbar forskjell" betyr at avviket er mindre enn to standardfeil, altså innenfor testens egen støy.</p>
@@ -1277,20 +1277,20 @@
         <tr><td>Sidegren: + rekke-rampe (på steg 3)</td><td data-l="Seriemester">0,0158</td><td data-l="Topp 4">0,0608</td><td data-l="Nedrykk">0,0490</td><td>Ga ingen målbar forskjell, og ble <strong>fjernet</strong> i september 2026.</td></tr>
       </tbody>
     </table></div>
-    <p class="note">Hovedfunnet i denne tabellen er hvor små de enkelte stegene er. Ingen av dem er alene utenfor to standardfeil, og oddssteget er det klareste. Det betyr ikke at de ikke virker: lagt sammen gir de en modell som slår tabellmodellen klart på nedrykk (tre standardfeil, se over). Stegene peker samme vei og forsterker hverandre, men testen er ikke stor nok til å måle hvert av dem, så radene bør leses som "ikke dårligere", ikke som "bevist bedre" hver for seg.</p>
+    <p class="note">Hovedfunnet i denne tabellen er hvor små de enkelte stegene er. Ingen av dem er alene utenfor to standardfeil, og oddssteget er det klareste. Det betyr ikke at de ikke virker: lagt sammen gir de en modell som er bedre enn tabellmodellen på nedrykk, men bare så vidt (2,0 standardfeil, se over). Stegene peker samme vei og forsterker hverandre, men testen er ikke stor nok til å måle hvert av dem, så radene bør leses som "ikke dårligere", ikke som "bevist bedre" hver for seg.</p>
 
     <h4>Forbedring mot tabellmodellen, per kuttpunkt</h4>
     <p>Negativt tall betyr at modellen er bedre enn å lese tabellen. 160 lag-observasjoner per kuttpunkt.</p>
     <div class="tblscroll"><table class="mt brier">
       <thead><tr><th>Spilt</th><th>Gull</th><th>Topp 4</th><th>Nedrykk</th></tr></thead>
       <tbody>
-        <tr><td>40 %</td><td>−0,0128 ± 0,0058</td><td>−0,0017 ± 0,0088</td><td>−0,0102 ± 0,0050</td></tr>
-        <tr><td>55 %</td><td>−0,0016 ± 0,0048</td><td>+0,0016 ± 0,0053</td><td>−0,0048 ± 0,0034</td></tr>
-        <tr><td>70 %</td><td>+0,0007 ± 0,0034</td><td>−0,0019 ± 0,0036</td><td>−0,0025 ± 0,0027</td></tr>
-        <tr><td>85 %</td><td>+0,0022 ± 0,0019</td><td>−0,0010 ± 0,0022</td><td>−0,0041 ± 0,0028</td></tr>
+        <tr><td>40 %</td><td>−0,0126 ± 0,0056</td><td>−0,0016 ± 0,0089</td><td>−0,0105 ± 0,0056</td></tr>
+        <tr><td>55 %</td><td>−0,0016 ± 0,0062</td><td>+0,0013 ± 0,0042</td><td>−0,0045 ± 0,0036</td></tr>
+        <tr><td>70 %</td><td>+0,0006 ± 0,0045</td><td>−0,0016 ± 0,0042</td><td>−0,0027 ± 0,0026</td></tr>
+        <tr><td>85 %</td><td>+0,0022 ± 0,0026</td><td>−0,0012 ± 0,0026</td><td>−0,0041 ± 0,0029</td></tr>
       </tbody>
     </table></div>
-    <p class="note">Bare de to punktene ved 40 prosent spilt er tydelig utenfor støyen (gull 2,2 og nedrykk 2,0 standardfeil). De tolv andre ligger innenfor to standardfeil og bør leses som et mønster, ikke som målte effekter hver for seg. Mønsteret er at gevinsten ligger tidlig i sesongen: for gull snur den til og med svakt i tabellmodellens favør ved 70 og 85 prosent.</p>
+    <p class="note">Bare gull ved 40 prosent spilt er utenfor støyen (2,2 standardfeil). Nedrykk ved samme punkt er 1,9, altså like under. De tretten andre ligger klart innenfor to standardfeil og bør leses som et mønster, ikke som målte effekter hver for seg. Mønsteret er at gevinsten ligger tidlig i sesongen: for gull snur den til og med svakt i tabellmodellens favør ved 70 og 85 prosent.</p>
 
     <h4>Enkeltkamper: hva er det verdt å vite hvem som spiller?</h4>
     <p>Samme type test, men på hver enkelt kamp i stedet for sluttplassen, over 1574 kamper i sesongene 2016–2025 (scripts/evaluate_model.py, samme rullerende tilpasning). Modellen sammenlignes med en variant der alle lag er like sterke og bare hjemmefordelen er med.</p>
@@ -4623,22 +4623,22 @@ function renderModelExample(){
   if(!x){ el.hidden = true; return; }
   el.hidden = false;
   const {m, o, fav, dog, gap, pFav, pDog} = x;
-  const liveForm = formScores(Array.from(LIVE.att), Array.from(LIVE.con));
-  const form = {}; TEAMS.forEach(t=>form[t] = liveForm[TI[t]]);
-  // Hvor uenige er de? Under 8 prosentpoeng mellom lagene er kampen jevn.
+  // Hvor mye foran er favoritten i denne ene kampen?
   const edge = pFav - pDog;
-  // Under 8 prosentpoeng mellom lagene er kampen åpen, uansett hvem som ligger
-  // marginalt foran: 35 mot 33 skal ikke kalles "med X som favoritt".
-  const how = Math.abs(edge) < 0.08 ? 'som helt åpen'
-    : pDog > pFav ? `med ${dog} som favoritt` : 'som langt jevnere';
-  // Begrunnelsen sier bare det tallene faktisk viser.
-  const why = [];
-  if(dog === m.home) why.push(`${dog} har hjemmebane`);
-  if(form[dog] > form[fav]) why.push(`${dog} er sterkere ifølge modellen (${f1(form[dog])} mot ${f1(form[fav])})`);
-  const whyTxt = why.length ? `, fordi ${why.join(' og ')}` : '';
-  el.textContent = `${fav} ligger ${poengTxt(gap)} foran ${dog}, så ut fra tabellen ville de fleste regnet ${fav} som klar favoritt. `+
-    `Modellen ser kampen hjemme hos ${m.home} ${formatDateNo(m.date)} ${how}: `+
-    `${pctTxt(o.H)} på ${m.home}, ${pctTxt(o.U)} uavgjort og ${pctTxt(o.B)} på ${m.away}${whyTxt}.`;
+  // Poenget i avsnittet er at et stort forsprang på tabellen ikke gjør laget
+  // til stor favoritt i en enkelt kamp. Kampen som velges er den der modellen
+  // gir favoritten MINST forsprang, så det stemmer nesten alltid. Men det er
+  // ikke garantert: finnes det ingen jevn kamp, ville setningen blitt usann.
+  // Over 20 prosentpoeng mellom lagene sier vi derfor det motsatte.
+  const påstand = edge < 0.20
+    ? `men det betyr ikke at ${fav} er stor favoritt i en enkelt kamp`
+    : `og modellen gir ${fav} et klart forsprang også i denne kampen`;
+  // "prosent" skrives ut her, ikke "%": avsnittet over i samme seksjon sier
+  // "rundt 20 prosent", og de to skal lese likt. Resten av siden bruker %.
+  const pTxt = x => pctTxt(x).replace(' %', ' prosent');
+  el.textContent = `${fav} ligger ${poengTxt(gap)} foran ${dog}, ${påstand}. `+
+    `Hjemme mot ${m.away} ${formatDateNo(m.date)} gir modellen ${m.home} `+
+    `${pTxt(o.H)} sjanse til seier, ${pTxt(o.U)} for uavgjort og ${m.away} ${pTxt(o.B)}.`;
 }
 
 // ---- Hva er rundens viktigste kamp? Trenger ikke noe valgt lag. For hver
