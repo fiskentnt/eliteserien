@@ -36,31 +36,64 @@ def outcome_and_grad(lh, la):
     dH_dla = dP_dla[_H_MASK].sum(); dD_dla = dP_dla[_D_MASK].sum(); dB_dla = dP_dla[_B_MASK].sum()
     return H,D,B, dH_dlh,dD_dlh,dB_dlh, dH_dla,dD_dla,dB_dla
 
-def prep_matches(matches, TI, ref_date, half_life_goals, half_life_odds):
+def prep_matches(matches, TI, ref_date, half_life_goals, half_life_odds,
+                 skille=None, half_life_hist=None, klokke=None):
+    """skille (dato) + half_life_hist: kamper FØR skillet aldres saktere.
+
+    Vekten er delt i to ledd, og de henger sammen i skillet: fra kampen fram
+    til skillet brukes den lange halveringstiden, og fra skillet fram til i dag
+    den vanlige. En kamp rett før skillet veier dermed det samme som en kamp
+    rett etter, og det blir ikke noe hopp.
+
+    Poenget er at kunnskap fra forrige sesong skal veie noe tidlig i sesongen,
+    der modellen nesten ikke har egne kamper å gå på, men falle bort like fort
+    som alt annet etter hvert som sesongen går. Uten dette leddet er det bare
+    den vanlige halveringstiden som gjelder, og forrige sesong veier nesten
+    ingenting allerede fra start."""
     from datetime import date as Dt
     ry,rm,rd = map(int, ref_date.split('-'))
     ref = Dt(ry,rm,rd)
+    # klokke (valgfri): {dato: tidspunkt}. Uten den maales alder i
+    # KALENDERDAGER, og informasjon forfaller ogsaa naar ligaen staar stille.
+    kl_ref = klokke.get(ref_date) if klokke else None
+    sk = None
+    if skille and half_life_hist:
+        sy,sm,sd = map(int, skille.split('-'))
+        sk = Dt(sy,sm,sd)
+        dager_til_skille = max(0, (ref-sk).days)
     H_IDX=[]; A_IDX=[]; HG=[]; AG=[]; W_G=[]; W_O=[]; ODDS=[]
     for m in matches:
         y,mo,d = map(int, m['date'].split('-'))
-        days = (ref-Dt(y,mo,d)).days
+        md = Dt(y,mo,d)
+        days = (ref-md).days if kl_ref is None else (kl_ref - klokke.get(m['date'], 0.0))
+        if sk is not None and md < sk:
+            før = (sk-md).days
+            wg = 0.5**(dager_til_skille/half_life_goals) * 0.5**(før/half_life_hist)
+            wo = 0.5**(dager_til_skille/half_life_odds) * 0.5**(før/half_life_hist)
+        else:
+            wg = 0.5**(days/half_life_goals)
+            wo = 0.5**(days/half_life_odds)
         H_IDX.append(TI[m['home']]); A_IDX.append(TI[m['away']])
         HG.append(m['hg']); AG.append(m['ag'])
-        W_G.append(0.5**(days/half_life_goals))
-        W_O.append(0.5**(days/half_life_odds))
+        W_G.append(wg); W_O.append(wo)
         ODDS.append(m.get('odds'))
     return dict(h=np.array(H_IDX), a=np.array(A_IDX), hg=np.array(HG,dtype=float),
                 ag=np.array(AG,dtype=float), wg=np.array(W_G), wo=np.array(W_O), odds=ODDS)
 
 def fit_model_fast(matches, teams, TI, odds_weight=0.0, half_life_goals=70, half_life_odds=None,
-                    l1=2.0, l2=6.0, ref_date='2026-09-20', x0=None, isolate_global=True):
+                    l1=2.0, l2=6.0, ref_date='2026-09-20', x0=None, isolate_global=True,
+                    skille=None, half_life_hist=None, senter_att=None, senter_con=None,
+                    klokke=None):
     """isolate_global: hvis True (anbefalt), påvirker oddsgradienten kun de
     lagvise parametrene (att/con/ha/hc), ikke det generelle målnivået (mu)
     eller hjemmefordelen (H) — de bestemmes utelukkende av faktiske mål."""
     if half_life_odds is None:
         half_life_odds = half_life_goals
     n = len(teams)
-    d = prep_matches(matches, TI, ref_date, half_life_goals, half_life_odds)
+    sa = np.zeros(n) if senter_att is None else np.asarray(senter_att, dtype=float)
+    sc = np.zeros(n) if senter_con is None else np.asarray(senter_con, dtype=float)
+    d = prep_matches(matches, TI, ref_date, half_life_goals, half_life_odds,
+                     skille=skille, half_life_hist=half_life_hist, klokke=klokke)
     nm = len(d['h'])
     has_odds = [o is not None for o in d['odds']]
     odds_arr = np.array([o if o is not None else (0,0,0) for o in d['odds']])
@@ -96,7 +129,13 @@ def fit_model_fast(matches, teams, TI, odds_weight=0.0, half_life_goals=70, half
                 deh_team[i] += odds_weight*d['wo'][i]*dL_dlh*lh[i]
                 dea_team[i] += odds_weight*d['wo'][i]*dL_dla*la[i]
 
-        loss += 0.5*l1*np.sum(att**2) + 0.5*l1*np.sum(con**2) + 0.5*l2*np.sum(ha**2) + 0.5*l2*np.sum(hc**2)
+        # Regulariseringen trekker mot et SENTER, ikke nødvendigvis mot null.
+        # Standard er null, altså ligasnittet. Et lag vi på forhånd vet
+        # noe om -- et nyopprykket, for eksempel -- kan trekkes mot sitt eget
+        # punkt i stedet. Styrken på trekket (l1) er den samme; bare punktet
+        # flyttes, så dette innfører ingen ny parameter utover selve senteret.
+        da = att - sa; dc = con - sc
+        loss += 0.5*l1*np.sum(da**2) + 0.5*l1*np.sum(dc**2) + 0.5*l2*np.sum(ha**2) + 0.5*l2*np.sum(hc**2)
 
         # mu/Hp (globalt målnivå + hjemmefordel): kun målbasert hvis isolate_global
         deh_mu, dea_mu = (deh_goal, dea_goal) if isolate_global else (deh_team, dea_team)
@@ -108,7 +147,7 @@ def fit_model_fast(matches, teams, TI, odds_weight=0.0, half_life_goals=70, half
         np.add.at(g_con, a, deh_team); np.add.at(g_con, h, dea_team)
         np.add.at(g_ha, h, deh_team); np.add.at(g_ha, a, -dea_team)
         np.add.at(g_hc, a, -deh_team); np.add.at(g_hc, h, dea_team)
-        g_att += l1*att; g_con += l1*con; g_ha += l2*ha; g_hc += l2*hc
+        g_att += l1*da; g_con += l1*dc; g_ha += l2*ha; g_hc += l2*hc
 
         grad = np.concatenate(([g_mu],[g_Hp], g_att, g_con, g_ha, g_hc))
         return loss, grad
