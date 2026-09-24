@@ -8,6 +8,23 @@ da, resten av sesongen simuleres, og sannsynligheten for seriemester, topp 4 og
 nedrykk sammenlignes med det som faktisk skjedde. Brier-score er snittet av
 (sannsynlighet − utfall)² over alle lag, kuttpunkt og sesonger. Lavere er bedre.
 
+To ting om usikkerheten, som begge er nødvendige for at tallene skal bety det
+de ser ut som:
+
+  Standardfeilene er KLUSTRET PÅ SESONG. Lagene i en sesong er ikke
+  uavhengige forsøk -- bare ett lag kan vinne serien, så bommer modellen på
+  gulloppgjøret bommer den på flere lag samtidig, og de samme sesongene måles
+  ved flere kuttpunkt. Regnet som om hver lagobservasjon var et eget forsøk,
+  blir standardfeilene rundt halvparten så store. Begge varianter skrives ut,
+  så forskjellen er synlig.
+
+  Alle variantene bruker SAMME TILFELDIGE TALL innenfor samme sesong og
+  kuttpunkt. Frøet avhenger bare av (frø, sesong, kuttpunkt). To varianter med
+  identiske parametre gir da bit-identiske tall, og i parvise sammenligninger
+  faller simuleringsstøyen ut av differansen. Resultatet er også uavhengig av
+  kjørerekkefølge: ett kuttpunkt kan kjøres for seg og gir nøyaktig samme
+  bidrag som i en full kjøring.
+
 Modellene som sammenlignes:
   basisrate   samme faste sannsynlighet for alle lag (1/n, 4/n, 2/n). Kjenner
               verken tabellen eller lagene.
@@ -235,7 +252,8 @@ def main():
         by_season = load_seasons(args.csv, args.league, name_map)
     seasons = season_range(args.seasons)
     cuts = [float(c) for c in args.cuts.split(",")]
-    rng = np.random.default_rng(args.seed)
+    # Frøet settes per (frø, sesong, kuttpunkt) inne i variantløkka, ikke her.
+    # Se kommentaren der.
 
     # Varianter: (oddsvekt, l1, l2, form_k, dc_rho). Tilpasningen deles av
     # varianter med samme (oddsvekt, l1, l2), så en ekstra variant som bare
@@ -269,6 +287,7 @@ def main():
     # Kuttpunktet hver observasjon hører til, i samme rekkefølge som err-listene,
     # så resultatet kan brytes ned per kuttpunkt etterpå.
     tags = {t: [] for t in targets}
+    klynge = {t: [] for t in targets}   # sesong per observasjon
     # Rå sannsynlighet og utfall, til kalibreringen (samme observasjoner).
     raw = {m: {t: {"p": [], "y": []} for t in targets} for m in models}
     cnt = 0
@@ -299,7 +318,7 @@ def main():
             b = hi if hi > 0 else n + hi + 1
             actual[name] = ((pos_f >= a) & (pos_f <= b)).astype(float)
 
-        for frac in cuts:
+        for kutt_nr, frac in enumerate(cuts):
             k = int(round(frac * len(matches)))
             if k < 10 or k >= len(matches):
                 continue
@@ -313,6 +332,18 @@ def main():
                                    for name, lo, hi in lcfg["targets"]}}
             fits = {}
             for name, cfg in VARIANTS.items():
+                # FELLES TILFELDIGE TALL: hver variant får sin egen generator,
+                # men med samme frø innenfor samme sesong og kuttpunkt. To
+                # varianter med identiske parametre gir da bit-identiske tall,
+                # og i alle parvise sammenligninger faller simuleringsstøyen ut
+                # av differansen i stedet for å legge seg oppå den ekte
+                # usikkerheten. Deler man én strøm, får hver variant sine egne
+                # terninger, og kontrollrader blir ikke eksakt null.
+                #
+                # Frøet avhenger bare av (frø, sesong, kuttpunkt). Ett enkelt
+                # kuttpunkt kan derfor kjøres for seg og gir nøyaktig samme
+                # tall som det bidrar med i en full kjøring.
+                rng = np.random.default_rng([args.seed, int(season), kutt_nr])
                 if cfg is None:  # tabellmodellen: målnivå fra sesongen så langt
                     lh_flat = max(0.2, float(np.mean([m["hg"] for m in played])))
                     la_flat = max(0.2, float(np.mean([m["ag"] for m in played])))
@@ -340,6 +371,7 @@ def main():
                     raw[name][t]["y"].extend(actual[t].tolist())
             for t in targets:
                 tags[t].extend([frac] * n)
+                klynge[t].extend([season] * n)
             cnt += n
             print(f"  {season} kutt {frac:.2f}: {k} spilt, {len(remaining)} igjen", file=sys.stderr)
 
@@ -349,6 +381,29 @@ def main():
     print(f"\nBrier-score, {cnt} lag-observasjoner, {args.sims} simuleringer, "
           f"sesongene {seasons[0]}-{seasons[-1]}, kuttpunkt {args.cuts}")
     E = {m: {t: np.array(err[m][t]) for t in targets} for m in models}
+    # Sesongklustret standardfeil. Lagene i samme sesong er IKKE uavhengige
+    # forsøk: bare ett lag kan vinne serien, så bommer modellen på
+    # gulloppgjøret bommer den på flere lag samtidig -- og den samme sesongen
+    # går igjen på hvert kuttpunkt. Den vanlige standardfeilen teller hver
+    # lagobservasjon som et eget forsøk og blir for liten. Denne teller
+    # SESONGEN som forsøket, og er den som gjelder.
+    KL = {t: np.array(klynge[t]) for t in targets}
+
+    def se_klynge(d, g):
+        """Klusterrobust standardfeil for gjennomsnittet av d, gruppert på g."""
+        if len(d) == 0:
+            return float("nan")
+        m = d.mean()
+        u = np.array([(d[g == c] - m).sum() for c in np.unique(g)])
+        return float(np.sqrt((u ** 2).sum()) / len(d))
+
+    def par(b, a, t, sel=None):
+        """Parvis forskjell b-a for sone t, med begge standardfeilene."""
+        d = E[b][t] - E[a][t]; g = KL[t]
+        if sel is not None:
+            d, g = d[sel], g[sel]
+        sn = d.std(ddof=1) / np.sqrt(len(d))
+        return d.mean(), se_klynge(d, g), sn
     print(f"{'Modell':<12}" + "".join(f"{t:>12}" for t in targets))
     for m in models:
         print(f"{m:<12}" + "".join(f"{E[m][t].mean():>12.4f}" for t in targets))
@@ -364,25 +419,25 @@ def main():
         print("\nPer kuttpunkt: full modell mot tabellmodell. Negativ forskjell = modellen er bedre.")
         for t in targets:
             print(f"\n  {t}")
-            print(f"    {'spilt':>7}{'lag':>6}{'tabell':>9}{'full':>9}{'forskjell':>12}{'standardfeil':>14}")
+            print(f"    {'spilt':>7}{'lag':>6}{'tabell':>9}{'full':>9}{'forskjell':>12}"
+                  f"{'klustret':>11}{'uklustret':>11}")
             for frac in cuts:
                 sel = TAG[t] == frac
                 if not sel.any():
                     continue
                 a, b = E["tabell"][t][sel], E["full"][t][sel]
-                d = b - a
-                se = d.std(ddof=1) / np.sqrt(len(d))
+                d, sk, sn = par("full", "tabell", t, sel)
                 print(f"    {frac*100:>5.0f} %{int(sel.sum()):>6}{a.mean():>9.4f}{b.mean():>9.4f}"
-                      f"{d.mean():>+12.4f}{se:>14.4f}")
+                      f"{d:>+12.4f}{sk:>11.4f}{sn:>11.4f}")
 
     # Full modell mot tabellmodellen, samlet: den sammenligningen teksten under
     # Brier-tabellen bygger på.
     if "tabell" in E and "full" in E:
         print("\nFull modell mot tabellmodell, alle kuttpunkt samlet:")
         for t in targets:
-            d = E["full"][t] - E["tabell"][t]
-            se = d.std(ddof=1) / np.sqrt(len(d))
-            print(f"    {t:<10}{d.mean():>+9.4f} +/- {se:.4f}   ({abs(d.mean())/se:.1f} standardfeil)")
+            d, sk, sn = par("full", "tabell", t)
+            print(f"    {t:<10}{d:>+9.4f} +/- {sk:.4f} klustret ({abs(d)/sk:.1f} SE)"
+                  f"   [uklustret {sn:.4f}, {abs(d)/sn:.1f} SE]")
 
     # Kalibrering for modellen som er i bruk: prediksjonene delt i
     # tiprosentspenn, med snitt predikert og faktisk andel i hvert.
@@ -400,18 +455,30 @@ def main():
                     continue
                 print(f"    {lo}-{hi} %{'':<6}{int(sel.sum()):>7}{P[sel].mean()*100:>12.1f}%{Y[sel].mean()*100:>9.1f}%")
 
-    print("\nForskjell mot referansen, med standardfeil (parvis, samme lag og kuttpunkt).")
-    print("Et avvik mindre enn omtrent to standardfeil kan ikke skilles fra testens egen stoy.")
-    print(f"{'Steg':<14}{'mot':<12}" + "".join(f"{t:>22}" for t in targets))
+    print("\nForskjell mot referansen, parvis (samme lag og kuttpunkt).")
+    print("Standardfeilen er KLUSTRET PAA SESONG. Et avvik under to standardfeil")
+    print("kan ikke skilles fra testens egen stoy.")
+    print(f"{'Steg':<14}{'mot':<12}" + "".join(f"{t:>26}" for t in targets))
     for b in models[1:]:
         a = BASE_OF.get(b)
         if a is None or a not in E:
             continue
         cells = []
         for t in targets:
-            d = E[b][t] - E[a][t]
-            se = d.std(ddof=1) / np.sqrt(len(d))
-            cells.append(f"{d.mean():+.4f} +/- {se:.4f}".rjust(22))
+            d, sk, _sn = par(b, a, t)
+            cells.append(f"{d:+.4f} +/- {sk:.4f} ({abs(d)/sk:.1f})".rjust(26))
+        print(f"{b:<14}{a:<12}" + "".join(cells))
+
+    print("\nSamme tabell UTEN klustring, til sammenligning.")
+    print(f"{'Steg':<14}{'mot':<12}" + "".join(f"{t:>26}" for t in targets))
+    for b in models[1:]:
+        a = BASE_OF.get(b)
+        if a is None or a not in E:
+            continue
+        cells = []
+        for t in targets:
+            d, _sk, sn = par(b, a, t)
+            cells.append(f"{d:+.4f} +/- {sn:.4f} ({abs(d)/sn:.1f})".rjust(26))
         print(f"{b:<14}{a:<12}" + "".join(cells))
     return 0
 
