@@ -240,3 +240,66 @@ Det som trengs:
 Samme mønster som arkiveringssteget i `update-odds.yml` bruker: jobben skal
 ikke velte, men feilen skal ikke forsvinne stille heller.
 
+#### Reservekilder, kartlagt og delvis verifisert 25. september 2026
+
+To ting er verifisert mot dataene våre, og begge holder:
+
+**Hvert (hjemme, borte)-par møtes nøyaktig én gang per sesong.** Kontrollert
+på 2022–2025: null dubletter. Paret er derfor en gyldig nøkkel for en fast
+tabell (hjemmelag, bortelag) → runde.
+
+**Runde kan ikke utledes av dato.** I 2026 er ni kamper spilt mer enn fem
+dager fra rundens median, og ytterpunktene er ekstreme:
+
+    runde  2   122 dager unna   Bodø/Glimt - HamKam
+    runde 18   108 dager unna   Bodø/Glimt - Start      (spilt 30. april)
+    runde 15   102 dager unna   Tromsø - Lillestrøm
+    runde 17   101 dager unna   Tromsø - Brann          (spilt 29. april)
+
+Rundenummeret følger kampen når den flyttes. Enhver utledning fra dato ville
+gitt feil svar på disse ni.
+
+**Arkitekturen som følger:** hent en fast tabell (hjemmelag, bortelag) → runde
+fra en offisiell kilde én gang per sesong og committ den. Dato og avspark kan
+komme fra hvilken som helst kilde og oppdateres løpende.
+
+Kilder, i anbefalt rekkefølge:
+
+1. **eliteserien.no/terminliste og /resultater.** Offisiell ligaside,
+   rundenummer på hver kamp, rendret på serveren så vanlig HTTP holder. OBOS
+   har samme format på obos-ligaen.no/terminliste. Ingen årlig ID i URL-en,
+   som er den svakheten ffksupporter har. **Førstevalg.**
+   Merk: kalenderfeeden (/terminliste/subscribe) har ikke runde.
+
+2. **FotMob.** Hele sesongen som JSON i `__NEXT_DATA__` på ligasiden: runde,
+   kamp-ID, UTC-avspark, resultat og status inkludert avlyst og tildelt.
+   Eliteserien liga 59, OBOS liga 203. Direkte-API-et er stengt. Uoffisielt,
+   så bare som reserve nummer to.
+
+3. **NFF, fotball.no.** Offisiell og har runde, men `fiksId` endres hvert år
+   -- samme svakhet som ffksupporter. Hovedterminliste-PDF finnes.
+
+4. **API-Football. VERIFISERT UBRUKELIG på gratisnivået.** Liga-oppslaget
+   virker og gir Eliteserien = 103, OBOS = 104, begge med full dekning for
+   2026. Men terminlisten svarer:
+
+       {'plan': 'Free plans do not have access to this season,
+                 try from 2022 to 2024.'}
+
+   Gratisnivået er 100 kall i døgnet, men inneværende sesong er bak
+   betalingsmur. Koden finnes alt i `scripts/discover_sources.py`
+   (`api_football_fixtures`, leser `f["league"]["round"]`), så den kan tas i
+   bruk umiddelbart hvis vi noen gang betaler.
+
+5. **thestatsapi.com.** Kamp-ID, dato, avspark, ingen runde. Må sjekkes om
+   det er åpent og om vilkårene tillater offentlig bruk.
+
+6. **ESPN**, som vi alt bruker. Kampoppsett uten runde, og bare dagens
+   kamper.
+
+SofaScore er sjekket og gir 403.
+
+Siden runde bare trengs én gang per sesong, holder det at **én** av kildene
+over virker i desember. Faller alle bort, er nødløsningen gruppering på
+kampdag i stedet for runde, men rundeselektoren må da bygges om.
+
