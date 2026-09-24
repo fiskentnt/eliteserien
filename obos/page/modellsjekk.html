@@ -16,16 +16,16 @@
       <thead><tr><th>Modell</th><th>Opprykk</th><th>Topp 6</th><th>Nedrykk</th></tr></thead>
       <tbody>
         <tr><td>Naiv basisrate</td><td>0,1094</td><td>0,2344</td><td>0,1094</td></tr>
-        <tr><td>Tabellmodell (alle lag like sterke)</td><td>0,0407</td><td>0,1074</td><td>0,0523</td></tr>
-        <tr><td>Ren Poisson</td><td>0,0428</td><td>0,1136</td><td>0,0480</td></tr>
-        <tr><td>Modell uten odds (som i testen)</td><td>0,0399</td><td>0,1076</td><td>0,0483</td></tr>
+        <tr><td>Tabellmodell (alle lag like sterke)</td><td>0,0407</td><td>0,1073</td><td>0,0524</td></tr>
+        <tr><td>Ren Poisson</td><td>0,0428</td><td>0,1135</td><td>0,0479</td></tr>
+        <tr><td>Modell uten odds (som i testen)</td><td>0,0400</td><td>0,1077</td><td>0,0482</td></tr>
       </tbody>
     </table></div>
-    <p class="note">Mot tabellmodellen: <strong>opprykk omtrent likt</strong> (0,0008 ± 0,0011, altså 0,7 standardfeil og innenfor støyen), <strong>topp 6 likt</strong> (0,0002 ± 0,0019), og <strong>nedrykk tydelig bedre</strong> (0,0040 ± 0,0011, 3,7 standardfeil).</p>
+    <p class="note">Mot tabellmodellen: <strong>opprykk omtrent likt</strong> (0,0007 ± 0,0015, altså 0,5 standardfeil og innenfor støyen), <strong>topp 6 likt</strong> (0,0003 ± 0,0024), og <strong>nedrykk tydelig bedre</strong> (0,0042 ± 0,0011, 3,7 standardfeil).</p>
 
     <details class="details-tech">
       <summary>Vis detaljer</summary>
-      <p class="note">Sist validert: 22. september 2026, mot obos/data/obos_2012-2026.csv, sesongene 2012–2025. Modellen tilpasses ved fire kuttpunkter i hver sesong (etter 40, 55, 70 og 85 prosent av kampene), resten av sesongen simuleres 8000 ganger, og tallene er snittet over 896 lag-observasjoner. Hele kjøringen ligger i <code>scripts/backtest_zones.py</code>, kjørt med <code>--league-zones obos</code>.</p>
+      <p class="note">Sist validert: 24. september 2026, mot obos/data/obos_2012-2026.csv, sesongene 2012–2025. Modellen tilpasses ved fire kuttpunkter i hver sesong (etter 40, 55, 70 og 85 prosent av kampene), resten av sesongen simuleres 100 000 ganger, og tallene er snittet over 896 lag-observasjoner. Standardfeilene er klustret på sesong: lagene i en sesong er ikke uavhengige forsøk, og de samme sesongene måles ved fire kuttpunkter. Hele kjøringen ligger i <code>scripts/backtest_zones.py</code>, kjørt med <code>--league-zones obos</code>.</p>
       <ul class="baselines">
         <li><strong>Naiv basisrate:</strong> samme faste sannsynlighet for alle lag: 2/16 for opprykk, 6/16 for topp 6, 2/16 for nedrykk.</li>
         <li><strong>Tabellmodell:</strong> starter fra dagens tabell og antar at alle lag er like sterke i de gjenstående kampene. Den bruker ikke tabellplasseringen til å anslå lagstyrke.</li>
@@ -37,10 +37,10 @@
       <div class="tblscroll"><table class="mt ablation">
         <thead><tr><th>Steg</th><th>Opprykk</th><th>Topp 6</th><th>Nedrykk</th><th>Effekt</th></tr></thead>
         <tbody>
-          <tr><td>1. Ren Poisson</td><td data-l="Opprykk">0,0428</td><td data-l="Topp 6">0,1136</td><td data-l="Nedrykk">0,0480</td><td>Utgangspunkt</td></tr>
-          <tr><td>2. + formoppdatering</td><td data-l="Opprykk">0,0426</td><td data-l="Topp 6">0,1122</td><td data-l="Nedrykk">0,0477</td><td>Bedre på topp 6, ellers ingen målbar forskjell</td></tr>
+          <tr><td>1. Ren Poisson</td><td data-l="Opprykk">0,0428</td><td data-l="Topp 6">0,1135</td><td data-l="Nedrykk">0,0479</td><td>Utgangspunkt</td></tr>
+          <tr><td>2. + formoppdatering</td><td data-l="Opprykk">0,0425</td><td data-l="Topp 6">0,1122</td><td data-l="Nedrykk">0,0477</td><td>Bedre på topp 6, ellers ingen målbar forskjell</td></tr>
           <tr><td>3. + Dixon-Coles</td><td data-l="Opprykk">0,0427</td><td data-l="Topp 6">0,1131</td><td data-l="Nedrykk">0,0477</td><td>Ingen målbar forskjell</td></tr>
-          <tr><td>4. Modell uten odds (l1/l2=16/48)</td><td data-l="Opprykk">0,0399</td><td data-l="Topp 6">0,1076</td><td data-l="Nedrykk">0,0483</td><td>Bedre på opprykk og topp 6</td></tr>
+          <tr><td>4. Modell uten odds (l1/l2=16/48)</td><td data-l="Opprykk">0,0400</td><td data-l="Topp 6">0,1077</td><td data-l="Nedrykk">0,0482</td><td>Bedre på opprykk og topp 6</td></tr>
         </tbody>
       </table></div>
       <p class="note">Regulariseringen betyr mer i OBOS-ligaen enn i Eliteserien: med færre kamper bak hvert lagestimat er det lettere å overtilpasse.</p>
