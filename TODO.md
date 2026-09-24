@@ -89,3 +89,92 @@ failsafe-tester grønne mot tabellkalkulator.no.
   Klokkeslettene i `.github/workflows/*.yml` er UTC og forutsetter norsk
   sommertid, så alle jobbene går en time for sent fra den datoen. Se
   kommentaren i `update-data.yml`.
+
+## Etter sesongslutt 8. november 2026: overgangen til 2027
+
+Kartlagt 24. september 2026. **Ikke start før sesongen er ferdigspilt.**
+
+Ett funn avgjør rekkefølgen: **prosentene regnes ut i nettleseren fra
+`model.json` og `matches.json` hver gang siden åpnes.** En frossen kopi av
+datafilene er derfor ikke nok -- en senere endring i JavaScript eller i
+modellen gir andre tall fra de samme dataene. Skal 2026 bevares nøyaktig slik
+den var, må de **utregnede sannsynlighetene** fryses som data.
+
+Rekkefølgen under er ikke valgfri. Bytteregelen forutsetter at frysingen
+virker, og frysingen må være prøvd før den brukes på ekte.
+
+### 1. Frysing, prøvd på 2025 først
+
+Bygg `/eliteserien/2025/` fra `NOR.csv` som en øvelse, og sammenlign med det
+siden faktisk viste i 2025. Da er metoden testet før 2026 fryses for godt.
+
+Stabil adresse per sesong, med ferdig utregnet tabell, sannsynligheter og
+treffsikkerhet som statisk data:
+
+    eliteserien/2026/index.html
+    eliteserien/2026/data/frosset.json
+
+Disse 9 filene utgjør sesongtilstanden og må fryses: `matches.json`,
+`fixtures.json`, `model.json`, `odds.json`, `odds_closing.json`,
+`accuracy.json`, `history.json`, `lastmatch.json`, `keymatch.json`.
+
+**Risikabelt.** Fryser vi for tidlig blir tallene feil for godt, og fryser vi
+uten å verifisere oppdager vi det ikke før noen spør.
+
+### 2. Automatisk oppdagelse av ny sesong
+
+`data/sesonger.json` som autoritativ kilde:
+
+    {"aktiv": "2026",
+     "sesonger": {"2026": {"status": "aktiv", "lag": [...]},
+                  "2027": {"status": "oppdaget", "lag": [...]}}}
+
+Et ukentlig skript ser etter terminliste for `aktiv + 1` og setter status
+`oppdaget`. Det **endrer ikke `aktiv`**. Enkelt: ny fil, ingen eksisterende
+logikk berørt.
+
+### 3. Bytteregel -- hendelsesdrevet, ikke kalenderdrevet
+
+Alle tre vilkårene må være oppfylt:
+
+1. Forrige sesong har alle 240 kamper spilt
+2. Ny sesong har minst én **spilt** kamp med resultat
+3. Forrige sesong er arkivert med status `frosset`
+
+Publisering av terminlisten alene gjør ingenting, siden vilkår 2 krever spilt
+kamp. 2026 er hovedsesong gjennom hele vinteren.
+
+**Kan gå galt:** bytter for tidlig hvis en trenings- eller cupkamp havner i
+`matches.json`. Må filtrere på ligakamp.
+
+### Hardkodet 2026 som må hentes fra aktiv sesong
+
+Python, ett symbol per fil:
+
+    scripts/odds_compare.py:49         SEASON = 2026
+    scripts/elite_closing_odds.py:45   SEASON = 2026
+    scripts/prekick_odds.py:39         SEASON = 2026
+    scripts/obos_results.py:54         SEASON = "2026"
+    scripts/obos_closing_odds.py:97    r["sesong"] != "2026"
+    scripts/fetch_odds_history.py:72   r.get("Season") == "2026"
+    scripts/discover_sources.py:57     s["year"] == 2026
+
+HTML og JS i `eliteserien/index.html`: `season: 2026` på linje 1351 og
+1691/1693, `<title>` og JSON-LD på 7/20/27/36, `<h1>` på 1012, «Om siden» på
+1157, FAQ-spørsmålene på 1367/1372. Forsiden: `index.html` 138 og 144.
+Testene forventer «Eliteserien 2026» i `tests/regression.js` 1604-1605.
+
+`<title>` og JSON-LD må være statiske for søkemotorer, så de skrives av
+`build_league.py` fra `sesonger.json`. De øvrige tekstene kan lese
+`LEAGUE.season`.
+
+Laglisten `CANONICAL_TEAMS` i `scripts/oddslib.py:17` må oppdateres ved hvert
+opp- og nedrykk.
+
+### Backtestene skal IKKE bruke aktiv sesong
+
+`backtest_zones.py` og `evaluate_model.py` tar eksplisitte historiske år og
+skal aldri lese `current_season`. Legg en failsafe-test som håndhever det --
+det er nettopp den feilen som ville ødelagt reproduserbarheten av de
+publiserte tallene.
+
