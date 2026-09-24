@@ -56,6 +56,42 @@ jobs:
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
         run: python3 scripts/odds_compare.py
 
+      # Point-in-time-arkiv i det PRIVATE lab-repoet. Tilbaketesten har bare
+      # sluttodds, og kan derfor ikke måle modeller som bruker markedsodds på
+      # kommende kamper uten å lekke framtidsinformasjon. Dette bygger
+      # grunnlaget for en ekte måling om ett til to år.
+      #
+      # Nøkkelen (LAB_DEPLOY_KEY) er en deploy key med skrivetilgang BARE til
+      # lab-repoet. Snapshotet havner aldri i dette repoet.
+      #
+      # continue-on-error: arkivet er en bonus, ikke produksjon. Feiler det,
+      # skal oddshentingen gå videre som før.
+      - name: Arkiver oddssnapshot i lab-repoet
+        if: steps.gate.outputs.should_fetch == 'true' && env.LAB_KEY != ''
+        continue-on-error: true
+        env:
+          LAB_KEY: ${{ secrets.LAB_DEPLOY_KEY }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          printf '%s\n' "$LAB_KEY" > ~/.ssh/lab
+          chmod 600 ~/.ssh/lab
+          ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/lab -o IdentitiesOnly=yes"
+          git clone --depth 1 git@github.com:fiskentnt/tabellkalkulator-lab.git "$RUNNER_TEMP/lab"
+          python3 scripts/arkiver_odds_snapshot.py "$RUNNER_TEMP/lab/odds-arkiv"
+          cd "$RUNNER_TEMP/lab"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add odds-arkiv
+          if git diff --cached --quiet; then
+            echo "Ingen nye snapshot."
+          else
+            git commit -m "Oddssnapshot $(date -u +%Y-%m-%dT%H:%MZ)"
+            git push
+          fi
+          rm -f ~/.ssh/lab
+
       - name: Committer og pusher hvis noe endret seg
         if: always() && steps.gate.outputs.should_fetch == 'true'
         run: |
