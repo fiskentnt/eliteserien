@@ -53,6 +53,18 @@ jobs:
         if: ${{ !inputs.dry_run }}
         run: python3 -m pip install --quiet -r requirements.txt
 
+      # Point-in-time-arkiv i det PRIVATE lab-repoet, samme mønster som
+      # update-odds.yml. Arkiveres FØR hentingen kan overskrive snapshotet,
+      # så et snapshot som gikk tapt sist blir fanget, og etterpå på nytt.
+      # Idempotent: filnavnet er hentetidspunktet.
+      - name: Arkiver forrige oddssnapshot (før henting)
+        id: ark_for
+        if: ${{ !inputs.dry_run }}
+        continue-on-error: true
+        env:
+          LAB_DEPLOY_KEY: ${{ secrets.LAB_DEPLOY_KEY }}
+        run: bash scripts/arkiver_til_lab.sh for-henting obos
+
       # Odds for kommende kamper: blandes inn per kamp på siden. Gratis
       # oppslag; bare terminlisten koster ett kall, og den mellomlagres.
       # Feiler den, er det ikke kritisk -- siden faller tilbake til modellen.
@@ -62,6 +74,35 @@ jobs:
         env:
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
         run: python3 scripts/obos_upcoming_odds.py
+
+      - name: Arkiver nytt oddssnapshot (etter henting)
+        id: ark_etter
+        if: ${{ !inputs.dry_run }}
+        continue-on-error: true
+        env:
+          LAB_DEPLOY_KEY: ${{ secrets.LAB_DEPLOY_KEY }}
+        run: bash scripts/arkiver_til_lab.sh etter-henting obos
+
+      # Arkiveringen skal ikke velte resultatoppdateringen, men et tapt
+      # snapshot er en observasjon vi ikke får igjen. Feilen skrives derfor i
+      # jobbsammendraget, med liga og hvilken fase det gjelder.
+      - name: Meld om arkiveringsfeil
+        if: always() && !inputs.dry_run
+        run: |
+          feil=0
+          for x in "for-henting:${{ steps.ark_for.outcome }}" \
+                   "etter-henting:${{ steps.ark_etter.outcome }}"; do
+            fase="${x%%:*}"; res="${x##*:}"
+            if [ "$res" = "failure" ]; then
+              echo "### Arkivering feilet: OBOS, $fase" >> "$GITHUB_STEP_SUMMARY"
+              echo "Snapshotet kan være tapt. Se git-historikken til" >> "$GITHUB_STEP_SUMMARY"
+              echo "\`obos/data/odds_upcoming.json\` for å hente det inn manuelt." >> "$GITHUB_STEP_SUMMARY"
+              echo "::warning title=Arkivering feilet::OBOS, $fase"
+              feil=1
+            fi
+          done
+          [ "$feil" = "0" ] && echo "Arkivering OK (begge faser)." >> "$GITHUB_STEP_SUMMARY"
+          exit 0
 
       - name: Bygg tabell og modell på nytt
         if: ${{ !inputs.dry_run }}
