@@ -20,6 +20,13 @@ FASE="${1:-ukjent}"; shift || true
 LIGAER=("$@")
 [ ${#LIGAER[@]} -eq 0 ] && LIGAER=(eliteserien obos)
 
+# Testbryter: gjor det mulig aa prove feilveien i en ekte kjoring uten aa
+# odelegge noe. Settes bare fra workflow_dispatch med feil_arkivering=true.
+if [ "${ARKIV_TVING_FEIL:-}" = "1" ]; then
+  echo "FEIL: tvunget feil for test av feilhaandtering ($FASE)"
+  exit 1
+fi
+
 if [ -z "${LAB_DEPLOY_KEY:-}" ]; then
   echo "LAB_DEPLOY_KEY er ikke satt -- hopper over arkivering ($FASE)."
   exit 0
@@ -48,7 +55,7 @@ git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
 git add odds-arkiv
 if git diff --cached --quiet; then
-  echo "Ingen nye snapshot ($FASE) -- alt var arkivert fra for."
+  echo "Ingen nye snapshot ($FASE) -- alt var arkivert fra før."
   exit 0
 fi
 git commit --quiet -m "Oddssnapshot ($FASE) $(date -u +%Y-%m-%dT%H:%MZ)"

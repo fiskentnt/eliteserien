@@ -32,6 +32,21 @@ jobs:
         with:
           ref: main
 
+      # Point-in-time-arkiv i det PRIVATE lab-repoet, samme mønster som
+      # update-odds.yml. Arkiveres FØR hentingen kan overskrive snapshotet,
+      # så et snapshot som gikk tapt sist blir fanget, og etterpå på nytt.
+      # Idempotent: filnavnet er hentetidspunktet.
+      #
+      # Ligger rett etter checkout, uten dry_run-betingelse: en kjoring som
+      # ikke henter ny odds skal likevel arkivere det som ligger fra sist.
+      # Skriptet bruker bare standardbibliotek.
+      - name: Arkiver forrige oddssnapshot (før henting)
+        id: ark_for
+        continue-on-error: true
+        env:
+          LAB_DEPLOY_KEY: ${{ secrets.LAB_DEPLOY_KEY }}
+        run: bash scripts/arkiver_til_lab.sh for-henting obos
+
       - name: Hent og valider resultater
         env:
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
@@ -52,18 +67,6 @@ jobs:
       - name: Installer avhengigheter
         if: ${{ !inputs.dry_run }}
         run: python3 -m pip install --quiet -r requirements.txt
-
-      # Point-in-time-arkiv i det PRIVATE lab-repoet, samme mønster som
-      # update-odds.yml. Arkiveres FØR hentingen kan overskrive snapshotet,
-      # så et snapshot som gikk tapt sist blir fanget, og etterpå på nytt.
-      # Idempotent: filnavnet er hentetidspunktet.
-      - name: Arkiver forrige oddssnapshot (før henting)
-        id: ark_for
-        if: ${{ !inputs.dry_run }}
-        continue-on-error: true
-        env:
-          LAB_DEPLOY_KEY: ${{ secrets.LAB_DEPLOY_KEY }}
-        run: bash scripts/arkiver_til_lab.sh for-henting obos
 
       # Odds for kommende kamper: blandes inn per kamp på siden. Gratis
       # oppslag; bare terminlisten koster ett kall, og den mellomlagres.
@@ -87,7 +90,7 @@ jobs:
       # snapshot er en observasjon vi ikke får igjen. Feilen skrives derfor i
       # jobbsammendraget, med liga og hvilken fase det gjelder.
       - name: Meld om arkiveringsfeil
-        if: always() && !inputs.dry_run
+        if: always()
         run: |
           feil=0
           for x in "for-henting:${{ steps.ark_for.outcome }}" \

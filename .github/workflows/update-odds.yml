@@ -7,7 +7,12 @@ on:
     # ikke nylig ble lav), se scripts/should_fetch_odds.py.
     - cron: "13 8 * * *"
     - cron: "13 16 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      feil_arkivering:
+        description: "Tving arkiveringen til aa feile, for aa teste at produksjonen gaar videre"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -21,6 +26,29 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
+      # Point-in-time-arkiv i det PRIVATE lab-repoet. Tilbaketesten har bare
+      # sluttodds, så vi kan ikke måle modeller som bruker markedsodds på
+      # kommende kamper uten å lekke framtidsinformasjon. Dette bygger
+      # datagrunnlaget for en ekte måling om ett til to år.
+      #
+      # Arkiveres TO ganger: først snapshotet som alt ligger i repoet, FØR
+      # hentingen kan overskrive det -- da fanges et snapshot som gikk tapt
+      # sist fordi arkiveringen feilet. Så det nye etterpå. Begge er
+      # idempotente: filnavnet er hentetidspunktet, så et snapshot som
+      # finnes fra før hoppes over.
+      #
+      # Dette steget ligger FOR porten under, og har ingen gate-betingelse:
+      # en jobb som bestemmer seg for aa ikke hente ny odds, skal likevel
+      # arkivere det som ligger fra sist. Skriptet bruker bare standardbibliotek,
+      # saa det trenger ikke setup-python eller pip.
+      - name: Arkiver forrige oddssnapshot (før henting)
+        id: ark_for
+        continue-on-error: true
+        env:
+          LAB_DEPLOY_KEY: ${{ secrets.LAB_DEPLOY_KEY }}
+          ARKIV_TVING_FEIL: ${{ inputs.feil_arkivering && '1' || '' }}
+        run: bash scripts/arkiver_til_lab.sh for-henting eliteserien
 
       - name: Sjekk om det er noen vits (kamper innen 7 dager, kvote ikke lav)
         id: gate
@@ -37,24 +65,6 @@ jobs:
       - name: Installer avhengigheter (numpy, scipy)
         if: steps.gate.outputs.should_fetch == 'true'
         run: pip install -r requirements.txt
-
-      # Point-in-time-arkiv i det PRIVATE lab-repoet. Tilbaketesten har bare
-      # sluttodds, så vi kan ikke måle modeller som bruker markedsodds på
-      # kommende kamper uten å lekke framtidsinformasjon. Dette bygger
-      # datagrunnlaget for en ekte måling om ett til to år.
-      #
-      # Arkiveres TO ganger: først snapshotet som alt ligger i repoet, FØR
-      # hentingen kan overskrive det -- da fanges et snapshot som gikk tapt
-      # sist fordi arkiveringen feilet. Så det nye etterpå. Begge er
-      # idempotente: filnavnet er hentetidspunktet, så et snapshot som
-      # finnes fra før hoppes over.
-      - name: Arkiver forrige oddssnapshot (før henting)
-        id: ark_for
-        if: steps.gate.outputs.should_fetch == 'true'
-        continue-on-error: true
-        env:
-          LAB_DEPLOY_KEY: ${{ secrets.LAB_DEPLOY_KEY }}
-        run: bash scripts/arkiver_til_lab.sh for-henting eliteserien
 
       - name: Hent kommende odds, slå sammen kilder og tilpass modellen på nytt
         if: steps.gate.outputs.should_fetch == 'true'
@@ -80,6 +90,7 @@ jobs:
         continue-on-error: true
         env:
           LAB_DEPLOY_KEY: ${{ secrets.LAB_DEPLOY_KEY }}
+          ARKIV_TVING_FEIL: ${{ inputs.feil_arkivering && '1' || '' }}
         run: bash scripts/arkiver_til_lab.sh etter-henting eliteserien
 
       # Arkiveringen skal ikke velte produksjonsoppdateringen, men den skal
@@ -87,7 +98,7 @@ jobs:
       # ikke får igjen. Feilen skrives derfor i jobbsammendraget, med liga og
       # hvilken av de to arkiveringene det gjelder.
       - name: Meld om arkiveringsfeil
-        if: always() && steps.gate.outputs.should_fetch == 'true'
+        if: always()
         run: |
           feil=0
           for x in "for-henting:${{ steps.ark_for.outcome }}" \
