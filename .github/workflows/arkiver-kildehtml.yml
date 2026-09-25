@@ -1,0 +1,79 @@
+name: "Arkiver kilde-HTML (diagnostikk)"
+
+# Lagrer rå HTML fra de offisielle kildene på kampdager, i det PRIVATE
+# lab-repoet. Se scripts/arkiver_kildehtml.py for hvorfor.
+#
+# EGEN WORKFLOW, ikke et steg i de andre. Grunnen er kadensen:
+#
+#   update-data.yml   kjører hvert 20. minutt kl 12-23, men PORTEN
+#                     (should_fetch.py) slipper først gjennom 105 minutter
+#                     ETTER avspark. Et arkivsteg der måtte ligge før porten.
+#   obos-results.yml  kjører én gang i døgnet, 07.17 norsk tid. Under en
+#                     OBOS-kamp om kvelden kjører den aldri.
+#
+# Første kampdag etter kildebyttet er nettopp en OBOS-kamp (runde 24,
+# 2. oktober 19.00), så et arkiv som henger på obos-results ville ikke fanget
+# noe som helst. Denne jobben har derfor sin egen, tette kadens, og dekker
+# begge ligaer likt.
+#
+# Jobben er billig: den henter tre sider per liga BARE på kampdager, og
+# avslutter umiddelbart ellers. Den trenger ingen avhengigheter -- verifisert
+# med AST-analyse at ntf_source, nff_source og arkiver_kildehtml bare bruker
+# standardbiblioteket -- så ingen pip og ingen setup-python.
+
+on:
+  schedule:
+    # Hvert 20. minutt kl 12-23 norsk sommertid. Ikke runde klokkeslett:
+    # GitHub sin cron er mest forsinket på hele og halve timer.
+    - cron: "3,23,43 10-21 * * *"
+  workflow_dispatch:
+    inputs:
+      tving_kampdag:
+        description: "Tving kampdag, for å teste arkiveringen utenom kampdager"
+        type: boolean
+        default: false
+      tving_feil:
+        description: "Tving arkiveringen til å feile, for å vise at feilen blir synlig"
+        type: boolean
+        default: false
+
+# Jobben skal ALDRI kunne skrive til dette repoet. Den skriver bare til laben,
+# og bare med deploy-nøkkelen. Lesetilgang er alt den trenger.
+permissions:
+  contents: read
+
+concurrency:
+  group: arkiver-kildehtml
+  cancel-in-progress: false
+
+jobs:
+  arkiver:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Arkiver rå HTML fra NTF- og NFF-kildene
+        id: ark
+        continue-on-error: true   # diagnostikk skal aldri farge en kjøring rød alene
+        env:
+          LAB_DEPLOY_KEY: ${{ secrets.LAB_DEPLOY_KEY }}
+          ARKIV_TVING_KAMPDAG: ${{ inputs.tving_kampdag && '1' || '' }}
+          ARKIV_TVING_FEIL: ${{ inputs.tving_feil && '1' || '' }}
+        run: bash scripts/arkiver_til_lab.sh kildehtml
+
+      - name: Meld om arkiveringsfeil
+        if: steps.ark.outcome == 'failure'
+        run: |
+          echo "::warning title=Kilde-HTML ble ikke arkivert::Arkiveringen til laben feilet. Produksjonen er upåvirket, men vi mister markupen fra denne kjøringen -- og på en kampdag er det nettopp den vi er ute etter."
+          {
+            echo "### Kilde-HTML ble IKKE arkivert"
+            echo ""
+            echo "Arkiveringen til \`tabellkalkulator-lab\` feilet. Dette stopper ingenting,"
+            echo "men diagnostikken for denne kjøringen er tapt."
+            echo ""
+            echo "Se steget «Arkiver rå HTML fra NTF- og NFF-kildene» over for årsaken."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Oppsummer
+        if: steps.ark.outcome == 'success'
+        run: echo "Arkivering fullført uten feil." >> "$GITHUB_STEP_SUMMARY"
