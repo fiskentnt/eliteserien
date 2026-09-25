@@ -3,28 +3,44 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
-## Når PAT-en for planleggeren går ut
+## Planleggerens hemmeligheter: hvor de trekkes tilbake
 
-UTLØPSDATO: _fyll inn når tokenen er laget_
+Tokenet har INGEN utløpsdato, så det finnes ingen fornyingsfrist. Til
+gjengjeld gjelder det til noen aktivt trekker det tilbake — og et token uten
+utløp som kommer på avveie, blir liggende.
 
-Den eksterne planleggeren (`planlegger/`) har TO hemmeligheter i Cloudflare:
+Den eksterne planleggeren (`planlegger/`) har to hemmeligheter i Cloudflare:
 
   GITHUB_TOKEN     fine-grained PAT, `Actions: Read and write` på
-                   `fiskentnt/eliteserien` alene. Denne utløper.
-  UTLOSER_NOKKEL   nøkkel for manuell utløsning via `?kjor=1`. Utløper ikke,
-                   men byttes hvis den kommer på avveie. Uten den er manuell
-                   utløsning av; den planlagte kjøringen virker uansett. Går den ut,
-slutter planleggeren å virke **uten å si fra**: dispatch svarer 401, og
-Cloudflare-loggen viser det, men ingen leser den loggen til daglig.
+                   `fiskentnt/eliteserien` alene. Uten utløpsdato.
+  UTLOSER_NOKKEL   nøkkel for manuell utløsning via headeren
+                   `X-Planlegger-Nokkel`. Uten den er manuell utløsning av;
+                   den planlagte kjøringen virker uansett.
 
-Det synlige tegnet er at kjøringene faller tilbake til GitHub sin egen
-kadens, altså rundt fem i døgnet i stedet for hvert tiende minutt. Da vil
-arkivet på kampdager være nesten tomt, og OBOS-tabellen oppdateres først
-neste formiddag igjen.
+### Trekke tilbake tokenet
 
-Forny tokenen og oppdater hemmeligheten:
+github.com → **Settings → Developer settings → Personal access tokens →
+Fine-grained tokens**. Velg tokenet og **Delete**. Der ligger også
+«Last used», som er stedet å se om det fortsatt er i bruk.
 
-    cd planlegger && npx wrangler secret put GITHUB_TOKEN
+Fra det øyeblikket svarer dispatch 401, og planleggeren slutter å virke uten
+å si fra. Cloudflare-loggen viser det, men ingen leser den til daglig. Det
+synlige tegnet er at kjøringene faller tilbake til GitHub sin egen kadens,
+altså rundt fem i døgnet — og da er arkivet på kampdager nesten tomt.
+
+### Legge inn et nytt
+
+Lag et nytt token med samme rettigheter, og så:
+
+    cd planlegger
+    npx wrangler secret put GITHUB_TOKEN
+
+Kommandoen spør om verdien og leser den uten å vise den. Ingen ny deploy
+trengs; workeren leser hemmeligheten ved hvert kall. Slett det gamle tokenet
+på GitHub etterpå, ikke før — ellers står planleggeren stille i mellomtiden.
+
+Samme kommando med `UTLOSER_NOKKEL` bytter triggernøkkelen.
+
 
 ## 2. oktober 2026: første kampdag med de offisielle kildene
 
