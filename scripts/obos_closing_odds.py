@@ -25,7 +25,7 @@ import os
 import sys
 import time
 import unicodedata
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 from zoneinfo import ZoneInfo
 from pathlib import Path
 
@@ -175,18 +175,49 @@ def match_fixtures(rows, fixtures, name_map):
     return links, only_odds, only_csv
 
 
+MARKEDSCACHE_DAGER = 30
+
+
 def fetch_markets(key):
     """Markedslisten: 1 tellende kall, mellomlagret. Trengs for å vite HVILKET
     marked som er 1X2 -- flere markeder har tre utfall, og et feil valg ga
-    uavgjort til 1,61 i første forsøk."""
+    uavgjort til 1,61 i første forsøk.
+
+    Vi lagrer BARE det ene markedet vi bruker, ikke hele listen. Hele svaret
+    er 11 MB, og filen ligger under <liga>/data/ som publiseres på siden --
+    altså 11 MB lastet ned av alle som henter datafilene, for å spare ett
+    API-kall i døgnet. find_1x2() leser bare marketId og navnefeltene, og de
+    beholdes i sin helhet slik at valget kan etterprøves.
+
+    Cachen utløper etter 30 dager. Uten utløp ville en endret markeds-id hos
+    OddsPapi aldri blitt oppdaget."""
     if MARKETS_CACHE.exists():
-        return json.loads(MARKETS_CACHE.read_text(encoding="utf-8"))
+        d = json.loads(MARKETS_CACHE.read_text(encoding="utf-8"))
+        hentet = d.get("hentet") if isinstance(d, dict) else None
+        if hentet is None:
+            return d      # gammelt format (hele listen) -- fortsatt brukbart
+        alder = datetime.now(timezone.utc) - datetime.fromisoformat(hentet)
+        if alder < timedelta(days=MARKEDSCACHE_DAGER):
+            return d
+        print(f"  markedscachen er {alder.days} dager gammel -- henter på nytt")
+
     d, err = oddspapi.call("/v4/markets", {}, key)
     if err:
         print(f"  FEIL ved markedsliste: {err}")
         return None
-    MARKETS_CACHE.write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
-    return d
+    m = find_1x2(d)
+    if m is None:
+        # Kjente vi ikke igjen 1X2, skal vi ikke laase en tom cache -- da
+        # ville vi aldri proevd igjen.
+        print("  fant ikke 1X2 i markedslisten -- cacher ikke")
+        return d
+    liten = {"hentet": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+             "note": ("Bare 1X2-markedet. Hele listen er 11 MB og ligger i en "
+                      "mappe som publiseres. find_1x2() leser marketId og "
+                      "navnefeltene, som er beholdt."),
+             "data": [m]}
+    MARKETS_CACHE.write_text(json.dumps(liten, ensure_ascii=False, indent=1), encoding="utf-8")
+    return liten
 
 
 def find_1x2(markets):

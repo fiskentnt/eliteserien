@@ -97,14 +97,46 @@ def write_json(path, data):
     leaguedata.write_json(path, data)
 
 
+def dagens_revisjonsavvik(now):
+    """Antall kritiske avvik i DAGENS revisjon, eller 0 hvis den ikke er
+    kjørt i dag.
+
+    Revisjonen kjører én gang per kalenderdag. Finner den et kritisk avvik,
+    feiler kjøringen og stempelet blir rødt -- men NESTE kjøring samme dag
+    hopper over revisjonen, og uten dette ville den skrevet ok=True og gjort
+    stempelet grønt igjen mens avviket fortsatt sto. Med en utløser hvert
+    tiende minutt ville det skjedd innen en time."""
+    if not AUDIT_STATE_PATH.exists():
+        return 0
+    try:
+        st = json.loads(AUDIT_STATE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return 0
+    if st.get("checked_date") != now.astimezone(OSLO).strftime("%Y-%m-%d"):
+        return 0
+    return int(st.get("errors") or 0)
+
+
 def write_status(ok, now, error=None):
     """data/status.json -- leses av index.html sitt stempel. Skrives KUN her,
     dvs. bare når update_data.py faktisk har kjørt (ikke når should_fetch.py
     avsluttet kjøringen tidlig uten å hente noe), slik at "Sist sjekket" i
-    stempelet bare oppdateres ved reelle sjekker."""
+    stempelet bare oppdateres ved reelle sjekker.
+
+    Dagens revisjon er sannhetskilden for om stempelet kan være grønt: står
+    det kritiske avvik fra revisjonen i dag, forblir det rødt uansett hvor
+    fint resten av kjøringen gikk. Det blir grønt igjen først når en NY
+    revisjon faktisk bekrefter at avviket er borte."""
+    avvik = dagens_revisjonsavvik(now)
+    if ok and avvik:
+        ok = False
+        error = error or (f"{avvik} kritisk(e) avvik i dagens revisjon står "
+                          f"fortsatt uløst (se audit_state.json)")
     data = {"last_checked": now.isoformat(timespec="seconds"), "ok": ok}
     if error:
         data["error"] = str(error)[:300]
+    if avvik:
+        data["revisjon_avvik"] = avvik
     STATUS_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
@@ -205,14 +237,21 @@ def run_daily_audit(matches_out, ffk_rows, now, log):
     spammer hvert kvarter resten av dagen."""
     today = now.astimezone(OSLO).strftime("%Y-%m-%d")
     state = json.loads(AUDIT_STATE_PATH.read_text(encoding="utf-8")) if AUDIT_STATE_PATH.exists() else {}
-    if state.get("checked_date") == today:
-        # Alt gjort i dag. Revisjonen har sin egen DATO-sperre, mens porten
-        # bruker en 20-TIMERS klokke. Returnerte vi False her, ville
-        # siste_ok aldri blitt satt paa en dag der revisjonen alt var kjort,
-        # og porten ville proevd hver time resten av dagen. De to
-        # mekanismene maa si det samme: vedlikeholdet ER ajour.
-        log("Daglig kontroll: alt gjort i dag -- hopper over.")
+    if state.get("checked_date") == today and not int(state.get("errors") or 0):
+        # Gjort i dag OG ren. Revisjonen har sin egen DATO-sperre, mens porten
+        # bruker en 20-TIMERS klokke. Returnerte vi False her, ville siste_ok
+        # aldri blitt satt paa en dag der revisjonen alt var kjort, og porten
+        # ville proevd hver time resten av dagen.
+        log("Daglig kontroll: alt gjort i dag uten avvik -- hopper over.")
         return True
+
+    if state.get("checked_date") == today:
+        # Gjort i dag, MEN med kritiske avvik. Da skal den kjores paa nytt,
+        # ikke regnes som gjort: et avvik kan vaere rettet hos kontrollkilden
+        # i mellomtiden. Sperren paa en time i porten (should_fetch.py)
+        # hindrer at dette skjer oftere enn det er vits i.
+        log(f"Daglig kontroll: {state['errors']} avvik fra tidligere i dag "
+            f"-- kjører revisjonen på nytt.")
     log(f"--- Daglig kontroll: {len(matches_out)} spilte kamper mot ffksupporter.net ---")
     errors, warnings = audit_against_ffk(matches_out, ffk_rows, now)
     AUDIT_STATE_PATH.write_text(json.dumps(

@@ -681,15 +681,94 @@ _ud.AUDIT_STATE_PATH = _sti
 _naa3 = _dt.now(_tz.utc)
 _i_dag = _naa3.astimezone(_ud.OSLO).strftime("%Y-%m-%d")
 
-_sti.write_text(_json.dumps({"checked_date": _i_dag}), encoding="utf-8")
-sjekk("revisjon alt gjort i dag: regnes som UTFØRT, ikke som hoppet over",
+_sti.write_text(_json.dumps({"checked_date": _i_dag, "errors": 0}), encoding="utf-8")
+sjekk("revisjon gjort i dag UTEN avvik: regnes som utført, hoppes over",
       _ud.run_daily_audit([], [], _naa3, lambda _s: None) is True)
+
+# Men en revisjon som fant avvik skal kjores PAA NYTT, ikke regnes som gjort:
+# avviket kan vaere rettet hos kontrollkilden i mellomtiden.
+_sti.write_text(_json.dumps({"checked_date": _i_dag, "errors": 3}), encoding="utf-8")
+_ud.run_daily_audit([], [], _naa3, lambda _s: None)
+sjekk("revisjon gjort i dag MED avvik: kjøres på nytt og skriver ny tilstand",
+      _json.loads(_sti.read_text(encoding="utf-8")).get("errors") == 0,
+      str(_json.loads(_sti.read_text(encoding="utf-8"))))
 
 _sti.write_text(_json.dumps({"checked_date": "2020-01-01"}), encoding="utf-8")
 sjekk("revisjon ikke gjort i dag: kjører og regnes som utført",
       _ud.run_daily_audit([], [], _naa3, lambda _s: None) is True)
 sjekk("og datoen er oppdatert",
       _json.loads(_sti.read_text(encoding="utf-8"))["checked_date"] == _i_dag)
+_ud.AUDIT_STATE_PATH = _ekte
+
+print("\n=== Et kritisk revisjonsavvik skal stå til det er løst ===")
+# Revisjonen kjorer en gang per kalenderdag. Uten dette ville NESTE kjoring
+# samme dag hoppet over revisjonen, skrevet ok=True og gjort stempelet
+# gronnt mens avviket fortsatt sto. Med utloser hvert tiende minutt ville
+# det skjedd innen en time.
+_st_dir = Path(_tf2.mkdtemp())
+_ud.AUDIT_STATE_PATH = _st_dir / "audit_state.json"
+_ud.STATUS_PATH = _st_dir / "status.json"
+_naa4 = _dt.now(_tz.utc)
+_dag = _naa4.astimezone(_ud.OSLO).strftime("%Y-%m-%d")
+
+
+def _status():
+    return _json.loads(_ud.STATUS_PATH.read_text(encoding="utf-8"))
+
+
+# 1) Revisjonen finner et kritisk avvik -> roedt
+_ud.AUDIT_STATE_PATH.write_text(
+    _json.dumps({"checked_date": _dag, "errors": 2, "warnings": 0}), encoding="utf-8")
+_ud.write_status(ok=False, now=_naa4, error="2 avvik mellom matches.json og kontrollkilden")
+sjekk("kritisk revisjonsavvik: stempelet er rødt", _status()["ok"] is False)
+
+# 2) Ny, ellers vellykket kjoring samme dag -> FORTSATT roedt
+_ud.write_status(ok=True, now=_naa4)
+sjekk("ny vanlig kjøring samme dag: fortsatt rødt", _status()["ok"] is False, str(_status()))
+sjekk("og begrunnelsen sier at avviket står uløst",
+      "står" in _status().get("error", "") and _status().get("revisjon_avvik") == 2,
+      str(_status()))
+
+# 3) DEN EKTE FLYTEN: avviket rettes hos kontrollkilden, neste tillatte
+#    kjoring kjorer revisjonen PAA NYTT, den er ren, og stempelet blir gronnt.
+_kamp = {"date": "2026-09-20", "time": "19:15", "round": 22,
+         "home": "Brann", "away": "Bodø/Glimt", "hg": 2, "ag": 1}
+_vaart = [_kamp]
+_kontroll_feil = [{**_kamp, "hg": 3}]     # kontrollkilden er uenig
+_kontroll_rett = [dict(_kamp)]            # og blir rettet
+
+_ud.AUDIT_STATE_PATH.write_text(
+    _json.dumps({"checked_date": "2020-01-01"}), encoding="utf-8")
+_gammel_naa = _dt(2026, 9, 21, 12, 0, tzinfo=_tz.utc)   # godt etter avspark
+try:
+    _ud.run_daily_audit(_vaart, _kontroll_feil, _gammel_naa, lambda _s: None)
+    _reiste = False
+except _ud.DataAuditError:
+    _reiste = True
+sjekk("revisjonen finner avviket og feiler kjøringen", _reiste)
+_tilstand = _json.loads(_ud.AUDIT_STATE_PATH.read_text(encoding="utf-8"))
+sjekk("og avviket er lagret i audit_state", _tilstand.get("errors") == 1, str(_tilstand))
+_ud.write_status(ok=True, now=_gammel_naa)
+sjekk("stempelet er rødt selv om kjøringen ellers gikk bra", _status()["ok"] is False)
+
+# Kontrollkilden rettes. Neste tillatte kjoring kjorer revisjonen paa nytt.
+_ren = _ud.run_daily_audit(_vaart, _kontroll_rett, _gammel_naa, lambda _s: None)
+sjekk("neste kjøring kjører revisjonen på nytt og den er ren", _ren is True)
+sjekk("audit_state er oppdatert til null avvik",
+      _json.loads(_ud.AUDIT_STATE_PATH.read_text(encoding="utf-8")).get("errors") == 0)
+_ud.write_status(ok=True, now=_gammel_naa)
+sjekk("og DA blir stempelet grønt igjen", _status()["ok"] is True, str(_status()))
+sjekk("avviksfeltet er borte", "revisjon_avvik" not in _status(), str(_status()))
+
+# 4) Gaarsdagens avvik skal ikke faerge dagens stempel
+_ud.AUDIT_STATE_PATH.write_text(
+    _json.dumps({"checked_date": "2020-01-01", "errors": 5}), encoding="utf-8")
+_ud.write_status(ok=True, now=_naa4)
+sjekk("gårsdagens avvik holder ikke stempelet rødt", _status()["ok"] is True)
+
+# 5) En ekte feil i kjoringen gjor det fortsatt roedt, uavhengig av revisjonen
+_ud.write_status(ok=False, now=_naa4, error="noe annet gikk galt")
+sjekk("en vanlig feil gjør det fortsatt rødt", _status()["ok"] is False)
 _ud.AUDIT_STATE_PATH = _ekte
 
 print(f"\n{antall[0] - len(feil)} av {antall[0]} tester gikk gjennom.")
