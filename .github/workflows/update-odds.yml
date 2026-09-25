@@ -129,7 +129,9 @@ jobs:
           [ -f eliteserien/data/odds_captured.json ] && git add eliteserien/data/odds_captured.json
           [ -f eliteserien/data/odds_sources.json ] && git add eliteserien/data/odds_sources.json
           [ -f eliteserien/data/oddspapi_fixtures.json ] && git add eliteserien/data/oddspapi_fixtures.json
-          [ -f data/oddspapi_usage.json ] && git add data/oddspapi_usage.json data/oddspapi-bruk
+          [ -f data/oddspapi_usage.json ] && git add data/oddspapi_usage.json
+          # Katalogen finnes bare naar et tellende kall er gjort i dag.
+          [ -d data/oddspapi-bruk ] && git add data/oddspapi-bruk
           if git diff --cached --quiet; then
             echo "Ingen endringer i odds."
           else

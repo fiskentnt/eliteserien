@@ -99,7 +99,9 @@ jobs:
           [ -f eliteserien/data/odds_closing.json ] && git add eliteserien/data/odds_closing.json
           [ -f eliteserien/data/oddspapi_fixtures_2026.json ] && git add eliteserien/data/oddspapi_fixtures_2026.json
           [ -f eliteserien/data/oddspapi_markets.json ] && git add eliteserien/data/oddspapi_markets.json
-          [ -f data/oddspapi_usage.json ] && git add data/oddspapi_usage.json data/oddspapi-bruk
+          [ -f data/oddspapi_usage.json ] && git add data/oddspapi_usage.json
+          # Katalogen finnes bare naar et tellende kall er gjort i dag.
+          [ -d data/oddspapi-bruk ] && git add data/oddspapi-bruk
           [ -f eliteserien/data/ffk_cache.json ] && git add eliteserien/data/ffk_cache.json
           [ -f eliteserien/data/audit_state.json ] && git add eliteserien/data/audit_state.json
           [ -f eliteserien/data/history.json ] && git add eliteserien/data/history.json
