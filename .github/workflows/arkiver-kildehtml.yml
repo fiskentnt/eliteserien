@@ -22,11 +22,6 @@ name: "Arkiver kilde-HTML (diagnostikk)"
 # standardbiblioteket -- så ingen pip og ingen setup-python.
 
 on:
-  # MIDLERTIDIG: lar oss bevise hele kjeden fra testgrenen. GitHub krever at
-  # en workflow_dispatch-jobb ligger paa standardgrenen for aa kunne startes
-  # via API, og vi vil ikke teste paa main. Fjernes for merge.
-  push:
-    branches: [test-kildearkiv]
   schedule:
     # Hvert 20. minutt kl 12-23 norsk sommertid. Ikke runde klokkeslett:
     # GitHub sin cron er mest forsinket på hele og halve timer.
@@ -62,10 +57,8 @@ jobs:
         continue-on-error: true   # diagnostikk skal aldri farge en kjøring rød alene
         env:
           LAB_DEPLOY_KEY: ${{ secrets.LAB_DEPLOY_KEY }}
-          # Paa testgrenen tvinges kampdag, slik at arkiveringen kan bevises
-          # utenom en kampdag. MIDLERTIDIG, fjernes for merge.
-          ARKIV_TVING_KAMPDAG: ${{ (inputs.tving_kampdag || github.ref_name == 'test-kildearkiv') && '1' || '' }}
-          ARKIV_TVING_FEIL: "1"   # MIDLERTIDIG: beviser feilveien, fjernes straks
+          ARKIV_TVING_KAMPDAG: ${{ inputs.tving_kampdag && '1' || '' }}
+          ARKIV_TVING_FEIL: ${{ inputs.tving_feil && '1' || '' }}
         run: bash scripts/arkiver_til_lab.sh kildehtml
 
       - name: Meld om arkiveringsfeil
