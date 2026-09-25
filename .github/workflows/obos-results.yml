@@ -184,7 +184,15 @@ jobs:
         #
         # Billig: ser bare fra 1. oktober, hopper over naar neste sesong alt
         # er klar, og forsoker hoyst en gang i dognet.
-        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
+        # always(): feiler databyggingen, skal ikke sesongmaskineriet
+        # hoppes over. Uten den ble Sesongskifte SKIPPED, og da utloses
+        # heller ikke sluttsteget som gjor kjoringen rod paa byttets
+        # alarm -- et hoppet steg har outcome 'skipped', ikke 'failure'.
+        # Verre: 1. januar med ufrosset sesong ville byttet aldri kjort,
+        # altsaa vranglaas. Alle tre er trygge paa en avbrutt kjede:
+        # oppdagelsen gir alltid exit 0, frysingen krever en revisjon fra
+        # samme kjoring, og byttet krever frosset gammel sesong.
+        if: always() && steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         run: python3 scripts/oppdag_sesong.py obos
 
       - name: Frys sesongen hvis den er ferdig (obos)
@@ -194,7 +202,15 @@ jobs:
         # timer siden siste kamp, og en fersk revisjon er uten apne kritiske
         # avvik. Resultater kan endres i etterkant, og en frysing skal ikke
         # laase inn en feil. Sesongen er fortsatt AKTIV til 1. januar.
-        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
+        # always(): feiler databyggingen, skal ikke sesongmaskineriet
+        # hoppes over. Uten den ble Sesongskifte SKIPPED, og da utloses
+        # heller ikke sluttsteget som gjor kjoringen rod paa byttets
+        # alarm -- et hoppet steg har outcome 'skipped', ikke 'failure'.
+        # Verre: 1. januar med ufrosset sesong ville byttet aldri kjort,
+        # altsaa vranglaas. Alle tre er trygge paa en avbrutt kjede:
+        # oppdagelsen gir alltid exit 0, frysingen krever en revisjon fra
+        # samme kjoring, og byttet krever frosset gammel sesong.
+        if: always() && steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         run: python3 scripts/frys_sesong.py . obos
 
       - name: Sesongskifte (obos) -- bytter bare 1. januar
@@ -214,7 +230,15 @@ jobs:
         #
         # OPPDAGELSEN av neste sesongs terminliste er IKKE med her -- se
         # TODO.md, frist 1. november.
-        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
+        # always(): feiler databyggingen, skal ikke sesongmaskineriet
+        # hoppes over. Uten den ble Sesongskifte SKIPPED, og da utloses
+        # heller ikke sluttsteget som gjor kjoringen rod paa byttets
+        # alarm -- et hoppet steg har outcome 'skipped', ikke 'failure'.
+        # Verre: 1. januar med ufrosset sesong ville byttet aldri kjort,
+        # altsaa vranglaas. Alle tre er trygge paa en avbrutt kjede:
+        # oppdagelsen gir alltid exit 0, frysingen krever en revisjon fra
+        # samme kjoring, og byttet krever frosset gammel sesong.
+        if: always() && steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         run: python3 scripts/sesong.py . bytt --liga obos --utfor
 
       - name: Tegn delingsbildet på nytt
@@ -231,7 +255,7 @@ jobs:
           # mangler, og da ble ingenting lagret -- heller ikke nye resultater.
           # (Skjedde 22. september: oddshentingen feilet, én fil ble ikke laget,
           # og det nye banneret ble aldri lagret.)
-          for f in obos/data/audit_fixtures.json data/nff-cache obos/data/daglig_state.json data/oddspapi_usage.json data/oddspapi-bruk obos/data/matches.json obos/data/fixtures.json obos/data/model.json \
+          for f in data/hentelogg obos/data/audit_fixtures.json data/nff-cache obos/data/daglig_state.json data/oddspapi_usage.json data/oddspapi-bruk obos/data/matches.json obos/data/fixtures.json obos/data/model.json \
                    obos/data/status.json obos/data/results_state.json \
                    obos/data/oddspapi_fixtures_2026.json obos/data/oddspapi_markets.json obos/og.png \
                    obos/data/odds_upcoming.json \
@@ -257,3 +281,15 @@ jobs:
         run: |
           echo "::error title=Sesongskiftet er ikke klart::Byttedatoen er passert, men neste sesong er ikke oppdaget og validert. Siden viser en ferdigspilt sesong. Se loggen for steget «Sesongskifte»."
           exit 1
+
+      - name: Gjør kjøringen rød hvis en kilde er ute
+        # SIST, og etter at data er lagret: en kilde som har feilet flere
+        # ganger paa rad skal gjore kjoringen rod, men den skal ikke hindre
+        # at dagens data blir skrevet. Derfor staar dette etter committeren,
+        # ikke for den.
+        #
+        # Tilstandsfilene kan ikke svare paa dette: de husker bare SISTE
+        # utfall. En kilde som faller tilbake paa cache hver dag ser fin ut
+        # der, mens hentelogget viser feil paa feil paa feil.
+        if: always()
+        run: python3 scripts/hentelogg.py sjekk

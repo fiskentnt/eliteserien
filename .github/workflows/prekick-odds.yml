@@ -72,7 +72,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          for f in data/nff-cache eliteserien/data/odds_upcoming.json obos/data/odds_upcoming.json \
+          for f in data/hentelogg data/nff-cache eliteserien/data/odds_upcoming.json obos/data/odds_upcoming.json \
                    eliteserien/data/oddspapi_fixtures_2026.json \
                    obos/data/oddspapi_fixtures_2026.json \
                    data/oddspapi_usage.json data/oddspapi-bruk eliteserien/data/oddspapi_markets.json obos/data/oddspapi_markets.json; do

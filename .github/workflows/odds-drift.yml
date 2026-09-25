@@ -53,7 +53,7 @@ jobs:
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          for f in data/nff-cache eliteserien/data/oddspapi_markets.json obos/data/oddspapi_markets.json data/oddspapi_usage.json data/oddspapi-bruk eliteserien/data/oddspapi_fixtures_2026.json; do
+          for f in data/hentelogg data/nff-cache eliteserien/data/oddspapi_markets.json obos/data/oddspapi_markets.json data/oddspapi_usage.json data/oddspapi-bruk eliteserien/data/oddspapi_fixtures_2026.json; do
             if [ -e "$f" ]; then git add "$f"; fi
           done
           if git diff --cached --quiet; then

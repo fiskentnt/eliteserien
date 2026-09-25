@@ -202,6 +202,59 @@ def _sesongens_ytterkanter(kjente):
             _median(etter_runde[max(etter_runde)]))
 
 
+class FeilSesong(Exception):
+    """Ligasiden ga ingen kamper i den aktive sesongen.
+
+    Egen type, og den skal IKKE fanges av en generell except rundt
+    hentingen: "kilden er nede" og "kilden viser en annen sesong" er to ulike
+    ting. Den forste kan forsvares med en reserve; den andre betyr at vi ikke
+    vet hvilken sesong dataene hoerer til, og da skal ingenting skrives."""
+
+
+def bare_aktiv_sesong(rader, sesong, log=lambda s: None):
+    """(aktive rader, fordeling per aar) -- setter sesonggrensen EKSPLISITT.
+
+    HVORFOR DEN FINNES: mellom siste runde og frysingen viser ligasiden BADE
+    fjoraaret og neste sesong, med noyaktig de samme lagparene. Grensen laa
+    fram til naa indirekte i ntf_source.slaa_sammen() sin duplikatregel --
+    altsaa i en regel skrevet for noe annet, i kildelaget, som ikke kjenner
+    aktiv sesong. En sesonggrense skal staa i klartekst der sesongen er
+    kjent: i produksjonskjeden.
+
+    Kaster FeilSesong naar ingen rad hoerer til aktiv sesong. Det er ALLTID
+    et avvik, ogsaa for byttedatoen: fram til frysingen forventer vi aa finne
+    aktiv sesong hos ligakilden. Da skal kjeden stoppe FOR den skriver noe,
+    saa de eksisterende filene staar urort.
+
+    sesong=None: ingen grense aa sette. Da filtreres ingenting -- den saken
+    har sin egen feilkode i rimelige_datoer() ("ingen_autoritet")."""
+    fordeling = {}
+    for r in rader:
+        aar = (r.get("date") or "")[:4]
+        fordeling[aar] = fordeling.get(aar, 0) + 1
+    if sesong is None:
+        log(f"Sesonggrense: ingen autoritativ sesong -- filtrerer ikke "
+            f"({fordeling}).")
+        return list(rader), fordeling
+
+    aar = str(sesong)
+    aktive = [r for r in rader if (r.get("date") or "").startswith(aar)]
+    andre = {k: v for k, v in fordeling.items() if k != aar}
+    if andre and aktive:
+        # EN linje, ikke en per rad: i vinduet for frysingen er dette 240
+        # rader, og en linje per rad ville gjort loggen ubrukelig.
+        log(f"Sesonggrense: {sum(andre.values())} rad(er) fra en annen sesong "
+            f"enn {aar} holdes utenfor ({andre}). Går videre med "
+            f"{len(aktive)} rad(er) fra {aar}.")
+    if not aktive:
+        raise FeilSesong(
+            f"ligasiden ga 0 kamper i sesongen {aar} (fant {fordeling or 'ingenting'}). "
+            f"Da vet vi ikke hvilken sesong dataene hører til, og ingenting "
+            f"skrives. Er sesongen ferdig, skal den fryses; er byttedatoen "
+            f"passert, kjør: python3 scripts/sesong.py . bytt --utfor")
+    return aktive, fordeling
+
+
 def rimelige_datoer(merged, eksisterende, sesong, log=lambda s: None):
     """(rader, utenfor, feilkode) -- retter datoer som umulig kan stemme.
 

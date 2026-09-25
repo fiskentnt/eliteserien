@@ -16,6 +16,7 @@ Kampnummeret er stabilt hos NFF, men nøkkelen vår er fortsatt
 """
 import html
 import json
+import os
 import re
 import sys
 import urllib.error
@@ -24,6 +25,7 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import hentelogg
 from ligaer import oppsett
 
 OSLO = ZoneInfo("Europe/Oslo")
@@ -50,7 +52,12 @@ FERDIG_ETTER_MIN = 150
 # Grensen ligger her, i kilden, ikke i hver kaller. Da kan den ikke omgaas
 # ved at noen glemmer den.
 HENT_INTERVALL_TIMER = 20
-CACHE_KATALOG = Path(__file__).resolve().parent.parent / "data" / "nff-cache"
+# NFF_CACHE_KATALOG finnes for testene, av samme grunn som
+# HENTELOGG_KATALOG og ODDSPAPI_BRUK_KATALOG: failsafe-suiten kjorer de
+# ekte skriptene i EGNE PROSESSER, og en subprosess ser ikke at testen
+# har satt CACHE_KATALOG i sin egen. Produksjonen setter den ikke.
+CACHE_KATALOG = Path(os.environ.get("NFF_CACHE_KATALOG")
+                     or Path(__file__).resolve().parent.parent / "data" / "nff-cache")
 
 
 def _cache_sti(liga):
@@ -239,6 +246,7 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
     if not forfalt:
         rader = d.get("rader") or []
         log(f"[nff {liga}] {hvorfor} -- bruker lagret svar ({len(rader)} kamper)")
+        hentelogg.logg(liga, "nff", "cache", kamper=len(rader), melding=hvorfor)
         return rader
 
     # Forsøket merkes FØR det gjøres. Feiler det, teller det likevel, og
@@ -261,6 +269,7 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
         _skriv_cache(liga, d)
         log(f"[nff {liga}] FEILET ({type(e).__name__}) -- nytt forsøk om "
             f"{HENT_INTERVALL_TIMER} timer. Bruker det som lå i cachen.")
+        hentelogg.logg(liga, "nff", "feil", melding=f"{type(e).__name__}: {e}")
         return d.get("rader") or []
 
     # HVILKEN KJORING som faktisk hentet. Et tidsstempel duger ikke: naar
@@ -273,6 +282,10 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
     d.pop("siste_feil", None)
     _skriv_cache(liga, d)
     log(f"[nff {liga}] hentet {len(rader)} kamper")
+    # 0 kamper er ikke "ok": fotball.no svarte, men vi fikk ingenting ut av
+    # det. Det er samme feilmaate som en omlagt markup.
+    hentelogg.logg(liga, "nff", "ok" if rader else "feil", kamper=len(rader),
+                   melding="" if rader else "siden ga 0 kamper")
     return rader
 
 

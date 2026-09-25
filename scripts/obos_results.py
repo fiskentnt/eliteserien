@@ -254,6 +254,25 @@ def offisielle_resultater():
     except Exception as e:
         log(f"  ligasiden feilet ({e})")
         return {}
+
+    # SESONGGRENSEN. Uten den var dette den verste veien inn: nokkelen er
+    # (hjemme, borte), og radene kommer fra ligasiden uansett sesong. Etter
+    # at kildene har flippet til neste sesong ville et 2027-resultat blitt
+    # publisert som resultatet paa en 2026-kamp -- dato og runde hentes fra
+    # var egen terminliste, saa ingenting hadde sett galt ut. decide() lar
+    # ligasiden alene publisere, og behold_eksisterende() holder et publisert
+    # resultat for godt. Rekkevidden var en UTSATT kamp: alt som er publisert
+    # fra for hoppes over i decide(), men en kamp uten resultat ville fatt
+    # neste sesongs.
+    #
+    # FeilSesong fanges IKKE her. Aa returnere {} ville latt decide() falle
+    # tilbake paa Wikipedia og OddsPapi, og dermed skjult kildefeilen bak et
+    # datasett som ser riktig ut. Den skal ut av main() for noe skrives.
+    import sesong as _ses2
+    from reconcile_ny import bare_aktiv_sesong
+    ntf, _f = bare_aktiv_sesong(ntf, _ses2.aktiv_sesong(ROOT, "obos",
+                                                        log=lambda _s: None),
+                                log=lambda m: log(f"  {m}"))
     ut = {(r["home"], r["away"]): (r["hg"], r["ag"])
           for r in ntf if r.get("hg") is not None}
     log(f"  ligasiden: {len(ut)} ferdigspilte kamper")
@@ -261,6 +280,18 @@ def offisielle_resultater():
 
 
 # ---------------------------------------------------------------- Wikipedia
+def _wiki_logg(utfall, melding="", kamper=None):
+    """Wikipedia er en av resultatkildene for OBOS. Ligasiden logges av
+    ntf_source selv, saa her logges bare Wikipedia -- ellers ville hvert
+    forsok blitt talt to ganger."""
+    try:
+        import hentelogg
+        hentelogg.logg("obos", "wikipedia", utfall, melding=melding,
+                       kamper=kamper)
+    except Exception:
+        pass
+
+
 def wikipedia_results(names):
     """Resultatrutenettet fra Wikipedia: (hjemme, borte) -> (hg, ag).
 
@@ -275,6 +306,7 @@ def wikipedia_results(names):
         doc = page["parse"]["text"]["*"]
     except Exception as e:
         log(f"  Wikipedia feilet: {type(e).__name__}: {e}")
+        _wiki_logg("feil", f"{type(e).__name__}: {e}")
         return None
     tables = re.findall(r"<table[^>]*>.*?</table>", doc, re.S)
     known = {norm(v): v for v in names.values()}
@@ -297,6 +329,7 @@ def wikipedia_results(names):
             name = known.get(norm(txt(cells[0])))
             if not name:
                 log(f"  Wikipedia: ukjent lagnavn i rutenettet: {txt(cells[0])!r}")
+                _wiki_logg("feil", f"ukjent lagnavn: {txt(cells[0])!r}")
                 return None
             teams.append(name)
             cells_by_row.append(cells[1:])
@@ -311,14 +344,17 @@ def wikipedia_results(names):
                     # rekkefølgen, og da leses ingenting.
                     if re.match(r"^\d+\s*[–\-−:]\s*\d+$", v):
                         log("  Wikipedia: diagonalen har resultat, rekkefølgen stemmer ikke")
+                        _wiki_logg("feil", "diagonalen har resultat")
                         return None
                     continue
                 m = re.match(r"^(\d+)\s*[–\-−:]\s*(\d+)$", v)
                 if m:
                     out[(home, teams[ci])] = (int(m.group(1)), int(m.group(2)))
         log(f"  Wikipedia: {len(out)} resultater fra rutenettet")
+        _wiki_logg("ok", kamper=len(out))
         return out
     log("  Wikipedia: fant ikke resultatrutenettet")
+    _wiki_logg("feil", "fant ikke resultatrutenettet")
     return None
 
 
@@ -361,6 +397,17 @@ def main():
     ap.add_argument("--break-wikipedia", action="store_true", help="test: lat som Wikipedia er ødelagt")
     ap.add_argument("--break-all", action="store_true", help="test: lat som ingen kilder svarer")
     args = ap.parse_args()
+
+    # En frossen sesong er uforanderlig. Denne kjeden manglet vakten som
+    # update_data og obos_build_data har hatt hele tiden -- og det er den
+    # kjeden som skriver RESULTATER. Etter frysing skal den stoppe for
+    # hentingen, ikke etter.
+    import sesong as _ses
+    _a0 = _ses.aktiv_sesong(ROOT, "obos", log=lambda _s: None)
+    if _a0 and _ses.er_frosset(ROOT, "obos", _a0):
+        log(f"Sesongen {_a0} er frosset -- rører ingenting. "
+            f"Venter på sesongskiftet.")
+        return 0
 
     names = load_names()
     sched = schedule()

@@ -41,9 +41,14 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
+import hentelogg
 from ligaer import oppsett
 
 OSLO = ZoneInfo("Europe/Oslo")
+
+# Reporoten, der data/sesonger.json ligger. Samme monster som
+# daglig_revisjon.ROT: testene peker den til en sandkasse.
+ROT = Path(__file__).resolve().parent.parent
 
 USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
 
@@ -86,6 +91,14 @@ class EsDataError(Exception):
 
     Skal ikke fanges stille. Hvis eliteserien.no legger om markupen, skal
     kjøringen feile synlig i stedet for å levere en halv terminliste."""
+
+
+class TomSide(EsDataError):
+    """Siden ble tolket, men inneholdt ingen kamprader.
+
+    Egen type fordi de to feilmaatene er ulike: en tolkningsfeil er ALLTID
+    galt, mens en tom TERMINLISTE er riktig naar sesongen er ferdigspilt.
+    Uten dette skillet maatte fetch_all gjette paa feilmeldingens ordlyd."""
 
 
 class RateLimited(Exception):
@@ -194,12 +207,12 @@ def parse_side(html_tekst, kilde, liga, naa=None, log=lambda s: None):
         if rad_data:
             ut.append(rad_data)
     if not ut:
-        raise EsDataError(f"fant ingen kamper på {kilde} -- har siden lagt om markupen?")
+        raise TomSide(f"fant ingen kamper på {kilde}")
     return ut
 
 
 def slå_sammen(rader, log=lambda s: None):
-    """Dedupliserer på (hjemmelag, bortelag).
+    """Dedupliserer på (år, hjemmelag, bortelag).
 
     "Neste kamp" står BÅDE som egen framhevet rad og i den vanlige listen --
     på OBOS-terminlisten 25. sep 2026 gjaldt det to kamper med samme
@@ -208,11 +221,31 @@ def slå_sammen(rader, log=lambda s: None):
 
     Terminlisten og resultatsiden er disjunkte i praksis (spilt / ikke
     spilt), men hvis en kamp skulle stå begge steder vinner raden som har
-    resultat.
+    resultat. Det er en failsafe, ikke sesonggrensen: sesonggrensen settes
+    eksplisitt i produksjonskjeden, av reconcile_ny.bare_aktiv_sesong().
+
+    ÅRET ER MED I NØKKELEN, og det er ikke kosmetisk. Mellom siste runde og
+    frysingen publiserer NTF neste sesongs terminliste med NØYAKTIG de samme
+    lagparene. Med nøkkelen (hjemme, borte) alene var en 2026-kamp og en
+    2027-kamp mellom samme lag "samme kamp", og to ting gikk galt:
+
+      * OPPDAGELSEN BLE BLIND. Tie-breaket beholdt 2026-raden med resultat,
+        så alle 240 2027-radene ble kastet. oppdag_sesong.py fant 0 kamper i
+        2027, sesongen ble aldri "klar", og bytt() kunne aldri bytte 1.
+        januar -- den alarmerte bare, hver dag, til noen kjørte oppdag for
+        hånd. Hele det selvkjørende sesongskiftet sto altså på en
+        duplikatregel som slo det av.
+      * 240 ADVARSLER per kjøring i det vinduet, som druknet den ekte
+        duplikatadvarselen -- to rader som er uenige om dato eller avspark
+        for samme kamp, som er nettopp det advarselen finnes for.
+
+    Innen samme sesong er nøkkelen uendret, så "neste kamp"-dupliseringen
+    fanges som før.
     """
     ut = {}
     for r in rader:
-        k = (r["home"], r["away"])
+        # Datoen finnes alltid: parse_rad kaster paa en rad uten dato.
+        k = (r["date"][:4], r["home"], r["away"])
         f = ut.get(k)
         if f is None:
             ut[k] = r
@@ -220,7 +253,7 @@ def slå_sammen(rader, log=lambda s: None):
         if f["hg"] is None and r["hg"] is not None:
             ut[k] = r
         elif (f["date"], f["time"], f["round"]) != (r["date"], r["time"], r["round"]):
-            log(f"ADVARSEL: {k[0]}-{k[1]} står to ganger med ulikt innhold: "
+            log(f"ADVARSEL: {k[1]}-{k[2]} står to ganger med ulikt innhold: "
                 f"{f['date']} {f['time']} #{f['round']} vs "
                 f"{r['date']} {r['time']} #{r['round']} -- bruker den første")
     return list(ut.values())
@@ -237,6 +270,48 @@ def hent(url):
         raise
 
 
+def sesongen_ferdigspilt(navn, hittil, liga, rot=None):
+    """Er en TOM side gyldig? (ja/nei, begrunnelse)
+
+    ANTALLET avgjor, ikke datoen. En datoregel -- "etter byttedatoen", "etter
+    siste oppsatte runde" -- godtar en tom terminliste ogsaa naar en utsatt
+    kamp fortsatt gjenstaar, og da mister vi nettopp den kampen.
+
+    Terminlisten kan bare vaere tom naar resultatsiden samtidig viser en
+    KOMPLETT FERDIGSPILT sesong. Hva "komplett" betyr, avgjores ikke her:
+    sesong.valider() er den autoritative regelen, den samme frysingen og
+    sesongskiftet bruker. Den krever unike lagpar, ingen duplikater, alle
+    oppgjor til stede, 15 hjemme- og 15 bortekamper per lag, runde 1-30 og
+    riktig aarstall. Antall RADER er ikke nok: 239 unike par pluss en
+    duplikat gir ogsaa 240 rader.
+
+    Resultatsiden kan aldri vaere tom -- da har kilden lagt om markupen,
+    eller svart med noe annet enn det vi ba om.
+
+    MERK: regelen hviler paa at fetch_all henter "resultater" FOR
+    "terminliste", slik at de ferdigspilte kampene er kjent naar
+    terminlisten tolkes."""
+    if navn != "terminliste":
+        return False, f"{navn} ga 0 kamper -- resultatsiden kan aldri være tom"
+
+    import sesong as _ses
+    rot = rot or ROT
+    aar = _ses.aktiv_sesong(rot, liga, log=lambda _s: None)
+    if not aar:
+        # Uten sesongautoritet kan vi ikke avgjore dette. Da er en tom
+        # terminliste en feil, ikke noe vi godtar paa antagelse.
+        return False, ("terminlisten er tom, men det finnes ingen "
+                       "sesongautoritet å bekrefte ferdigspilt sesong mot")
+
+    ferdige = [r for r in hittil if r.get("hg") is not None]
+    ok, funn = _ses.valider(ferdige, aar)
+    if not ok:
+        grunner = [t for alvor, t in funn if alvor == "feil"]
+        return False, (f"terminlisten er tom, men {aar} er ikke ferdigspilt: "
+                       + "; ".join(grunner[:2]))
+    return True, f"sesongen {aar} er ferdigspilt ({len(ferdige)} kamper)"
+
+
 def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
     """Begge sidene for én liga, slått sammen til én liste kamper.
 
@@ -245,7 +320,24 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
     eller hele runder flyttes.
 
     Resultatsiden og terminlisten er disjunkte i praksis (spilt / ikke spilt),
-    men hvis en kamp skulle stå begge steder vinner raden som har resultat."""
+    men hvis en kamp skulle stå begge steder vinner raden som har resultat.
+
+    RETURNERER ALLE SESONGER DEN SER. I vinduet mellom siste runde og
+    frysingen viser sidene bade fjoraaret og neste sesong, og da er dette
+    480 rader, ikke 240. Kildelaget skal returnere det det ser; hvilken
+    sesong som gjelder, avgjores av kalleren. ALLE KALLERE, og hva de gjor:
+
+      scripts/update_data.py         FILTRERER -- bare_aktiv_sesong() rett
+                                     etter dette kallet, for reconcile
+      scripts/obos_build_data.py     FILTRERER -- samme, i rows_for(), og
+                                     utenfor CSV-fallbacken
+      scripts/obos_results.py        FILTRERER -- samme, i ligaside_results()
+      scripts/oppdag_sesong.py       SER ALLE SESONGER, med vilje: den skal
+                                     finne NESTE sesongs terminliste, og
+                                     gjor sin egen utvelging paa aarstall
+
+    Legger du til en kaller: den skal filtrere, med mindre den har en grunn
+    til aa se flere sesonger. Ingen skal fa 480 rader uten aa vite det."""
     cfg = oppsett(liga)
     naa = naa or datetime.now(OSLO)
     rader = []
@@ -256,11 +348,42 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
             tekst = sti.read_text(encoding="utf-8")
         else:
             log(f"[ntf {liga}] henter {navn} ...")
-            tekst = hent(f"{cfg['ntf_base']}/{navn}")
+            try:
+                tekst = hent(f"{cfg['ntf_base']}/{navn}")
+            except Exception as e:
+                # Logges FOR den kastes videre. Kalleren bestemmer om det er
+                # kritisk; loggen skal ha linjen uansett.
+                hentelogg.logg(liga, f"ntf-{navn}", "feil", melding=f"{type(e).__name__}: {e}")
+                raise
             if sti:
                 sti.parent.mkdir(parents=True, exist_ok=True)
                 sti.write_text(tekst, encoding="utf-8")
-        rader.extend(parse_side(tekst, navn, liga, naa=naa, log=log))
+        # Tolkningen ligger INNE i loggingen, ikke bare hentingen. En side
+        # som svarer 200 men har lagt om markupen gir 0 kamper, og
+        # parse_side kaster da. Sto kastet utenfor, ble den verste
+        # feilmaaten -- kilden svarer, men vi forstaar den ikke -- aldri
+        # loggfort, og alarmen kunne ikke se den.
+        try:
+            nye = parse_side(tekst, navn, liga, naa=naa, log=log)
+        except TomSide as e:
+            ferdig, hvorfor = sesongen_ferdigspilt(navn, rader, liga, rot=ROT)
+            if not ferdig:
+                hentelogg.logg(liga, f"ntf-{navn}", "feil", kamper=0,
+                               melding=hvorfor)
+                raise
+            # Gyldig tom terminliste: sesongen ER ferdigspilt. Loggfores som
+            # "ok" med 0 kamper, ellers bygger sesongslutten en falsk
+            # feilrekke og gjor kjoringen rod nettopp i frysevinduet.
+            log(f"[ntf {liga}] terminliste: tom -- {hvorfor}")
+            hentelogg.logg(liga, f"ntf-{navn}", "ok", kamper=0,
+                           melding=hvorfor)
+            continue
+        except Exception as e:
+            hentelogg.logg(liga, f"ntf-{navn}", "feil",
+                           melding=f"{type(e).__name__}: {e}")
+            raise
+        hentelogg.logg(liga, f"ntf-{navn}", "ok", kamper=len(nye))
+        rader.extend(nye)
 
     return slå_sammen(rader, log=log)
 

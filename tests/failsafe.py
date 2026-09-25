@@ -4,12 +4,18 @@
 Kjøres av tests/run.sh, uten nett og uten nøkkel: kildene simuleres.
 """
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 sys.path.insert(0, str(ROOT / "scripts"))
+
+# ETT sted hindrer at testene skriver i produksjonsdataene. Se tests/conftest.py.
+sys.path.insert(0, str(ROOT / "tests"))
+import conftest as _vern
+_VERN = _vern.vern()
 MATCHES = ROOT / "obos" / "data" / "matches.json"
 
 ok = fail = 0
@@ -26,6 +32,9 @@ def check(name, cond, detail=""):
 
 
 def run(*args):
+    # Subprosessen er en EGEN python, og arver os.environ. Det er derfor
+    # conftest.vern() setter MILJOVARIABLER og ikke bare modulattributter:
+    # et modulattributt satt her inne naar aldri inn dit.
     return subprocess.run([sys.executable, str(ROOT / "scripts" / "obos_results.py"), *args],
                           capture_output=True, text=True, cwd=ROOT)
 
@@ -388,6 +397,15 @@ def main():
     sporet = subprocess.run(["git", "ls-files", "innlegg"],
                             capture_output=True, text=True, cwd=ROOT)
     check("innlegg: ingenting er sporet", not sporet.stdout.strip(), sporet.stdout.strip())
+
+    # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
+    # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare
+    # kall som aldri skjedde, av selve testene.
+    #
+    # sha256 av hver fil, ikke "git status": status sier ingenting om filer
+    # som er .gitignore-et, og heller ingenting om en fil som er endret og
+    # lagt til igjen. Summen over innholdet er uavhengig av git.
+    _vern.sjekk_urort(check)
 
     print(f"\n{ok} av {ok + fail} failsafe-tester gikk gjennom.")
     return 1 if fail else 0

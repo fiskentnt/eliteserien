@@ -66,7 +66,13 @@ DAGSTAK = 12
 # dermed aldri samme sti, og ingen oppdatering gaar tapt i en rebase. Summen
 # for maaneden er summen over filene. Den gamle samlefilen beholdes som
 # historikk for september, men skrives ikke lenger.
-BRUK_KATALOG = ROOT / "data" / "oddspapi-bruk"
+# ODDSPAPI_BRUK_KATALOG finnes for testene, av samme grunn som
+# HENTELOGG_KATALOG: failsafe-suiten kjorer de ekte skriptene i EGNE
+# PROSESSER, og en subprosess ser ikke at testen har satt BRUK_KATALOG i sin
+# egen. Uten den telte en testkjoring fakturerbare kall som aldri skjedde.
+# Produksjonen setter den ikke.
+BRUK_KATALOG = Path(os.environ.get("ODDSPAPI_BRUK_KATALOG")
+                    or ROOT / "data" / "oddspapi-bruk")
 
 
 def _kjoring_id():
@@ -159,6 +165,24 @@ def _count(path, billable):
     fil.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
+def _logg(path, utfall, melding=""):
+    """Logger til hentelogg uten aa kunne velte noe. OddsPapi logges i call(),
+    saa alle kallere daekkes uten at noen maa huske det.
+
+    Kilden navngis per ENDEPUNKT (oddspapi-fixtures, oddspapi-markets, ...).
+    Ett navn for hele API-et ville blandet et dodt endepunkt sammen med et
+    friskt, og da kan ingen se hvilket av dem som er nede.
+
+    Ligaen er "alle": kvoten og nokkelen er felles for begge ligaer, og de
+    fleste kallene her er ikke knyttet til en enkelt liga."""
+    kilde = "oddspapi-" + (str(path).strip("/").split("/")[-1] or "ukjent")
+    try:
+        import hentelogg
+        hentelogg.logg("alle", kilde, utfall, melding=melding)
+    except Exception:
+        pass
+
+
 def call(path, params=None, key=None, timeout=TIMEOUT):
     """Returnerer (data, feilmelding). Teller kallet hvis endepunktet koster."""
     key = key or os.environ.get("ODDSPAPI_KEY", "").strip()
@@ -170,6 +194,7 @@ def call(path, params=None, key=None, timeout=TIMEOUT):
         # kunne gaa ut naar et av takene er naadd.
         stopp, hvorfor = budsjett_stopp()
         if stopp:
+            _logg(path, "hoppet", hvorfor)
             return None, f"stopper: {hvorfor}"
     q = dict(params or {})
     q["apiKey"] = key
@@ -177,15 +202,23 @@ def call(path, params=None, key=None, timeout=TIMEOUT):
     _count(path, billable)
     try:
         with urllib.request.urlopen(urllib.request.Request(url, headers=HEADERS), timeout=timeout) as r:
-            return json.loads(r.read().decode("utf-8")), None
+            d = json.loads(r.read().decode("utf-8"))
+        _logg(path, "ok")
+        return d, None
     except urllib.error.HTTPError as e:
         body = ""
         try:
             body = e.read().decode("utf-8")[:300]
         except Exception:
             pass
+        # 429 er ikke en kilde som er nede: svaret sier selv hvor lenge vi
+        # skal vente, og call_retry folger den beskjeden. Tre slike forsok i
+        # EN kjoring skal ikke gjore kjoringen rod -- derfor "hoppet".
+        # Er retryene oppbrukt, logger call_retry en ekte "feil".
+        _logg(path, "hoppet" if e.code == 429 else "feil", f"HTTP {e.code}")
         return None, f"HTTP {e.code}: {body}"
     except Exception as e:
+        _logg(path, "feil", type(e).__name__)
         return None, f"{type(e).__name__}: {e}"
 
 
@@ -212,6 +245,8 @@ def call_retry(path, params=None, key=None, timeout=TIMEOUT, forsok=4):
         vent = (int(m.group(1)) / 1000.0 + 0.4) if m else 5.0
         # Aldri mer enn et halvt minutt: da er det noe annet galt.
         _time.sleep(min(vent, 30))
+    # Oppbrukte forsok: NA er det en ekte feil, og den skal telle.
+    _logg(path, "feil", f"oppbrukte {forsok} forsøk: {str(siste)[:80]}")
     return None, siste
 
 

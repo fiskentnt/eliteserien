@@ -15,6 +15,11 @@ from pathlib import Path
 
 ROT = Path(__file__).resolve().parent.parent.parent
 sys.path.insert(0, str(ROT / "scripts"))
+
+# ETT sted hindrer at testene skriver i produksjonsdataene. Se tests/conftest.py.
+sys.path.insert(0, str(ROT / "tests"))
+import conftest as _vern
+_VERN = _vern.vern()
 import ntf_source
 import nff_source
 import sesong
@@ -562,10 +567,8 @@ _sett([], [])
 sjekk("ingen kamp i dag: hopper over", not _paa("19:00")[0])
 sjekk("og sier hvorfor", "ingen kamp i dag" in _paa("19:00")[1], _paa("19:00")[1])
 
-import os as _os
-_os.environ["ARKIV_TVING_KAMPDAG"] = "1"
-sjekk("testbryteren overstyrer vinduet", _paa("03:00")[0])
-del _os.environ["ARKIV_TVING_KAMPDAG"]
+with _vern.miljo(ARKIV_TVING_KAMPDAG="1"):
+    sjekk("testbryteren overstyrer vinduet", _paa("03:00")[0])
 ark.ROT = _ekte_rot
 
 print("\n=== Arkivet lagres komprimert ===")
@@ -1265,6 +1268,328 @@ _f8, _a8 = _dr.revider(_v_feil, _nff_rett, ferskt=False, bekreftet=_b)
 sjekk("og avviket er fortsatt kritisk etter midnatt", len(_f8) == 1, f"{_f8} {_a8}")
 _dr.ROT = _ekte_rot2
 _dr.oppsett.__globals__["LIGAER"].pop("test", None)
+
+print("\n=== Hentelogg: historikk, ikke bare siste utfall ===")
+import hentelogg as _hl
+from datetime import timedelta as _td3
+
+_hl_dir = Path(_tf2.mkdtemp())
+_ekte_kat = _hl.KATALOG
+_hl.KATALOG = _hl_dir
+_n = _dt(2026, 10, 2, 12, 0, tzinfo=_tz.utc)
+
+_hl.logg("obos", "ntf-resultater", "ok", kamper=184, naa=_n)
+sjekk("en linje skrives", len(_hl.les(naa=_n + _td3(minutes=1))) == 1)
+_r = _hl.les(naa=_n + _td3(minutes=1))[0]
+sjekk("med liga, kilde, utfall og antall",
+      (_r["liga"], _r["kilde"], _r["utfall"], _r["kamper"])
+      == ("obos", "ntf-resultater", "ok", 184), str(_r))
+
+# Tre feil paa rad -> kilden regnes som ute
+for _i in range(1, 4):
+    _hl.logg("obos", "nff", "feil", melding="403", naa=_n + _td3(hours=_i))
+_etter = _n + _td3(hours=4)
+sjekk("tre feil på rad telles", _hl.feil_paa_rad("obos", "nff", naa=_etter) == 3)
+sjekk("og kilden regnes som ute",
+      ("obos", "nff", 3) in _hl.ute(naa=_etter), str(_hl.ute(naa=_etter)))
+
+# To feil er ikke nok -- et blaff skal ikke gi alarm
+_hl2 = Path(_tf2.mkdtemp())
+_hl.KATALOG = _hl2
+for _i in range(2):
+    _hl.logg("obos", "nff", "feil", naa=_n + _td3(hours=_i))
+sjekk("to feil gir ingen alarm", not _hl.ute(naa=_n + _td3(hours=3)))
+
+# En vellykket henting nullstiller
+_hl.logg("obos", "nff", "ok", kamper=240, naa=_n + _td3(hours=3))
+sjekk("en vellykket henting nullstiller telleren",
+      _hl.feil_paa_rad("obos", "nff", naa=_n + _td3(hours=4)) == 0)
+sjekk("og alarmen forsvinner", not _hl.ute(naa=_n + _td3(hours=4)))
+
+# cache-treff skal ikke telle som verken ok eller feil
+_hl3 = Path(_tf2.mkdtemp())
+_hl.KATALOG = _hl3
+for _i in range(1, 4):
+    _hl.logg("obos", "nff", "feil", naa=_n + _td3(hours=_i))
+_hl.logg("obos", "nff", "cache", kamper=240, naa=_n + _td3(hours=4))
+sjekk("et cache-treff nullstiller IKKE feilrekken",
+      _hl.feil_paa_rad("obos", "nff", naa=_n + _td3(hours=5)) == 3)
+
+# Filnavnet skilles per workflow, saa to workflows ikke skriver samme fil
+import os as _os3
+_hl4 = Path(_tf2.mkdtemp())
+_hl.KATALOG = _hl4
+with _vern.miljo(GITHUB_WORKFLOW="Oppdater kampdata"):
+    _hl.logg("obos", "nff", "ok", naa=_n)
+with _vern.miljo(GITHUB_WORKFLOW="OBOS: hent resultater"):
+    _hl.logg("obos", "nff", "ok", naa=_n)
+_filer = sorted(x.name for x in _hl4.rglob("*.jsonl"))
+sjekk("to workflows skriver til ULIKE filer", len(_filer) == 2, str(_filer))
+sjekk("og begge linjene finnes", len(_hl.les(naa=_n + _td3(minutes=1))) == 2)
+
+# EN FIL PER KJORING, ikke per workflow: to kjoringer av SAMME workflow fra
+# ulike checkouts ville ellers lagt til linjer i samme fil, og en rebase
+# taper da linjer -- samme feil som OddsPapi-telleren hadde.
+_hl5 = Path(_tf2.mkdtemp())
+_hl.KATALOG = _hl5
+with _vern.miljo(GITHUB_WORKFLOW="Oppdater kampdata"):
+    for _rid in ("111", "222"):
+        with _vern.miljo(GITHUB_RUN_ID=_rid):
+            _hl.logg("obos", "nff", "ok", naa=_n)
+    with _vern.miljo(GITHUB_RUN_ID="222", GITHUB_RUN_ATTEMPT="2"):
+        _hl.logg("obos", "nff", "ok", naa=_n)
+_filer5 = sorted(x.name for x in _hl5.rglob("*.jsonl"))
+sjekk("to kjøringer av samme workflow skriver til ulike filer",
+      len(_filer5) == 3, str(_filer5))
+sjekk("og forsøk 2 skrives for seg",
+      any(x.endswith("222-2.jsonl") for x in _filer5), str(_filer5))
+
+# En logg som feiler skal aldri velte en kjoring
+_hl.KATALOG = Path("/dev/null/finnes-ikke")
+_hl.logg("obos", "nff", "ok")
+sjekk("en logg som ikke kan skrives kaster ikke", True)
+_hl.KATALOG = _ekte_kat
+
+print("\n=== Cache skjuler ikke en kilde som er nede ===")
+# Fem mislykkede daglige fotball.no-hentinger MED fungerende cache. Kjeden
+# skal gaa videre paa cachen hver dag -- men historikken skal vise fem feil
+# paa rad, ellers er loggen verdilos.
+import nff_source as _nffs
+_hl6 = Path(_tf2.mkdtemp())
+_hl.KATALOG = _hl6
+_nff_ekte_kat, _nff_ekte_hent = _nffs.CACHE_KATALOG, _nffs.hent
+_nffs.CACHE_KATALOG = Path(_tf2.mkdtemp())
+_nffs.CACHE_KATALOG.mkdir(parents=True, exist_ok=True)
+_cache_rader = [{"home": f"L{_i}", "away": f"B{_i}", "date": "2026-09-01",
+                 "round": 1, "hg": 1, "ag": 0} for _i in range(240)]
+(_nffs.CACHE_KATALOG / "obos.json").write_text(_json.dumps({
+    "rader": _cache_rader, "hentet": "2026-09-19T10:00:00+00:00",
+    "hentet_av": "gammel", "forsokt": "2026-09-19T10:00:00+00:00"}),
+    encoding="utf-8")
+
+
+def _nede(url, **kw):
+    raise OSError("timed out")
+
+
+_nffs.hent = _nede
+_start6 = _dt(2026, 9, 20, 10, 0, tzinfo=_tz.utc)
+_fra_cache = []
+for _dag in range(5):
+    with _vern.miljo(GITHUB_RUN_ID=f"nede{_dag}"):
+        _fra_cache.append(len(_nffs.fetch_all("obos", log=lambda _s: None,
+                                              naa=_start6 + _td3(days=_dag))))
+_etter6 = _start6 + _td3(days=5)
+sjekk("cachen virker -- kjeden fikk 240 kamper hver dag",
+      _fra_cache == [240] * 5, str(_fra_cache))
+sjekk("men historikken viser fem feil på rad",
+      _hl.feil_paa_rad("obos", "nff", naa=_etter6) == 5,
+      str([r["utfall"] for r in _hl.les(naa=_etter6)]))
+sjekk("og kilden regnes som ute", ("obos", "nff", 5) in _hl.ute(naa=_etter6),
+      str(_hl.ute(naa=_etter6)))
+sjekk("fem kjøringer ga fem filer",
+      len(list(_hl6.rglob("*.jsonl"))) == 5)
+_nffs.CACHE_KATALOG, _nffs.hent = _nff_ekte_kat, _nff_ekte_hent
+
+print("\n=== Tre feil mot ligasiden gjør kjøringen rød, én henting gjør den grønn ===")
+# Mot den EKTE ntf_source og den ekte lagrede obos-ligaen.no-siden.
+import ntf_source as _ntfs
+_hl7 = Path(_tf2.mkdtemp())
+_hl.KATALOG = _hl7
+_ntf_ekte_hent = _ntfs.hent
+_ntfs.hent = _nede
+_start7 = _dt(2026, 9, 22, 10, 0, tzinfo=_tz.utc)
+for _dag in range(3):
+    with _vern.miljo(GITHUB_RUN_ID=f"ligaside{_dag}"):
+        try:
+            _ntfs.fetch_all("obos", log=lambda _s: None,
+                            naa=_start7 + _td3(days=_dag))
+        except Exception:
+            pass
+_etter7 = _start7 + _td3(days=3)
+sjekk("tre feil mot obos-ligaen.no gir exit 1",
+      _hl.sjekk(naa=_etter7) == 1)
+_nede7 = _hl.ute(naa=_etter7)
+sjekk("og kildenavnet står i meldingen",
+      _nede7 and _nede7[0][1] == "ntf-resultater", str(_nede7))
+
+_sider7 = {n: (Path("tests/kilder/testdata") /
+               f"ntf_obos_{n}_2026-09-25.html").read_text(encoding="utf-8")
+           for n in ("resultater", "terminliste")}
+_ntfs.hent = lambda url, **kw: _sider7[
+    "resultater" if url.endswith("resultater") else "terminliste"]
+with _vern.miljo(GITHUB_RUN_ID="oppe-igjen"):
+    _ok7 = _ntfs.fetch_all("obos", log=lambda _s: None, naa=_etter7)
+sjekk("en vellykket henting gir hele terminlisten", len(_ok7) == 240,
+      str(len(_ok7)))
+sjekk("og kjøringen blir grønn igjen",
+      _hl.sjekk(naa=_etter7 + _td3(hours=1)) == 0)
+_ntfs.hent = _ntf_ekte_hent
+
+print("\n=== OddsPapi: 429 er ventebeskjed, ikke en kilde som er nede ===")
+import urllib.error as _ue
+import oddspapi as _op
+_hl8 = Path(_tf2.mkdtemp())
+_hl.KATALOG = _hl8
+_op_ekte_aapne = _op.urllib.request.urlopen
+_op_ekte_budsjett = _op.budsjett_stopp
+_op.budsjett_stopp = lambda *a, **k: (False, "")
+
+
+def _svar_429(*a, **k):
+    raise _ue.HTTPError("u", 429, "rate", None, None)
+
+
+_op.urllib.request.urlopen = _svar_429
+# call_retry folger serverens ventetid. Her er poenget hva som LOGGES, ikke
+# at testen faktisk venter.
+import time as _time8
+_sov_ekte = _time8.sleep
+_time8.sleep = lambda _s: None
+_op.call_retry("/v4/historical-odds", {}, "n", forsok=3)
+_time8.sleep = _sov_ekte
+_r8 = [r for r in _hl.les() if r["kilde"] == "oddspapi-historical-odds"]
+sjekk("tre 429 logges som «hoppet», ikke feil",
+      [r["utfall"] for r in _r8[:3]] == ["hoppet"] * 3,
+      str([r["utfall"] for r in _r8]))
+sjekk("men oppbrukte forsøk gir én ekte feil",
+      _r8[-1]["utfall"] == "feil", str(_r8[-1]))
+sjekk("tre 429 alene gjør IKKE kjøringen rød",
+      _hl.feil_paa_rad("alle", "oddspapi-historical-odds") == 1,
+      str(_hl.feil_paa_rad("alle", "oddspapi-historical-odds")))
+
+# En annen HTTP-feil er en ekte feil fra forste forsok
+_hl9 = Path(_tf2.mkdtemp())
+_hl.KATALOG = _hl9
+
+
+def _svar_500(*a, **k):
+    raise _ue.HTTPError("u", 500, "nede", None, None)
+
+
+_op.urllib.request.urlopen = _svar_500
+for _i in range(3):
+    _op.call("/v4/fixtures", {}, "n")
+sjekk("tre HTTP 500 teller som tre feil",
+      _hl.feil_paa_rad("alle", "oddspapi-fixtures") == 3)
+sjekk("og kilden navngis per endepunkt, med liga «alle»",
+      ("alle", "oddspapi-fixtures", 3) in _hl.ute(), str(_hl.ute()))
+sjekk("en kilde uten egen liga kan altså gjøre kjøringen rød",
+      _hl.sjekk() == 1)
+_op.urllib.request.urlopen = _op_ekte_aapne
+_op.budsjett_stopp = _op_ekte_budsjett
+
+print("\n=== Bare samme fysiske kilde nullstiller feilrekken ===")
+# Faren: ligasiden er nede, reservekilden svarer, kjeden gaar videre -- og
+# alarmen forsvinner fordi "en kilde" lyktes. Da er loggen verre enn ingen
+# logg: den sier at alt er bra mens hovedkilden har vaert nede i en uke.
+# Hver fysisk kilde har derfor sin egen rekke, paa (liga, kilde).
+_hl10 = Path(_tf2.mkdtemp())
+_hl.KATALOG = _hl10
+_n10 = _dt(2026, 9, 20, 10, 0, tzinfo=_tz.utc)
+for _i in range(3):
+    _hl.logg("obos", "ntf-resultater", "feil", melding="timeout",
+             naa=_n10 + _td3(days=_i))
+_etter10 = _n10 + _td3(days=3)
+sjekk("hovedkilden har tre feil på rad",
+      _hl.feil_paa_rad("obos", "ntf-resultater", naa=_etter10) == 3)
+
+# 1. En RESERVEKILDE lykkes -- fotball.no er reserve for ligasiden.
+_hl.logg("obos", "nff", "ok", kamper=240, naa=_etter10)
+sjekk("at reservekilden fotball.no lykkes nullstiller IKKE hovedkilden",
+      _hl.feil_paa_rad("obos", "ntf-resultater",
+                       naa=_etter10 + _td3(hours=1)) == 3)
+sjekk("og kjøringen er fortsatt rød",
+      _hl.sjekk(naa=_etter10 + _td3(hours=1)) == 1)
+
+# 2. Den ANDRE SIDEN hos samme leverandor lykkes. Terminlisten og
+#    resultatsiden er to forespørsler til to adresser: den ene kan svare
+#    mens den andre er nede, og da er de ikke samme fysiske kilde.
+_hl.logg("obos", "ntf-terminliste", "ok", kamper=56,
+         naa=_etter10 + _td3(hours=2))
+sjekk("at terminlisten lykkes nullstiller ikke resultatsiden",
+      _hl.feil_paa_rad("obos", "ntf-resultater",
+                       naa=_etter10 + _td3(hours=3)) == 3)
+
+# 3. SAMME KILDE i den andre ligaen lykkes.
+_hl.logg("eliteserien", "ntf-resultater", "ok", kamper=184,
+         naa=_etter10 + _td3(hours=4))
+sjekk("at Eliteserien-siden lykkes nullstiller ikke OBOS-siden",
+      _hl.feil_paa_rad("obos", "ntf-resultater",
+                       naa=_etter10 + _td3(hours=5)) == 3)
+
+# 4. Alle de tre andre kildene lyktes, og alarmen staar likevel -- med
+#    NOYAKTIG hovedkilden navngitt, ikke de som virker.
+_nede10 = _hl.ute(naa=_etter10 + _td3(hours=5))
+sjekk("alarmen navngir bare kilden som er nede",
+      _nede10 == [("obos", "ntf-resultater", 3)], str(_nede10))
+
+# 5. Bare en vellykket henting fra SAMME kilde nullstiller.
+_hl.logg("obos", "ntf-resultater", "ok", kamper=184,
+         naa=_etter10 + _td3(hours=6))
+sjekk("en vellykket henting fra samme kilde nullstiller",
+      _hl.feil_paa_rad("obos", "ntf-resultater",
+                       naa=_etter10 + _td3(hours=7)) == 0)
+sjekk("og da blir kjøringen grønn",
+      _hl.sjekk(naa=_etter10 + _td3(hours=7)) == 0)
+_hl.KATALOG = _ekte_kat
+
+print("\n=== En kilde som svarer, men ikke gir kamper, er en FEIL ===")
+# Den verste feilmaaten: 200 OK, men 0 kamper ut. Loggen maa ikke vise
+# dette gront -- da er en omlagt markup usynlig.
+_hl11 = Path(_tf2.mkdtemp())
+_hl.KATALOG = _hl11
+_n11 = _dt(2026, 9, 20, 10, 0, tzinfo=_tz.utc)
+
+# 1. Ligasiden svarer med en side vi ikke kjenner igjen. parse_side kaster,
+#    og kastet skjer ETTER hentingen -- for laa det utenfor loggingen, saa
+#    denne feilmaaten ble aldri loggfort i det hele tatt.
+_ntfs.hent = lambda url, **kw: "<html><body>ny forside</body></html>"
+with _vern.miljo(GITHUB_RUN_ID="omlagt"):
+    try:
+        _ntfs.fetch_all("obos", log=lambda _s: None, naa=_n11)
+    except Exception:
+        pass
+_r11 = [r for r in _hl.les(naa=_n11 + _td3(hours=1)) if r["liga"] == "obos"]
+sjekk("omlagt markup på ligasiden logges som feil",
+      _r11 and _r11[-1]["utfall"] == "feil", str(_r11))
+sjekk("og ikke som «ok» med 0 kamper",
+      not any(r["utfall"] == "ok" for r in _r11), str(_r11))
+_ntfs.hent = _ntf_ekte_hent
+
+# 2. fotball.no svarer med en gyldig, men tom tabell. Da kaster ikke
+#    parse_side -- og uten regelen ville dette blitt logget «ok, 0 kamper».
+_hl12 = Path(_tf2.mkdtemp())
+_hl.KATALOG = _hl12
+_nffs.CACHE_KATALOG = Path(_tf2.mkdtemp())
+_nffs.CACHE_KATALOG.mkdir(parents=True, exist_ok=True)
+_nffs.hent = lambda url, **kw: "<html>tom</html>"
+_nff_ekte_parse = _nffs.parse_side
+_nffs.parse_side = lambda *a, **k: []
+with _vern.miljo(GITHUB_RUN_ID="tom-tabell"):
+    _tomt = _nffs.fetch_all("obos", log=lambda _s: None, naa=_n11)
+_r12 = [r for r in _hl.les(naa=_n11 + _td3(hours=1)) if r["kilde"] == "nff"]
+sjekk("fotball.no med 0 kamper logges som feil",
+      _r12 and _r12[-1]["utfall"] == "feil" and _r12[-1].get("kamper") == 0,
+      str(_r12))
+# Tre slike dogn paa rad: kilden svarer hver gang, og alarmen gaar likevel.
+for _dag in (1, 2):
+    with _vern.miljo(GITHUB_RUN_ID=f"tom{_dag}"):
+        _nffs.fetch_all("obos", log=lambda _s: None,
+                        naa=_n11 + _td3(days=_dag))
+_etter12 = _n11 + _td3(days=3)
+sjekk("tre døgn med 0 kamper teller som tre feil",
+      _hl.feil_paa_rad("obos", "nff", naa=_etter12) == 3,
+      str([r["utfall"] for r in _hl.les(naa=_etter12) if r["kilde"] == "nff"]))
+sjekk("og gjør kjøringen rød", _hl.sjekk(naa=_etter12) == 1)
+_nffs.parse_side = _nff_ekte_parse
+_nffs.hent = _nff_ekte_hent
+_nffs.CACHE_KATALOG = _nff_ekte_kat
+_hl.KATALOG = _ekte_kat
+
+# Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
+# noen tilfeldigvis kjorer failsafe etterpaa.
+_vern.sjekk_urort(sjekk)
 
 print(f"\n{antall[0] - len(feil)} av {antall[0]} tester gikk gjennom.")
 if feil:

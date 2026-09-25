@@ -112,7 +112,15 @@ jobs:
         #
         # Billig: ser bare fra 1. oktober, hopper over naar neste sesong alt
         # er klar, og forsoker hoyst en gang i dognet.
-        if: steps.gate.outputs.should_fetch == 'true'
+        # always(): feiler databyggingen, skal ikke sesongmaskineriet
+        # hoppes over. Uten den ble Sesongskifte SKIPPED, og da utloses
+        # heller ikke sluttsteget som gjor kjoringen rod paa byttets
+        # alarm -- et hoppet steg har outcome 'skipped', ikke 'failure'.
+        # Verre: 1. januar med ufrosset sesong ville byttet aldri kjort,
+        # altsaa vranglaas. Alle tre er trygge paa en avbrutt kjede:
+        # oppdagelsen gir alltid exit 0, frysingen krever en revisjon fra
+        # samme kjoring, og byttet krever frosset gammel sesong.
+        if: always() && steps.gate.outputs.should_fetch == 'true'
         run: python3 scripts/oppdag_sesong.py eliteserien
 
       - name: Frys sesongen hvis den er ferdig (eliteserien)
@@ -122,7 +130,15 @@ jobs:
         # timer siden siste kamp, og en fersk revisjon er uten apne kritiske
         # avvik. Resultater kan endres i etterkant, og en frysing skal ikke
         # laase inn en feil. Sesongen er fortsatt AKTIV til 1. januar.
-        if: steps.gate.outputs.should_fetch == 'true'
+        # always(): feiler databyggingen, skal ikke sesongmaskineriet
+        # hoppes over. Uten den ble Sesongskifte SKIPPED, og da utloses
+        # heller ikke sluttsteget som gjor kjoringen rod paa byttets
+        # alarm -- et hoppet steg har outcome 'skipped', ikke 'failure'.
+        # Verre: 1. januar med ufrosset sesong ville byttet aldri kjort,
+        # altsaa vranglaas. Alle tre er trygge paa en avbrutt kjede:
+        # oppdagelsen gir alltid exit 0, frysingen krever en revisjon fra
+        # samme kjoring, og byttet krever frosset gammel sesong.
+        if: always() && steps.gate.outputs.should_fetch == 'true'
         run: python3 scripts/frys_sesong.py . eliteserien
 
       - name: Sesongskifte (eliteserien) -- bytter bare 1. januar
@@ -142,7 +158,15 @@ jobs:
         #
         # OPPDAGELSEN av neste sesongs terminliste er IKKE med her -- se
         # TODO.md, frist 1. november.
-        if: steps.gate.outputs.should_fetch == 'true'
+        # always(): feiler databyggingen, skal ikke sesongmaskineriet
+        # hoppes over. Uten den ble Sesongskifte SKIPPED, og da utloses
+        # heller ikke sluttsteget som gjor kjoringen rod paa byttets
+        # alarm -- et hoppet steg har outcome 'skipped', ikke 'failure'.
+        # Verre: 1. januar med ufrosset sesong ville byttet aldri kjort,
+        # altsaa vranglaas. Alle tre er trygge paa en avbrutt kjede:
+        # oppdagelsen gir alltid exit 0, frysingen krever en revisjon fra
+        # samme kjoring, og byttet krever frosset gammel sesong.
+        if: always() && steps.gate.outputs.should_fetch == 'true'
         run: python3 scripts/sesong.py . bytt --liga eliteserien --utfor
 
       - name: Committer og pusher hvis noe endret seg
@@ -159,6 +183,7 @@ jobs:
           [ -d data/oddspapi-bruk ] && git add data/oddspapi-bruk
           # fotball.no-cachen: hoyst ett forsok per liga per dogn ligger her.
           [ -d data/nff-cache ] && git add data/nff-cache
+          [ -d data/hentelogg ] && git add data/hentelogg
           [ -f eliteserien/data/audit_fixtures.json ] && git add eliteserien/data/audit_fixtures.json
           [ -f eliteserien/data/ffk_cache.json ] && git add eliteserien/data/ffk_cache.json
           [ -f eliteserien/data/audit_state.json ] && git add eliteserien/data/audit_state.json
@@ -183,3 +208,15 @@ jobs:
         run: |
           echo "::error title=Sesongskiftet er ikke klart::Byttedatoen er passert, men neste sesong er ikke oppdaget og validert. Siden viser en ferdigspilt sesong. Se loggen for steget «Sesongskifte»."
           exit 1
+
+      - name: Gjør kjøringen rød hvis en kilde er ute
+        # SIST, og etter at data er lagret: en kilde som har feilet flere
+        # ganger paa rad skal gjore kjoringen rod, men den skal ikke hindre
+        # at dagens data blir skrevet. Derfor staar dette etter committeren,
+        # ikke for den.
+        #
+        # Tilstandsfilene kan ikke svare paa dette: de husker bare SISTE
+        # utfall. En kilde som faller tilbake paa cache hver dag ser fin ut
+        # der, mens hentelogget viser feil paa feil paa feil.
+        if: always()
+        run: python3 scripts/hentelogg.py sjekk

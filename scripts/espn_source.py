@@ -61,6 +61,17 @@ class EspnDataError(Exception):
     pass
 
 
+def _logg(utfall, melding="", kamper=None):
+    """ESPN er resultatkontrollen for Eliteserien. Loggingen er ren
+    observasjon og kan aldri velte hentingen."""
+    try:
+        import hentelogg
+        hentelogg.logg("eliteserien", "espn", utfall, melding=melding,
+                       kamper=kamper)
+    except Exception:
+        pass
+
+
 def get_json(url):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT, "Accept-Encoding": "identity"})
     try:
@@ -88,10 +99,18 @@ def fetch_all(cache_dir=None, log=lambda s: None):
     if cache_file and cache_file.exists():
         d = json.loads(cache_file.read_text(encoding="utf-8"))
         log("[espn] scoreboard: fra lokal cache")
+        _logg("cache", f"scoreboard {day}")
     else:
         url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{LEAGUE}/scoreboard?dates={day}"
         log(f"[espn] Henter rundetavle for {day} (ett kall) ...")
-        d = get_json(url)
+        try:
+            d = get_json(url)
+        except Exception as e:
+            # Loggfor forsoket FOR vi kaster videre. update_data.py fanger
+            # ESPN-feil og fortsetter, saa uten denne linjen ville en ESPN
+            # som er nede i en uke ikke vaere synlig noe sted.
+            _logg("feil", f"{type(e).__name__}: {e}")
+            raise
         if cache_file:
             cache_dir.mkdir(parents=True, exist_ok=True)
             cache_file.write_text(json.dumps(d), encoding="utf-8")
@@ -159,10 +178,12 @@ def fetch_all(cache_dir=None, log=lambda s: None):
             out.append({"home": home, "away": away, "date": date, "hg": None, "ag": None, "suspect": False})
 
     if problems:
+        _logg("feil", f"{len(problems)} ferdigspilt(e) kamp(er) kunne ikke tolkes")
         raise EspnDataError(
             f"{len(problems)} ferdigspilt(e) kamp(er) fra ESPN kunne ikke tolkes riktig:\n" +
             "\n".join(f"  - {p}" for p in problems)
         )
+    _logg("ok", f"scoreboard {day}", kamper=len(out))
     return out
 
 

@@ -134,6 +134,7 @@ jobs:
           [ -d data/oddspapi-bruk ] && git add data/oddspapi-bruk
           # fotball.no-cachen: hoyst ett forsok per liga per dogn ligger her.
           [ -d data/nff-cache ] && git add data/nff-cache
+          [ -d data/hentelogg ] && git add data/hentelogg
           if git diff --cached --quiet; then
             echo "Ingen endringer i odds."
           else

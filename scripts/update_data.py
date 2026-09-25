@@ -25,7 +25,8 @@ import espn_source
 import should_fetch
 import ntf_source
 import nff_source
-from reconcile_ny import reconcile as reconcile_kilder, behold_eksisterende, rimelige_datoer
+from reconcile_ny import (bare_aktiv_sesong, behold_eksisterende,
+                          reconcile as reconcile_kilder, rimelige_datoer)
 import fetch_odds_history
 import merge_odds
 import fit_model
@@ -40,6 +41,20 @@ LIGA = "eliteserien"
 FFK_MIN_INTERVAL_MIN = 60  # ffksupporter.net skrapes (16 sider) maks én gang i timen
 STATUS_PATH = LEAGUE / "data" / "status.json"
 AUDIT_STATE_PATH = LEAGUE / "data" / "audit_state.json"
+
+
+DATOVAKT_BESKJED = {
+    "ingen_autoritet": (
+        "Ingen autoritativ sesong i data/sesonger.json, så datovakten sto "
+        "over. Dataene er skrevet som normalt, men en gal dato fra kilden "
+        "ville ikke blitt fanget. Kjør: python3 scripts/sesong.py . init "
+        "<liga> <år>"),
+    "sesongskifte_mangler": (
+        "Terminlisten er for en annen sesong enn registeret sier. "
+        "Sesongskiftet er ikke kjørt, så datovakten sto over -- den ville "
+        "ellers skrevet hele den nye sesongen tilbake til fjorårets datoer. "
+        "Ingenting er skrevet. Kjør: python3 scripts/sesong.py . bytt --utfor"),
+}
 
 
 class DataAuditError(Exception):
@@ -340,6 +355,13 @@ def main(cache_dir=None):
         # Hovedkilde: ligasiden. Uten den kan vi ikke bygge terminlisten.
         ntf_rows = ntf_source.fetch_all(LIGA, cache_dir=cache_dir, log=log)
 
+        # SESONGGRENSEN, eksplisitt og for avstemmingen. Ligasiden viser
+        # bade fjoraaret og neste sesong i vinduet for frysingen, med de
+        # samme lagparene. Kaster FeilSesong ved 0 aktive rader -- og det
+        # skjer HER, lenge for write_json under, saa de eksisterende filene
+        # staar urort.
+        ntf_rows, _fordeling = bare_aktiv_sesong(ntf_rows, _aktiv0, log=log)
+
         # fotball.no, hoeyst ett forsok per dogn (nff_source styrer det selv).
         # Brukes BARE i den daglige revisjonen under, aldri i avstemmingen.
         try:
@@ -375,6 +397,16 @@ def main(cache_dir=None):
         import sesong as _sesong
         _aktiv = _sesong.aktiv_sesong(ROOT, LIGA, log=log)
         merged, utenfor, _datofeil = rimelige_datoer(merged, tidligere, _aktiv, log=log)
+
+        # FOR SKRIVINGEN, ikke etter. "sesongskifte_mangler" betyr at
+        # terminlisten hoerer til en ANNEN sesong enn registeret sier -- altsaa
+        # at disse dataene ikke skal publiseres. Kontrollen laa nedenfor
+        # write_json, saa 2027-datoer ble skrevet og pushet FOR kjoringen ble
+        # rod. Etter sesonggrensen over skal den ikke kunne utloses; den staar
+        # som andre ben, og da maa den staa paa riktig side av skrivingen.
+        if _datofeil == "sesongskifte_mangler":
+            raise DataAuditError(DATOVAKT_BESKJED["sesongskifte_mangler"])
+
         matches_out, fixtures_out = build(merged)
 
         fordeling = {}
@@ -396,8 +428,15 @@ def main(cache_dir=None):
         # Mange datoer utenfor sesongen er ikke enkeltfeil -- da er det noe
         # galt med kilden, typisk en markupendring. Datoene er rettet over,
         # men kjoringen skal feile synlig.
-        if _datofeil:
-            raise DataAuditError({'ingen_autoritet': 'Ingen autoritativ sesong i data/sesonger.json, så datovakten sto over. Dataene er skrevet som normalt, men en gal dato fra kilden ville ikke blitt fanget. Kjør: python3 scripts/sesong.py . init <liga> <år>', 'sesongskifte_mangler': 'Terminlisten er for en annen sesong enn registeret sier. Sesongskiftet er ikke kjørt, så datovakten sto over -- den ville ellers skrevet hele den nye sesongen tilbake til fjorårets datoer. Kjør: python3 scripts/sesong.py . bytt --utfor'}[_datofeil])
+        # ETTER skrivingen, med vilje: dataene er skrevet som normalt, og
+        # dette sier bare at vi ikke kunne kontrollere datoene.
+        if _datofeil == "ingen_autoritet":
+            raise DataAuditError(DATOVAKT_BESKJED["ingen_autoritet"])
+        # ETTER skrivingen: naar denne slaar ut, er datoene med lagret verdi
+        # i samme sesong ALT rettet av rimelige_datoer(). Det som er skrevet
+        # er altsaa den lagrede verdien, ikke kildens gale dato. AA ikke
+        # skrive ville bare latt de eksisterende filene staa -- det er ikke
+        # galt, men det retter ingenting, og kilden maa uansett sjekkes.
         if len(utenfor) > len(merged) * 0.25:
             raise DataAuditError(
                 f"{len(utenfor)} av {len(merged)} kamper hadde dato utenfor "

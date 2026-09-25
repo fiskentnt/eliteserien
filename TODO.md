@@ -141,6 +141,98 @@ Testet ende-til-ende paa simulert kalender i
 tests/kilder/test_sesongskifte.py: tre forlop, 52 kontroller.
 
 
+## Hentelogg: hvor du ser om en kilde svikter
+
+data/hentelogg/<maaned>/<dato>-<workflow>-<run_id>-<attempt>.jsonl, en
+linje per henting:
+
+    {"tid": "...", "liga": "obos", "kilde": "ntf-resultater",
+     "utfall": "ok", "kamper": 184, "kjoring": "36094132921-1"}
+
+utfall er ok, cache, feil eller hoppet. Skrives av kildene selv --
+ligasidene, fotball.no, Wikipedia, ESPN og OddsPapi -- saa den ikke kan
+glemmes.
+
+    python3 scripts/hentelogg.py sammendrag   # utfall per kilde, 14 dogn
+    python3 scripts/hentelogg.py feil         # bare det som gikk galt
+    python3 scripts/hentelogg.py sjekk        # exit 1 hvis en kilde er ute
+
+HVORFOR: tilstandsfilene husker bare SISTE utfall. Uten en historikk var det
+ingenting som viste at OBOS eller fotball.no hadde feilet fem dager paa rad
+-- de "feiler gront".
+
+Har en kilde feilet tre ganger paa rad, gjor et EGET STEG TIL SLUTT i
+update-data og obos-results kjoringen rod, med kildenavnet i meldingen.
+Steget staar ETTER committeren: en kilde som er ute skal gjore kjoringen
+rod, men aldri hindre at dagens data blir skrevet.
+
+Et cache-treff nullstiller ikke rekken, og bare en vellykket henting fra
+SAMME fysiske kilde gjor det. At en reservekilde svarer, nullstiller ikke
+hovedkildens rekke -- ellers ville en hovedkilde kunnet vaere nede i en uke
+uten at noe sa fra.
+
+0 kamper er ogsaa feil: en side som svarer 200 men har lagt om markupen er
+den verste feilmaaten. Ett unntak, og bare ett: en TOM TERMINLISTE er
+gyldig naar resultatsiden samtidig viser en komplett ferdigspilt sesong
+etter sesong.valider(). Da logges den som ok med kamper=0.
+
+429 fra OddsPapi er ikke en kilde som er nede -- svaret sier selv hvor lenge
+vi skal vente -- og logges som "hoppet". Er retryene oppbrukt, er det en
+ekte feil.
+
+EN FIL PER KJORING, ikke per dato eller workflow: to kjoringer fra ulike
+checkouts som legger til i samme fil gir konflikt i git, og en rebase taper
+da linjer. Det var samme feil OddsPapi-telleren hadde.
+
+TESTENE SKRIVER ALDRI I data/. tests/conftest.py har vern(), som flytter
+hentelogg, oddspapi-bruk og nff-cache til en midlertidig rot via
+miljovariabler -- ogsaa for subprosesser -- og sjekk_urort(), som
+sammenligner sha256 av produksjonsstiene til slutt. Dette gikk galt en gang:
+testene la igjen loggfiler i produksjonsdataene, og kvotetelleren fikk tre
+fakturerbare kall som aldri skjedde.
+
+## Sesonggrensen: hvor den staar, og hvorfor
+
+Mellom siste runde og frysingen viser ligasiden BADE fjoraaret og neste
+sesong, med noyaktig de samme lagparene. Grensen laa fram til 25. september
+2026 INDIREKTE i ntf_source.slaa_sammen() sin duplikatregel. Tre ting var
+galt:
+
+  1. OPPDAGELSEN VAR BLIND. Tie-breaket "raden med resultat vinner" kastet
+     alle 240 neste-sesongs-radene, saa oppdag_sesong.py fant 0 kamper.
+     Sesongen ble aldri "klar", og bytt() kunne aldri bytte 1. januar --
+     hele det selvkjorende sesongskiftet sto paa en duplikatregel som slo
+     det av.
+  2. ETTER AT KILDENE FLIPPET ble neste sesongs datoer SKREVET OG PUSHET
+     for kjoringen ble rod: rimelige_datoer() oppdaget det og satte
+     "sesongskifte_mangler", men kontrollen laa nedenfor write_json.
+  3. obos_results.py hadde ingen sesonggrense og ingen frysevakt. Et
+     2027-resultat kunne bli publisert som resultatet paa en UTSATT
+     2026-kamp -- dato og runde kom fra var egen terminliste, saa
+     ingenting saa galt ut, og behold_eksisterende() ville holdt det for
+     godt.
+
+SLIK DET ER NAA:
+
+  * ntf_source.slaa_sammen() nokler paa (aar, hjemme, borte). En 2026-kamp
+    og en 2027-kamp mellom samme lag er to kamper. Duplikatsjekken for
+    "neste kamp" innen samme sesong virker som for, og tie-breaket er
+    failsafe -- ikke sesonggrensen.
+  * fetch_all() returnerer ALLE sesonger den ser (480 rader i det vinduet).
+    Docstringen lister alle kallere og hva hver av dem gjor.
+  * reconcile_ny.bare_aktiv_sesong() setter grensen EKSPLISITT, kalt rett
+    etter hentingen og for reconcile i update_data, obos_build_data og
+    obos_results. Den logger antall og aar EN gang.
+  * 0 aktive rader kaster FeilSesong, alltid -- ogsaa for byttedatoen.
+    Kallet ligger for forste write_json, og for OBOS utenfor
+    except-blokken rundt fetch_all, slik at "kilden viser feil sesong"
+    aldri kan tolkes som "kilden er nede, bruk CSV-reserven".
+  * "sesongskifte_mangler" behandles FOR skrivingen i begge kjeder.
+  * Sesongstegene (oppdagelse, frysing, bytte) har always() i workflowene,
+    slik at byttets alarm naas selv om databyggingen stopper. Uten den ble
+    Sesongskifte SKIPPED, og 1. januar med ufrosset sesong ble en vranglaas.
+
+
 ## Etter 2. oktober, foerst av alt: kalenderfeeden
 
 NTF har en kalenderfeed som er LAGET for automatisk bruk:

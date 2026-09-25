@@ -44,7 +44,7 @@ ODDS_PATH = DATA / "odds_closing.json"
 # SLUTT paa den, etter at dataene er skrevet -- en manglende fil skal ikke
 # stoppe datakjeden, bare gjore kjoringen rod.
 DATOVAKT_FEIL = None
-DATOVAKT_BESKJED = {'ingen_autoritet': 'Ingen autoritativ sesong i data/sesonger.json, så datovakten sto over. Dataene er skrevet som normalt, men en gal dato fra kilden ville ikke blitt fanget. Kjør: python3 scripts/sesong.py . init <liga> <år>', 'sesongskifte_mangler': 'Terminlisten er for en annen sesong enn registeret sier. Sesongskiftet er ikke kjørt, så datovakten sto over -- den ville ellers skrevet hele den nye sesongen tilbake til fjorårets datoer. Kjør: python3 scripts/sesong.py . bytt --utfor'}
+DATOVAKT_BESKJED = {'ingen_autoritet': 'Ingen autoritativ sesong i data/sesonger.json, så datovakten sto over. Dataene er skrevet som normalt, men en gal dato fra kilden ville ikke blitt fanget. Kjør: python3 scripts/sesong.py . init <liga> <år>', 'sesongskifte_mangler': 'Terminlisten er for en annen sesong enn registeret sier. Sesongskiftet er ikke kjørt, så datovakten sto over -- den ville ellers skrevet hele den nye sesongen tilbake til fjorårets datoer. Ingenting er skrevet. Kjør: python3 scripts/sesong.py . bytt --utfor'}
 
 
 def rows_for(season=SEASON, log=print):
@@ -77,7 +77,9 @@ def rows_for(season=SEASON, log=print):
         return fra_csv
 
     import ntf_source
-    from reconcile_ny import reconcile
+    from reconcile_ny import bare_aktiv_sesong, reconcile
+    import sesong as _sesong
+    _aktiv = _sesong.aktiv_sesong(ROOT, "obos", log=log)
     try:
         ntf = ntf_source.fetch_all("obos", log=log)
     except Exception as e:
@@ -85,6 +87,14 @@ def rows_for(season=SEASON, log=print):
             f"denne kjøringen. En kamp som er flyttet i dag blir da ikke fanget opp.")
         fra_csv.sort(key=lambda m: (m["date"], m["time"], m["home"]))
         return fra_csv
+
+    # SESONGGRENSEN, og den ligger UTENFOR except-blokken over med vilje.
+    # "Kilden er nede" kan forsvares med CSV-reserven; "kilden viser en annen
+    # sesong" kan det ikke -- da vet vi ikke hvilken sesong dataene hoerer
+    # til, og aa bygge fra CSV-en i stedet ville skjult kildefeilen bak et
+    # datasett som ser riktig ut. FeilSesong faar derfor gaa videre ut av
+    # rows_for(), som kalles for foerste write_json i main().
+    ntf, _fordeling = bare_aktiv_sesong(ntf, _aktiv, log=log)
     # fotball.no er ikke med: robots.txt der sier Disallow: / for alle andre
     # enn sokemotorene, og denne funksjonen kjorer i hver resultatkjoring.
     # Den uavhengige kontrollen mot fotball.no skjer i det daglige
@@ -93,8 +103,6 @@ def rows_for(season=SEASON, log=print):
     # En dato utenfor sesongvinduet er alltid feil hos kilden. CSV-en er
     # fasiten vi faller tilbake paa: den er handkurert og staar stille.
     from reconcile_ny import rimelige_datoer
-    import sesong as _sesong
-    _aktiv = _sesong.aktiv_sesong(ROOT, "obos", log=log)
     offisiell, utenfor, _datofeil = rimelige_datoer(offisiell, fra_csv, _aktiv, log=log)
     # utenfor er None naar det ikke finnes autoritativ sesong. Da har vakten
     # staatt over, og main() skal feile TIL SLUTT -- etter at dataene er
@@ -104,6 +112,12 @@ def rows_for(season=SEASON, log=print):
             f"FEIL: {len(utenfor)} av {len(offisiell)} kamper hadde dato utenfor "
             f"sesongen. Datoene er beholdt fra CSV-en, men kilden må "
             f"sjekkes:\n" + "\n".join(utenfor[:10]))
+    # FOR SKRIVINGEN: rows_for() kalles for foerste write_json i main(), saa
+    # en raise her lar de eksisterende filene staa urort. Beskjeden laa til
+    # naa i main() ETTER at matches.json, fixtures.json, model.json og
+    # status.json var skrevet.
+    if _datofeil == "sesongskifte_mangler":
+        raise SystemExit("FEIL: " + DATOVAKT_BESKJED["sesongskifte_mangler"])
     global DATOVAKT_FEIL
     DATOVAKT_FEIL = _datofeil
     resultat = {(r["home"], r["away"]): r for r in fra_csv}
