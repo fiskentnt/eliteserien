@@ -63,6 +63,18 @@ async function dispatch(workflow, gren, token) {
   return { workflow, status: svar.status, ok: svar.status === 204, tekst };
 }
 
+function likeStrenger(a, b) {
+  // Konstant tid: en vanlig === returnerer med en gang ved første ulike tegn,
+  // og lekker dermed hvor langt en gjetning kom.
+  const ab = new TextEncoder().encode(a);
+  const bb = new TextEncoder().encode(b);
+  let ulik = ab.length ^ bb.length;
+  const n = Math.max(ab.length, bb.length);
+  for (let i = 0; i < n; i++) ulik |= (ab[i] ?? 0) ^ (bb[i] ?? 0);
+  return ulik === 0;
+}
+
+
 async function kjor(env) {
   const token = env.GITHUB_TOKEN;
   if (!token) {
@@ -96,18 +108,36 @@ export default {
     ctx.waitUntil(kjor(env));
   },
 
-  // Manuell sjekk: åpne workerens URL for å se at token og tilgang virker.
-  // Sender ingenting med mindre ?kjor=1 er med.
+  // Manuell utløsning. Adressen til en Cloudflare-worker er lett å gjette, og
+  // uten nøkkel kunne hvem som helst fylt Actions med kjøringer. Portene
+  // hindrer at det gjør skade, men ikke at det lager støy og brenner
+  // kjøretid. Derfor kreves en egen hemmelighet, UTLOSER_NOKKEL, i tillegg
+  // til GITHUB_TOKEN.
+  //
+  // Er nøkkelen ikke satt, er manuell utløsning AV. Den skal ikke kunne
+  // omgås ved å la være å konfigurere den.
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.searchParams.get("kjor") !== "1") {
-      return new Response(
-        `Planlegger for ${EIER}/${REPO}.\n` +
-          `Utløser ${WORKFLOWS.join(", ")} hvert 10. minutt, ${FRA_TIME}-${TIL_TIME} UTC.\n` +
-          `Legg til ?kjor=1 for å sende nå.\n`,
-        { headers: { "content-type": "text/plain; charset=utf-8" } },
-      );
+      return new Response(`Planlegger for ${EIER}/${REPO}. Ingenting å se her.\n`, {
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
     }
+
+    const fasit = env.UTLOSER_NOKKEL;
+    if (!fasit) {
+      return new Response("Manuell utløsning er av: UTLOSER_NOKKEL er ikke satt.\n", {
+        status: 503,
+        headers: { "content-type": "text/plain; charset=utf-8" },
+      });
+    }
+    const gitt = request.headers.get("x-planlegger-nokkel") || url.searchParams.get("nokkel") || "";
+    if (!likeStrenger(gitt, fasit)) {
+      // 404, ikke 401: et galt forsøk skal ikke få bekreftet at endepunktet
+      // finnes i det hele tatt.
+      return new Response("Ikke funnet.\n", { status: 404 });
+    }
+
     const r = await kjor(env);
     return new Response(JSON.stringify(r, null, 1), {
       headers: { "content-type": "application/json; charset=utf-8" },

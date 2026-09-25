@@ -7,8 +7,13 @@ huskes fram til en dato eller en hendelse.
 
 UTLØPSDATO: _fyll inn når tokenen er laget_
 
-Den eksterne planleggeren (`planlegger/`) bruker en fine-grained PAT med
-`Actions: Read and write` på `fiskentnt/eliteserien` alene. Går den ut,
+Den eksterne planleggeren (`planlegger/`) har TO hemmeligheter i Cloudflare:
+
+  GITHUB_TOKEN     fine-grained PAT, `Actions: Read and write` på
+                   `fiskentnt/eliteserien` alene. Denne utløper.
+  UTLOSER_NOKKEL   nøkkel for manuell utløsning via `?kjor=1`. Utløper ikke,
+                   men byttes hvis den kommer på avveie. Uten den er manuell
+                   utløsning av; den planlagte kjøringen virker uansett. Går den ut,
 slutter planleggeren å virke **uten å si fra**: dispatch svarer 401, og
 Cloudflare-loggen viser det, men ingen leser den loggen til daglig.
 

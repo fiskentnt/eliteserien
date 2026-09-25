@@ -39,19 +39,44 @@ tester.
    - Noter utløpsdatoen. Den skal inn i `TODO.md`, ellers stopper
      planleggeren stille den dagen den går ut.
 
-2. **Legg den inn som hemmelighet:**
+2. **Lag en nøkkel for manuell utløsning.** Adressen til en
+   Cloudflare-worker er lett å gjette, og uten nøkkel kunne hvem som helst
+   fylt Actions med kjøringer. Portene hindrer at det gjør skade, men ikke
+   at det lager støy. Lag en tilfeldig streng:
+
+       python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+
+3. **Legg begge inn som hemmeligheter:**
 
        cd planlegger
-       npx wrangler secret put GITHUB_TOKEN
+       npx wrangler secret put GITHUB_TOKEN     # GitHub-tokenen fra steg 1
+       npx wrangler secret put UTLOSER_NOKKEL   # strengen fra steg 2
 
-   Tokenen skal aldri i `wrangler.toml` og aldri i repoet.
+   Ingen av dem skal i `wrangler.toml` eller i repoet.
 
-3. **Publiser:**
+   Settes ikke `UTLOSER_NOKKEL`, er manuell utløsning helt av. Den
+   planlagte kjøringen hvert tiende minutt virker uansett.
+
+4. **Publiser:**
 
        npx wrangler deploy
 
-4. **Sjekk at den svarer:** åpne workerens URL. Den viser hva den gjør uten å
-   sende noe. `?kjor=1` utløser én runde med én gang.
+5. **Finn adressen og sjekk at den svarer.** `wrangler deploy` skriver ut
+   adressen til slutt, på formen
+   `https://tabellkalkulator-planlegger.<ditt-subdomene>.workers.dev`. Den
+   står også under Workers & Pages i Cloudflare-panelet.
+
+   Åpner du den i nettleseren, svarer den bare «Ingenting å se her» — med
+   vilje. For å utløse en runde med én gang:
+
+       curl "https://<adressen>/?kjor=1&nokkel=<UTLOSER_NOKKEL>"
+
+   Svaret er en liste med én linje per workflow og `"ok": true` når GitHub
+   godtok utløsningen. Uten riktig nøkkel svarer den 404, slik at et galt
+   forsøk ikke får bekreftet at endepunktet finnes.
+
+6. **Kontroller i Actions** at kjøringene dukker opp som `workflow_dispatch`,
+   og at portene stopper dem når det ikke er noe å gjøre.
 
 ## Når tokenen går ut
 
