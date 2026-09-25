@@ -485,6 +485,74 @@ update_data.sjekk_manglende_resultat(
                                 "time": None, "played": False}]}], naa, lambda s: None)
 sjekk("kamp uten avspark utløser ikke fristen", True)
 
+print("\n=== Kampvinduet styrer arkiveringen ===")
+import json as _json
+import tempfile as _tempfile
+import arkiver_kildehtml as ark
+from datetime import datetime as _dt
+
+_OSLO = ZoneInfo("Europe/Oslo")
+_sb = Path(_tempfile.mkdtemp())
+(_sb / "obos/data").mkdir(parents=True)
+_ekte_rot = ark.ROT
+ark.ROT = _sb
+
+
+def _sett(fixtures, matches):
+    (_sb / "obos/data/fixtures.json").write_text(_json.dumps(fixtures), encoding="utf-8")
+    (_sb / "obos/data/matches.json").write_text(_json.dumps(matches), encoding="utf-8")
+
+
+def _paa(kl, dato="2026-10-02"):
+    return ark.kampdag("obos", _dt.fromisoformat(f"{dato}T{kl}:00").replace(tzinfo=_OSLO))
+
+
+# Den viktigste: kampen er FERDIGSPILT og ligger bare i matches.json.
+# Vinduet skal fortsatt være åpent -- det er markupen etter kampslutt vi
+# trenger for å se hvordan et endelig resultat ser ut.
+FERDIG = [{"date": "2026-10-02", "time": "19:00", "round": 24,
+           "home": "Ranheim", "away": "Egersund", "hg": 2, "ag": 1}]
+_sett([], FERDIG)
+sjekk("avspark 19:00, ferdigspilt, kl 21:30: ARKIVERER", _paa("21:30")[0], str(_paa("21:30")))
+sjekk("kl 12:00 samme dag: utenfor vinduet", not _paa("12:00")[0], str(_paa("12:00")))
+sjekk("kl 18:29 (31 min før): utenfor", not _paa("18:29")[0])
+sjekk("kl 18:31 (29 min før): innenfor", _paa("18:31")[0])
+sjekk("kl 22:59 (3t59 etter): innenfor", _paa("22:59")[0])
+sjekk("kl 23:01 (4t01 etter): utenfor", not _paa("23:01")[0])
+sjekk("begrunnelsen navngir vinduet", "18:30-23:00" in _paa("21:30")[1], _paa("21:30")[1])
+
+# Samme kamp, men uspilt i fixtures.json -- vinduet skal være identisk
+_sett([{"round": 24, "matches": [dict(FERDIG[0], hg=None, ag=None, played=False)]}], [])
+sjekk("uspilt kamp i fixtures.json gir samme vindu",
+      _paa("21:30")[0] and "18:30-23:00" in _paa("21:30")[1], str(_paa("21:30")))
+
+# Stort spenn: vinduet spenner fra første til siste
+_sett([{"round": 24, "matches": [
+    {"date": "2026-10-03", "time": "14:30", "home": "Strømmen", "away": "Sandnes Ulf"},
+    {"date": "2026-10-03", "time": "19:00", "home": "Moss", "away": "Kongsvinger"}]}], [])
+sjekk("stort spenn: vinduet er 14:00-23:00",
+      "14:00-23:00" in _paa("17:00", "2026-10-03")[1], _paa("17:00", "2026-10-03")[1])
+sjekk("stort spenn: midt imellom arkiveres", _paa("17:00", "2026-10-03")[0])
+sjekk("stort spenn: 13:59 er utenfor", not _paa("13:59", "2026-10-03")[0])
+
+_sett([], [])
+sjekk("ingen kamp i dag: hopper over", not _paa("19:00")[0])
+sjekk("og sier hvorfor", "ingen kamp i dag" in _paa("19:00")[1], _paa("19:00")[1])
+
+import os as _os
+_os.environ["ARKIV_TVING_KAMPDAG"] = "1"
+sjekk("testbryteren overstyrer vinduet", _paa("03:00")[0])
+del _os.environ["ARKIV_TVING_KAMPDAG"]
+ark.ROT = _ekte_rot
+
+print("\n=== Arkivet lagres komprimert ===")
+import gzip as _gzip
+_pr = Path(TESTDATA / "ntf_eliteserien_resultater_2026-09-25.html").read_bytes()
+_kom = _gzip.compress(_pr, 9)
+sjekk(f"HTML-en komprimerer minst 5x (målt {len(_pr)/len(_kom):.1f}x)",
+      len(_pr) / len(_kom) >= 5)
+sjekk("og lar seg pakke ut igjen uendret", _gzip.decompress(_kom) == _pr)
+
 print(f"\n{antall[0] - len(feil)} av {antall[0]} tester gikk gjennom.")
 if feil:
     print("FEILET: " + ", ".join(feil))

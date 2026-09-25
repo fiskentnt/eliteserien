@@ -14,15 +14,25 @@ Dette er DIAGNOSTIKK. Det ligger i det private lab-repoet, ikke i
 produksjonen, og det skal aldri kunne velte produksjonskjeden. Kalleren
 (arkiver_til_lab.sh) svelger feil herfra.
 
-Arkiveres bare på kampdager, for å holde arkivet lesbart: en dag der en kamp
-starter, eller der en kamp startet i løpet av de siste seks timene. Da får vi
-markup fra før, under og etter kamp uten å lagre 365 kopier av en side som
-ikke endrer seg.
+Arkiveres bare i KAMPVINDUET, per liga: fra 30 minutter før dagens første
+avspark til fire timer etter dagens siste. Utenfor vinduet hoppes ligaen
+over, også på en kampdag -- ellers ville en kveldskamp gitt oss femti kopier
+av en side som ikke endrer seg før klokka seks.
 
-Filnavn: <liga>/<dato>/<kilde>-<tidspunkt>.html, med tidspunkt i UTC.
+Vinduet regnes fra dagens kamper i BÅDE fixtures.json og matches.json. En
+kamp som er ferdigspilt flyttes fra den ene filen til den andre, og skal
+fortsatt holde vinduet åpent: det er nettopp markupen ETTER kampslutt vi
+trenger for å se hvordan et endelig resultat ser ut.
+
+Filene lagres gzippet. Sidene er svært repetitiv HTML og komprimerer 13
+ganger (målt på arkivet fra 25. september 2026), så et arkiv som ellers
+hadde vokst med megabyte per kjøring vokser med titalls kilobyte.
+
+Filnavn: <liga>/<dato>/<kilde>-<tidspunkt>.html.gz, med tidspunkt i UTC.
 
 Bruk:  python3 scripts/arkiver_kildehtml.py <arkivkatalog> [liga ...]
 """
+import gzip
 import json
 import os
 import sys
@@ -37,11 +47,16 @@ from ligaer import LIGAER, oppsett
 
 ROT = Path(__file__).resolve().parent.parent
 OSLO = ZoneInfo("Europe/Oslo")
-TIMER_ETTER = 6
+
+# Vinduet rundt dagens kamper. Fire timer etter siste avspark dekker en kamp
+# som starter presis (105 min), pluss tid til at kilden rekker å oppdatere
+# seg, pluss margin for en forsinket start.
+FOER_MIN = 30
+ETTER_TIMER = 4
 
 
 def kampdag(liga, naa):
-    """Spilles det kamp i dag, eller startet en kamp for under seks timer siden?
+    """Er vi i kampvinduet for denne ligaen akkurat nå?
 
     ARKIV_TVING_KAMPDAG=1 svarer ja uansett. Den finnes for å kunne bevise
     hele kjeden i Actions utenom en kampdag, og settes bare fra
@@ -52,39 +67,51 @@ def kampdag(liga, naa):
     for lite -- et arkiv som mangler nettopp kampdagen er verdiløst.
     """
     if os.environ.get("ARKIV_TVING_KAMPDAG") == "1":
-        return True, "kampdag tvunget (ARKIV_TVING_KAMPDAG=1)"
+        return True, "kampvindu tvunget (ARKIV_TVING_KAMPDAG=1)"
 
     data = ROT / oppsett(liga)["data"]
     i_dag = naa.date().isoformat()
+    avspark = []
+
+    # Dagens kamper fra BEGGE filene. En ferdigspilt kamp ligger i
+    # matches.json, ikke i fixtures.json, og skal fortsatt holde vinduet åpent.
     try:
-        fx = json.loads((data / "fixtures.json").read_text(encoding="utf-8"))
+        for runde in json.loads((data / "fixtures.json").read_text(encoding="utf-8")):
+            avspark += _avspark_i_dag(runde.get("matches", []), i_dag)
     except Exception:
         return True, "fant ikke fixtures.json -- arkiverer for sikkerhets skyld"
-
-    for runde in fx:
-        for m in runde.get("matches", []):
-            if m.get("date") == i_dag:
-                return True, f"kamp i dag: {m['home']} - {m['away']}"
-
-    grense = naa - timedelta(hours=TIMER_ETTER)
     try:
-        ms = json.loads((data / "matches.json").read_text(encoding="utf-8"))
+        avspark += _avspark_i_dag(
+            json.loads((data / "matches.json").read_text(encoding="utf-8")), i_dag)
     except Exception:
-        ms = []
-    for m in ms:
-        if not m.get("date") or not m.get("time"):
+        pass
+
+    if not avspark:
+        return False, "ingen kamp i dag"
+
+    start = min(avspark) - timedelta(minutes=FOER_MIN)
+    slutt = max(avspark) + timedelta(hours=ETTER_TIMER)
+    vindu = f"{start.strftime('%H:%M')}-{slutt.strftime('%H:%M')}"
+    if start <= naa <= slutt:
+        return True, f"i kampvinduet {vindu} ({len(avspark)} kamp(er) i dag)"
+    return False, f"kamp i dag, men utenfor vinduet {vindu}"
+
+
+def _avspark_i_dag(kamper, i_dag):
+    """Avsparkstidspunktene for dagens kamper, som tidssonebevisste datoer.
+
+    Avspark står i norsk lokaltid. Sommer- og vintertid skiller en time, så
+    tidssonen må komme fra kalenderen, ikke fra en fast forskyvning."""
+    ut = []
+    for m in kamper:
+        if m.get("date") != i_dag or not m.get("time"):
             continue
         try:
-            # Avspark står i norsk lokaltid. Sommer- og vintertid skiller en
-            # time, så tidssonen må komme fra kalenderen, ikke fra en fast verdi.
-            avspark = datetime.fromisoformat(
-                f"{m['date']}T{m['time']}:00").replace(tzinfo=OSLO)
+            ut.append(datetime.fromisoformat(
+                f"{m['date']}T{m['time']}:00").replace(tzinfo=OSLO))
         except ValueError:
             continue
-        if grense <= avspark <= naa:
-            return True, f"kamp nettopp spilt: {m['home']} - {m['away']}"
-
-    return False, "ingen kamp i dag"
+    return ut
 
 
 def hent_alle(liga):
@@ -123,11 +150,13 @@ def main(argv):
         mappe = arkiv / liga / naa.date().isoformat()
         mappe.mkdir(parents=True, exist_ok=True)
         for navn, html in hent_alle(liga):
-            fil = mappe / f"{navn}-{stempel}.html"
+            fil = mappe / f"{navn}-{stempel}.html.gz"
             if fil.exists():
                 continue
-            fil.write_text(html, encoding="utf-8")
-            print(f"  skrev {fil.relative_to(arkiv)} ({len(html)} tegn)")
+            raa = html.encode("utf-8")
+            fil.write_bytes(gzip.compress(raa, 9))
+            print(f"  skrev {fil.relative_to(arkiv)} "
+                  f"({len(raa) / 1024:.0f} kB -> {fil.stat().st_size / 1024:.0f} kB)")
             skrevet += 1
 
     print(f"{skrevet} fil(er) arkivert.")

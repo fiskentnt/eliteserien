@@ -16,10 +16,15 @@ name: "Arkiver kilde-HTML (diagnostikk)"
 # noe som helst. Denne jobben har derfor sin egen, tette kadens, og dekker
 # begge ligaer likt.
 #
-# Jobben er billig: den henter tre sider per liga BARE på kampdager, og
-# avslutter umiddelbart ellers. Den trenger ingen avhengigheter -- verifisert
-# med AST-analyse at ntf_source, nff_source og arkiver_kildehtml bare bruker
-# standardbiblioteket -- så ingen pip og ingen setup-python.
+# Jobben er billig: cronen er tett, men SCRIPTET avgjør. Det henter tre sider
+# per liga bare når ligaen er i kampvinduet -- fra 30 minutter før dagens
+# første avspark til fire timer etter dagens siste -- og avslutter umiddelbart
+# ellers. En kveldskamp gir dermed rundt fjorten kjøringer, ikke femti.
+# Filene lagres gzippet og komprimerer 13 ganger.
+#
+# Den trenger ingen avhengigheter -- verifisert med AST-analyse at ntf_source,
+# nff_source og arkiver_kildehtml bare bruker standardbiblioteket -- så ingen
+# pip og ingen setup-python.
 
 on:
   schedule:
@@ -29,7 +34,7 @@ on:
   workflow_dispatch:
     inputs:
       tving_kampdag:
-        description: "Tving kampdag, for å teste arkiveringen utenom kampdager"
+        description: "Tving arkivering, uavhengig av kampvinduet"
         type: boolean
         default: false
       tving_feil:
