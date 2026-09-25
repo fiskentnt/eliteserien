@@ -102,6 +102,29 @@ jobs:
         if: steps.gate.outputs.should_fetch == 'true'
         run: python3 scripts/daglig_revisjon.py eliteserien
 
+      - name: Se etter neste sesongs terminliste (eliteserien)
+        id: oppdag_sesong
+        continue-on-error: true   # en kilde som er nede skal aldri velte kjeden
+        # Ligasiden viser bare uspilte kamper. Naar NTF publiserer neste
+        # sesong og ingen er spilt, er det hele sesongen -- 240 kamper. Det
+        # er signalet. Valideringen skjer i sesong.oppdag(), som setter
+        # "klar" bare naar alt stemmer.
+        #
+        # Billig: ser bare fra 1. oktober, hopper over naar neste sesong alt
+        # er klar, og forsoker hoyst en gang i dognet.
+        if: steps.gate.outputs.should_fetch == 'true'
+        run: python3 scripts/oppdag_sesong.py eliteserien
+
+      - name: Frys sesongen hvis den er ferdig (eliteserien)
+        id: frys
+        continue-on-error: true   # "ikke ferdig ennaa" er normaltilstanden
+        # Nekter av seg selv til alle kamper har resultat, det har gaatt 72
+        # timer siden siste kamp, og en fersk revisjon er uten apne kritiske
+        # avvik. Resultater kan endres i etterkant, og en frysing skal ikke
+        # laase inn en feil. Sesongen er fortsatt AKTIV til 1. januar.
+        if: steps.gate.outputs.should_fetch == 'true'
+        run: python3 scripts/frys_sesong.py . eliteserien
+
       - name: Sesongskifte (eliteserien) -- bytter bare 1. januar
         id: sesongskifte
         continue-on-error: true

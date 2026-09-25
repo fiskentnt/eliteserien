@@ -139,6 +139,13 @@ def load_closing_odds():
 
 
 def main():
+    # En frossen sesong er uforanderlig -- se sesong.er_frosset().
+    import sesong as _ses
+    _a0 = _ses.aktiv_sesong(ROOT, "obos", log=lambda _s: None)
+    if _a0 and _ses.er_frosset(ROOT, "obos", _a0):
+        print(f"Sesongen {_a0} er frosset -- rører ingenting. "
+              f"Venter på sesongskiftet.")
+        return 0
     from_matches = "--from-matches" in sys.argv
     rows = rows_for()
     if from_matches and (DATA / "matches.json").exists():

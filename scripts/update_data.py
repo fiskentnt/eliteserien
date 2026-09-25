@@ -309,6 +309,17 @@ def sjekk_manglende_resultat(fixtures_out, now, log):
 def main(cache_dir=None):
     log = lambda s: print(s, file=sys.stderr)
     now = datetime.now(timezone.utc)
+
+    # En frossen sesong er uforanderlig. Rundt aarsskiftet viser kildene
+    # NESTE sesong, saa en kjoring her ville skrevet neste sesongs kamper inn
+    # i den frosne. Vi venter paa at bytt() gjor jobben 1. januar.
+    import sesong as _ses
+    _aktiv0 = _ses.aktiv_sesong(ROOT, LIGA, log=log)
+    if _aktiv0 and _ses.er_frosset(ROOT, LIGA, _aktiv0):
+        log(f"Sesongen {_aktiv0} er frosset -- rører ingenting. "
+            f"Venter på sesongskiftet.")
+        return 0
+
     try:
         try:
             espn_rows = espn_source.fetch_all(cache_dir=cache_dir, log=log)

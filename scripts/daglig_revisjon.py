@@ -192,6 +192,15 @@ def main(argv):
     liga = argv[0]
     naa = datetime.now(timezone.utc)
 
+    # Ikke revider en frossen sesong. Kildene viser neste sesong rundt
+    # aarsskiftet, og da ville hver kamp sett ut som et avvik.
+    import sesong as _ses
+    _a = _ses.aktiv_sesong(ROOT, liga, log=lambda _s: None)
+    if _a and _ses.er_frosset(ROOT, liga, _a):
+        print(f"Sesongen {_a} er frosset -- reviderer ikke. "
+              f"En frossen sesong er uforanderlig.")
+        return 0
+
     # fetch_all haandterer selv at fotball.no hentes hoeyst en gang i dognet.
     # Er forsoket sperret, kommer det lagrede svaret -- og det er riktig: da
     # reviderer vi mot det nyeste vi lovlig har.

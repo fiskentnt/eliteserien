@@ -42,10 +42,96 @@ def les_side(rot, sti, ut):
     return json.loads(Path(ut).read_text(encoding="utf-8"))
 
 
+KARENS_TIMER = 72
+
+
+def ikke_ferdig(rot, liga, sesong, naa=None):
+    """Hva som gjenstaar for sesongen kan kalles FERDIG. Tom liste = ferdig.
+
+    "Ferdig" er tre ting, ikke bare at kampene er spilt:
+
+      1. alle kamper har resultat
+      2. det har gaatt minst 72 timer siden siste kamp
+      3. en FERSK revisjon mot fotball.no har ingen apne kritiske avvik
+
+    naa kan settes for aa prove et forlop paa en simulert kalender.
+
+    Karenstiden og revisjonen er der fordi resultater kan endres i etterkant
+    -- en kamp som domme 3-0 etter protest, en rettet feilregistrering. En
+    frysing som skjer for tidlig laser inn feilen for godt, og det er nettopp
+    det frysingen skal hindre.
+    """
+    import json as _json
+    from datetime import datetime, timedelta, timezone
+    from zoneinfo import ZoneInfo
+    oslo = ZoneInfo("Europe/Oslo")
+    data = Path(rot) / liga / "data"
+    naa = naa or datetime.now(timezone.utc)
+    ut = []
+
+    # 1) alle kamper spilt
+    try:
+        fx = _json.loads((data / "fixtures.json").read_text(encoding="utf-8"))
+        uspilt = [m for r in fx for m in r["matches"] if not m.get("played")]
+        if uspilt:
+            ut.append(f"{len(uspilt)} kamp(er) mangler fortsatt resultat")
+    except Exception as e:
+        ut.append(f"kunne ikke lese fixtures.json ({type(e).__name__})")
+
+    # 2) karenstid etter siste kamp
+    try:
+        m = _json.loads((data / "matches.json").read_text(encoding="utf-8"))
+        tider = []
+        for x in m:
+            if x.get("date") and x.get("time"):
+                try:
+                    tider.append(datetime.fromisoformat(
+                        f"{x['date']}T{x['time']}:00").replace(tzinfo=oslo))
+                except ValueError:
+                    continue
+        if tider:
+            siden = (naa - max(tider)).total_seconds() / 3600
+            if siden < KARENS_TIMER:
+                ut.append(f"bare {siden:.0f} timer siden siste kamp "
+                          f"(karenstiden er {KARENS_TIMER})")
+    except Exception as e:
+        ut.append(f"kunne ikke lese matches.json ({type(e).__name__})")
+
+    # 3) fersk revisjon uten apne kritiske avvik
+    rev = data / "audit_fixtures.json"
+    if not rev.exists():
+        ut.append("ingen terminlisterevisjon er kjørt")
+    else:
+        try:
+            d = _json.loads(rev.read_text(encoding="utf-8"))
+            if int(d.get("errors") or 0):
+                ut.append(f"{d['errors']} åpne kritiske avvik i revisjonen")
+            elif d.get("bekreftet"):
+                ut.append(f"{len(d['bekreftet'])} bekreftede avvik står uløst")
+            sett = datetime.fromisoformat(d["checked_at"])
+            alder = (naa - sett).total_seconds() / 3600
+            if alder > 24:
+                ut.append(f"revisjonen er {alder:.0f} timer gammel, ikke fersk")
+        except Exception as e:
+            ut.append(f"kunne ikke lese revisjonen ({type(e).__name__})")
+    return ut
+
+
 def main():
-    if len(sys.argv) < 4:
+    if len(sys.argv) < 3:
         print(__doc__.strip(), file=sys.stderr); return 2
-    rot, liga, sesong = Path(sys.argv[1]).resolve(), sys.argv[2], sys.argv[3]
+    rot, liga = Path(sys.argv[1]).resolve(), sys.argv[2]
+    if len(sys.argv) > 3 and sys.argv[3][:1].isdigit():
+        sesong = sys.argv[3]
+    else:
+        # Sesongen leses fra registeret naar den ikke er oppgitt. Da slipper
+        # workflowen aa regne den ut i en shell-substitusjon.
+        import sesong as _ses
+        sesong = _ses.aktiv_sesong(rot, liga, log=lambda s: print(f"  {s}"))
+        if not sesong:
+            print("Ingen aktiv sesong i registeret -- fryser ingenting.",
+                  file=sys.stderr)
+            return 0
     kilde = rot / liga
     mal = kilde / sesong
     if not (kilde / "index.html").exists():
@@ -72,11 +158,14 @@ def main():
         blokk = d.get("ligaer", {}).get(liga, {})
         st = blokk.get("sesonger", {}).get(neste, {}).get("status")
         klar = st in ("oppdaget", "klar", "aktiv")
-    if not klar and "--uten-sperre" not in sys.argv:
-        print(f"NEKTER Å FRYSE {sesong}: terminlisten for {neste} er ikke oppdaget.",
-              file=sys.stderr)
-        print(f"  Kjør oppdag_sesong.py først. Frysing før etterfølgeren finnes "
-              f"gir et bilde vi ikke kan rette.", file=sys.stderr)
+    hindre = [] if klar else [f"terminlisten for {neste} er ikke oppdaget"]
+    hindre += ikke_ferdig(rot, liga, sesong)
+    if hindre and "--uten-sperre" not in sys.argv:
+        print(f"NEKTER Å FRYSE {sesong}:", file=sys.stderr)
+        for h in hindre:
+            print(f"  - {h}", file=sys.stderr)
+        print(f"  Frysing skal ikke låse inn en feil. Prøver igjen ved neste "
+              f"daglige kjøring.", file=sys.stderr)
         print(f"  (--uten-sperre kan brukes i sandkasse.)", file=sys.stderr)
         return 3
     if not klar:

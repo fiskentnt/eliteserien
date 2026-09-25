@@ -63,39 +63,60 @@ kjøringen rød hvis et resultat mangler. Slår den ut denne kvelden, er det et
 ønsket signal: produksjonen har valgt den sikre retningen, og live-statusen
 mangler sannsynligvis i `KJENTE_KLASSER`.
 
-## Sesongskiftet maa kobles til en workflow foer november
+## Sesongskiftet: hvordan det virker, og hvordan det feiler
 
-INGEN workflow kaller sesong.py i dag. Maskineriet er bygget, testet og
-ligger i produksjonsrepoet -- men det er kode ingen kjorer, og da skjer
-sesongskiftet ikke av seg selv.
+SELVKJORENDE siden 25. september 2026. Ingen manuell redigering av
+data/sesonger.json skal vaere nodvendig.
 
-data/sesonger.json er opprettet (25. september 2026, `sesong.py init` for
-begge ligaer med 2026). Datovakten leser den naa som eneste autoritet.
+data/sesonger.json er eneste autoritet. Den skrives bare av sesong.py, leses
+av frys_sesong.py og av datovakten i reconcile_ny.py.
 
-Det som mangler, er de to tingene som skal skje av seg selv:
+Fire steg, alle i den daglige kjeden for begge ligaer, hver med sitt eget
+skript:
 
-1. OPPDAGELSE. Naar NTF publiserer 2027-terminlisten, normalt i november,
-   skal `sesong.oppdag()` kalles med den. Terminlisten hentes fra
-   ligasiden (eller kalenderfeeden, se punktet under), valideres av
-   `valider()`, og status settes til `klar`.
+  oppdag_sesong.py   Ser etter neste sesongs terminliste. Ligasiden viser
+                     bare uspilte kamper, saa naar NTF publiserer neste
+                     sesong og ingen er spilt, er det hele sesongen -- 240
+                     kamper. Ser bare fra 1. oktober, hoyst ett forsok i
+                     dognet. Sender radene til sesong.oppdag(), som
+                     validerer: 16 lag, 240 kamper, 30 runder, 15 hjemme og
+                     15 borte per lag, alle oppgjor, ingen duplikater,
+                     riktig aarstall. Status blir "klar" bare naar alt
+                     stemmer.
 
-2. BYTTET. Fra 1. januar skal `sesong.py bytt --utfor` kjore. Den bytter
-   bare hvis neste sesong er `klar`, og fryser den avsluttede sesongen.
+  frys_sesong.py     Fryser den avsluttede sesongen naar den er FERDIG, som
+                     betyr tre ting: alle kamper har resultat, det har gaatt
+                     72 timer siden siste kamp, og en fersk revisjon mot
+                     fotball.no har ingen apne kritiske avvik. Karenstiden
+                     og revisjonen er der fordi et resultat kan endres i
+                     etterkant -- en kamp som dommes 3-0 etter protest. En
+                     frysing som skjer for tidlig laser inn feilen.
 
-Forslag til hvordan: ett nytt steg i `update-data.yml` og `obos-results.yml`,
-etter det daglige vedlikeholdet, som kjorer
+  daglig_revisjon.py Revisjonen som frysingen venter paa.
 
-    python3 scripts/sesong.py . bytt --utfor
+  sesong.py bytt     Bytter aktiv sesong fra 1. januar, men bare naar neste
+                     er "klar". Er den ikke klar, blir gammel sesong
+                     staaende, resten av kjeden fullforer, og kjoringen
+                     ender rodt. Den prover igjen hver dag, saa et bytte
+                     10. januar skjer ogsaa automatisk.
 
-Den er billig og gjor ingenting de 364 andre dagene -- `skal_bytte()`
-returnerer False med begrunnelse. Oppdagelsen trenger et eget lite skript
-som henter neste sesongs terminliste og kaller `oppdag()`; det finnes ikke
-ennaa.
+ETTER FRYSING er sesongen uforanderlig. update_data.py, obos_build_data.py
+og daglig_revisjon.py hopper over naar sesong.er_frosset() er sann: rundt
+aarsskiftet viser kildene NESTE sesong, og en revisjon ville sett avvik
+overalt. Sesongen er fortsatt AKTIV til 1. januar -- frossen og aktiv er to
+ulike ting.
 
-FRIST: koblet inn og testet foer 1. november, saa oppdagelsen rekker aa
-skje for terminlisten publiseres. Uten dette staar siden paa 2026 inn i
-2027, og datovakten sier fra med "sesongskiftet er ikke kjort" -- som er
-riktig, men da er det alt for sent.
+HVORDAN DET FEILER, med vilje:
+
+  kilden nede eller omlagt    varsel, exit 0, aktiv sesong urort
+  halv terminliste            status "oppdaget", aldri "klar"
+  manglende sesongautoritet   datovakten staar over, data skrives, rodt
+  neste sesong ikke klar      gammel staar, data skrives, rodt
+  kritisk revisjonsavvik      ingen frysing for det er lost
+
+Testet ende-til-ende paa simulert kalender i
+tests/kilder/test_sesongskifte.py: tre forlop, 52 kontroller.
+
 
 ## Etter 2. oktober, foerst av alt: kalenderfeeden
 

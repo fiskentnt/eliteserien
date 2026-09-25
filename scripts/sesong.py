@@ -70,6 +70,20 @@ def skriv(rot, d):
     p.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
+def er_frosset(rot, liga, sesong):
+    """Er sesongen frosset? Merket er frosset.json i sesongmappen.
+
+    En FROSSET sesong er uforanderlig. Den daglige kjeden skal da verken
+    skrive til <liga>/data/ eller revidere den mot fotball.no: rundt
+    aarsskiftet viser kildene NESTE sesong, og en revisjon ville sett avvik
+    overalt -- mens det er vi som er ute av takt, ikke dataene.
+
+    Merk at sesongen fortsatt er AKTIV til 1. januar. Frossen og aktiv er to
+    ulike ting: siden viser den, men ingenting endrer den.
+    """
+    return (Path(rot) / liga / str(sesong) / "data" / "frosset.json").exists()
+
+
 def init(rot, liga, sesong, log=print):
     """Setter den FORSTE aktive sesongen for en liga. Administrativ handling.
 
@@ -114,7 +128,21 @@ def init(rot, liga, sesong, log=print):
             f"-- fortsetter, kontrollen er ikke et krav.")
 
     blokk["aktiv"] = sesong
-    blokk["sesonger"].setdefault(sesong, {})["status"] = "aktiv"
+    s_blokk = blokk["sesonger"].setdefault(sesong, {})
+    s_blokk["status"] = "aktiv"
+    # Lagene maa lagres: valider() sammenligner neste sesongs lagsett med
+    # dette for aa rapportere opprykk og nedrykk. Uten dem gaar en
+    # lagendring upaaaktet hen.
+    try:
+        lag = sorted({t for r in json.loads(
+            (Path(rot) / oppsett(liga)["data"] / "matches.json")
+            .read_text(encoding="utf-8"))
+            for t in (r["home"], r["away"])})
+        if lag:
+            s_blokk["lag"] = lag
+            log(f"  lagret {len(lag)} lag for {sesong}")
+    except Exception:
+        pass
     blokk["initiert_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
     skriv(rot, d)
     log(f"{liga}: aktiv sesong satt til {sesong}.")
