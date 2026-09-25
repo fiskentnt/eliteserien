@@ -143,4 +143,17 @@ def behold_eksisterende(merged, eksisterende, log=lambda s: None):
                 f"{g['hg']}-{g['ag']} til {r['hg']}-{r['ag']} -- bruker det nye, "
                 f"men dette skal ikke skje for en ferdigspilt kamp")
         ut.append(r)
+
+    # En ferdigspilt kamp som er borte fra ALLE kildene skal ikke forsvinne
+    # stille. Det er en verre nedgradering enn å bli uspilt: kampen faller ut
+    # av tabellen helt. Vi tar den med videre uendret og sier tydelig fra.
+    sett = {_nøkkel(r) for r in merged}
+    for key, g in gamle.items():
+        if key in sett or g.get("hg") is None:
+            continue
+        log(f"ADVARSEL: {key[0]}-{key[1]} ({g.get('date')}) er ferdigspilt hos oss "
+            f"med {g['hg']}-{g['ag']}, men finnes ikke hos noen kilde nå -- "
+            f"beholder kampen uendret")
+        ut.append(dict(g))
+
     return ut

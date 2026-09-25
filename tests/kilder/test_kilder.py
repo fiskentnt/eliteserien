@@ -411,6 +411,57 @@ mål2 = next(r for r in flyttet_beholdt if (r["home"], r["away"]) == GLEMT)
 sjekk("men dato og avspark oppdateres fortsatt",
       (mål2["date"], mål2["time"]) == ("2026-12-01", "20:00"), str(mål2))
 
+print("\n=== Ukjent status skal ALDRI gjøre en ferdig kamp uspilt ===")
+# Dette er den farlige retningen. At en uspilt kamp forblir uspilt når vi ikke
+# kjenner statusen er trygt. At en FERDIG kamp blir uspilt igjen er det ikke:
+# da går tabellen bakover, og en kamp som er spilt forsvinner fra poengsummen.
+FERDIG_HOS_OSS = [{"date": "2026-09-20", "time": "19:15", "round": 22,
+                   "home": "Brann", "away": "Bodø/Glimt", "hg": 2, "ag": 1, "src": "ntf"}]
+UKJENT_KLASSE = '''<tr class="schedule__match schedule__match--helt-ny-klasse">
+  <td class="schedule__match__item schedule__match__item--round"><span>#22</span></td>
+  <td class="schedule__match__item schedule__match__item--teams">
+    Brann - <span class="results__team--opponent">Bodø/Glimt</span></td>
+  <td class="schedule__match__item schedule__match__item--result">2 - 1</td>
+  <td class="schedule__match__item schedule__match__item--date">20.09.<span
+    class="schedule__match__item--date__year">2026</span> 19:15</td>
+</tr>'''
+logg = []
+fra_kilde = ntf_source.parse_side(UKJENT_KLASSE, "resultater", "eliteserien", log=logg.append)
+sjekk("kilden alene gir ingen resultat ved ukjent klasse", fra_kilde[0]["hg"] is None)
+sjekk("og markerer statusen som ukjent", fra_kilde[0]["ukjent_status"] is True)
+
+etter = behold_eksisterende(reconcile(fra_kilde, [], log=lambda s: None),
+                            FERDIG_HOS_OSS, log=logg.append)
+rad = etter[0]
+sjekk("FERDIG KAMP + UKJENT KLASSE: resultatet beholdes",
+      (rad["hg"], rad["ag"]) == (2, 1), str(rad))
+sjekk("FERDIG KAMP + UKJENT KLASSE: ferdigstatus beholdes",
+      rad["src"] is not None, str(rad))
+sjekk("FERDIG KAMP + UKJENT KLASSE: kampen er fortsatt med", len(etter) == 1)
+sjekk("og begge stegene er logget",
+      any("ikke merket ferdigspilt" in m for m in logg)
+      and any("beholder resultatet" in m for m in logg), str(logg))
+
+# build_matches skal fortsatt regne den som spilt
+sys.path.insert(0, str(ROT / "scripts"))
+import leaguedata
+sjekk("kampen havner fortsatt blant de spilte i matches.json",
+      len(leaguedata.build_matches(etter)) == 1, str(leaguedata.build_matches(etter)))
+
+# En kamp som forsvinner HELT fra kildene er en verre nedgradering
+BORTE = behold_eksisterende([], FERDIG_HOS_OSS, log=lambda s: None)
+sjekk("ferdig kamp som forsvinner fra alle kilder beholdes",
+      len(BORTE) == 1 and (BORTE[0]["hg"], BORTE[0]["ag"]) == (2, 1), str(BORTE))
+logg = []
+behold_eksisterende([], FERDIG_HOS_OSS, log=logg.append)
+sjekk("og det logges tydelig",
+      any("finnes ikke hos noen kilde" in m for m in logg), str(logg))
+
+USPILT_HOS_OSS = [{"date": "2026-10-09", "time": "19:00", "round": 23,
+                   "home": "Start", "away": "Odd", "hg": None, "ag": None, "src": None}]
+sjekk("men en USPILT kamp som forsvinner gjenoppstår ikke",
+      behold_eksisterende([], USPILT_HOS_OSS, log=lambda s: None) == [])
+
 print("\n=== Manglende resultat tre timer etter avspark skal feile ===")
 sys.path.insert(0, str(ROT / "scripts"))
 import update_data

@@ -6,6 +6,10 @@
 #                 overskrive det. Fanger et snapshot som ble tapt sist fordi
 #                 arkiveringen feilet.
 #   etter-henting tar det nye snapshotet.
+#   kildehtml     tar ra HTML fra de offisielle kildene, bare paa kampdager.
+#                 Diagnostikk: vi har aldri sett hvordan en paagaende kamp ser
+#                 ut i markupen, og arkivet gjor at vi slipper aa folge en kamp
+#                 live for aa finne det ut.
 #
 # Idempotent: filnavnet er hentetidspunktet (fetched_at), så et snapshot som
 # alt finnes i laben hoppes over. To kall på rad gir dermed én fil.
@@ -47,17 +51,27 @@ git clone --quiet --depth 1 \
   git@github.com:fiskentnt/tabellkalkulator-lab.git "$ARB" || {
   echo "FEIL: klarte ikke klone lab-repoet ($FASE)"; exit 1; }
 
-python3 scripts/arkiver_odds_snapshot.py "$ARB/odds-arkiv" "${LIGAER[@]}" || {
-  echo "FEIL: arkiveringsskriptet feilet ($FASE)"; exit 1; }
+# Fasen avgjor HVA som arkiveres. kildehtml tar ra HTML fra de offisielle
+# kildene paa kampdager (se scripts/arkiver_kildehtml.py); alt annet tar
+# oddssnapshotet.
+if [ "$FASE" = "kildehtml" ]; then
+  MAPPE="kilde-arkiv"
+  python3 scripts/arkiver_kildehtml.py "$ARB/$MAPPE" "${LIGAER[@]}" || {
+    echo "FEIL: arkivering av kilde-HTML feilet ($FASE)"; exit 1; }
+else
+  MAPPE="odds-arkiv"
+  python3 scripts/arkiver_odds_snapshot.py "$ARB/$MAPPE" "${LIGAER[@]}" || {
+    echo "FEIL: arkiveringsskriptet feilet ($FASE)"; exit 1; }
+fi
 
 cd "$ARB"
 git config user.name "github-actions[bot]"
 git config user.email "github-actions[bot]@users.noreply.github.com"
-git add odds-arkiv
+git add "$MAPPE"
 if git diff --cached --quiet; then
   echo "Ingen nye snapshot ($FASE) -- alt var arkivert fra før."
   exit 0
 fi
-git commit --quiet -m "Oddssnapshot ($FASE) $(date -u +%Y-%m-%dT%H:%MZ)"
+git commit --quiet -m "${FASE^} $(date -u +%Y-%m-%dT%H:%MZ)"
 git push --quiet || { echo "FEIL: klarte ikke pushe til laben ($FASE)"; exit 1; }
 echo "Arkivert ($FASE): $(git show --stat --oneline HEAD | tail -n +2 | wc -l | tr -d ' ') fil(er)."
