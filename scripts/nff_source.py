@@ -82,6 +82,16 @@ def sist_hentet(liga):
         return None
 
 
+def hentet_i_denne_kjoringen(liga):
+    """Lyktes hentingen fra fotball.no i DENNE kjoringen?
+
+    Det er dette frysingen krever. Feiler hentingen, faller fetch_all tilbake
+    paa cachen og returnerer gamle rader -- de er brukbare til kontroll, men
+    de sier ingenting om at dagens henting gikk bra."""
+    import sesong as _s
+    return les_cache(liga).get("hentet_av") == _s.kjoring_id()
+
+
 def _forfalt(d, naa):
     """Er det over HENT_INTERVALL_TIMER siden SISTE FORSOK?"""
     forsokt = d.get("forsokt")
@@ -98,6 +108,26 @@ def _forfalt(d, naa):
 USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
 
 TABELL_RE = re.compile(r"<table[^>]*customSorterAtomicMatches.*?</table>", re.S)
+TURNERING_RE = re.compile(r"tournamentId=(\d+)")
+
+# fotball.no/turneringer/<liga>/ viser ALLTID den aktive sesongen. En avsluttet
+# sesong hentes med sin egen turnerings-id:
+#   https://www.fotball.no/fotballdata/turnering/hjem/?fiksId=206092&underside=kamper
+# Eliteserien 2026 = 206092, OBOS 2026 = 206093 (lest av kalenderlenken paa
+# ligaens egen side 25. september 2026). Id-en lagres i cachen og folger med
+# inn i den frosne sesongen, saa en senere reparasjon finner den selv.
+SESONG_URL = ("https://www.fotball.no/fotballdata/turnering/hjem/"
+              "?fiksId={turnering}&underside=kamper")
+
+
+def turnering_url(turnering):
+    return SESONG_URL.format(turnering=turnering)
+
+
+def finn_turnering(html_tekst):
+    """Turnerings-id-en siden gjelder, eller None."""
+    m = TURNERING_RE.search(html_tekst)
+    return m.group(1) if m else None
 RAD_RE = re.compile(r"<tr[^>]*>(.*?)</tr>", re.S)
 CELLE_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.S)
 DATO_RE = re.compile(r"^(\d{2})\.(\d{2})\.(\d{4})$")
@@ -218,7 +248,14 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
 
     log(f"[nff {liga}] {hvorfor} -- henter {cfg['nff_url']}")
     try:
-        rader = parse_side(hent(cfg["nff_url"]), liga, naa=naa, log=log)
+        tekst = hent(cfg["nff_url"])
+        rader = parse_side(tekst, liga, naa=naa, log=log)
+        # Turnerings-id-en for sesongen siden viste. Den folger med inn i den
+        # frosne sesongen, slik at en reparasjon senere kan hente NETTOPP den
+        # sesongen framfor den aktive.
+        t = finn_turnering(tekst)
+        if t:
+            d["turnering"] = t
     except Exception as e:
         d["siste_feil"] = f"{type(e).__name__}: {e}"[:200]
         _skriv_cache(liga, d)
@@ -226,7 +263,13 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
             f"{HENT_INTERVALL_TIMER} timer. Bruker det som lå i cachen.")
         return d.get("rader") or []
 
-    d.update({"hentet": naa.isoformat(timespec="seconds"), "rader": rader})
+    # HVILKEN KJORING som faktisk hentet. Et tidsstempel duger ikke: naar
+    # hentingen feiler faller vi tilbake paa cachen, og "hentet for 30
+    # sekunder siden" ville da sett ferskt ut selv om DENNE kjoringen ikke
+    # fikk tak i noe. Frysingen krever at hentingen lyktes i samme kjoring.
+    import sesong as _s
+    d.update({"hentet": naa.isoformat(timespec="seconds"),
+              "hentet_av": _s.kjoring_id(), "rader": rader})
     d.pop("siste_feil", None)
     _skriv_cache(liga, d)
     log(f"[nff {liga}] hentet {len(rader)} kamper")

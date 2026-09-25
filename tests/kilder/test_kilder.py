@@ -30,6 +30,16 @@ AVVIK = {(x["home"], x["away"]): x
 feil, antall = [], [0]
 
 
+def _frys_kunstig(rot, liga, ses):
+    """Setter frosset.json. Byttet krever at gammel sesong er frosset, og
+    denne filen prover BYTTEREGLENE -- frysekriteriene har sin egen test i
+    test_sesongskifte.py."""
+    m = Path(rot) / liga / str(ses) / "data"
+    m.mkdir(parents=True, exist_ok=True)
+    (m / "frosset.json").write_text("{}", encoding="utf-8")
+
+
+
 def sjekk(navn, betingelse, detalj=""):
     antall[0] += 1
     if betingelse:
@@ -327,6 +337,7 @@ sjekk("1. januar uten validert liste: bytter ikke", not gjør)
 sjekk("og det sies tydelig fra", "VENTER" in hvorfor, hvorfor)
 
 sesong.oppdag(rot, "eliteserien", "2027", god, log=stille)
+_frys_kunstig(rot, "eliteserien", "2026")
 sesong.bytt(rot, date(2027, 1, 1), utfor=True, log=stille)
 d = sesong.les(rot)
 sjekk("etter byttet er 2027 aktiv for Eliteserien",
@@ -337,6 +348,7 @@ sjekk("OBOS står fortsatt på 2026", d["ligaer"]["obos"]["aktiv"] == "2026")
 
 obos_2027 = dikt_terminliste(2027, sorted(LIGAER["obos"]["lag"]))
 sesong.oppdag(rot, "obos", "2027", obos_2027, log=stille)
+_frys_kunstig(rot, "obos", "2026")
 sesong.bytt(rot, date(2027, 1, 2), utfor=True, log=stille)
 d = sesong.les(rot)
 sjekk("OBOS bytter uavhengig, senere", d["ligaer"]["obos"]["aktiv"] == "2027")
@@ -1182,6 +1194,7 @@ sjekk("og begrunnelsen står i loggen",
 
 # 2) 1. januar med 2027 oppdaget OG validert -> bytter
 _lag_2027("eliteserien", "klar")
+_frys_kunstig(_sd5, "eliteserien", "2026")
 _lg5 = []
 _ses.bytt(_sd5, date(2027, 1, 1), utfor=True, log=_lg5.append, ligaer=["eliteserien"])
 sjekk("1. januar med validert 2027: aktiv blir 2027",
@@ -1224,6 +1237,7 @@ _kodeE = _ses.bytt(_sd5, date(2027, 1, 1), utfor=True, log=_lgE.append,
 sjekk("Eliteserien mangler 2027: står, og varsler med exit 1",
       _kodeE == 1 and _reg()["eliteserien"]["aktiv"] == "2026",
       f"kode={_kodeE} aktiv={_reg()['eliteserien']['aktiv']}")
+_frys_kunstig(_sd5, "obos", "2026")
 _kodeO = _ses.bytt(_sd5, date(2027, 1, 1), utfor=True, log=lambda _s: None,
                    ligaer=["obos"])
 sjekk("mens OBOS bytter uavhengig, med exit 0",

@@ -19,6 +19,11 @@ LIGAER = {
         "ntf_liga_alt": "Eliteserien",
         # NFF sin turneringsdatabase (uavhengig offisiell kontroll)
         "nff_url": "https://www.fotball.no/turneringer/eliteserien/",
+        # Turnerings-id per sesong hos fotball.no. nff_url viser alltid den
+        # AKTIVE sesongen; en avsluttet sesong hentes med sin egen id. Lest
+        # av kalenderlenken paa ligasiden 25. september 2026. Nye sesonger
+        # fanges automatisk av den daglige revisjonen.
+        "nff_turnering": {"2026": "206092"},
         "navn": {
             "KFUM": "KFUM Oslo",
             "Sandefjord Fotball": "Sandefjord",
@@ -35,6 +40,11 @@ LIGAER = {
         "ntf_base": "https://www.obos-ligaen.no",
         "ntf_liga_alt": "OBOS-ligaen",
         "nff_url": "https://www.fotball.no/turneringer/obosligaen/",
+        # Turnerings-id per sesong hos fotball.no. nff_url viser alltid den
+        # AKTIVE sesongen; en avsluttet sesong hentes med sin egen id. Lest
+        # av kalenderlenken paa ligasiden 25. september 2026. Nye sesonger
+        # fanges automatisk av den daglige revisjonen.
+        "nff_turnering": {"2026": "206093"},
         "navn": {
             "Ranheim TF": "Ranheim",
         },

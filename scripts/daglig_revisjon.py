@@ -35,9 +35,22 @@ ROT = Path(__file__).resolve().parent.parent
 OSLO = ZoneInfo("Europe/Oslo")
 
 
-def vaare_kamper(liga):
+def data_katalog(liga, sesong=None):
+    """Hvor dataene for en sesong ligger.
+
+    Den AKTIVE sesongen ligger i <liga>/data. En avsluttet, frossen sesong
+    ligger i <liga>/<sesong>/data. En reparasjon av 2026 etter at 2027 er
+    aktiv maa lese og skrive i 2026-mappen -- ellers overskriver den den
+    aktive sesongens revisjon, bekreftede avvik og stempel.
+    """
+    if sesong:
+        return ROT / liga / str(sesong) / "data"
+    return ROT / oppsett(liga)["data"]
+
+
+def vaare_kamper(liga, sesong=None):
     """(hjemme, borte) -> {round, date, time, hg, ag} fra det siden viser."""
-    d = ROT / oppsett(liga)["data"]
+    d = data_katalog(liga, sesong)
     ut = {}
     for r in json.loads((d / "matches.json").read_text(encoding="utf-8")):
         ut[(r["home"], r["away"])] = r
@@ -56,7 +69,7 @@ def _nokkel(tekst):
     return tekst.split(":", 1)[0]
 
 
-def revider(vaare, nff_rader, ferskt=True, bekreftet=None):
+def revider(vaare, nff_rader, ferskt=True, bekreftet=None, sesong=None):
     """(feil, advarsler). feil er kritisk og gjoer stempelet roedt.
 
     ferskt=False naar fotball.no-svaret kommer fra cachen og altsaa kan vaere
@@ -73,9 +86,24 @@ def revider(vaare, nff_rader, ferskt=True, bekreftet=None):
     ti minutter gammel -- mens feilen fortsatt sto."""
     feil, advarsler = [], []
     bekreftet = bekreftet or {}
+
+    # BARE SAMME SESONG. I desember viser fotball.no 2027 mens vi fortsatt
+    # har 2026. Sammenlignet vi paa tvers, ville hver kamp sett ut som et
+    # avvik, revisjonen aldri blitt ren, frysingen aldri skjedd -- og med
+    # frysingen som vilkaar for byttet ville sesongskiftet staatt fast for
+    # godt. En kamp fra en annen sesong er en advarsel, ikke et avvik.
+    if sesong:
+        annen = [r for r in nff_rader if not (r.get("date") or "").startswith(str(sesong))]
+        if annen:
+            advarsler.append(f"{len(annen)} kamper hos fotball.no er fra en "
+                             f"annen sesong enn {sesong} -- ikke sammenlignet")
+        nff_rader = [r for r in nff_rader
+                     if (r.get("date") or "").startswith(str(sesong))]
+
     nff = {(r["home"], r["away"]): r for r in nff_rader}
     if not nff:
-        return [], ["fotball.no ga ingen kamper -- ingen kontroll denne gangen"]
+        return [], advarsler + ["fotball.no ga ingen kamper i sesongen -- "
+                                "ingen kontroll denne gangen"]
 
     for key, v in sorted(vaare.items()):
         k = nff.get(key)
@@ -124,7 +152,7 @@ def _vaar_verdi(vaare, lagpar):
     return None
 
 
-def les_bekreftet(liga, naa=None):
+def les_bekreftet(liga, naa=None, sesong=None):
     """Avvik en FERSK revisjon har bekreftet, med vaar verdi den gangen.
 
     IKKE begrenset til i dag. Et bekreftet avvik gjelder til en fersk
@@ -132,7 +160,7 @@ def les_bekreftet(liga, naa=None):
     Knyttet vi det til dagens dato, ville forste kjoring etter midnatt
     nedgradert avviket, satt siste_ok og gjort stempelet gronnt -- mens
     feilen fortsatt sto."""
-    sti = ROT / oppsett(liga)["data"] / "audit_fixtures.json"
+    sti = data_katalog(liga, sesong) / "audit_fixtures.json"
     if not sti.exists():
         return {}
     try:
@@ -141,14 +169,14 @@ def les_bekreftet(liga, naa=None):
         return {}
 
 
-def dagens_avvik(liga, naa):
+def dagens_avvik(liga, naa, sesong=None):
     """Antall kritiske avvik i DAGENS terminlisterevisjon, ellers 0.
 
     Leses av dem som ogsaa skriver status.json -- write_status() for
     Eliteserien og obos_build_data.py for OBOS -- slik at de ikke kan
     overskrive et rodt stempel med ok=True. Uten dette ville neste kjoring
     gjort stempelet gronnt mens avviket sto."""
-    sti = ROT / oppsett(liga)["data"] / "audit_fixtures.json"
+    sti = data_katalog(liga, sesong) / "audit_fixtures.json"
     if not sti.exists():
         return 0
     try:
@@ -160,12 +188,12 @@ def dagens_avvik(liga, naa):
     return int(d.get("errors") or 0)
 
 
-def skriv_stempel(liga, feil, naa):
+def skriv_stempel(liga, feil, naa, sesong=None):
     """Setter ok=False saa lenge dagens revisjon staar med kritiske avvik.
 
     Samme regel som Eliteserien: gronnt kommer tilbake bare naar en NY
     revisjon bekrefter at avviket er borte."""
-    sti = ROT / oppsett(liga)["data"] / "status.json"
+    sti = data_katalog(liga, sesong) / "status.json"
     d = {}
     if sti.exists():
         try:
@@ -185,6 +213,67 @@ def skriv_stempel(liga, feil, naa):
     sti.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
+def revider_sesong(liga, sesong, naa=None, log=print):
+    """Reviderer EN BESTEMT sesong i sin egen mappe, mot sin egen
+    turneringsadresse hos fotball.no.
+
+    Brukes til reparasjon etter at sesongen er byttet: fotball.no viser da
+    den AKTIVE sesongen, saa vi maa hente den avsluttede med turnerings-id-en
+    som ligger i sesongens egen audit_fixtures.json.
+
+    Den daglige 20-timersgrensen gaar gjennom nff_source.fetch_all(). Her
+    hentes sesongadressen DIREKTE, fordi dette er en manuell reparasjon som
+    ikke skal blokkeres av at den daglige kjeden hentet tidligere samme dag.
+    Det er en ekstra forespørsel, utlost av et menneske.
+    """
+    naa = naa or datetime.now(timezone.utc)
+    kat = data_katalog(liga, sesong)
+    tidligere = {}
+    sti = kat / "audit_fixtures.json"
+    if sti.exists():
+        try:
+            tidligere = json.loads(sti.read_text(encoding="utf-8"))
+        except Exception:
+            tidligere = {}
+    turnering = tidligere.get("turnering") or oppsett(liga).get("nff_turnering", {}).get(str(sesong))
+    if not turnering:
+        log(f"Fant ingen turnerings-id for {liga} {sesong}. Uten den kan vi "
+            f"ikke hente NETTOPP den sesongen fra fotball.no.")
+        return 1
+
+    url = nff_source.turnering_url(turnering)
+    log(f"Henter {liga} {sesong} fra {url}")
+    try:
+        rader = nff_source.parse_side(nff_source.hent(url), liga, naa=naa,
+                                      log=lambda m: log(f"  {m}"))
+    except Exception as e:
+        log(f"ADVARSEL: klarte ikke hente {sesong} ({type(e).__name__}: {e}).")
+        return 1
+
+    vaare = vaare_kamper(liga, sesong)
+    feil, advarsler = revider(vaare, rader, ferskt=True,
+                              bekreftet=les_bekreftet(liga, naa, sesong),
+                              sesong=str(sesong))
+    log(f"Revisjon av {liga} {sesong}: {len(vaare)} kamper mot {len(rader)} "
+        f"hos fotball.no")
+    for a in advarsler:
+        log(f"  ADVARSEL: {a}")
+    for f in feil:
+        log(f"  AVVIK: {f}")
+
+    import sesong as _s
+    sti.write_text(json.dumps({
+        "checked_date": naa.astimezone(OSLO).strftime("%Y-%m-%d"),
+        "checked_at": naa.isoformat(timespec="seconds"),
+        "ferskt": True, "kjoring": _s.kjoring_id(), "turnering": turnering,
+        "errors": len(feil), "warnings": len(advarsler),
+        "avvik": feil[:20], "advarsler": advarsler[:20],
+        "bekreftet": {_nokkel(f): _vaar_verdi(vaare, _nokkel(f)) for f in feil},
+    }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    skriv_stempel(liga, feil, naa, sesong)
+    return 1 if feil else 0
+
+
 def main(argv):
     if not argv or argv[0] not in LIGAER:
         print(__doc__.strip(), file=sys.stderr)
@@ -195,8 +284,8 @@ def main(argv):
     # Ikke revider en frossen sesong. Kildene viser neste sesong rundt
     # aarsskiftet, og da ville hver kamp sett ut som et avvik.
     import sesong as _ses
-    _a = _ses.aktiv_sesong(ROOT, liga, log=lambda _s: None)
-    if _a and _ses.er_frosset(ROOT, liga, _a):
+    _a = _ses.aktiv_sesong(ROT, liga, log=lambda _s: None)
+    if _a and _ses.er_frosset(ROT, liga, _a):
         print(f"Sesongen {_a} er frosset -- reviderer ikke. "
               f"En frossen sesong er uforanderlig.")
         return 0
@@ -206,16 +295,24 @@ def main(argv):
     # reviderer vi mot det nyeste vi lovlig har.
     nff_rader = nff_source.fetch_all(liga, log=lambda s: print(f"  {s}"))
     hentet = nff_source.sist_hentet(liga)
-    ferskt = bool(hentet and (naa - hentet).total_seconds() / 60 < FERSK_MIN)
+    # FERSKT betyr at hentingen lyktes i DENNE kjoringen -- ikke at cachen er
+    # ny. Feiler dagens henting, brukes de gamle radene til kontroll, men
+    # avvik nedgraderes til advarsler og frysingen slipper ikke gjennom.
+    ferskt = nff_source.hentet_i_denne_kjoringen(liga)
     vaare = vaare_kamper(liga)
     bekreftet_for = les_bekreftet(liga, naa)
     feil, advarsler = revider(vaare, nff_rader, ferskt=ferskt,
-                              bekreftet=bekreftet_for)
+                              bekreftet=bekreftet_for, sesong=_a)
 
-    alder = f"{(naa - hentet).total_seconds() / 3600:.0f} t gammel" if hentet else "ukjent alder"
+    if ferskt:
+        kilde_ord = "hentet i denne kjøringen"
+    elif hentet:
+        kilde_ord = (f"fra cachen, hentet {(naa - hentet).total_seconds() / 3600:.0f} "
+                     f"timer siden -- avvik blir advarsler, og frysing sperres")
+    else:
+        kilde_ord = "ingen henting registrert -- avvik blir advarsler"
     print(f"Daglig terminlisterevisjon, {oppsett(liga)['visningsnavn']}: "
-          f"{len(vaare)} kamper mot {len(nff_rader)} hos fotball.no "
-          f"({'hentet nå' if ferskt else alder + ' -- avvik blir advarsler'})")
+          f"{len(vaare)} kamper mot {len(nff_rader)} hos fotball.no ({kilde_ord})")
     for a in advarsler:
         print(f"  ADVARSEL: {a}")
     for f in feil:
@@ -225,6 +322,17 @@ def main(argv):
     sti.write_text(json.dumps({
         "checked_date": naa.astimezone(OSLO).strftime("%Y-%m-%d"),
         "checked_at": naa.isoformat(timespec="seconds"),
+        # Om fotball.no-dataene ble hentet i DENNE kjoringen. En revisjon
+        # mot cachet data nedgraderer nye avvik til advarsler, og kan derfor
+        # ha null feil uten aa ha kontrollert noe. Frysingen krever ferskt.
+        "ferskt": ferskt,
+        # Turnerings-id-en sesongen har hos fotball.no. Folger med inn i den
+        # frosne sesongen, saa en reparasjon senere kan hente nettopp den.
+        "turnering": nff_source.les_cache(liga).get("turnering"),
+        # Hvilken kjoring som utforte revisjonen. Frysingen krever samme id,
+        # saa en gronn revisjon fra i gaar ikke kan apne for frysing naar
+        # dagens henting feilet.
+        "kjoring": _ses.kjoring_id(),
         "errors": len(feil), "warnings": len(advarsler),
         "avvik": feil[:20], "advarsler": advarsler[:20],
         # Vaar verdi da avviket ble bekreftet. En senere revisjon mot gammel

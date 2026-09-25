@@ -39,6 +39,7 @@ Bruk:
     python3 sesong.py <rot> bytt [--dato ÅÅÅÅ-MM-DD] [--utfor]
 """
 import json
+import os
 import sys
 from datetime import date, datetime, timezone
 from pathlib import Path
@@ -68,6 +69,24 @@ def skriv(rot, d):
     p = reg_sti(rot)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def kjoring_id():
+    """Identifiserer DENNE kjoringen. Samme monster som oddspapi-telleren.
+
+    Frysingen krever at revisjonen ble utfort i samme kjoring. Uten det
+    kunne en gronn revisjon fra i gaar apnet for frysing selv om dagens
+    henting feilet eller revisjonssteget krasjet -- og da er det ingenting
+    som faktisk har kontrollert sluttresultatene.
+
+    I Actions er run_id + forsok unikt. Lokalt brukes prosess-id, saa
+    revisjon og frysing i SAMME prosess (se --frys-paa-nytt) matcher, mens
+    to separate kommandoer ikke gjor det.
+    """
+    rid = os.environ.get("GITHUB_RUN_ID")
+    if rid:
+        return f"{rid}-{os.environ.get('GITHUB_RUN_ATTEMPT', '1')}"
+    return f"lokal-{os.getpid()}"
 
 
 def er_frosset(rot, liga, sesong):
@@ -314,6 +333,8 @@ def skal_bytte(blokk, i_dag):
 def bytt(rot, i_dag, utfor, log=print, ligaer=None):
     """Vurderer byttet for HVER liga for seg.
 
+Byttet krever at den gamle sesongen er FROSSET, se er_frosset().
+
     ligaer begrenser til en enkelt liga. Kjeden for Eliteserien skal ikke
     kunne bytte OBOS sin sesong, selv om registeret rommer begge -- ligaene
     er uavhengige helt ut."""
@@ -326,13 +347,27 @@ def bytt(rot, i_dag, utfor, log=print, ligaer=None):
             log(f"{liga:12} ingen tilstand registrert")
             continue
         gjør, neste, hvorfor = skal_bytte(blokk, i_dag)
+
+        # FROSSET ER ET VILKAAR. At neste sesong er klar og datoen passert er
+        # ikke nok: byttet gjor den gamle sesongen utilgjengelig fra
+        # hovedsiden, og er den ikke frosset da, finnes den ikke lenger som
+        # historisk versjon. Sjekken ligger her og ikke i skal_bytte(), som
+        # er en ren funksjon uten tilgang til filsystemet.
+        if gjør and not er_frosset(rot, liga, blokk["aktiv"]):
+            gjør = False
+            hvorfor = (f"{neste} er klar, men {blokk['aktiv']} er IKKE FROSSET. "
+                       f"Bytter ikke -- da ville sesongen forsvunnet uten aa "
+                       f"finnes som historisk versjon.")
+            alarm.append(f"{liga}: {hvorfor}")
+
         merke = "BYTTER" if gjør else "står"
         log(f"{liga:12} {blokk['aktiv']} -> {neste}  [{merke}]  {hvorfor}")
         # "Ikke tid ennaa" er normaltilstanden 364 dager i aaret. Men naar
         # byttedatoen ER naadd og neste sesong likevel ikke er klar, er det en
         # alarm: siden viser en ferdigspilt sesong inn i det nye aaret, og
         # ingen ser det for noen ser tabellen.
-        if not gjør and i_dag.year > int(blokk["aktiv"]):
+        if (not gjør and i_dag.year > int(blokk["aktiv"])
+                and f"{liga}: {hvorfor}" not in alarm):
             alarm.append(f"{liga}: {hvorfor}")
         if gjør and utfor:
             blokk["sesonger"].setdefault(blokk["aktiv"], {})["status"] = "frosset"

@@ -86,16 +86,39 @@ skript:
 
   frys_sesong.py     Fryser den avsluttede sesongen naar den er FERDIG, som
                      betyr tre ting: alle kamper har resultat, det har gaatt
-                     72 timer siden siste kamp, og en fersk revisjon mot
-                     fotball.no har ingen apne kritiske avvik. Karenstiden
-                     og revisjonen er der fordi et resultat kan endres i
-                     etterkant -- en kamp som dommes 3-0 etter protest. En
-                     frysing som skjer for tidlig laser inn feilen.
+                     14 DAGER siden siste kamp, og en revisjon mot fotball.no
+                     hentet i SAMME kjoring, utfort ETTER siste kamp, har
+                     ingen apne kritiske avvik.
+                     Fjorten dager fordi en protest kan ta uker. MARGINEN ER
+                     TRANG for Eliteserien: siste kamp 13. desember gir
+                     tidligste frysing 27. desember, fem dager for byttet.
+                     OBOS har 40 dager.
+                     Revisjonen maa vaere utfort i SAMME KJORING, og
+                     hentingen fra fotball.no maa ha lyktes i den kjoringen
+                     -- ikke bare vaere ny i cachen. Feiler hentingen,
+                     brukes gamle rader til kontroll, men frysingen sperres.
+                     Siden fotball.no hentes hoyst en gang i dognet, er det
+                     ETT kjoring per dag som kan fryse.
+
+                     NODUTGANG etter en rettelse:
+                       1. frys_sesong.py . <liga> <ses> --tin --grunn "..."
+                       2. rett dataene i <liga>/<ses>/data/
+                       3. frys_sesong.py . <liga> <ses> --frys-paa-nytt
+                     Begrunnelsen i steg 1 er paakrevd og logges i tint.json.
+                     Steg 3 reviderer og fryser i samme prosess, leser og
+                     skriver BARE i <liga>/<ses>/data, og henter sesongen fra
+                     sin egen turneringsadresse hos fotball.no
+                     (fiksId; Eliteserien 2026 = 206092, OBOS = 206093).
+                     Den gaar utenom 20-timersgrensen, fordi en manuell
+                     reparasjon ikke skal stoppes av at kjeden hentet
+                     tidligere samme dag.
 
   daglig_revisjon.py Revisjonen som frysingen venter paa.
 
   sesong.py bytt     Bytter aktiv sesong fra 1. januar, men bare naar neste
-                     er "klar". Er den ikke klar, blir gammel sesong
+                     er "klar" OG gammel sesong er FROSSET. Uten frysingen
+                     ville sesongen forsvunnet fra hovedsiden uten aa finnes
+                     som historisk versjon. Er den ikke klar, blir gammel sesong
                      staaende, resten av kjeden fullforer, og kjoringen
                      ender rodt. Den prover igjen hver dag, saa et bytte
                      10. januar skjer ogsaa automatisk.

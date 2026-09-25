@@ -15,7 +15,9 @@ siden i Chrome. Det er kontrakten: en test kan siden lese den frosne siden
 på nytt og bekrefte at den fortsatt viser de samme tallene.
 
 Bruk:
-    python3 frys_sesong.py <rot> <liga> <sesong>
+    python3 frys_sesong.py <rot> <liga> [<sesong>]
+    python3 frys_sesong.py <rot> <liga> <sesong> --tin --grunn "..."  (nodutgang)
+    python3 frys_sesong.py <rot> <liga> <sesong> --frys-paa-nytt      (etter tining)
       rot      repo-rot (eller en sandkasse-kopi)
       liga     eliteserien | obos
       sesong   f.eks. 2026
@@ -42,17 +44,26 @@ def les_side(rot, sti, ut):
     return json.loads(Path(ut).read_text(encoding="utf-8"))
 
 
-KARENS_TIMER = 72
+# Karenstid etter siste kamp. Fjorten dager, ikke tre: en protest eller en
+# kamp som dommes i etterkant kan ta uker, og en frysing som skjer for tidlig
+# laser inn feilen for godt.
+#
+# Marginen er trang for Eliteserien. Siste kamp i 2026 er 13. desember, saa
+# sesongen kan tidligst fryses 27. desember -- fem dager for byttet. OBOS har
+# 40 dager. Rekker ikke frysingen, bytter ikke sesongen heller (det er et
+# vilkaar), og kjoringen blir rod hver dag til den er gjort.
+KARENS_DAGER = 14
 
 
-def ikke_ferdig(rot, liga, sesong, naa=None):
+def ikke_ferdig(rot, liga, sesong, naa=None, sesongmappe=False):
     """Hva som gjenstaar for sesongen kan kalles FERDIG. Tom liste = ferdig.
 
     "Ferdig" er tre ting, ikke bare at kampene er spilt:
 
       1. alle kamper har resultat
-      2. det har gaatt minst 72 timer siden siste kamp
-      3. en FERSK revisjon mot fotball.no har ingen apne kritiske avvik
+      2. det har gaatt minst 14 dager siden siste kamp
+      3. en revisjon mot fotball.no som er FERSK, utfort i SAMME KJORING,
+         etter siste kamp, og uten apne kritiske avvik
 
     naa kan settes for aa prove et forlop paa en simulert kalender.
 
@@ -65,7 +76,11 @@ def ikke_ferdig(rot, liga, sesong, naa=None):
     from datetime import datetime, timedelta, timezone
     from zoneinfo import ZoneInfo
     oslo = ZoneInfo("Europe/Oslo")
-    data = Path(rot) / liga / "data"
+    # sesongmappe=True leser <liga>/<sesong>/data i stedet for <liga>/data.
+    # Brukes ved reparasjon av en avsluttet sesong, der den aktive sesongens
+    # data ikke har noe med saken aa gjore.
+    data = (Path(rot) / liga / str(sesong) / "data" if sesongmappe
+            else Path(rot) / liga / "data")
     naa = naa or datetime.now(timezone.utc)
     ut = []
 
@@ -79,6 +94,7 @@ def ikke_ferdig(rot, liga, sesong, naa=None):
         ut.append(f"kunne ikke lese fixtures.json ({type(e).__name__})")
 
     # 2) karenstid etter siste kamp
+    siste = None
     try:
         m = _json.loads((data / "matches.json").read_text(encoding="utf-8"))
         tider = []
@@ -90,10 +106,11 @@ def ikke_ferdig(rot, liga, sesong, naa=None):
                 except ValueError:
                     continue
         if tider:
-            siden = (naa - max(tider)).total_seconds() / 3600
-            if siden < KARENS_TIMER:
-                ut.append(f"bare {siden:.0f} timer siden siste kamp "
-                          f"(karenstiden er {KARENS_TIMER})")
+            siste = max(tider)
+            dager = (naa - siste).total_seconds() / 86400
+            if dager < KARENS_DAGER:
+                ut.append(f"bare {dager:.1f} dager siden siste kamp "
+                          f"(karenstiden er {KARENS_DAGER})")
     except Exception as e:
         ut.append(f"kunne ikke lese matches.json ({type(e).__name__})")
 
@@ -108,19 +125,173 @@ def ikke_ferdig(rot, liga, sesong, naa=None):
                 ut.append(f"{d['errors']} åpne kritiske avvik i revisjonen")
             elif d.get("bekreftet"):
                 ut.append(f"{len(d['bekreftet'])} bekreftede avvik står uløst")
+            # FERSK betyr at fotball.no-dataene ble hentet i den kjoringen
+            # revisjonen gikk -- ikke bare at filen er ny. En revisjon mot
+            # cachet data nedgraderer nye avvik til advarsler, og kan derfor
+            # ha errors=0 uten aa ha kontrollert noe.
+            if not d.get("ferskt"):
+                ut.append("siste revisjon gikk mot cachet fotball.no-data, "
+                          "ikke mot data hentet i samme kjøring")
+            # SAMME KJORING. En gronn revisjon fra i gaar sier ingenting om
+            # at dagens henting gikk bra -- den kan ha feilet, eller
+            # revisjonssteget kan ha krasjet, uten at filen ble roert.
+            import sesong as _s2
+            naa_id = _s2.kjoring_id()
+            if d.get("kjoring") != naa_id:
+                ut.append(f"revisjonen er fra en annen kjøring "
+                          f"({d.get('kjoring')}, nå {naa_id})")
             sett = datetime.fromisoformat(d["checked_at"])
             alder = (naa - sett).total_seconds() / 3600
             if alder > 24:
                 ut.append(f"revisjonen er {alder:.0f} timer gammel, ikke fersk")
+            # Revisjonen maa vaere utfort ETTER siste kamp. En ren revisjon
+            # fra midtsesongen sier ingenting om sluttresultatene.
+            if siste and sett < siste:
+                ut.append(f"revisjonen er fra {sett:%Y-%m-%d}, før siste kamp "
+                          f"{siste:%Y-%m-%d}")
         except Exception as e:
             ut.append(f"kunne ikke lese revisjonen ({type(e).__name__})")
     return ut
+
+
+def tin(rot, liga, sesong, grunn, log=print):
+    """NODUTGANG: tiner en frossen sesong. Ikke del av den automatiske flyten.
+
+    Frysing er ment aa vaere endelig. Men et resultat KAN endres etter at vi
+    har frosset -- en protest som fores, en kamp som dommes 3-0 uker etterpaa.
+    Da er det frosne bildet feil, og et feil historisk bilde er verre enn
+    ingen frysing.
+
+    Begrunnelsen er PAAKREVD og lagres i tint.json ved siden av sesongen.
+    Det er hele poenget: en tining skal etterlate et spor som forklarer
+    hvorfor historikken ble endret. Uten den logges ingenting, og om et aar
+    vet ingen hvorfor tallene ikke stemmer med det folk husker.
+
+    Etter tining kjorer den daglige kjeden igjen som normalt, og frysingen
+    skjer paa nytt naar kriteriene er oppfylt.
+
+    Bruk:  python3 scripts/frys_sesong.py <rot> <liga> <sesong> --tin \
+               --grunn "Sarpsborg-Brann dommet 3-0 etter protest 12. januar"
+    """
+    from datetime import datetime, timezone
+    mal = Path(rot) / liga / str(sesong)
+    markor = mal / "data" / "frosset.json"
+    if not markor.exists():
+        log(f"{liga}/{sesong} er ikke frosset -- ingenting aa tine.")
+        return 1
+    if not (grunn or "").strip():
+        log("NEKTER: --grunn er paakrevd. En tining som ikke forklarer seg "
+            "etterlater en historikk ingen kan stole paa.")
+        return 2
+
+    tint = mal / "data" / "tint.json"
+    tidligere = []
+    if tint.exists():
+        try:
+            tidligere = json.loads(tint.read_text(encoding="utf-8")).get("tininger", [])
+        except Exception:
+            tidligere = []
+    frosset_at = None
+    try:
+        frosset_at = json.loads(markor.read_text(encoding="utf-8")).get("frosset_at")
+    except Exception:
+        pass
+    tidligere.append({"tint_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+                      "grunn": grunn.strip(), "var_frosset_at": frosset_at})
+    tint.write_text(json.dumps({"liga": liga, "sesong": str(sesong),
+                                "note": ("Sporet etter hver tining av denne sesongen. "
+                                         "Frysing er ment aa vaere endelig; staar det "
+                                         "noe her, er historikken endret etter at den "
+                                         "var laast, og grunnen skal staa nedenfor."),
+                                "tininger": tidligere},
+                               ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    markor.unlink()
+    log(f"TINT {liga}/{sesong}. Grunn: {grunn.strip()}")
+    log(f"  logget i {tint.relative_to(Path(rot))} ({len(tidligere)} tining(er) totalt)")
+    log(f"  den daglige kjeden kjorer naa igjen, og fryser paa nytt naar "
+        f"kriteriene er oppfylt.")
+    return 0
+
+
+def frys_paa_nytt(rot, liga, sesong, log=print, naa=None):
+    """Revisjon OG frysing av EN BESTEMT sesong, alt i samme prosess.
+
+    HVORFOR DEN TRENGS: kommer en rettelse etter at neste sesong er aktiv,
+    kjorer ingen daglig kjede for den gamle sesongen lenger. Den blir
+    staaende tint. Og frysingen krever at revisjonen skjedde i SAMME
+    kjoring, saa to separate kommandoer ville aldri matchet.
+
+    SESONGEN OPPGIS EKSPLISITT. Kommandoen bruker aldri aktiv sesong: etter
+    byttet er 2027 aktiv, mens det er 2026 som skal repareres.
+
+    Alt leses og skrives i <liga>/<sesong>/data, aldri i <liga>/data. Ellers
+    ville reparasjonen overskrevet den aktive sesongens revisjon, bekreftede
+    avvik og stempel.
+
+    fotball.no viser den aktive sesongen, saa 2026 hentes med sin egen
+    turnerings-id (se nff_source.turnering_url). Hentingen gaar direkte,
+    ikke gjennom den daglige 20-timersgrensen -- en manuell reparasjon skal
+    ikke stoppes av at kjeden hentet tidligere samme dag.
+
+    FRAMGANGSMAATE ved en rettelse etter byttet:
+
+      1. Tin:  frys_sesong.py . <liga> <sesong> --tin --grunn "..."
+      2. Rett dataene i <liga>/<sesong>/data/ (matches.json, og bygg
+         model.json paa nytt om resultatet endret seg)
+      3. Frys: frys_sesong.py . <liga> <sesong> --frys-paa-nytt
+    """
+    import daglig_revisjon
+    if not sesong:
+        log("NEKTER: sesongen maa oppgis eksplisitt. Etter byttet er det den "
+            "AVSLUTTEDE sesongen som skal repareres, ikke den aktive.")
+        return 2
+    kat = Path(rot) / liga / str(sesong) / "data"
+    if not kat.exists():
+        log(f"Finner ikke {kat} -- er sesongen frosset en gang?")
+        return 1
+
+    log(f"1. Reviderer {liga}/{sesong} i sin egen mappe ...")
+    kode = daglig_revisjon.revider_sesong(liga, sesong, naa=naa, log=log)
+    if kode != 0:
+        log(f"   revisjonen fant kritiske avvik -- fryser ikke. "
+            f"Rett dem forst, se {liga}/{sesong}/data/audit_fixtures.json.")
+        return 1
+
+    log(f"2. Fryser {liga}/{sesong} paa nytt ...")
+    hindre = ikke_ferdig(Path(rot), liga, sesong, naa=naa, sesongmappe=True)
+    if hindre:
+        log("   NEKTER:")
+        for h in hindre:
+            log(f"     - {h}")
+        return 1
+    markor = kat / "frosset.json"
+    markor.write_text(json.dumps({
+        "sesong": str(sesong), "liga": liga,
+        "frosset_at": (naa or datetime.now(timezone.utc)).isoformat(timespec="seconds"),
+        "note": ("Frosset paa nytt etter en rettelse. Se tint.json for "
+                 "hvorfor sesongen ble tint."),
+    }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    log(f"   {liga}/{sesong} er frosset paa nytt.")
+    return 0
 
 
 def main():
     if len(sys.argv) < 3:
         print(__doc__.strip(), file=sys.stderr); return 2
     rot, liga = Path(sys.argv[1]).resolve(), sys.argv[2]
+    if "--frys-paa-nytt" in sys.argv:
+        # Ingen reserve til aktiv sesong: den ville pekt paa 2027 mens det er
+        # 2026 som skal repareres.
+        ses = next((a for a in sys.argv[3:] if a[:1].isdigit()), None)
+        return frys_paa_nytt(rot, liga, ses)
+    if "--tin" in sys.argv:
+        ses = next((a for a in sys.argv[3:] if a[:1].isdigit()), None)
+        grunn = (sys.argv[sys.argv.index("--grunn") + 1]
+                 if "--grunn" in sys.argv else "")
+        if not ses:
+            import sesong as _s
+            ses = _s.aktiv_sesong(rot, liga, log=lambda m: None)
+        return tin(rot, liga, ses, grunn)
     if len(sys.argv) > 3 and sys.argv[3][:1].isdigit():
         sesong = sys.argv[3]
     else:
@@ -137,29 +308,23 @@ def main():
     if not (kilde / "index.html").exists():
         print(f"finner ikke {kilde}/index.html", file=sys.stderr); return 1
 
-    # SPERRE: ikke frys før neste sesongs terminliste er på plass.
+    # NAAR ER SESONGEN FERDIG?
     #
     # Frysing er irreversibel i praksis. Kommer det en utsatt kamp, et rettet
     # resultat eller en protest ETTER at vi har frosset, er det frosne bildet
     # feil -- og det er nettopp bildet som ikke skal kunne endres.
     #
-    # At neste sesongs terminliste finnes er den beste indikasjonen vi har på
-    # at sesongen faktisk er ferdig, og ikke bare ser ferdig ut. Den kommer
-    # normalt flere uker etter siste runde.
+    # Tidligere ventet vi paa at neste sesongs terminliste skulle dukke opp,
+    # som en ERSTATNING for aa vite om sesongen var over. Den er fjernet:
+    # ikke_ferdig() svarer paa sporsmaalet direkte -- alle kamper spilt, 72
+    # timer siden siste kamp, og en fersk revisjon uten apne avvik.
+    #
+    # Erstatningen var dessuten skadelig. Den utsatte frysingen til ETTER at
+    # NTF publiserte neste sesong, altsaa til kildene hadde begynt aa vise
+    # 2027. Naa fryses sesongen mens kildene fortsatt er enige om den.
     #
     # --uten-sperre finnes bare for testing i sandkasse.
-    neste = str(int(sesong) + 1)
-    reg = rot / "data" / "sesonger.json"
-    klar = False
-    if reg.exists():
-        d = json.loads(reg.read_text(encoding="utf-8"))
-        # Registeret er per liga (version 2): at 2027 er klar i Eliteserien
-        # sier ingenting om OBOS, og skal ikke kunne låse opp frysing der.
-        blokk = d.get("ligaer", {}).get(liga, {})
-        st = blokk.get("sesonger", {}).get(neste, {}).get("status")
-        klar = st in ("oppdaget", "klar", "aktiv")
-    hindre = [] if klar else [f"terminlisten for {neste} er ikke oppdaget"]
-    hindre += ikke_ferdig(rot, liga, sesong)
+    hindre = ikke_ferdig(rot, liga, sesong)
     if hindre and "--uten-sperre" not in sys.argv:
         print(f"NEKTER Å FRYSE {sesong}:", file=sys.stderr)
         for h in hindre:
@@ -168,9 +333,13 @@ def main():
               f"daglige kjøring.", file=sys.stderr)
         print(f"  (--uten-sperre kan brukes i sandkasse.)", file=sys.stderr)
         return 3
-    if not klar:
-        print(f"   ADVARSEL: sperren er overstyrt, {neste} er ikke oppdaget.")
 
+    return main_frys(rot, liga, sesong)
+
+
+def main_frys(rot, liga, sesong, log=print):
+    kilde = rot / liga
+    mal = kilde / sesong
     # 1) Les hva siden viser NÅ, før noe fryses. Dette er fasiten.
     print(f"1. Leser hva {liga}/ viser nå ...")
     foer = les_side(rot, f"{liga}/", HER / "_foer.json")
@@ -206,7 +375,7 @@ def main():
             avvik.append(f"rad {i+1}: {a} != {b}")
     (mal / "data" / "frosset.json").write_text(json.dumps({
         "sesong": sesong, "liga": liga,
-        "frosset_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        "frosset_at": (naa or datetime.now(timezone.utc)).isoformat(timespec="seconds"),
         "note": ("Ferdig utregnede tall, lest ut av siden i Chrome ved frysing. "
                  "Kontrakt: den frosne siden skal alltid vise disse tallene. "
                  "Avviker den, er noe i den frosne kopien endret."),
