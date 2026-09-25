@@ -65,7 +65,7 @@ jobs:
           # Paa testgrenen tvinges kampdag, slik at arkiveringen kan bevises
           # utenom en kampdag. MIDLERTIDIG, fjernes for merge.
           ARKIV_TVING_KAMPDAG: ${{ (inputs.tving_kampdag || github.ref_name == 'test-kildearkiv') && '1' || '' }}
-          ARKIV_TVING_FEIL: ${{ inputs.tving_feil && '1' || '' }}
+          ARKIV_TVING_FEIL: "1"   # MIDLERTIDIG: beviser feilveien, fjernes straks
         run: bash scripts/arkiver_til_lab.sh kildehtml
 
       - name: Meld om arkiveringsfeil
