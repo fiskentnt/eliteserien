@@ -9,7 +9,7 @@ i alle 22. Se verifiser_avvik.py og testdata/verifisert_avvik.json.
 """
 import json
 import sys
-from datetime import date
+from datetime import date, datetime as _dt, timezone as _tz
 from pathlib import Path
 
 ROT = Path(__file__).resolve().parent.parent.parent
@@ -552,6 +552,121 @@ _kom = _gzip.compress(_pr, 9)
 sjekk(f"HTML-en komprimerer minst 5x (målt {len(_pr)/len(_kom):.1f}x)",
       len(_pr) / len(_kom) >= 5)
 sjekk("og lar seg pakke ut igjen uendret", _gzip.decompress(_kom) == _pr)
+
+print("\n=== Porten: siste_forsok skrives BARE for daglig vedlikehold ===")
+import should_fetch as sf
+from datetime import timezone as _tz, timedelta as _td
+
+_sb2 = Path(_tempfile.mkdtemp())
+(_sb2 / "data").mkdir(parents=True)
+sf.LIGAER["test"] = _sb2
+_naa = _dt(2026, 10, 2, 18, 0, tzinfo=_tz.utc)
+
+
+def _fixtures(kamper):
+    (_sb2 / "data").mkdir(exist_ok=True)
+    (_sb2 / "data" / "fixtures.json").write_text(_json.dumps(kamper), encoding="utf-8")
+
+
+def _tilstand():
+    f = _sb2 / "data" / "daglig_state.json"
+    return _json.loads(f.read_text(encoding="utf-8")) if f.exists() else {}
+
+
+def _nullstill():
+    f = _sb2 / "data" / "daglig_state.json"
+    if f.exists():
+        f.unlink()
+
+
+# 1) En VENTENDE KAMP aapner porten -- det er ikke daglig vedlikehold,
+#    og da skal forsokssperren ikke belastes.
+_nullstill()
+_fixtures([{"round": 24, "matches": [
+    {"home": "Ranheim", "away": "Egersund", "date": "2026-10-02",
+     "time": "16:00", "played": False}]}])   # avspark 16:00 norsk = 14:00 UTC
+ok1, hvorfor1 = sf.should_fetch(now=_naa, liga="test")
+sjekk("ventende kamp åpner porten", ok1, hvorfor1)
+sjekk("og siste_forsok er IKKE skrevet", "siste_forsok" not in _tilstand(), str(_tilstand()))
+
+# 2) Ingen ventende kamp: da er daglig_forfalt grunnen, og forsoket skal telles.
+_nullstill()
+_fixtures([])
+ok2, hvorfor2 = sf.should_fetch(now=_naa, liga="test")
+sjekk("uten ventende kamp åpner det daglige vedlikeholdet porten", ok2, hvorfor2)
+sjekk("og siste_forsok ER skrevet", "siste_forsok" in _tilstand(), str(_tilstand()))
+
+# 3) Ny planlagt kjoring 30 minutter senere, fortsatt ingen kamp: sperret.
+ok3, hvorfor3 = sf.should_fetch(now=_naa + _td(minutes=30), liga="test")
+sjekk("ny kjøring innen timen stoppes av forsøkssperren", not ok3, hvorfor3)
+sjekk("og begrunnelsen sier hvorfor", "venter minst 1 time" in hvorfor3, hvorfor3)
+
+# 4) MEN en ventende kamp skal fortsatt slippe gjennom i samme time.
+#    Sperren gjelder bare det daglige vedlikeholdet.
+_fixtures([{"round": 24, "matches": [
+    {"home": "Ranheim", "away": "Egersund", "date": "2026-10-02",
+     "time": "16:00", "played": False}]}])
+ok4, hvorfor4 = sf.should_fetch(now=_naa + _td(minutes=30), liga="test")
+sjekk("men en ventende kamp åpner porten likevel", ok4, hvorfor4)
+sjekk("og det er kampen som er grunnen, ikke vedlikeholdet",
+      "venter på resultat" in hvorfor4, hvorfor4)
+
+# 5) Etter en time er det daglige forsoket tillatt igjen.
+_fixtures([])
+ok5, hvorfor5 = sf.should_fetch(now=_naa + _td(minutes=70), liga="test")
+sjekk("etter en time slipper det daglige vedlikeholdet gjennom igjen", ok5, hvorfor5)
+
+# 6) Og naar arbeidet er FULLFORT, hviler klokka i 20 timer.
+sf.merk_ok("test", _naa + _td(minutes=70))
+ok6, hvorfor6 = sf.should_fetch(now=_naa + _td(hours=5), liga="test")
+sjekk("etter fullført vedlikehold er porten lukket i 20 timer", not ok6, hvorfor6)
+ok7, hvorfor7 = sf.should_fetch(now=_naa + _td(hours=22), liga="test")  # 20 t etter merk_ok på +70 min
+sjekk("og åpen igjen etter 20 timer", ok7, hvorfor7)
+del sf.LIGAER["test"]
+
+print("\n=== OBOS: publiseringsregelen ===")
+import obos_results as _R
+from reconcile_ny import reconcile as _rec
+
+_sched = {("Ranheim", "Egersund"): {"date": "2026-10-02", "time": "19:00"}}
+_naa2 = _dt.now(_tz.utc)
+_NTF = '''<tr class="schedule__match schedule__match--played">
+ <td class="schedule__match__item schedule__match__item--round"><span>#24</span></td>
+ <td class="schedule__match__item schedule__match__item--teams">
+   Ranheim TF - <span class="results__team--opponent">Egersund</span></td>
+ <td class="schedule__match__item schedule__match__item--result">2 - 1</td>
+ <td class="schedule__match__item schedule__match__item--date">02.10.<span
+   class="schedule__match__item--date__year">2026</span> 19:00</td>
+ <td class="schedule__match__item schedule__match__item--league"><img alt="OBOS-ligaen"/></td></tr>'''
+_NFF = '''<table class="tablesorter customSorterAtomicMatches"><tr><th>R</th></tr>
+<tr><td>24</td><td>02.10.2026</td><td>fredag</td><td>19:00</td><td>Ranheim TF</td>
+<td>2 - 1</td><td>Egersund</td><td>Bane</td><td>1</td></tr></table>'''
+
+
+def _off(ntf_html, nff_naa):
+    n1 = ntf_source.parse_side(ntf_html, "resultater", "obos", log=lambda _s: None)
+    n2 = nff_source.parse_side(_NFF, "obos", naa=nff_naa, log=lambda _s: None)
+    return {(r["home"], r["away"]): (r["hg"], r["ag"])
+            for r in _rec(n1, n2, log=lambda _s: None) if r["hg"] is not None}
+
+
+_sent = _dt(2026, 10, 2, 23, 0, tzinfo=ZoneInfo("Europe/Oslo"))
+_off_ferdig = _off(_NTF, _sent)
+sjekk("ferdig kamp: begge offisielle kilder gir resultatet",
+      _off_ferdig == {("Ranheim", "Egersund"): (2, 1)}, str(_off_ferdig))
+_p, _c, _v = _R.decide(_off_ferdig, {}, {}, _sched, {}, _naa2)
+sjekk("og den publiseres i SAMME kjøring, uten å vente på Wikipedia",
+      _p.get(("Ranheim", "Egersund")) == (2, 1) and not _v, f"{_p} {_v}")
+_p, _c, _v = _R.decide(_off_ferdig, {}, {("Ranheim", "Egersund"): (3, 1)}, _sched, {}, _naa2)
+sjekk("uenighet med Wikipedia holder resultatet tilbake",
+      not _p and len(_c) == 1, f"{_p} {_c}")
+
+# Pågående kamp: 40 minutter etter avspark, stilling på tavla hos begge.
+_underveis = _NTF.replace("schedule__match--played", "schedule__match--live")
+_off_live = _off(_underveis, _dt(2026, 10, 2, 19, 40, tzinfo=ZoneInfo("Europe/Oslo")))
+sjekk("pågående kamp: INGEN av de offisielle kildene gir resultat", not _off_live, str(_off_live))
+_p, _c, _v = _R.decide(_off_live, {}, {}, _sched, {}, _naa2)
+sjekk("og den kan derfor ikke publiseres som sluttresultat", not _p, str(_p))
 
 print(f"\n{antall[0] - len(feil)} av {antall[0]} tester gikk gjennom.")
 if feil:

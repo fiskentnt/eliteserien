@@ -21,7 +21,7 @@ Kjører videre hvis:
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -31,6 +31,78 @@ OSLO = ZoneInfo("Europe/Oslo")
 # Ligamappen velges av argumentet, med Eliteserien som standard slik at
 # eksisterende kall uten argument oppfører seg som før.
 LIGAER = {"eliteserien": ROOT / "eliteserien", "obos": ROOT / "obos"}
+
+# Daglig vedlikehold (football-data.co.uk, revisjonen mot kontrollkilden)
+# styres av NAAR DET SIST GIKK BRA, ikke av klokkeslettet.
+#
+# Den gamle regelen var "time 06, minutt under 10". Den har aldri slaatt til:
+# GitHub sine planlagte kjoringer i 06-timen landet paa minutt 33-43 hver
+# eneste dag 21.-24. september, og falt dermed utenfor vinduet. Med en
+# ekstern utloser hvert tiende minutt blir et smalt klokkeslettvindu enda mer
+# tilfeldig -- det avhenger av at en kjoering treffer akkurat da.
+DAGLIG_TIMER = 20
+
+# Etter et MISLYKKET forsok maa det gaa minst saa lenge for vi proever igjen.
+# Uten denne ville den eksterne utloseren proevd hvert tiende minutt saa
+# lenge feilen varer, og brent baade kjoretid og eventuelle API-kall.
+DAGLIG_SPERRE_TIMER = 1
+
+
+def daglig_sti(liga):
+    return LIGAER[liga] / "data" / "daglig_state.json"
+
+
+def les_daglig(liga):
+    p = daglig_sti(liga)
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _tid(x):
+    try:
+        return datetime.fromisoformat(x) if x else None
+    except ValueError:
+        return None
+
+
+def merk_forsok(liga, now):
+    """Skrives NAAR porten aapner for daglig vedlikehold, for arbeidet gjores.
+    Da teller et forsok som feiler ogsaa, og sperren paa en time gjelder."""
+    d = les_daglig(liga)
+    d["siste_forsok"] = now.isoformat(timespec="seconds")
+    p = daglig_sti(liga)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def merk_ok(liga, now=None):
+    """Skrives av update_data.py naar en kjoring er ferdig uten feil."""
+    now = now or datetime.now(timezone.utc)
+    d = les_daglig(liga)
+    d["siste_ok"] = now.isoformat(timespec="seconds")
+    p = daglig_sti(liga)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def daglig_forfalt(liga, now):
+    """(slipp gjennom?, begrunnelse)"""
+    d = les_daglig(liga)
+    ok, forsok = _tid(d.get("siste_ok")), _tid(d.get("siste_forsok"))
+    if forsok and (now - forsok) < timedelta(hours=DAGLIG_SPERRE_TIMER):
+        minutter = (now - forsok).total_seconds() / 60
+        return False, (f"daglig vedlikehold forsøkt for {minutter:.0f} min siden, "
+                       f"venter minst {DAGLIG_SPERRE_TIMER} time mellom forsøk")
+    if ok is None:
+        return True, "daglig vedlikehold har aldri kjørt"
+    timer = (now - ok).total_seconds() / 3600
+    if timer >= DAGLIG_TIMER:
+        return True, f"daglig vedlikehold: siste vellykkede kjøring var {timer:.0f} timer siden"
+    return False, f"daglig vedlikehold gjort for {timer:.0f} timer siden"
 
 
 def kickoff_utc(date_str, time_str):
@@ -54,7 +126,6 @@ def should_fetch(now=None, liga="eliteserien"):
     if os.environ.get("FORCE_FETCH") == "true":
         return True, "manuelt trigget (workflow_dispatch uten planlagt=true)"
     now = now or datetime.now(timezone.utc)
-    oslo_hour = now.astimezone(OSLO).hour
 
     path = LIGAER[liga] / "data" / "fixtures.json"
     if not path.exists():
@@ -68,9 +139,11 @@ def should_fetch(now=None, liga="eliteserien"):
         if now.minute < 10:
             return True, f"{len(pending)} kamp(er) over 6 timer uten resultat ('venter på resultat'), prøver i timeslotten"
         return False, f"{len(pending)} kamp(er) over 6 timer uten resultat, venter til neste timeslott"
-    if oslo_hour == 6 and now.minute < 10:  # bare første slott i 06-timen
-        return True, "ingen ventende kamper, men innenfor den daglige 06-sjekken (football-data.co.uk + ffk-revisjon)"
-    return False, "ingen kamper har startet for over 105 minutter siden uten resultat"
+    forfalt, hvorfor = daglig_forfalt(liga, now)
+    if forfalt:
+        merk_forsok(liga, now)
+        return True, f"ingen ventende kamper, men {hvorfor}"
+    return False, f"ingen kamper har startet for over 105 minutter siden uten resultat ({hvorfor})"
 
 
 if __name__ == "__main__":

@@ -29,6 +29,9 @@ const REPO = "eliteserien";
 // Rekkefølgen er bevisst: arkiveringen først, fordi den er den eneste som er
 // tidskritisk. Den skal fange markup mens en kamp pågår.
 const WORKFLOWS = [
+  // prekick foerst: den har et vindu paa 45 minutter og er den eneste her
+  // som virkelig ikke taaler aa vente.
+  "prekick-odds.yml",
   "arkiver-kildehtml.yml",
   "update-data.yml",
   "obos-results.yml",

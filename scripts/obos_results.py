@@ -164,21 +164,43 @@ def finished_without_result(fixtures, prev, names, teams):
     return out
 
 
-def decide(op_scores, wiki, sched, prev, now):
-    """Avgjør hva som kan publiseres. Regelen:
+def decide(off, op_scores, wiki, sched, prev, now):
+    """Avgjør hva som kan publiseres.
 
-      begge kilder enige            -> publiser
-      begge uenige                  -> hold tilbake, konflikt
-      bare én kilde, under 24 timer -> vent (den andre er ikke oppdatert ennå)
-      bare én kilde, over 24 timer  -> publiser den kilden
+    De OFFISIELLE kildene (NTF og NFF) er allerede to uavhengige kilder som
+    har blitt enige i reconcile() for resultatet kommer hit. Har de det,
+    publiseres det med en gang:
+
+      offisielt, og Wikipedia enig eller mangler  -> publiser
+      offisielt, men Wikipedia uenig              -> hold tilbake, konflikt
+
+    Wikipedia er altsaa en EKSTRA kontroll, ikke et krav. Wikipedia-rutenettet
+    oppdateres av frivillige og ligger ofte timer etter. Krevde vi at det var
+    med, ville et ferskt resultat blitt staaende i 24 timer bare fordi ingen
+    hadde rukket aa redigere siden.
+
+    For de andre kildene gjelder den gamle regelen, der to kilder trengs:
+
+      OddsPapi og Wikipedia enige       -> publiser
+      uenige                            -> hold tilbake, konflikt
+      bare en av dem, under 24 timer    -> vent
+      bare en av dem, over 24 timer     -> publiser den kilden
 
     Returnerer (publiser, konflikter, venter)."""
     publish, conflicts, waiting = dict(prev), [], []
-    cand = set(op_scores) | {k for k in (wiki or {}) if k not in prev}
+    cand = set(off) | set(op_scores) | {k for k in (wiki or {}) if k not in prev}
     for k in sorted(cand):
         if k in prev or k not in sched:
             continue
-        o, w = op_scores.get(k), (wiki or {}).get(k)
+        f, w = off.get(k), (wiki or {}).get(k)
+        if f:
+            if w and w != f:
+                conflicts.append(f"{k[0]} mot {k[1]}: offisielt {f[0]}-{f[1]}, "
+                                 f"Wikipedia {w[0]}-{w[1]}")
+            else:
+                publish[k] = f
+            continue
+        o = op_scores.get(k)
         s2 = sched[k]
         try:
             kickoff = datetime.fromisoformat(f"{s2['date']}T{s2['time']}").replace(
@@ -199,6 +221,42 @@ def decide(op_scores, wiki, sched, prev, now):
             else:
                 waiting.append(f"{k[0]} mot {k[1]}: bare {src} har det ennå, venter på den andre")
     return publish, conflicts, waiting
+
+
+# ------------------------------------------------- offisielle ligakilder
+def offisielle_resultater():
+    """Resultater fra de offisielle ligakildene. Gratis, ingen kvote.
+
+    Etter kildebyttet er disse hovedkilden ogsaa for OBOS. De gjor
+    /v4/scores unodvendig i normal drift: et tellende kall skal ikke brukes
+    paa et resultat vi allerede har gratis fra to offisielle kilder.
+
+    NTF (obos-ligaen.no) gir bare resultat for rader som er eksplisitt merket
+    ferdigspilt; NFF (fotball.no) krever at det har gaatt 150 minutter siden
+    avspark. En paagaaende kamp gir derfor ingen verdi her."""
+    try:
+        import ntf_source
+        import nff_source
+        from reconcile_ny import reconcile
+    except Exception as e:
+        log(f"  offisielle kilder utilgjengelige ({type(e).__name__}: {e})")
+        return {}
+    try:
+        ntf = ntf_source.fetch_all("obos", log=lambda _s: None)
+    except Exception as e:
+        log(f"  ligasiden feilet ({e})")
+        return {}
+    try:
+        nff = nff_source.fetch_all("obos", log=lambda _s: None)
+    except Exception as e:
+        log(f"  fotball.no feilet ({e}) -- fortsetter uten kontroll")
+        nff = []
+    ut = {}
+    for r in reconcile(ntf, nff, log=lambda _s: None):
+        if r.get("hg") is not None:
+            ut[(r["home"], r["away"])] = (r["hg"], r["ag"])
+    log(f"  offisielle kilder: {len(ut)} ferdigspilte kamper")
+    return ut
 
 
 # ---------------------------------------------------------------- Wikipedia
@@ -313,23 +371,35 @@ def main():
         log(f"Glemmer runde {args.forget_round}: {len(drop)} resultater tas ut, så kjeden må hente dem på nytt.")
     log(f"Terminliste: {len(sched)} kamper. Publisert fra før: {len(prev)} resultater.")
 
+    # Gratiskildene foerst. I normal drift daekker de alt, og da gjoeres
+    # ingen tellende OddsPapi-kall i det hele tatt.
+    off = {} if args.break_all else offisielle_resultater()
+    wiki = None if args.break_all or args.break_wikipedia else wikipedia_results(names)
+
     key = None if args.no_oddspapi else (oddspapi and __import__("os").environ.get("ODDSPAPI_KEY", "").strip())
     op_scores, fixtures = {}, []
     if key:
+        # Kamplisten er mellomlagret i 20 timer, saa dette er hoeyst ett
+        # tellende kall i doegnet -- og det trengs til odds-koblingen, ikke
+        # til resultatene.
         fixtures = oddspapi_fixtures(key) or []
         teams = {t for k2 in sched for t in k2}
         missing = finished_without_result(fixtures, prev, names, teams)
-        log(f"  ferdigspilte kamper uten publisert resultat: {len(missing)}")
-        for k2, f in missing[: args.max_scores]:
+        # SISTE UTVEI: bare kamper ingen av gratiskildene har. Et tellende
+        # kall skal aldri brukes paa et resultat vi allerede har gratis.
+        rest = [(k2, f) for k2, f in missing
+                if k2 not in off and k2 not in (wiki or {})]
+        log(f"  ferdigspilte uten publisert resultat: {len(missing)}, "
+            f"uten dekning i gratiskildene: {len(rest)}")
+        for k2, f in rest[: args.max_scores]:
             sc = oddspapi_score(key, f.get("fixtureId"))
             if sc:
                 op_scores[k2] = sc
-                log(f"    {k2[0]} mot {k2[1]}: {sc[0]}-{sc[1]}")
+                log(f"    {k2[0]} mot {k2[1]}: {sc[0]}-{sc[1]} (tellende kall)")
             time.sleep(1.2)
     elif not args.no_oddspapi:
         log("  ODDSPAPI_KEY mangler: hopper over OddsPapi")
 
-    wiki = None if args.break_all or args.break_wikipedia else wikipedia_results(names)
     if args.break_wikipedia or args.break_all:
         log("  (test: later som kilden er ødelagt)")
     if args.break_all:
@@ -350,7 +420,7 @@ def main():
 
     # ---- sammenlign og avgjør
     now = datetime.now(timezone.utc)
-    publish, conflicts, waiting = decide(op_scores, wiki, sched, prev, now)
+    publish, conflicts, waiting = decide(off, op_scores, wiki, sched, prev, now)
     log(f"\nNye resultater: {len(publish) - len(prev)}. Venter: {len(waiting)}. Konflikter: {len(conflicts)}.")
     for c in conflicts:
         log(f"  KONFLIKT {c}")

@@ -121,6 +121,14 @@ def main():
         if fjernet:
             print(f"  hentingen feilet, men ryddet ut {fjernet} spilte kamper")
             skriv(beholdt, gammel.get("fetched_at"))
+        # En budsjettsperre er et VALG vi har tatt, ikke en feil. Gir vi
+        # feilkode, regnes det daglige vedlikeholdet som mislykket, og
+        # kjoringen proever igjen hver time resten av dagen uten at noe kan
+        # bli bedre. Se ogsaa markedslisten lenger nede.
+        stopp, hvorfor = oddspapi.budsjett_stopp()
+        if stopp:
+            print(f"  hopper over kamplisten: {hvorfor}")
+            return 0
         return 1
 
     links, only_odds, only_csv = match_fixtures(rows, fixtures, load_name_map())
@@ -135,6 +143,14 @@ def main():
     mkt = find_1x2(fetch_markets(key))
     mkt_id = (mkt or {}).get("marketId") or (mkt or {}).get("id")
     if mkt_id is None:
+        # En BUDSJETTSPERRE er ikke en feil: vi har med vilje bestemt at vi
+        # ikke skal bruke flere tellende kall i dag. Gir vi feilkode her,
+        # regnes det daglige vedlikeholdet som mislykket, og kjoringen proever
+        # igjen hver time resten av dagen uten at noe kan bli bedre.
+        stopp, hvorfor = oddspapi.budsjett_stopp()
+        if stopp:
+            print(f"  hopper over odds: {hvorfor}")
+            return 0
         print("  fant ikke 1X2-markedet -- henter ingen odds")
         return 1
 

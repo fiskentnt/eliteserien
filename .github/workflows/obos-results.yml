@@ -86,6 +86,7 @@ jobs:
       # oppslag; bare terminlisten koster ett kall, og den mellomlagres.
       # Feiler den, er det ikke kritisk -- siden faller tilbake til modellen.
       - name: Hent odds for kommende kamper
+        id: odds
         if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         continue-on-error: true
         env:
@@ -122,6 +123,7 @@ jobs:
           exit 0
 
       - name: Bygg tabell og modell på nytt
+        id: bygg
         if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         run: python3 scripts/obos_build_data.py --from-matches
 
@@ -137,9 +139,26 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/snapshot_probs.js obos
 
       - name: Treffsikkerhetslogg (lagrede sannsynligheter mot resultat)
+        id: logg
         if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         continue-on-error: true  # skal aldri stoppe resultatene
         run: python3 scripts/accuracy_log.py obos
+
+      - name: Merk daglig vedlikehold som utført
+        # SISTE steg for lagring, og bare naar DET DAGLIGE ARBEIDET faktisk
+        # ble gjort: oddsen for kommende kamper, tabellen og modellen bygget
+        # med den, og treffsikkerhetsloggen. Delingsbildet er ikke en del av
+        # vedlikeholdet og staar derfor etter.
+        #
+        # success() alene duger IKKE: to av stegene har continue-on-error, og
+        # da regner success() dem som vellykkede selv naar de feilet. Derfor
+        # sjekkes outcome for hvert av dem -- outcome er raaresultatet.
+        if: >-
+          steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
+          && steps.odds.outcome == 'success'
+          && steps.bygg.outcome == 'success'
+          && steps.logg.outcome == 'success' 
+        run: python3 scripts/merk_daglig.py obos
 
       - name: Tegn delingsbildet på nytt
         if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
@@ -155,9 +174,9 @@ jobs:
           # mangler, og da ble ingenting lagret -- heller ikke nye resultater.
           # (Skjedde 22. september: oddshentingen feilet, én fil ble ikke laget,
           # og det nye banneret ble aldri lagret.)
-          for f in obos/data/matches.json obos/data/fixtures.json obos/data/model.json \
+          for f in obos/data/daglig_state.json data/oddspapi_usage.json data/oddspapi-bruk obos/data/matches.json obos/data/fixtures.json obos/data/model.json \
                    obos/data/status.json obos/data/results_state.json \
-                   obos/data/oddspapi_fixtures_2026.json obos/og.png \
+                   obos/data/oddspapi_fixtures_2026.json obos/data/oddspapi_markets.json obos/og.png \
                    obos/data/odds_upcoming.json \
                    obos/data/keymatch.json obos/data/lastmatch.json \
                    obos/data/history.json obos/data/prekick.json \

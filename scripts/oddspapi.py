@@ -29,6 +29,93 @@ FREE_ENDPOINTS = {"/v4/historical-odds"}
 TIMEOUT = 45
 MONTHLY_LIMIT = 250
 
+# VAARE EGNE SIKKERHETSGRENSER, strengere enn kvoten.
+#
+# Telleren her er VAAR egen, ikke en autoritativ kvote fra OddsPapi -- API-et
+# oppgir ingen. Tallet skal derfor leses som et MINIMUM: faktisk forbruk kan
+# vaere hoyere, for eksempel hvis en kjoring dode etter at forespoerselen gikk
+# ut men for filen ble skrevet. Derfor stopper vi godt for 250.
+MAANEDSTAK = 200
+
+# Dagstak. Maalt paa tvers av ALLE workflows og begge ligaer, etter at de
+# offisielle gratiskildene ble hovedkilde for OBOS-resultatene:
+#
+#   /v4/historical-odds  GRATIS -- selve oddsen teller ikke
+#   prekick_odds         /v4/fixtures, 24 t cache per liga      2/dag
+#   obos_results         /v4/fixtures, 20 t cache               1/dag
+#   obos_results         /v4/scores                             0 (gratis kilder)
+#   obos_upcoming_odds   fixtures 30 t + markets permanent      0/dag
+#   elite_closing_odds   fixtures + markets, cachet            <=1/dag
+#   odds_compare         cachet, cron to ganger i doegnet      <=1/dag
+#   odds-drift, elite-check  ingen cron -- bare manuelt         0
+#
+#   vanlig dag                        ~4
+#   full runde i begge ligaer         ~5-6 (kampantall rorer ikke cachene)
+#   alle cacher kalde og begge
+#   gratiskilder nede for 8 kamper    ~20
+#
+# 12 ligger godt over normal drift, men under det katastrofale tilfellet --
+# og det er meningen: et tak skal stoppe noe som loper lopsk, ikke romme
+# verste tenkelige dag. Blir en dag kappet, venter arbeidet til i morgen.
+#
+# Maanedstaket er likevel den bindende grensen: 12 x 30 = 360, godt over 200.
+# Normal drift er ~4/dag = ~120 i maaneden, saa det er 80 i margin.
+DAGSTAK = 12
+
+# Hver kjoring skriver SIN EGEN fil. To jobber som er i luften samtidig rorer
+# dermed aldri samme sti, og ingen oppdatering gaar tapt i en rebase. Summen
+# for maaneden er summen over filene. Den gamle samlefilen beholdes som
+# historikk for september, men skrives ikke lenger.
+BRUK_KATALOG = ROOT / "data" / "oddspapi-bruk"
+
+
+def _kjoring_id():
+    """Unik per kjoring. I Actions er run_id + forsok unikt; lokalt bruker vi
+    tidspunkt og prosess-id."""
+    rid = os.environ.get("GITHUB_RUN_ID")
+    if rid:
+        return f"{rid}-{os.environ.get('GITHUB_RUN_ATTEMPT', '1')}"
+    return f"lokal-{datetime.now(timezone.utc):%Y%m%dT%H%M%S}-{os.getpid()}"
+
+
+def _bruk_fil(month=None):
+    m = month or datetime.now(timezone.utc).strftime("%Y-%m")
+    return BRUK_KATALOG / m / f"{_kjoring_id()}.json"
+
+
+def _les_alle(month=None):
+    """Alle bruksfilene for maaneden, som liste av dict."""
+    m = month or datetime.now(timezone.utc).strftime("%Y-%m")
+    katalog = BRUK_KATALOG / m
+    ut = []
+    if katalog.exists():
+        for f in sorted(katalog.glob("*.json")):
+            try:
+                ut.append(json.loads(f.read_text(encoding="utf-8")))
+            except Exception:
+                continue
+    return ut
+
+
+def dagsbruk(dag=None):
+    """Tellende kall i dag, summert over alle kjoringers filer."""
+    dag = dag or datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    return sum(d.get("dager", {}).get(dag, 0) for d in _les_alle())
+
+
+def budsjett_stopp():
+    """(stopp?, begrunnelse) -- kalles FOR ethvert tellende kall."""
+    brukt, _ = usage()
+    if brukt >= MAANEDSTAK:
+        return True, (f"maanedstaket er naadd: {brukt} av maks {MAANEDSTAK} "
+                      f"(kvoten er {MONTHLY_LIMIT}, vi stopper for) -- "
+                      f"bruker bare gratiskilder resten av maaneden")
+    i_dag = dagsbruk()
+    if i_dag >= DAGSTAK:
+        return True, (f"dagstaket er naadd: {i_dag} av maks {DAGSTAK} kall i dag "
+                      f"-- venter til i morgen")
+    return False, ""
+
 
 def _load():
     if USAGE_PATH.exists():
@@ -39,22 +126,37 @@ def _load():
 
 
 def usage(month=None):
+    """(tellende kall denne maaneden, kvoten). Summen av den gamle samlefilen
+    og alle per-kjoring-filene, slik at historikken fra september blir med."""
     d = _load()
     m = month or datetime.now(timezone.utc).strftime("%Y-%m")
-    return d["months"].get(m, {}).get("billable", 0), d.get("monthly_limit", MONTHLY_LIMIT)
+    gammelt = d["months"].get(m, {}).get("billable", 0)
+    nytt = sum(x.get("billable", 0) for x in _les_alle(m))
+    return gammelt + nytt, d.get("monthly_limit", MONTHLY_LIMIT)
 
 
 def _count(path, billable):
+    """Skriver til DENNE kjoringens egen fil. Kalles FOR forespoerselen gaar
+    ut, slik at et kall som sendes men aldri svarer likevel er talt -- vi vil
+    heller tro vi har brukt for mye enn for lite."""
     if not billable:
         return
-    d = _load()
-    m = datetime.now(timezone.utc).strftime("%Y-%m")
-    mon = d["months"].setdefault(m, {"billable": 0, "free": 0, "endpoints": {}})
-    mon["billable"] += 1
-    mon["endpoints"][path] = mon["endpoints"].get(path, 0) + 1
-    mon["last"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
-    USAGE_PATH.parent.mkdir(parents=True, exist_ok=True)
-    USAGE_PATH.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    fil = _bruk_fil()
+    d = {}
+    if fil.exists():
+        try:
+            d = json.loads(fil.read_text(encoding="utf-8"))
+        except Exception:
+            d = {}
+    naa = datetime.now(timezone.utc)
+    d["billable"] = d.get("billable", 0) + 1
+    d.setdefault("endpoints", {})[path] = d.get("endpoints", {}).get(path, 0) + 1
+    dag = naa.strftime("%Y-%m-%d")
+    d.setdefault("dager", {})[dag] = d.get("dager", {}).get(dag, 0) + 1
+    d["last"] = naa.isoformat(timespec="seconds")
+    d["kjoring"] = _kjoring_id()
+    fil.parent.mkdir(parents=True, exist_ok=True)
+    fil.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
 def call(path, params=None, key=None, timeout=TIMEOUT):
@@ -64,9 +166,11 @@ def call(path, params=None, key=None, timeout=TIMEOUT):
         return None, "ODDSPAPI_KEY er ikke satt"
     billable = path not in FREE_ENDPOINTS
     if billable:
-        used, limit = usage()
-        if used >= limit:
-            return None, f"stopper: {used} av {limit} tellende kall brukt denne måneden"
+        # Sperren ligger FOR alt som koster. Ingen tellende forespoersel skal
+        # kunne gaa ut naar et av takene er naadd.
+        stopp, hvorfor = budsjett_stopp()
+        if stopp:
+            return None, f"stopper: {hvorfor}"
     q = dict(params or {})
     q["apiKey"] = key
     url = f"{BASE}{path}?" + urllib.parse.urlencode(q)

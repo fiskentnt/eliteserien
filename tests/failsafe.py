@@ -134,15 +134,30 @@ def main():
         tzinfo=R.ZoneInfo("Europe/Oslo")).astimezone(_tz.utc)
     fersk = kick + timedelta(hours=3)      # tre timer etter avspark
     gammel = kick + timedelta(hours=30)    # over et døgn etter
-    pub, conf, vent = R.decide({key: (2, 1)}, {}, sched, {}, fersk)
+    # De offisielle kildene (NTF og NFF) har alt blitt enige i reconcile().
+    # Da skal resultatet ut med en gang -- Wikipedia er en ekstra kontroll,
+    # ikke et krav. Uten dette ville et ferskt resultat blitt staaende i 24
+    # timer bare fordi ingen hadde rukket aa redigere Wikipedia-rutenettet.
+    pub, conf, vent = R.decide({key: (2, 1)}, {}, {}, sched, {}, fersk)
+    check("offisielt alene, fersk kamp: publiseres med en gang",
+          pub.get(key) == (2, 1) and not conf and not vent, f"{pub.get(key)} {conf} {vent}")
+    pub, conf, vent = R.decide({key: (2, 1)}, {}, {key: (2, 1)}, sched, {}, fersk)
+    check("offisielt og Wikipedia enige: publiseres", pub.get(key) == (2, 1) and not conf)
+    pub, conf, vent = R.decide({key: (2, 1)}, {}, {key: (1, 1)}, sched, {}, fersk)
+    check("offisielt, men Wikipedia uenig: holdes tilbake",
+          key not in pub and len(conf) == 1, f"{pub.get(key)} {conf}")
+
+    # OddsPapi er siste utvei og teller fortsatt bare som EN kilde.
+    pub, conf, vent = R.decide({}, {key: (2, 1)}, {}, sched, {}, fersk)
     check("OddsPapi alene, fersk kamp: venter, ingen konflikt",
           key not in pub and not conf and len(vent) == 1, f"{pub.get(key)} {conf} {vent}")
-    pub, conf, vent = R.decide({key: (2, 1)}, {}, sched, {}, gammel)
+    pub, conf, vent = R.decide({}, {key: (2, 1)}, {}, sched, {}, gammel)
     check("OddsPapi alene, over et døgn: publiseres", pub.get(key) == (2, 1) and not conf)
-    pub, conf, vent = R.decide({key: (2, 1)}, {key: (2, 1)}, sched, {}, fersk)
-    check("begge kilder enige: publiseres med en gang", pub.get(key) == (2, 1) and not conf)
-    pub, conf, vent = R.decide({key: (2, 1)}, {key: (1, 1)}, sched, {}, gammel)
-    check("kildene uenige: holdes tilbake og logges",
+    pub, conf, vent = R.decide({}, {key: (2, 1)}, {key: (2, 1)}, sched, {}, fersk)
+    check("OddsPapi og Wikipedia enige: publiseres med en gang",
+          pub.get(key) == (2, 1) and not conf)
+    pub, conf, vent = R.decide({}, {key: (2, 1)}, {key: (1, 1)}, sched, {}, gammel)
+    check("OddsPapi og Wikipedia uenige: holdes tilbake og logges",
           key not in pub and len(conf) == 1, f"{pub.get(key)} {conf}")
     check("datasettet er fortsatt uendret etter alle testene",
           MATCHES.read_bytes() == before and len(json.loads(MATCHES.read_bytes())) == n_before)

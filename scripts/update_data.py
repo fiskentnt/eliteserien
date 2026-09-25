@@ -22,6 +22,7 @@ from zoneinfo import ZoneInfo
 sys.path.insert(0, str(Path(__file__).parent))
 import ffk_source
 import espn_source
+import should_fetch
 import ntf_source
 import nff_source
 from reconcile_ny import reconcile as reconcile_kilder, behold_eksisterende
@@ -205,7 +206,7 @@ def run_daily_audit(matches_out, ffk_rows, now, log):
     today = now.astimezone(OSLO).strftime("%Y-%m-%d")
     state = json.loads(AUDIT_STATE_PATH.read_text(encoding="utf-8")) if AUDIT_STATE_PATH.exists() else {}
     if state.get("checked_date") == today:
-        return
+        return False   # allerede gjort i dag -- da er dette ikke en daglig kjoring
     log(f"--- Daglig kontroll: {len(matches_out)} spilte kamper mot ffksupporter.net ---")
     errors, warnings = audit_against_ffk(matches_out, ffk_rows, now)
     AUDIT_STATE_PATH.write_text(json.dumps(
@@ -218,6 +219,7 @@ def run_daily_audit(matches_out, ffk_rows, now, log):
             log(f"AVVIK: {e}")
         raise DataAuditError(f"{len(errors)} avvik mellom matches.json og kontrollkilden:\n" + "\n".join(errors))
     log(f"Daglig kontroll: ingen kritiske avvik ({len(warnings)} advarsel(er)).")
+    return True
 
 
 RESULTAT_FRIST_TIMER = 3
@@ -343,9 +345,16 @@ def main(cache_dir=None):
         # fra, og komplett for hele sesongen. Faller den ut, bruker vi
         # ffksupporter som før, slik at kontrollen aldri blir helt borte.
         kontroll = nff_rows or ffk_rows
-        run_daily_audit(matches_out, kontroll, now, log)
+        gjorde_daglig = run_daily_audit(matches_out, kontroll, now, log)
 
         write_status(ok=True, now=now)
+        # BARE naar det daglige vedlikeholdet faktisk ble utfort i denne
+        # kjoringen. En vanlig resultatkjoring midt paa dagen skal ikke
+        # nullstille 20-timersklokka -- da ville revisjonen og
+        # football-data-sjekken kunne bli utsatt i det uendelige.
+        if gjorde_daglig:
+            should_fetch.merk_ok(LIGA, now)
+            log("Daglig vedlikehold utfort -- 20-timersklokka nullstilt.")
     except Exception as e:
         write_status(ok=False, now=now, error=e)
         raise

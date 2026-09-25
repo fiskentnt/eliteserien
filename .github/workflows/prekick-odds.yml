@@ -22,6 +22,10 @@ on:
     - cron: "3,13,23,33,43,53 10-21 * * *"
   workflow_dispatch:
     inputs:
+      planlagt:
+        description: "Utlost av den eksterne planleggeren -- prekick-vinduet skal avgjore"
+        type: boolean
+        default: false
       dry_run:
         description: "Bare vis hva som ville skjedd"
         type: boolean
@@ -43,7 +47,17 @@ jobs:
         with:
           ref: main
 
+      - name: Er en kamp i sluttoddsvinduet nå?
+        id: gate
+        env:
+          # Den eksterne planleggeren sender planlagt=true og skal behandles
+          # som en planlagt kjoring: vinduet avgjor. En manuell kjoring uten
+          # flagget tvinger fortsatt henting.
+          FORCE_FETCH: ${{ github.event_name == 'workflow_dispatch' && !inputs.planlagt && 'true' || 'false' }}
+        run: python3 scripts/prekick_vindu.py
+
       - name: Hent odds nær avspark
+        if: steps.gate.outputs.should_fetch == 'true'
         env:
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
         run: |
@@ -61,7 +75,7 @@ jobs:
           for f in eliteserien/data/odds_upcoming.json obos/data/odds_upcoming.json \
                    eliteserien/data/oddspapi_fixtures_2026.json \
                    obos/data/oddspapi_fixtures_2026.json \
-                   data/oddspapi_usage.json; do
+                   data/oddspapi_usage.json data/oddspapi-bruk eliteserien/data/oddspapi_markets.json obos/data/oddspapi_markets.json; do
             if [ -e "$f" ]; then git add "$f"; fi
           done
           if git diff --cached --quiet; then
