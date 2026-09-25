@@ -9,6 +9,10 @@ on:
     - cron: "13 16 * * *"
   workflow_dispatch:
     inputs:
+      planlagt:
+        description: "Utlost av den eksterne planleggeren -- porten og kampvinduet skal gjelde som ved schedule"
+        type: boolean
+        default: false
       feil_arkivering:
         description: "Tving arkiveringen til aa feile, for aa teste at produksjonen gaar videre"
         type: boolean
@@ -53,7 +57,7 @@ jobs:
       - name: Sjekk om det er noen vits (kamper innen 7 dager, kvote ikke lav)
         id: gate
         env:
-          FORCE_FETCH: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+          FORCE_FETCH: ${{ github.event_name == 'workflow_dispatch' && !inputs.planlagt && 'true' || 'false' }}
         run: python3 scripts/should_fetch_odds.py
 
       - uses: actions/setup-python@v5
@@ -130,5 +134,5 @@ jobs:
             echo "Ingen endringer i odds."
           else
             git commit -m "Oppdater kommende odds $(date -u +%Y-%m-%dT%H:%MZ)"
-            git push
+            bash scripts/push_med_rebase.sh
           fi

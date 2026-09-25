@@ -61,5 +61,5 @@ jobs:
           else
             git commit -m "Måling: oddsbevegelse før avspark (kallteller og terminliste)"
             git pull --rebase --autostash origin main || true
-            git push origin HEAD:main
+            bash scripts/push_med_rebase.sh
           fi

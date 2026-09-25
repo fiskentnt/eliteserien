@@ -43,4 +43,4 @@ jobs:
           git add obos/index.html
           git commit -m "Bygg obos/index.html fra eliteserien/index.html"
           git pull --rebase --autostash origin main || true
-          git push origin HEAD:main
+          bash scripts/push_med_rebase.sh

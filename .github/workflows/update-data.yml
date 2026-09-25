@@ -15,7 +15,12 @@ on:
     # (minutt 5/25/45 og 7), som GitHub sin planlegger ofte utsetter/dropper.
     - cron: "5,25,45 10-20 * * *"  # kl 12-22 norsk tid, hvert 20. minutt
     - cron: "7 21-23,0-9 * * *"    # kl 23-11 norsk tid, hver time
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      planlagt:
+        description: "Utlost av den eksterne planleggeren -- porten og kampvinduet skal gjelde som ved schedule"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -33,7 +38,10 @@ jobs:
       - name: Sjekk om noe faktisk trenger henting (ingen avhengigheter, raskt)
         id: gate
         env:
-          FORCE_FETCH: ${{ github.event_name == 'workflow_dispatch' && 'true' || 'false' }}
+          # Den eksterne planleggeren sender planlagt=true og skal behandles
+          # som en schedule-kjoring: porten avgjor. En manuell kjoring uten
+          # flagget tvinger fortsatt henting.
+          FORCE_FETCH: ${{ github.event_name == 'workflow_dispatch' && !inputs.planlagt && 'true' || 'false' }}
         run: python3 scripts/should_fetch.py
 
       - uses: actions/setup-python@v5
@@ -104,5 +112,5 @@ jobs:
             echo "Ingen endringer i kampdata."
           else
             git commit -m "Oppdater kampdata $(date -u +%Y-%m-%dT%H:%MZ)"
-            git push
+            bash scripts/push_med_rebase.sh
           fi

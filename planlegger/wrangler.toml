@@ -1,0 +1,14 @@
+name = "tabellkalkulator-planlegger"
+main = "worker.js"
+compatibility_date = "2026-09-25"
+
+# Hvert tiende minutt. Timefilteret (09-21 UTC) ligger i worker.js, ikke her,
+# slik at det er ett sted aa endre og det stedet er versjonert i repoet.
+[triggers]
+crons = ["*/10 * * * *"]
+
+[vars]
+GREN = "main"
+
+# GITHUB_TOKEN settes som hemmelighet, ALDRI i denne filen:
+#   npx wrangler secret put GITHUB_TOKEN

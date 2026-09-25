@@ -56,5 +56,5 @@ jobs:
           else
             git commit -m "OBOS: sluttodds hentet $(date -u +%Y-%m-%dT%H:%MZ)"
             git pull --rebase --autostash origin main || true
-            git push origin HEAD:main
+            bash scripts/push_med_rebase.sh
           fi

@@ -3,6 +3,24 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Når PAT-en for planleggeren går ut
+
+UTLØPSDATO: _fyll inn når tokenen er laget_
+
+Den eksterne planleggeren (`planlegger/`) bruker en fine-grained PAT med
+`Actions: Read and write` på `fiskentnt/eliteserien` alene. Går den ut,
+slutter planleggeren å virke **uten å si fra**: dispatch svarer 401, og
+Cloudflare-loggen viser det, men ingen leser den loggen til daglig.
+
+Det synlige tegnet er at kjøringene faller tilbake til GitHub sin egen
+kadens, altså rundt fem i døgnet i stedet for hvert tiende minutt. Da vil
+arkivet på kampdager være nesten tomt, og OBOS-tabellen oppdateres først
+neste formiddag igjen.
+
+Forny tokenen og oppdater hemmeligheten:
+
+    cd planlegger && npx wrangler secret put GITHUB_TOKEN
+
 ## 2. oktober 2026: første kampdag med de offisielle kildene
 
 OBOS runde 24 åpner 2. oktober 19:00 med Ranheim mot Egersund. Det er den

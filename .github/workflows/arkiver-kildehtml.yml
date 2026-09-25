@@ -33,6 +33,10 @@ on:
     - cron: "3,23,43 10-21 * * *"
   workflow_dispatch:
     inputs:
+      planlagt:
+        description: "Utlost av den eksterne planleggeren -- porten og kampvinduet skal gjelde som ved schedule"
+        type: boolean
+        default: false
       tving_kampdag:
         description: "Tving arkivering, uavhengig av kampvinduet"
         type: boolean

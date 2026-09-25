@@ -8,6 +8,10 @@ on:
     - cron: "17 5 * * *"   # 07.17 norsk sommertid
   workflow_dispatch:
     inputs:
+      planlagt:
+        description: "Utlost av den eksterne planleggeren -- porten skal gjelde som ved schedule"
+        type: boolean
+        default: false
       forget_round:
         description: "Glem denne runden først, for å vise at kjeden henter den på nytt"
         default: ""
@@ -47,7 +51,17 @@ jobs:
           LAB_DEPLOY_KEY: ${{ secrets.LAB_DEPLOY_KEY }}
         run: bash scripts/arkiver_til_lab.sh for-henting obos
 
+      - name: Sjekk om noe faktisk trenger henting (sparer OddsPapi-kvote)
+        id: gate
+        env:
+          # Hvert kall mot OddsPapi teller mot en kvote paa 250 i maaneden.
+          # Den eksterne planleggeren kaller hvert 10. minutt, saa uten denne
+          # porten ville kvoten vaert brukt opp paa tre dager.
+          FORCE_FETCH: ${{ github.event_name == 'workflow_dispatch' && !inputs.planlagt && 'true' || 'false' }}
+        run: python3 scripts/should_fetch.py obos
+
       - name: Hent og valider resultater
+        if: steps.gate.outputs.should_fetch == 'true'
         env:
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
         run: |
@@ -59,20 +73,20 @@ jobs:
       # kjører uansett. Modelltilpasningen trenger numpy og scipy, og
       # delingsbildet Pillow -- ingen av dem er forhåndsinstallert på runneren.
       - uses: actions/setup-python@v5
-        if: ${{ !inputs.dry_run }}
+        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         with:
           python-version: "3.12"
           cache: pip
 
       - name: Installer avhengigheter
-        if: ${{ !inputs.dry_run }}
+        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         run: python3 -m pip install --quiet -r requirements.txt
 
       # Odds for kommende kamper: blandes inn per kamp på siden. Gratis
       # oppslag; bare terminlisten koster ett kall, og den mellomlagres.
       # Feiler den, er det ikke kritisk -- siden faller tilbake til modellen.
       - name: Hent odds for kommende kamper
-        if: ${{ !inputs.dry_run }}
+        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         continue-on-error: true
         env:
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
@@ -80,7 +94,7 @@ jobs:
 
       - name: Arkiver nytt oddssnapshot (etter henting)
         id: ark_etter
-        if: ${{ !inputs.dry_run }}
+        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         continue-on-error: true
         env:
           LAB_DEPLOY_KEY: ${{ secrets.LAB_DEPLOY_KEY }}
@@ -108,14 +122,14 @@ jobs:
           exit 0
 
       - name: Bygg tabell og modell på nytt
-        if: ${{ !inputs.dry_run }}
+        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         run: python3 scripts/obos_build_data.py --from-matches
 
       # Rundens viktigste kamp, hva forrige kamp betydde, historikken, og
       # sannsynlighetene før avspark. Leses ut av selve siden i Chrome, så
       # tallene er de samme som tabellen viser. Samme skript som Eliteserien.
       - name: Rundens viktigste kamp, forrige kamp og historikk
-        if: ${{ !inputs.dry_run }}
+        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         continue-on-error: true  # skal aldri stoppe resultatene
         run: |
           npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pp" puppeteer-core@25.11.0
@@ -123,12 +137,12 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/snapshot_probs.js obos
 
       - name: Treffsikkerhetslogg (lagrede sannsynligheter mot resultat)
-        if: ${{ !inputs.dry_run }}
+        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         continue-on-error: true  # skal aldri stoppe resultatene
         run: python3 scripts/accuracy_log.py obos
 
       - name: Tegn delingsbildet på nytt
-        if: ${{ !inputs.dry_run }}
+        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         continue-on-error: true  # et feilet bilde skal ikke stoppe resultatene
         run: python3 scripts/make_og.py --obos
 
@@ -156,5 +170,5 @@ jobs:
           else
             git commit -m "OBOS: resultater oppdatert $(date -u +%Y-%m-%dT%H:%MZ)"
             git pull --rebase --autostash origin main || true
-            git push origin HEAD:main
+            bash scripts/push_med_rebase.sh
           fi

@@ -69,5 +69,5 @@ jobs:
           else
             git commit -m "Odds nær avspark $(date -u +%Y-%m-%dT%H:%MZ)"
             git pull --rebase --autostash origin main || true
-            git push origin HEAD:main
+            bash scripts/push_med_rebase.sh
           fi
