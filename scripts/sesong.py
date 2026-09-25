@@ -283,11 +283,16 @@ def skal_bytte(blokk, i_dag):
     return True, neste, f"det er {i_dag.year} og {neste} er klar"
 
 
-def bytt(rot, i_dag, utfor, log=print):
-    """Vurderer byttet for HVER liga for seg."""
+def bytt(rot, i_dag, utfor, log=print, ligaer=None):
+    """Vurderer byttet for HVER liga for seg.
+
+    ligaer begrenser til en enkelt liga. Kjeden for Eliteserien skal ikke
+    kunne bytte OBOS sin sesong, selv om registeret rommer begge -- ligaene
+    er uavhengige helt ut."""
     d = les(rot)
     endret = False
-    for liga in LIGAER:
+    alarm = []
+    for liga in (ligaer or LIGAER):
         blokk = d["ligaer"].get(liga)
         if blokk is None:
             log(f"{liga:12} ingen tilstand registrert")
@@ -295,6 +300,12 @@ def bytt(rot, i_dag, utfor, log=print):
         gjør, neste, hvorfor = skal_bytte(blokk, i_dag)
         merke = "BYTTER" if gjør else "står"
         log(f"{liga:12} {blokk['aktiv']} -> {neste}  [{merke}]  {hvorfor}")
+        # "Ikke tid ennaa" er normaltilstanden 364 dager i aaret. Men naar
+        # byttedatoen ER naadd og neste sesong likevel ikke er klar, er det en
+        # alarm: siden viser en ferdigspilt sesong inn i det nye aaret, og
+        # ingen ser det for noen ser tabellen.
+        if not gjør and i_dag.year > int(blokk["aktiv"]):
+            alarm.append(f"{liga}: {hvorfor}")
         if gjør and utfor:
             blokk["sesonger"].setdefault(blokk["aktiv"], {})["status"] = "frosset"
             blokk["sesonger"][neste]["status"] = "aktiv"
@@ -304,6 +315,14 @@ def bytt(rot, i_dag, utfor, log=print):
             log(f"{'':12} utført: {liga} viser nå {neste}, {blokk['sesonger']} ")
     if endret:
         skriv(rot, d)
+    if alarm:
+        log("")
+        for a in alarm:
+            log(f"ALARM: {a}")
+        log("Byttedatoen er passert, men sesongen er ikke klar. Siden viser "
+            "en ferdigspilt sesong. Kjør 'oppdag' med neste sesongs "
+            "terminliste, se TODO.md.")
+        return 1
     return 0
 
 
@@ -341,7 +360,14 @@ def main():
         i_dag = date.today()
         if "--dato" in sys.argv:
             i_dag = date.fromisoformat(sys.argv[sys.argv.index("--dato") + 1])
-        return bytt(rot, i_dag, "--utfor" in sys.argv)
+        ligaer = None
+        if "--liga" in sys.argv:
+            liga = sys.argv[sys.argv.index("--liga") + 1]
+            if liga not in LIGAER:
+                print(f"ukjent liga: {liga}", file=sys.stderr)
+                return 2
+            ligaer = [liga]
+        return bytt(rot, i_dag, "--utfor" in sys.argv, ligaer=ligaer)
     print(f"ukjent kommando {cmd!r}", file=sys.stderr)
     return 2
 

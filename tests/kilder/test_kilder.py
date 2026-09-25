@@ -1148,6 +1148,91 @@ sjekk("bytt nekter 31. desember", not _gjor, _hvorfor)
 _gjor, _neste, _hvorfor = _ses.skal_bytte(_ses.les(_sd4)["ligaer"]["obos"], date(2027, 1, 1))
 sjekk("bytt godtar 1. januar når sesongen er klar", _gjor, _hvorfor)
 
+print("\n=== bytt --utfor i det daglige vedlikeholdet ===")
+# data/sesonger.json er autoriteten datovakten leser, saa sesongskiftet kan
+# ikke ligge som kode ingen kjorer. Steget er en no-op 364 dager i aaret.
+_sd5 = Path(_tf2.mkdtemp())
+(_sd5 / "data").mkdir()
+for _l in ("eliteserien", "obos"):
+    (_sd5 / _l / "data").mkdir(parents=True)
+    (_sd5 / _l / "data" / "matches.json").write_text(
+        _json.dumps([{"date": "2026-04-01", "home": "A", "away": "B"}]), encoding="utf-8")
+    (_sd5 / _l / "data" / "fixtures.json").write_text("[]", encoding="utf-8")
+    _ses.init(_sd5, _l, "2026", log=lambda _s: None)
+
+
+def _reg():
+    return _ses.les(_sd5)["ligaer"]
+
+
+def _lag_2027(liga, status="klar"):
+    d = _ses.les(_sd5)
+    d["ligaer"][liga]["sesonger"]["2027"] = {"status": status, "lag": []}
+    _ses.skriv(_sd5, d)
+
+
+# 1) Vanlig dag i 2026: ingenting skjer
+_for = _json.dumps(_reg(), sort_keys=True)
+_lg5 = []
+sjekk("vanlig dag: exitkode 0",
+      _ses.bytt(_sd5, date(2026, 9, 25), utfor=True, log=_lg5.append, ligaer=["eliteserien"]) == 0)
+sjekk("og registeret er uendret", _json.dumps(_reg(), sort_keys=True) == _for)
+sjekk("og begrunnelsen står i loggen",
+      any("aktiv ut kalenderåret" in m for m in _lg5), str(_lg5))
+
+# 2) 1. januar med 2027 oppdaget OG validert -> bytter
+_lag_2027("eliteserien", "klar")
+_lg5 = []
+_ses.bytt(_sd5, date(2027, 1, 1), utfor=True, log=_lg5.append, ligaer=["eliteserien"])
+sjekk("1. januar med validert 2027: aktiv blir 2027",
+      _reg()["eliteserien"]["aktiv"] == "2027")
+sjekk("og 2026 merkes frosset",
+      _reg()["eliteserien"]["sesonger"]["2026"]["status"] == "frosset")
+
+# 3) LIGAENE ER UAVHENGIGE: OBOS er urort
+sjekk("OBOS står fortsatt på 2026", _reg()["obos"]["aktiv"] == "2026")
+sjekk("og har ingen 2027 registrert", "2027" not in _reg()["obos"]["sesonger"])
+
+# 4) 1. januar UTEN validert 2027 -> staar, ALARM, og exit 1
+_lag_2027("obos", "oppdaget")        # oppdaget, men ikke validert
+_lg5 = []
+_kode5 = _ses.bytt(_sd5, date(2027, 1, 1), utfor=True, log=_lg5.append, ligaer=["obos"])
+sjekk("1. januar uten validert 2027: OBOS blir stående på 2026",
+      _reg()["obos"]["aktiv"] == "2026")
+sjekk("og det varsles tydelig",
+      any("VENTER" in m for m in _lg5), str(_lg5))
+# En passert byttedato med en sesong som ikke er klar er IKKE en vanlig
+# no-op. Da skal kjoringen ende rodt, ikke stole paa at datovakten kanskje
+# oppdager det senere.
+sjekk("og exitkoden er 1, så kjøringen ender rødt", _kode5 == 1)
+sjekk("med ALARM i loggen", any("ALARM" in m for m in _lg5), str(_lg5))
+
+# Til sammenligning: samme tilstand FØR byttedatoen er en ren no-op
+sjekk("men samme tilstand i desember gir exit 0",
+      _ses.bytt(_sd5, date(2026, 12, 31), utfor=True, log=lambda _s: None,
+                ligaer=["obos"]) == 0)
+
+# 4b) Eliteserien mangler 2027 mens OBOS er klar
+_d5 = _ses.les(_sd5)
+_d5["ligaer"]["eliteserien"]["aktiv"] = "2026"
+_d5["ligaer"]["eliteserien"]["sesonger"].pop("2027", None)
+_ses.skriv(_sd5, _d5)
+_lag_2027("obos", "klar")
+_lgE = []
+_kodeE = _ses.bytt(_sd5, date(2027, 1, 1), utfor=True, log=_lgE.append,
+                   ligaer=["eliteserien"])
+sjekk("Eliteserien mangler 2027: står, og varsler med exit 1",
+      _kodeE == 1 and _reg()["eliteserien"]["aktiv"] == "2026",
+      f"kode={_kodeE} aktiv={_reg()['eliteserien']['aktiv']}")
+_kodeO = _ses.bytt(_sd5, date(2027, 1, 1), utfor=True, log=lambda _s: None,
+                   ligaer=["obos"])
+sjekk("mens OBOS bytter uavhengig, med exit 0",
+      _kodeO == 0 and _reg()["obos"]["aktiv"] == "2027",
+      f"kode={_kodeO} aktiv={_reg()['obos']['aktiv']}")
+sjekk("og Eliteserien er fortsatt urørt", _reg()["eliteserien"]["aktiv"] == "2026")
+
+
+
 print("\n=== Bekreftet avvik overlever midnatt ===")
 # Forlopet: avviket bekreftes klokka 23. Forste kjoring etter midnatt maa
 # ikke nedgradere det bare fordi datoen har skiftet.

@@ -174,6 +174,26 @@ jobs:
           && steps.revisjon.outcome == 'success' 
         run: python3 scripts/merk_daglig.py obos
 
+      - name: Sesongskifte (obos) -- bytter bare 1. januar
+        id: sesongskifte
+        continue-on-error: true
+        # data/sesonger.json er autoriteten datovakten leser. Da kan
+        # sesongskiftet ikke ligge som kode ingen kjorer.
+        #
+        # Dette er en no-op 364 dager i aaret: skal_bytte() returnerer False
+        # med begrunnelse, ingenting skrives, og exitkoden er 0. Fra 1. januar
+        # bytter den bare hvis neste sesong er validert (status "klar").
+        # --liga: Eliteserie-kjeden skal ikke kunne bytte OBOS sin sesong.
+        #
+        # Er byttedatoen passert UTEN at neste sesong er klar, gir den
+        # exit 1. Da fanges det av steget nederst, etter at lagringen har
+        # rukket aa kjore.
+        #
+        # OPPDAGELSEN av neste sesongs terminliste er IKKE med her -- se
+        # TODO.md, frist 1. november.
+        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
+        run: python3 scripts/sesong.py . bytt --liga obos --utfor
+
       - name: Tegn delingsbildet på nytt
         if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         continue-on-error: true  # et feilet bilde skal ikke stoppe resultatene
@@ -205,3 +225,12 @@ jobs:
             git pull --rebase --autostash origin main || true
             bash scripts/push_med_rebase.sh
           fi
+
+      - name: Gjør kjøringen rød hvis sesongskiftet varslet
+        # Steget over har continue-on-error, saa resten av kjeden -- inkludert
+        # lagringen -- rekker aa fullfore. Men en passert byttedato med en
+        # sesong som ikke er klar skal ikke ende gront.
+        if: always() && steps.sesongskifte.outcome == 'failure'
+        run: |
+          echo "::error title=Sesongskiftet er ikke klart::Byttedatoen er passert, men neste sesong er ikke oppdaget og validert. Siden viser en ferdigspilt sesong. Se loggen for steget «Sesongskifte»."
+          exit 1
