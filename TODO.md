@@ -13,19 +13,57 @@ Sandkassen kunne ikke teste dette: alle sidene ble hentet mellom runder, så
 vi har aldri sett hvordan en pågående kamp ser ut i markupen. Det som er
 bygget, er derfor et vern mot det ukjente, ikke mot noe vi har observert.
 
-Sjekk konkret, mens kampen spilles:
-
-1. Hvilken CSS-klasse ligasiden gir raden. Kjenner vi den ikke igjen, skal
-   kampen regnes som ikke spilt og `ntf_source` skal logge «ukjent
-   radstatus». Noter klassen og legg den inn i `KJENTE_KLASSER`.
-2. At stillingen underveis ikke havner i `matches.json`.
-3. Hva fotball.no viser. Der finnes ingen statusklasse, så vernet er
-   tidsgrensen `FERDIG_ETTER_MIN = 150` i `nff_source.py`.
-4. At sluttresultatet kommer riktig inn når kampen er ferdig.
+Ingen skal sitte og følge kampen. Arkiveringsjobben
+(`.github/workflows/arkiver-kildehtml.yml`) henter NTF og NFF hvert 20.
+minutt i kampvinduet 18.30–23.00 og legger gzippet HTML i
+`kilde-arkiv/obos/2026-10-02/` i lab-repoet. Det er det arkivet vi leser
+etterpå.
 
 Fristen på tre timer (`RESULTAT_FRIST_TIMER` i `update_data.py`) gjør
-kjøringen rød hvis et resultat mangler. Første gang den slår ut kan den
-komme av at vernene er for strenge, ikke av at kilden er nede.
+kjøringen rød hvis et resultat mangler. Slår den ut denne kvelden, er det et
+ønsket signal: produksjonen har valgt den sikre retningen, og live-statusen
+mangler sannsynligvis i `KJENTE_KLASSER`.
+
+## 3.–8. oktober 2026: les arkivet og legg inn de observerte statusene
+
+FRIST: alt skal være testet og pushet FØR 9. oktober.
+
+Les `kilde-arkiv/obos/2026-10-02/` i lab-repoet og finn ut hva kildene
+FAKTISK bruker:
+
+1. Hvilken status eller CSS-klasse NTF gir en **pågående** kamp, og hvilken
+   den gir en **ferdig** kamp.
+2. Hva NFF viser i resultatkolonnen mens kampen pågår.
+
+Legg de observerte statusene inn i `KJENTE_KLASSER` i `ntf_source.py` der
+det er nødvendig, og skriv testene med den arkiverte HTML-en som testdata —
+ikke med oppdiktet markup slik vi måtte gjøre i september.
+
+Det kritiske skillet: klassen for en **pågående** kamp skal gjenkjennes som
+pågående, aldri som ferdig. Å legge den i `KJENTE_KLASSER` fjerner bare
+«ukjent radstatus»-advarselen; den skal fortsatt ikke gi resultat. Bare
+`FERDIG_KLASSE` gir resultat. Test eksplisitt, mot den arkiverte HTML-en, at
+en pågående kamp med stilling på tavla ikke gir resultat i `matches.json`.
+
+IKKE gjett på live-statusene før 2. oktober. Bruk det arkivet viser.
+
+Kjør hele testpakken — kildetester, failsafe, regresjon — og push før
+9. oktober.
+
+## 9. oktober 2026: første reelle live-test av Eliteserie-kjeden
+
+OBOS 2. oktober gir oss markupen, men ikke en live-test av produksjonen:
+`obos-results.yml` kjører bare 07.17, altså aldri mens en kveldskamp
+spilles.
+
+Eliteserien er annerledes, og verre. `update-data.yml` kjører hvert 20.
+minutt, og porten (`should_fetch.py`) slipper gjennom 105 minutter etter
+avspark. For en kamp som starter 19.00 er det rundt 20.45 — omtrent på
+sluttsignalet. Kjeden kan altså møte en kamp som fortsatt pågår, i
+overtid eller med forsinket start, og det er nettopp det øyeblikket
+vernene er bygget for.
+
+Runde 23 åpner 9. oktober 19.00 med Brann mot Viking.
 
 ## Når den nye kjeden har stått stabilt: fjern returveien
 
