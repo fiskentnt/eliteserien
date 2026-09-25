@@ -668,6 +668,30 @@ sjekk("pågående kamp: INGEN av de offisielle kildene gir resultat", not _off_l
 _p, _c, _v = _R.decide(_off_live, {}, {}, _sched, {}, _naa2)
 sjekk("og den kan derfor ikke publiseres som sluttresultat", not _p, str(_p))
 
+print("\n=== Revisjonens dato-sperre maa ikke laase 20-timersklokka ===")
+# Funnet i en ekte Actions-kjoring 25. sep 2026: revisjonen hadde alt kjort
+# den dagen, saa den ble hoppet over og gjorde_daglig ble False. Da ble
+# siste_ok aldri satt, og porten ville proevd hver time resten av dagen.
+import update_data as _ud
+import tempfile as _tf2
+
+_sti = Path(_tf2.mkdtemp()) / "audit_state.json"
+_ekte = _ud.AUDIT_STATE_PATH
+_ud.AUDIT_STATE_PATH = _sti
+_naa3 = _dt.now(_tz.utc)
+_i_dag = _naa3.astimezone(_ud.OSLO).strftime("%Y-%m-%d")
+
+_sti.write_text(_json.dumps({"checked_date": _i_dag}), encoding="utf-8")
+sjekk("revisjon alt gjort i dag: regnes som UTFØRT, ikke som hoppet over",
+      _ud.run_daily_audit([], [], _naa3, lambda _s: None) is True)
+
+_sti.write_text(_json.dumps({"checked_date": "2020-01-01"}), encoding="utf-8")
+sjekk("revisjon ikke gjort i dag: kjører og regnes som utført",
+      _ud.run_daily_audit([], [], _naa3, lambda _s: None) is True)
+sjekk("og datoen er oppdatert",
+      _json.loads(_sti.read_text(encoding="utf-8"))["checked_date"] == _i_dag)
+_ud.AUDIT_STATE_PATH = _ekte
+
 print(f"\n{antall[0] - len(feil)} av {antall[0]} tester gikk gjennom.")
 if feil:
     print("FEILET: " + ", ".join(feil))

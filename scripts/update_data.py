@@ -206,7 +206,13 @@ def run_daily_audit(matches_out, ffk_rows, now, log):
     today = now.astimezone(OSLO).strftime("%Y-%m-%d")
     state = json.loads(AUDIT_STATE_PATH.read_text(encoding="utf-8")) if AUDIT_STATE_PATH.exists() else {}
     if state.get("checked_date") == today:
-        return False   # allerede gjort i dag -- da er dette ikke en daglig kjoring
+        # Alt gjort i dag. Revisjonen har sin egen DATO-sperre, mens porten
+        # bruker en 20-TIMERS klokke. Returnerte vi False her, ville
+        # siste_ok aldri blitt satt paa en dag der revisjonen alt var kjort,
+        # og porten ville proevd hver time resten av dagen. De to
+        # mekanismene maa si det samme: vedlikeholdet ER ajour.
+        log("Daglig kontroll: alt gjort i dag -- hopper over.")
+        return True
     log(f"--- Daglig kontroll: {len(matches_out)} spilte kamper mot ffksupporter.net ---")
     errors, warnings = audit_against_ffk(matches_out, ffk_rows, now)
     AUDIT_STATE_PATH.write_text(json.dumps(
