@@ -112,10 +112,13 @@ export default {
   // uten nøkkel kunne hvem som helst fylt Actions med kjøringer. Portene
   // hindrer at det gjør skade, men ikke at det lager støy og brenner
   // kjøretid. Derfor kreves en egen hemmelighet, UTLOSER_NOKKEL, i tillegg
-  // til GITHUB_TOKEN.
+  // til GITHUB_TOKEN -- to ulike hemmeligheter, ingen av dem i koden.
+  //
+  // Nøkkelen sendes i headeren X-Planlegger-Nokkel, ikke i URL-en.
   //
   // Er nøkkelen ikke satt, er manuell utløsning AV. Den skal ikke kunne
-  // omgås ved å la være å konfigurere den.
+  // omgås ved å la være å konfigurere den. scheduled() bryr seg ikke om
+  // denne nøkkelen -- den planlagte kjøringen skal virke uansett.
   async fetch(request, env) {
     const url = new URL(request.url);
     if (url.searchParams.get("kjor") !== "1") {
@@ -124,18 +127,25 @@ export default {
       });
     }
 
+    // Nøkkelen tas BARE fra en header, aldri fra query-strengen. En
+    // query-streng havner i Cloudflare-loggen, i referrer-headeren til alt
+    // siden laster, og i nettleserhistorikken -- en header gjør ikke det.
     const fasit = env.UTLOSER_NOKKEL;
-    if (!fasit) {
-      return new Response("Manuell utløsning er av: UTLOSER_NOKKEL er ikke satt.\n", {
-        status: 503,
+    const gitt = request.headers.get("x-planlegger-nokkel") || "";
+
+    // ETT svar for alle avslag: manglende header, feil nøkkel og manglende
+    // konfigurasjon ser likt ut utenfra. Ellers ville svaret fortalt en som
+    // prøver seg hvor langt hen kom. 404 framfor 401, slik at det heller
+    // ikke bekreftes at endepunktet finnes.
+    if (!fasit || !likeStrenger(gitt, fasit)) {
+      if (!fasit) {
+        // Bare i loggen, aldri i svaret -- og aldri nøkkelen selv.
+        console.log("Manuell utløsning avvist: UTLOSER_NOKKEL er ikke satt.");
+      }
+      return new Response("Ikke funnet.\n", {
+        status: 404,
         headers: { "content-type": "text/plain; charset=utf-8" },
       });
-    }
-    const gitt = request.headers.get("x-planlegger-nokkel") || url.searchParams.get("nokkel") || "";
-    if (!likeStrenger(gitt, fasit)) {
-      // 404, ikke 401: et galt forsøk skal ikke få bekreftet at endepunktet
-      // finnes i det hele tatt.
-      return new Response("Ikke funnet.\n", { status: 404 });
     }
 
     const r = await kjor(env);

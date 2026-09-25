@@ -32,55 +32,94 @@ tester.
 
 ## Oppsett
 
-1. **Token.** Lag en fine-grained PAT på github.com:
-   - Resource owner: `fiskentnt`
-   - Repository access: **Only select repositories** → `fiskentnt/eliteserien`
-   - Permissions → Repository → **Actions: Read and write**. Ingenting annet.
-   - Noter utløpsdatoen. Den skal inn i `TODO.md`, ellers stopper
-     planleggeren stille den dagen den går ut.
+Alt under gjør du selv. Ingen av hemmelighetene skal limes inn i en chat, i
+koden, i `wrangler.toml` eller i git.
 
-2. **Lag en nøkkel for manuell utløsning.** Adressen til en
-   Cloudflare-worker er lett å gjette, og uten nøkkel kunne hvem som helst
-   fylt Actions med kjøringer. Portene hindrer at det gjør skade, men ikke
-   at det lager støy. Lag en tilfeldig streng:
+### 1. Fine-grained GitHub-token
 
-       python3 -c "import secrets; print(secrets.token_urlsafe(32))"
+På github.com: **Settings → Developer settings → Personal access tokens →
+Fine-grained tokens → Generate new token**.
 
-3. **Legg begge inn som hemmeligheter:**
+| Felt | Verdi |
+|---|---|
+| Resource owner | `fiskentnt` |
+| Expiration | sett en dato, og skriv den i `TODO.md` |
+| Repository access | **Only select repositories** → `fiskentnt/eliteserien` |
+| Permissions → Repository → **Actions** | **Read and write** |
+| Alt annet | **No access** |
 
-       cd planlegger
-       npx wrangler secret put GITHUB_TOKEN     # GitHub-tokenen fra steg 1
-       npx wrangler secret put UTLOSER_NOKKEL   # strengen fra steg 2
+`Actions: Read and write` er det minste som finnes for `workflow_dispatch` —
+GitHub har ingen egen «bare dispatch»-rettighet. Ingen `contents`, ingen
+`metadata` utover det GitHub legger til selv.
 
-   Ingen av dem skal i `wrangler.toml` eller i repoet.
+### 2. Cloudflare-konto
 
-   Settes ikke `UTLOSER_NOKKEL`, er manuell utløsning helt av. Den
-   planlagte kjøringen hvert tiende minutt virker uansett.
+Gratis konto på dash.cloudflare.com hvis du ikke har en. Ingen kortopplysninger
+trengs for Workers på gratisnivået.
 
-4. **Publiser:**
+### 3. Nøkkel for manuell utløsning
 
-       npx wrangler deploy
+Lag en tilfeldig streng og legg den i en fil bare du kan lese:
 
-5. **Finn adressen og sjekk at den svarer.** `wrangler deploy` skriver ut
-   adressen til slutt, på formen
-   `https://tabellkalkulator-planlegger.<ditt-subdomene>.workers.dev`. Den
-   står også under Workers & Pages i Cloudflare-panelet.
+    umask 077
+    python3 -c "import secrets; print(secrets.token_urlsafe(32))" > ~/.tabellkalkulator-utloser
+    chmod 600 ~/.tabellkalkulator-utloser
 
-   Åpner du den i nettleseren, svarer den bare «Ingenting å se her» — med
-   vilje. For å utløse en runde med én gang:
+Filen brukes av curl-kommandoen nederst, så nøkkelen aldri skrives i
+terminalen.
 
-       curl "https://<adressen>/?kjor=1&nokkel=<UTLOSER_NOKKEL>"
+### 4. Logg inn og legg inn hemmelighetene
 
-   Svaret er en liste med én linje per workflow og `"ok": true` når GitHub
-   godtok utløsningen. Uten riktig nøkkel svarer den 404, slik at et galt
-   forsøk ikke får bekreftet at endepunktet finnes.
+    cd planlegger
+    npx wrangler login
 
-6. **Kontroller i Actions** at kjøringene dukker opp som `workflow_dispatch`,
-   og at portene stopper dem når det ikke er noe å gjøre.
+    npx wrangler secret put GITHUB_TOKEN
+    # limer du inn tokenen fra steg 1 når den spør
+
+    npx wrangler secret put UTLOSER_NOKKEL
+    # lim inn innholdet i ~/.tabellkalkulator-utloser
+
+`wrangler secret put` spør om verdien og leser den uten å vise den. Gi den
+aldri som argument på kommandolinjen — da havner den i terminalhistorikken
+og i prosesslisten mens den kjører.
+
+### 5. Publiser
+
+    npx wrangler deploy
+
+Adressen skrives ut til slutt, på formen
+`https://tabellkalkulator-planlegger.<ditt-subdomene>.workers.dev`. Den står
+også under **Workers & Pages** i Cloudflare-panelet.
+
+### 6. Kontroller at den virker
+
+Åpner du adressen i nettleseren, svarer den bare «Ingenting å se her». Det er
+med vilje.
+
+Manuell utløsning krever nøkkelen i headeren `X-Planlegger-Nokkel`:
+
+    ADR=https://tabellkalkulator-planlegger.<ditt-subdomene>.workers.dev
+    curl -sS -X POST "$ADR/?kjor=1" \
+      -H "X-Planlegger-Nokkel: $(cat ~/.tabellkalkulator-utloser)"
+
+Nøkkelen leses fra filen, så den står ikke i kommandoen. Vil du heller skrive
+den inn for hånd, uten at den vises eller lagres:
+
+    read -rs -p "Nøkkel: " N; echo
+    curl -sS -X POST "$ADR/?kjor=1" -H "X-Planlegger-Nokkel: $N"; unset N
+
+Svaret er en linje per workflow med `"ok": true` når GitHub godtok
+utløsningen. Alt annet enn riktig nøkkel gir `404 Ikke funnet` — det samme
+svaret enten headeren manglet, var feil, eller hemmeligheten ikke er satt.
+Nøkkelen sendes aldri i URL-en: en query-streng havner i Cloudflare-loggen,
+i referrer-headeren og i nettleserhistorikken.
+
+Til slutt: sjekk i Actions at kjøringene dukker opp som `workflow_dispatch`,
+og at portene stopper dem når det ikke er noe å gjøre.
 
 ## Når tokenen går ut
 
-Planleggeren slutter å virke uten å si fra — dispatch svarer 401 og
+Planleggeren slutter å virke uten å si fra -- dispatch svarer 401 og
 `scheduled` logger det, men ingen ser Cloudflare-loggen til daglig. Det
 synlige tegnet er at kjøringene faller tilbake til GitHub sin egen kadens,
 altså rundt fem i døgnet. Derfor står utløpsdatoen i `TODO.md`.

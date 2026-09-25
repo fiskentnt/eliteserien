@@ -10,5 +10,11 @@ crons = ["*/10 * * * *"]
 [vars]
 GREN = "main"
 
-# GITHUB_TOKEN settes som hemmelighet, ALDRI i denne filen:
-#   npx wrangler secret put GITHUB_TOKEN
+# TO hemmeligheter, begge lagt inn interaktivt og ALDRI i denne filen, i
+# koden eller i git:
+#
+#   npx wrangler secret put GITHUB_TOKEN      fine-grained PAT
+#   npx wrangler secret put UTLOSER_NOKKEL    nokkel for manuell utlosning
+#
+# Kommandoen spor om verdien og leser den uten aa vise den, saa den havner
+# verken i terminalhistorikken eller i prosesslisten.
