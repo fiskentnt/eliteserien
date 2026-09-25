@@ -167,17 +167,23 @@ def finished_without_result(fixtures, prev, names, teams):
 def decide(off, op_scores, wiki, sched, prev, now):
     """Avgjør hva som kan publiseres.
 
-    De OFFISIELLE kildene (NTF og NFF) er allerede to uavhengige kilder som
-    har blitt enige i reconcile() for resultatet kommer hit. Har de det,
-    publiseres det med en gang:
+LIGASIDEN alene kan publisere. Den er den offisielle kilden, og et
+    resultat der er ikke et gjetningsresultat -- det staar bare naar kampen
+    er eksplisitt merket ferdigspilt OG det har gaatt over 110 minutter siden
+    avspark (ntf_source).
 
-      offisielt, og Wikipedia enig eller mangler  -> publiser
-      offisielt, men Wikipedia uenig              -> hold tilbake, konflikt
+      ligasiden, og Wikipedia enig eller mangler  -> publiser
+      ligasiden, men Wikipedia uenig              -> hold tilbake, konflikt
 
     Wikipedia er altsaa en EKSTRA kontroll, ikke et krav. Wikipedia-rutenettet
     oppdateres av frivillige og ligger ofte timer etter. Krevde vi at det var
     med, ville et ferskt resultat blitt staaende i 24 timer bare fordi ingen
     hadde rukket aa redigere siden.
+
+    fotball.no er ikke med i denne avgjorelsen lenger (robots.txt: Disallow:
+    / for alle andre enn sokemotorene). Den uavhengige kontrollen mot
+    fotball.no skjer i det daglige vedlikeholdet, og fanger dermed en feil i
+    etterkant framfor aa hindre publisering i oyeblikket.
 
     For de andre kildene gjelder den gamle regelen, der to kilder trengs:
 
@@ -225,37 +231,32 @@ def decide(off, op_scores, wiki, sched, prev, now):
 
 # ------------------------------------------------- offisielle ligakilder
 def offisielle_resultater():
-    """Resultater fra de offisielle ligakildene. Gratis, ingen kvote.
+    """Resultater fra den offisielle ligasiden. Gratis, ingen kvote.
 
     Etter kildebyttet er disse hovedkilden ogsaa for OBOS. De gjor
     /v4/scores unodvendig i normal drift: et tellende kall skal ikke brukes
     paa et resultat vi allerede har gratis fra to offisielle kilder.
 
-    NTF (obos-ligaen.no) gir bare resultat for rader som er eksplisitt merket
-    ferdigspilt; NFF (fotball.no) krever at det har gaatt 150 minutter siden
-    avspark. En paagaaende kamp gir derfor ingen verdi her."""
+    fotball.no er IKKE med her: robots.txt der sier Disallow: / for alle
+    andre enn sokemotorene, og denne funksjonen kjorer i hver resultatkjoring.
+    Den brukes bare i det daglige vedlikeholdet, hoyst en gang i dognet.
+
+    Ligasiden gir bare resultat for rader som er eksplisitt merket
+    ferdigspilt OG der det har gaatt lang nok tid siden avspark (se
+    ntf_source.FERDIG_ETTER_MIN). En paagaaende kamp gir derfor ingenting."""
     try:
         import ntf_source
-        import nff_source
-        from reconcile_ny import reconcile
     except Exception as e:
-        log(f"  offisielle kilder utilgjengelige ({type(e).__name__}: {e})")
+        log(f"  ligasiden utilgjengelig ({type(e).__name__}: {e})")
         return {}
     try:
         ntf = ntf_source.fetch_all("obos", log=lambda _s: None)
     except Exception as e:
         log(f"  ligasiden feilet ({e})")
         return {}
-    try:
-        nff = nff_source.fetch_all("obos", log=lambda _s: None)
-    except Exception as e:
-        log(f"  fotball.no feilet ({e}) -- fortsetter uten kontroll")
-        nff = []
-    ut = {}
-    for r in reconcile(ntf, nff, log=lambda _s: None):
-        if r.get("hg") is not None:
-            ut[(r["home"], r["away"])] = (r["hg"], r["ag"])
-    log(f"  offisielle kilder: {len(ut)} ferdigspilte kamper")
+    ut = {(r["home"], r["away"]): (r["hg"], r["ag"])
+          for r in ntf if r.get("hg") is not None}
+    log(f"  ligasiden: {len(ut)} ferdigspilte kamper")
     return ut
 
 

@@ -33,6 +33,7 @@ sin status. At 2027 er klar i den ene skal aldri blokkere eller framskynde
 den andre. All tilstand ligger under ligaer.<liga>, aldri på rota.
 
 Bruk:
+    python3 sesong.py <rot> init <liga> <sesong>   (én gang, første gang)
     python3 sesong.py <rot> status
     python3 sesong.py <rot> oppdag <liga> <sesong> <terminliste.json>
     python3 sesong.py <rot> bytt [--dato ÅÅÅÅ-MM-DD] [--utfor]
@@ -67,6 +68,92 @@ def skriv(rot, d):
     p = reg_sti(rot)
     p.parent.mkdir(parents=True, exist_ok=True)
     p.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def init(rot, liga, sesong, log=print):
+    """Setter den FORSTE aktive sesongen for en liga. Administrativ handling.
+
+    Registeret har ingen mekanisme for dette fra for: oppdag() registrerer
+    bare NESTE sesong, og bytt() returnerer tidlig naar aktiv mangler. Den
+    forste verdien maa derfor settes en gang, av et menneske.
+
+    Aarstallet oppgis EKSPLISITT. Vi utleder det ikke av kampdataene -- et
+    utledet aarstall blir feil nettopp ved et sesongskifte, der dataene
+    fortsatt er fjoraarets mens terminlisten er ny. Kampdataene brukes bare
+    til aa KONTROLLERE at det oppgitte aarstallet er rimelig.
+
+    Bruker les(), liga_blokk() og skriv() som alt annet. Ingen ny state-fil.
+    """
+    from ligaer import oppsett
+    sesong = str(sesong)
+    if not (sesong.isdigit() and len(sesong) == 4):
+        log(f"FEIL: {sesong!r} er ikke et årstall.")
+        return 2
+
+    d = les(rot)
+    blokk = liga_blokk(d, liga)
+    if blokk.get("aktiv"):
+        log(f"NEKTER: {liga} har allerede aktiv sesong {blokk['aktiv']}. "
+            f"init setter bare den første. Et ordinært sesongskifte går "
+            f"gjennom 'bytt', som krever validert terminliste og 1. januar.")
+        return 1
+
+    # Kontroll mot kampdataene -- kontroll, ikke autoritet.
+    try:
+        m = json.loads((Path(rot) / oppsett(liga)["data"] / "matches.json")
+                       .read_text(encoding="utf-8"))
+        aar = sorted({r["date"][:4] for r in m if r.get("date")})
+        if aar and sesong not in aar:
+            log(f"FEIL: oppgitt sesong {sesong}, men matches.json for {liga} "
+                f"inneholder bare {', '.join(aar)}. Sjekk årstallet.")
+            return 2
+        if aar:
+            log(f"  kontroll: matches.json for {liga} har kamper i {', '.join(aar)}")
+    except Exception as e:
+        log(f"  kunne ikke kontrollere mot matches.json ({type(e).__name__}) "
+            f"-- fortsetter, kontrollen er ikke et krav.")
+
+    blokk["aktiv"] = sesong
+    blokk["sesonger"].setdefault(sesong, {})["status"] = "aktiv"
+    blokk["initiert_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+    skriv(rot, d)
+    log(f"{liga}: aktiv sesong satt til {sesong}.")
+    return 0
+
+
+def aktiv_sesong(rot, liga, log=lambda s: None):
+    """Sesongen kjeden skal kjore, eller None.
+
+    data/sesonger.json er ENESTE autoritet. Den skrives bare av dette
+    skriptet og leses ogsaa av frys_sesong.py.
+
+    Det finnes med vilje INGEN reserve. Aa utlede sesongen fra matches.json
+    ville vaert aa gjette -- og gjettet blir feil nettopp ved et
+    sesongskifte, der dataene fortsatt er fjoraarets mens terminlisten er ny.
+    Det er da datovakten trengs mest, og det er da et feil gjett ville slaatt
+    den ut eller fatt den til aa skrive fjoraarets datoer inn i den nye
+    sesongen.
+
+    Mangler autoriteten, skal kalleren staa over vakten, kjore resten som
+    normalt, og la kjoringen feile synlig til slutt."""
+    p = reg_sti(rot)
+    if not p.exists():
+        log(f"INGEN SESONGAUTORITET: {p.relative_to(Path(rot))} finnes ikke. "
+            f"Datovakten står over -- den skal ikke gjette.")
+        return None
+    try:
+        d = json.loads(p.read_text(encoding="utf-8"))
+    except Exception as e:
+        log(f"INGEN SESONGAUTORITET: klarte ikke lese data/sesonger.json "
+            f"({type(e).__name__}: {e}). Datovakten står over.")
+        return None
+    s = d.get("ligaer", {}).get(liga, {}).get("aktiv")
+    if not s:
+        log(f"INGEN SESONGAUTORITET: data/sesonger.json har ingen aktiv "
+            f"sesong for {liga}. Datovakten står over.")
+        return None
+    log(f"Aktiv sesong for {liga}: {s} (data/sesonger.json)")
+    return str(s)
 
 
 def liga_blokk(d, liga):
@@ -241,6 +328,11 @@ def main():
     rot, cmd = sys.argv[1], sys.argv[2]
     if cmd == "status":
         return status(rot)
+    if cmd == "init":
+        if len(sys.argv) < 5:
+            print("bruk: sesong.py <rot> init <liga> <sesong>", file=sys.stderr)
+            return 2
+        return init(rot, sys.argv[3], sys.argv[4])
     if cmd == "oppdag":
         liga, sesong, fil = sys.argv[3], sys.argv[4], sys.argv[5]
         rader = json.loads(Path(fil).read_text(encoding="utf-8"))

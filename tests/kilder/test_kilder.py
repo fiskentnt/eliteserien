@@ -10,6 +10,7 @@ i alle 22. Se verifiser_avvik.py og testdata/verifisert_avvik.json.
 import json
 import sys
 from datetime import date, datetime as _dt, timezone as _tz
+from zoneinfo import ZoneInfo
 from pathlib import Path
 
 ROT = Path(__file__).resolve().parent.parent.parent
@@ -370,9 +371,19 @@ sjekk("ukjent radstatus: regnes som ikke spilt", rader[0]["hg"] is None)
 sjekk("ukjent radstatus: det logges", any("ukjent radstatus" in m for m in logg), str(logg))
 
 FERDIG = UNDERVEIS.replace("schedule__match--live", "schedule__match--played")
-rader = ntf_source.parse_side(FERDIG, "resultater", "eliteserien", log=lambda s: None)
-sjekk("eksplisitt ferdigspilt: resultatet tas inn",
+# Kampen i testdataene er 9. oktober 19:00. Klokkeregelen krever at det har
+# gaatt 110 minutter, saa "naa" maa settes -- ellers ligger avsparket i
+# framtiden og raden avvises med rette.
+_etterpaa = _dt(2026, 10, 9, 21, 30, tzinfo=ZoneInfo("Europe/Oslo"))
+rader = ntf_source.parse_side(FERDIG, "resultater", "eliteserien",
+                              naa=_etterpaa, log=lambda s: None)
+sjekk("eksplisitt ferdigspilt OG lenge nok etter avspark: resultatet tas inn",
       (rader[0]["hg"], rader[0]["ag"]) == (1, 0), str(rader[0]))
+rader = ntf_source.parse_side(FERDIG, "resultater", "eliteserien",
+                              naa=_dt(2026, 10, 9, 20, 0, tzinfo=ZoneInfo("Europe/Oslo")),
+                              log=lambda s: None)
+sjekk("men merket ferdig bare 60 min etter avspark: ikke resultat",
+      rader[0]["hg"] is None, str(rader[0]))
 
 from datetime import datetime
 from zoneinfo import ZoneInfo
@@ -770,6 +781,391 @@ sjekk("gårsdagens avvik holder ikke stempelet rødt", _status()["ok"] is True)
 _ud.write_status(ok=False, now=_naa4, error="noe annet gikk galt")
 sjekk("en vanlig feil gjør det fortsatt rødt", _status()["ok"] is False)
 _ud.AUDIT_STATE_PATH = _ekte
+
+print("\n=== Klokkeregelen paa ligasiden (110 min), ogsaa uten radklasse ===")
+# Da fotball.no falt ut av hver kjoring, mistet vernet mot paagaaende kamper
+# ett av to ben. Klokken er det som erstatter det -- og den koster ingen
+# ekstra henting.
+_MAL = '''<tr class="{klasse}">
+ <td class="schedule__match__item schedule__match__item--round"><span>#24</span></td>
+ <td class="schedule__match__item schedule__match__item--teams">
+   Ranheim TF - <span class="results__team--opponent">Egersund</span></td>
+ <td class="schedule__match__item schedule__match__item--result">2 - 1</td>
+ <td class="schedule__match__item schedule__match__item--date">02.10.<span
+   class="schedule__match__item--date__year">2026</span> 19:00</td></tr>'''
+_OSLO2 = ZoneInfo("Europe/Oslo")
+_AV = _dt(2026, 10, 2, 19, 0, tzinfo=_OSLO2)
+from datetime import timedelta as _td2
+
+
+def _les(klasse, minutter, logg=None):
+    return ntf_source.parse_side(_MAL.format(klasse=klasse), "resultater", "obos",
+                                 naa=_AV + _td2(minutes=minutter),
+                                 log=(logg.append if logg is not None else (lambda _s: None)))[0]
+
+
+sjekk("rad MERKET FERDIG 60 min etter avspark gir IKKE resultat",
+      _les("schedule__match schedule__match--played", 60)["hg"] is None)
+sjekk("109 min: fortsatt ikke", _les("schedule__match schedule__match--played", 109)["hg"] is None)
+sjekk("110 min: resultatet tas inn",
+      _les("schedule__match schedule__match--played", 110)["hg"] == 2)
+_l = []
+_les("schedule__match schedule__match--played", 60, _l)
+sjekk("og for tidlig logges tydelig",
+      any("bare 60 min siden avspark" in m for m in _l), str(_l))
+
+sjekk("UKJENT klasse 180 min etter: fortsatt ikke resultat",
+      _les("schedule__match schedule__match--noe-helt-nytt", 180)["hg"] is None)
+sjekk("uten klasse i det hele tatt: ikke resultat",
+      _les("schedule__match", 180)["hg"] is None)
+
+print("\n=== fotball.no: ett forsok per liga per dogn ===")
+import nff_source as _nff
+_nff_dir = Path(_tf2.mkdtemp())
+_ekte_kat = _nff.CACHE_KATALOG
+_nff.CACHE_KATALOG = _nff_dir
+_hentet = []
+_ekte_hent = _nff.hent
+_nff.hent = lambda url: (_hentet.append(url), les_nff("eliteserien"))[1]
+_n0 = _dt(2026, 10, 2, 8, 0, tzinfo=_tz.utc)
+
+_r1 = _nff.fetch_all("eliteserien", naa=_n0, log=lambda _s: None)
+sjekk("workflow 1 henter og fyller cachen", len(_hentet) == 1 and len(_r1) == 240)
+_r2 = _nff.fetch_all("eliteserien", naa=_n0 + _td2(minutes=10), log=lambda _s: None)
+sjekk("workflow 2 samme dag henter IKKE, men får samme data",
+      len(_hentet) == 1 and _r2 == _r1, f"{len(_hentet)} hentinger")
+_r3 = _nff.fetch_all("eliteserien", naa=_n0 + _td2(hours=19), log=lambda _s: None)
+sjekk("etter 19 timer: fortsatt ikke", len(_hentet) == 1)
+_r4 = _nff.fetch_all("eliteserien", naa=_n0 + _td2(hours=21), log=lambda _s: None)
+sjekk("etter 21 timer: nytt forsøk", len(_hentet) == 2)
+
+# Et forsok som FEILER maa ogsaa telle, ellers proever den hver time
+_nff.hent = lambda url: (_hentet.append(url), (_ for _ in ()).throw(RuntimeError("403")))[1]
+_r5 = _nff.fetch_all("eliteserien", naa=_n0 + _td2(hours=42), log=lambda _s: None)
+sjekk("feilet forsøk teller: gammelt svar beholdes", _r5 == _r1 and len(_hentet) == 3)
+_r6 = _nff.fetch_all("eliteserien", naa=_n0 + _td2(hours=43), log=lambda _s: None)
+sjekk("og nytt forsøk kommer ikke før om 20 timer", len(_hentet) == 3)
+sjekk("feilen er lagret i cachen",
+      "403" in _json.loads((_nff_dir / "eliteserien.json").read_text("utf-8")).get("siste_feil", ""))
+_nff.hent = _ekte_hent
+_nff.CACHE_KATALOG = _ekte_kat
+
+print("\n=== Gammel fotball.no-cache skal ikke paavirke en kjoring ===")
+# Cachen kan vaere 20 timer gammel. Ligasiden kan i mellomtiden ha faatt nytt
+# avspark OG ferskt resultat. Da skal ligasiden vinne, uten konflikt og uten
+# stoy -- derfor er fotball.no ute av avstemmingen og bare med i den daglige
+# revisjonen, der begge sider er like gamle.
+_NY = [{"date": "2026-10-02", "time": "19:15", "round": 24,
+        "home": "Ranheim", "away": "Egersund", "hg": 2, "ag": 1}]
+_GAMMEL = [{"date": "2026-10-02", "time": "19:00", "round": 24,
+            "home": "Ranheim", "away": "Egersund", "hg": None, "ag": None}]
+_l2 = []
+_ut2 = reconcile(_NY, [], log=_l2.append)
+sjekk("ligasiden alene: nytt avspark og ferskt resultat beholdes",
+      (_ut2[0]["time"], _ut2[0]["hg"], _ut2[0]["ag"]) == ("19:15", 2, 1), str(_ut2[0]))
+sjekk("ingen konflikt", not any("ADVARSEL" in m for m in _l2), str(_l2))
+sjekk("ingen advarsler i det hele tatt", not _l2, str(_l2))
+
+# Til sammenligning: hadde cachen vaert med som kontroll, ville den klaget
+_l3 = []
+reconcile(_NY, _GAMMEL, log=_l3.append)
+sjekk("(og med cachen som kontroll ville den klaget -- derfor er den ute)",
+      any("avspark" in m for m in _l3), str(_l3))
+
+print("\n=== Daglig terminlisterevisjon, begge ligaer ===")
+import daglig_revisjon as _dr
+
+_v = {("Ranheim", "Egersund"): {"round": 24, "date": "2026-10-02",
+                                "time": "19:00", "hg": 2, "ag": 1}}
+_lik = [{"home": "Ranheim", "away": "Egersund", "round": 24,
+         "date": "2026-10-02", "time": "19:00", "hg": 2, "ag": 1}]
+sjekk("enighet: ingen avvik", _dr.revider(_v, _lik) == ([], []))
+
+_feil_runde = [{**_lik[0], "round": 25}]
+_f, _a = _dr.revider(_v, _feil_runde)
+sjekk("ulik RUNDE er kritisk", len(_f) == 1 and "runde" in _f[0], str(_f))
+
+_feil_dato = [{**_lik[0], "date": "2026-10-03"}]
+_f, _a = _dr.revider(_v, _feil_dato)
+sjekk("ulik DATO er kritisk", len(_f) == 1 and "dato" in _f[0], str(_f))
+
+_feil_tid = [{**_lik[0], "time": "19:15"}]
+_f, _a = _dr.revider(_v, _feil_tid)
+sjekk("ulikt AVSPARK er bare advarsel (tv-tider justeres)",
+      not _f and len(_a) == 1 and "avspark" in _a[0], f"{_f} {_a}")
+
+_feil_res = [{**_lik[0], "hg": 3}]
+_f, _a = _dr.revider(_v, _feil_res)
+sjekk("ulikt RESULTAT er kritisk", len(_f) == 1 and "resultat" in _f[0], str(_f))
+
+_f, _a = _dr.revider(_v, [])
+sjekk("tom kontrollkilde blokkerer ikke, men sier fra",
+      not _f and len(_a) == 1, f"{_f} {_a}")
+
+_f, _a = _dr.revider({}, _lik)
+sjekk("kamp hos fotball.no som vi mangler er kritisk", len(_f) == 1, str(_f))
+
+print("\n=== Gammel cache gir ADVARSEL, ikke rodt stempel ===")
+# En kamp flyttes i gaar kveld. Ligasiden har ny dato; cachen er 10 timer
+# gammel og har den gamle. Det er ikke en feil -- det er to tidspunkter.
+_flyttet = {("Ranheim", "Egersund"): {"round": 24, "date": "2026-10-05",
+                                      "time": "19:00", "hg": None, "ag": None}}
+_gammel_cache = [{"home": "Ranheim", "away": "Egersund", "round": 24,
+                  "date": "2026-10-02", "time": "19:00", "hg": None, "ag": None}]
+
+_f, _a = _dr.revider(_flyttet, _gammel_cache, ferskt=True)
+sjekk("fersk henting: flyttet kamp er kritisk", len(_f) == 1 and "dato" in _f[0], str(_f))
+_f, _a = _dr.revider(_flyttet, _gammel_cache, ferskt=False)
+sjekk("10 timer gammel cache: bare advarsel, ingen kritiske avvik",
+      not _f and len(_a) == 1, f"feil={_f} advarsler={_a}")
+sjekk("og advarselen sier at dataene er fra cachen",
+      "fra cachen" in _a[0], str(_a))
+
+print("\n=== Stempelet overskrives ikke av neste kjoring ===")
+import daglig_revisjon as _dr2
+_sd = Path(_tf2.mkdtemp())
+(_sd / "data").mkdir()
+_ekte_rot2 = _dr2.ROT
+_dr2.ROT = _sd
+_dr2.LIGAER["test"] = {"data": "data", "visningsnavn": "Test"}
+_ligaer_ekte = dict(_dr2.oppsett.__globals__["LIGAER"])
+_dr2.oppsett.__globals__["LIGAER"]["test"] = {"data": "data", "visningsnavn": "Test"}
+_naa5 = _dt.now(_tz.utc)
+_dag5 = _naa5.astimezone(_dr2.OSLO).strftime("%Y-%m-%d")
+
+(_sd / "data" / "audit_fixtures.json").write_text(
+    _json.dumps({"checked_date": _dag5, "errors": 3}), encoding="utf-8")
+sjekk("dagens revisjon med 3 avvik leses av andre skrivere",
+      _dr2.dagens_avvik("test", _naa5) == 3)
+(_sd / "data" / "audit_fixtures.json").write_text(
+    _json.dumps({"checked_date": "2020-01-01", "errors": 3}), encoding="utf-8")
+sjekk("gårsdagens avvik teller ikke", _dr2.dagens_avvik("test", _naa5) == 0)
+(_sd / "data" / "audit_fixtures.json").write_text(
+    _json.dumps({"checked_date": _dag5, "errors": 0}), encoding="utf-8")
+sjekk("ren revisjon i dag gir 0", _dr2.dagens_avvik("test", _naa5) == 0)
+
+# skriv_stempel: rodt naar det er avvik, gronnt naar det ikke er det
+_dr2.skriv_stempel("test", ["noe galt"], _naa5)
+_st5 = _json.loads((_sd / "data" / "status.json").read_text(encoding="utf-8"))
+sjekk("skriv_stempel setter ok=False ved avvik", _st5["ok"] is False and _st5["revisjon_avvik"] == 1)
+_dr2.skriv_stempel("test", [], _naa5)
+_st5 = _json.loads((_sd / "data" / "status.json").read_text(encoding="utf-8"))
+sjekk("og ok=True naar avviket er borte",
+      _st5["ok"] is True and "revisjon_avvik" not in _st5, str(_st5))
+_dr2.ROT = _ekte_rot2
+_dr2.oppsett.__globals__["LIGAER"].pop("test", None)
+
+print("\n=== Et bekreftet avvik blir ikke gronnt av at cachen eldes ===")
+# Forlopet: fersk revisjon finner avviket. En time senere er cachen over 10
+# minutter gammel. Uten dette ville avviket blitt nedgradert til advarsel,
+# stempelet gronnt og siste_ok satt -- mens feilen sto.
+_v_feil = {("Haugesund", "Sogndal"): {"round": 21, "date": "2026-01-01",
+                                      "time": "16:00", "hg": 2, "ag": 0}}
+_nff_rett = [{"home": "Haugesund", "away": "Sogndal", "round": 21,
+              "date": "2026-09-05", "time": "16:00", "hg": 2, "ag": 0}]
+
+_f1, _a1 = _dr.revider(_v_feil, _nff_rett, ferskt=True)
+sjekk("fersk revisjon: avviket er kritisk", len(_f1) == 1, str(_f1))
+_bekreftet = {_dr._nokkel(_f1[0]): _dr._vaar_verdi(_v_feil, _dr._nokkel(_f1[0]))}
+
+_f2, _a2 = _dr.revider(_v_feil, _nff_rett, ferskt=False, bekreftet=_bekreftet)
+sjekk("en time senere, gammel cache, VÅR VERDI UENDRET: fortsatt kritisk",
+      len(_f2) == 1, f"feil={_f2} advarsler={_a2}")
+sjekk("og det sies at den er bekreftet",
+      "bekreftet av fersk revisjon" in _f2[0], str(_f2))
+
+# Retter vi datoen, skal den ikke lenger holdes kritisk mot gammel cache
+_v_rettet = {("Haugesund", "Sogndal"): {"round": 21, "date": "2026-09-05",
+                                        "time": "16:00", "hg": 2, "ag": 0}}
+_f3, _a3 = _dr.revider(_v_rettet, _nff_rett, ferskt=False, bekreftet=_bekreftet)
+sjekk("etter at VI har rettet: ingen avvik igjen", not _f3 and not _a3, f"{_f3} {_a3}")
+
+# Endrer vi til noe ANNET galt, er det et nytt avvik mot gammel cache --
+# og da skal det nedgraderes, ikke arve bekreftelsen
+_v_annet = {("Haugesund", "Sogndal"): {"round": 21, "date": "2026-02-02",
+                                       "time": "16:00", "hg": 2, "ag": 0}}
+_f4, _a4 = _dr.revider(_v_annet, _nff_rett, ferskt=False, bekreftet=_bekreftet)
+sjekk("men en NY, annen verdi arver ikke bekreftelsen",
+      not _f4 and len(_a4) == 1, f"{_f4} {_a4}")
+
+print("\n=== Datovakten bruker den AKTIVE sesongen, ikke dataene ===")
+from reconcile_ny import rimelige_datoer as _rd
+# Runde MAA vaere med: vinduet regnes av medianen i forste og siste runde.
+_eks = [{"home": f"L{i}", "away": f"B{i}", "date": f"2026-{3 + i // 8:02d}-{10 + i % 8:02d}",
+         "time": "18:00", "hg": 1, "ag": 0, "round": i // 8 + 1}
+        for i in range(80)]
+_eks.append({"home": "Haugesund", "away": "Sogndal", "date": "2026-09-05",
+             "time": "16:00", "hg": 2, "ag": 0, "round": 7})
+
+# 1) Enkeltfeil midt i sesongen: rettes, og det er FAA nok til aa vaere ok
+_ny = [dict(r) for r in _eks]
+for r in _ny:
+    if r["home"] == "Haugesund":
+        r["date"] = "2026-01-01"
+_l4 = []
+_ut4, _utenfor4, _kode4 = _rd(_ny, _eks, "2026", log=_l4.append)
+sjekk("01.01.2026 rettes til 05.09",
+      next(r for r in _ut4 if r["home"] == "Haugesund")["date"] == "2026-09-05")
+sjekk("ingen kamp forsvinner", len(_ut4) == len(_ny))
+sjekk("én utenfor, altså ikke kildefeil", len(_utenfor4) == 1, str(_utenfor4))
+sjekk("og det logges med sesongen navngitt",
+      any("i sesongen 2026" in m and "Beholder 2026-09-05" in m for m in _l4), str(_l4))
+
+# 2) SESONGSKIFTE: fjoraarets data som eksisterende -> full terminliste
+# Autoritativ sesong er 2027; eksisterende matches.json er 2026.
+_neste = [{**r, "date": r["date"].replace("2026", "2027")} for r in _eks]
+_l5 = []
+_ut5, _utenfor5, _kode5 = _rd(_neste, _eks, "2027", log=_l5.append)
+sjekk("sesongskifte: ingen 2026-dato brukes som tidligere verdi",
+      not any(r["date"].startswith("2026") for r in _ut5),
+      str([r["date"] for r in _ut5 if r["date"].startswith("2026")][:3]))
+sjekk("sesongskifte: full terminliste kommer gjennom", len(_ut5) == len(_neste))
+sjekk("og datoene er den NYE sesongens",
+      all(r["date"].startswith("2027") for r in _ut5), str([r["date"] for r in _ut5[:2]]))
+sjekk("ingen regnes som utenfor, fordi fjoråret ikke er sammenlignbart",
+      not _utenfor5, str(_utenfor5))
+sjekk("og vakten sier at den står over", any("står over" in m for m in _l5), str(_l5[:1]))
+
+# 3) MASSEFEIL: halve sesongen faar 01.01 midt i sesongen
+_masse = [dict(r) for r in _eks]
+for r in _masse[: len(_masse) // 2]:
+    r["date"] = "2026-01-01"
+_ut6, _utenfor6, _kode6 = _rd(_masse, _eks, "2026", log=lambda _s: None)
+sjekk("massefeil: alle datoer rettes til de gamle",
+      all(not r["date"].endswith("01-01") for r in _ut6),
+      str([r["date"] for r in _ut6[:3]]))
+sjekk("ingen kamp forsvinner", len(_ut6) == len(_masse))
+sjekk("og over en fjerdedel meldes utenfor -> kjøringen skal bli rød",
+      len(_utenfor6) > len(_masse) * 0.25, f"{len(_utenfor6)} av {len(_masse)}")
+
+# 3b) VINDUET skal taale EN gal dato i eksisterende data. Med min/maks ville
+#     den ene lagrede 01.01 apnet vinduet og slatt vakten av.
+_med_feil = [{"home": f"L{i}", "away": f"B{i}", "round": i // 8 + 1,
+              "date": f"2026-{3 + i // 8:02d}-{10 + i % 8:02d}", "time": "18:00"}
+             for i in range(80)]
+_med_feil[0]["date"] = "2026-01-01"          # allerede lagret feil
+_ny_feil = [dict(r) for r in _med_feil]
+_ny_feil[40]["date"] = "2026-01-01"          # NY feil samme sted i kalenderen
+_ut_f, _utenfor_f, _kode_f = _rd(_ny_feil, _med_feil, "2026", log=lambda _s: None)
+sjekk("én gal dato i eksisterende data slår ikke av vakten",
+      _ut_f[40]["date"] == _med_feil[40]["date"],
+      f'{_ut_f[40]["date"]} skulle vært {_med_feil[40]["date"]}')
+sjekk("og den nye feilen meldes utenfor", len(_utenfor_f) >= 1, str(_utenfor_f))
+
+print("\n=== Aktiv sesong: hvor kommer den fra ===")
+import sesong as _ses
+_sd3 = Path(_tf2.mkdtemp())
+(_sd3 / "data").mkdir()
+(_sd3 / "eliteserien" / "data").mkdir(parents=True)
+(_sd3 / "eliteserien" / "data" / "matches.json").write_text(
+    _json.dumps([{"date": "2026-04-01", "home": "A", "away": "B"}]), encoding="utf-8")
+
+_lg = []
+sjekk("uten register: INGEN gjetting, returnerer None",
+      _ses.aktiv_sesong(_sd3, "eliteserien", log=_lg.append) is None)
+sjekk("og det sies tydelig at autoriteten mangler",
+      any("INGEN SESONGAUTORITET" in m for m in _lg), str(_lg))
+
+(_sd3 / "data" / "sesonger.json").write_text(_json.dumps({
+    "version": 2, "ligaer": {"eliteserien": {"aktiv": "2027", "sesonger": {}}}}),
+    encoding="utf-8")
+_lg = []
+sjekk("med register: registeret vinner",
+      _ses.aktiv_sesong(_sd3, "eliteserien", log=_lg.append) == "2027")
+sjekk("og kilden navngis", any("sesonger.json" in m for m in _lg), str(_lg))
+
+# 4) Kamp uten tidligere verdi utelates aldri
+_ukjent = _ny + [{"home": "Helt", "away": "Ny", "date": "2026-01-02",
+                  "time": "18:00", "round": 5}]
+_l7 = []
+_ut7, _, _ = _rd(_ukjent, _eks, "2026", log=_l7.append)
+sjekk("kamp uten tidligere dato utelates ikke", len(_ut7) == len(_ukjent))
+sjekk("den slipper gjennom med sin egen dato",
+      next(r for r in _ut7 if r["home"] == "Helt")["date"] == "2026-01-02")
+sjekk("og det logges", any("slipper gjennom" in m for m in _l7), str(_l7))
+
+print("\n=== Uten sesongautoritet står vakten over ===")
+_l8 = []
+_ut8, _utenfor8, _kode8 = _rd(_ny, _eks, None, log=_l8.append)
+sjekk("ingen sesong: dataene går uendret gjennom", _ut8 == _ny)
+sjekk("og feilkoden sier at autoriteten mangler", _kode8 == "ingen_autoritet")
+sjekk("og det logges at den ikke gjetter",
+      any("uten å gjette" in m for m in _l8), str(_l8))
+
+print("\n=== Sesongskiftet ikke kjort: vakten retter INGENTING ===")
+# Registeret sier 2026, terminlisten er 2027. Lagparene gaar igjen, saa uten
+# denne sperren ville vakten funnet en "tidligere verdi" for hver kamp og
+# skrevet hele 2027-sesongen tilbake til 2026-datoer.
+_ikke_byttet = [{**r, "date": r["date"].replace("2026", "2027")} for r in _eks]
+_l9 = []
+_ut9, _utenfor9, _kode9 = _rd(_ikke_byttet, _eks, "2026", log=_l9.append)
+sjekk("datoene beholdes som 2027",
+      all(r["date"].startswith("2027") for r in _ut9),
+      str([r["date"] for r in _ut9[:2]]))
+sjekk("ingenting rettes", _ut9 == _ikke_byttet)
+sjekk("feilkoden er sesongskifte_mangler", _kode9 == "sesongskifte_mangler")
+sjekk("og loggen sier at sesongskiftet ikke er kjørt",
+      any("Sesongskiftet er ikke kjørt" in m for m in _l9), str(_l9[:1]))
+
+print("\n=== sesong.py init: bootstrap ===")
+_sd4 = Path(_tf2.mkdtemp())
+(_sd4 / "data").mkdir()
+for _l in ("eliteserien", "obos"):
+    (_sd4 / _l / "data").mkdir(parents=True)
+    (_sd4 / _l / "data" / "matches.json").write_text(
+        _json.dumps([{"date": "2026-04-01", "home": "A", "away": "B"}]), encoding="utf-8")
+
+sjekk("tom tilstand: ingen autoritet", _ses.aktiv_sesong(_sd4, "obos") is None)
+_li = []
+sjekk("init setter 2026 for eliteserien",
+      _ses.init(_sd4, "eliteserien", "2026", log=_li.append) == 0)
+sjekk("init setter 2026 for obos",
+      _ses.init(_sd4, "obos", "2026", log=_li.append) == 0)
+sjekk("og kampdataene ble brukt som KONTROLL",
+      any("kontroll: matches.json" in m for m in _li), str(_li))
+sjekk("etterpå leses registeret, uten reserve",
+      (_ses.aktiv_sesong(_sd4, "eliteserien"), _ses.aktiv_sesong(_sd4, "obos"))
+      == ("2026", "2026"))
+
+_li = []
+sjekk("ny init NEKTES når aktiv finnes",
+      _ses.init(_sd4, "obos", "2027", log=_li.append) == 1)
+sjekk("og den sier at bytt er veien",
+      any("går\ngjennom 'bytt'" in m or "gjennom 'bytt'" in m for m in _li), str(_li))
+sjekk("aktiv er uendret", _ses.aktiv_sesong(_sd4, "obos") == "2026")
+
+_li = []
+sjekk("feil årstall mot kampdata avvises",
+      _ses.init(_sd4, "eliteserien", "2030", log=_li.append) != 0)
+sjekk("tullball som årstall avvises", _ses.init(_sd4, "obos", "i fjor", log=lambda _s: None) == 2)
+
+# bytt() er fortsatt eneste normale vei videre
+_d4 = _ses.les(_sd4)
+_d4["ligaer"]["obos"]["sesonger"]["2027"] = {"status": "klar", "lag": []}
+_ses.skriv(_sd4, _d4)
+_gjor, _neste, _hvorfor = _ses.skal_bytte(_ses.les(_sd4)["ligaer"]["obos"], date(2026, 12, 31))
+sjekk("bytt nekter 31. desember", not _gjor, _hvorfor)
+_gjor, _neste, _hvorfor = _ses.skal_bytte(_ses.les(_sd4)["ligaer"]["obos"], date(2027, 1, 1))
+sjekk("bytt godtar 1. januar når sesongen er klar", _gjor, _hvorfor)
+
+print("\n=== Bekreftet avvik overlever midnatt ===")
+# Forlopet: avviket bekreftes klokka 23. Forste kjoring etter midnatt maa
+# ikke nedgradere det bare fordi datoen har skiftet.
+_sd2 = Path(_tf2.mkdtemp())
+(_sd2 / "data").mkdir()
+_dr.ROT = _sd2
+_dr.oppsett.__globals__["LIGAER"]["test"] = {"data": "data", "visningsnavn": "Test"}
+(_sd2 / "data" / "audit_fixtures.json").write_text(_json.dumps({
+    "checked_date": "2026-10-02", "errors": 1,
+    "bekreftet": {"Haugesund-Sogndal": [21, "2026-01-01", "16:00", 2, 0]},
+}), encoding="utf-8")
+_i_morgen = _dt(2026, 10, 3, 6, 0, tzinfo=_tz.utc)
+_b = _dr.les_bekreftet("test", _i_morgen)
+sjekk("bekreftelsen leses også dagen etter", "Haugesund-Sogndal" in _b, str(_b))
+_f8, _a8 = _dr.revider(_v_feil, _nff_rett, ferskt=False, bekreftet=_b)
+sjekk("og avviket er fortsatt kritisk etter midnatt", len(_f8) == 1, f"{_f8} {_a8}")
+_dr.ROT = _ekte_rot2
+_dr.oppsett.__globals__["LIGAER"].pop("test", None)
 
 print(f"\n{antall[0] - len(feil)} av {antall[0]} tester gikk gjennom.")
 if feil:

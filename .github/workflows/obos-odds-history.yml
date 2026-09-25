@@ -48,7 +48,7 @@ jobs:
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           # Hver fil for seg, så én manglende fil ikke stopper lagringen av de andre.
-          for f in eliteserien/data/oddspapi_markets.json obos/data/oddspapi_markets.json obos/data/odds_closing.json obos/data/oddspapi_fixtures_2026.json data/oddspapi_usage.json data/oddspapi-bruk; do
+          for f in data/nff-cache eliteserien/data/oddspapi_markets.json obos/data/oddspapi_markets.json obos/data/odds_closing.json obos/data/oddspapi_fixtures_2026.json data/oddspapi_usage.json data/oddspapi-bruk; do
             if [ -e "$f" ]; then git add "$f"; fi
           done
           if git diff --cached --quiet; then

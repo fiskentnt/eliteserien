@@ -40,8 +40,16 @@ HALF_LIFE, L1, L2 = 35.0, 16.0, 48.0
 ODDS_WEIGHT = 40.0
 ODDS_PATH = DATA / "odds_closing.json"
 
+# Settes av rows_for() naar datovakten maatte staa over. main() feiler TIL
+# SLUTT paa den, etter at dataene er skrevet -- en manglende fil skal ikke
+# stoppe datakjeden, bare gjore kjoringen rod.
+DATOVAKT_FEIL = None
+DATOVAKT_BESKJED = {'ingen_autoritet': 'Ingen autoritativ sesong i data/sesonger.json, så datovakten sto over. Dataene er skrevet som normalt, men en gal dato fra kilden ville ikke blitt fanget. Kjør: python3 scripts/sesong.py . init <liga> <år>', 'sesongskifte_mangler': 'Terminlisten er for en annen sesong enn registeret sier. Sesongskiftet er ikke kjørt, så datovakten sto over -- den ville ellers skrevet hele den nye sesongen tilbake til fjorårets datoer. Kjør: python3 scripts/sesong.py . bytt --utfor'}
 
-def rows_for(season=SEASON, log=lambda s: None):
+
+def rows_for(season=SEASON, log=print):
+    # log=print, ikke en stum lambda: advarslene herfra -- en kilde som
+    # feiler, en dato utenfor sesongen -- maa vaere synlige i Actions.
     """Kampene i sesongen.
 
     Runde, dato og avspark kommer fra den offisielle ligakilden, ikke fra
@@ -68,7 +76,7 @@ def rows_for(season=SEASON, log=lambda s: None):
         fra_csv.sort(key=lambda m: (m["date"], m["time"], m["home"]))
         return fra_csv
 
-    import ntf_source, nff_source
+    import ntf_source
     from reconcile_ny import reconcile
     try:
         ntf = ntf_source.fetch_all("obos", log=log)
@@ -77,14 +85,27 @@ def rows_for(season=SEASON, log=lambda s: None):
             f"denne kjøringen. En kamp som er flyttet i dag blir da ikke fanget opp.")
         fra_csv.sort(key=lambda m: (m["date"], m["time"], m["home"]))
         return fra_csv
-    try:
-        nff = nff_source.fetch_all("obos", log=log)
-    except Exception as e:
-        log(f"ADVARSEL: fotball.no feilet ({e}) -- ingen uavhengig kontroll av "
-            f"terminlisten denne kjøringen.")
-        nff = []
-
-    offisiell = reconcile(ntf, nff, reserver=[("csv", fra_csv)], log=log)
+    # fotball.no er ikke med: robots.txt der sier Disallow: / for alle andre
+    # enn sokemotorene, og denne funksjonen kjorer i hver resultatkjoring.
+    # Den uavhengige kontrollen mot fotball.no skjer i det daglige
+    # vedlikeholdet i stedet, hoyst en gang i dognet.
+    offisiell = reconcile(ntf, [], reserver=[("csv", fra_csv)], log=log)
+    # En dato utenfor sesongvinduet er alltid feil hos kilden. CSV-en er
+    # fasiten vi faller tilbake paa: den er handkurert og staar stille.
+    from reconcile_ny import rimelige_datoer
+    import sesong as _sesong
+    _aktiv = _sesong.aktiv_sesong(ROOT, "obos", log=log)
+    offisiell, utenfor, _datofeil = rimelige_datoer(offisiell, fra_csv, _aktiv, log=log)
+    # utenfor er None naar det ikke finnes autoritativ sesong. Da har vakten
+    # staatt over, og main() skal feile TIL SLUTT -- etter at dataene er
+    # skrevet, slik at en manglende fil ikke stopper hele kjeden.
+    if utenfor is not None and len(utenfor) > len(offisiell) * 0.25:
+        raise SystemExit(
+            f"FEIL: {len(utenfor)} av {len(offisiell)} kamper hadde dato utenfor "
+            f"sesongen. Datoene er beholdt fra CSV-en, men kilden må "
+            f"sjekkes:\n" + "\n".join(utenfor[:10]))
+    global DATOVAKT_FEIL
+    DATOVAKT_FEIL = _datofeil
     resultat = {(r["home"], r["away"]): r for r in fra_csv}
     out = []
     for r in offisiell:
@@ -176,17 +197,39 @@ def main():
     print(f"  mu={res['mu']:.3f} H={res['H']:.3f}, sterkeste lag: "
           f"{teams[max(range(len(teams)), key=lambda i: res['att'][i])]}")
 
-    (DATA / "status.json").write_text(json.dumps({
-        "built_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+    # Terminlisterevisjonen (daglig_revisjon.py) kan ha satt ok=False. Den
+    # maa overleve at vi skriver filen paa nytt, ellers ville en vanlig
+    # bygging gjort stempelet gronnt mens avviket sto. Merk at OBOS-siden
+    # leser status.ok akkurat som Eliteserien -- for denne endringen fantes
+    # feltet ikke, saa OBOS kunne aldri bli rod.
+    _naa = datetime.now(timezone.utc)
+    _avvik = 0
+    try:
+        import daglig_revisjon
+        _avvik = daglig_revisjon.dagens_avvik("obos", _naa)
+    except Exception:
+        pass
+    _status = {
+        "built_at": _naa.isoformat(timespec="seconds"),
         "source": "obos/data/obos_2012-2026.csv", "played": len(played),
         "last_match": max((m["date"] for m in played), default=None),
-    }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+        "ok": not _avvik,
+    }
+    if _avvik:
+        _status["revisjon_avvik"] = _avvik
+        _status["error"] = (f"{_avvik} kritisk(e) avvik mellom terminlisten og "
+                            f"fotball.no, se obos/data/audit_fixtures.json")
+    (DATA / "status.json").write_text(
+        json.dumps(_status, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
     if not (DATA / "odds_upcoming.json").exists():
         (DATA / "odds_upcoming.json").write_text(
             json.dumps({"matches": [], "fetched_at": None}, ensure_ascii=False, indent=1) + "\n",
             encoding="utf-8")
     print("  skrev matches.json, fixtures.json, model.json, status.json")
+    if DATOVAKT_FEIL:
+        print("\nFEIL: " + DATOVAKT_BESKJED[DATOVAKT_FEIL], file=sys.stderr)
+        return 1
     return 0
 
 

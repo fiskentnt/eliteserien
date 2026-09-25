@@ -144,6 +144,19 @@ jobs:
         continue-on-error: true  # skal aldri stoppe resultatene
         run: python3 scripts/accuracy_log.py obos
 
+      - name: Daglig revisjon av terminlisten mot fotball.no
+        id: revisjon
+        # Den ENESTE uavhengige kontrollen obos har paa runde, dato og
+        # avspark. De 22 feilene vi rettet 25. september var nettopp saann
+        # data. Et kritisk avvik gjor stempelet rodt til en ny revisjon
+        # bekrefter at det er borte.
+        #
+        # nff_source henter hoyst en gang i dognet av seg selv, saa dette
+        # steget koster ingen ekstra forespørsel naar noe annet alt har hentet.
+        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
+          && steps.bygg.outcome == 'success'
+        run: python3 scripts/daglig_revisjon.py obos
+
       - name: Merk daglig vedlikehold som utført
         # SISTE steg for lagring, og bare naar DET DAGLIGE ARBEIDET faktisk
         # ble gjort: oddsen for kommende kamper, tabellen og modellen bygget
@@ -157,7 +170,8 @@ jobs:
           steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
           && steps.odds.outcome == 'success'
           && steps.bygg.outcome == 'success'
-          && steps.logg.outcome == 'success' 
+          && steps.logg.outcome == 'success'
+          && steps.revisjon.outcome == 'success' 
         run: python3 scripts/merk_daglig.py obos
 
       - name: Tegn delingsbildet på nytt
@@ -174,7 +188,7 @@ jobs:
           # mangler, og da ble ingenting lagret -- heller ikke nye resultater.
           # (Skjedde 22. september: oddshentingen feilet, én fil ble ikke laget,
           # og det nye banneret ble aldri lagret.)
-          for f in obos/data/daglig_state.json data/oddspapi_usage.json data/oddspapi-bruk obos/data/matches.json obos/data/fixtures.json obos/data/model.json \
+          for f in obos/data/audit_fixtures.json data/nff-cache obos/data/daglig_state.json data/oddspapi_usage.json data/oddspapi-bruk obos/data/matches.json obos/data/fixtures.json obos/data/model.json \
                    obos/data/status.json obos/data/results_state.json \
                    obos/data/oddspapi_fixtures_2026.json obos/data/oddspapi_markets.json obos/og.png \
                    obos/data/odds_upcoming.json \

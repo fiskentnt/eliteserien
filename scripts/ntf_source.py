@@ -37,9 +37,13 @@ import re
 import sys
 import urllib.error
 import urllib.request
+from datetime import datetime
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from ligaer import oppsett
+
+OSLO = ZoneInfo("Europe/Oslo")
 
 USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
 
@@ -51,6 +55,22 @@ RAD_RE = re.compile(r'<tr[^>]*class="([^"]*schedule__match[^"]*)"[^>]*>(.*?)</tr
 # denne markupen (sidene ble hentet mellom runder), så den ukjente tilstanden
 # er nettopp den vi ikke får lov til å gjette på.
 FERDIG_KLASSE = "schedule__match--played"
+
+# KLOKKEREGEL, i tillegg til radklassen.
+#
+# Fram til naa hvilte vernet mot en paagaaende kamp paa to uavhengige ben:
+# ligasidens radklasse, og en tidsgrense hos fotball.no. Naar fotball.no bare
+# hentes en gang i dognet, staar radklassen alene -- og den er nettopp det vi
+# ikke kjenner ennaa, siden vi aldri har sett en kamp underveis i markupen.
+#
+# Klokken koster ingen ekstra henting. En kamp som starter presis er ferdig
+# 105-115 minutter etter avspark; 110 er derfor en grense som i verste fall
+# utsetter et ferdig resultat noen faa minutter, og som til gjengjeld gjor at
+# en ukjent klasse ikke alene kan gjore en paagaaende kamp ferdig.
+#
+# Regelen gjelder OGSAA naar radklassen mangler eller er ukjent: da er den
+# det eneste vernet vi har igjen.
+FERDIG_ETTER_MIN = 110
 KJENTE_KLASSER = ("schedule__match--played", "schedule__match--upcoming",
                   "future__match__terminlist")
 CELLE_RE = re.compile(r'<td[^>]*class="([^"]*)"[^>]*>(.*?)</td>', re.S)
@@ -94,8 +114,9 @@ def _navn(rått, cfg):
     return n
 
 
-def parse_rad(rad, kilde, cfg, klasser="", log=lambda s: None):
+def parse_rad(rad, kilde, cfg, klasser="", naa=None, log=lambda s: None):
     """Én kamprad -> dict, eller None hvis raden ikke hører til ligaen."""
+    naa = naa or datetime.now(OSLO)
     celler = _celler(rad)
     lag_celle = _finn(celler, "--teams")
     if lag_celle is None:
@@ -127,14 +148,28 @@ def parse_rad(rad, kilde, cfg, klasser="", log=lambda s: None):
     if not r:
         raise EsDataError(f"manglende rundenummer for {hjemme} - {borte} ({kilde})")
 
-    ferdig = FERDIG_KLASSE in klasser.split()
+    merket_ferdig = FERDIG_KLASSE in klasser.split()
     ukjent = not any(k in klasser.split() for k in KJENTE_KLASSER)
+
+    # Klokken, uavhengig av klassen. Mangler avspark, kan vi ikke regne --
+    # da faar klassen bestemme alene, som for.
+    lenge_nok, siden = True, None
+    if tid:
+        avspark = datetime.fromisoformat(f"{dato}T{tid}:00").replace(tzinfo=OSLO)
+        siden = (naa - avspark).total_seconds() / 60
+        lenge_nok = siden >= FERDIG_ETTER_MIN
+
+    ferdig = merket_ferdig and lenge_nok
 
     hg = ag = None
     res_celle = _finn(celler, "--result")
     rm = RESULTAT_RE.match(re.sub(r"<[^>]+>", "", res_celle)) if res_celle else None
     if rm and ferdig:
         hg, ag = int(rm.group(1)), int(rm.group(2))
+    elif rm and merket_ferdig and not lenge_nok:
+        log(f"ADVARSEL: {hjemme} - {borte} ({kilde}) står {rm.group(1)}-{rm.group(2)} "
+            f"og er merket ferdigspilt, men det er bare {siden:.0f} min siden "
+            f"avspark (grensen er {FERDIG_ETTER_MIN}) -- regnes som IKKE spilt")
     elif rm:
         # Det STÅR et resultat, men raden er ikke merket ferdigspilt. Det er
         # slik en kamp underveis ser ut. Stillingen er ikke et sluttresultat.
@@ -150,11 +185,12 @@ def parse_rad(rad, kilde, cfg, klasser="", log=lambda s: None):
             "ferdig": ferdig, "ukjent_status": ukjent}
 
 
-def parse_side(html_tekst, kilde, liga, log=lambda s: None):
+def parse_side(html_tekst, kilde, liga, naa=None, log=lambda s: None):
     cfg = oppsett(liga)
+    naa = naa or datetime.now(OSLO)
     ut = []
     for klasser, rad in RAD_RE.findall(html_tekst):
-        rad_data = parse_rad(rad, kilde, cfg, klasser, log)
+        rad_data = parse_rad(rad, kilde, cfg, klasser, naa, log)
         if rad_data:
             ut.append(rad_data)
     if not ut:
@@ -201,7 +237,7 @@ def hent(url):
         raise
 
 
-def fetch_all(liga, cache_dir=None, log=lambda s: None):
+def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
     """Begge sidene for én liga, slått sammen til én liste kamper.
 
     Terminlisten må hentes gjennom hele sesongen, ikke bare ved oppstart:
@@ -211,6 +247,7 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None):
     Resultatsiden og terminlisten er disjunkte i praksis (spilt / ikke spilt),
     men hvis en kamp skulle stå begge steder vinner raden som har resultat."""
     cfg = oppsett(liga)
+    naa = naa or datetime.now(OSLO)
     rader = []
     for navn in ("resultater", "terminliste"):
         sti = cache_dir and (Path(cache_dir) / f"{liga}_{navn}.html")
@@ -223,7 +260,7 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None):
             if sti:
                 sti.parent.mkdir(parents=True, exist_ok=True)
                 sti.write_text(tekst, encoding="utf-8")
-        rader.extend(parse_side(tekst, navn, liga, log=log))
+        rader.extend(parse_side(tekst, navn, liga, naa=naa, log=log))
 
     return slå_sammen(rader, log=log)
 

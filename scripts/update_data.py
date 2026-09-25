@@ -25,7 +25,7 @@ import espn_source
 import should_fetch
 import ntf_source
 import nff_source
-from reconcile_ny import reconcile as reconcile_kilder, behold_eksisterende
+from reconcile_ny import reconcile as reconcile_kilder, behold_eksisterende, rimelige_datoer
 import fetch_odds_history
 import merge_odds
 import fit_model
@@ -128,6 +128,14 @@ def write_status(ok, now, error=None):
     fint resten av kjøringen gikk. Det blir grønt igjen først når en NY
     revisjon faktisk bekrefter at avviket er borte."""
     avvik = dagens_revisjonsavvik(now)
+    # Terminlisterevisjonen (daglig_revisjon.py) skriver sin egen tilstand.
+    # Den maa med her, ellers ville denne kjoringen overskrevet et rodt
+    # stempel med ok=True.
+    try:
+        import daglig_revisjon
+        avvik += daglig_revisjon.dagens_avvik(LIGA, now)
+    except Exception:
+        pass
     if ok and avvik:
         ok = False
         error = error or (f"{avvik} kritisk(e) avvik i dagens revisjon står "
@@ -321,8 +329,8 @@ def main(cache_dir=None):
         # Hovedkilde: ligasiden. Uten den kan vi ikke bygge terminlisten.
         ntf_rows = ntf_source.fetch_all(LIGA, cache_dir=cache_dir, log=log)
 
-        # Uavhengig offisiell kontroll. Faller den ut, fortsetter vi -- men
-        # da er terminlisten uten annenmening igjen, og det skal logges.
+        # fotball.no, hoeyst ett forsok per dogn (nff_source styrer det selv).
+        # Brukes BARE i den daglige revisjonen under, aldri i avstemmingen.
         try:
             nff_rows = nff_source.fetch_all(LIGA, cache_dir=cache_dir, log=log)
         except Exception as e:
@@ -337,13 +345,25 @@ def main(cache_dir=None):
             log(f"ADVARSEL: ffksupporter (reserve) feilet ({e}) -- fortsetter.")
             ffk_rows = []
 
-        merged = reconcile(ntf_rows, nff_rows, ffk_rows, espn_rows, log=log)
+        # fotball.no er IKKE med i avstemmingen. Cachen kan vaere opptil 20
+        # timer gammel, og da ville et ferskt avspark eller resultat fra
+        # ligasiden gitt en falsk advarsel i hver kjoring i 20 timer.
+        # Ligasiden ville vunnet uansett -- stoyen var hele problemet.
+        # Kontrollen mot fotball.no skjer i den daglige revisjonen i stedet,
+        # der dataene er like gamle paa begge sider.
+        merged = reconcile(ntf_rows, [], ffk_rows, espn_rows, log=log)
 
         # Et publisert resultat skal aldri forsvinne fordi en kilde midlertidig
         # ikke melder kampen som ferdig. Se behold_eksisterende().
         tidligere = json.loads((LEAGUE / "data" / "matches.json").read_text(encoding="utf-8")) \
             if (LEAGUE / "data" / "matches.json").exists() else []
         merged = behold_eksisterende(merged, tidligere, log=log)
+        # En dato utenfor sesongens vindu er alltid feil hos kilden, aldri
+        # hos oss. Se rimelige_datoer() for hendelsen som gjorde den
+        # nodvendig. Sesongen kommer fra registeret, ikke fra dataene.
+        import sesong as _sesong
+        _aktiv = _sesong.aktiv_sesong(ROOT, LIGA, log=log)
+        merged, utenfor, _datofeil = rimelige_datoer(merged, tidligere, _aktiv, log=log)
         matches_out, fixtures_out = build(merged)
 
         fordeling = {}
@@ -361,6 +381,17 @@ def main(cache_dir=None):
         # Etter skriving: filene er riktige så langt kildene rekker, men en
         # kamp som mangler resultat lenge etter avspark skal stoppe kjøringen.
         sjekk_manglende_resultat(fixtures_out, now, log)
+
+        # Mange datoer utenfor sesongen er ikke enkeltfeil -- da er det noe
+        # galt med kilden, typisk en markupendring. Datoene er rettet over,
+        # men kjoringen skal feile synlig.
+        if _datofeil:
+            raise DataAuditError({'ingen_autoritet': 'Ingen autoritativ sesong i data/sesonger.json, så datovakten sto over. Dataene er skrevet som normalt, men en gal dato fra kilden ville ikke blitt fanget. Kjør: python3 scripts/sesong.py . init <liga> <år>', 'sesongskifte_mangler': 'Terminlisten er for en annen sesong enn registeret sier. Sesongskiftet er ikke kjørt, så datovakten sto over -- den ville ellers skrevet hele den nye sesongen tilbake til fjorårets datoer. Kjør: python3 scripts/sesong.py . bytt --utfor'}[_datofeil])
+        if len(utenfor) > len(merged) * 0.25:
+            raise DataAuditError(
+                f"{len(utenfor)} av {len(merged)} kamper hadde dato utenfor "
+                f"sesongen. Datoene er beholdt fra før, men kilden må sjekkes:\n"
+                + "\n".join(utenfor[:10]))
 
         log("--- Sluttodds (football-data.co.uk, maks én gang i døgnet) ---")
         fetch_odds_history.main()

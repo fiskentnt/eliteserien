@@ -90,6 +90,18 @@ jobs:
           python3 scripts/make_og.py --league
           python3 scripts/make_sitemap.py
 
+      - name: Daglig revisjon av terminlisten mot fotball.no
+        id: revisjon
+        # Den ENESTE uavhengige kontrollen eliteserien har paa runde, dato og
+        # avspark. De 22 feilene vi rettet 25. september var nettopp saann
+        # data. Et kritisk avvik gjor stempelet rodt til en ny revisjon
+        # bekrefter at det er borte.
+        #
+        # nff_source henter hoyst en gang i dognet av seg selv, saa dette
+        # steget koster ingen ekstra forespørsel naar noe annet alt har hentet.
+        if: steps.gate.outputs.should_fetch == 'true'
+        run: python3 scripts/daglig_revisjon.py eliteserien
+
       - name: Committer og pusher hvis noe endret seg
         if: always() && steps.gate.outputs.should_fetch == 'true'
         run: |
@@ -102,6 +114,9 @@ jobs:
           [ -f data/oddspapi_usage.json ] && git add data/oddspapi_usage.json
           # Katalogen finnes bare naar et tellende kall er gjort i dag.
           [ -d data/oddspapi-bruk ] && git add data/oddspapi-bruk
+          # fotball.no-cachen: hoyst ett forsok per liga per dogn ligger her.
+          [ -d data/nff-cache ] && git add data/nff-cache
+          [ -f eliteserien/data/audit_fixtures.json ] && git add eliteserien/data/audit_fixtures.json
           [ -f eliteserien/data/ffk_cache.json ] && git add eliteserien/data/ffk_cache.json
           [ -f eliteserien/data/audit_state.json ] && git add eliteserien/data/audit_state.json
           [ -f eliteserien/data/history.json ] && git add eliteserien/data/history.json

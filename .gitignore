@@ -21,3 +21,7 @@ innlegg/
 
 # macOS lager disse i hver mappe man apner i Finder.
 .DS_Store
+
+# Wranglers lokale tilstand for planleggeren. Skal aldri i repoet:
+# den kan inneholde bygg-cache og kontospesifikk tilstand.
+planlegger/.wrangler/

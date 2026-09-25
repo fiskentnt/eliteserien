@@ -63,6 +63,68 @@ kjøringen rød hvis et resultat mangler. Slår den ut denne kvelden, er det et
 ønsket signal: produksjonen har valgt den sikre retningen, og live-statusen
 mangler sannsynligvis i `KJENTE_KLASSER`.
 
+## Sesongskiftet maa kobles til en workflow foer november
+
+INGEN workflow kaller sesong.py i dag. Maskineriet er bygget, testet og
+ligger i produksjonsrepoet -- men det er kode ingen kjorer, og da skjer
+sesongskiftet ikke av seg selv.
+
+data/sesonger.json er opprettet (25. september 2026, `sesong.py init` for
+begge ligaer med 2026). Datovakten leser den naa som eneste autoritet.
+
+Det som mangler, er de to tingene som skal skje av seg selv:
+
+1. OPPDAGELSE. Naar NTF publiserer 2027-terminlisten, normalt i november,
+   skal `sesong.oppdag()` kalles med den. Terminlisten hentes fra
+   ligasiden (eller kalenderfeeden, se punktet under), valideres av
+   `valider()`, og status settes til `klar`.
+
+2. BYTTET. Fra 1. januar skal `sesong.py bytt --utfor` kjore. Den bytter
+   bare hvis neste sesong er `klar`, og fryser den avsluttede sesongen.
+
+Forslag til hvordan: ett nytt steg i `update-data.yml` og `obos-results.yml`,
+etter det daglige vedlikeholdet, som kjorer
+
+    python3 scripts/sesong.py . bytt --utfor
+
+Den er billig og gjor ingenting de 364 andre dagene -- `skal_bytte()`
+returnerer False med begrunnelse. Oppdagelsen trenger et eget lite skript
+som henter neste sesongs terminliste og kaller `oppdag()`; det finnes ikke
+ennaa.
+
+FRIST: koblet inn og testet foer 1. november, saa oppdagelsen rekker aa
+skje for terminlisten publiseres. Uten dette staar siden paa 2026 inn i
+2027, og datovakten sier fra med "sesongskiftet er ikke kjort" -- som er
+riktig, men da er det alt for sent.
+
+## Etter 2. oktober, foerst av alt: kalenderfeeden
+
+NTF har en kalenderfeed som er LAGET for automatisk bruk:
+
+    https://www.eliteserien.no/terminliste/subscribe
+    https://www.obos-ligaen.no/terminliste/subscribe
+
+Begge svarer HTTP 200 med `text/calendar`, og hver kamp har det vi trenger:
+
+    SUMMARY:Ranheim TF - Egersund
+    DESCRIPTION: OBOS-ligaen (runde 24) ... fredag 02.10.26 19:00
+    DTSTART;TZID=Europe/Oslo:20261002T190000
+
+Altsaa lag, RUNDENUMMER, dato og avspark, i riktig tidssone. Hent dato,
+avspark og runde derfra i stedet for aa skrape `/terminliste`, for begge
+ligaer. Det er baade mer robust enn HTML-parsing og i traad med NTFs vilkaar,
+som sier at innhold ikke skal hentes med annen teknologi enn nettstedene
+eller funksjoner NTF spesifikt har laget for formaalet. En kalenderfeed er
+nettopp en slik funksjon.
+
+Feeden har IKKE resultater. Resultatsiden maa altsaa fortsatt skrapes.
+
+UAVKLART, undersoek samtidig: OBOS-feeden hadde 58 kamper 25. september, mens
+det gjensto 56. To for mange. Mulige forklaringer: kamper som alt er spilt
+men ligger igjen i feeden, en utsatt kamp som staar to steder, eller
+kvalifiseringskamper. Finn ut hvilken for feeden tas i bruk -- en feed med
+to ukjente kamper kan ikke vaere terminlistekilde.
+
 ## 3.–8. oktober 2026: les arkivet og legg inn de observerte statusene
 
 FRIST: alt skal være testet og pushet FØR 9. oktober.

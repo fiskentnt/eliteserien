@@ -28,6 +28,10 @@ Filene lagres gzippet. Sidene er svært repetitiv HTML og komprimerer 13
 ganger (målt på arkivet fra 25. september 2026), så et arkiv som ellers
 hadde vokst med megabyte per kjøring vokser med titalls kilobyte.
 
+Bare ligasidene arkiveres. fotball.no holdes utenfor: robots.txt der sier
+Disallow: / for alle andre enn sokemotorene, og det er uansett ligasidens
+statusmerking vi skal studere.
+
 Filnavn: <liga>/<dato>/<kilde>-<tidspunkt>.html.gz, med tidspunkt i UTC.
 
 Bruk:  python3 scripts/arkiver_kildehtml.py <arkivkatalog> [liga ...]
@@ -41,7 +45,6 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import nff_source
 import ntf_source
 from ligaer import LIGAER, oppsett
 
@@ -124,10 +127,12 @@ def hent_alle(liga):
             ut.append((f"ntf-{side}", ntf_source.hent(f"{cfg['ntf_base']}/{side}")))
         except Exception as e:
             print(f"  {liga}/ntf-{side}: {type(e).__name__}: {e}", file=sys.stderr)
-    try:
-        ut.append(("nff", nff_source.hent(cfg["nff_url"])))
-    except Exception as e:
-        print(f"  {liga}/nff: {type(e).__name__}: {e}", file=sys.stderr)
+    # fotball.no arkiveres IKKE. robots.txt der sier Disallow: / for alle
+    # andre enn de navngitte sokemotorene, og arkivet henter hvert tiende
+    # minutt i kampvinduet. Vi trenger det heller ikke: det vi skal studere
+    # er hvordan LIGASIDEN merker en paagaaende kamp. fotball.no har ingen
+    # statusmarkering i det hele tatt -- der er vernet en klokkeregel, og en
+    # klokke trenger vi ikke lese markup for aa forstaa.
     return ut
 
 

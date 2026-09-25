@@ -157,3 +157,134 @@ def behold_eksisterende(merged, eksisterende, log=lambda s: None):
         ut.append(dict(g))
 
     return ut
+
+
+# Hvor langt utenfor sesongens egne kamper en dato faar ligge for vi
+# forkaster den. En utsatt kamp kan flyttes bakover i kalenderen, sjelden
+# framover forbi sesongstart.
+VINDU_FOR_DAGER = 7
+VINDU_ETTER_DAGER = 45
+
+# Over denne andelen utenfor vinduet er det ikke enkeltfeil, men noe galt med
+# kilden -- typisk en markupendring som gir feil dato paa mange kamper.
+ANDEL_KILDEFEIL = 0.25
+
+
+def _dato(s):
+    from datetime import date
+    try:
+        return date.fromisoformat(s)
+    except (TypeError, ValueError):
+        return None
+
+
+def _median(datoer):
+    d = sorted(datoer)
+    return d[len(d) // 2]
+
+
+def _sesongens_ytterkanter(kjente):
+    """(medianen i forste runde, medianen i siste runde), eller None.
+
+    IKKE min og maks av alle datoer: en enkelt lagret feildato -- akkurat den
+    typen vi er ute etter -- ville da apnet vinduet og slatt vakten av. En
+    runde har aatte kamper, sa medianen i den er ufolsom for en enkelt.
+    """
+    etter_runde = {}
+    for r in kjente:
+        runde = r.get("round")
+        if runde is None:
+            continue
+        etter_runde.setdefault(runde, []).append(_dato(r["date"]))
+    if not etter_runde:
+        return None
+    return (_median(etter_runde[min(etter_runde)]),
+            _median(etter_runde[max(etter_runde)]))
+
+
+def rimelige_datoer(merged, eksisterende, sesong, log=lambda s: None):
+    """(rader, utenfor, feilkode) -- retter datoer som umulig kan stemme.
+
+    obos-ligaen.no oppga 25. september 2026 datoen 01.01.2026 for
+    Haugesund-Sogndal, en kamp som ble spilt 5. september. Uten denne vakten
+    ville kampen flyttet seg ni maaneder i tidsvektingen, og ingenting ville
+    sagt fra for noen saa tabellen.
+
+    SESONGEN kommer fra kjeden som kjorer (sesong.py), ikke fra dataene. Det
+    er forskjellen som gjor at et sesongskifte og en massefeil kan skilles:
+
+      * Eksisterende data fra en ANNEN sesong brukes aldri som forrige verdi.
+        Ved skiftet er fjoraarets kamper irrelevante, og hele den nye
+        terminlisten slipper gjennom uendret.
+      * Vinduet settes av MEDIANDATOEN i forste og siste runde i sesongen,
+        med margin. Et kalenderaar alene duger ikke -- 01.01.2026 ligger inne
+        i 2026 -- og min/maks duger ikke, fordi en enkelt lagret feildato da
+        ville apnet vinduet og slatt vakten av.
+      * En dato utenfor vinduet rettes til forrige verdi fra samme sesong,
+        uansett hvor mange det gjelder. Mangler forrige verdi, slipper
+        kampen gjennom med advarsel -- vi utelater aldri en kamp.
+
+    utenfor er lagparene som laa utenfor. Er de mange, er det kilden det er
+    noe galt med, og kalleren skal la kjoringen feile synlig. utenfor er None
+    naar sesong er None -- da har vakten staatt over, og kalleren skal ogsaa
+    feile, men av en annen grunn."""
+    from datetime import timedelta
+    if sesong is None:
+        # Ingen autoritativ sesong. Vi gjetter ikke -- kalleren skal la
+        # kjoringen feile synlig, men dataene skrives som normalt.
+        log("Datovakt: ingen autoritativ sesong -- står over uten å gjette.")
+        return merged, None, "ingen_autoritet"
+    aar = str(sesong)
+
+    # SESONGSKIFTET IKKE KJORT. Registeret sier 2026, men terminlisten er
+    # 2027. Lagparene gaar igjen, saa uten denne sperren ville vakten funnet
+    # en "tidligere verdi" for hver kamp og skrevet HELE den nye sesongen
+    # tilbake til fjoraarets datoer, kamp for kamp, uten at noe saa galt ut.
+    aarene = {}
+    for r in merged:
+        if r.get("date"):
+            aarene[r["date"][:4]] = aarene.get(r["date"][:4], 0) + 1
+    if aarene:
+        flest = max(aarene, key=aarene.get)
+        if flest != aar and aarene[flest] > len(merged) * 0.5:
+            log(f"AVVIK: terminlisten er for {flest}, men registeret sier "
+                f"{aar}. Sesongskiftet er ikke kjørt. Datovakten retter "
+                f"ingenting -- den ville skrevet hele {flest}-sesongen "
+                f"tilbake til {aar}-datoer.")
+            return merged, None, "sesongskifte_mangler"
+    # Bare samme sesong teller som "forrige verdi".
+    gamle = {_nøkkel(r): r for r in (eksisterende or [])
+             if (r.get("date") or "").startswith(aar)}
+    kjente = [r for r in gamle.values() if _dato(r.get("date"))]
+    if len(kjente) < 20:
+        # Ny sesong, eller for tynt grunnlag til aa si hva som er umulig.
+        log(f"Datovakt: bare {len(kjente)} kjente kamper i {aar} -- står over.")
+        return merged, [], None
+
+    ytre = _sesongens_ytterkanter(kjente)
+    if ytre is None:
+        log(f"Datovakt: fant ikke runder i {aar}-dataene -- står over.")
+        return merged, [], None
+    forste, siste = ytre
+    fra = forste - timedelta(days=VINDU_FOR_DAGER)
+    til = siste + timedelta(days=VINDU_ETTER_DAGER)
+
+    ut, utenfor = [], []
+    for r in merged:
+        d = _dato(r.get("date"))
+        if d and not (fra <= d <= til):
+            utenfor.append(f"{r['home']}-{r['away']} ({r['date']})")
+            g = gamle.get(_nøkkel(r))
+            forrige = g.get("date") if g else None
+            log(f"ADVARSEL: {r['home']}-{r['away']} oppgis med {r['date']}, "
+                f"utenfor {fra}–{til} i sesongen {aar}. "
+                + (f"Beholder {forrige}." if forrige
+                   else "Ingen tidligere dato i denne sesongen, slipper gjennom."))
+            if forrige:
+                r = {**r, "date": forrige, "time": (g.get("time") or r.get("time"))}
+        ut.append(r)
+
+    if merged and len(utenfor) > len(merged) * ANDEL_KILDEFEIL:
+        log(f"AVVIK: {len(utenfor)} av {len(merged)} kamper hadde dato utenfor "
+            f"{fra}–{til}. Det er ikke enkeltfeil -- noe er galt med kilden.")
+    return ut, utenfor, None

@@ -15,11 +15,12 @@ Kampnummeret er stabilt hos NFF, men nøkkelen vår er fortsatt
 (hjemmelag, bortelag), slik at den er lik på tvers av alle kildene.
 """
 import html
+import json
 import re
 import sys
 import urllib.error
 import urllib.request
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -34,6 +35,65 @@ OSLO = ZoneInfo("Europe/Oslo")
 # Ligasiden (ntf_source) har en eksplisitt ferdig-klasse og er hovedkilden;
 # denne grensen gjelder bare kontrollkilden.
 FERDIG_ETTER_MIN = 150
+
+# HVOR OFTE VI HENTER FRA fotball.no -- og hvorfor det er sjelden.
+#
+# robots.txt paa fotball.no navngir Googlebot, Bing og noen til, og avslutter
+# med "User-agent: *" og "Disallow: /". Vaar User-Agent sier aerlig at vi er
+# en robot, saa vi er omfattet. robots.txt er ikke lov, men det er forbundets
+# uttrykte oenske, og aa hente derfra i hver kjoring er aa gaa imot det.
+#
+# Derfor: hoeyst ETT forsok per liga per doegn, uansett hvor mange workflows
+# som spoer. Alle andre leser det som ligger i cachen. Et forsok som FEILER
+# teller ogsaa -- ellers ville en nede-periode gitt nytt forsok hver time.
+#
+# Grensen ligger her, i kilden, ikke i hver kaller. Da kan den ikke omgaas
+# ved at noen glemmer den.
+HENT_INTERVALL_TIMER = 20
+CACHE_KATALOG = Path(__file__).resolve().parent.parent / "data" / "nff-cache"
+
+
+def _cache_sti(liga):
+    return CACHE_KATALOG / f"{liga}.json"
+
+
+def les_cache(liga):
+    p = _cache_sti(liga)
+    if not p.exists():
+        return {}
+    try:
+        return json.loads(p.read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+
+
+def _skriv_cache(liga, d):
+    p = _cache_sti(liga)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def sist_hentet(liga):
+    """Naar fotball.no-svaret i cachen faktisk ble hentet, eller None."""
+    d = les_cache(liga)
+    try:
+        return datetime.fromisoformat(d["hentet"]) if d.get("hentet") else None
+    except (KeyError, ValueError):
+        return None
+
+
+def _forfalt(d, naa):
+    """Er det over HENT_INTERVALL_TIMER siden SISTE FORSOK?"""
+    forsokt = d.get("forsokt")
+    if not forsokt:
+        return True, "aldri hentet"
+    try:
+        alder = (naa - datetime.fromisoformat(forsokt)).total_seconds() / 3600
+    except ValueError:
+        return True, "ulesbart tidspunkt i cachen"
+    if alder >= HENT_INTERVALL_TIMER:
+        return True, f"siste forsøk var {alder:.0f} timer siden"
+    return False, f"siste forsøk var {alder:.1f} timer siden, venter til {HENT_INTERVALL_TIMER}"
 
 USER_AGENT = "eliteserien-tabell (+https://github.com/fiskentnt/eliteserien)"
 
@@ -127,20 +187,50 @@ def hent(url):
         raise
 
 
-def fetch_all(liga, cache_dir=None, log=lambda s: None):
-    """Hele sesongen for én liga, i én forespørsel."""
+def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
+    """Hele sesongen for én liga -- fra cachen, eller ett forsøk i døgnet.
+
+    Returnerer alltid en liste. Har vi ingenting i cachen og forsøket er
+    sperret, er listen tom: da går kaller videre uten kontrollkilde, ikke i
+    stykker.
+
+    cache_dir er testinngangen: ligger filen der, brukes den og ingenting
+    hentes over nett."""
     cfg = oppsett(liga)
+    naa = naa or datetime.now(timezone.utc)
+
     sti = cache_dir and (Path(cache_dir) / f"nff_{liga}.html")
     if sti and sti.exists():
-        log(f"[nff {liga}] fra lokal cache")
-        tekst = sti.read_text(encoding="utf-8")
-    else:
-        log(f"[nff {liga}] henter {cfg['nff_url']} ...")
-        tekst = hent(cfg["nff_url"])
-        if sti:
-            sti.parent.mkdir(parents=True, exist_ok=True)
-            sti.write_text(tekst, encoding="utf-8")
-    return parse_side(tekst, liga, log=log)
+        log(f"[nff {liga}] fra lokal fil ({sti.name})")
+        return parse_side(sti.read_text(encoding="utf-8"), liga, log=log)
+
+    d = les_cache(liga)
+    forfalt, hvorfor = _forfalt(d, naa)
+    if not forfalt:
+        rader = d.get("rader") or []
+        log(f"[nff {liga}] {hvorfor} -- bruker lagret svar ({len(rader)} kamper)")
+        return rader
+
+    # Forsøket merkes FØR det gjøres. Feiler det, teller det likevel, og
+    # neste forsøk kommer først om 20 timer.
+    d["forsokt"] = naa.isoformat(timespec="seconds")
+    _skriv_cache(liga, d)
+
+    log(f"[nff {liga}] {hvorfor} -- henter {cfg['nff_url']}")
+    try:
+        rader = parse_side(hent(cfg["nff_url"]), liga, naa=naa, log=log)
+    except Exception as e:
+        d["siste_feil"] = f"{type(e).__name__}: {e}"[:200]
+        _skriv_cache(liga, d)
+        log(f"[nff {liga}] FEILET ({type(e).__name__}) -- nytt forsøk om "
+            f"{HENT_INTERVALL_TIMER} timer. Bruker det som lå i cachen.")
+        return d.get("rader") or []
+
+    d.update({"hentet": naa.isoformat(timespec="seconds"), "rader": rader})
+    d.pop("siste_feil", None)
+    _skriv_cache(liga, d)
+    log(f"[nff {liga}] hentet {len(rader)} kamper")
+    return rader
 
 
 if __name__ == "__main__":
