@@ -41,17 +41,57 @@ ODDS_WEIGHT = 40.0
 ODDS_PATH = DATA / "odds_closing.json"
 
 
-def rows_for(season=SEASON):
-    out = []
+def rows_for(season=SEASON, log=lambda s: None):
+    """Kampene i sesongen.
+
+    Runde, dato og avspark kommer fra den offisielle ligakilden, ikke fra
+    CSV-en. CSV-en er et statisk øyeblikksbilde som ingen kode skriver til,
+    så en flyttet kamp ville aldri blitt fanget opp der. Resultatene
+    beholdes fra den eksisterende kjeden (obos_results.py), som har regelen
+    om at ingenting publiseres før to kilder er enige.
+
+    CSV-en er fortsatt fasit for sesongene 2012-2025, som er ferdige og
+    ikke har noen kilde å hente fra lenger.
+    """
+    fra_csv = []
     for r in csv.DictReader(CSV_PATH.open(encoding="utf-8-sig")):
         if r["sesong"] != season:
             continue
-        out.append({
+        fra_csv.append({
             "round": int(r["runde"]), "date": r["dato"], "time": r["tid"],
             "home": r["hjemme"], "away": r["borte"],
             "hg": int(float(r["hjemmemaal"])) if r["hjemmemaal"] else None,
             "ag": int(float(r["bortemaal"])) if r["bortemaal"] else None,
         })
+
+    if season != SEASON:
+        fra_csv.sort(key=lambda m: (m["date"], m["time"], m["home"]))
+        return fra_csv
+
+    import ntf_source, nff_source
+    from reconcile_ny import reconcile
+    try:
+        ntf = ntf_source.fetch_all("obos", log=log)
+    except Exception as e:
+        log(f"ADVARSEL: ligasiden feilet ({e}) -- bruker CSV-terminlisten "
+            f"denne kjøringen. En kamp som er flyttet i dag blir da ikke fanget opp.")
+        fra_csv.sort(key=lambda m: (m["date"], m["time"], m["home"]))
+        return fra_csv
+    try:
+        nff = nff_source.fetch_all("obos", log=log)
+    except Exception as e:
+        log(f"ADVARSEL: fotball.no feilet ({e}) -- ingen uavhengig kontroll av "
+            f"terminlisten denne kjøringen.")
+        nff = []
+
+    offisiell = reconcile(ntf, nff, reserver=[("csv", fra_csv)], log=log)
+    resultat = {(r["home"], r["away"]): r for r in fra_csv}
+    out = []
+    for r in offisiell:
+        egen = resultat.get((r["home"], r["away"]), {})
+        out.append({"round": r["round"], "date": r["date"], "time": r["time"],
+                    "home": r["home"], "away": r["away"],
+                    "hg": egen.get("hg"), "ag": egen.get("ag")})
     out.sort(key=lambda m: (m["date"], m["time"], m["home"]))
     return out
 

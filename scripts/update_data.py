@@ -22,6 +22,9 @@ from zoneinfo import ZoneInfo
 sys.path.insert(0, str(Path(__file__).parent))
 import ffk_source
 import espn_source
+import ntf_source
+import nff_source
+from reconcile_ny import reconcile as reconcile_kilder, behold_eksisterende
 import fetch_odds_history
 import merge_odds
 import fit_model
@@ -32,6 +35,7 @@ LEAGUE = ROOT / "eliteserien"  # ligamappen (data/ ligger under den, så flere l
 OSLO = ZoneInfo("Europe/Oslo")
 
 FFK_CACHE_PATH = LEAGUE / "data" / "ffk_cache.json"
+LIGA = "eliteserien"
 FFK_MIN_INTERVAL_MIN = 60  # ffksupporter.net skrapes (16 sider) maks én gang i timen
 STATUS_PATH = LEAGUE / "data" / "status.json"
 AUDIT_STATE_PATH = LEAGUE / "data" / "audit_state.json"
@@ -43,7 +47,18 @@ class DataAuditError(Exception):
     pass
 
 
-def reconcile(ffk_rows, espn_rows, log=lambda s: None):
+def reconcile(ntf_rows, nff_rows, ffk_rows, espn_rows, log=lambda s: None):
+    """Ligasiden er fasit for terminliste, runde, dato og avspark.
+    fotball.no er uavhengig offisiell kontroll og reserve. ffksupporter er
+    degradert til siste utvei, ESPN er resultatkontroll. Se reconcile_ny.py."""
+    return reconcile_kilder(
+        ntf_rows, nff_rows,
+        reserver=[("ffksupporter", ffk_rows)],
+        resultatkontroll=[("ESPN", espn_rows)],
+        log=log)
+
+
+def reconcile_gammel(ffk_rows, espn_rows, log=lambda s: None):
     """Slår sammen kilder per kamp (nøkkel: lagpar, unikt i en dobbel serie).
     Runde og dato kommer alltid fra ffksupporter (har hele sesongoppsettet).
     Resultat: ffksupporter hvis satt, ellers ESPN. Uenighet mellom kildene
@@ -166,15 +181,15 @@ def audit_against_ffk(matches_out, ffk_rows, now):
             else:
                 suffix = f" ({hours_since:.0f}t siden avspark)" if hours_since is not None else ""
                 warnings.append(f"{m['home']}-{m['away']} ({m['date']}): vi har {m['hg']}-{m['ag']}, "
-                                 f"ffksupporter.net har ikke registrert resultat ennå{suffix}")
+                                 f"kontrollkilden har ikke registrert resultat ennå{suffix}")
         elif (ffk["hg"], ffk["ag"]) != (m["hg"], m["ag"]):
-            errors.append(f"{m['home']}-{m['away']} ({m['date']}): vi har {m['hg']}-{m['ag']}, ffksupporter.net har {ffk['hg']}-{ffk['ag']}")
+            errors.append(f"{m['home']}-{m['away']} ({m['date']}): vi har {m['hg']}-{m['ag']}, kontrollkilden har {ffk['hg']}-{ffk['ag']}")
 
     for r in ffk_rows:
         if r["hg"] is None or r["ag"] is None:
             continue
         if (r["home"], r["away"]) not in matches_by_pair:
-            errors.append(f"{r['home']}-{r['away']} ({r['date']}): ffksupporter.net har {r['hg']}-{r['ag']}, vi mangler kampen helt")
+            errors.append(f"{r['home']}-{r['away']} ({r['date']}): kontrollkilden har {r['hg']}-{r['ag']}, vi mangler kampen helt")
 
     return errors, warnings
 
@@ -201,8 +216,39 @@ def run_daily_audit(matches_out, ffk_rows, now, log):
     if errors:
         for e in errors:
             log(f"AVVIK: {e}")
-        raise DataAuditError(f"{len(errors)} avvik mellom matches.json og ffksupporter.net:\n" + "\n".join(errors))
+        raise DataAuditError(f"{len(errors)} avvik mellom matches.json og kontrollkilden:\n" + "\n".join(errors))
     log(f"Daglig kontroll: ingen kritiske avvik ({len(warnings)} advarsel(er)).")
+
+
+RESULTAT_FRIST_TIMER = 3
+
+
+def sjekk_manglende_resultat(fixtures_out, now, log):
+    """Står en kamp uten sluttresultat mer enn tre timer etter avspark, er
+    noe galt -- og da skal kjøringen feile synlig samme kveld, ikke bare
+    legge en linje i loggen som ingen leser. Alternativet er at tabellen står
+    feil til noen tilfeldigvis oppdager det.
+
+    Kaster DataAuditError, som allerede gjør stempelet rødt."""
+    sent = []
+    for runde in fixtures_out:
+        for m in runde.get("matches", []):
+            if m.get("played"):
+                continue
+            if not m.get("date") or not m.get("time"):
+                continue  # uten avspark kan vi ikke vite om fristen er ute
+            avspark = _kickoff_utc(m["date"], m["time"])
+            timer = (now - avspark).total_seconds() / 3600
+            if timer > RESULTAT_FRIST_TIMER:
+                sent.append(f"{m['home']}-{m['away']} ({m['date']} {m.get('time')}): "
+                            f"{timer:.1f} timer siden avspark, fortsatt uten sluttresultat")
+    if sent:
+        for e in sent:
+            log(f"AVVIK: {e}")
+        raise DataAuditError(
+            f"{len(sent)} kamp(er) mangler sluttresultat mer enn "
+            f"{RESULTAT_FRIST_TIMER} timer etter avspark:\n" + "\n".join(sent))
+    return 0
 
 
 def main(cache_dir=None):
@@ -225,19 +271,49 @@ def main(cache_dir=None):
             log(f"ADVARSEL: ESPN feilet ({e}) -- fortsetter uten ESPN denne runden (ffksupporter dekker fortsatt resultatet).")
             espn_rows = []
 
-        ffk_rows = get_ffk_rows(cache_dir, log)
+        # Hovedkilde: ligasiden. Uten den kan vi ikke bygge terminlisten.
+        ntf_rows = ntf_source.fetch_all(LIGA, cache_dir=cache_dir, log=log)
 
-        merged = reconcile(ffk_rows, espn_rows, log=log)
+        # Uavhengig offisiell kontroll. Faller den ut, fortsetter vi -- men
+        # da er terminlisten uten annenmening igjen, og det skal logges.
+        try:
+            nff_rows = nff_source.fetch_all(LIGA, cache_dir=cache_dir, log=log)
+        except Exception as e:
+            log(f"ADVARSEL: fotball.no feilet ({e}) -- fortsetter uten "
+                f"uavhengig kontroll av terminlisten denne runden.")
+            nff_rows = []
+
+        # Reserve. Feiler den, er det ikke lenger kritisk.
+        try:
+            ffk_rows = get_ffk_rows(cache_dir, log)
+        except Exception as e:
+            log(f"ADVARSEL: ffksupporter (reserve) feilet ({e}) -- fortsetter.")
+            ffk_rows = []
+
+        merged = reconcile(ntf_rows, nff_rows, ffk_rows, espn_rows, log=log)
+
+        # Et publisert resultat skal aldri forsvinne fordi en kilde midlertidig
+        # ikke melder kampen som ferdig. Se behold_eksisterende().
+        tidligere = json.loads((LEAGUE / "data" / "matches.json").read_text(encoding="utf-8")) \
+            if (LEAGUE / "data" / "matches.json").exists() else []
+        merged = behold_eksisterende(merged, tidligere, log=log)
         matches_out, fixtures_out = build(merged)
 
-        from_espn = sum(1 for r in merged if r["src"] == "espn")
-        log(f"Ferdig: {len(matches_out)} spilte kamper ({from_espn} fra ESPN, resten ffksupporter.net), "
+        fordeling = {}
+        for r in merged:
+            if r["src"]:
+                fordeling[r["src"]] = fordeling.get(r["src"], 0) + 1
+        log(f"Ferdig: {len(matches_out)} spilte kamper ({fordeling}), "
             f"{len(fixtures_out)} runder med gjenstående kamper.")
 
         data_dir = LEAGUE / "data"
         data_dir.mkdir(exist_ok=True)
         write_json(data_dir / "matches.json", matches_out)
         write_json(data_dir / "fixtures.json", fixtures_out)
+
+        # Etter skriving: filene er riktige så langt kildene rekker, men en
+        # kamp som mangler resultat lenge etter avspark skal stoppe kjøringen.
+        sjekk_manglende_resultat(fixtures_out, now, log)
 
         log("--- Sluttodds (football-data.co.uk, maks én gang i døgnet) ---")
         fetch_odds_history.main()
@@ -262,7 +338,12 @@ def main(cache_dir=None):
         # kontrollen mot ffksupporter.net. Kan fortsatt feile KJØRINGEN
         # (stempelet blir rødt), men hindrer ikke dagens resultater/odds/
         # modell i å bli skrevet og committet først.
-        run_daily_audit(matches_out, ffk_rows, now, log)
+        # Den daglige kontrollen går nå mot fotball.no (NFF), ikke mot
+        # ffksupporter. Den er offisiell, uavhengig av ligasiden vi bygger
+        # fra, og komplett for hele sesongen. Faller den ut, bruker vi
+        # ffksupporter som før, slik at kontrollen aldri blir helt borte.
+        kontroll = nff_rows or ffk_rows
+        run_daily_audit(matches_out, kontroll, now, log)
 
         write_status(ok=True, now=now)
     except Exception as e:

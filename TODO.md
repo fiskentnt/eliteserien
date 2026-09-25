@@ -3,6 +3,40 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## 2. oktober 2026: første kampdag med de offisielle kildene
+
+OBOS runde 24 åpner 2. oktober 19:00 med Ranheim mot Egersund. Det er den
+første kampdagen etter kildebyttet — en uke FØR Eliteserien runde 23, så
+kontrollen skal gjøres den kvelden, ikke 9. oktober.
+
+Sandkassen kunne ikke teste dette: alle sidene ble hentet mellom runder, så
+vi har aldri sett hvordan en pågående kamp ser ut i markupen. Det som er
+bygget, er derfor et vern mot det ukjente, ikke mot noe vi har observert.
+
+Sjekk konkret, mens kampen spilles:
+
+1. Hvilken CSS-klasse ligasiden gir raden. Kjenner vi den ikke igjen, skal
+   kampen regnes som ikke spilt og `ntf_source` skal logge «ukjent
+   radstatus». Noter klassen og legg den inn i `KJENTE_KLASSER`.
+2. At stillingen underveis ikke havner i `matches.json`.
+3. Hva fotball.no viser. Der finnes ingen statusklasse, så vernet er
+   tidsgrensen `FERDIG_ETTER_MIN = 150` i `nff_source.py`.
+4. At sluttresultatet kommer riktig inn når kampen er ferdig.
+
+Fristen på tre timer (`RESULTAT_FRIST_TIMER` i `update_data.py`) gjør
+kjøringen rød hvis et resultat mangler. Første gang den slår ut kan den
+komme av at vernene er for strenge, ikke av at kilden er nede.
+
+## Når den nye kjeden har stått stabilt: fjern returveien
+
+`reconcile_gammel()` i `scripts/update_data.py` er den gamle
+ffksupporter-baserte sammenslåingen. Den er død kode, beholdt bevisst som
+vei tilbake. Fjern den når de offisielle kildene har kjørt gjennom noen
+runder uten overraskelser — ellers blir den liggende for godt.
+
+Samtidig: vurder om `ffk_source.py` fortsatt skal hentes. Den er nå tredje
+reserve, og den hadde feil avspark på 21 kamper og feil dato på 1 i 2026.
+
 ## Sist oppdatert 22. september 2026
 
 OBOS-ligaen ble lansert på `/obos/` denne dagen: egne soner, lagfarger,
