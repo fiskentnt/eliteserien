@@ -36,8 +36,26 @@ import oddswindow
 ROOT = Path(__file__).parent.parent
 DATA = ROOT / "obos" / "data"
 CSV_PATH = DATA / "obos_2012-2026.csv"
+# SESONGEN kjoringen gjelder. 2026 er inneverende og beholder de opprinnelige
+# filnavnene; eldre sesonger er TILBAKEFYLL og legges under odds-historikk/,
+# en fil per sesong, slik at jobben kan gjenopptas og to kjoringer aldri
+# skriver i samme fil.
+SESONG = "2026"
 FIXTURES_CACHE = DATA / "oddspapi_fixtures_2026.json"
 OUT_PATH = DATA / "odds_closing.json"
+
+
+def sett_sesong(aar):
+    """Peker stiene til den oppgitte sesongen. 2026 er uendret."""
+    global SESONG, FIXTURES_CACHE, OUT_PATH
+    SESONG = str(aar)
+    if SESONG == "2026":
+        FIXTURES_CACHE = DATA / "oddspapi_fixtures_2026.json"
+        OUT_PATH = DATA / "odds_closing.json"
+    else:
+        h = DATA / "odds-historikk"
+        FIXTURES_CACHE = h / f"oppslag_{SESONG}.json"
+        OUT_PATH = h / f"{SESONG}.json"
 MARKETS_CACHE = DATA / "oddspapi_markets.json"
 NAME_MAP_PATH = DATA / "name_map.json"
 
@@ -94,7 +112,7 @@ def csv_2026():
     """
     rows = []
     for r in csv.DictReader(CSV_PATH.open(encoding="utf-8-sig")):
-        if r["sesong"] != "2026":
+        if r["sesong"] != SESONG:
             continue
         rows.append({
             "round": int(r["runde"]), "date": r["dato"], "time": r["tid"],
@@ -102,8 +120,11 @@ def csv_2026():
             "hg": int(float(r["hjemmemaal"])) if r["hjemmemaal"] else None,
             "ag": int(float(r["bortemaal"])) if r["bortemaal"] else None,
         })
+    # Resultatoverlegget gjelder bare inneverende sesong. For en ferdigspilt
+    # sesong staar resultatene i CSV-en, og matches.json inneholder en annen
+    # sesong -- aa legge den oppaa ville blandet to sesonger.
     pub_path = DATA / "matches.json"
-    if pub_path.exists():
+    if pub_path.exists() and SESONG == "2026":
         pub = {(m["home"], m["away"]): (m["hg"], m["ag"])
                for m in json.loads(pub_path.read_text(encoding="utf-8"))}
         extra = 0
@@ -123,7 +144,7 @@ def match_id(row):
     Datoen er ikke med. En flyttet kamp er den samme kampen, og skal aldri bli
     to rader i filen.
     """
-    return f"2026|{row['home']}|{row['away']}"
+    return f"{SESONG}|{row['home']}|{row['away']}"
 
 
 def fetch_fixtures(key, force=False):
@@ -134,7 +155,8 @@ def fetch_fixtures(key, force=False):
         return d["fixtures"]
     print("  henter terminlisten fra OddsPapi (1 tellende kall)")
     d, err = get("/v4/fixtures", {"tournamentId": OBOS_TOURNAMENT,
-                                  "from": "2026-01-01", "to": "2026-12-31"}, key)
+                                  "from": f"{SESONG}-01-01",
+                                  "to": f"{SESONG}-12-31"}, key)
     if err:
         print(f"  FEIL: {err}")
         return None
@@ -288,7 +310,15 @@ def main():
     ap.add_argument("--max", type=int, default=250, help="høyst så mange kamper denne kjøringen")
     ap.add_argument("--report", action="store_true", help="bare navnesjekk, hent ingen odds")
     ap.add_argument("--refresh-fixtures", action="store_true", help="hent terminlisten på nytt (1 tellende kall)")
+    ap.add_argument("--sesong", default="2026",
+                    help="hvilken sesong. 2026 er inneværende og uendret; "
+                         "eldre år er tilbakefyll til obos/data/odds-historikk/")
     args = ap.parse_args()
+    sett_sesong(args.sesong)
+    if args.sesong != "2026":
+        OUT_PATH.parent.mkdir(parents=True, exist_ok=True)
+        print(f"TILBAKEFYLL for {args.sesong}: skriver til "
+              f"{OUT_PATH.relative_to(ROOT)}")
 
     key = os.environ.get("ODDSPAPI_KEY", "").strip()
     if not key:
@@ -297,7 +327,7 @@ def main():
 
     rows = csv_2026()
     played = [r for r in rows if r["hg"] is not None]
-    print(f"Terminliste: {len(rows)} kamper i 2026, {len(played)} spilte")
+    print(f"Terminliste: {len(rows)} kamper i {SESONG}, {len(played)} spilte")
 
     fixtures = fetch_fixtures(key, force=args.refresh_fixtures)
     if fixtures is None:
