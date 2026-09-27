@@ -94,6 +94,11 @@ Notert, ikke rettet.
   `obos_upcoming_odds.py` hadde: 404 «No historical odds found» logges som
   feil selv om markedet bare ikke er åpnet. Sjekkes når Eliteserie-kampene
   nærmer seg (9. oktober 2026).
+- **«Heie på» følger ikke sonen brukeren kom fra.** `qaCheerFor` bruker
+  alltid lagets egen målsone (`qaTargetZone`) og ignorerer
+  `qaWhyZoneOverride`, mens de andre svarene følger sonen brukeren kom fra.
+  Eksempel: etter «Hvorfor har Ranheim 0 % nedrykksfare?» svarer «heie på»
+  for topp 6, ikke for nedrykk.
 
 ## Kjøre lokalt
 
