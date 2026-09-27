@@ -80,6 +80,21 @@ historical odds found» for alle 45 kampene den prøvde, 26. september 2026
 (`obos/data/odds-historikk/2025.json`). OddsPapi har altså ikke 2025-oddsen.
 Tilbakefyllingen er ikke endret.
 
+## Kjente svakheter
+
+Notert, ikke rettet.
+
+- **NTF-unntaket for ugyldig dato slår opp kampen uten sesong.** En rad på
+  resultatsiden med ugyldig dato hoppes over når (hjemme, borte) har resultat
+  i `matches.json` (`scripts/ntf_source.py`). Oppslaget har ikke med
+  sesongen. Det er trygt så lenge `matches.json` bare har én sesong.
+- **`obos_results.py --dry-run` skriver til `obos/data/results_state.json`**
+  (`checked_at` og `oddspapi_usage`). En tørrkjøring skal ikke skrive.
+- **`prekick_odds.py` kan ha samme 404-mønster** for kommende kamper som
+  `obos_upcoming_odds.py` hadde: 404 «No historical odds found» logges som
+  feil selv om markedet bare ikke er åpnet. Sjekkes når Eliteserie-kampene
+  nærmer seg (9. oktober 2026).
+
 ## Kjøre lokalt
 
 Siden er statiske filer og trenger ingen byggesteg:
