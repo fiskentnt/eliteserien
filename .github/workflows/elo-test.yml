@@ -1,0 +1,69 @@
+name: "ELO-test: bygg modellen"
+
+# Testversjonen under /elo-test/, med ELO-Odds 90 som grunnmodell. Rører INGEN
+# produksjonsfil: skriver bare elo-test/emodell/, og committer bare når
+# modellen eller prognoseloggen faktisk er endret. Uendret prognose gir ingen
+# commit. Se elo-test/README.md.
+#
+# UTLØSES av de tre workflowene som skriver data testsiden leser:
+#   Oppdater kampdata                    matches.json, fixtures.json, odds.json
+#   Oppdater odds for kommende kamper    odds_upcoming.json (fetch_odds_upcoming.py)
+#   Odds nær avspark                     odds_upcoming.json (prekick_odds.py)
+# Alle tre pusher til main som et STEG i egen jobb, før workflowen er ferdig.
+# workflow_run med types: [completed] starter derfor først etter pushen, og
+# checkout med ref: main ser den nye filen.
+on:
+  workflow_run:
+    workflows:
+      - "Oppdater kampdata"
+      - "Oppdater odds for kommende kamper"
+      - "Odds nær avspark"
+    types: [completed]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: elo-test-bygg          # egen gruppe; køer testsidens jobber
+  cancel-in-progress: false
+
+jobs:
+  bygg:
+    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Installer avhengigheter (numpy, scipy)
+        run: pip install -r requirements.txt
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"      # kontroll D kjører sidens egen JS
+
+      - name: Bygg ELO90-modellen
+        run: python3 elo-test/scripts/bygg.py
+
+      - name: Kontroller
+        run: python3 elo-test/scripts/kontroll.py
+
+      - name: Lagre hvis noe er endret
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add elo-test/emodell
+          if git diff --cached --quiet; then
+            echo "Ingenting endret -- ingen commit."
+          else
+            git commit -m "ELO-test: modellen bygget $(date -u +%Y-%m-%dT%H:%MZ)"
+            bash scripts/push_med_rebase.sh
+          fi
