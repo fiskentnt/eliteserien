@@ -74,6 +74,12 @@ tegnes på nytt.
 Alt hentes automatisk av workflowene i `.github/workflows/`. Ingenting
 publiseres uten at valideringen går gjennom.
 
+**OBOS 2025: ingen sluttodds hos OddsPapi.** Tilbakefyllingen
+(«OBOS: hent historiske sluttodds», `--sesong 2025`) fikk HTTP 404 «No
+historical odds found» for alle 45 kampene den prøvde, 26. september 2026
+(`obos/data/odds-historikk/2025.json`). OddsPapi har altså ikke 2025-oddsen.
+Tilbakefyllingen er ikke endret.
+
 ## Kjøre lokalt
 
 Siden er statiske filer og trenger ingen byggesteg:
