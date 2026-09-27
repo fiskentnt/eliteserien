@@ -482,6 +482,66 @@ def main():
           "ikke_funnet_er_hoppet=True" in kilde
           and 'kommende = [(r, f) for r, f in links if (r["home"], r["away"]) not in played' in kilde)
 
+    # 19. NTF: en rad med ugyldig dato skal ikke stoppe hele hentingen naar
+    #   kampen alt har resultat i matches.json. NTF viste "Invalid date." for
+    #   Kongsvinger - Hødd (spilt 20.9.2026, 5-1), og OBOS-resultatene stoppet
+    #   hver dag. Uten resultat -- og alltid paa terminlisten -- skal en
+    #   ugyldig dato fortsatt stoppe. Syntetiske rader i NTF-markupen; ingen nett.
+    import ntf_source as NTF
+    def ntf_rad(h, b, dato_html, res="5 - 1", klasse="schedule__match schedule__match--played", runde="#23"):
+        return (f'<tr class="{klasse}"><td class="schedule__match__item--round">{runde}</td>'
+                f'<td class="schedule__match__item--teams">{h} - <span class="schedule__match__item--opponent">{b}</span></td>'
+                f'<td class="schedule__match__item--result">{res}</td>'
+                f'<td class="schedule__match__item--date">{dato_html} <span class="schedule__time">17:00</span></td></tr>')
+    ugyldig = 'Invalid date.<span class="schedule__match__item--date__year">Invalid date</span>'
+    gyldig = '20.09.<span class="schedule__match__item--date__year">2026</span>'
+    side = ntf_rad("Kongsvinger", "Hødd", ugyldig) + ntf_rad("Lyn", "Moss", gyldig, res="2 - 0")
+    hoppet = []
+    try:
+        rader = NTF.parse_side(side, "resultater", "obos", har_resultat=lambda h, b: (h, b) == ("Kongsvinger", "Hødd"),
+                               hoppet=hoppet)
+        check("NTF: ugyldig dato for kamp MED resultat hoppes over, resten tolkes",
+              [(r["home"], r["away"]) for r in rader] == [("Lyn", "Moss")] and hoppet == ["Kongsvinger - Hødd"],
+              f"{rader}, hoppet {hoppet}")
+    except Exception as e:
+        check("NTF: ugyldig dato for kamp MED resultat hoppes over, resten tolkes", False, f"{type(e).__name__}: {e}")
+    for navn, kw in (("uten resultat", {"har_resultat": lambda h, b: False}),
+                     ("uten oppslag (terminlisten)", {})):
+        try:
+            NTF.parse_side(side, "resultater", "obos", **kw)
+            check(f"NTF: ugyldig dato {navn} stopper fortsatt hentingen", False, "ingen feil ble kastet")
+        except NTF.EsDataError as e:
+            check(f"NTF: ugyldig dato {navn} stopper fortsatt hentingen", "manglende dato" in str(e), str(e))
+        except TypeError as e:
+            check(f"NTF: ugyldig dato {navn} stopper fortsatt hentingen", False, f"TypeError: {e}")
+    # Hele fetch_all, med sidene fra en lokal mappe og matches.json fra repoet.
+    import tempfile as _tf
+    import hentelogg as HL2
+    with _tf.TemporaryDirectory() as d:
+        Path(d, "obos_resultater.html").write_text(side, encoding="utf-8")
+        Path(d, "obos_terminliste.html").write_text(
+            ntf_rad("Ranheim", "Egersund", '02.10.<span class="schedule__match__item--date__year">2026</span>',
+                    res="", klasse="schedule__match schedule__match--upcoming", runde="#24"), encoding="utf-8")
+        try:
+            alle = NTF.fetch_all("obos", cache_dir=d)
+            par = {(r["home"], r["away"]) for r in alle}
+            siste = [r for r in HL2.les(1) if r.get("liga") == "obos" and r.get("kilde") == "ntf-resultater"][-1]
+            check("NTF: fetch_all fortsetter forbi raden, og hentelogget sier ok og nevner kampen",
+                  ("Lyn", "Moss") in par and ("Ranheim", "Egersund") in par and ("Kongsvinger", "Hødd") not in par
+                  and siste["utfall"] == "ok" and "Kongsvinger - Hødd" in siste.get("melding", ""),
+                  f"{sorted(par)}, logg {siste}")
+        except Exception as e:
+            check("NTF: fetch_all fortsetter forbi raden, og hentelogget sier ok og nevner kampen", False,
+                  f"{type(e).__name__}: {e}")
+        Path(d, "obos_terminliste.html").write_text(
+            ntf_rad("Ranheim", "Egersund", ugyldig, res="", klasse="schedule__match schedule__match--upcoming",
+                    runde="#24"), encoding="utf-8")
+        try:
+            NTF.fetch_all("obos", cache_dir=d)
+            check("NTF: ugyldig dato på terminlisten stopper fortsatt fetch_all", False, "ingen feil ble kastet")
+        except NTF.EsDataError as e:
+            check("NTF: ugyldig dato på terminlisten stopper fortsatt fetch_all", "manglende dato" in str(e), str(e))
+
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare
     # kall som aldri skjedde, av selve testene.

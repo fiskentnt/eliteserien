@@ -33,6 +33,8 @@ med ett unntak: "neste kamp"-raden har ingen liga-celle, og hentes fra
 terminlisten der bare ligaens egne kamper står.
 """
 import html
+import json
+import os
 import re
 import sys
 import urllib.error
@@ -127,8 +129,14 @@ def _navn(rått, cfg):
     return n
 
 
-def parse_rad(rad, kilde, cfg, klasser="", naa=None, log=lambda s: None):
-    """Én kamprad -> dict, eller None hvis raden ikke hører til ligaen."""
+def parse_rad(rad, kilde, cfg, klasser="", naa=None, log=lambda s: None,
+              har_resultat=None, hoppet=None):
+    """Én kamprad -> dict, eller None hvis raden ikke hører til ligaen.
+
+    har_resultat(hjemme, borte): True hvis kampen alt har resultat i
+    matches.json. Da stopper ikke en ugyldig dato hentingen: raden hoppes over
+    med en advarsel (og legges i listen hoppet). Brukes bare paa
+    resultatsiden. Uten resultat stopper en ugyldig dato fortsatt alt."""
     naa = naa or datetime.now(OSLO)
     celler = _celler(rad)
     lag_celle = _finn(celler, "--teams")
@@ -149,6 +157,19 @@ def parse_rad(rad, kilde, cfg, klasser="", naa=None, log=lambda s: None):
     dato_celle = _finn(celler, "--date") or ""
     d = DATO_RE.search(dato_celle)
     if not d:
+        # NTF viste "Invalid date." for Kongsvinger - Hødd (spilt 20.9.2026,
+        # 5-1) paa OBOS-resultatsiden, og hele hentingen stoppet hver dag.
+        # Har kampen alt resultat hos oss, er raden ikke noe vi trenger.
+        if har_resultat is not None and har_resultat(hjemme, borte):
+            melding = (f"ADVARSEL: ugyldig dato for {hjemme} - {borte} ({kilde}) -- "
+                       f"kampen har alt resultat i matches.json, raden hoppes over")
+            log(melding)
+            print(melding, file=sys.stderr)
+            if os.environ.get("GITHUB_ACTIONS"):
+                print(f"::warning title=NTF: ugyldig dato::{melding}")
+            if hoppet is not None:
+                hoppet.append(f"{hjemme} - {borte}")
+            return None
         raise EsDataError(f"manglende dato for {hjemme} - {borte} ({kilde})")
     dato = f"{d.group(3)}-{d.group(2)}-{d.group(1)}"
 
@@ -198,12 +219,14 @@ def parse_rad(rad, kilde, cfg, klasser="", naa=None, log=lambda s: None):
             "ferdig": ferdig, "ukjent_status": ukjent}
 
 
-def parse_side(html_tekst, kilde, liga, naa=None, log=lambda s: None):
+def parse_side(html_tekst, kilde, liga, naa=None, log=lambda s: None,
+               har_resultat=None, hoppet=None):
     cfg = oppsett(liga)
     naa = naa or datetime.now(OSLO)
     ut = []
     for klasser, rad in RAD_RE.findall(html_tekst):
-        rad_data = parse_rad(rad, kilde, cfg, klasser, naa, log)
+        rad_data = parse_rad(rad, kilde, cfg, klasser, naa, log,
+                             har_resultat=har_resultat, hoppet=hoppet)
         if rad_data:
             ut.append(rad_data)
     if not ut:
@@ -341,7 +364,17 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
     cfg = oppsett(liga)
     naa = naa or datetime.now(OSLO)
     rader = []
+    # Kamper som alt har resultat hos oss. Bare resultatsiden bruker dette:
+    # der kan en rad med ugyldig dato hoppes over naar vi alt har kampen.
+    # Paa terminlisten kan samme lagpar vaere NESTE sesongs kamp, og der
+    # stopper en ugyldig dato fortsatt hentingen.
+    try:
+        _ms = json.loads((ROT / cfg["data"] / "matches.json").read_text(encoding="utf-8"))
+        med_resultat = {(m["home"], m["away"]) for m in _ms if m.get("hg") is not None}
+    except Exception:
+        med_resultat = set()
     for navn in ("resultater", "terminliste"):
+        hoppet = []
         sti = cache_dir and (Path(cache_dir) / f"{liga}_{navn}.html")
         if sti and sti.exists():
             log(f"[ntf {liga}] {navn}: fra lokal cache")
@@ -364,7 +397,10 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
         # feilmaaten -- kilden svarer, men vi forstaar den ikke -- aldri
         # loggfort, og alarmen kunne ikke se den.
         try:
-            nye = parse_side(tekst, navn, liga, naa=naa, log=log)
+            nye = parse_side(tekst, navn, liga, naa=naa, log=log,
+                             har_resultat=(lambda h, b: (h, b) in med_resultat)
+                             if navn == "resultater" else None,
+                             hoppet=hoppet)
         except TomSide as e:
             ferdig, hvorfor = sesongen_ferdigspilt(navn, rader, liga, rot=ROT)
             if not ferdig:
@@ -382,7 +418,9 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
             hentelogg.logg(liga, f"ntf-{navn}", "feil",
                            melding=f"{type(e).__name__}: {e}")
             raise
-        hentelogg.logg(liga, f"ntf-{navn}", "ok", kamper=len(nye))
+        hentelogg.logg(liga, f"ntf-{navn}", "ok", kamper=len(nye),
+                       melding=(f"hoppet over rad med ugyldig dato (har resultat): "
+                                f"{', '.join(hoppet)}") if hoppet else "")
         rader.extend(nye)
 
     return slå_sammen(rader, log=log)
