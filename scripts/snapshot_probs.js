@@ -30,6 +30,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
+const {avsparkFraTerminliste, oppdaterPrekick} = require('./prekick_frys');
 
 const ROOT = path.join(__dirname, '..');
 // Hvilken liga. Alt som skiller ligaene ligger i LEAGUE på selve siden, så
@@ -147,27 +148,19 @@ function chromePath() {
       return ut;
     });
     {
+      // Frysregelen ligger i scripts/prekick_frys.js: en rad oppdateres bare
+      // FØR avspark fra terminlisten, og fryses med siste stempel fra før
+      // avspark når resultatet kommer. Se kommentaren der.
       const old = fs.existsSync(PREKICK) ? JSON.parse(fs.readFileSync(PREKICK, 'utf8')) : {version: 1, matches: {}};
-      old.matches = old.matches || {};
-      let nye = 0, oppdatert = 0;
-      for (const [k, v] of Object.entries(pre)) {
-        // En lagret kamp som nå er spilt, røres ikke: den skal beholde tallet
-        // som gjaldt før avspark. Er den fortsatt uspilt, holdes den fersk.
-        if (old.matches[k] && old.matches[k].frosset) continue;
-        if (old.matches[k]) oppdatert++; else nye++;
-        old.matches[k] = {...v, stamp: new Date().toISOString().replace(/\.\d+Z$/, 'Z')};
-      }
-      // Frys alt som er spilt nå.
+      const avspark = avsparkFraTerminliste(JSON.parse(fs.readFileSync(path.join(DATA, 'fixtures.json'), 'utf8')));
       const spilte = await page.evaluate(() =>
         MATCHES.map(m => `${LEAGUE.season}|${m.home}|${m.away}`));
-      let frosne = 0;
-      for (const k of spilte) {
-        if (old.matches[k] && !old.matches[k].frosset) { old.matches[k].frosset = true; frosne++; }
-      }
+      const n = oppdaterPrekick(old, pre, spilte, avspark, Date.now(),
+                                new Date().toISOString().replace(/\.\d+Z$/, 'Z'));
       old.version = 1;
-      old.note = 'Sannsynlighet for hvert utfall før avspark, per kamp. Skrevet mens kampen var uspilt og frosset da den ble spilt, så "forrige kamp" kan si hvor overraskende resultatet var uten etterpåklokskap.';
+      old.note = 'Sannsynlighet for hvert utfall før avspark, per kamp. Oppdateres bare før avspark fra terminlisten og fryses med siste stempel fra før avspark når kampen er spilt, så "forrige kamp" og treffsikkerheten er uten etterpåklokskap.';
       fs.writeFileSync(PREKICK, JSON.stringify(old, null, 1) + '\n');
-      console.log(`prekick.json: ${nye} nye, ${oppdatert} oppdatert, ${frosne} frosset, ${Object.keys(old.matches).length} totalt.`);
+      console.log(`prekick.json: ${n.nye} nye, ${n.oppdatert} oppdatert, ${n.etterAvspark} ikke rørt etter avspark, ${n.frosne} frosset, ${Object.keys(old.matches).length} totalt.`);
     }
     // Hva forrige kamp betydde, for alle 16 lag. Samme regnestykke som
     // spørsmålet i "Spør om tabellen" (qaLastMatchData), og siden bygger selve

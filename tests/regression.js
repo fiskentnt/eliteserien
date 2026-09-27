@@ -1847,6 +1847,74 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- Prekick: frysing ved avspark ----
+    // prekick.json skal bare oppdateres FØR avspark fra terminlisten, og
+    // fryses med siste stempel fra før avspark når resultatet kommer. Før
+    // denne regelen ble raden skrevet på nytt til resultatet var inne, og den
+    // frosne prognosen fikk som regel et stempel etter avspark. Testene kaller
+    // regelen direkte (scripts/prekick_frys.js), den samme koden
+    // snapshot_probs.js bruker for begge ligaer.
+    setGroup('Prekick: frysing ved avspark');
+    {
+      const F = require(path.join(ROOT, 'scripts', 'prekick_frys.js'));
+      // Norsk tid til UTC, også over sommertidsskiftet 25. oktober 2026.
+      const utc = (y, mo, d, h, mi) => Date.UTC(y, mo - 1, d, h, mi);
+      const tider = [['2026-10-09', '19:00', utc(2026, 10, 9, 17, 0)],
+                     ['2026-10-24', '17:00', utc(2026, 10, 24, 15, 0)],
+                     ['2026-10-25', '17:00', utc(2026, 10, 25, 16, 0)],
+                     ['2026-12-05', '18:00', utc(2026, 12, 5, 17, 0)]];
+      const feilTid = tider.filter(([d, tt, v]) => F.avsparkUtcMs(d, tt) !== v);
+      check('avspark regnes om fra norsk tid til UTC, også over sommertidsskiftet', feilTid.length === 0,
+        feilTid.map(([d, tt, v]) => `${d} ${tt}: ${new Date(F.avsparkUtcMs(d, tt)).toISOString()} mot ${new Date(v).toISOString()}`).join('; '));
+
+      for (const liga of ['eliteserien', 'obos']) {
+        const fx = JSON.parse(fs.readFileSync(path.join(ROOT, liga, 'data', 'fixtures.json'), 'utf8'));
+        const avspark = F.avsparkFraTerminliste(fx);
+        const kamper = fx.flatMap(r => r.matches);
+        check(`${liga}: hver kamp i terminlisten får et avspark`,
+          kamper.length > 0 && kamper.every(m => Number.isFinite(avspark[`${m.home}|${m.away}`])),
+          `${kamper.filter(m => !Number.isFinite(avspark[`${m.home}|${m.away}`])).length} uten`);
+        const m = kamper[0], a = avspark[`${m.home}|${m.away}`];
+        const k = `2026|${m.home}|${m.away}`;
+        const rad = (H) => ({[k]: {home: m.home, away: m.away, date: m.date, H, U: 0.3, B: 0.7 - H}});
+        const iso = ms => new Date(ms).toISOString().replace(/\.\d+Z$/, 'Z');
+        const fil = {version: 1, matches: {}};
+        // 1) før avspark: raden skrives, og en ny kjøring før avspark oppdaterer den
+        F.oppdaterPrekick(fil, rad(0.40), [], avspark, a - 3 * 3600e3, iso(a - 3 * 3600e3));
+        const n1 = F.oppdaterPrekick(fil, rad(0.41), [], avspark, a - 60e3, iso(a - 60e3));
+        check(`${liga}: en kamp før avspark oppdateres (${m.home} - ${m.away})`,
+          n1.oppdatert === 1 && fil.matches[k].H === 0.41 && fil.matches[k].stamp === iso(a - 60e3),
+          JSON.stringify(fil.matches[k]));
+        // 2) ved og etter avspark: raden røres ikke
+        const n2 = F.oppdaterPrekick(fil, rad(0.55), [], avspark, a, iso(a));
+        const n3 = F.oppdaterPrekick(fil, rad(0.60), [], avspark, a + 105 * 60e3, iso(a + 105 * 60e3));
+        check(`${liga}: ved og etter avspark røres ikke raden`,
+          n2.etterAvspark === 1 && n3.etterAvspark === 1 && fil.matches[k].H === 0.41 && fil.matches[k].stamp === iso(a - 60e3),
+          JSON.stringify(fil.matches[k]));
+        const tom = {version: 1, matches: {}};
+        F.oppdaterPrekick(tom, rad(0.5), [], avspark, a + 60e3, iso(a + 60e3));
+        check(`${liga}: en rad som mangler, lages ikke etter avspark`, !tom.matches[k], JSON.stringify(tom.matches));
+        // 3) resultatet kommer: fryses med stempelet fra før avspark
+        const n4 = F.oppdaterPrekick(fil, {}, [k], avspark, a + 3 * 3600e3, iso(a + 3 * 3600e3));
+        const s = Date.parse(fil.matches[k].stamp);
+        check(`${liga}: frysingen skjer når resultatet kommer, med stempelet fra før avspark`,
+          n4.frosne === 1 && fil.matches[k].frosset === true && s < a && fil.matches[k].H === 0.41,
+          `${JSON.stringify(fil.matches[k])}, avspark ${iso(a)}`);
+        const n5 = F.oppdaterPrekick(fil, rad(0.9), [k], avspark, a - 3600e3, iso(a - 3600e3));
+        check(`${liga}: en frosset rad røres aldri`, fil.matches[k].H === 0.41 && n5.oppdatert === 0,
+          JSON.stringify(fil.matches[k]));
+      }
+      // Samme skript for begge ligaer: snapshot_probs.js bruker regelen og
+      // leser terminlisten i ligaens egen mappe, og OBOS-jobben kjører det.
+      const snap = fs.readFileSync(path.join(ROOT, 'scripts', 'snapshot_probs.js'), 'utf8');
+      const obosWf = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'obos-results.yml'), 'utf8');
+      check('snapshot_probs.js bruker frysregelen og ligaens egen terminliste',
+        /require\('\.\/prekick_frys'\)/.test(snap) && /oppdaterPrekick\(old, pre, spilte, avspark, Date\.now\(\)/.test(snap)
+          && /path\.join\(DATA, 'fixtures\.json'\)/.test(snap) && !/old\.matches\[k\] = \{\.\.\.v, stamp/.test(snap),
+        'koblingen mangler, eller den gamle oppdateringen står igjen');
+      check('OBOS-jobben kjører det samme skriptet (snapshot_probs.js obos)', /snapshot_probs\.js obos/.test(obosWf));
+    }
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();
