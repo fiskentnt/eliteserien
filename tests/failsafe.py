@@ -445,6 +445,43 @@ def main():
         check("kildevakt: OBOS-jobben blir ikke rød av eliteseriejobbens feil",
               r.returncode == 0, (r.stdout + r.stderr)[-200:])
 
+    # 18. OBOS-odds for kommende kamper: 404 "No historical odds found" for en
+    #   kamp som ikke er spilt, betyr at markedet ikke er aapnet. Det skal
+    #   logges som "hoppet", ikke "feil" -- ellers melder kildevakten
+    #   oddspapi-historical-odds som ute hver gang neste runde er for langt
+    #   unna. Andre feil logges som foer. Ingen nett: urlopen er byttet ut.
+    import io
+    import urllib.error
+    import urllib.request
+    import oddspapi as OP
+    import hentelogg as HL
+    def siste_utfall(kode, kropp, **kw):
+        def falsk(*_a, **_k):
+            raise urllib.error.HTTPError("https://x", kode, "feil", {}, io.BytesIO(kropp.encode()))
+        gml = urllib.request.urlopen
+        urllib.request.urlopen = falsk
+        try:
+            OP.call_retry("/v4/historical-odds", {"fixtureId": "t"}, "testnokkel", **kw)
+        except TypeError as e:
+            return f"TypeError: {e}"
+        finally:
+            urllib.request.urlopen = gml
+        rader = [r for r in HL.les(1) if r.get("kilde") == "oddspapi-historical-odds"]
+        return rader[-1]["utfall"] if rader else None
+    ikke_funnet = '{"error":{"message":"No historical odds found.","code":"NOT_FOUND"}}'
+    u = siste_utfall(404, ikke_funnet, ikke_funnet_er_hoppet=True)
+    check("OBOS-odds: 404 'No historical odds found' for uspilt kamp logges som hoppet", u == "hoppet", str(u))
+    u = siste_utfall(404, ikke_funnet)
+    check("OBOS-odds: samme 404 uten flagget (andre kallere) logges fortsatt som feil", u == "feil", str(u))
+    u = siste_utfall(404, '{"error":{"message":"Fixture not found."}}', ikke_funnet_er_hoppet=True)
+    check("OBOS-odds: en annen 404 logges fortsatt som feil", u == "feil", str(u))
+    u = siste_utfall(500, "Internal Server Error", ikke_funnet_er_hoppet=True)
+    check("OBOS-odds: HTTP 500 logges fortsatt som feil", u == "feil", str(u))
+    kilde = (ROOT / "scripts" / "obos_upcoming_odds.py").read_text(encoding="utf-8")
+    check("OBOS-odds: obos_upcoming_odds.py bruker flagget, og bare for uspilte kamper",
+          "ikke_funnet_er_hoppet=True" in kilde
+          and 'kommende = [(r, f) for r, f in links if (r["home"], r["away"]) not in played' in kilde)
+
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare
     # kall som aldri skjedde, av selve testene.

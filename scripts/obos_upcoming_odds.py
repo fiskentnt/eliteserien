@@ -160,7 +160,12 @@ def main():
         # call_retry følger serverens egen ventetid ved 429. En fast pause og
         # ett forsøk til holdt ikke: da samme kjøring nettopp hadde hentet
         # sluttodds fra samme endepunkt, falt seks av åtte kamper ut.
-        svar, err = oddspapi.call_retry("/v4/historical-odds", params, key)
+        # Bare uspilte kamper her (kommende), saa 404 "No historical odds
+        # found" betyr at markedet ikke er aapnet ennaa -- logges som hoppet,
+        # ikke feil. Det var den eneste grunnen til at kildevakten meldte
+        # oddspapi-historical-odds som ute i OBOS-jobben.
+        svar, err = oddspapi.call_retry("/v4/historical-odds", params, key,
+                                        ikke_funnet_er_hoppet=True)
         if err:
             print(f"  {r['home']} mot {r['away']}: FEIL {err}")
             time.sleep(COOLDOWN)

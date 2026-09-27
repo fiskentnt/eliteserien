@@ -183,8 +183,16 @@ def _logg(path, utfall, melding=""):
         pass
 
 
-def call(path, params=None, key=None, timeout=TIMEOUT):
-    """Returnerer (data, feilmelding). Teller kallet hvis endepunktet koster."""
+# Svaret OddsPapi gir naar en kamp ennaa ikke har noen priser.
+IKKE_FUNNET = "No historical odds found"
+
+
+def call(path, params=None, key=None, timeout=TIMEOUT, ikke_funnet_er_hoppet=False):
+    """Returnerer (data, feilmelding). Teller kallet hvis endepunktet koster.
+
+    ikke_funnet_er_hoppet: kalleren vet at kampen IKKE er spilt ennaa. Da
+    betyr 404 "No historical odds found" at markedet ikke er aapnet, og det
+    logges som "hoppet", ikke "feil". Alle andre feil logges som foer."""
     key = key or os.environ.get("ODDSPAPI_KEY", "").strip()
     if not key:
         return None, "ODDSPAPI_KEY er ikke satt"
@@ -215,14 +223,18 @@ def call(path, params=None, key=None, timeout=TIMEOUT):
         # skal vente, og call_retry folger den beskjeden. Tre slike forsok i
         # EN kjoring skal ikke gjore kjoringen rod -- derfor "hoppet".
         # Er retryene oppbrukt, logger call_retry en ekte "feil".
-        _logg(path, "hoppet" if e.code == 429 else "feil", f"HTTP {e.code}")
+        if e.code == 404 and ikke_funnet_er_hoppet and IKKE_FUNNET in body:
+            _logg(path, "hoppet", "HTTP 404: markedet er ikke aapnet (kampen er ikke spilt)")
+        else:
+            _logg(path, "hoppet" if e.code == 429 else "feil", f"HTTP {e.code}")
         return None, f"HTTP {e.code}: {body}"
     except Exception as e:
         _logg(path, "feil", type(e).__name__)
         return None, f"{type(e).__name__}: {e}"
 
 
-def call_retry(path, params=None, key=None, timeout=TIMEOUT, forsok=4):
+def call_retry(path, params=None, key=None, timeout=TIMEOUT, forsok=4,
+               ikke_funnet_er_hoppet=False):
     """Som call(), men følger serverens egen ventetid ved 429.
 
     /v4/historical-odds har en kortvarig grense, og svaret sier nøyaktig hvor
@@ -237,7 +249,8 @@ def call_retry(path, params=None, key=None, timeout=TIMEOUT, forsok=4):
     import time as _time
     siste = None
     for n in range(forsok):
-        d, err = call(path, params, key, timeout=timeout)
+        d, err = call(path, params, key, timeout=timeout,
+                      ikke_funnet_er_hoppet=ikke_funnet_er_hoppet)
         if not err or "RATE_LIMITED" not in str(err) and "429" not in str(err):
             return d, err
         siste = err
