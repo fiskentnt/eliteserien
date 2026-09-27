@@ -329,6 +329,11 @@ testsidespesifikk og skal ikke porteres. `ELO_EKTE` kan fjernes.
   trekker hele forløpet med λ fra ratingen på trekketidspunktet, i én
   omgang. Ratingen oppdateres først når resultatene står i kamplisten; den
   oppdateres ikke underveis i trekningen.
+- **Produksjonens `rateFor` normaliserer ikke oddsen.** Den bruker rå
+  oddstall fra `odds_upcoming.json` (`[o.H, o.D, o.A]`) uten normalisering.
+  Rådataene er rundet til fire desimaler og summerer ikke alltid til 1;
+  avviket er rundt 1e-4 og gjelder bare produksjonen. Testsiden normaliserer
+  som `bygg.py`. Produksjonens `rateFor` er ikke endret.
 - **Flaks-spørsmålet** er fjernet, ikke løst. Det lå også som reserve i
   `renderQaHighlight`, som kontroll G ikke så; kontroll L gjør det nå. Det krever å vurdere hver spilt
   kamp med ratingen slik den var **før** kampen, som finnes i
