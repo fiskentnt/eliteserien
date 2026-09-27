@@ -1843,6 +1843,89 @@ async function main() {
       check(`${liga}: ${stat.tabeller} tilfeldige tabeller, grensen er aldri lavere enn det eksakte antallet`,
         stat.tabeller >= 200 && igjenMin > 0 && stat.tilfeller > 0 && stat.lavere.length === 0 && stat.ikkeEksakt === 0,
         `${stat.lavere.length} lavere: ${stat.lavere.slice(0, 5).join('; ')}; ${stat.tilfeller} tilfeller, ${stat.ikkeEksakt} ikke eksakte`);
+
+      // Tidlig stopp i merkesøket. Merket avgjøres av tersklene i
+      // LEAGUE.badges, så søket stopper når det beste funnet og den øvre
+      // grensen ligger mellom de samme to tersklene. Merket skal være LIKT det
+      // søket uten tidlig stopp gir (dagens kode før rettelsen): testen bygger
+      // den varianten ved å fjerne tersklene fra de to kallene i
+      // computeOneBadge -- nøyaktig én tekstbytting hver, ellers feiler den.
+      // Sammenlignes på dagens tabell og grensetestens 200 tilfeldige tabeller
+      // (samme frø), med produksjonens tidsgrense (500 ms per lag).
+      const stopp = await mp.evaluate(() => {
+        const fra1 = "cfg.badges.map(function(b){ return b.above; })", fra2 = "'atmost', deadline, [2])";
+        const treff = [WORKER_SRC.split(fra1).length - 1, WORKER_SRC.split(fra2).length - 1];
+        const lag = src => { const W = {}; (new Function('W', 'var postMessage=function(){}; var self={};' + src + '; W.f=computeOneBadge;'))(W); return W.f; };
+        const ny = lag(WORKER_SRC), uten = lag(WORKER_SRC.replace(fra1, 'undefined').replace(fra2, "'atmost', deadline)"));
+        const cfg = {badges: LEAGUE.badges, relegatedBadge: LEAGUE.relegatedBadge};
+        const ut = {treff, tabeller: 0, lag: 0, ulike: [], tregeNy: [], tidNy: 0, tidUten: 0, dagensUten: []};
+        const sammenlign = dagens => {
+          const {rows} = compute(), byname = {};
+          rows.forEach(r => byname[r.name] = {name: r.name, pts: r.pts, gd: r.gd, gf: r.gf, left: r.left, max: r.max});
+          const rem = matches.filter(isEmpty).map(m => [m.home, m.away]);
+          ut.tabeller++;
+          rows.forEach(r => {
+            let t0 = performance.now(); const u = uten(byname, rem, r.name, 500, cfg); const dU = performance.now() - t0;
+            t0 = performance.now(); const n = ny(byname, rem, r.name, 500, cfg); const dN = performance.now() - t0;
+            ut.lag++; ut.tidNy += dN; ut.tidUten += dU;
+            if (JSON.stringify(u) !== JSON.stringify(n)) ut.ulike.push(`${dagens ? 'dagens' : 'tilfeldig'}: ${r.name} uten ${JSON.stringify(u)}, med ${JSON.stringify(n)}`);
+            if (dagens && dU > 100) ut.dagensUten.push(`${r.name} ${dU.toFixed(0)} ms`);
+          });
+        };
+        // Tiden måles på sidens egen kode, uavhengig av tekstbyttingen over.
+        {
+          const {rows} = compute(), byname = {};
+          rows.forEach(r => byname[r.name] = {name: r.name, pts: r.pts, gd: r.gd, gf: r.gf, left: r.left, max: r.max});
+          const rem = matches.filter(isEmpty).map(m => [m.home, m.away]);
+          rows.forEach(r => { const t0 = performance.now(); ny(byname, rem, r.name, 500, cfg);
+            const d = performance.now() - t0; if (d > 100) ut.tregeNy.push(`${r.name} ${d.toFixed(0)} ms`); });
+        }
+        if (treff[0] !== 1 || treff[1] !== 1) return ut;
+        sammenlign(true);
+        for (let bunke = 0; bunke < 10; bunke++) {
+          let frø = 777 + bunke;
+          const tilf = () => { frø = (frø * 1103515245 + 12345) % 2147483648; return frø / 2147483648; };
+          const tomme = matches.filter(m => m.hg == null || m.sim);
+          const runder = [...new Set(tomme.map(m => m.round))].sort((a, b) => a - b);
+          for (let n = 0; n < 20; n++) {
+            const R = 2 + (n % 2), apne = new Set(runder.slice(-R));
+            tomme.forEach(m => {
+              if (apne.has(m.round)) { m.hg = null; m.ag = null; return; }
+              const x = tilf(), g = () => Math.floor(tilf() * 4);
+              let h = g(), a = g();
+              if (x < 0.45) { if (h <= a) h = a + 1; } else if (x < 0.72) a = h; else if (a <= h) a = h + 1;
+              m.hg = h; m.ag = a;
+            });
+            sammenlign(false);
+          }
+          tomme.forEach(m => { m.hg = null; m.ag = null; });
+        }
+        return ut;
+      });
+      await mp.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); render(); });
+      console.log(`      ${liga}: ${stopp.lag} merker i ${stopp.tabeller} tabeller, søketid uten tidlig stopp ${(stopp.tidUten / 1000).toFixed(2)} s, med ${(stopp.tidNy / 1000).toFixed(2)} s` +
+        (stopp.dagensUten.length ? `; dagens tabell uten tidlig stopp: ${stopp.dagensUten.join(', ')}` : ''));
+      check(`${liga}: testen finner tersklene i computeOneBadge (én gang hver)`, stopp.treff.join() === '1,1', `treff ${stopp.treff}`);
+      check(`${liga}: tidlig stopp gir samme merke som søket uten, i dagens tabell og ${stopp.tabeller - 1} tilfeldige`,
+        stopp.treff.join() === '1,1' && stopp.tabeller === 201 && stopp.ulike.length === 0,
+        `${stopp.ulike.length} ulike av ${stopp.lag}: ${stopp.ulike.slice(0, 5).join('; ')}`);
+      check(`${liga}: dagens tabell, ingen lag bruker over 100 ms på merket`, stopp.tregeNy.length === 0,
+        stopp.tregeNy.join(', '));
+
+      // Merkene i egen Worker: simuleringen skal aldri stå i kø bak dem.
+      const egen = await mp.evaluate(async () => {
+        if (typeof getBadgeWorker !== 'function') return {finnes: false};
+        const tell = {merke: 0, sim: 0};
+        const bw = getBadgeWorker(), mw = getWorker();
+        const lM = e => { if (e.data.mode === 'badges') tell.merke++; }, lS = e => { if (e.data.mode === 'badges') tell.sim++; };
+        bw.addEventListener('message', lM); mw.addEventListener('message', lS);
+        const f = lastBadges; lastBadgeSignature = null; computeBadgesAsync(compute().rows);
+        const t0 = Date.now(); while (tell.merke + tell.sim === 0 && Date.now() - t0 < 5000) await new Promise(r => setTimeout(r, 10));
+        bw.removeEventListener('message', lM); mw.removeEventListener('message', lS);
+        return {finnes: true, ulike: bw !== mw, tell, oppdatert: lastBadges !== f};
+      });
+      check(`${liga}: merkene regnes i en egen Worker, ikke i simuleringens`,
+        egen.finnes && egen.ulike && egen.tell.merke === 1 && egen.tell.sim === 0 && egen.oppdatert, JSON.stringify(egen));
       await mp.close();
     }
     await page.bringToFront();
