@@ -60,6 +60,26 @@ jobs:
       - name: Bygg ELO90-modellen
         run: python3 elo-test/scripts/bygg.py
 
+      # PANELENE: keymatch, lastmatch, prekick og accuracy for /elo-test/,
+      # regnet av siden selv (ELO90) med produksjonens egne skript og samme
+      # frysregel (scripts/prekick_frys.js). Se elo-test/scripts/paneler.py.
+      - name: Paneler -- skal de regnes?
+        id: paneler
+        env:
+          UTLOSER: ${{ github.event.workflow_run.name }}
+          HENDELSE: ${{ github.event_name }}
+        run: python3 elo-test/scripts/paneler.py port
+
+      - name: Paneler -- regn dem med /elo-test/
+        if: steps.paneler.outputs.kjor == 'true'
+        run: |
+          npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pp" puppeteer-core@25.11.0
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
+          NODE_PATH="$RUNNER_TEMP/pp/node_modules" \
+            node scripts/snapshot_probs.js eliteserien --side elo-test --ut elo-test/emodell --uten-historikk
+          python3 scripts/accuracy_log.py eliteserien --data elo-test/emodell
+          python3 elo-test/scripts/paneler.py etter
+
       - name: Kontroller
         run: python3 elo-test/scripts/kontroll.py
 
@@ -71,6 +91,6 @@ jobs:
           if git diff --cached --quiet; then
             echo "Ingenting endret -- ingen commit."
           else
-            git commit -m "ELO-test: modellen bygget $(date -u +%Y-%m-%dT%H:%MZ)"
+            git commit -m "ELO-test: modellen og panelene bygget $(date -u +%Y-%m-%dT%H:%MZ)"
             bash scripts/push_med_rebase.sh
           fi

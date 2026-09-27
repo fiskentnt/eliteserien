@@ -544,6 +544,14 @@ for _fr in FULL_FRASER:
     _i1, _i2 = _stat.count(_fr), _aktiv_js.count(_fr)
     krev(f"«{_fr}» finnes ikke i synlig tekst", _i1 == 0 and _i2 == 0,
          f"{_i1} i HTML, {_i2} i aktiv JS")
+# Panelfilene (keymatch-banneret og lastmatch) er tekst siden viser. De er
+# skrevet av /elo-test/, og skal heller ikke beskrive Full.
+for _pn in ("keymatch.json", "lastmatch.json"):
+    _pf = UT / _pn
+    if _pf.exists():
+        _pt = _pf.read_text(encoding="utf-8")
+        _pfunn = [f for f in FULL_FRASER if f in _pt]
+        krev(f"{_pn}: ingen Full-fraser", not _pfunn, ", ".join(_pfunn))
 krev("qaHighlight faller ikke tilbake til 'luck'",
      "dataset.qid = 'luck'" not in _aktiv_js and "qid || 'luck'" not in _aktiv_js)
 
@@ -1081,6 +1089,93 @@ console.log(JSON.stringify([ventetAv({kilde:'sluttoddsen'}), ventetAv({kilde:'od
 krev("ventetAv: sluttodds -> markedet, frosset prognose -> modellen",
      _rv.returncode == 0 and json.loads(_rv.stdout) == ["markedet", "modellen", "modellen", "modellen"],
      (_rv.stdout or _rv.stderr).strip()[:120])
+
+# ---------- W: PANELENE -- regnet av /elo-test/, samme frysregel som produksjonen
+# keymatch.json, lastmatch.json, prekick.json og accuracy.json i emodell/ skal
+# være skrevet av scripts/snapshot_probs.js mot /elo-test/ (ELO90), ikke kopiert
+# fra produksjonen. Beviset: prekick-radene har ELO90-tallene fra model.json
+# (outcome av byggingens lambda; "modell" = OLR-sannsynlighetene), og de skiller
+# seg fra produksjonens. Frysregelen er produksjonens egen modul.
+print("\nW   panelene: regnet av /elo-test/, samme frysregel som produksjonen")
+_wf = (ROT / ".github" / "workflows" / "elo-test.yml").read_text(encoding="utf-8")
+krev("elo-test.yml kjører produksjonens snapshot_probs.js mot /elo-test/ til emodell/",
+     "node scripts/snapshot_probs.js eliteserien --side elo-test --ut elo-test/emodell --uten-historikk" in _wf
+     and "python3 scripts/accuracy_log.py eliteserien --data elo-test/emodell" in _wf)
+krev("frysregelen er produksjonens modul (ingen kopi i elo-test/)",
+     "require('./prekick_frys')" in (ROT / "scripts" / "snapshot_probs.js").read_text(encoding="utf-8")
+     and not list((ROT / "elo-test").rglob("prekick_frys*")))
+krev("siden henter de fire panelfilene fra emodell/, og ikke history.json",
+     all(f"fetch('emodell/{n}.json')" in _h for n in ("keymatch", "lastmatch", "prekick", "accuracy"))
+     and "history.json" not in _akt and "Promise.resolve(null)" not in _h)
+krev("history.json skrives ikke for testsiden", not (UT / "history.json").exists())
+_pk = UT / "prekick.json"
+if not _pk.exists():
+    print("     prekick.json finnes ikke ennå -- innholdssjekkene hoppes over (skrives i CI)")
+else:
+    import math as _mw
+    def _utfall(lh, la):
+        def pv(l):
+            v = [_mw.exp(-l)]
+            for k in range(1, 16):
+                v.append(v[-1] * l / k)
+            return v
+        a, b = pv(lh), pv(la)
+        H = U = B = 0.0
+        for i in range(16):
+            for j in range(16):
+                q = a[i] * b[j]
+                if i > j: H += q
+                elif i == j: U += q
+                else: B += q
+        s = H + U + B
+        return H / s, U / s, B / s
+    _pkd = json.loads(_pk.read_text(encoding="utf-8"))["matches"]
+    _prodpk = json.loads((PROD / "prekick.json").read_text(encoding="utf-8"))["matches"]
+    _kr = {(r["home"], r["away"]): r for r in M["kamper"]}
+    _avv, _n, _ulik_prod, _mangler = 0.0, 0, 0, []
+    for k, v in _pkd.items():
+        if v.get("frosset"):
+            continue
+        r = _kr.get((v["home"], v["away"]))
+        if r is None:
+            _mangler.append(k); continue
+        med_odds = v.get("kilde") == "odds+modell"
+        lam = r["blend_lam"] if med_odds else r["lam"]
+        side = _utfall(*lam)
+        modell = (r["pH"], r["pU"], r["pB"]) if med_odds else side
+        _avv = max(_avv, max(abs(v[x] - side[i]) for i, x in enumerate("HUB")),
+                   max(abs(v["modell"][x] - modell[i]) for i, x in enumerate("HUB")))
+        _n += 1
+        pr = _prodpk.get(k)
+        if pr and max(abs(pr[x] - v[x]) for x in "HUB") > 1e-3:
+            _ulik_prod += 1
+    krev(f"prekick.json har ELO90-tallene fra model.json for {_n} uspilte kamper (runde 23 og utover)",
+         _n > 0 and not _mangler and _avv <= 5e-5 + 1e-12, f"største avvik {_avv:.1e}, uten modell: {_mangler[:3]}")
+    krev(f"prekick.json er ikke produksjonens: {_ulik_prod} av {_n} kamper skiller seg med over 0,1 prosentpoeng",
+         _ulik_prod > _n // 2, f"{_ulik_prod} ulike")
+    from datetime import datetime as _dtw
+    from zoneinfo import ZoneInfo as _ZIw
+    _fxw = {(m["home"], m["away"]): m for r in json.loads((PROD / "fixtures.json").read_text(encoding="utf-8")) for m in r["matches"]}
+    _etter = []
+    for k, v in _pkd.items():
+        if not v.get("frosset"):
+            continue
+        m = _fxw.get((v["home"], v["away"]))
+        if m and m.get("time"):
+            a = _dtw.fromisoformat(f"{m['date']}T{m['time']}").replace(tzinfo=_ZIw("Europe/Oslo"))
+            if _dtw.fromisoformat(v["stamp"].replace("Z", "+00:00")) >= a:
+                _etter.append(k)
+    krev(f"frosne rader har stempel før avspark ({sum(1 for v in _pkd.values() if v.get('frosset'))} frosne)",
+         not _etter, f"etter avspark: {_etter[:3]}")
+    for n in ("keymatch.json", "lastmatch.json"):
+        if (UT / n).exists() and (PROD / n).exists():
+            krev(f"{n} er ikke en kopi av produksjonens", (UT / n).read_bytes() != (PROD / n).read_bytes())
+    _acc = UT / "accuracy.json"
+    krev("accuracy.json finnes og teller de frosne radene med resultat",
+         _acc.exists() and json.loads(_acc.read_text(encoding="utf-8"))["n"]
+         == sum(1 for v in _pkd.values() if v.get("frosset")
+                and any(m["home"] == v["home"] and m["away"] == v["away"]
+                        for m in json.loads((PROD / "matches.json").read_text(encoding="utf-8")))))
 
 print("\nE   festede sha256")
 for rel, ventet in FESTET.items():

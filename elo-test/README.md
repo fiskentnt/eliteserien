@@ -18,10 +18,33 @@ produksjonsfil er endret for å få testsiden til å virke.
 | `emodell/model.json` | egen, bygget av `scripts/bygg.py` |
 | `emodell/historikk.json` | fryst grunnlag 2012–2025 |
 
-`keymatch.json`, `lastmatch.json`, `prekick.json`, `accuracy.json` og
-`history.json` er **ikke** lest: de er regnet med produksjonsmodellen av
-`scripts/snapshot_probs.js`, som kjører produksjonssiden i headless Chrome.
-Panelene er skjult.
+| `emodell/keymatch.json`, `lastmatch.json`, `prekick.json` | egne, skrevet av produksjonens `scripts/snapshot_probs.js` kjørt mot **/elo-test/** (`--side elo-test --ut elo-test/emodell --uten-historikk`) |
+| `emodell/accuracy.json` | egen, `scripts/accuracy_log.py eliteserien --data elo-test/emodell` |
+
+**Panelene** (rundens viktigste kamp, forrige kamp i lagboksen, prekick og
+treffsikkerhet) regnes av testsiden selv, med ELO90, i `elo-test.yml` --
+parallelt med produksjonen og med de samme skriptene. Produksjonens filer
+leses ikke. `history.json` skrives ikke og vises ikke.
+
+- **Når:** når `model.json` eller oddsene i `odds_upcoming.json` er endret
+  (sha256 i `emodell/paneler_grunnlag.json`), og alltid når utløseren er
+  «Odds nær avspark» eller workflow_dispatch, så prognosen før avspark lagres
+  (`elo-test/scripts/paneler.py`).
+- **Frysregelen** er produksjonens egen modul, `scripts/prekick_frys.js`: en
+  rad oppdateres bare før avspark fra terminlisten, og fryses med siste stempel
+  fra før avspark når resultatet kommer.
+- **Commit bare ved innholdsendring.** Et nytt tidsstempel alene (`updated`,
+  `stamp` i prekick-radene) gir ingen commit; den committede versjonen legges
+  tilbake. En ny frosset rad, en ny rad eller nye tall er en endring.
+- **To frosne registre.** `prognoselogg/` (bygg.py: siste logglinje før
+  avspark) og `prekick.json` (snapshot_probs.js: siste skriving før avspark)
+  finnes begge. Treffsikkerhetspanelet (`accuracy.json`) regnes av
+  `prekick.json`, som i produksjonen, så de to sidene måles med samme regel.
+- **Kontroll W** krever at `prekick.json` har ELO90-tallene fra `model.json`
+  (outcome av byggingens λ, og OLR-sannsynlighetene som «modell») og skiller
+  seg fra produksjonens, at frysregelen er produksjonens modul, at siden henter
+  filene fra `emodell/` og ikke `history.json`, og at frosne rader har stempel
+  før avspark.
 
 ## Modellen
 
@@ -150,8 +173,9 @@ linje før avspark kan dermed være fra en tidligere henting, for eksempel
 kamper», og en kamp fjernes først når resultatet står i `matches.json`.
 Definisjonen over tåler det, siden bare linjer med `logget` < avspark teller.
 
-Treffsikkerhetspanelene er skjult til testperioden er over. Det finnes ingen
-kunstig historikk: loggen starter den dagen siden går live.
+Det finnes ingen kunstig historikk: loggen og `prekick.json` starter den
+dagen siden går live. Treffsikkerhetspanelet viser testsidens egne frosne
+kamper fra første runde etter det (9.–12. oktober 2026).
 
 ## Kontroller
 
@@ -241,7 +265,8 @@ gjenstående kamper, så spilte kamper kan ikke oppdateres to ganger).
 | `boot()`, `odds.json` | hentes ved siden av, normalisert som i `bygg.py` (`ELO_ODDS_SPILT`) | trengs bare til avspillingen for forrige kamp |
 | `boot()`, datastier | `data/…` → `../eliteserien/data/…` for matches, fixtures, odds_upcoming, status, odds_quota | produksjonens filer leses direkte, ingen kopier |
 | `boot()`, modellsti | `data/model.json` → `emodell/model.json` | egen modell, i en mappe som ikke heter `data` (sitemap) |
-| `boot()`, keymatch/lastmatch/prekick/accuracy | `fetch(…)` → `Promise.resolve(null)` | Full-beregnet av `snapshot_probs.js`; skal ikke vises som ELO90 — første versjon hadde et komma for mye etter hver (`,,`). Hullene forskjøv destruktureringen, `CLOSING_IN` ble `undefined`, og sluttoddsen ble aldri lastet. Rettet; kontroll **P** krever like mange elementer som variabler og ingen hull. «Hva betydde forrige kamp?» bruker nå sluttoddsen som reserve, som produksjonen |
+| `boot()`, keymatch/lastmatch/prekick/accuracy | `data/…` → `emodell/…` | testsidens egne panelfiler, regnet med ELO90 (se over). Første versjon erstattet hentingen med `Promise.resolve(null)` og hadde et komma for mye etter hver (`,,`); hullene forskjøv destruktureringen, og sluttoddsen ble aldri lastet. Kontroll **P** krever like mange elementer som variabler og ingen hull |
+| `accuracyLog` | `hidden` fjernet, teksten over skrevet om | treffsikkerhetspanelet viser testsidens egne tall |
 | `boot()`, etter `MTI` | setter `ELO`, `ELO_LAM`, `ELO_EKTE` | kobler inn modellaget |
 | `boot()`, `howP1`/`howP2` | ny forklaringstekst; `MODEL.meta.half_life_days` fjernet | ELO90 har én rating og ingen halveringstid; `meta` finnes ikke |
 | `render()`, `baseForm` | `formScores(MODEL.att…)` → `eloStyrke(ELO.rating_alle)` | `MODEL.att` finnes ikke |
@@ -324,8 +349,8 @@ tabellen Kristiansund 3,6.
 ### D. Ved portering inn i produksjonen
 
 Blokk A kan flyttes nesten uendret. B må gjøres bevisst: ρ = 0 gjelder på
-**begge** steder, datastiene går tilbake til `data/`, og de fem
-`snapshot_probs.js`-panelene må regnes med ELO90 før de vises igjen. C er
+**begge** steder, og datastiene (også panelfilene i `emodell/`) går tilbake
+til `data/`. C er
 testsidespesifikk og skal ikke porteres. `ELO_EKTE` kan fjernes.
 
 ## Ikke løst
@@ -339,10 +364,8 @@ testsidespesifikk og skal ikke porteres. `ELO_EKTE` kan fjernes.
   ikke skal ligge i det offentlige repoet. `scripts/build_league.py` genererer
   `obos/index.html` fra `eliteserien/index.html`, men ikke fra testsiden, og
   skal ikke gjøre det.
-- **`snapshot_probs.js`-panelene** — rundens viktigste kamp, forrige kamp,
-  historikk, prekick og treffsikkerhet — er skjult. De er ikke regnet om med
-  ELO90. Treffsikkerhet kan uansett ikke vises før prognoseloggen har en
-  sesong bak seg.
+- **Historikkpanelet** (`history.json`) er ikke regnet for testsiden og
+  vises ikke.
 - **Ratingoppdatering i scenarioer er ikke validert i laben.** Regelen er
   labens egen og er kontrollert bit-eksakt mot den (M), men laben har ikke
   målt hva det gjør med prognosene at brukerens resultater flytter ratingen.

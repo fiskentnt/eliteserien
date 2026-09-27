@@ -1153,17 +1153,17 @@
 <!-- LIGA-MODELLSJEKK -->
 <!-- ELO-TEST: produksjonens valideringsseksjon (kalibrering, 20 mot 18
      prosent, sist validert 24. september, backtest_zones.py) er ERSTATTET. De
-     tallene gjelder produksjonsmodellen, ikke ELO-Odds 90. accuracyLog staar
-     som skjult stubb fordi JS skriver til den. modelExample VISES: den regnes
+     tallene gjelder produksjonsmodellen, ikke ELO-Odds 90. accuracyLog viser
+     testsidens EGEN treffsikkerhet (emodell/accuracy.json). modelExample VISES: den regnes
      med rateFor og outcome, de samme tallene som kamplisten, og er riktig for
      ELO90. -->
 <details class="howitworks modelcheck">
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 20v-7M12 20V6M18 20v-11"/></svg></span>Hvordan vet vi at modellen virker?</summary>
   <div class="in">
     <p class="plain-lead">ELO-Odds 90 er testet i laben mot produksjonsmodellen, på tidligere sesonger av Eliteserien, med de samme kuttpunktene og simuleringene. Labresultatene for ELO-Odds 90 er ikke publisert på siden ennå.</p>
-    <p>Treffsikkerheten til denne testversjonen kan først måles når prognosene den lagrer før avspark har en sesong bak seg. Til da vises ingen treffsikkerhet.</p>
+    <p>Tabellen under viser hvor godt testversjonens egne tall fra før avspark har truffet, fra de første kampene etter at den ble satt i drift. Tallene fryses ved avspark og regnes ikke om i etterkant.</p>
     <p id="modelExample" hidden></p>
-    <div id="accuracyLog" hidden></div>
+    <div id="accuracyLog"></div>
   </div>
 </details>
 <!-- /LIGA-MODELLSJEKK -->
@@ -6391,33 +6391,29 @@ async function boot(){
       // der med en gang, uten å vente på en simulering. Mangler filen (eller
       // er den for gammel, se qaKeyBannerStale), faller banneret tilbake til
       // spørsmålet om hell og uhell.
-      /* ELO-TEST: keymatch.json er FULL-beregnet -- snapshot_probs.js
-         kjorer PRODUKSJONSSIDEN i headless Chrome og leser tallene ut,
-         saa de er Full-modellens sannsynligheter. Skjules her: de skal
-         ikke vises som om de var ELO90. */
-      Promise.resolve(null),
-      /* ELO-TEST: lastmatch.json er FULL-beregnet -- snapshot_probs.js
-         kjorer PRODUKSJONSSIDEN i headless Chrome og leser tallene ut,
-         saa de er Full-modellens sannsynligheter. Skjules her: de skal
-         ikke vises som om de var ELO90. */
-      Promise.resolve(null),
+      /* ELO-TEST: keymatch.json fra emodell/, skrevet av snapshot_probs.js
+         mot /elo-test/ (ELO90)
+         i elo-test.yml. Ikke produksjonens fil. */
+      fetch('emodell/keymatch.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      /* ELO-TEST: lastmatch.json fra emodell/, skrevet av snapshot_probs.js
+         mot /elo-test/ (ELO90)
+         i elo-test.yml. Ikke produksjonens fil. */
+      fetch('emodell/lastmatch.json').then(r=>r.ok?r.json():null).catch(()=>null),
       // Sannsynlighetene som gjaldt FØR avspark (skrevet av snapshot_probs.js
       // mens kampen var uspilt), og sluttoddsen som reserve for kamper som ble
       // spilt før vi begynte å lagre dem. Begge er valgfrie: uten dem sier
       // "forrige kamp" ingenting om hvor overraskende resultatet var.
-      /* ELO-TEST: prekick.json er FULL-beregnet -- snapshot_probs.js
-         kjorer PRODUKSJONSSIDEN i headless Chrome og leser tallene ut,
-         saa de er Full-modellens sannsynligheter. Skjules her: de skal
-         ikke vises som om de var ELO90. */
-      Promise.resolve(null),
+      /* ELO-TEST: prekick.json fra emodell/, skrevet av snapshot_probs.js
+         mot /elo-test/ (ELO90)
+         i elo-test.yml. Ikke produksjonens fil. */
+      fetch('emodell/prekick.json').then(r=>r.ok?r.json():null).catch(()=>null),
       fetch(LEAGUE.closingOddsFile).then(r=>r.ok?r.json():null).catch(()=>null),
       // Treffsikkerhetsloggen (scripts/accuracy_log.py). Mangler den, står
       // seksjonen tom -- den er aldri kritisk for resten av siden.
-      /* ELO-TEST: accuracy.json er FULL-beregnet -- snapshot_probs.js
-         kjorer PRODUKSJONSSIDEN i headless Chrome og leser tallene ut,
-         saa de er Full-modellens sannsynligheter. Skjules her: de skal
-         ikke vises som om de var ELO90. */
-      Promise.resolve(null),
+      /* ELO-TEST: accuracy.json fra emodell/, skrevet av snapshot_probs.js
+         mot /elo-test/ (ELO90) og accuracy_log.py --data elo-test/emodell
+         i elo-test.yml. Ikke produksjonens fil. */
+      fetch('emodell/accuracy.json').then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
   }catch(err){
     console.error('Klarte ikke hente kampdata', err);
