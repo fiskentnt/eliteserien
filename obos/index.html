@@ -4026,6 +4026,21 @@ function qaKeyBannerStale(){
 const kampTxt = n => n===1 ? '1 kamp' : `${n} kamper`;
 const fmtSigned = v => (v<0?'−':'+') + Math.abs(v).toFixed(1).replace('.',',');
 const ppTxt = d => { const r=Math.round(d*100); return r===0 ? '±0' : (r>0?'+':'−')+Math.abs(r); };
+// DIFFERANSEN SOM FORSKJELLEN MELLOM DE VISTE TALLENE. Svarene viser nivået
+// avrundet (pctTxt) og differansen i parentes. Ble differansen regnet før
+// avrunding, gikk tallene i samme setning ikke opp: "øker topp 4-sjansen til
+// 15 % (+8 prosentpoeng) ... er 8 % nå". Samme prinsipp som qaLastMatchLine.
+// vistProsent er tallet slik pctTxt viser det, som heltall å regne med:
+// "<1 %" teller som 0 og ">99 %" som 100, så "8 % → <1 % (−8)" går opp.
+// vistPp brukes både til tallet i parentes og til grensen for "endrer lite".
+function vistProsent(x){
+  const y = Math.min(1, Math.max(0, x));
+  if(y < 0.005) return 0;
+  if(y > 0.995) return 100;
+  return Math.round(y*100);
+}
+function vistPp(naa, etter){ return vistProsent(etter) - vistProsent(naa); }
+const ppHelTxt = n => n===0 ? '±0' : (n>0?'+':'−')+Math.abs(n);
 const QA_SAFE_PHRASE = Object.fromEntries(ZONE_KEYS.filter(k=>LEAGUE.zones[k]).map(k=>[k, LEAGUE.zones[k].safe]));
 const QA_VERB = Object.fromEntries(ZONE_KEYS.filter(k=>LEAGUE.zones[k]).map(k=>[k, LEAGUE.zones[k].verb]));
 
@@ -4173,14 +4188,17 @@ async function qaNextMatch(team){
   // konklusjonen skal komme først, og én ting per setning.
   const naar = `Kampen spilles ${isHome?'hjemme':'borte'} ${formatDateNo(next.date)}.`;
   const p = d => pctTxt(Math.min(1,Math.max(0,tableP+d)));
-  if(Math.abs(dWin)<0.02 && Math.abs(dDraw)<0.02 && Math.abs(dLose)<0.02){
+  // Differansene mellom de VISTE tallene (vistPp), også for grensen på to
+  // prosentpoeng, så nivå, nå og differanse alltid går opp.
+  const vWin = vistPp(tableP, tableP+dWin), vDraw = vistPp(tableP, tableP+dDraw), vLose = vistPp(tableP, tableP+dLose);
+  if(Math.abs(vWin)<2 && Math.abs(vDraw)<2 && Math.abs(vLose)<2){
     return `Kampen ${kamp} betyr lite: ${navn} holder seg ${/^[<>]/.test(pctTxt(tableP)) ? '' : 'rundt '}${pctTxt(tableP)} uansett utfall. ${naar}`;
   }
-  const seier = Math.abs(dWin)<0.02
+  const seier = Math.abs(vWin)<2
     ? `Seier ${kamp} endrer ${navn} lite (${p(dWin)}).`
-    : `Seier ${kamp} ${dWin>0?'øker':'senker'} ${navn} til ${p(dWin)} (${ppTxt(dWin)} prosentpoeng).`;
-  const tap = Math.abs(dLose)<0.02 ? 'mens tap endrer den lite'
-    : `mens tap ${dLose<0?'senker':'øker'} den til ${p(dLose)}`;
+    : `Seier ${kamp} ${vWin>0?'øker':'senker'} ${navn} til ${p(dWin)} (${ppHelTxt(vWin)} prosentpoeng).`;
+  const tap = Math.abs(vLose)<2 ? 'mens tap endrer den lite'
+    : `mens tap ${vLose<0?'senker':'øker'} den til ${p(dLose)}`;
   return `${seier} Uavgjort gir ${p(dDraw)}, ${tap}. ${qaStor(navn)} er ${pctTxt(tableP)} nå. ${naar}`;
 }
 
@@ -4302,14 +4320,16 @@ async function qaCheerFor(team, onPartial){
       ];
       let best = outs[0];
       outs.forEach(o=>{ if(good(o.d)>good(best.d)) best = o; });
-      if(good(best.d)>=0.02) rows.push({m, best, effect:good(best.d)}); // under 2 prosentpoeng er innenfor støyen (som i spørsmål 3 og 5)
+      // Differansen mellom de VISTE tallene (vistPp), som i spørsmål 3 og 5.
+      best = {...best, v: vistPp(tableP, tableP+best.d)};
+      if(good(best.v)>=2) rows.push({m, best, effect:good(best.d)}); // under 2 prosentpoeng er innenfor støyen (som i spørsmål 3 og 5)
     });
     return rows.sort((x,y)=>y.effect-x.effect || x.m.date.localeCompare(y.m.date));
   };
-  const effekt = d => zone.dir==='front'
-    ? `${ppTxt(d)} prosentpoeng`
-    : `reduserer ${navn} med ${Math.abs(Math.round(d*100))} prosentpoeng`;
-  const textFor = rows=>head+rows.map(x=>`${x.best.txt}: ${effekt(x.best.d)}`).join('\n');
+  const effekt = v => zone.dir==='front'
+    ? `${ppHelTxt(v)} prosentpoeng`
+    : `reduserer ${navn} med ${Math.abs(v)} prosentpoeng`;
+  const textFor = rows=>head+rows.map(x=>`${x.best.txt}: ${effekt(x.best.v)}`).join('\n');
   const results = await runZoneTasks(payload, tasks, (id, res)=>{
     const rows = rowsFrom(res);
     if(onPartial && rows.length) onPartial(textFor(rows));
@@ -5468,8 +5488,11 @@ async function qaKeyMatches(team){
   const shown = fine.results.map(r=>{
     const m = openMatches[r.idx];
     const outs = [{who:m.home, d:r.homeProb-r.baseProb}, {who:m.away, d:r.awayProb-r.baseProb}];
-    return {m, outs, impact:Math.max(Math.abs(outs[0].d), Math.abs(outs[1].d))};
-  }).sort((a,b)=>b.impact-a.impact).filter(x=>x.impact>=0.02);
+    // Grensen på to prosentpoeng gjelder de VISTE tallene (vistPp), så en
+    // kamp ikke kan stå i lista med "endrer lite" på begge utfallene.
+    return {m, outs, impact:Math.max(Math.abs(outs[0].d), Math.abs(outs[1].d)),
+            vist:Math.max(Math.abs(vistPp(tableP, tableP+outs[0].d)), Math.abs(vistPp(tableP, tableP+outs[1].d)))};
+  }).sort((a,b)=>b.impact-a.impact).filter(x=>x.vist>=2);
   if(!shown.length){
     return `Ingen enkeltkamp betyr mye for ${team}: ingen utfall endrer ${qaSjanse(zone)} mer enn to prosentpoeng fra dagens ${pctTxt(tableP)}.`;
   }
@@ -5477,15 +5500,16 @@ async function qaKeyMatches(team){
   // 18 % (+7), Lillestrøm-seier 4 % (−7)." Utfallet navngis med vinneren.
   // Bindestrek, ikke minustegn: linjene er lange, og et − brakk ordet i to
   // når nettleseren måtte dele linja.
-  const ppKort = d => { const r=Math.round(d*100); return r===0 ? '0' : (r>0?'+':'-')+Math.abs(r); };
+  const ppKort = n => n===0 ? '0' : (n>0?'+':'-')+Math.abs(n);   // n = vistPp, heltall
   // Spiller laget selv, er utfallet lagets eget ("seier", "tap") -- da slipper
   // linja å gjenta motstanderens navn, og den blir kort nok til å stå på én.
   // Spiller det ikke, trengs begge navnene for at "seier" skal bety noe.
   const bit = (o, egen) => {
     const hva = egen ? (o.who===team ? 'seier' : 'tap') : `${o.who}-seier`;
-    return Math.abs(o.d)<0.02
+    const v = vistPp(tableP, tableP+o.d);
+    return Math.abs(v)<2
       ? `${hva} endrer lite`
-      : `${hva} ${pctTxt(Math.min(1,Math.max(0,tableP+o.d)))} (${ppKort(o.d)})`;
+      : `${hva} ${pctTxt(Math.min(1,Math.max(0,tableP+o.d)))} (${ppKort(v)})`;
   };
   const lines = shown.map(x=>{
     const egen = x.m.home===team || x.m.away===team;

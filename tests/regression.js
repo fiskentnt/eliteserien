@@ -1915,6 +1915,96 @@ async function main() {
       check('OBOS-jobben kjører det samme skriptet (snapshot_probs.js obos)', /snapshot_probs\.js obos/.test(obosWf));
     }
 
+    // ---- Svarene: vist nivå minus vist nå = vist differanse ----
+    // Svarene viser nivået avrundet og differansen i parentes. Ble differansen
+    // regnet før avrunding, gikk tallene i samme setning ikke opp ("til 15 %
+    // (+8) ... er 8 % nå"). Testen er DETERMINISTISK: simuleringen byttes ut
+    // med valgte tall, og nå-nivået settes direkte (0,3 %, 1,2 %, 2,4 %, 50 %,
+    // 98,8 %, 99,7 %), for én fremre og én bakre sone i hver liga. Da dekkes
+    // "<1 %" -> lite tall og tilbake, ">99 %" og ned, og "reduserer ... med N".
+    setGroup('Svarene: vist nivå minus vist nå = vist differanse');
+    for (const [url, liga] of [[base, 'Eliteserien'], [base.replace('/eliteserien/', '/obos/'), 'OBOS']]) {
+      const sp = await open(1400, 900, url);
+      const r = await sp.evaluate(async () => {
+        const tall = s => s === '<1 %' ? 0 : s === '>99 %' ? 100 : parseInt(s, 10);
+        const vis = x => { const y = Math.min(1, Math.max(0, x)); return y < 0.005 ? 0 : y > 0.995 ? 100 : Math.round(y * 100); };
+        const PCT = '(<1 %|>99 %|\\d+ %)';
+        const orig = {runMatchImpactAsync, runZoneTasks, qaTargetZone, qaZoneByKey, qaSettled};
+        const t = TEAMS[0];
+        const fremre = ['europa', 'gull'].find(k => LEAGUE.zones[k]), bakre = ['nedrykk', 'kvalik'].find(k => LEAGUE.zones[k]);
+        const brudd = [], eks = {}; let n = 0, nBakre = 0;
+        for (const key of [fremre, bakre]) {
+          const ekte = orig.qaZoneByKey(t, key);
+          for (const P of [0.003, 0.012, 0.024, 0.5, 0.988, 0.997]) {
+            const z = {...ekte, pct: P};
+            qaTargetZone = () => z; qaZoneByKey = () => z; qaSettled = () => null; qaWhyZoneOverride = null;
+            for (const d of [0.0249, -0.009, 0.009, -0.02, -0.022, 0.0760, -0.0760, 0.0351, -0.0449, 0.9, -0.9]) {
+              runMatchImpactAsync = async (team, zone, specs) => ({results: specs.map(c => ({
+                idx: c.idx, baseProb: 0.5, homeProb: 0.5 + d, awayProb: 0.5 - d / 2, drawProb: 0.5 + d / 3, diff: Math.abs(1.5 * d)}))});
+              runZoneTasks = async (payload, tasks) => { const res = {};
+                tasks.forEach(k => { res[k.id] = {prob: k.id === 'base' ? 0.5 : 0.5 + (k.id.endsWith(':H') ? d : k.id.endsWith(':U') ? d / 3 : -d / 2), pos: null}; });
+                return res; };
+              const nm = await qaNextMatch(t), naa = nm.match(new RegExp(`er ${PCT} nå`));
+              for (const m of nm.matchAll(new RegExp(`til ${PCT} \\(([+−]\\d+|±0) prosentpoeng\\)`, 'g'))) {
+                n++; const a = tall(m[1]), b = m[2] === '±0' ? 0 : parseInt(m[2].replace('−', '-'), 10), N = tall(naa[1]);
+                if (a - N !== b) brudd.push(`neste kamp (${key}, nå ${naa[1]}): ${m[1]} − ${naa[1]} ≠ ${m[2]}`);
+                const s = nm.split('. ')[0] + '. … ' + nm.match(/[^.]* er [^.]* nå\./)[0];
+                if (naa[1] === '<1 %' && a > 0 && !eks.fraUnder1) eks.fraUnder1 = s;
+                if (m[1] === '<1 %' && N > 0 && !eks.tilUnder1) eks.tilUnder1 = s;
+                if (naa[1] === '>99 %' && a < 100 && !eks.fraOver99) eks.fraOver99 = s;
+              }
+              const km = await qaKeyMatches(t), naa2 = km.match(new RegExp(`Den er ${PCT} nå`));
+              if (naa2) for (const m of km.matchAll(new RegExp(`${PCT} \\(([+-]?\\d+)\\)`, 'g'))) {
+                n++; if (key === bakre) nBakre++;
+                if (tall(m[1]) - tall(naa2[1]) !== parseInt(m[2], 10)) brudd.push(`kamper som betyr mest (${key}): ${m[1]} − ${naa2[1]} ≠ ${m[2]}`);
+                if (key === bakre && !eks.kmBakre && tall(naa2[1]) !== tall(m[1])) eks.kmBakre = km.split('\n').filter(Boolean).slice(0, 2).join(' | ');
+              }
+              // Heie på: differansen står alene. Fremre: "+N prosentpoeng",
+              // bakre: "reduserer ... med N prosentpoeng". N skal være
+              // forskjellen mellom de viste tallene for det beste utfallet.
+              const ch = await qaCheerFor(t);
+              const kand = [d, d / 3, -d / 2].map(dd => vis(P + dd) - vis(P));
+              for (const m of ch.matchAll(/: ([+−]\d+|±0) prosentpoeng|reduserer [^\n]*? med (\d+) prosentpoeng/g)) {
+                n++;
+                if (m[1]) { const v = m[1] === '±0' ? 0 : parseInt(m[1].replace('−', '-'), 10);
+                  if (!kand.includes(v)) brudd.push(`heie på (${key}, nå ${vis(P)}): ${m[1]} er ikke vist nivå minus vist nå (${kand.join('/')})`); }
+                else { nBakre++; const v = parseInt(m[2], 10);
+                  if (!kand.map(x => -x).includes(v)) brudd.push(`heie på (${key}, nå ${vis(P)}): «reduserer med ${v}» er ikke forskjellen mellom de viste tallene (${kand.join('/')})`);
+                  if (!eks.cheerBakre) eks.cheerBakre = `nå ${P < 0.005 ? '<1' : P > 0.995 ? '>99' : Math.round(P * 100)} %: ` + ch.split('\n')[1]; }
+              }
+            }
+          }
+        }
+        Object.assign(window, {}); runMatchImpactAsync = orig.runMatchImpactAsync; runZoneTasks = orig.runZoneTasks;
+        qaTargetZone = orig.qaTargetZone; qaZoneByKey = orig.qaZoneByKey; qaSettled = orig.qaSettled; qaWhyZoneOverride = null;
+        return {soner: [fremre, bakre], n, nBakre, brudd, eks,
+                bruddBakre: brudd.filter(b => b.includes(`(${bakre}`) || b.includes('reduserer'))};
+      });
+      for (const [k, v] of Object.entries(r.eks)) console.log(`      ${liga} ${k}: ${v}`);
+      check(`${liga}: vist nivå minus vist nå = vist differanse i ${r.n} tall (${r.soner.join(' og ')}, nå fra <1 % til >99 %)`,
+        r.n > 100 && r.brudd.length === 0, `${r.brudd.length} brudd: ${r.brudd.slice(0, 4).join('; ')}`);
+      check(`${liga}: overgangene er med: <1 % -> lite tall, lite tall -> <1 %, >99 % og ned`,
+        r.eks.fraUnder1 && r.eks.tilUnder1 && r.eks.fraOver99, JSON.stringify(r.eks));
+      check(`${liga}: bakre sone (${r.soner[1]}): "reduserer ... med N" og differansene i kamper som betyr mest går opp (${r.nBakre} tall)`,
+        r.nBakre > 10 && r.eks.cheerBakre && r.eks.kmBakre && r.bruddBakre.length === 0,
+        `${r.bruddBakre.length} brudd: ${r.bruddBakre.slice(0, 3).join('; ')}`);
+      // Og uten utbytting: ekte simulering for to lag.
+      const ekte = await sp.evaluate(async () => {
+        const tall = s => s === '<1 %' ? 0 : s === '>99 %' ? 100 : parseInt(s, 10);
+        const PCT = '(<1 %|>99 %|\\d+ %)', brudd = []; let n = 0;
+        for (const t of TEAMS.slice(0, 2)) {
+          qaWhyZoneOverride = null;
+          const nm = await qaNextMatch(t), naa = nm.match(new RegExp(`er ${PCT} nå`));
+          if (naa) for (const m of nm.matchAll(new RegExp(`til ${PCT} \\(([+−]\\d+|±0) prosentpoeng\\)`, 'g'))) {
+            n++; if (tall(m[1]) - tall(naa[1]) !== (m[2] === '±0' ? 0 : parseInt(m[2].replace('−', '-'), 10))) brudd.push(nm.slice(0, 120));
+          }
+        }
+        return {n, brudd};
+      });
+      check(`${liga}: ekte simulering, neste kamp: tallene går opp`, ekte.brudd.length === 0, ekte.brudd.join('; '));
+      await sp.close();
+    }
+
     // ---- Forrige kamp: "enn markedet/modellen ventet" følger kilden ----
     // Forventningen før kampen er en frosset prognose eller, som reserve,
     // sluttoddsen. Teksten sa alltid "modellen". Nå "markedet" ved sluttodds.

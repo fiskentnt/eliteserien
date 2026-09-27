@@ -34,6 +34,7 @@ en bruker ville sett.
 | Merker ved poenglikhet | for hver merkegrense og nedrykksgrensen i begge ligaer: ferdigspilt og likt på poeng gir merket bare til laget som står over etter målforskjell; helt likt på poeng, målforskjell og scorede mål gir ingen av dem merket; kan et lag fortsatt nå samme poengsum, venter merket |
 | Prekick: frysing ved avspark | avspark fra terminlisten regnes om fra norsk tid til UTC (også over sommertidsskiftet); for begge ligaer: en rad oppdateres før avspark, røres ikke ved og etter avspark, lages ikke etter avspark, og fryses med stempelet fra før avspark når resultatet kommer; `snapshot_probs.js` bruker regelen, og OBOS-jobben kjører samme skript |
 | Forrige kamp: ordlyden følger kilden | «bedre/verre enn markedet ventet» når forventningen er regnet fra sluttoddsen, «enn modellen ventet» ved frosset prognose (injisert), både i svaret og i linja i lagboksen, begge ligaer |
+| Svarene: vist nivå minus vist nå = vist differanse | deterministisk (simuleringen og nå-nivået byttes ut): «Hva betyr neste kamp?», «Hvilke kamper betyr mest?» og «heie på» for én fremre og én bakre sone i begge ligaer, nå fra 0,3 % til 99,7 %; differansen i parentes og «reduserer … med N» er forskjellen mellom de viste tallene, også over «<1 %» og «>99 %»; pluss ekte simulering for to lag |
 | JS-feil | ingen feil i konsollen gjennom hele kjøringen |
 
 Nye spørsmål i «Spør om tabellen» må legges inn i `QA_EXPECT` i
