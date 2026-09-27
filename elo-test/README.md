@@ -243,13 +243,14 @@ slik den er i dag, altså etterpåklokskap.
 
 ## Avviksliste mot `eliteserien/index.html`
 
-Basis: `eliteserien/index.html` i commit `9cc3590` (sha256 `c27b6727…`).
+Basis: `eliteserien/index.html` i commit `16934d2` (sha256 `a08ff089…`).
 Kopien ble tatt i `1fc6e8f`. Produksjonsrettelsene etterpå er tatt inn med
 samme patch, ordrett: merkene (`157d9ff`: likt på poeng er en trussel,
 ferdigspilt sesong etter faktisk plass), ordlyden i forrige kamp (`bf623aa`:
 «markedet ventet» ved sluttodds) og avrundingen i svarene (`5f415cd`:
-differansen mellom de viste tallene) og merkesøket (`9cc3590`: tidlig stopp og
-egen Worker for merkene). Kopien har 7137 linjer mot produksjonens 6819, fordelt på 32 endrede
+differansen mellom de viste tallene), merkesøket (`9cc3590`: tidlig stopp og
+egen Worker for merkene) og tabellsimuleringen i egen Worker (`16934d2`).
+Kopien har 7143 linjer mot produksjonens 6825, fordelt på 32 endrede
 blokker (`git diff`, vanlig kontekst). Merkerettelsen endret ikke antallet
 blokker; scenariooppdateringen (27.9.2026) la til tekstendringer og nye
 funksjoner i blokk A.

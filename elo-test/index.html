@@ -2975,26 +2975,17 @@ let lastSimSeed = null, lastSimMatchIds = null;
 // per mode siden runId-tellerne er uavhengige.
 const insightsResolvers = new Map(), matchImpactResolvers = new Map();
 let insightsRunId = 0, matchImpactRunId = 0;
+// Tabellsimuleringen (runMCAsync) har sin EGEN Worker, som bare den bruker.
+// Alt annet -- "Neste kamp" (matchImpact), "Spør om tabellen" (insights) og
+// "typisk sesong" (typical) -- går i hjelpe-Workeren under, merkene i sin, og
+// "heie på" i bassenget. Før sto tabellens prosenter i kø bak kortet "Neste
+// kamp" (2500 × 4 sesonger), som sendes før tabellsimuleringen.
 function getWorker(){
   if(!mcWorker){
     mcWorker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'})));
     mcWorker.onmessage = e=>{
       const data=e.data;
-      if(data.mode==='typical'){
-        const resolve=typicalResolvers.get(data.runId);
-        if(resolve){ resolve(data); typicalResolvers.delete(data.runId); }
-        return;
-      }
-      if(data.mode==='insights'){
-        const resolve=insightsResolvers.get(data.runId);
-        if(resolve){ resolve(data); insightsResolvers.delete(data.runId); }
-        return;
-      }
-      if(data.mode==='matchImpact'){
-        const resolve=matchImpactResolvers.get(data.runId);
-        if(resolve){ resolve(data); matchImpactResolvers.delete(data.runId); }
-        return;
-      }
+      if(data.mode!=='prob') return;
       const {runId,out}=data;
       // Basis fanges FØR forkastingen under: åpner man en delt lenke, rekker
       // den tomme kjøringen ofte å bli forbigått av scenarioet før den er
@@ -3008,6 +2999,21 @@ function getWorker(){
     };
   }
   return mcWorker;
+}
+let hjelpWorker=null;
+function getHjelpWorker(){
+  if(!hjelpWorker){
+    hjelpWorker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'})));
+    hjelpWorker.onmessage = e=>{
+      const data=e.data;
+      const kart = data.mode==='typical' ? typicalResolvers : data.mode==='insights' ? insightsResolvers
+                 : data.mode==='matchImpact' ? matchImpactResolvers : null;
+      if(!kart) return;
+      const resolve=kart.get(data.runId);
+      if(resolve){ resolve(data); kart.delete(data.runId); }
+    };
+  }
+  return hjelpWorker;
 }
 // Merkene har sin EGEN Worker (samme kode). Søket kan bruke opptil
 // budgetMs per lag, og i samme Worker ville simuleringen stått i kø bak det,
@@ -3211,7 +3217,7 @@ function simulateTypicalAsync(open, forcedSeed){
       lastSimMatchIds = new Set(open.map(m=>m.id));
       resolve();
     });
-    getWorker().postMessage({
+    getHjelpWorker().postMessage({
       mode:'typical', runId, seed,
       mu:MODEL.mu, H:MODEL.H, k:FORM_K,
       att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
@@ -4982,7 +4988,7 @@ function runInsightsAsync(team, zone, rivalName){
   const runId = insightsRunId;
   return new Promise(resolve=>{
     insightsResolvers.set(runId, resolve);
-    getWorker().postMessage({
+    getHjelpWorker().postMessage({
       mode:'insights', runId, seed:hashStr(scenarioKey+'|'+team+'|'+zone.key),
       mu:MODEL.mu, H:MODEL.H, k:FORM_K,
       att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
@@ -5017,7 +5023,7 @@ function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base){
   const runId = matchImpactRunId;
   return new Promise(resolve=>{
     matchImpactResolvers.set(runId, resolve);
-    getWorker().postMessage({
+    getHjelpWorker().postMessage({
       mode:'matchImpact', runId,
       mu:MODEL.mu, H:MODEL.H, k:FORM_K,
       att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
