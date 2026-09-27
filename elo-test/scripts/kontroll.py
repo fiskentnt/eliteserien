@@ -92,7 +92,7 @@ if _p.exists():
     lab_mod = importlib.util.module_from_spec(_s)
     _s.loader.exec_module(lab_mod)
 
-# A1 OG A2 ER PLATTFORMUAVHENGIGE MOT model.json. De kjorer kjeden to ganger
+# A1 OG A2 ER MASKINUAVHENGIGE MOT model.json. De kjorer kjeden to ganger
 # PAA SAMME MASKIN -- en gang med den isolerte modulen, en gang med labens -- og
 # sammenligner de to. model.json brukes bare som liste over kamppar;
 # ratingforskjellen kommer fra den lokale kjoringen. Det er viktig fordi

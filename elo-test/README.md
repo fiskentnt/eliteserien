@@ -71,13 +71,21 @@ med nøyaktig 1e-06, én avrundingsenhet, fra forrige linje for samme kamp.
 Alle fire ble skrevet av koden før terskelen kom. Med terskelen ville ingen
 av dem blitt skrevet. Linjene står, siden loggen er append-only.
 
+**`model.json` og `meta.json` skrives med toleranse.** Et tall regnes som
+endret bare når det har flyttet seg mer enn 1e-6 fra filen som ligger der;
+tekst, nøkler og listelengder sammenlignes eksakt. Ellers røres filen ikke.
+Før dette ble `model.json` sammenlignet eksakt, og f76708a (11:20) var en
+commit uten endrede data, bare en annen CPU. Verifisert på de tre versjonene
+vi har (10:56 westus, 11:20 centralus og en lokal macOS-bygging): de skiller
+seg parvis med opptil 9,5e-09, ingen av dem er eksakt like, og med hver av dem
+som filen på disk sier `bygg.py` «model.json uendret» og sha256 er den samme
+før og etter. En endring på 1e-3 i én rating skrives. `olr_tilpass` og
+Nelder-Mead er ikke endret, ellers ville A1 sluttet å matche laben.
+
 `elo-test/requirements.txt` låser numpy 2.5.3 og scipy 1.18.1, versjonene CI
-brukte. Det hindrer at en scipy-oppgradering flytter tallene; det fjerner ikke
-forskjellen mellom maskiner, som terskelen tar i loggen. `model.json`
-sammenlignes fortsatt eksakt, så en kjøring på en annen CPU enn forrige kan gi
-en commit av `model.json` uten at dataene er endret. Det skjedde i f76708a
-(11:20). Siden viser hele prosent, så slike commits endrer ikke det som vises,
-men de gir commits uten innhold.
+brukte. Det hindrer bare at en oppgradering flytter tallene. Forskjellen
+mellom maskiner fjerner det ikke; den tas av toleransen i `model.json` og
+terskelen i loggen.
 
 **Definisjon:** for en kamp hentes avsparket fra **terminlisten**
 (`fixtures.json`: `date` + `time`, norsk lokaltid, `Europe/Oslo` → UTC). Den

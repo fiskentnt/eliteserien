@@ -74,6 +74,26 @@ def last_2026():
     return ut
 
 
+# 1e-6: over 100 ganger stoyen mellom maskiner (8,9e-09), og under det
+# prognoseloggen reagerer paa (1e-5) og det siden viser (hele prosent).
+TOL_FIL = 1e-6
+
+
+def lik_innenfor(a, b, tol=TOL_FIL):
+    """Samme struktur, samme ikke-tall, og hvert tall innenfor `tol`."""
+    if isinstance(a, bool) or isinstance(b, bool):
+        return type(a) is type(b) and a == b
+    if isinstance(a, (int, float)) and isinstance(b, (int, float)):
+        return abs(a - b) <= tol
+    if isinstance(a, dict) and isinstance(b, dict):
+        return a.keys() == b.keys() and all(lik_innenfor(a[k], b[k], tol)
+                                            for k in a)
+    if isinstance(a, list) and isinstance(b, list):
+        return len(a) == len(b) and all(lik_innenfor(x, y, tol)
+                                        for x, y in zip(a, b))
+    return a == b
+
+
 def main():
     meta_h, hist = last_historikk()
     s26 = last_2026()
@@ -165,12 +185,24 @@ def main():
 
         Er ingenting endret, roeres filen IKKE, og den beholder sitt gamle
         tidsstempel. Filen sier naar MODELLEN ble bygget, og modellen er den
-        samme."""
+        samme.
+
+        TALL SAMMENLIGNES MED TOLERANSE, ikke eksakt. Byggingen er ikke
+        bit-reproduserbar mellom maskiner, heller ikke mellom to CI-kjoringer
+        med samme image og versjoner: 10:56 (westus) og 11:20 (centralus)
+        27.9. skilte opptil 8,9e-09 paa identisk input. Med eksakt
+        sammenligning ble model.json committet paa nytt hver gang en kjoring
+        havnet paa en annen CPU. Et tall regnes som endret bare naar det har
+        flyttet seg MER enn TOL_FIL fra filen som ligger der. Alt annet --
+        tekst, sannhetsverdier, noekler, listelengder -- sammenlignes eksakt.
+        olr_tilpass og Nelder-Mead er IKKE endret; da ville A1 sluttet aa
+        matche laben."""
         p = UT / navn
         ny = {k: v for k, v in d.items() if k not in ignorer}
         if p.exists():
             gml = json.loads(p.read_text(encoding="utf-8"))
-            if {k: v for k, v in gml.items() if k not in ignorer} == ny:
+            if lik_innenfor({k: v for k, v in gml.items() if k not in ignorer},
+                            ny):
                 return False
         p.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n",
                      encoding="utf-8")

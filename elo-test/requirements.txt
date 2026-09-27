@@ -9,6 +9,8 @@
 # Laasingen fjerner IKKE forskjellen mellom maskiner: macOS og CI hadde de
 # samme versjonene og ga likevel ~8e-09 forskjell i OLR, og to CI-kjoringer
 # med samme image og versjoner (westus 10:56 og centralus 11:20, 27.9.) ga
-# ogsaa 8,9e-09. Det er terskelen i bygg.py som tar den i prognoseloggen.
+# ogsaa 8,9e-09. Laasingen hindrer bare at en oppgradering flytter tallene.
+# Maskinstoyen tas i bygg.py: toleranse 1e-6 for model.json og meta.json,
+# terskel 1e-5 i prognoseloggen.
 numpy==2.5.3
 scipy==1.18.1
