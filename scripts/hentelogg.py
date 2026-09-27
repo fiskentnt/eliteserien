@@ -28,7 +28,17 @@ Bruk:
     python3 scripts/hentelogg.py sammendrag [dager]   # utfall per kilde
     python3 scripts/hentelogg.py feil [dager]         # bare det som gikk galt
     python3 scripts/hentelogg.py sjekk [dager]        # exit 1 hvis en kilde er ute
+    python3 scripts/hentelogg.py sjekk [dager] --alle # alle jobbers kilder
+
+SJEKK GJELDER BARE DENNE JOBBENS KILDER. I Actions er jobben workflowen
+(GITHUB_WORKFLOW), og en kilde regnes som ute bare hvis DENNE jobbens egne
+forsok har feilet paa rad. For dette ble "Oppdater kampdata" rod av
+OBOS-jobbenes feil (obos/ntf-resultater, alle/oddspapi-historical-odds), som
+den aldri selv forsoker -- en alarm som alltid er rod, blir ignorert. Jobben
+leses av filnavnet, som alltid har hatt workflow-navnet i seg. Lokalt, uten
+GITHUB_WORKFLOW, sjekkes alle jobber, som foer.
 """
+import re
 import json
 import os
 import sys
@@ -48,6 +58,26 @@ KATALOG = Path(os.environ.get("HENTELOGG_KATALOG") or ROT / "data" / "hentelogg"
 FEIL_PAA_RAD_GRENSE = 3
 
 
+def _jobbnavn(wf):
+    """Workflow-navnet slik det staar i filnavnet."""
+    return wf.replace("/", "-").replace(" ", "_")
+
+
+_FILNAVN = re.compile(r"^\d{4}-\d{2}-\d{2}-(.+)-(\d+-\d+|pid\d+)\.jsonl$")
+
+
+def jobb_fra_fil(navn):
+    """Jobben (workflow-navnet) som skrev en loggfil, eller None."""
+    m = _FILNAVN.match(navn)
+    return m.group(1) if m else None
+
+
+def denne_jobben():
+    """Denne kjoringens jobb i Actions, eller None lokalt."""
+    wf = os.environ.get("GITHUB_WORKFLOW")
+    return _jobbnavn(wf) if wf else None
+
+
 def _fil(naa):
     """EN FIL PER KJORING. To kjoringer fra ulike checkouts kan da aldri
     legge til linjer i samme fil, og en rebase kan ikke tape linjer.
@@ -56,7 +86,7 @@ def _fil(naa):
     for svakt: gruppen kan endres, og en gjenopptatt kjoring har samme
     workflow-navn. Lokalt finnes ingen run_id, og da holder dato pluss
     prosess-id."""
-    wf = os.environ.get("GITHUB_WORKFLOW", "lokal").replace("/", "-").replace(" ", "_")
+    wf = _jobbnavn(os.environ.get("GITHUB_WORKFLOW", "lokal"))
     rid = os.environ.get("GITHUB_RUN_ID")
     hale = (f"{rid}-{os.environ.get('GITHUB_RUN_ATTEMPT', '1')}" if rid
             else f"pid{os.getpid()}")
@@ -105,12 +135,13 @@ def les(dager=14, naa=None):
                 continue
             if t >= grense:
                 r["_t"] = t
+                r["_jobb"] = jobb_fra_fil(f.name)
                 ut.append(r)
     ut.sort(key=lambda r: r["_t"])
     return ut
 
 
-def feil_paa_rad(liga, kilde, dager=14, naa=None):
+def feil_paa_rad(liga, kilde, dager=14, naa=None, jobb=None):
     """Hvor mange forsok paa rad som har feilet, nyeste forst.
 
     Dette er svaret tilstandsfilene ikke kan gi: de husker bare siste
@@ -118,7 +149,8 @@ def feil_paa_rad(liga, kilde, dager=14, naa=None):
     """
     rader = [r for r in les(dager, naa)
              if r.get("liga") == liga and r.get("kilde") == kilde
-             and r.get("utfall") in ("ok", "feil")]
+             and r.get("utfall") in ("ok", "feil")
+             and (jobb is None or r.get("_jobb") == jobb)]
     n = 0
     for r in reversed(rader):
         if r["utfall"] == "feil":
@@ -128,15 +160,17 @@ def feil_paa_rad(liga, kilde, dager=14, naa=None):
     return n
 
 
-def ute(dager=14, naa=None):
-    """Kilder som har feilet FEIL_PAA_RAD_GRENSE ganger eller mer paa rad."""
-    par = {(r.get("liga"), r.get("kilde")) for r in les(dager, naa)}
+def ute(dager=14, naa=None, jobb=None):
+    """Kilder som har feilet FEIL_PAA_RAD_GRENSE ganger eller mer paa rad.
+    Med jobb: bare kilder den jobben selv har forsokt, og bare dens forsok."""
+    par = {(r.get("liga"), r.get("kilde")) for r in les(dager, naa)
+           if jobb is None or r.get("_jobb") == jobb}
     ut = []
     # Bare kilden maa vaere navngitt. Krevde vi ogsaa liga, ville kilder som
     # ikke horer til EN liga -- OddsPapi deler nokkel og kvote mellom dem --
     # aldri kunne utlose alarmen, uansett hvor lenge de var nede.
     for liga, kilde in sorted((x for x in par if x[1]), key=lambda x: (x[0] or "", x[1])):
-        n = feil_paa_rad(liga, kilde, dager, naa)
+        n = feil_paa_rad(liga, kilde, dager, naa, jobb)
         if n >= FEIL_PAA_RAD_GRENSE:
             ut.append((liga, kilde, n))
     return ut
@@ -178,21 +212,27 @@ def sammendrag(dager=14, bare_feil=False, naa=None):
     return 1 if nede else 0
 
 
-def sjekk(dager=14, naa=None):
-    """Exit 1 hvis en kilde har feilet FEIL_PAA_RAD_GRENSE ganger paa rad.
+def sjekk(dager=14, naa=None, jobb=None, alle=False):
+    """Exit 1 hvis en av DENNE jobbens kilder har feilet FEIL_PAA_RAD_GRENSE
+    ganger paa rad (se modulteksten). alle=True: alle jobbers kilder.
 
     Kalles som eget steg TIL SLUTT i kjeden, etter at data er lagret: en
     kilde som er ute skal gjore kjoringen rod, men ikke hindre at dagens
     data blir skrevet."""
-    nede = ute(dager, naa)
+    if not alle and jobb is None:
+        jobb = denne_jobben()
+    if alle:
+        jobb = None
+    nede = ute(dager, naa, jobb)
+    hvem = f"jobben {jobb}" if jobb else "alle jobber"
     if not nede:
-        print(f"Hentelogg: ingen kilde har feilet {FEIL_PAA_RAD_GRENSE} "
+        print(f"Hentelogg ({hvem}): ingen kilde har feilet {FEIL_PAA_RAD_GRENSE} "
               f"ganger på rad.")
         return 0
     i_actions = bool(os.environ.get("GITHUB_ACTIONS"))
     for liga, kilde, n in nede:
-        melding = (f"{liga}/{kilde} har feilet {n} ganger på rad -- kilden er "
-                   f"sannsynligvis ute.")
+        melding = (f"{liga}/{kilde} har feilet {n} ganger på rad ({hvem}) -- "
+                   f"kilden er sannsynligvis ute.")
         if i_actions:
             # Kildenavnet skal staa i selve feilmeldingen paa kjoringen, ikke
             # bare i loggen: det er hele poenget med at steget er rodt.
@@ -209,7 +249,7 @@ def main(argv):
     if cmd in ("sammendrag", "feil"):
         return sammendrag(dager, bare_feil=(cmd == "feil"))
     if cmd == "sjekk":
-        return sjekk(dager)
+        return sjekk(dager, alle="--alle" in argv)
     print(__doc__.strip(), file=sys.stderr)
     return 2
 

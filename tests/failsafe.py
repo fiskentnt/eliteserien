@@ -398,6 +398,53 @@ def main():
                             capture_output=True, text=True, cwd=ROOT)
     check("innlegg: ingenting er sporet", not sporet.stdout.strip(), sporet.stdout.strip())
 
+    # 17. Kildevakten (hentelogg.py sjekk) gjor bare en jobb rod for kilder den
+    #   jobben SELV har forsokt. "Oppdater kampdata" ble rod av OBOS-jobbens
+    #   feil, som den aldri forsoker -- en alarm som alltid er rod, blir
+    #   ignorert. Syntetiske loggfiler i en egen mappe; jobben leses av
+    #   filnavnet, som i produksjonen.
+    import tempfile
+    from datetime import datetime, timedelta, timezone
+    def logg_fil(mappe, jobb, rid, rader):
+        naa = datetime.now(timezone.utc)
+        f = Path(mappe) / f"{naa:%Y-%m}" / f"{naa:%Y-%m-%d}-{jobb}-{rid}-1.jsonl"
+        f.parent.mkdir(parents=True, exist_ok=True)
+        with f.open("a", encoding="utf-8") as fh:
+            for i, (liga, kilde, utfall) in enumerate(rader):
+                t = (naa - timedelta(minutes=60 - i)).isoformat(timespec="seconds")
+                fh.write(json.dumps({"tid": t, "liga": liga, "kilde": kilde, "utfall": utfall}) + "\n")
+    def sjekk_som(mappe, workflow, *ekstra):
+        env = {k: v for k, v in os.environ.items() if k not in ("GITHUB_WORKFLOW", "GITHUB_ACTIONS")}
+        env["HENTELOGG_KATALOG"] = str(mappe)
+        if workflow:
+            env["GITHUB_WORKFLOW"] = workflow
+        return subprocess.run([sys.executable, str(ROOT / "scripts" / "hentelogg.py"), "sjekk", *ekstra],
+                              capture_output=True, text=True, cwd=ROOT, env=env)
+    with tempfile.TemporaryDirectory() as d:
+        logg_fil(d, "Oppdater_kampdata", 100, [("eliteserien", "nff", "ok"), ("eliteserien", "espn", "ok")])
+        logg_fil(d, "OBOS:_hent_resultater", 200,
+                 [("obos", "ntf-resultater", "feil")] * 4 + [("alle", "oddspapi-historical-odds", "feil")] * 3)
+        r = sjekk_som(d, "Oppdater kampdata")
+        check("kildevakt: eliteseriejobben blir ikke rød av OBOS-jobbens feil",
+              r.returncode == 0 and "ntf-resultater" not in r.stderr, (r.stdout + r.stderr)[-200:])
+        r = sjekk_som(d, "OBOS: hent resultater")
+        check("kildevakt: OBOS-jobben blir rød av sine egne kilder",
+              r.returncode == 1 and "obos/ntf-resultater" in r.stderr and "oddspapi-historical-odds" in r.stderr,
+              (r.stdout + r.stderr)[-200:])
+        r = sjekk_som(d, None)
+        check("kildevakt: lokalt, uten jobb, sjekkes alle jobber", r.returncode == 1, (r.stdout + r.stderr)[-200:])
+        r = sjekk_som(d, "Oppdater kampdata", "--alle")
+        check("kildevakt: --alle sjekker alle jobber også i Actions", r.returncode == 1, (r.stdout + r.stderr)[-200:])
+    with tempfile.TemporaryDirectory() as d:
+        logg_fil(d, "Oppdater_kampdata", 101, [("eliteserien", "nff", "feil")] * 3)
+        logg_fil(d, "OBOS:_hent_resultater", 201, [("obos", "nff", "ok")])
+        r = sjekk_som(d, "Oppdater kampdata")
+        check("kildevakt: eliteseriejobben blir rød av sine egne kilder",
+              r.returncode == 1 and "eliteserien/nff" in r.stderr, (r.stdout + r.stderr)[-200:])
+        r = sjekk_som(d, "OBOS: hent resultater")
+        check("kildevakt: OBOS-jobben blir ikke rød av eliteseriejobbens feil",
+              r.returncode == 0, (r.stdout + r.stderr)[-200:])
+
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare
     # kall som aldri skjedde, av selve testene.
