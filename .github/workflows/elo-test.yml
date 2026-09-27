@@ -30,7 +30,11 @@ concurrency:
 
 jobs:
   bygg:
-    if: github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success'
+    # Ogsaa naar den utlosende jobben er ROD. "Oppdater kampdata" kan ha
+    # committet data foer et senere steg gjor den rod (kildevakten), og da skal
+    # testsiden bygges paa dem. Byggingen gjor ingenting naar ingenting er
+    # endret. En avbrutt kjoring (cancelled) hoppes fortsatt over.
+    if: github.event_name == 'workflow_dispatch' || contains(fromJSON('["success","failure"]'), github.event.workflow_run.conclusion)
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
