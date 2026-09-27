@@ -183,10 +183,12 @@ slik den er i dag, altså etterpåklokskap.
 
 ## Avviksliste mot `eliteserien/index.html`
 
-Basis: `eliteserien/index.html` i commit `157d9ff` (sha256 `8c35dda0…`).
-Kopien ble tatt i `1fc6e8f`; merkerettelsen i `157d9ff` (likt på poeng er en
-trussel, ferdigspilt sesong etter faktisk plass) er tatt inn med samme patch,
-ordrett. Kopien har 6965 linjer mot produksjonens 6754, fordelt på 26 endrede
+Basis: `eliteserien/index.html` i commit `5f415cd` (sha256 `9271d999…`).
+Kopien ble tatt i `1fc6e8f`. Produksjonsrettelsene etterpå er tatt inn med
+samme patch, ordrett: merkene (`157d9ff`: likt på poeng er en trussel,
+ferdigspilt sesong etter faktisk plass), ordlyden i forrige kamp (`bf623aa`:
+«markedet ventet» ved sluttodds) og avrundingen i svarene (`5f415cd`:
+differansen mellom de viste tallene). Kopien har 7108 linjer mot produksjonens 6786, fordelt på 32 endrede
 blokker (`git diff`, vanlig kontekst). Merkerettelsen endret ikke antallet
 blokker; scenariooppdateringen (27.9.2026) la til tekstendringer og nye
 funksjoner i blokk A.
@@ -235,7 +237,7 @@ gjenstående kamper, så spilte kamper kan ikke oppdateres to ganger).
 | `runMatchImpact` i `WORKER_SRC` | hvert låste utfall simuleres med sin egen `oddsOverride` | workeren kjørte alle utfallene med samme målrater |
 | `qaLastMatchData` | oppgavene for de alternative utfallene merkes `eloAlt` | så `runZoneTasks` kan regne ratingen etter det alternative resultatet |
 | `qaLastMatch`, avsluttende setning | «Lagstyrkene holdes som i dag» → «Ratingen er regnet om for hvert alternative resultat, men holdes fast gjennom resten av sesongen» når `odds.json` er lastet | setningen skal si hva som skjer |
-| `qaLastMatch` og `qaLastMatchLine` | «enn modellen ventet» → `eloVentetAv(...)`: «markedet» når forventningen er regnet fra sluttoddsen, «modellen» ved frosset prognose | teksten sa «modellen» også om et markedstall |
+| `qaLastMatch` og `qaLastMatchLine` | «enn modellen ventet» → produksjonens `ventetAv(...)` (bf623aa, tatt inn ordrett): «markedet» ved sluttodds, «modellen» ved frosset prognose | testsiden hadde sin egen `eloVentetAv`; den er erstattet av produksjonens |
 | `boot()`, `odds.json` | hentes ved siden av, normalisert som i `bygg.py` (`ELO_ODDS_SPILT`) | trengs bare til avspillingen for forrige kamp |
 | `boot()`, datastier | `data/…` → `../eliteserien/data/…` for matches, fixtures, odds_upcoming, status, odds_quota | produksjonens filer leses direkte, ingen kopier |
 | `boot()`, modellsti | `data/model.json` → `emodell/model.json` | egen modell, i en mappe som ikke heter `data` (sitemap) |
@@ -354,10 +356,6 @@ testsidespesifikk og skal ikke porteres. `ELO_EKTE` kan fjernes.
 - **Forrige kamp trenger `odds.json`.** Avspillingen for et alternativt
   resultat bruker sluttoddsen for de spilte kampene. Er filen ikke lastet,
   holdes ratingen fast for alternativet, som før, og svaret sier det.
-- **Produksjonen sier «enn modellen ventet» også når forventningen er regnet
-  fra sluttoddsen** (`qaLastMatch` og `qaLastMatchLine`, begge ligaer).
-  Produksjonen har 0 frosne prognoser, så i dag gjelder det alle 16
-  lagbokslinjene. Ikke endret; testsiden følger kilden.
 - **Produksjonens `rateFor` normaliserer ikke oddsen.** Den bruker rå
   oddstall fra `odds_upcoming.json` (`[o.H, o.D, o.A]`) uten normalisering.
   Rådataene er rundet til fire desimaler og summerer ikke alltid til 1;

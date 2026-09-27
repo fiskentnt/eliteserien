@@ -357,8 +357,9 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 
 # ---------- I: DRIFT mot produksjonssiden -- ADVARSEL, ikke feil
 # elo-test/index.html er en kopi av eliteserien/index.html slik den var i commit
-# 1fc6e8f, med merkerettelsen fra 157d9ff tatt inn (samme patch, ordrett).
-# Basisen er derfor 157d9ff. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
+# 1fc6e8f, med produksjonsrettelsene tatt inn ordrett: merkene (157d9ff),
+# ordlyden i forrige kamp (bf623aa) og avrundingen i svarene (5f415cd).
+# Basisen er derfor 5f415cd. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
 # rettelse eller ny funksjon der kommer ikke med her. Det er ikke en feil i
 # testsiden, men noen maa ta stilling til det -- derfor en advarsel med antall
 # endrede linjer, og ingen FEIL.
@@ -367,8 +368,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_COMMIT = "157d9ff995461a5030266da26585f057676f1ad1"
-BASE_SHA = "8c35dda095ed2e328d1bbac7b268633ddfb24813ca0eb95bb9d4f7237e05107f"
+BASE_COMMIT = "5f415cda00e8082d378269167d2300f8f1a28f7d"
+BASE_SHA = "9271d999b9028629bdb5125a4dcaef386de76bd2db836f1b227137affc6ab6e3"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
@@ -1071,12 +1072,13 @@ print("\nV   forrige kamp: \"enn markedet/modellen ventet\" følger kilden")
 _akt = "\n".join(l for l in _h.splitlines() if not l.strip().startswith("//"))
 krev("ingen fast \"enn modellen ventet\" igjen i aktiv kode", "enn modellen ventet" not in _akt,
      f"{_akt.count('enn modellen ventet')} treff")
-krev("svaret og lagbokslinja bruker eloVentetAv",
-     "enn ${eloVentetAv(data.preKick)} ventet" in _h and "enn ${eloVentetAv(preKickProbs(e.home, e.away))} ventet" in _h)
-_rv = subprocess.run(["node", "-e", _hent("eloVentetAv") + """
-console.log(JSON.stringify([eloVentetAv({kilde:'sluttoddsen'}), eloVentetAv({kilde:'odds og modell'}),
-                            eloVentetAv({kilde:'modellen'}), eloVentetAv(null)]));"""], capture_output=True, text=True)
-krev("eloVentetAv: sluttodds -> markedet, frosset prognose -> modellen",
+# Regelen er produksjonens egen (ventetAv, bf623aa), tatt inn med patchen.
+krev("svaret og lagbokslinja bruker ventetAv (produksjonens)",
+     "enn ${ventetAv(data.preKick)} ventet" in _h and "enn ${ventetAv(preKickProbs(e.home, e.away))} ventet" in _h)
+_rv = subprocess.run(["node", "-e", _hent("ventetAv") + """
+console.log(JSON.stringify([ventetAv({kilde:'sluttoddsen'}), ventetAv({kilde:'odds og modell'}),
+                            ventetAv({kilde:'modellen'}), ventetAv(null)]));"""], capture_output=True, text=True)
+krev("ventetAv: sluttodds -> markedet, frosset prognose -> modellen",
      _rv.returncode == 0 and json.loads(_rv.stdout) == ["markedet", "modellen", "modellen", "modellen"],
      (_rv.stdout or _rv.stderr).strip()[:120])
 
