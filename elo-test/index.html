@@ -2847,12 +2847,15 @@ function runInsights(d){
 // gir samme tall i spørsmål 3, 5 og "heie på".
 function runMatchImpact(d){
   var results = d.candidates.map(function(c){
-    var homeProb = simulateZoneProb(d, c.idx, c.homeScore, c.seed);
-    var awayProb = simulateZoneProb(d, c.idx, c.awayScore, c.seed);
+    // ELO-TEST: hvert låste utfall har egen oddsOverride (c.overHome osv.),
+    // regnet på hovedtråden med ratingen etter det utfallet.
+    var med = function(ov){ return ov ? Object.assign({}, d, {oddsOverride: ov}) : d; };
+    var homeProb = simulateZoneProb(med(c.overHome), c.idx, c.homeScore, c.seed);
+    var awayProb = simulateZoneProb(med(c.overAway), c.idx, c.awayScore, c.seed);
     // drawScore er valgfri -- bare spørsmål 5 (ett resultat om gangen, alle
     // tre utfall) trenger den; spørsmål 3 (mange kandidatkamper, bare
     // seier/tap-forskjellen) lar den stå tom for å spare en tredje kjøring.
-    var drawProb = c.drawScore ? simulateZoneProb(d, c.idx, c.drawScore, c.seed) : null;
+    var drawProb = c.drawScore ? simulateZoneProb(med(c.overDraw), c.idx, c.drawScore, c.seed) : null;
     // Utgangspunktet uten låst kamp, samme frø som de låste kjøringene, så
     // endringen (utfall minus utgangspunkt) kan legges oppå tabellens tall.
     // Bare spørsmål 3 (finpuss) og 5 ber om den.
@@ -4160,7 +4163,8 @@ function runZoneTasks(payload, tasks, onTask){
       // t.over: egen utgangsstilling for AKKURAT denne kjøringen (brukes av
       // "hva betydde forrige kamp", der det er startpunktet som varieres, ikke
       // en gjenstående kamp). Samme frø som de andre, så støyen kansellerer.
-      poolQueue.push({epoch, msg:{...payload, ...(t.over||{}), mode:'zoneTask', runId:epoch, taskId:t.id, forcedIdx:t.idx, forcedScore:t.score},
+      // ELO-TEST: eloTaskOver gir oppgaven egen oddsOverride for det låste utfallet.
+      poolQueue.push({epoch, msg:{...payload, ...eloTaskOver(payload, t), mode:'zoneTask', runId:epoch, taskId:t.id, forcedIdx:t.idx, forcedScore:t.score},
         done:data=>{ results[t.id]={prob:data.prob, pos:data.pos}; if(onTask) onTask(t.id, results); if(--left===0) resolve(results); }});
     });
     pumpPool();
@@ -4248,6 +4252,8 @@ async function qaCheerFor(team, onPartial){
 // utfylte resultater), og bare denne ene kampens bidrag byttes ut.
 //   Lagstyrkene (LIVE) holdes som i dag og tilpasses IKKE på nytt for det
 // alternative resultatet -- svaret sier det, så tallet leses som et anslag.
+//   ELO-TEST: her regnes ratingen om for det alternative resultatet
+// (eloRatingMedAlternativ, via eloAlt i oppgaven), og svaret sier det.
 // Samme workerbasseng og frø som de andre spørsmålene, og bare tre kjøringer,
 // så antallet simuleringer kan være høyere enn i "heie på".
 const QA_LAST_N = 6000;
@@ -4291,7 +4297,8 @@ async function qaLastMatchData(team){
     const P=Float64Array.from(P0), G=Float64Array.from(G0), F=Float64Array.from(F0);
     applyResultDelta(P,G,F,h0,a0,m.hg,m.ag,-1); // det faktiske resultatet ut
     applyResultDelta(P,G,F,h0,a0,hg,ag,1);      // det alternative inn
-    tasks.push({id:o, idx:-1, score:null, over:{P0:Array.from(P), G0:Array.from(G), F0:Array.from(F)}});
+    tasks.push({id:o, idx:-1, score:null, over:{P0:Array.from(P), G0:Array.from(G), F0:Array.from(F)},
+                eloAlt:{home:m.home, away:m.away, hg, ag}});   // ELO-TEST: ratingen etter det alternative resultatet
   });
   const res = await runZoneTasks({
     mu:MODEL.mu, H:MODEL.H, k:FORM_K,
@@ -4344,7 +4351,11 @@ async function qaLastMatch(team){
   const clamp = v => Math.min(1, Math.max(0, v));
   const head = actual==='win' ? `Seieren mot ${opp}` : actual==='loss' ? `Tapet mot ${opp}` : `Poengdelingen mot ${opp}`;
   const headLiten = head.charAt(0).toLowerCase()+head.slice(1);
-  const anslag = ` Lagstyrkene holdes som i dag, så tallene er anslag.`;
+  // ELO-TEST: ratingen regnes om for hvert alternative resultat
+  // (eloRatingMedAlternativ) når sluttoddsen for spilte kamper er lastet.
+  const anslag = ELO_ODDS_SPILT
+    ? ` Ratingen er regnet om for hvert alternative resultat, men holdes fast gjennom resten av sesongen, så tallene er anslag.`
+    : ` Lagstyrkene holdes som i dag, så tallene er anslag.`;
   const others = ['win','draw','loss'].filter(o=>o!==actual);
   // Hvor sannsynlig selve resultatet var før avspark (prekick.json eller
   // sluttoddsen). Kommer etter konklusjonen, som forklaring.
@@ -4940,7 +4951,7 @@ function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base){
     awayScore: forcedScoreline(c.match.home, c.match.away, false),
     drawScore: c.needsDraw ? forcedDrawScoreline(c.match.home, c.match.away) : null,
     seed: hashStr(scenarioKey+'|impact')
-  }));
+  })).map(c=>({...c, ...eloKandidatOver(base.open, c)}));   // ELO-TEST: egen oddsOverride per låst utfall
   matchImpactRunId++;
   const runId = matchImpactRunId;
   return new Promise(resolve=>{
@@ -6462,6 +6473,15 @@ async function boot(){
   });
   ELO_EKTE = new Set((MATCHES_IN||[]).filter(m=>m.hg!=null)
                                      .map(m=>m.home+"|"+m.away));
+  // ELO-TEST: sluttoddsen for spilte kamper (odds.json), normalisert som i
+  // bygg.py. Bare "Hva betydde forrige kamp?" trenger den (eloRatingMedAlternativ);
+  // mangler den, holdes ratingen fast for det alternative resultatet, som før.
+  fetch('../eliteserien/data/odds.json').then(r=>r.ok?r.json():null).then(d=>{
+    if(!d) return;
+    const u = {};
+    (d.matches||[]).forEach(o=>{ const s = o.H + o.D + o.A; u[o.home+"|"+o.away] = [o.H / s, o.D / s, o.A / s]; });
+    ELO_ODDS_SPILT = u;
+  }).catch(()=>{});
 
   // Odds for kommende kamper (The Odds API, allerede avvigget av Python)
   ODDS_UP = {};
@@ -6772,6 +6792,112 @@ function computeLiveState(){
   // vist tall, og workeren leser dem ikke fordi oddsOverride er satt for ALLE
   // kamper. Dette er ikke konstruerte angreps- og forsvarstall.
   return {R, att:z(), con:z(), ha:z(), hc:z()};
+}
+
+/* LÅSTE UTFALL I SVARENE FØLGER SAMME REGEL SOM SCENARIOENE.
+
+   "Hva betyr neste kamp?", "Hvilke kamper betyr mest?", "Heie på", "Rundens
+   viktigste kamp", "Hva betydde forrige kamp?" og kortet Neste kamp simulerer
+   resten av sesongen med ett resultat LÅST. Før holdt de ratingen fast etter
+   det låste resultatet, mens et innfylt scenario oppdaterte den: for Brann -
+   Viking ga svarmaskinen Brann 13/6/4 % topp 4 ved seier/uavgjort/tap, mens
+   innfylt 2-1/1-1/0-1 ga 16,4/6,8/3,8 %.
+
+   Nå gjør hovedtråden for hvert låste utfall det samme som scenarioet: ratingen
+   oppdateres med hva_mix_lap (eloMixLap, samme regel, odds der de finnes,
+   reserveregel ellers), målratene for de andre åpne kampene slås opp i
+   lam_tabell og blandingstabellene (eloLamFor, samme valg som stateRate og
+   rateFor), og sendes til workeren som oddsOverride for AKKURAT den
+   oppgaven. Ingen dynamisk simulering: ratingen står fast gjennom hver
+   simulerte sesong, som ellers. Kontroll U krever at målratene er bit-like
+   dem scenarioet selv gir for samme resultat. */
+
+// Målratene for en kamp med ratingen R: byggingens lambda når
+// ratingforskjellen er uendret, ellers tabellene -- samme valg som
+// stateRate (uten odds) og rateFor (med odds).
+function eloLamFor(R, home, away){
+  const k = home+"|"+away, bygd = ELO_LAM[k], o = ODDS_UP[k];
+  const dr = (R[home]||0) - (R[away]||0);
+  const uendret = !!bygd && Math.abs(dr - bygd.dr) < 1e-12;
+  if(o){
+    if(uendret && bygd.blend_lam) return [bygd.blend_lam[0], bygd.blend_lam[1]];
+    if(bygd && bygd.blend_tabell) return eloTabellOppslag(bygd.blend_tabell, dr);
+  }
+  if(uendret) return [bygd.lam[0], bygd.lam[1]];
+  return eloTabellOppslag(ELO.lam_tabell, dr);
+}
+
+// Ratingen hvis en ÅPEN kamp ender hg-ag: scenarioets utfylte kamper pluss
+// denne, i samme rekkefølge og med samme regel som computeLiveState.
+function eloRatingMedLaast(home, away, hg, ag){
+  const m = matches.find(x => x.home === home && x.away === away);
+  const cmp = (x, y) => x < y ? -1 : (x > y ? 1 : 0);
+  const kamper = eloScenarioKamper().filter(x => !(x.home === home && x.away === away));
+  kamper.push({date: m.date, home, away, hg: Number(hg), ag: Number(ag), odds: eloOddsFor(home, away)});
+  kamper.sort((x, y) => cmp(x.date, y.date) || cmp(x.home, y.home) || cmp(x.away, y.away));
+  const R = Object.assign({}, ELO.rating_alle || ELO.rating);
+  eloMixLap(R, kamper, ELO.hjemmefordel_rating, ELO.w, ELO.k);
+  return R;
+}
+
+// Sluttoddsen for spilte kamper (odds.json), normalisert som i bygg.py.
+// Hentes i boot(); trengs bare til "Hva betydde forrige kamp?".
+let ELO_ODDS_SPILT = null;
+
+// Ratingen hvis en SPILT kamp hadde endt hg-ag i stedet: ratingen spilles av
+// fra dagen før kampen (rating_historikk) over de ekte kampene fra den dagen,
+// én gang med det faktiske resultatet og én gang med det alternative.
+// Forskjellen legges på byggingens rating, og scenarioets utfylte kamper
+// kjøres oppå, som i computeLiveState. null hvis grunnlaget mangler.
+function eloRatingMedAlternativ(alt){
+  const H = ELO.rating_historikk || {};
+  const m = MATCHES.find(x => x.home === alt.home && x.away === alt.away);
+  if(!m || !ELO_ODDS_SPILT) return null;
+  const foer = Object.keys(H).sort().filter(d => d < m.date);
+  if(!foer.length) return null;
+  const cmp = (x, y) => x < y ? -1 : (x > y ? 1 : 0);
+  const spilte = MATCHES.filter(x => x.date >= m.date)
+    .map(x => ({date: x.date, home: x.home, away: x.away, hg: Number(x.hg), ag: Number(x.ag),
+                odds: ELO_ODDS_SPILT[x.home+"|"+x.away] || null}))
+    .sort((x, y) => cmp(x.date, y.date) || cmp(x.home, y.home) || cmp(x.away, y.away));
+  const kjor = erstatt => {
+    const R = Object.assign({}, H[foer[foer.length - 1]]);
+    eloMixLap(R, spilte.map(x => erstatt && x.home === alt.home && x.away === alt.away
+      ? {...x, hg: Number(alt.hg), ag: Number(alt.ag)} : x), ELO.hjemmefordel_rating, ELO.w, ELO.k);
+    return R;
+  };
+  const faktisk = kjor(false), alternativ = kjor(true);
+  const R0 = Object.assign({}, ELO.rating_alle || ELO.rating);
+  for(const t in R0) R0[t] = R0[t] + ((alternativ[t] || 0) - (faktisk[t] || 0));
+  eloMixLap(R0, eloScenarioKamper(), ELO.hjemmefordel_rating, ELO.w, ELO.k);
+  return R0;
+}
+
+// oddsOverride for en liste åpne kamper ([h, a, ...] som TEAMS-indekser).
+function eloOverrideFor(open, R){
+  return open.map(o => eloLamFor(R, TEAMS[o[0]], TEAMS[o[1]]));
+}
+
+// Egen oddsOverride for én oppgave i runZoneTasks: låst åpen kamp (idx, score)
+// eller alternativt resultat i en spilt kamp (eloAlt).
+function eloTaskOver(payload, t){
+  const over = Object.assign({}, t.over || {});
+  let R = null;
+  if(t.idx >= 0 && t.score){
+    const o = payload.open[t.idx];
+    R = eloRatingMedLaast(TEAMS[o[0]], TEAMS[o[1]], t.score[0], t.score[1]);
+  } else if(t.eloAlt){
+    R = eloRatingMedAlternativ(t.eloAlt);
+  }
+  if(R) over.oddsOverride = eloOverrideFor(payload.open, R);
+  return over;
+}
+
+// Egen oddsOverride per låst utfall for en kandidat i runMatchImpactAsync.
+function eloKandidatOver(open, c){
+  const o = open[c.idx], h = TEAMS[o[0]], a = TEAMS[o[1]];
+  const for_ = s => s ? eloOverrideFor(open, eloRatingMedLaast(h, a, s[0], s[1])) : null;
+  return {overHome: for_(c.homeScore), overAway: for_(c.awayScore), overDraw: for_(c.drawScore)};
 }
 
 /* lambda-TABELLEN fra bygg.py: labens fit_rates(olr_sannsyn(dr)) som

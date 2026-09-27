@@ -922,6 +922,148 @@ if _pa:
         _cl = _deler[_navn.index("CLOSING_IN")] if "CLOSING_IN" in _navn else ""
         krev("CLOSING_IN faar fetch av LEAGUE.closingOddsFile", "closingOddsFile" in _cl, _cl[:60])
 
+# ---------- U: LÅSTE UTFALL I SVARENE = SCENARIOET MED SAMME RESULTAT
+# Svarene som låser et resultat (neste kamp, kamper som betyr mest, heie på,
+# rundens viktigste kamp, forrige kamp, kortet Neste kamp) holdt ratingen fast
+# etter det låste resultatet, mens et innfylt scenario oppdaterte den. Nå
+# regner hovedtråden ratingen etter utfallet og sender egne målrater for
+# oppgaven. Kravet: målratene for de andre åpne kampene er BIT-LIKE dem
+# scenarioet gir når samme resultat fylles inn.
+print("\nU   låste utfall i svarene: samme målrater som scenarioet med samme resultat")
+if shutil.which("node") is None:
+    krev("node finnes", False, "node mangler")
+else:
+    _fxu = json.loads((PROD / "fixtures.json").read_text(encoding="utf-8"))
+    _terminu = [{"date": m["date"], "home": m["home"], "away": m["away"], "round": r["round"], "hg": None, "ag": None}
+                for r in _fxu for m in r["matches"] if not m.get("played")]
+    _spilteu = json.loads((PROD / "matches.json").read_text(encoding="utf-8"))
+    _oddsu = json.loads((PROD / "odds.json").read_text(encoding="utf-8"))
+    _jsu = ("const GMAX=15;\nconst ODDS_W=0.7;\n"
+            "let ELO=null,ELO_LAM={},RATES={},LIVE=null,ODDS_UP={},matches=[],TEAMS=[],MATCHES=[],ELO_ODDS_SPILT=null;\n"
+            + _re.search(r"\nconst ELO_HVA = \{[^\n]*\n", html).group(0)
+            + "".join([_hent("pois"), _hent("dcTau"), _hent("outcome"), _hent("fitRates"), _hent("eloOLR"),
+                       _hent("eloTabellOppslag"), _hent("eloOddsFor"), _hent("eloMixLap"), _hent("eloScenarioKamper"),
+                       _hent("computeLiveState", True), _hent("stateRate", True), _hent("rateFor", True),
+                       _hent("oddsOverrideFor", True), _hent("eloLamFor"), _hent("eloRatingMedLaast"),
+                       _hent("eloRatingMedAlternativ"), _hent("eloOverrideFor"), _hent("eloTaskOver"),
+                       _hent("eloKandidatOver")])
+            + r"""
+const fs=require('fs');
+const M=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+const OJ=JSON.parse(fs.readFileSync(process.argv[3],'utf8'));
+const INN=JSON.parse(fs.readFileSync(process.argv[4],'utf8'));
+ELO=M; TEAMS=M.teams; MATCHES=INN.spilte;
+OJ.matches.forEach(o=>{ ODDS_UP[o.home+"|"+o.away]=o; });
+M.kamper.forEach(r=>{ELO_LAM[r.home+"|"+r.away]={dr:r.dr,lam:r.lam,p:[r.pH,r.pU,r.pB],blend_lam:r.blend_lam||null,blend_tabell:r.blend_tabell||null};});
+ELO_ODDS_SPILT={}; INN.odds.forEach(o=>{ const s=o.H+o.D+o.A; ELO_ODDS_SPILT[o.home+"|"+o.away]=[o.H/s,o.D/s,o.A/s]; });
+const TI={}; TEAMS.forEach((t,i)=>TI[t]=i);
+// Scenario: fyll inn kampen med resultatet, bygg LIVE, og les oddsOverrideFor for de åpne.
+function scenario(forfylt, home, away, hg, ag){
+  matches=INN.termin.map(m=>({...m}));
+  forfylt.forEach(f=>{ const x=matches.find(m=>m.home===f[0]&&m.away===f[1]); x.hg=f[2]; x.ag=f[3]; });
+  const x=matches.find(m=>m.home===home&&m.away===away); x.hg=hg; x.ag=ag;
+  LIVE=computeLiveState(); RATES={};
+  const ut={}; matches.filter(m=>m.hg==null).forEach(m=>{ ut[m.home+"|"+m.away]=oddsOverrideFor(m.home,m.away); });
+  return ut;
+}
+// Svarveien: kampen står åpen, låses i oppgaven.
+function laast(forfylt, home, away, hg, ag){
+  matches=INN.termin.map(m=>({...m}));
+  forfylt.forEach(f=>{ const x=matches.find(m=>m.home===f[0]&&m.away===f[1]); x.hg=f[2]; x.ag=f[3]; });
+  LIVE=computeLiveState(); RATES={};
+  const aapne=matches.filter(m=>m.hg==null), open=aapne.map(m=>[TI[m.home],TI[m.away]]);
+  const idx=aapne.findIndex(m=>m.home===home&&m.away===away);
+  const ov=eloTaskOver({open}, {idx, score:[hg,ag]}).oddsOverride;
+  const kand=eloKandidatOver(open, {idx, homeScore:[hg,ag], awayScore:null, drawScore:null}).overHome;
+  const fast=aapne.map(m=>oddsOverrideFor(m.home,m.away));
+  const ut={}, utK={}, utF={};
+  aapne.forEach((m,j)=>{ if(j===idx) return; ut[m.home+"|"+m.away]=ov[j]; utK[m.home+"|"+m.away]=kand[j]; utF[m.home+"|"+m.away]=fast[j]; });
+  return {ut, utK, utF};
+}
+const saker=[];
+for(const [f, h, a, hg, ag] of INN.saker){
+  const s=scenario(f,h,a,hg,ag), l=laast(f,h,a,hg,ag);
+  let ulik=0, ulikK=0, endret=0, n=0;
+  for(const k in s){ n++; if(JSON.stringify(s[k])!==JSON.stringify(l.ut[k])) ulik++;
+    if(JSON.stringify(s[k])!==JSON.stringify(l.utK[k])) ulikK++;
+    if(JSON.stringify(s[k])!==JSON.stringify(l.utF[k])) endret++; }
+  saker.push({sak:`${h}-${a} ${hg}-${ag}${f.length?' (med '+f.map(x=>x[0]+'-'+x[1]+' '+x[2]+'-'+x[3]).join(', ')+' utfylt)':''}`, n, ulik, ulikK, endret});
+}
+// Forrige kamp: sidens avspilling for alternativt resultat.
+matches=INN.termin.map(m=>({...m})); LIVE=computeLiveState();
+const alt={};
+for(const a of INN.alt){ alt[a.key]=eloRatingMedAlternativ(a); }
+console.log(JSON.stringify({saker, alt}));
+""")
+    # Brann - Viking, alle tre utfall, pluss andre kamper og med noe utfylt fra før.
+    _saker = [[[], "Brann", "Viking", 2, 1], [[], "Brann", "Viking", 1, 1], [[], "Brann", "Viking", 0, 1]]
+    _ekstra = [m for m in _terminu if not (m["home"] == "Brann" and m["away"] == "Viking")]
+    for m in _ekstra[::9][:6]:
+        _saker.append([[], m["home"], m["away"], 3, 0])
+    _saker.append([[[_ekstra[0]["home"], _ekstra[0]["away"], 0, 2]], "Brann", "Viking", 2, 1])
+    # Forrige kamp: et lags siste spilte kamp, med faktisk og alternativt resultat.
+    _sisteu = sorted(_spilteu, key=lambda m: (m["date"], m["home"], m["away"]))[-1]
+    _alt = [{"key": "faktisk", "home": _sisteu["home"], "away": _sisteu["away"], "hg": _sisteu["hg"], "ag": _sisteu["ag"]},
+            {"key": "alternativ", "home": _sisteu["home"], "away": _sisteu["away"], "hg": 0, "ag": 3}]
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fh:
+        json.dump({"termin": _terminu, "spilte": _spilteu, "odds": _oddsu["matches"], "saker": _saker, "alt": _alt}, fh,
+                  ensure_ascii=False); _innu = fh.name
+    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as fh:
+        fh.write(_jsu); _jpu = fh.name
+    _ru = subprocess.run(["node", _jpu, str(UT / "model.json"), str(PROD / "odds_upcoming.json"), _innu],
+                         capture_output=True, text=True)
+    if _ru.returncode:
+        _fl = [l for l in _ru.stderr.splitlines() if "Error" in l] or ["?"]
+        krev("Node-sjekken for låste utfall kjorer", False, _fl[0][:200])
+    else:
+        _du = json.loads(_ru.stdout)
+        for s in _du["saker"]:
+            krev(f"{s['sak']}: svarveien = scenarioet for {s['n']} åpne kamper "
+                 f"({s['endret']} endret mot fast rating)",
+                 s["ulik"] == 0 and s["ulikK"] == 0 and s["endret"] > 0,
+                 f"runZoneTasks {s['ulik']} ulike, matchImpact {s['ulikK']} ulike")
+        # Avspillingen i Python: fra dagen før kampen, over de ekte kampene med
+        # normalisert sluttodds, med hva_mix_lap. Faktisk resultat skal gi
+        # byggingens rating; alternativet skal gi det siden gir.
+        _od2 = {}
+        for o in _oddsu["matches"]:
+            s_ = o["H"] + o["D"] + o["A"]
+            _od2[(o["home"], o["away"])] = [o["H"] / s_, o["D"] / s_, o["A"] / s_]
+        _H = M["rating_historikk"]
+        _foer = sorted(d for d in _H if d < _sisteu["date"])[-1]
+        _rest = sorted([m for m in _spilteu if m["date"] >= _sisteu["date"]], key=lambda m: (m["date"], m["home"], m["away"]))
+        def _spill(alt):
+            R = dict(_H[_foer])
+            E.hva_mix_lap(R, [{**m, "odds": _od2.get((m["home"], m["away"])),
+                               **({"hg": alt[0], "ag": alt[1]} if alt and m["home"] == _sisteu["home"] and m["away"] == _sisteu["away"] else {})}
+                              for m in _rest], dict(E.HVA, k=M["k"]), M["hjemmefordel_rating"], M["w"])
+            return R
+        _fak, _alt3 = _spill(None), _spill((0, 3))
+        _a1 = max(abs(_fak[t] - M["rating_alle"][t]) for t in M["rating_alle"])
+        krev(f"forrige kamp: avspilling fra {_foer} med faktisk resultat gir byggingens rating", _a1 <= 1e-9,
+             f"største avvik {_a1:.2e}")
+        _forv = {t: M["rating_alle"][t] + (_alt3[t] - _fak[t]) for t in M["rating_alle"]}
+        _a2 = max(abs(_du["alt"]["alternativ"][t] - _forv[t]) for t in _forv)
+        _a3 = max(abs(_du["alt"]["faktisk"][t] - M["rating_alle"][t]) for t in M["rating_alle"])
+        _fl2 = max(abs(_forv[t] - M["rating_alle"][t]) for t in _forv)
+        krev(f"forrige kamp ({_sisteu['home']} - {_sisteu['away']} 0-3 i stedet for "
+             f"{_sisteu['hg']}-{_sisteu['ag']}): sidens rating = Python-avspillingen",
+             _a2 <= 1e-9 and _a3 <= 1e-9 and _fl2 > 1.0,
+             f"alternativ {_a2:.2e}, faktisk {_a3:.2e}, flytting {_fl2:.1f}")
+
+    # Koblingen: svarene bruker faktisk de egne målratene.
+    _hv = _h
+    krev("runZoneTasks gir hver oppgave eloTaskOver (låst utfall og forrige kamp)",
+         "...eloTaskOver(payload, t), mode:'zoneTask'" in _hv and "...(t.over||{}), mode:'zoneTask'" not in _hv)
+    krev("runMatchImpactAsync legger eloKandidatOver på hver kandidat",
+         ".map(c=>({...c, ...eloKandidatOver(base.open, c)}))" in _hv)
+    _wi = _hv.index("const WORKER_SRC = `"); _wj = _hv.index("`;", _wi); _wk = _hv[_wi:_wj]
+    krev("workerens runMatchImpact bruker overHome/overAway/overDraw per utfall",
+         "simulateZoneProb(med(c.overHome)" in _wk and "simulateZoneProb(med(c.overAway)" in _wk
+         and "simulateZoneProb(med(c.overDraw)" in _wk)
+    krev("qaLastMatchData merker det alternative resultatet (eloAlt)",
+         "eloAlt:{home:m.home, away:m.away, hg, ag}" in _hv)
+
 print("\nE   festede sha256")
 for rel, ventet in FESTET.items():
     p = HER.parent / rel

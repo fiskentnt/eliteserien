@@ -230,6 +230,12 @@ gjenstående kamper, så spilte kamper kan ikke oppdateres to ganger).
 |---|---|---|
 | `const DC_RHO` (hovedtråden) | −0,38 → **0** | laben testet ρ = 0; `const` kan ikke overstyres senere |
 | `var DC_RHO` i `WORKER_SRC` | −0,38 → **0** | workeren har sin egen kopi; hovedtrådens endring nådde den ikke |
+| `runZoneTasks` | `...(t.over\|\|{})` → `...eloTaskOver(payload, t)` | låst utfall (`idx`, `score`) eller alternativt resultat i forrige kamp (`eloAlt`) får egen `oddsOverride`, regnet med ratingen etter utfallet |
+| `runMatchImpactAsync` | kandidatene får `overHome`/`overAway`/`overDraw` (`eloKandidatOver`) | samme, for neste kamp, kamper som betyr mest og kortet Neste kamp |
+| `runMatchImpact` i `WORKER_SRC` | hvert låste utfall simuleres med sin egen `oddsOverride` | workeren kjørte alle utfallene med samme målrater |
+| `qaLastMatchData` | oppgavene for de alternative utfallene merkes `eloAlt` | så `runZoneTasks` kan regne ratingen etter det alternative resultatet |
+| `qaLastMatch`, avsluttende setning | «Lagstyrkene holdes som i dag» → «Ratingen er regnet om for hvert alternative resultat, men holdes fast gjennom resten av sesongen» når `odds.json` er lastet | setningen skal si hva som skjer |
+| `boot()`, `odds.json` | hentes ved siden av, normalisert som i `bygg.py` (`ELO_ODDS_SPILT`) | trengs bare til avspillingen for forrige kamp |
 | `boot()`, datastier | `data/…` → `../eliteserien/data/…` for matches, fixtures, odds_upcoming, status, odds_quota | produksjonens filer leses direkte, ingen kopier |
 | `boot()`, modellsti | `data/model.json` → `emodell/model.json` | egen modell, i en mappe som ikke heter `data` (sitemap) |
 | `boot()`, keymatch/lastmatch/prekick/accuracy | `fetch(…)` → `Promise.resolve(null)` | Full-beregnet av `snapshot_probs.js`; skal ikke vises som ELO90 — første versjon hadde et komma for mye etter hver (`,,`). Hullene forskjøv destruktureringen, `CLOSING_IN` ble `undefined`, og sluttoddsen ble aldri lastet. Rettet; kontroll **P** krever like mange elementer som variabler og ingen hull. «Hva betydde forrige kamp?» bruker nå sluttoddsen som reserve, som produksjonen |
@@ -270,6 +276,21 @@ Enkeltord er **ikke** forbudt med vilje. Testsiden sier selv «Det finnes ingen
 halveringstid» og «har ikke egne angreps- og forsvarstall» — korrekte
 negasjoner. Et forbud mot ordene ville tvunget bort riktig tekst, og korrekt
 brukertekst skal ikke endres for at en kontroll skal passere.
+
+Kontroll **U**: svarene som låser et resultat (neste kamp, kamper som betyr
+mest, heie på, rundens viktigste kamp, forrige kamp, kortet Neste kamp) holdt
+før ratingen fast etter det låste resultatet, mens et innfylt scenario
+oppdaterte den. For Brann–Viking ga svaret 13/6/4 % topp 4 mot scenarioets
+16,4/6,8/3,8 %. Nå regner hovedtråden ratingen etter hvert låste utfall med
+`eloMixLap` og sender egne målrater (tabellene) til workeren. U krever at
+målratene er **bit-like** dem scenarioet gir med samme resultat utfylt (Brann–
+Viking i tre utfall, seks andre kamper, og med en annen kamp utfylt), at
+forrige kamp spilles av riktig (faktisk resultat gir byggingens rating;
+alternativet er lik Python-avspillingen), og at svarene er koblet til dette.
+Målt med 100 000 simuleringer: svarveien 15,84/6,45/3,22 % mot scenarioet
+15,90/6,45/3,17 % (forskjell under 1 SE); før rettelsen ga svarveien 13,81/
+6,21/3,62 %. Med samme frø og N gir svarveiens og scenarioets målrater
+identiske tall.
 
 Kontroll **T** måler tabellen mot `fit_rates` på ~42 000 punkter (tilfeldige,
 kampenes egne dr og alle bruddpunktene) og blandingstabellene på 24 000; avvik
@@ -329,6 +350,9 @@ testsidespesifikk og skal ikke porteres. `ELO_EKTE` kan fjernes.
   trekker hele forløpet med λ fra ratingen på trekketidspunktet, i én
   omgang. Ratingen oppdateres først når resultatene står i kamplisten; den
   oppdateres ikke underveis i trekningen.
+- **Forrige kamp trenger `odds.json`.** Avspillingen for et alternativt
+  resultat bruker sluttoddsen for de spilte kampene. Er filen ikke lastet,
+  holdes ratingen fast for alternativet, som før, og svaret sier det.
 - **Produksjonens `rateFor` normaliserer ikke oddsen.** Den bruker rå
   oddstall fra `odds_upcoming.json` (`[o.H, o.D, o.A]`) uten normalisering.
   Rådataene er rundet til fire desimaler og summerer ikke alltid til 1;
