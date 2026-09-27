@@ -1930,6 +1930,72 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- Tabellsimuleringen i egen Worker ----
+    // Tabellens prosenter (runMCAsync) skal aldri stå i kø bak noe annet. Før
+    // gikk kortet "Neste kamp" (matchImpact, 2500 × 4 sesonger) i samme Worker
+    // og ble sendt FØR tabellsimuleringen etter et innfylt resultat. Testen
+    // følger hjemmelaget i første åpne kamp, slår av «Fyll ut runden» (ellers
+    // fylles lagets kamp grått og kortet regner ikke), og skriver et resultat
+    // i en annen kamp, som en bruker. Kortet gjøres ti ganger tyngre (N × 10)
+    // så rekkefølgen ikke avhenger av maskinen: på en rask maskin er kortet
+    // ellers ferdig før tabellsimuleringen sendes (render() + 250 ms).
+    // Kontrollert på de tre sidene: Eliteserien, OBOS og testsiden.
+    setGroup('Tabellsimuleringen i egen Worker');
+    for (const [sti, liga] of [['/eliteserien/', 'Eliteserien'], ['/obos/', 'OBOS'], ['/elo-test/', 'ELO-test']]) {
+      const url = base.replace('/eliteserien/', sti);
+      const probe = await open(1400, 900, url);
+      const lag = await probe.evaluate(() => matches.find(m => m.hg == null).home);
+      await probe.close();
+      const wp = await browser.newPage();
+      wp.on('pageerror', e => errors.push(`${url}: ${e.message}`));
+      await wp.evaluateOnNewDocument(() => {
+        window.__ws = {poster: [], svar: []};
+        const W = window.Worker;
+        window.Worker = function (u, o) {
+          const w = new W(u, o), id = window.__ws.poster.length + ':' + Math.random().toString(36).slice(2, 6);
+          const post = w.postMessage.bind(w);
+          w.postMessage = m => { window.__ws.poster.push({id, mode: m.mode || 'tabell', t: performance.now()}); return post(m); };
+          w.addEventListener('message', e => window.__ws.svar.push({id, mode: e.data.mode, done: e.data.done, t: performance.now()}));
+          return w;
+        };
+      });
+      await wp.setViewport({width: 1400, height: 900});
+      await wp.goto(`${url}#team=${encodeURIComponent(lag)}`, {waitUntil: 'networkidle0'});
+      await wp.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
+      await wp.evaluate(() => { const t = document.getElementById('autoFillToggle'); if (t.checked) t.click(); });
+      await settle(wp);
+      await sleep(1500);
+      const r = await wp.evaluate(async lag => {
+        const orig = window.runMatchImpactAsync;
+        window.runMatchImpactAsync = (t, z, c, k, b) => orig(t, z, c, k, {...b, N: (b.N || 400) * 10});
+        const row = [...document.querySelectorAll('.match')].find(r => { const m = matches.find(x => x.id === r.dataset.id);
+          return m && m.hg == null && m.home !== lag && m.away !== lag && !r.querySelector('[data-side=h]').value; });
+        const nP = __ws.poster.length, nS = __ws.svar.length;
+        const h = row.querySelector('[data-side=h]'), a = row.querySelector('[data-side=a]');
+        h.value = '2'; h.dispatchEvent(new Event('input', {bubbles: true}));
+        a.value = '1'; a.dispatchEvent(new Event('input', {bubbles: true}));
+        const t0 = Date.now();
+        while (Date.now() - t0 < 60000 && !(__ws.svar.slice(nS).some(x => x.mode === 'prob' && x.done >= 10000)
+                                             && __ws.svar.slice(nS).some(x => x.mode === 'matchImpact'))) await new Promise(r => setTimeout(r, 20));
+        window.runMatchImpactAsync = orig;
+        const poster = __ws.poster.slice(nP), svar = __ws.svar.slice(nS);
+        const tabellW = new Set(poster.filter(x => x.mode === 'tabell').map(x => x.id));
+        const kortW = new Set(poster.filter(x => x.mode === 'matchImpact').map(x => x.id));
+        const forste = svar.find(x => x.mode === 'prob'), kort = svar.find(x => x.mode === 'matchImpact');
+        const kortPost = poster.find(x => x.mode === 'matchImpact'), tabPost = poster.find(x => x.mode === 'tabell');
+        return {tabellW: [...tabellW], kortW: [...kortW], felles: [...tabellW].filter(x => kortW.has(x)),
+                kortForTabell: !!(kortPost && tabPost && kortPost.t < tabPost.t),
+                forste: forste ? Math.round(forste.t - poster[0].t) : null, kort: kort ? Math.round(kort.t - poster[0].t) : null};
+      }, lag);
+      console.log(`      ${liga} (følger ${lag}): kortet sendt før tabellen: ${r.kortForTabell}; første prosenter ${r.forste} ms, «Neste kamp» ferdig ${r.kort} ms (kortet × 10)`);
+      check(`${liga}: tabellsimuleringen og «Neste kamp» går i ulike Workere`,
+        r.tabellW.length === 1 && r.kortW.length === 1 && r.felles.length === 0, JSON.stringify(r));
+      check(`${liga}: tabellens første prosenter kommer før «Neste kamp» er ferdig`,
+        r.forste != null && r.kort != null && r.forste < r.kort, `første ${r.forste} ms, kortet ${r.kort} ms`);
+      await wp.close();
+    }
+    await page.bringToFront();
+
     // ---- Prekick: frysing ved avspark ----
     // prekick.json skal bare oppdateres FØR avspark fra terminlisten, og
     // fryses med siste stempel fra før avspark når resultatet kommer. Før
