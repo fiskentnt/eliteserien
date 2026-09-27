@@ -232,7 +232,7 @@ gjenstående kamper, så spilte kamper kan ikke oppdateres to ganger).
 | `var DC_RHO` i `WORKER_SRC` | −0,38 → **0** | workeren har sin egen kopi; hovedtrådens endring nådde den ikke |
 | `boot()`, datastier | `data/…` → `../eliteserien/data/…` for matches, fixtures, odds_upcoming, status, odds_quota | produksjonens filer leses direkte, ingen kopier |
 | `boot()`, modellsti | `data/model.json` → `emodell/model.json` | egen modell, i en mappe som ikke heter `data` (sitemap) |
-| `boot()`, keymatch/lastmatch/prekick/accuracy | `fetch(…)` → `Promise.resolve(null)` | Full-beregnet av `snapshot_probs.js`; skal ikke vises som ELO90 |
+| `boot()`, keymatch/lastmatch/prekick/accuracy | `fetch(…)` → `Promise.resolve(null)` | Full-beregnet av `snapshot_probs.js`; skal ikke vises som ELO90 — første versjon hadde et komma for mye etter hver (`,,`). Hullene forskjøv destruktureringen, `CLOSING_IN` ble `undefined`, og sluttoddsen ble aldri lastet. Rettet; kontroll **P** krever like mange elementer som variabler og ingen hull. «Hva betydde forrige kamp?» bruker nå sluttoddsen som reserve, som produksjonen |
 | `boot()`, etter `MTI` | setter `ELO`, `ELO_LAM`, `ELO_EKTE` | kobler inn modellaget |
 | `boot()`, `howP1`/`howP2` | ny forklaringstekst; `MODEL.meta.half_life_days` fjernet | ELO90 har én rating og ingen halveringstid; `meta` finnes ikke |
 | `render()`, `baseForm` | `formScores(MODEL.att…)` → `eloStyrke(ELO.rating_alle)` | `MODEL.att` finnes ikke |

@@ -872,6 +872,56 @@ console.log(JSON.stringify({steg, rekkefolge, direkte, hva:ELO_HVA, halv, R_ette
         print(f"  MAALT  tabell-lambda mot OLR-1X2 etter flyttet rating: maks {_rek:.2e} i H/U/B "
               f"({len(_d['aapne'])} kamper, labens rutenett)")
 
+# ---------- P: Promise.all i boot() -- like mange elementer som variabler, ingen hull
+# Da Full-filene ble koblet fra, ble fetch-kallene erstattet av
+# Promise.resolve(null) med et komma for mye etter hver. [a,,b] har et HULL, og
+# destruktureringen forskyves: CLOSING_IN ble undefined, saa sluttoddsen aldri
+# ble lastet paa testsiden. Denne kontrollen deler listen paa toppnivaa (utenom
+# kommentarer og strenger) og krever like mange elementer som variabler.
+print("\nP   Promise.all i boot(): like mange elementer som variabler, ingen hull")
+def _promise_all(src):
+    import re as _rp
+    m = _rp.search(r"\[([A-Za-z_$][\w$]*(?:\s*,\s*[A-Za-z_$][\w$]*)*)\]\s*=\s*await\s+Promise\.all\(\[", src)
+    if not m:
+        return None
+    navn = [x.strip() for x in m.group(1).split(",")]
+    i, dybde, el, deler = m.end(), 0, [], []
+    while i < len(src):
+        c = src[i]
+        if src.startswith("//", i):
+            i = src.index("\n", i); continue
+        if src.startswith("/*", i):
+            i = src.index("*/", i) + 2; continue
+        if c in "'\"`":
+            j = i + 1
+            while src[j] != c:
+                j += 2 if src[j] == "\\" else 1
+            el.append(src[i:j + 1]); i = j + 1; continue
+        if c in "([{":
+            dybde += 1
+        elif c in ")]}":
+            if dybde == 0:
+                deler.append("".join(el).strip()); break
+            dybde -= 1
+        elif c == "," and dybde == 0:
+            deler.append("".join(el).strip()); el = []; i += 1; continue
+        el.append(c); i += 1
+    if deler and deler[-1] == "":
+        deler = deler[:-1]          # ett avsluttende komma er lov i JS
+    return navn, deler
+_pa = _promise_all(_h)
+krev("fant [..] = await Promise.all([..]) i boot()", _pa is not None)
+if _pa:
+    _navn, _deler = _pa
+    _hull = [i for i, d in enumerate(_deler) if d == ""]
+    krev(f"ingen hull i listen", not _hull,
+         f"hull paa plass {_hull}" if _hull else f"{len(_deler)} elementer")
+    krev(f"like mange elementer som variabler ({len(_navn)})", len(_deler) == len(_navn),
+         f"{len(_deler)} elementer mot {len(_navn)} variabler")
+    if len(_deler) == len(_navn):
+        _cl = _deler[_navn.index("CLOSING_IN")] if "CLOSING_IN" in _navn else ""
+        krev("CLOSING_IN faar fetch av LEAGUE.closingOddsFile", "closingOddsFile" in _cl, _cl[:60])
+
 print("\nE   festede sha256")
 for rel, ventet in FESTET.items():
     p = HER.parent / rel

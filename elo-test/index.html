@@ -6352,12 +6352,12 @@ async function boot(){
          kjorer PRODUKSJONSSIDEN i headless Chrome og leser tallene ut,
          saa de er Full-modellens sannsynligheter. Skjules her: de skal
          ikke vises som om de var ELO90. */
-      Promise.resolve(null),,
+      Promise.resolve(null),
       /* ELO-TEST: lastmatch.json er FULL-beregnet -- snapshot_probs.js
          kjorer PRODUKSJONSSIDEN i headless Chrome og leser tallene ut,
          saa de er Full-modellens sannsynligheter. Skjules her: de skal
          ikke vises som om de var ELO90. */
-      Promise.resolve(null),,
+      Promise.resolve(null),
       // Sannsynlighetene som gjaldt FØR avspark (skrevet av snapshot_probs.js
       // mens kampen var uspilt), og sluttoddsen som reserve for kamper som ble
       // spilt før vi begynte å lagre dem. Begge er valgfrie: uten dem sier
@@ -6366,7 +6366,7 @@ async function boot(){
          kjorer PRODUKSJONSSIDEN i headless Chrome og leser tallene ut,
          saa de er Full-modellens sannsynligheter. Skjules her: de skal
          ikke vises som om de var ELO90. */
-      Promise.resolve(null),,
+      Promise.resolve(null),
       fetch(LEAGUE.closingOddsFile).then(r=>r.ok?r.json():null).catch(()=>null),
       // Treffsikkerhetsloggen (scripts/accuracy_log.py). Mangler den, står
       // seksjonen tom -- den er aldri kritisk for resten av siden.
@@ -6374,7 +6374,7 @@ async function boot(){
          kjorer PRODUKSJONSSIDEN i headless Chrome og leser tallene ut,
          saa de er Full-modellens sannsynligheter. Skjules her: de skal
          ikke vises som om de var ELO90. */
-      Promise.resolve(null),,
+      Promise.resolve(null),
     ]);
   }catch(err){
     console.error('Klarte ikke hente kampdata', err);
