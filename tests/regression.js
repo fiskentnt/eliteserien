@@ -1777,7 +1777,72 @@ async function main() {
           }
         }
       }
+      // Den øvre grensen i solveDirection. Når søket når tidsgrensen, gir
+      // "above" metBase + bound(0), og computeOneBadge godtar det som bevis.
+      // Det holder bare hvis grensen ALDRI er lavere enn det eksakte antallet.
+      // Tidsgrensen sjekkes bare hver 512. node, så deadline = 0 alene gir
+      // ofte et ferdig søk og ikke grensen. Testen bruker derfor en kopi av
+      // Worker-koden der sjekken skjer ved første node -- nøyaktig én
+      // tekstbytting, ellers feiler testen. Produksjonskoden er urørt.
+      // Tabellene er tilfeldige med fast seed: alt fylles ut bortsett fra de
+      // siste 2 eller 3 rundene, så det lange søket blir eksakt.
       await mp.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); render(); });
+      const grenseOk = await mp.evaluate(() => {
+        const lag = src => { const W = {}; (new Function('W', 'var postMessage=function(){}; var self={};' + src + '; W.solve=solveDirection;'))(W); return W.solve; };
+        const fra = '(visited & 511)===0 && Date.now()>deadline', til = 'Date.now()>deadline';
+        const treff = WORKER_SRC.split(fra).length - 1;
+        window.__grense = {treff, bare: lag(WORKER_SRC.replace(fra, til)), eksakt: lag(WORKER_SRC)};
+        return treff;
+      });
+      check(`${liga}: grensetesten kan tvinge søket til å bruke bare grensen`, grenseOk === 1, `${grenseOk} treff på tidsgrensesjekken`);
+      const stat = {tabeller: 0, tilfeller: 0, lik: 0, hoyere: 0, storst: 0, utenSok: 0, ikkeEksakt: 0, lavere: [], igjen: []};
+      for (let bunke = 0; bunke < 10 && grenseOk === 1; bunke++) {
+        const s = await mp.evaluate(bunke => {
+          let frø = 777 + bunke;
+          const tilf = () => { frø = (frø * 1103515245 + 12345) % 2147483648; return frø / 2147483648; };
+          const tomme = matches.filter(m => m.hg == null || m.sim);
+          const runder = [...new Set(tomme.map(m => m.round))].sort((a, b) => a - b);
+          const ut = {tabeller: 0, tilfeller: 0, lik: 0, hoyere: 0, storst: 0, utenSok: 0, ikkeEksakt: 0, lavere: [], igjen: []};
+          for (let n = 0; n < 20; n++) {
+            const R = 2 + (n % 2), apne = new Set(runder.slice(-R));
+            tomme.forEach(m => {
+              if (apne.has(m.round)) { m.hg = null; m.ag = null; return; }
+              const x = tilf(), g = () => Math.floor(tilf() * 4);
+              let h = g(), a = g();
+              if (x < 0.45) { if (h <= a) h = a + 1; } else if (x < 0.72) a = h; else if (a <= h) a = h + 1;
+              m.hg = h; m.ag = a;
+            });
+            const {rows} = compute(), byname = {};
+            rows.forEach(r => byname[r.name] = {name: r.name, pts: r.pts, gd: r.gd, gf: r.gf, left: r.left, max: r.max});
+            const rem = matches.filter(m => m.hg == null).map(m => [m.home, m.away]);
+            ut.igjen.push(rem.length);
+            ut.tabeller++;
+            rows.forEach(r => {
+              const b = window.__grense.bare(byname, rem, r.name, r.pts, 'above', 0);
+              const e = window.__grense.eksakt(byname, rem, r.name, r.pts, 'above', Date.now() + 10000);
+              if (!e.exact) { ut.ikkeEksakt++; return; }
+              if (b.exact) { ut.utenSok++; return; }   // svart før søket: ingen grense brukt
+              ut.tilfeller++;
+              const d = b.count - e.count;
+              if (d < 0) ut.lavere.push(`${r.name}: grense ${b.count}, eksakt ${e.count}, ${rem.length} kamper igjen`);
+              else if (d === 0) ut.lik++; else ut.hoyere++;
+              ut.storst = Math.max(ut.storst, d);
+            });
+          }
+          tomme.forEach(m => { m.hg = null; m.ag = null; });
+          return ut;
+        }, bunke);
+        for (const k of ['tabeller', 'tilfeller', 'lik', 'hoyere', 'utenSok', 'ikkeEksakt']) stat[k] += s[k];
+        stat.storst = Math.max(stat.storst, s.storst); stat.lavere.push(...s.lavere); stat.igjen.push(...s.igjen);
+      }
+      await mp.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); render(); });
+      const igjenMin = Math.min(...stat.igjen), igjenMaks = Math.max(...stat.igjen);
+      console.log(`      ${liga}: ${stat.tabeller} tabeller med ${igjenMin} til ${igjenMaks} kamper igjen, ${stat.tilfeller} tilfeller der bare grensen ble brukt: ` +
+        `${stat.lik} lik, ${stat.hoyere} høyere, største forskjell ${stat.storst}. ` +
+        `${stat.utenSok} svart uten søk (teller ikke), ${stat.ikkeEksakt} der det lange søket ikke ble eksakt.`);
+      check(`${liga}: ${stat.tabeller} tilfeldige tabeller, grensen er aldri lavere enn det eksakte antallet`,
+        stat.tabeller >= 200 && igjenMin > 0 && stat.tilfeller > 0 && stat.lavere.length === 0 && stat.ikkeEksakt === 0,
+        `${stat.lavere.length} lavere: ${stat.lavere.slice(0, 5).join('; ')}; ${stat.tilfeller} tilfeller, ${stat.ikkeEksakt} ikke eksakte`);
       await mp.close();
     }
     await page.bringToFront();
