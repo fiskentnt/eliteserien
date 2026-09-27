@@ -359,6 +359,38 @@ else:
     if _os.environ.get("GITHUB_ACTIONS"):
         print(f"::warning title=ELO-test drifter fra produksjonen::{_txt}")
 
+# ---------- J: SESONGSKIFTET -- ADVARSEL, ikke feil
+# Testsiden leser 2026 fra produksjonens filer, og historikk.json dekker bare
+# 2012-2025. Naar produksjonen gaar over til 2027, forsvinner 2026 fra
+# matches.json, og ratingen mister en hel sesong UTEN at noe feiler: byggingen
+# kjorer videre paa 2012-2025 + 2027. Det er den farligste stille feilen
+# testsiden har. Derfor advares det med en gang fixtures.json inneholder en
+# kamp fra en annen sesong enn 2026.
+#
+# Hvorfor fixtures.json og ikke matches.json: terminlisten for neste sesong
+# kommer FOR de forste resultatene, saa den gir tidligst varsel.
+# ELOTEST_FIXTURES kan peke paa en annen fil, bare for aa teste advarselen.
+print("\nJ   sesongskiftet (advarsel, ikke feil)")
+AKTIV_SESONG = "2026"
+_fx_sti = Path(_os.environ.get("ELOTEST_FIXTURES") or (PROD / "fixtures.json"))
+_fx = json.loads(_fx_sti.read_text(encoding="utf-8"))
+from collections import Counter as _C
+_ses = _C(m["date"][:4] for r in _fx for m in r["matches"])
+_andre = {aar: n for aar, n in sorted(_ses.items()) if aar != AKTIV_SESONG}
+if not _andre:
+    print(f"  OK    fixtures.json har bare {AKTIV_SESONG} "
+          f"({_ses.get(AKTIV_SESONG, 0)} kamper)")
+else:
+    _txt = (f"fixtures.json har kamper fra en ANNEN sesong enn {AKTIV_SESONG}: "
+            + ", ".join(f"{a} ({n} kamper)" for a, n in _andre.items())
+            + f". Sesongskiftet er i gang. {AKTIV_SESONG} maa fryses inn i "
+            f"elo-test/emodell/historikk.json FOR produksjonens matches.json "
+            f"slutter aa inneholde {AKTIV_SESONG}, ellers mister ratingen en "
+            f"sesong uten at noe feiler. Se 'Ikke loest' i elo-test/README.md.")
+    print(f"  ADVARSEL  {_txt}")
+    if _os.environ.get("GITHUB_ACTIONS"):
+        print(f"::warning title=ELO-test: sesongskiftet er i gang::{_txt}")
+
 # ---------- E: festede sha256
 print("\nE   festede sha256")
 for rel, ventet in FESTET.items():
