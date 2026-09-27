@@ -191,7 +191,7 @@ ratingen, nå satt men ikke lest).
 | detaljer, typisk sesongforløp | «med formoppdatering underveis» | «med fast lagstyrke» — `simulateTypicalAsync` bruker `oddsOverrideFor`, som gir faste rater |
 | detaljer, Sarpsborg-avsnittet | Full-styrken flyttet Sarpsborg 08 fra 4,80 til 4,65 | ratingen flyttes etter spilte kamper, ikke av egne resultater |
 | `howP1` | `k = 83.37` | `k = 83,37` |
-| «Hvordan vet vi at modellen virker?» | produksjonens validering: 20 mot 18 prosent, sist validert 24. september, `backtest_zones.py`, kalibreringstabeller | kort tekst: testet i laben mot produksjonsmodellen, labresultatene for ELO-Odds 90 er ikke publisert på siden ennå, treffsikkerhet først etter en sesong. `accuracyLog` og `modelExample` står som skjulte stubber fordi JS skriver til dem |
+| «Hvordan vet vi at modellen virker?» | produksjonens validering: 20 mot 18 prosent, sist validert 24. september, `backtest_zones.py`, kalibreringstabeller | kort tekst: testet i laben mot produksjonsmodellen, labresultatene for ELO-Odds 90 er ikke publisert på siden ennå, treffsikkerhet først etter en sesong. `accuracyLog` står som skjult stubb fordi JS skriver til den. `modelExample` (for eksempel Viking mot Brann) **vises**: den regnes med `rateFor` og `outcome`, de samme tallene som kamplisten, og er riktig for ELO90 |
 | FAQ «Hvordan regnes sannsynlighetene ut?» | «en modell tilpasset på mål og sluttodds» | ELO-Odds 90: én rating per lag siden 2012, 90 % markedssignal |
 
 Kontroll **L** leter etter **hele Full-fraser**, ikke enkeltord, i HTML-tekst

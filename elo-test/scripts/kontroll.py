@@ -320,6 +320,41 @@ for rel in ("index.html", "eliteserien/index.html", "sitemap.xml"):
     krev(f'"elo-test" finnes ikke i {rel}',
          "elo-test" not in p.read_text(encoding="utf-8"))
 
+# INGEN LENKE TIL PRODUKSJONEN FRA TESTSIDEN, bortsett fra banneret
+# "Produksjonssiden ligger her". Ligaknappen "Eliteserien" pekte til
+# /eliteserien/ og sendte brukeren til produksjonen uten at det merkes.
+# Alle forekomster av /eliteserien/ telles, ogsaa fulle URL-er. Unntatt er
+# kommentarer (HTML-kommentar, eller en linje som starter med //, /* eller *)
+# og ../eliteserien/data/, som er data som hentes, ikke lenker.
+# Kontrollen er ikke tom: paa produksjonens index.html MAA den finne
+# ligaknappen, ellers maaler den ingenting.
+import re as _re
+_BANNER = '<a href="/eliteserien/" style="color:#fecaca">Produksjonssiden ligger her.</a>'
+def _prodlenker(tekst):
+    kom = [(m.start(), m.end()) for m in _re.finditer(r"<!--.*?-->", tekst, _re.S)]
+    ut = []
+    for m in _re.finditer(r"(?:https?://[^\s\"'`<>]*?)?/eliteserien/", tekst):
+        i = m.start()
+        if any(a <= i < b for a, b in kom):
+            continue
+        ls = tekst.rfind("\n", 0, i) + 1
+        le = tekst.find("\n", i)
+        linje = tekst[ls:le if le >= 0 else None]
+        if linje.lstrip().startswith(("//", "/*", "*")):
+            continue
+        if tekst[max(0, i - 2):i] == ".." and tekst.startswith("data/", m.end()):
+            continue
+        ut.append(linje.strip())
+    return ut
+_pl = _prodlenker(_h)
+krev("eneste lenke til /eliteserien/ er banneret",
+     len(_pl) == 1 and _BANNER in _pl[0],
+     f"{len(_pl)} forekomst(er): {[x[:60] for x in _pl]}")
+_pp = _prodlenker((ROT / "eliteserien/index.html").read_text(encoding="utf-8"))
+krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
+     any("path: '/eliteserien/'" in x for x in _pp),
+     f"{len(_pp)} forekomst(er) der")
+
 # ---------- I: DRIFT mot produksjonssiden -- ADVARSEL, ikke feil
 # elo-test/index.html er en kopi av eliteserien/index.html slik den var i commit
 # 1fc6e8f. Endres produksjonssiden etterpaa, drifter de fra hverandre: en

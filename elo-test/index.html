@@ -1025,7 +1025,7 @@
           <th></th><th class="team">Lag</th><th class="hide-s">K</th>
           <th class="hide-s">V</th><th class="hide-s">U</th><th class="hide-s">T</th><th class="hide-s">Mål</th>
           <th class="hide-diff">Diff</th><th>P</th>
-          <th class="sortable hh" id="formHeader" title="Styrke: modellens vurdering av hvor sterkt laget er, over hele sesongen. 5 er et gjennomsnittslag. Klikk for å sortere.">Styrke</th>
+          <th class="sortable hh" id="formHeader" title="Styrke: lagets rating nå, regnet om til en skala fra 0 til 10. 5 er et gjennomsnittslag. Klikk for å sortere.">Styrke</th>
           <th class="sortable hide-s hh" id="form5Header" data-sort="form5" title="Formen nå: vanlige poeng i de fem siste seriekampene (3 for seier, 1 for uavgjort), regnet om til skalaen 0 til 10. Fem seirer gir 15 av 15 poeng, altså 10,0. Resultatene står til høyre, eldst først. Klikk for å sortere.">Form</th>
           <th class="sortable hide-m hh" id="gullHeader" data-sort="gull" ></th>
           <th class="sortable hh" id="europaHeader" data-sort="europa" ></th>
@@ -1117,7 +1117,7 @@
     <section class="about" id="om-siden" aria-labelledby="omSidenTittel">
       <h2 id="omSidenTittel">Om tabellkalkulatoren for Eliteserien</h2>
       <p>Tabellkalkulator for Eliteserien 2026 viser dagens tabell og sannsynligheten for at hvert lag vinner serien, tar en europaplass (topp 4), havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 10&nbsp;000 ganger.</p>
-      <p>Du kan fylle inn egne resultater, la modellen simulere tomme kamper, følge ett lag og se hvordan tabellen og sjansene endrer seg. Tabellen viser både modellens styrkevurdering for hele sesongen og formen i de fem siste kampene, så du ser forskjellen på hvor sterkt et lag er og hvordan det går akkurat nå. Du kan også se tabellen etter en valgt runde, både for spilte runder og scenarier fremover. Tallene oppdateres automatisk etter hver kamp.</p>
+      <p>Du kan fylle inn egne resultater, la modellen simulere tomme kamper, følge ett lag og se hvordan tabellen og sjansene endrer seg. Tabellen viser både lagets styrke slik ratingen står nå, bygget på kamper og odds siden 2012, og formen i de fem siste kampene, så du ser forskjellen på hvor sterkt et lag er og hvordan det går akkurat nå. Du kan også se tabellen etter en valgt runde, både for spilte runder og scenarier fremover. Tallene oppdateres automatisk etter hver kamp.</p>
       <noscript><p><strong>Tabellen og sannsynlighetene regnes ut i nettleseren og krever JavaScript.</strong> Slå på JavaScript for å bruke kalkulatoren.</p></noscript>
     </section>
     <!-- /LIGA-OM -->
@@ -1140,9 +1140,9 @@
       <p id="howP2"></p>
       <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene. Lagstyrken holdes fast gjennom hele den simulerte sesongen, slik den gjør i testene modellen er validert med. Topp 4, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
       <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner resten", "...taper resten", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med fast lagstyrke, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
-      <p>Ratingen flyttes etter hver spilte kamp, mest når utfallet eller markedet avviker fra det ratingen ventet. Resultater du fyller inn selv flytter den ikke. Styrke viser nivå. Vil du se de siste kampene, er det formtallet som sier det.</p>
       <p>Tabellen, kamplisten, simuleringene og svarene bygger alle på nøyaktig den samme lagstyrken. Det finnes ikke lenger en egen variant for visning: ett tall, ett sted.</p>
       <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn, verken i tabellen eller i simuleringene. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
+      <p class="note">H, U og B er sjansen for hjemmeseier, uavgjort og borteseier når laget spiller hjemme mot et lag med snittrating.</p>
       <div class="tblscroll"><table class="mt" id="modelTbl"></table></div>
     </details>
   </div>
@@ -1153,8 +1153,10 @@
 <!-- LIGA-MODELLSJEKK -->
 <!-- ELO-TEST: produksjonens valideringsseksjon (kalibrering, 20 mot 18
      prosent, sist validert 24. september, backtest_zones.py) er ERSTATTET. De
-     tallene gjelder produksjonsmodellen, ikke ELO-Odds 90. accuracyLog og
-     modelExample staar som skjulte stubber fordi JS skriver til dem. -->
+     tallene gjelder produksjonsmodellen, ikke ELO-Odds 90. accuracyLog staar
+     som skjult stubb fordi JS skriver til den. modelExample VISES: den regnes
+     med rateFor og outcome, de samme tallene som kamplisten, og er riktig for
+     ELO90. -->
 <details class="howitworks modelcheck">
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 20v-7M12 20V6M18 20v-11"/></svg></span>Hvordan vet vi at modellen virker?</summary>
   <div class="in">
@@ -1542,7 +1544,10 @@ const SORT_LABELS = Object.assign({form:'Styrke', form5:'Form'}, Object.fromEntr
 // Ligaene på nettstedet. Står her, utenfor den byttede regionen, så begge
 // sidene har den samme listen og en ny liga bare legges inn ett sted.
 const SITE_LEAGUES = [
-  {id: 'eliteserien', name: 'Eliteserien', season: 2026, path: '/eliteserien/',
+  // ELO-TEST: Eliteserien-knappen peker til testsiden, ikke produksjonen.
+  // Den eneste lenken til /eliteserien/ er "Produksjonssiden ligger her" i
+  // banneret. id beholdes, saa forsidens "sist liga" virker som foer.
+  {id: 'eliteserien', name: 'Eliteserien', season: 2026, path: '/elo-test/',
    blurb: 'Gull, Europa og nedrykk'},
   {id: 'obos', name: 'OBOS-ligaen', season: 2026, path: '/obos/',
    blurb: 'Opprykk, opprykkskvalifisering og nedrykk'},
@@ -6514,8 +6519,8 @@ async function boot(){
   // faktisk vekt/halveringstid (fra fase A: uendret, men holdt dynamisk i tilfelle).
   // ELO-TEST: teksten beskriver ELO-Odds 90, ikke Fulls angrep/forsvar.
   // MODEL.meta finnes ikke i ELO90-modellen -- den har ingen halveringstid.
-  document.getElementById('howP1').textContent = `Hvert lag har ÉN rating. Den bygges kronologisk fra 2012: etter hver kamp flyttes ratingen mot det som skjedde, der 90 prosent av signalet er hva spillmarkedet ventet før kampen og 10 prosent er selve resultatet med målforskjellen. Læringsraten k = ${String(ELO.k).replace('.', ',')} er låst. Det finnes ingen halveringstid — eldre kamper glemmes ikke, de er allerede bakt inn i ratingen.`;
-  document.getElementById('howP2').textContent = `Sjansen for hjemmeseier, uavgjort og borteseier regnes av ratingforskjellen mellom lagene, med én hjemmefordel som gjelder hele ligaen (${Math.round(ELO.hjemmefordel_rating)} ratingpoeng). Der spillselskapene har lagt ut odds for en kommende kamp, blandes de inn med ${Math.round(ELO.blend_w*100)} prosent vekt. Modellen har ikke egne angreps- og forsvarstall, så tabellen under viser ratingen i stedet. Merk at resultater du fyller inn selv IKKE endrer lagstyrken på denne testsiden: ratingen holdes fast, slik den gjør i testene modellen er validert med. Produksjonssiden justerer styrkene underveis.`;
+  document.getElementById('howP1').textContent = `Ratingen oppdateres som beskrevet over, med læringsrate k = ${String(ELO.k).replace('.', ',')}, låst fra innkjøringen 2012–2013. Det finnes ingen halveringstid.`;
+  document.getElementById('howP2').textContent = `Sjansen for hjemmeseier, uavgjort og borteseier regnes av ratingforskjellen mellom lagene, med én hjemmefordel som gjelder hele ligaen (${Math.round(ELO.hjemmefordel_rating)} ratingpoeng). Der spillselskapene har lagt ut odds for en kommende kamp, blandes de inn med ${Math.round(ELO.blend_w*100)} prosent vekt. Modellen har ikke egne angreps- og forsvarstall, så tabellen under viser ratingen i stedet. Merk at resultater du fyller inn selv ikke endrer lagstyrken på denne testsiden: ratingen holdes fast, slik den gjør i testene modellen er validert med. Produksjonssiden justerer styrkene underveis.`;
 
   // Gjenstående kamper, gruppert per runde. Kamper som allerede er spilt innad i en runde
   // som ikke er ferdig, vises gråtonet og legges ikke i den redigerbare listen.
@@ -6722,7 +6727,9 @@ function formScores(){ return eloStyrke(LIVE.R, TEAMS); }
 function neutralExpPts(){ return 0; }   /* ikke i bruk i ELO90 */
 
 /* "Slik fungerer det" -> RATINGTABELL. Viser bare det modellen faktisk har:
-   rating, avstand til ligasnittet, og 1X2 mot et snittlag paa noytral bane. */
+   rating, avstand til ligasnittet, og 1X2 HJEMME mot et lag med snittrating.
+   OLR-tersklene er tilpasset med hjemmelaget forst, saa hjemmefordelen ligger
+   i dem; eloOLR(R - snitt) er derfor en hjemmekamp, ikke noytral bane. */
 function renderModelTbl(){
   const R = LIVE.R, v = TEAMS.map(t=>R[t]||0);
   const snitt = v.reduce((a,b)=>a+b,0)/v.length;
@@ -6745,10 +6752,15 @@ function renderModelTbl(){
 
 /* Formgrafen: ratingen etter hver kampdag, fra byggingen. Samme regel som
    hovedvandringen -- bygget ved aa gjenta hva_mix_lap og ta avtrykk, og
-   kontrollert til aa gi identisk sluttrating. */
+   kontrollert til aa gi identisk sluttrating.
+   rating_historikk har en noekkel per dato NOEN i ligaen spilte (56 i
+   september). Grafen viser bare datoene laget SELV spilte, slik produksjonen
+   gjor og undertittelen sier ("etter hver spilte kamp"). */
 function teamFormHistory(team){
   const H = (ELO && ELO.rating_historikk) || {};
-  const datoer = Object.keys(H).sort();
+  const egne = new Set(MATCHES.filter(m=>m.home===team || m.away===team)
+                              .map(m=>m.date));
+  const datoer = Object.keys(H).sort().filter(d=>egne.has(d));
   const pts = [];
   datoer.forEach(d=>{
     const R = H[d];
