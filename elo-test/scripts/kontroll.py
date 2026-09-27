@@ -308,6 +308,57 @@ for rel in ("index.html", "eliteserien/index.html", "sitemap.xml"):
     krev(f'"elo-test" finnes ikke i {rel}',
          "elo-test" not in p.read_text(encoding="utf-8"))
 
+# ---------- I: DRIFT mot produksjonssiden -- ADVARSEL, ikke feil
+# elo-test/index.html er en kopi av eliteserien/index.html slik den var i commit
+# 1fc6e8f. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
+# rettelse eller ny funksjon der kommer ikke med her. Det er ikke en feil i
+# testsiden, men noen maa ta stilling til det -- derfor en advarsel med antall
+# endrede linjer, og ingen FEIL.
+#
+# ELOTEST_PROD_INDEX kan peke paa en annen fil, bare for aa teste advarselen
+# uten aa roere produksjonssiden.
+print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
+import os as _os
+BASE_COMMIT = "1fc6e8f88874a94a83b4bc7375237d07710f7a5d"
+BASE_SHA = "4a6a32445f340f2fc0e2272e90f7f18e6e0141c80c513a12ecb79b69461d46eb"
+_prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
+_naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
+if _naa == BASE_SHA:
+    print(f"  OK    produksjonssiden er uendret siden kopien ble tatt "
+          f"({BASE_COMMIT[:7]}, sha256 {BASE_SHA[:16]}...)")
+else:
+    def _basis():
+        """Basisversjonen fra git. I CI er klonen grunn, saa commiten hentes
+        ved behov; mangler den likevel, returneres None."""
+        for forsok in (0, 1):
+            r = subprocess.run(["git", "-C", str(ROT), "show",
+                                f"{BASE_COMMIT}:eliteserien/index.html"],
+                               capture_output=True, text=True)
+            if r.returncode == 0:
+                return r.stdout
+            if forsok == 0:
+                subprocess.run(["git", "-C", str(ROT), "fetch", "--quiet",
+                                "--depth=1", "origin", BASE_COMMIT],
+                               capture_output=True, text=True)
+        return None
+    import difflib as _dl
+    _b = _basis()
+    if _b is None:
+        _txt = (f"produksjonssiden er ENDRET siden {BASE_COMMIT[:7]} "
+                f"(sha256 {_naa[:16]}...), men basisversjonen kunne ikke hentes, "
+                f"saa antall endrede linjer er ukjent")
+    else:
+        _a = _b.splitlines(); _c = _prod.read_text(encoding="utf-8").splitlines()
+        _sm = _dl.SequenceMatcher(None, _a, _c, autojunk=False)
+        _fj = sum(i2 - i1 for t, i1, i2, j1, j2 in _sm.get_opcodes() if t != "equal")
+        _lt = sum(j2 - j1 for t, i1, i2, j1, j2 in _sm.get_opcodes() if t != "equal")
+        _txt = (f"produksjonssiden er ENDRET siden kopien ble tatt i "
+                f"{BASE_COMMIT[:7]}: {_fj} linjer fjernet/endret og {_lt} "
+                f"lagt til/endret. Endringene er IKKE med i elo-test/index.html.")
+    print(f"  ADVARSEL  {_txt}")
+    if _os.environ.get("GITHUB_ACTIONS"):
+        print(f"::warning title=ELO-test drifter fra produksjonen::{_txt}")
+
 # ---------- E: festede sha256
 print("\nE   festede sha256")
 for rel, ventet in FESTET.items():
