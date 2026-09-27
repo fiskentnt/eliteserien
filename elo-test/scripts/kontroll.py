@@ -217,8 +217,8 @@ else:
     js = ("const GMAX=15;\nconst ODDS_W=0.7;\n"
           "let ELO=null,ELO_LAM={},RATES={},LIVE=null,ODDS_UP={};\n"
           + "".join([_hent("pois"), _hent("dcTau"), _hent("outcome"),
-                     _hent("fitRates"), _hent("eloOLR"),
-                     _hent("stateRate", True), _hent("rateFor", True)])
+                     _hent("fitRates"), _hent("eloOLR"), _hent("eloTabellOppslag"),
+                     _hent("eloOddsFor"), _hent("stateRate", True), _hent("rateFor", True)])
           + """
 const fs=require('fs');
 const M=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
@@ -226,7 +226,7 @@ const OJ=JSON.parse(fs.readFileSync(process.argv[3],'utf8'));
 const LAM={},OU={};
 M.kamper.forEach(r=>{LAM[r.home+"|"+r.away]={dr:r.dr,lam:r.lam,p:[r.pH,r.pU,r.pB],
   blend_lam:r.blend_lam||null};});
-OJ.matches.forEach(o=>{const t=o.H+o.D+o.A;OU[o.home+"|"+o.away]={H:o.H/t,D:o.D/t,A:o.A/t};});
+OJ.matches.forEach(o=>{OU[o.home+"|"+o.away]=o;});   // RAA, som i boot(); eloOddsFor normaliserer
 ELO=M; ELO_LAM=LAM; LIVE={R:(M.rating_alle||M.rating)}; ODDS_UP=OU; RATES={};
 let m1=0,mU=0,mB=0,nB=0,mR=0;
 for(const r of M.kamper){
@@ -606,7 +606,7 @@ if _tab is not None and all("blend_tabell" in r for r in _btab):
     _jst = ("const GMAX=15;\nconst ODDS_W=0.7;\n"
             "let ELO=null,ELO_LAM={},RATES={},LIVE=null,ODDS_UP={};\n"
             + "".join([_hent("pois"), _hent("dcTau"), _hent("outcome"), _hent("fitRates"),
-                       _hent("eloOLR"), _hent("eloTabellOppslag"),
+                       _hent("eloOLR"), _hent("eloTabellOppslag"), _hent("eloOddsFor"),
                        _hent("stateRate", True), _hent("rateFor", True)])
             + r"""
 const fs=require('fs');
@@ -659,6 +659,218 @@ console.log(JSON.stringify({opp,bopp,kobling}));
                 _kf += 1
         krev("rateFor bruker blandingstabellen (odds) eller lam_tabell (uten) naar ratingen er flyttet",
              _kf == 0, f"{_kf} ulike")
+
+# ---------- M: SCENARIOOPPDATERINGEN -- sidens JS mot labens hva_mix_lap
+# Resultater brukeren fyller inn, og resultater fra simuleringsknappene,
+# flytter ratingen etter labens hva_mix_lap (w = 0,90, k = 83,37 med odds,
+# reserveregelen k = 10 uten). Regelen er portert til JS i index.html. Denne
+# kontrollen kjorer SIDENS EGNE eloMixLap og computeLiveState i Node mot
+# Python paa noyaktig samme input -- alle 72 gjenstaaende kamper med trukne
+# resultater (fast seed), odds fra odds_upcoming.json der de finnes -- og
+# sammenligner ratingen etter HVER kamp, i begge greiner, innenfor 1e-12.
+# Kampene gis til siden i terminlisterekkefolge, ikke sortert, saa ogsaa
+# sidens sortering (dato, hjemme, borte) blir kontrollert mot Pythons.
+print("\nM   scenariooppdateringen: sidens JS mot labens hva_mix_lap")
+if shutil.which("node") is None:
+    krev("node finnes", False, "node mangler -- JS-siden kan ikke kontrolleres")
+else:
+    import random as _rnd
+    _fx = json.loads((PROD / "fixtures.json").read_text(encoding="utf-8"))
+    _oj = json.loads((PROD / "odds_upcoming.json").read_text(encoding="utf-8"))
+    _od = {}   # normalisert NOYAKTIG som bygg.py: x / (H + D + A)
+    for _o in _oj["matches"]:
+        _s = _o["H"] + _o["D"] + _o["A"]
+        _od[(_o["home"], _o["away"])] = [_o["H"] / _s, _o["D"] / _s, _o["A"] / _s]
+    _rg = _rnd.Random(20260927)
+    _terminliste = []
+    for _r in _fx:
+        for _m in _r["matches"]:
+            if _m.get("played"):
+                continue
+            _hg, _ag = _rg.randint(0, 4), _rg.randint(0, 3)
+            _terminliste.append({"date": _m["date"], "home": _m["home"], "away": _m["away"],
+                                 "hg": _hg, "ag": _ag})
+    _sortert = sorted(_terminliste, key=lambda m: (m["date"], m["home"], m["away"]))
+    for _m in _sortert:
+        _m["odds"] = _od.get((_m["home"], _m["away"]))
+    _R0 = dict(M.get("rating_alle") or M["rating"])
+    _p = dict(E.HVA, k=M["k"])
+    _hr, _w = M["hjemmefordel_rating"], M["w"]
+    _py_steg = []
+    _R = dict(_R0)
+    for _m in _sortert:
+        E.hva_mix_lap(_R, [_m], _p, _hr, _w)
+        _py_steg.append(dict(_R))
+    # Hele vandringen i ett kall skal gi det samme som steg for steg.
+    _py_hel = E.hva_mix_lap(dict(_R0), _sortert, _p, _hr, _w)
+    krev("Python: hele vandringen = steg for steg",
+         max(abs(_py_hel[t] - _py_steg[-1][t]) for t in _py_hel) == 0.0)
+    if lab_mod is not None and hasattr(lab_mod, "hva_mix_lap"):
+        _lab_hel = lab_mod.hva_mix_lap(dict(_R0), _sortert, _p, _hr, _w)
+        krev("eloodds.py = labens egen hva_mix_lap (samme input)",
+             max(abs(_lab_hel[t] - _py_hel[t]) for t in _py_hel) == 0.0)
+    else:
+        print("     laben finnes ikke -- eloodds.py (verbatim kopi, se A1) brukes alene")
+
+    # DC_RHO kommer fra sidens egen tekst (et av stykkene over tar den med),
+    # og kontroll F krever at den er 0.
+    _js = ("const GMAX=15;\nconst ODDS_W=0.7;\n"
+           "let ELO=null,ELO_LAM={},RATES={},LIVE=null,ODDS_UP={},matches=[],TEAMS=[];\n"
+           + _re.search(r"\nconst ELO_HVA = \{[^\n]*\n", html).group(0)
+           + "".join([_hent("pois"), _hent("dcTau"), _hent("outcome"), _hent("fitRates"),
+                      _hent("eloOLR"), _hent("eloTabellOppslag"), _hent("eloOddsFor"),
+                      _hent("eloMixLap"), _hent("eloScenarioKamper"),
+                      _hent("computeLiveState", True), _hent("stateRate", True),
+                      _hent("rateFor", True)])
+           + r"""
+const fs=require('fs');
+const M=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+const OJ=JSON.parse(fs.readFileSync(process.argv[3],'utf8'));
+const INN=JSON.parse(fs.readFileSync(process.argv[4],'utf8'));
+ELO=M; TEAMS=M.teams; ODDS_UP={};
+OJ.matches.forEach(o=>{ ODDS_UP[o.home+"|"+o.away]=o; });   // RAA, som i boot()
+M.kamper.forEach(r=>{ELO_LAM[r.home+"|"+r.away]={dr:r.dr,lam:r.lam,p:[r.pH,r.pU,r.pB],blend_lam:r.blend_lam||null,blend_tabell:r.blend_tabell||null};});
+// Kampene i terminlisterekkefolge; steg i fylles de i-forste i SORTERT rekkefolge.
+const nokkel=m=>m.date+"|"+m.home+"|"+m.away;
+const rang={}; INN.sortert.forEach((m,i)=>{ rang[nokkel(m)]=i; });
+const steg=[];
+for(let i=0;i<INN.sortert.length;i++){
+  matches=INN.terminliste.map(m=>rang[nokkel(m)]<=i ? {...m} : {...m, hg:null, ag:null});
+  steg.push(computeLiveState().R);
+}
+matches=INN.terminliste.map(m=>({...m}));
+const rekkefolge=eloScenarioKamper().map(nokkel);
+const direkte=eloMixLap(Object.assign({},M.rating_alle||M.rating), INN.sortert, M.hjemmefordel_rating, M.w, M.k);
+// FORENKLINGEN: siste halvdel utfylt, forste aapen. De aapne kampene ligger
+// FOER de utfylte, men skal regnes med ratingen etter ALLE utfylte, via
+// lambda-tabellen (blandingstabellen for kamper med odds).
+const halv=Math.floor(INN.sortert.length/2);
+matches=INN.terminliste.map(m=>rang[nokkel(m)]>=halv ? {...m} : {...m, hg:null, ag:null});
+LIVE=computeLiveState(); RATES={};
+const aapne=matches.filter(m=>m.hg==null).map(m=>({k:m.home+"|"+m.away,
+  dr:(LIVE.R[m.home]||0)-(LIVE.R[m.away]||0), s:stateRate(LIVE,m.home,m.away), f:rateFor(m.home,m.away)}));
+// SAMME NORMALISERTE MARKEDSSANNSYNLIGHET: eloOddsFor paa RAADATA fra filen,
+// og det rateFor lagrer (og viser i "Blandet 70 % odds").
+const norm={}; OJ.matches.forEach(o=>{ norm[o.home+"|"+o.away]=eloOddsFor(o.home,o.away); });
+const visMk={}; for(const k in RATES){ if(RATES[k].odds) visMk[k]=RATES[k].mk; }
+// RAADATA MED PAASLAG (x 1,03): en innfylt odds-kamp, 3-0, alene. Uten
+// normalisering ville markedsleddet brukt tall som summerer til 1,03.
+const EKTE=ODDS_UP, skal={};
+ODDS_UP={}; OJ.matches.forEach(o=>{ ODDS_UP[o.home+"|"+o.away]={...o, H:o.H*1.03, D:o.D*1.03, A:o.A*1.03}; });
+for(const o of OJ.matches){
+  matches=INN.terminliste.map(m=>(m.home===o.home&&m.away===o.away) ? {...m, hg:3, ag:0} : {...m, hg:null, ag:null});
+  skal[o.home+"|"+o.away]=computeLiveState().R;
+}
+ODDS_UP=EKTE;
+console.log(JSON.stringify({steg, rekkefolge, direkte, hva:ELO_HVA, halv, R_etter:LIVE.R, aapne, norm, visMk, skal}));
+""")
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fh:
+        json.dump({"terminliste": _terminliste,
+                   "sortert": [{k: v for k, v in m.items()} for m in _sortert]}, fh, ensure_ascii=False)
+        _inn = fh.name
+    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as fh:
+        fh.write(_js); _jp = fh.name
+    _r = subprocess.run(["node", _jp, str(UT / "model.json"), str(PROD / "odds_upcoming.json"), _inn],
+                        capture_output=True, text=True)
+    if _r.returncode:
+        _fl = [l for l in _r.stderr.splitlines() if "Error" in l] or _r.stderr.strip().splitlines() or ["?"]
+        krev("Node-sjekken for scenariooppdateringen kjorer", False, _fl[0][:200])
+    else:
+        _d = json.loads(_r.stdout)
+        krev("sidens ELO_HVA = HVA i eloodds.py", _d["hva"] == E.HVA, f"{_d['hva']}")
+        krev("sidens sortering = Pythons (dato, hjemme, borte)",
+             _d["rekkefolge"] == [f"{m['date']}|{m['home']}|{m['away']}" for m in _sortert],
+             f"{len(_d['rekkefolge'])} kamper")
+        _med = [i for i, m in enumerate(_sortert) if m["odds"]]
+        _uten = [i for i, m in enumerate(_sortert) if not m["odds"]]
+        def _avvik(idx):
+            mx = 0.0
+            for i in idx:
+                forr_js = _d["steg"][i - 1] if i else _R0
+                forr_py = _py_steg[i - 1] if i else _R0
+                m = _sortert[i]
+                for t in (m["home"], m["away"]):
+                    d_js = _d["steg"][i][t] - forr_js.get(t, 0.0)
+                    d_py = _py_steg[i][t] - forr_py.get(t, 0.0)
+                    mx = max(mx, abs(d_js - d_py))
+                mx = max(mx, max(abs(_d["steg"][i][t] - _py_steg[i][t]) for t in _py_steg[i]))
+            return mx
+        _a_med, _a_uten = _avvik(_med), _avvik(_uten)
+        krev(f"greinen MED odds (w = {_w}, k = {M['k']}): {len(_med)} kamper, JS = Python",
+             len(_med) > 0 and _a_med <= 1e-12, f"storste avvik {_a_med:.2e}")
+        krev(f"greinen UTEN odds (k = {E.HVA['k']}): {len(_uten)} kamper, JS = Python",
+             len(_uten) > 0 and _a_uten <= 1e-12, f"storste avvik {_a_uten:.2e}")
+        _a_dir = max(abs(_d["direkte"][t] - _py_hel[t]) for t in _py_hel)
+        krev("eloMixLap direkte paa Pythons liste = hva_mix_lap", _a_dir <= 1e-12,
+             f"storste avvik {_a_dir:.2e}")
+        # Forenklingen: Python-vandringen over den siste halvdelen, i datorekkefolge.
+        _R_h = E.hva_mix_lap(dict(_R0), _sortert[_d["halv"]:], _p, _hr, _w)
+        _a_h = max(abs(_d["R_etter"][t] - _R_h[t]) for t in _R_h)
+        krev("ratingen etter de utfylte kampene = hva_mix_lap over dem (Python)", _a_h <= 1e-12,
+             f"storste avvik {_a_h:.2e}")
+        import bisect as _bs2
+        def _sl(tb, dr):
+            i = _bs2.bisect_right(tb["bp"], dr)
+            return [tb["lh"][i], tb["la"][i]]
+        _kr = {r["home"] + "|" + r["away"]: r for r in M["kamper"]}
+        _feil_s = _feil_f = _flyttet = 0
+        for o in _d["aapne"]:
+            r = _kr[o["k"]]
+            dr_py = _R_h[r["home"]] - _R_h[r["away"]]
+            if abs(dr_py - r["dr"]) < 1e-12:
+                forv_s = r["lam"]; forv_f = r.get("blend_lam") or r["lam"]
+            else:
+                _flyttet += 1
+                forv_s = _sl(M["lam_tabell"], dr_py)
+                forv_f = _sl(r["blend_tabell"], dr_py) if "blend_tabell" in r else forv_s
+            _feil_s += o["s"] != forv_s
+            _feil_f += o["f"] != forv_f
+        krev(f"forenklingen: {len(_d['aapne'])} aapne kamper FOER de utfylte regnes med ratingen "
+             f"etter alle utfylte, via tabellen ({_flyttet} med flyttet rating)",
+             _flyttet > 0 and _feil_s == 0 and _feil_f == 0,
+             f"stateRate {_feil_s} ulike, rateFor {_feil_f} ulike")
+        # Markedssannsynligheten: raadata -> normalisert, samme tall overalt.
+        _ikke1 = [o for o in _oj["matches"] if o["H"] + o["D"] + o["A"] != 1.0]
+        print(f"     raadata: {len(_ikke1)} av {len(_oj['matches'])} kamper i odds_upcoming.json "
+              f"summerer ikke til 1 ({', '.join(o['home'] + ' - ' + o['away'] for o in _ikke1)})")
+        _uln = 0
+        for r in M["kamper"]:
+            if "marked" not in r:
+                continue
+            k = r["home"] + "|" + r["away"]
+            if _d["norm"].get(k) != r["marked"] or _d["norm"].get(k) != _od[(r["home"], r["away"])]:
+                _uln += 1
+        krev("sidens eloOddsFor(raadata) = byggingens marked = Pythons normalisering, bit for bit "
+             "(samme tall i hva_mix_lap og i 70 %-blandingen)", _uln == 0, f"{_uln} ulike")
+        _ulv = sum(1 for k, v in _d["visMk"].items() if v != _d["norm"][k])
+        krev(f"rateFor lagrer og viser den normaliserte (\"Blandet 70 % odds\"), {len(_d['visMk'])} kamper",
+             len(_d["visMk"]) > 0 and _ulv == 0, f"{_ulv} ulike")
+        _ask = 0.0
+        for o in _oj["matches"]:
+            h_, d_, a_ = o["H"] * 1.03, o["D"] * 1.03, o["A"] * 1.03
+            s_ = h_ + d_ + a_
+            m_ = next(m for m in _terminliste if m["home"] == o["home"] and m["away"] == o["away"])
+            R_ = E.hva_mix_lap(dict(_R0), [{"date": m_["date"], "home": o["home"], "away": o["away"],
+                                            "hg": 3, "ag": 0, "odds": [h_ / s_, d_ / s_, a_ / s_]}], _p, _hr, _w)
+            J_ = _d["skal"][o["home"] + "|" + o["away"]]
+            _ask = max(_ask, max(abs(J_[t] - R_[t]) for t in R_))
+        krev(f"innfylt odds-kamp fra raadata med paaslag 1,03 ({len(_oj['matches'])} kamper): "
+             "JS-rating = Python innenfor 1e-12", _ask <= 1e-12, f"storste avvik {_ask:.2e}")
+        _flytt = max(abs(_py_hel[t] - _R0.get(t, 0.0)) for t in _py_hel)
+        krev("kontrollen maaler noe: ratingen flytter seg", _flytt > 1.0,
+             f"storste flytting {_flytt:.1f} ratingpoeng")
+        # MAALING, ikke krav: tabellens lambda gjenskaper ikke OLR-1X2 eksakt
+        # (labens fit_rates-rutenett). Samme stoerrelse som byggingens lambda.
+        _rek = 0.0
+        g_, Hg_, Bg_ = E._grid(0.0)
+        _gi = {round(float(v), 3): i for i, v in enumerate(g_)}
+        for o in _d["aapne"]:
+            dr_py = _R_h[_kr[o["k"]]["home"]] - _R_h[_kr[o["k"]]["away"]]
+            ph, pu, pb = E.olr_sannsyn(M["olr"], dr_py)
+            i, j = _gi[round(o["s"][0], 3)], _gi[round(o["s"][1], 3)]
+            _rek = max(_rek, abs(Hg_[i, j] - ph), abs(Bg_[i, j] - pb), abs(1 - Hg_[i, j] - Bg_[i, j] - pu))
+        print(f"  MAALT  tabell-lambda mot OLR-1X2 etter flyttet rating: maks {_rek:.2e} i H/U/B "
+              f"({len(_d['aapne'])} kamper, labens rutenett)")
 
 print("\nE   festede sha256")
 for rel, ventet in FESTET.items():

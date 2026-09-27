@@ -1131,15 +1131,15 @@
   <div class="in">
     <p class="plain-lead">Siden spiller resten av sesongen 10&nbsp;000 ganger og teller hvor ofte hvert lag ender på hver plass.</p>
     <p>Hvert lag har én rating, bygget kamp for kamp siden 2012. Etter hver spilte kamp flyttes ratingen mot det som skjedde, og 90 prosent av det signalet er hva spillmarkedet ventet før kampen, 10 prosent selve resultatet. Eldre kamper glemmes ikke; de er allerede bakt inn i ratingen. Står det 52 prosent for topp 4, endte laget blant de fire beste i omtrent 5200 av de 10&nbsp;000 sesongene.</p>
-    <p>Fyller du inn et resultat selv, brukes det i alle 10&nbsp;000 simuleringene, så du ser hvordan det påvirker tabellen og sjansene. Lagstyrken endres ikke av resultater du fyller inn. Styrke er ratingen regnet om til forventede poeng per kamp mot alle de andre lagene, hjemme og borte, på en skala fra 0 til 10, der 5 er et gjennomsnittslag. Form står på samme skala, men er regnet rett ut av de fem siste kampene: vanlige poeng, 3 for seier og 1 for uavgjort, delt på de 15 som var mulige og ganget med 10. Fem seirer gir 10,0, fem uavgjorte 3,3 og fem tap 0,0.</p>
+    <p>Fyller du inn et resultat selv, brukes det i alle 10&nbsp;000 simuleringene, så du ser hvordan det påvirker tabellen og sjansene. Resultater du fyller inn, behandles som spilte kamper og oppdaterer ratingen etter modellens eksisterende regel. Når de er behandlet, simuleres de øvrige kampene foreløpig med denne ratingen fast. Dynamisk rating inne i simuleringen avventer testing. Styrke er ratingen regnet om til forventede poeng per kamp mot alle de andre lagene, hjemme og borte, på en skala fra 0 til 10, der 5 er et gjennomsnittslag. Form står på samme skala, men er regnet rett ut av de fem siste kampene: vanlige poeng, 3 for seier og 1 for uavgjort, delt på de 15 som var mulige og ganget med 10. Fem seirer gir 10,0, fem uavgjorte 3,3 og fem tap 0,0.</p>
 
     <details class="details-tech">
       <summary>Vis detaljer</summary>
       <h3>Slik regnes sannsynlighetene</h3>
       <p id="howP1"></p>
       <p id="howP2"></p>
-      <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene. Lagstyrken holdes fast gjennom hele den simulerte sesongen, slik den gjør i testene modellen er validert med. Topp 4, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
-      <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner resten", "...taper resten", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med fast lagstyrke, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
+      <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene. Inne i hver simulerte sesong holdes lagstyrken fast, slik den gjør i testene modellen er validert med. Det er bare resultatene som står i kamplisten, som flytter den. Topp 4, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
+      <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner resten", "...taper resten", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med fast lagstyrke, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet. Når kampene er fylt inn, flytter de ratingen på samme måte som resultater du fyller inn selv.</p>
       <p>Tabellen, kamplisten, simuleringene og svarene bygger alle på nøyaktig den samme lagstyrken. Det finnes ikke lenger en egen variant for visning: ett tall, ett sted.</p>
       <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn, verken i tabellen eller i simuleringene. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
       <p class="note">H, U og B er sjansen for hjemmeseier, uavgjort og borteseier når laget spiller hjemme mot et lag med snittrating.</p>
@@ -6554,7 +6554,7 @@ async function boot(){
   // ELO-TEST: teksten beskriver ELO-Odds 90, ikke Fulls angrep/forsvar.
   // MODEL.meta finnes ikke i ELO90-modellen -- den har ingen halveringstid.
   document.getElementById('howP1').textContent = `Ratingen oppdateres som beskrevet over, med læringsrate k = ${String(ELO.k).replace('.', ',')}, låst fra innkjøringen 2012–2013. Det finnes ingen halveringstid.`;
-  document.getElementById('howP2').textContent = `Sjansen for hjemmeseier, uavgjort og borteseier regnes av ratingforskjellen mellom lagene, med én hjemmefordel som gjelder hele ligaen (${Math.round(ELO.hjemmefordel_rating)} ratingpoeng). Der spillselskapene har lagt ut odds for en kommende kamp, blandes de inn med ${Math.round(ELO.blend_w*100)} prosent vekt. Modellen har ikke egne angreps- og forsvarstall, så tabellen under viser ratingen i stedet. Merk at resultater du fyller inn selv ikke endrer lagstyrken på denne testsiden: ratingen holdes fast, slik den gjør i testene modellen er validert med. Produksjonssiden justerer styrkene underveis.`;
+  document.getElementById('howP2').textContent = `Sjansen for hjemmeseier, uavgjort og borteseier regnes av ratingforskjellen mellom lagene, med én hjemmefordel som gjelder hele ligaen (${Math.round(ELO.hjemmefordel_rating)} ratingpoeng). Der spillselskapene har lagt ut odds for en kommende kamp, blandes de inn med ${Math.round(ELO.blend_w*100)} prosent vekt. Modellen har ikke egne angreps- og forsvarstall, så tabellen under viser ratingen i stedet. Resultater du fyller inn, og resultater fra simuleringsknappene, behandles som spilte kamper og oppdaterer ratingen etter samme regel: med markedets odds der de finnes, ellers med resultatet alene og Elo-Goals sin læringsrate k = 10. Den nye ratingen brukes for alle kamper som ikke er fylt inn, også dem som spilles før et resultat du har fylt inn. Inne i simuleringen holdes ratingen foreløpig fast; dynamisk rating der avventer testing.`;
 
   // Gjenstående kamper, gruppert per runde. Kamper som allerede er spilt innad i en runde
   // som ikke er ferdig, vises gråtonet og legges ikke i den redigerbare listen.
@@ -6683,22 +6683,89 @@ function eloOLR(par, dr){
   return [p2, 1-p0-p2, p0];
 }
 
-/* Ratingen som gjelder NAA: NOYAKTIG den byggingen kom fram til.
+/* SCENARIORESULTATER BEHANDLES SOM SPILTE KAMPER og oppdaterer ratingen etter
+   modellens eksisterende regel. Det gjelder resultater brukeren fyller inn og
+   resultater fra "Simuler runden", "Simuler tomme kamper" og "<lag>
+   vinner/taper resten" -- alle utfylte kamper i `matches`, egne og grå.
+   Deretter simuleres de ukjente kampene med den resulterende ratingen FAST
+   (faste lambda per kamp, fra lambda-tabellen). Dynamisk rating INNE i
+   Monte Carlo avventer labtesten (resultater/eloodds_2026/
+   BESTILLING_dynamisk_rating.md i laben).
 
-   SCENARIOER FLYTTER IKKE RATINGEN. Labens ELO90 holder ratingen fast gjennom
-   hele simuleringen -- faste lambda per kamp, form_k = 0, ingen oppdatering
-   etter simulerte kamper. Forste utkast her oppdaterte ratingen for
-   brukerutfylte resultater, via modellens fallback for kamper uten odds
-   (resultatleddet med k = 10). Det er en mekanisme laben HAR, men ikke i denne
-   rollen: laben har aldri maalt hva det gjor med prognosene, saa det ville
-   vaert utestet oppforsel paa en testside som skal vise en testet modell.
-   Derfor holdes ratingen fast, som i laben, og forklaringsteksten sier det.
+   REGELEN er labens hva_mix_lap, portert tegn for tegn og i samme
+   uttrykksrekkefolge, kronologisk etter (dato, hjemme, borte) som bygg.py
+   sorterer spilte kamper:
+     - kamp med odds i odds_upcoming.json: full ELO90-oppdatering, w = 0,90,
+       k = 83,37, med markedets odds for kampen (normalisert som i bygg.py)
+     - kamp uten odds: reserveregelen (§6B), resultatleddet med Elo-Goals sin
+       k = 10: delta = 10 * (1 + |maalforskjell|)^b * (s - e)
+   Hjemmefordelen i markedsleddet er byggingens hjemmefordel_rating.
 
-   Konsekvens brukeren maa vite om: fyller du inn et resultat, endres tabellen
-   og poengene, men LAGSTYRKEN staar stille. Produksjonssiden justerer
-   styrkene; denne gjor det ikke. */
+   Kontroll M i scripts/kontroll.py kjorer eloMixLap og computeLiveState fra
+   DENNE filen mot labens hva_mix_lap paa samme input, begge greiner,
+   innenfor 1e-12, og krever at ELO_HVA er lik HVA i eloodds.py.
+
+   Foer 27.9.2026 holdt testsiden ratingen fast ogsaa for brukerens egne
+   resultater. Det er reversert etter beslutning. */
+const ELO_HVA = {k: 10.0, b: 1.0, c: 10.0, d: 400.0};   // = HVA i scripts/eloodds.py
+
+// Markedets 1X2 for en kamp, normalisert med summen som i bygg.py, eller null.
+function eloOddsFor(home, away){
+  const o = ODDS_UP[home+"|"+away];
+  if(!o) return null;
+  const s = o.H + o.D + o.A;
+  return [o.H / s, o.D / s, o.A / s];
+}
+
+// hva_mix_lap fra laben. R endres paa stedet og returneres.
+function eloMixLap(R, kamper, hjemme_r, w, k){
+  const c = ELO_HVA.c, d = ELO_HVA.d, b = ELO_HVA.b;
+  for(const m of kamper){
+    const h = m.home, a = m.away;
+    const rh = (h in R) ? R[h] : 0.0, ra = (a in R) ? R[a] : 0.0;
+    const e = 1.0 / (1.0 + Math.pow(c, (ra - rh) / d));
+    const s = m.hg > m.ag ? 1.0 : (m.hg === m.ag ? 0.5 : 0.0);
+    const o = m.odds;
+    let delta;
+    if(o && w > 0.0){
+      const mk = Math.min(Math.max(o[0] + 0.5 * o[1], 1e-6), 1 - 1e-6);
+      const dr_mkt = -d * Math.log(1.0 / mk - 1.0) / Math.log(c);
+      const mstar = 1.0 / (1.0 + Math.pow(c, -(dr_mkt - hjemme_r) / d));
+      const res_ledd = Math.pow(1.0 + Math.abs(m.hg - m.ag), b) * (s - e);
+      delta = k * ((1.0 - w) * res_ledd + w * (mstar - e));
+    } else {
+      delta = (w === 0.0 ? k : ELO_HVA.k)
+        * Math.pow(1.0 + Math.abs(m.hg - m.ag), b) * (s - e);
+    }
+    R[h] = rh + delta;
+    R[a] = ra - delta;
+  }
+  return R;
+}
+
+// Utfylte kamper i scenariet, sortert som bygg.py sorterer spilte kamper.
+// Vanlig <-sammenligning, ikke localeCompare: Python sorterer paa kodepunkt.
+function eloScenarioKamper(){
+  const cmp = (x, y) => x < y ? -1 : (x > y ? 1 : 0);
+  return matches.filter(m => m.hg != null && m.ag != null)
+    .map(m => ({date: m.date, home: m.home, away: m.away,
+                hg: Number(m.hg), ag: Number(m.ag), odds: eloOddsFor(m.home, m.away)}))
+    .sort((x, y) => cmp(x.date, y.date) || cmp(x.home, y.home) || cmp(x.away, y.away));
+}
+
+/* FORENKLING, SAMME SOM PRODUKSJONENS computeLiveState: de utfylte kampene
+   behandles i datorekkefolge, og den RESULTERENDE ratingen brukes for ALLE
+   aapne kamper -- ogsaa de som ligger foer en utfylt kamp. Fyller brukeren inn
+   en kamp i runde 30, regnes altsaa en aapen kamp i runde 24 med ratingen
+   etter runde 30-kampen. Produksjonen gjor det samme med sine styrker. En
+   strengt kronologisk variant (hver kamp med ratingen rett foer seg) ble
+   proevd og lagt bort i paavente av labtesten av dynamisk rating.
+
+   LIVE.R er ratingen etter alle utfylte kamper. Styrke-kolonnen,
+   ratingtabellen, kamplisten og Monte Carlo bruker den. */
 function computeLiveState(){
   const R = Object.assign({}, ELO.rating_alle || ELO.rating);
+  eloMixLap(R, eloScenarioKamper(), ELO.hjemmefordel_rating, ELO.w, ELO.k);
   const n=TEAMS.length, z=()=>new Float64Array(n);
   // att/con/ha/hc er INERTE BAERERE, bare for at Array.from(LIVE.att) skal
   // virke i de sju nyttelastene til workeren. De er null, brukes aldri til et
@@ -6842,7 +6909,12 @@ function rateFor(home,away){
   const md=(bygd && Math.abs(dr-bygd.dr)<1e-12)
     ? {H:bygd.p[0],U:bygd.p[1],B:bygd.p[2]}
     : (p=>({H:p[0],U:p[1],B:p[2]}))(eloOLR(ELO.olr, dr));
-  const mk=[o.H,o.D,o.A];
+  // Markedssannsynligheten NORMALISERT som i bygg.py (eloOddsFor): samme tall
+  // som ratingoppdateringen (hva_mix_lap) og blandingstabellene bruker, og det
+  // som vises i "Blandet 70 % odds (...)". Raatallene i odds_upcoming.json er
+  // rundet til fire desimaler og summerer ikke alltid til 1 (Brann - Viking:
+  // 0,9999); foer viste teksten raatallet, borteseier 42 % mot normalisert 43 %.
+  const mk=eloOddsFor(home,away);
   const pH=ODDS_W*mk[0]+(1-ODDS_W)*md.H, pB=ODDS_W*mk[2]+(1-ODDS_W)*md.B;
   // Blandet lambda: byggingens naar ratingforskjellen er uendret, ellers
   // kampens egen blandingstabell (bygget med normaliserte odds, som
@@ -6856,7 +6928,10 @@ function rateFor(home,away){
 
 /* SIMULERINGEN: labens ELO90 bruker FASTE lambda per kamp -- dc_rho = 0,
    faste=fst, form_k = 0, alle styrke-arrays null. Ratingen oppdateres IKKE
-   etter simulerte kamper.
+   etter kampene INNE I Monte Carlo-simuleringen (avventer labtesten). Utfylte
+   scenariokamper har alt flyttet ratingen (computeLiveState), og lambda for de
+   aapne kampene regnes fra den: byggingens lambda der ratingforskjellen er
+   uendret, ellers lambda-tabellen (blandingstabellen for kamper med odds).
 
    Produksjonens worker har alt kroken: oddsOverride[j] gir tvungne [lh, la]
    per kamp, og da leses aldri attS/conS. Ved aa returnere lambda for ALLE

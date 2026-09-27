@@ -31,8 +31,34 @@ Panelene er skjult.
   bygging, av historikken pluss alle spilte 2026-kamper.
 - **ρ = 0 overalt** — λ-konvertering, simulering og målfordeling. Laben testet
   ρ = 0; produksjonens −0,38 ville gitt en variant laben ikke har validert.
-- **Scenarioer flytter ikke ratingen.** Laben holder den fast, og testsiden
-  gjør det samme. Produksjonssiden justerer styrkene underveis.
+- **Scenarioresultater behandles som spilte kamper** (fra 27.9.2026; før det
+  holdt testsiden ratingen fast). Resultater brukeren fyller inn, og
+  resultater fra «Simuler runden», «Simuler tomme kamper» og «<lag>
+  vinner/taper resten», oppdaterer ratingen etter modellens eksisterende
+  regel, labens `hva_mix_lap`, i datorekkefølge (dato, hjemme, borte):
+  - kamp med odds i `odds_upcoming.json`: full ELO90-oppdatering, w = 0,90,
+    k = 83,37, med kampens odds **normalisert som i `bygg.py`**
+    (x / (H + D + A)); rådataene er rundet til fire desimaler og summerer
+    ikke alltid til 1
+  - kamp uten odds: reserveregelen (§6B), resultatleddet med Elo-Goals sin
+    k = 10
+- **Forenkling, samme som produksjonens `computeLiveState`:** den resulterende
+  ratingen brukes for **alle** åpne kamper, også dem som ligger før en
+  utfylt kamp. Fyller brukeren inn en kamp i runde 30, regnes en åpen kamp i
+  runde 24 med ratingen etter den. En strengt kronologisk variant ble prøvd og
+  lagt bort i påvente av labtesten av dynamisk rating.
+- **λ etter en flyttet rating** kommer fra λ-tabellen (under), ikke fra
+  JS-`fitRates`. Målt H/U/B-feil mot OLR er av samme størrelse som byggingens
+  λ (labens rutenett); kontroll M rapporterer den.
+- **Monte Carlo holder ratingen fast** innenfor hver simulerte sesong: faste λ
+  per åpen kamp, regnet fra ratingen etter de utfylte kampene. Dynamisk rating
+  inne i simuleringen avventer labtesten
+  (`resultater/eloodds_2026/BESTILLING_dynamisk_rating.md` i laben).
+- **Samme normaliserte markedssannsynlighet overalt:** ratingoppdateringen,
+  70 %-blandingen (`blend_lam` og `blend_tabell`) og teksten «Blandet 70 %
+  odds (…)» bruker alle x / (H + D + A). Før viste teksten rådataene: for
+  Brann–Viking borteseier 42 % mot normalisert 43 %. Produksjonssidens
+  `rateFor` bruker fortsatt rådataene; den er ikke endret.
 - **70 % direkte markedsblanding** på kommende kamper som finnes i
   produksjonens `odds_upcoming.json`. Ellers ELO90 alene. Vekten er
   produksjonens og er ikke tunet.
@@ -132,6 +158,20 @@ kunstig historikk: loggen starter den dagen siden går live.
 `python3 elo-test/scripts/kontroll.py` — hardfeiler. A1 og A2 krever laben og
 hoppes over uten den; resten kjører også i CI.
 
+Kontroll **M** kjører sidens egne `eloMixLap` og `computeLiveState` i Node mot
+`hva_mix_lap` på samme input: alle 72 gjenstående kamper med trukne resultater
+(fast seed), odds fra `odds_upcoming.json` der de finnes. Ratingen sammenlignes
+etter hver kamp, i begge greiner (8 kamper med odds, 64 uten), innenfor 1e-12;
+målt avvik er 0. Den krever også at sidens `ELO_HVA` er lik `HVA` i
+`eloodds.py`, at sidens sortering er Pythons, og forenklingen: med siste
+halvdel utfylt regnes de åpne kampene før dem med ratingen etter alle utfylte,
+via λ-tabellen. Markedssannsynligheten kontrolleres fra **rådataene** i
+`odds_upcoming.json`: sidens `eloOddsFor` skal gi bit for bit byggingens
+`marked` (som blandingen bygger på) og det `rateFor` lagrer og viser, og en
+innfylt odds-kamp med rådataene ganget med 1,03 skal gi samme rating som
+Python innenfor 1e-12. Med dagens fil summerer tre av åtte kamper ikke til 1,
+så også de ekte dataene avslører en manglende normalisering.
+
 ## Hva modellen ikke har
 
 Ingen angreps- og forsvarsstyrker, og ingen lagspesifikk hjemmefordel. Én
@@ -146,9 +186,10 @@ slik den er i dag, altså etterpåklokskap.
 Basis: `eliteserien/index.html` i commit `157d9ff` (sha256 `8c35dda0…`).
 Kopien ble tatt i `1fc6e8f`; merkerettelsen i `157d9ff` (likt på poeng er en
 trussel, ferdigspilt sesong etter faktisk plass) er tatt inn med samme patch,
-ordrett. Kopien har 6854 linjer mot produksjonens 6754, fordelt på 26 endrede
-blokker (`git diff`, vanlig kontekst). Antallet blokker er det samme som før
-rettelsen, så avvikslisten under er uendret.
+ordrett. Kopien har 6965 linjer mot produksjonens 6754, fordelt på 26 endrede
+blokker (`git diff`, vanlig kontekst). Merkerettelsen endret ikke antallet
+blokker; scenariooppdateringen (27.9.2026) la til tekstendringer og nye
+funksjoner i blokk A.
 Listen er ment å være nok til å portere Elo-laget inn i produksjonssiden uten
 å lese hele diffen. `kontroll.py` (I) advarer hvis produksjonssiden har endret
 seg siden.
@@ -162,7 +203,10 @@ funksjonsdeklarasjonen, og deklarasjoner heises, så alle kall — også under
 | Funksjon | Status | Hva den gjør i ELO90 | Produksjonens versjon gjorde |
 |---|---|---|---|
 | `eloOLR(par, dr)` | ny | 1X2 av ratingforskjellen; speiler labens `olr_sannsyn` tegn for tegn: `p0 = sig(t1 − z)` borteseier, `p2 = 1 − sig(t2 − z)` hjemmeseier, z klippet til [−60, 60] | — |
-| `computeLiveState()` | overstyrt | returnerer byggingens rating **uendret**; scenarioer flytter den ikke. `att/con/ha/hc` er nullfylte bærere | bygget att/con/ha/hc fra `MODEL` og drev dem med `FORM_K` for alle spilte kamper |
+| `computeLiveState()` | overstyrt | byggingens rating, deretter `eloMixLap` over alle utfylte kamper i `matches` (egne og grå) i datorekkefølge. Den resulterende ratingen brukes for **alle** åpne kamper, også dem før en utfylt kamp — samme forenkling som produksjonen. `att/con/ha/hc` er nullfylte bærere | bygget att/con/ha/hc fra `MODEL` og drev dem med `FORM_K` for alle utfylte kamper |
+| `eloMixLap(R, kamper, hr, w, k)` | ny | labens `hva_mix_lap`, tegn for tegn og i samme uttrykksrekkefølge; begge greiner | — |
+| `eloOddsFor(h, a)` | ny | markedets 1X2 fra `odds_upcoming.json`, normalisert med summen som i `bygg.py` | — |
+| `eloScenarioKamper()` | ny | utfylte kamper, sortert på (dato, hjemme, borte) med vanlig `<`, som Python | — |
 | `eloTabellOppslag(tab, dr)` | ny | oppslag i en bruddpunkttabell; indeksen er antall bruddpunkter ≤ dr, som `bisect_right` | — |
 | `stateRate(state, h, a)` | overstyrt | byggingens λ når ratingforskjellen er uendret (bit-lik laben); ellers `lam_tabell`. JS-`fitRates` bare for en `model.json` uten tabell (overgang) | `exp(mu + H + att + ha + con − hc)` |
 | `rateFor(h, a)` | overstyrt | 70 %-blanding av **OLR-sannsynlighetene** med markedet; byggingens `blend_lam` når ratingforskjellen er uendret, ellers kampens `blend_tabell` | blandet `outcome(λ)` med markedet |
@@ -176,8 +220,9 @@ funksjonsdeklarasjonen, og deklarasjoner heises, så alle kall — også under
 | `baseRate(h, a)` | overstyrt | `stateRate` med byggingens rating. **I praksis død**: eneste bruker er `qaLuck`, som ikke kan nås | statiske att/con |
 
 Globale variabler: `ELO` (modellfilen), `ELO_LAM` (λ, 1X2 og `blend_lam` per
-gjenstående kamp), `ELO_EKTE` (**død kode** — brukt da scenarioer flyttet
-ratingen, nå satt men ikke lest).
+gjenstående kamp), `ELO_HVA` (c, d, b og reserve-k fra `HVA`, kontrollert av M),
+`ELO_EKTE` (**død kode** — satt, men ikke lest; `matches` inneholder bare
+gjenstående kamper, så spilte kamper kan ikke oppdateres to ganger).
 
 ### B. Inngrep inne i eksisterende kode
 
@@ -204,10 +249,11 @@ ratingen, nå satt men ikke lest).
 |---|---|---|
 | «Om tabellkalkulatoren» | avsnitt om «Hvem har vært heldig eller uheldig» | fjernet |
 | «Slik fungerer det», 1. avsnitt | styrke «fra målene sine … der nye kamper teller mest» | én rating siden 2012, 90 % markedssignal, 10 % resultat |
-| «Slik fungerer det», 2. avsnitt | Styrke «over hele sesongen» | Styrke = rating omregnet til forventede poeng per kamp; egne resultater flytter den ikke |
-| detaljer, simuleringen | «lagstyrken oppdateres etter hver kamp i hver simulerte sesong» | lagstyrken holdes **fast**, som i testene |
-| detaljer, typisk sesongforløp | «med formoppdatering underveis» | «med fast lagstyrke» — `simulateTypicalAsync` bruker `oddsOverrideFor`, som gir faste rater |
-| detaljer, Sarpsborg-avsnittet | Full-styrken flyttet Sarpsborg 08 fra 4,80 til 4,65 | ratingen flyttes etter spilte kamper, ikke av egne resultater |
+| «Slik fungerer det», 2. avsnitt | Styrke «over hele sesongen» | Styrke = rating omregnet til forventede poeng per kamp; et utfylt resultat flytter ratingen, og kampene etter regnes med den nye |
+| detaljer, simuleringen | «lagstyrken oppdateres etter hver kamp i hver simulerte sesong» | inne i hver simulerte sesong holdes lagstyrken **fast**, som i testene; bare resultatene i kamplisten flytter den |
+| detaljer, typisk sesongforløp | «med formoppdatering underveis» | trekkes «med fast lagstyrke» (`oddsOverrideFor` gir faste rater); når kampene er fylt inn, flytter de ratingen som egne resultater |
+| detaljer, Sarpsborg-avsnittet | Full-styrken flyttet Sarpsborg 08 fra 4,80 til 4,65 | fjernet — erstatningen gjentok «Slik fungerer det» |
+| `howP2` | — | resultater fra brukeren og simuleringsknappene flytter ratingen etter samme regel som spilte kamper; Monte Carlo holder den fast |
 | `howP1` | `k = 83.37` | `k = 83,37` |
 | «Hvordan vet vi at modellen virker?» | produksjonens validering: 20 mot 18 prosent, sist validert 24. september, `backtest_zones.py`, kalibreringstabeller | kort tekst: testet i laben mot produksjonsmodellen, labresultatene for ELO-Odds 90 er ikke publisert på siden ennå, treffsikkerhet først etter en sesong. `accuracyLog` står som skjult stubb fordi JS skriver til den. `modelExample` (for eksempel Viking mot Brann) **vises**: den regnes med `rateFor` og `outcome`, de samme tallene som kamplisten, og er riktig for ELO90 |
 | FAQ «Hvordan regnes sannsynlighetene ut?» | «en modell tilpasset på mål og sluttodds» | ELO-Odds 90: én rating per lag siden 2012, 90 % markedssignal |
@@ -273,9 +319,16 @@ testsidespesifikk og skal ikke porteres. `ELO_EKTE` kan fjernes.
   historikk, prekick og treffsikkerhet — er skjult. De er ikke regnet om med
   ELO90. Treffsikkerhet kan uansett ikke vises før prognoseloggen har en
   sesong bak seg.
-- **Scenarioer holder ratingen fast**, som i laben. Fyller brukeren inn et
-  resultat, endres tabellen, men ikke lagstyrken. Produksjonssiden justerer
-  styrkene. At ratingen burde flyttes er mulig, men utestet.
+- **Ratingoppdatering i scenarioer er ikke validert i laben.** Regelen er
+  labens egen og er kontrollert bit-eksakt mot den (M), men laben har ikke
+  målt hva det gjør med prognosene at brukerens resultater flytter ratingen.
+- **Monte Carlo med fast rating** avventer labtesten av dynamisk rating.
+- **Forenklingen** (resulterende rating også for åpne kamper før en utfylt
+  kamp) er ikke kronologisk. Den er valgt fordi produksjonen gjør det samme.
+- **Knappene trekker med fast lagstyrke.** «Simuler tomme kamper» og de andre
+  trekker hele forløpet med λ fra ratingen på trekketidspunktet, i én
+  omgang. Ratingen oppdateres først når resultatene står i kamplisten; den
+  oppdateres ikke underveis i trekningen.
 - **Flaks-spørsmålet** er fjernet, ikke løst. Det lå også som reserve i
   `renderQaHighlight`, som kontroll G ikke så; kontroll L gjør det nå. Det krever å vurdere hver spilt
   kamp med ratingen slik den var **før** kampen, som finnes i
