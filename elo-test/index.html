@@ -6457,7 +6457,8 @@ async function boot(){
     // stateRate() den blandede raten og rateFor() blandet EN GANG TIL --
     // dobbeltblanding. Fanget av aa kartlegge fitRates-kallstedene.
     ELO_LAM[r.home+"|"+r.away] = {dr:r.dr, lam:r.lam, p:[r.pH,r.pU,r.pB],
-                                  blend_lam:r.blend_lam||null};
+                                  blend_lam:r.blend_lam||null,
+                                  blend_tabell:r.blend_tabell||null};
   });
   ELO_EKTE = new Set((MATCHES_IN||[]).filter(m=>m.hg!=null)
                                      .map(m=>m.home+"|"+m.away));
@@ -6706,14 +6707,32 @@ function computeLiveState(){
   return {R, att:z(), con:z(), ha:z(), hc:z()};
 }
 
-/* Maalratene for en kamp. Bruker byggingens ferdige lambda naar ratingen er
-   uendret -- de er kontrollert bit-eksakt mot labens fit_rates. Er ratingen
-   flyttet av et scenario, regnes lambda i nettleseren med samme rutesok. */
+/* lambda-TABELLEN fra bygg.py: labens fit_rates(olr_sannsyn(dr)) som
+   bruddpunkter. verdi[i] gjelder for bp[i-1] <= dr < bp[i], altsaa indeksen er
+   antall bruddpunkter <= dr -- samme som bisect_right i Python. Kontroll T
+   krever at dette oppslaget er bit-likt Pythons.
+
+   HVORFOR IKKE JS-fitRates: den bruker et annet rutenett (0,05 + 0,005) enn
+   labens fit_rates (0,01) og gir andre maalrater for 74 % av
+   ratingforskjellene. Tabellen er labens egen. */
+function eloTabellOppslag(tab, dr){
+  let lo = 0, hi = tab.bp.length;
+  while(lo < hi){ const m = (lo + hi) >> 1; if(tab.bp[m] <= dr) lo = m + 1; else hi = m; }
+  return [tab.lh[lo], tab.la[lo]];
+}
+
+/* Maalratene for en kamp. Byggingens ferdige lambda naar ratingforskjellen er
+   uendret (bit-lik labens fit_rates); ellers lambda-tabellen.
+
+   OVERGANG: en model.json fra foer tabellen fantes har ingen lam_tabell. Da
+   brukes JS-fitRates, som foer. CI bygger tabellen ved foerste kjoring, og
+   kontroll T feiler hvis den mangler. */
 function stateRate(state,home,away){
   const k = home+"|"+away;
   const dr = (state.R[home]||0) - (state.R[away]||0);
   const bygd = ELO_LAM[k];
   if(bygd && Math.abs(dr-bygd.dr) < 1e-12) return [bygd.lam[0], bygd.lam[1]];
+  if(ELO.lam_tabell) return eloTabellOppslag(ELO.lam_tabell, dr);
   const p = eloOLR(ELO.olr, dr);
   return fitRates(p[0], p[2], bygd ? bygd.lam : [1.3,1.3]);
 }
@@ -6825,8 +6844,12 @@ function rateFor(home,away){
     : (p=>({H:p[0],U:p[1],B:p[2]}))(eloOLR(ELO.olr, dr));
   const mk=[o.H,o.D,o.A];
   const pH=ODDS_W*mk[0]+(1-ODDS_W)*md.H, pB=ODDS_W*mk[2]+(1-ODDS_W)*md.B;
+  // Blandet lambda: byggingens naar ratingforskjellen er uendret, ellers
+  // kampens egen blandingstabell (bygget med normaliserte odds, som
+  // blend_lam). JS-fitRates bare for en model.json uten tabeller.
   const r=(bygd && bygd.blend_lam && Math.abs(dr-bygd.dr)<1e-12)
     ? [bygd.blend_lam[0], bygd.blend_lam[1]]
+    : (bygd && bygd.blend_tabell) ? eloTabellOppslag(bygd.blend_tabell, dr)
     : fitRates(pH,pB,base);
   RATES[k]={r,odds:true,mk,md,meta:o}; return r;
 }
@@ -6844,9 +6867,7 @@ function oddsOverrideFor(home,away){ return rateFor(home,away); }
 /* STATISK modell, til "flaks"-sammenligningen: ratingen fra byggingen, FOER
    scenariokamper. Samme rolle som MODEL.att/con hadde. */
 function baseRate(home,away){
-  const R = ELO.rating_alle || ELO.rating;
-  const p = eloOLR(ELO.olr, (R[home]||0)-(R[away]||0));
-  return fitRates(p[0], p[2], [1.3,1.3]);
+  return stateRate({R: ELO.rating_alle || ELO.rating}, home, away);
 }
 
 </script>

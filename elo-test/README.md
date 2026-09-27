@@ -36,6 +36,19 @@ Panelene er skjult.
 - **70 % direkte markedsblanding** på kommende kamper som finnes i
   produksjonens `odds_upcoming.json`. Ellers ELO90 alene. Vekten er
   produksjonens og er ikke tunet.
+- **λ-tabellen.** `bygg.py` legger labens `fit_rates(olr_sannsyn(dr))` i
+  `model.json` som bruddpunkter (`lam_tabell`, ~1760 segmenter), og for hver
+  kamp med odds en blandingstabell (`blend_tabell`) for
+  `fit_rates(0,7 × marked + 0,3 × OLR(dr))`, med normaliserte odds som
+  `blend_lam`. Siden bruker byggingens λ når ratingforskjellen er uendret og
+  tabellen ellers — aldri JS-`fitRates`, som bruker et annet rutenett og gir
+  andre målrater for 74 % av ratingforskjellene. Tabellen bygges ved
+  nærmeste-nabo-søk i labens rutenett (k-d-tre; nesten like avstander avgjøres
+  av `fit_rates` selv), skann på 0,0005 i [−800, 800], bisektering til 1e-9, og
+  hvert segment kontrollert mot `fit_rates` i midtpunktet. ~18 s per bygging.
+  Tabellene sammenlignes ikke ved skrivetoleransen: de er avledet av `olr` og
+  `kamper` i samme fil og bygges bare når filen skrives, så maskinstøy i dem
+  gir ingen commit.
 
 ## Den frosne prognosen
 
@@ -150,8 +163,9 @@ funksjonsdeklarasjonen, og deklarasjoner heises, så alle kall — også under
 |---|---|---|---|
 | `eloOLR(par, dr)` | ny | 1X2 av ratingforskjellen; speiler labens `olr_sannsyn` tegn for tegn: `p0 = sig(t1 − z)` borteseier, `p2 = 1 − sig(t2 − z)` hjemmeseier, z klippet til [−60, 60] | — |
 | `computeLiveState()` | overstyrt | returnerer byggingens rating **uendret**; scenarioer flytter den ikke. `att/con/ha/hc` er nullfylte bærere | bygget att/con/ha/hc fra `MODEL` og drev dem med `FORM_K` for alle spilte kamper |
-| `stateRate(state, h, a)` | overstyrt | byggingens λ når ratingforskjellen er uendret (bit-lik laben); ellers `eloOLR` → `fitRates` | `exp(mu + H + att + ha + con − hc)` |
-| `rateFor(h, a)` | overstyrt | 70 %-blanding av **OLR-sannsynlighetene** med markedet; byggingens `blend_lam` når den finnes | blandet `outcome(λ)` med markedet |
+| `eloTabellOppslag(tab, dr)` | ny | oppslag i en bruddpunkttabell; indeksen er antall bruddpunkter ≤ dr, som `bisect_right` | — |
+| `stateRate(state, h, a)` | overstyrt | byggingens λ når ratingforskjellen er uendret (bit-lik laben); ellers `lam_tabell`. JS-`fitRates` bare for en `model.json` uten tabell (overgang) | `exp(mu + H + att + ha + con − hc)` |
+| `rateFor(h, a)` | overstyrt | 70 %-blanding av **OLR-sannsynlighetene** med markedet; byggingens `blend_lam` når ratingforskjellen er uendret, ellers kampens `blend_tabell` | blandet `outcome(λ)` med markedet |
 | `oddsOverrideFor(h, a)` | overstyrt | returnerer λ for **alle** kamper, slik at workeren bruker faste rater, som labens `faste` | returnerte λ bare for kamper med odds, ellers `null` |
 | `eloPPK(R, lag)` | ny | balansert forventet poeng per kamp: `eloOLR` mot hvert av de andre lagene **både hjemme og borte**, `3·P(seier) + P(uavgjort)`, snitt over 2·(n−1) kamper. Hjemmefordelen ligger i OLR-tersklene, så begge må med | — |
 | `eloStyrke(R, lag)` | ny | **produksjonens formel**: `5 + (ppk − snitt) · FORM_SPAN`, klippet til [0, 10]. Første utkast brukte `(rating − snitt)/100 · FORM_SPAN`, som ga spenn 1,1–12,9 og klippet Glimt og Viking til 10,0 | — |
@@ -159,7 +173,7 @@ funksjonsdeklarasjonen, og deklarasjoner heises, så alle kall — også under
 | `neutralExpPts()` | overstyrt | returnerer 0, ikke i bruk | forventede poeng på nøytral bane |
 | `renderModelTbl()` | overstyrt | ratingtabell: rating, mot snittet, H/U/B mot snittlag | «Slik fungerer det»: fire forventede mål per lag |
 | `teamFormHistory(team)` | overstyrt | `eloStyrke` på ratingen per kampdag fra `rating_historikk`, altså samme skala som Styrke-kolonnen | kjørte FORM_K-oppdateringen på nytt |
-| `baseRate(h, a)` | overstyrt | byggingens rating → `eloOLR` → `fitRates`. **I praksis død**: eneste bruker er `qaLuck`, som ikke kan nås | statiske att/con |
+| `baseRate(h, a)` | overstyrt | `stateRate` med byggingens rating. **I praksis død**: eneste bruker er `qaLuck`, som ikke kan nås | statiske att/con |
 
 Globale variabler: `ELO` (modellfilen), `ELO_LAM` (λ, 1X2 og `blend_lam` per
 gjenstående kamp), `ELO_EKTE` (**død kode** — brukt da scenarioer flyttet
@@ -210,6 +224,13 @@ Enkeltord er **ikke** forbudt med vilje. Testsiden sier selv «Det finnes ingen
 halveringstid» og «har ikke egne angreps- og forsvarstall» — korrekte
 negasjoner. Et forbud mot ordene ville tvunget bort riktig tekst, og korrekt
 brukertekst skal ikke endres for at en kontroll skal passere.
+
+Kontroll **T** måler tabellen mot `fit_rates` på ~42 000 punkter (tilfeldige,
+kampenes egne dr og alle bruddpunktene) og blandingstabellene på 24 000; avvik
+rapporteres, ikke kreves null, fordi segmenter smalere enn skannesteget kan
+mangle. Den krever at sidens oppslag er bit-likt Pythons, og at `stateRate` og
+`rateFor` faktisk bruker tabellene når ratingen er flyttet. Mutasjoner (`<` for
+`<=`, tabellen koblet fra) er kontrollert å feile.
 
 Kontroll **K** regner Styrke uavhengig i Python og krever likhet med sidens
 `eloStyrke`, og at ingen lag er klippet til 0 eller 10. Den sjekker også

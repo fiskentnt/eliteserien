@@ -547,6 +547,119 @@ krev("qaHighlight faller ikke tilbake til 'luck'",
      "dataset.qid = 'luck'" not in _aktiv_js and "qid || 'luck'" not in _aktiv_js)
 
 # ---------- E: festede sha256
+# ---------- T: lambda-TABELLEN -- labens fit_rates som bruddpunkter
+# Naar ratingen er flyttet, bruker siden tabellen i stedet for JS-fitRates.
+# Tabellen er bygget av bygg.py fra labens fit_rates(olr_sannsyn(dr)) og, per
+# kamp med odds, fra fit_rates paa den blandede sannsynligheten. Den er ikke
+# bevist eksakt: segmenter smalere enn skannesteget kan mangle. Derfor
+# MAALES den mot fit_rates paa tilfeldige punkter. Sidens oppslag, derimot,
+# skal vaere BIT-LIKT Pythons, og stateRate/rateFor skal faktisk bruke den.
+print("\nT   lambda-tabellen: labens fit_rates som bruddpunkter")
+import bisect as _bs
+import random as _rt
+_tab = M.get("lam_tabell")
+krev("model.json har lam_tabell", _tab is not None)
+_btab = [r for r in M["kamper"] if "marked" in r]
+krev(f"alle {len(_btab)} kamper med odds har blend_tabell",
+     all("blend_tabell" in r for r in _btab))
+if _tab is not None and all("blend_tabell" in r for r in _btab):
+    def _stig(tb):
+        return all(a < b for a, b in zip(tb["bp"], tb["bp"][1:])) and \
+            len(tb["lh"]) == len(tb["la"]) == len(tb["bp"]) + 1
+    krev("bruddpunktene er strengt stigende, verdiene en flere",
+         _stig(_tab) and all(_stig(r["blend_tabell"]) for r in _btab),
+         f"{len(_tab['bp']) + 1} segmenter")
+    def _slaa(tb, dr):
+        i = _bs.bisect_right(tb["bp"], dr)
+        return (tb["lh"][i], tb["la"][i])
+    _rg2 = _rt.Random(4711)
+    _pk = ([_rg2.uniform(-800, 800) for _ in range(20000)]
+           + [_rg2.gauss(0, 150) for _ in range(20000)]
+           + [r["dr"] for r in M["kamper"]]
+           + list(_tab["bp"]))   # bruddpunktene selv: der skiller <= og <
+    _par = M["olr"]
+    _avv, _maks = 0, 0.0
+    for _x in _pk:
+        _ph, _pu, _pb = E.olr_sannsyn(_par, _x)
+        _f = E.fit_rates(_ph, _pb, 0.0); _t = _slaa(_tab, _x)
+        if _f != _t:
+            _avv += 1; _maks = max(_maks, abs(_f[0] - _t[0]), abs(_f[1] - _t[1]))
+    print(f"  MAALT  tabell mot fit_rates(olr_sannsyn(dr)): {_avv} avvik av {len(_pk)} "
+          f"punkter, stoerste lambda-avvik {_maks:.3f}")
+    _bpk = {}
+    _bavv, _bn = 0, 0
+    for r in _btab:
+        mk = r["marked"]
+        pts = [_rg2.uniform(-800, 800) for _ in range(2000)] + [_rg2.gauss(r["dr"], 60) for _ in range(1000)] + [r["dr"]]
+        _bpk[r["home"] + "|" + r["away"]] = pts
+        for _x in pts:
+            _ph, _pu, _pb = E.olr_sannsyn(_par, _x)
+            _f = E.fit_rates(0.70 * mk[0] + (1 - 0.70) * _ph, 0.70 * mk[2] + (1 - 0.70) * _pb, 0.0)
+            _bn += 1
+            if _f != _slaa(r["blend_tabell"], _x):
+                _bavv += 1
+    print(f"  MAALT  blandingstabellene mot fit_rates paa blandet 1X2: {_bavv} avvik av {_bn} punkter")
+    krev("blandingstabellen gir byggingens blend_lam ved kampens egen dr",
+         all(list(_slaa(r["blend_tabell"], r["dr"])) == r["blend_lam"] for r in _btab))
+
+    # Sidens oppslag og kobling i Node.
+    _jst = ("const GMAX=15;\nconst ODDS_W=0.7;\n"
+            "let ELO=null,ELO_LAM={},RATES={},LIVE=null,ODDS_UP={};\n"
+            + "".join([_hent("pois"), _hent("dcTau"), _hent("outcome"), _hent("fitRates"),
+                       _hent("eloOLR"), _hent("eloTabellOppslag"),
+                       _hent("stateRate", True), _hent("rateFor", True)])
+            + r"""
+const fs=require('fs');
+const M=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
+const OJ=JSON.parse(fs.readFileSync(process.argv[3],'utf8'));
+const INN=JSON.parse(fs.readFileSync(process.argv[4],'utf8'));
+ELO=M;
+M.kamper.forEach(r=>{ELO_LAM[r.home+"|"+r.away]={dr:r.dr,lam:r.lam,p:[r.pH,r.pU,r.pB],blend_lam:r.blend_lam||null,blend_tabell:r.blend_tabell||null};});
+OJ.matches.forEach(o=>{ ODDS_UP[o.home+"|"+o.away]=o; });
+const opp=INN.pk.map(x=>eloTabellOppslag(M.lam_tabell,x));
+const bopp={}; for(const k in INN.bpk){ bopp[k]=INN.bpk[k].map(x=>eloTabellOppslag(ELO_LAM[k].blend_tabell,x)); }
+// Kobling: flytt hjemmelagets rating med +d og se hva stateRate og rateFor gir.
+const kobling=[];
+for(const r of M.kamper){
+  for(const d of [-37.5, 12.25, 80]){
+    const R=Object.assign({}, M.rating_alle||M.rating); R[r.home]=(R[r.home]||0)+d;
+    LIVE={R}; RATES={};
+    kobling.push({k:r.home+"|"+r.away, dr:(R[r.home]||0)-(R[r.away]||0), s:stateRate(LIVE,r.home,r.away), f:rateFor(r.home,r.away)});
+  }
+}
+console.log(JSON.stringify({opp,bopp,kobling}));
+""")
+    with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fh:
+        json.dump({"pk": _pk, "bpk": _bpk}, fh); _inn_t = fh.name
+    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False, encoding="utf-8") as fh:
+        fh.write(_jst); _jp_t = fh.name
+    _r_t = subprocess.run(["node", _jp_t, str(UT / "model.json"), str(PROD / "odds_upcoming.json"), _inn_t],
+                          capture_output=True, text=True)
+    if _r_t.returncode:
+        _fl = [l for l in _r_t.stderr.splitlines() if "Error" in l] or ["?"]
+        krev("Node-sjekken for tabellen kjorer", False, _fl[0][:200])
+    else:
+        _dt = json.loads(_r_t.stdout)
+        _ulik = sum(1 for x, j in zip(_pk, _dt["opp"]) if tuple(j) != _slaa(_tab, x))
+        krev(f"sidens eloTabellOppslag = Pythons oppslag ({len(_pk)} punkter)", _ulik == 0,
+             f"{_ulik} ulike")
+        _bulik = sum(1 for k, xs in _bpk.items() for x, j in zip(xs, _dt["bopp"][k])
+                     if tuple(j) != _slaa(next(r for r in _btab if r["home"] + "|" + r["away"] == k)["blend_tabell"], x))
+        krev(f"sidens oppslag i blandingstabellene = Pythons ({_bn} punkter)", _bulik == 0,
+             f"{_bulik} ulike")
+        _kr = {r["home"] + "|" + r["away"]: r for r in M["kamper"]}
+        _ks = sum(1 for o in _dt["kobling"] if tuple(o["s"]) != _slaa(_tab, o["dr"]))
+        krev(f"stateRate bruker lam_tabell naar ratingen er flyttet ({len(_dt['kobling'])} tilfeller)",
+             _ks == 0, f"{_ks} ulike")
+        _kf = 0
+        for o in _dt["kobling"]:
+            r = _kr[o["k"]]
+            forv = _slaa(r["blend_tabell"], o["dr"]) if "blend_tabell" in r else _slaa(_tab, o["dr"])
+            if tuple(o["f"]) != forv:
+                _kf += 1
+        krev("rateFor bruker blandingstabellen (odds) eller lam_tabell (uten) naar ratingen er flyttet",
+             _kf == 0, f"{_kf} ulike")
+
 print("\nE   festede sha256")
 for rel, ventet in FESTET.items():
     p = HER.parent / rel

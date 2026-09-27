@@ -94,6 +94,102 @@ def lik_innenfor(a, b, tol=TOL_FIL):
     return a == b
 
 
+# ---- lambda-TABELLEN: ratingforskjell -> (lh, la), fra labens fit_rates
+#
+# Naar et scenario flytter ratingen, trenger siden lambda for en ny
+# ratingforskjell. JS-fitRates (rutenett 0,05 + 0,005) gir ANDRE maalrater enn
+# labens fit_rates (rutenett 0,01) for 74 % av ratingforskjellene -- en annen
+# modell. Denne tabellen er labens egen: lambda = fit_rates(olr_sannsyn(dr)).
+#
+# fit_rates velger et punkt i et fast rutenett, saa funksjonen dr -> lambda er
+# STYKKEVIS KONSTANT og kan lagres som bruddpunkter: verdi[i] gjelder for
+# bp[i-1] <= dr < bp[i]. Oppslag: verdi[bisect_right(bp, dr)].
+#
+# BYGGING: fit_rates er argmin av kvadratavstanden i (H, B)-rommet over 436^2
+# punkter, altsaa naermeste nabo. Et k-d-tre gir samme svar; der de to
+# naermeste er nesten like langt unna (relativt 1e-9), brukes fit_rates selv.
+# Skann dr tett, bisekter hvert skifte til 1e-9 med SKALARE olr_sannsyn, og
+# kontroller hvert segment mot fit_rates i midtpunktet. Segmenter smalere enn
+# skannesteget kan mangle; kontroll T tester tabellen mot fit_rates paa
+# tilfeldige punkter og rapporterer avvikene.
+_TRE = None
+def _fit_rask(ph, pb):
+    global _TRE
+    from scipy.spatial import cKDTree
+    g, Hg, Bg = E._grid(RHO)
+    if _TRE is None:
+        _TRE = cKDTree(np.column_stack([Hg.ravel(), Bg.ravel()]))
+    q = np.column_stack([np.atleast_1d(ph), np.atleast_1d(pb)])
+    d, idx = _TRE.query(q, k=2)
+    ut = idx[:, 0].copy()
+    naer = (d[:, 1] - d[:, 0]) <= 1e-9 * np.maximum(d[:, 0], 1e-300)
+    for i in np.nonzero(naer)[0]:
+        lh, la = E.fit_rates(float(q[i, 0]), float(q[i, 1]), RHO)
+        ut[i] = int(np.nonzero(g == lh)[0][0]) * len(g) + int(np.nonzero(g == la)[0][0])
+    return ut
+
+
+def lambda_tabell(sannsyn):
+    """Bruddpunkttabell for dr -> fit_rates(*sannsyn(dr)). sannsyn(dr) gir
+    (pH, pB) for en skalar dr; den kalles ogsaa vektorisert paa en ndarray."""
+    g = E._grid(RHO)[0]
+    n = len(g)
+    xs = np.unique(np.concatenate([np.arange(-1500.0, -800.0, 0.01),
+                                   np.arange(-800.0, 800.0, 0.0005),
+                                   np.arange(800.0, 1500.0 + 0.005, 0.01)]))
+    ph, pb = sannsyn(xs)
+    v = _fit_rask(ph, pb)
+    f = lambda x: int(_fit_rask(*sannsyn(np.array([x])))[0])
+    bp, verdi = [], [f(float(xs[0]))]
+    for i in np.nonzero(v[1:] != v[:-1])[0]:
+        a, x1 = float(xs[i]), float(xs[i + 1])
+        v1 = f(x1)
+        while verdi[-1] != v1:
+            lo, hi = a, x1
+            while hi - lo > 1e-9:
+                m = (lo + hi) / 2
+                if f(m) == verdi[-1]:
+                    lo = m
+                else:
+                    hi = m
+            bp.append(hi); verdi.append(f(hi)); a = hi
+    # Hvert segment mot fit_rates selv, i midtpunktet.
+    kant = [-1500.0] + bp + [1500.0]
+    for k, val in enumerate(verdi):
+        mid = (kant[k] + kant[k + 1]) / 2
+        p1, p2 = sannsyn(np.array([mid]))
+        lh, la = E.fit_rates(float(p1[0]), float(p2[0]), RHO)
+        assert (lh, la) == (float(g[val // n]), float(g[val % n])), \
+            f"segment {k} ved dr = {mid}: tabell og fit_rates er uenige"
+    return {"bp": bp,
+            "lh": [float(g[x // n]) for x in verdi],
+            "la": [float(g[x % n]) for x in verdi]}
+
+
+def olr_vek(par):
+    """(pH, pB) for en skalar eller ndarray dr; skalar gaar via labens
+    olr_sannsyn, saa bisekteringen bruker noyaktig den."""
+    def s(dr):
+        dr = np.asarray(dr, dtype=float)
+        if dr.size == 1:
+            ph, _pu, pb = E.olr_sannsyn(par, float(dr.ravel()[0]))
+            return np.array([ph]), np.array([pb])
+        t1, t2, beta = par
+        sig = lambda z: 1.0 / (1.0 + np.exp(-np.clip(z, -60.0, 60.0)))
+        z = beta * dr
+        return 1.0 - sig(t2 - z), sig(t1 - z)
+    return s
+
+
+def blend_vek(par, mk):
+    """Samme blanding som i kamper-lokken: BLEND_W * marked + (1 - BLEND_W) * OLR."""
+    s = olr_vek(par)
+    def b(dr):
+        ph, pb = s(dr)
+        return BLEND_W * mk[0] + (1 - BLEND_W) * ph, BLEND_W * mk[2] + (1 - BLEND_W) * pb
+    return b
+
+
 def main():
     meta_h, hist = last_historikk()
     s26 = last_2026()
@@ -174,7 +270,7 @@ def main():
     lag = sorted({m["home"] for m in s26} | {m["away"] for m in s26})
     UT.mkdir(parents=True, exist_ok=True)
 
-    def skriv_hvis_endret(navn, d, ignorer):
+    def skriv_hvis_endret(navn, d, ignorer, tillegg=None):
         """Skriver bare naar INNHOLDET er endret, tidsstempler holdt utenfor.
 
         HVORFOR: "Oppdater kampdata" kan kjore hvert tiende minutt. Et
@@ -201,9 +297,22 @@ def main():
         ny = {k: v for k, v in d.items() if k not in ignorer}
         if p.exists():
             gml = json.loads(p.read_text(encoding="utf-8"))
-            if lik_innenfor({k: v for k, v in gml.items() if k not in ignorer},
-                            ny):
+            if tillegg is not None:
+                # Tabellene sammenlignes ikke: de er avledet av olr og kamper
+                # i SAMME fil og bygges paa nytt bare naar filen skrives. Da
+                # gir maskinstoy i tabellen ingen commit. Men filen maa ha dem.
+                har = all(k in gml for k in tillegg[0]) and all(
+                    "blend_tabell" in r for r in gml.get("kamper", []) if "marked" in r)
+                gml = {k: v for k, v in gml.items() if k not in tillegg[0]}
+                gml["kamper"] = [{k: v for k, v in r.items() if k != "blend_tabell"}
+                                 for r in gml.get("kamper", [])]
+            else:
+                har = True
+            if har and lik_innenfor({k: v for k, v in gml.items() if k not in ignorer},
+                                    ny):
                 return False
+        if tillegg is not None:
+            tillegg[1](d)
         p.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n",
                      encoding="utf-8")
         return True
@@ -230,7 +339,20 @@ def main():
         "rating_historikk": hist_r,
         "built": datetime.now(timezone.utc).isoformat(timespec="seconds"),
     }
-    endret_modell = skriv_hvis_endret("model.json", MODELL, {"built"})
+    def legg_til_tabeller(d):
+        import time
+        t0 = time.perf_counter()
+        d["lam_tabell"] = lambda_tabell(olr_vek(d["olr"]))
+        nb = 0
+        for r in d["kamper"]:
+            if "marked" in r:
+                r["blend_tabell"] = lambda_tabell(blend_vek(d["olr"], r["marked"]))
+                nb += 1
+        print(f"  lambda-tabell: {len(d['lam_tabell']['bp']) + 1} segmenter, "
+              f"{nb} blandingstabeller, {time.perf_counter() - t0:.1f} s")
+
+    endret_modell = skriv_hvis_endret("model.json", MODELL, {"built"},
+                                      tillegg=(("lam_tabell",), legg_til_tabeller))
     META = {
         "version": 1, "w": W, "k": K, "rho": RHO, "blend_w": BLEND_W,
         "hjemmefordel_rating": hr,
