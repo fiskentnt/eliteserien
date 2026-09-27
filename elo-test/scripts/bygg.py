@@ -283,14 +283,16 @@ def main():
     # mot siste loggede linje for samme kamp.
     #
     # HVORFOR EN TERSKEL og ikke likhet paa de avrundede tallene: byggingen er
-    # ikke bit-reproduserbar mellom plattformer. Ratingene skiller 2,8e-14
-    # mellom macOS og Linux, men olr_tilpass bruker scipys Nelder-Mead, som
-    # forsterker det til ~8e-09 i parameterne og ~2e-09 i 1X2. Ligger en verdi
-    # naer en avrundingsgrense, vipper sjette desimal. Det skjedde i den forste
-    # CI-kjoringen: Aalesund - Bodo/Glimt, borteseier 0,722485499307 lokalt, bare
-    # 6,9e-10 under grensen 0,7224855, og 0,722485500848 i CI. En falsk linje.
+    # ikke bit-reproduserbar mellom maskiner, heller ikke mellom to
+    # CI-kjoringer (samme image og versjoner, ulik Azure-region). Ratingene
+    # skiller 2,8e-14 mellom macOS og CI, men olr_tilpass bruker scipys
+    # Nelder-Mead, som forsterker det til ~8e-09 i parameterne og ~2e-09 i 1X2.
+    # Ligger en verdi naer en avrundingsgrense, vipper sjette desimal. Det
+    # skjedde i den forste CI-kjoringen: Aalesund - Bodo/Glimt, borteseier
+    # 0,722485499307 lokalt, bare 6,9e-10 under grensen 0,7224855, og
+    # 0,722485500848 i CI. Fire falske linjer i alt; se README.
     #
-    # 1e-5 er ti avrundingsenheter: langt over plattformstoyen, og langt under
+    # 1e-5 er ti avrundingsenheter: langt over stoyen, og langt under
     # det siden viser (hele prosent). En reell endring fanges; stoy gjor ikke.
     #
     # Ikke-tall (modell, dato, avspark, og om markedet finnes) sammenlignes

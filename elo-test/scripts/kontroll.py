@@ -96,9 +96,9 @@ if _p.exists():
 # PAA SAMME MASKIN -- en gang med den isolerte modulen, en gang med labens -- og
 # sammenligner de to. model.json brukes bare som liste over kamppar;
 # ratingforskjellen kommer fra den lokale kjoringen. Det er viktig fordi
-# model.json bygges i CI (Linux), og macOS gir ~8e-09 forskjell i OLR. Hadde
-# A1 sammenlignet mot filen med 1e-12, ville den feilet paa plattformen og ikke
-# paa koden. Verifisert: lokalt mot CI-bygget model.json gir 0,000e+00.
+# model.json bygges i CI, og en annen maskin -- macOS, eller en CI-runner i en
+# annen region -- gir ~8e-09 forskjell i OLR. Hadde A1 sammenlignet mot filen
+# med 1e-12, ville den feilet paa maskinen og ikke paa koden. Verifisert: lokalt mot CI-bygget model.json gir 0,000e+00.
 print("A1  den isolerte modulen mot labens egne funksjoner, samme input")
 if lab_mod is None:
     print("     laben finnes ikke -- hoppes over (den trengs aldri ved kjoring)")

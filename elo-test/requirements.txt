@@ -6,8 +6,9 @@
 # commit av model.json uten at noe i dataene er endret. requirements.txt i
 # roten har >=-grenser og kan hente nye versjoner naar som helst.
 #
-# Laasingen fjerner IKKE forskjellen mellom plattformer: lokalt (macOS) og CI
-# (Linux) hadde de samme versjonene og ga likevel ~8e-09 forskjell i OLR.
-# Det er terskelen i bygg.py som tar den.
+# Laasingen fjerner IKKE forskjellen mellom maskiner: macOS og CI hadde de
+# samme versjonene og ga likevel ~8e-09 forskjell i OLR, og to CI-kjoringer
+# med samme image og versjoner (westus 10:56 og centralus 11:20, 27.9.) ga
+# ogsaa 8,9e-09. Det er terskelen i bygg.py som tar den i prognoseloggen.
 numpy==2.5.3
 scipy==1.18.1

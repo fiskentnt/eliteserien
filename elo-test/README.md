@@ -46,25 +46,38 @@ mer**. Modell, dato, avspark og om markedet finnes sammenlignes eksakt. En ny
 `odds_hentet` alene er ikke en endring.
 
 **Hvorfor en terskel.** Byggingen er ikke bit-reproduserbar mellom
-plattformer. Ratingene skiller 2,8e-14 mellom macOS og Linux, men
-`olr_tilpass` bruker scipys Nelder-Mead, som forsterker det til ~8e-09 i
-OLR-parameterne og ~2e-09 i 1X2 — med **samme** numpy- og scipy-versjon på
-begge. Ligger en verdi nær en avrundingsgrense, vipper sjette desimal. 1e-5 er
-ti avrundingsenheter: langt over plattformstøyen, langt under det siden viser.
+maskiner, og det gjelder også mellom to CI-kjøringer. Ratingene skiller
+2,8e-14 mellom macOS og CI, men `olr_tilpass` bruker scipys Nelder-Mead, som
+forsterker det til ~8e-09 i OLR-parameterne og ~2e-09 i 1X2. Ligger en verdi
+nær en avrundingsgrense, vipper sjette desimal. 1e-5 er ti avrundingsenheter:
+langt over støyen, langt under det siden viser.
 
-**Én linje i loggen er plattformstøy, ikke en endret prognose.** Linje 73 i
-`2026-09.jsonl`, Aalesund–Bodø/Glimt, skrevet av den første CI-kjøringen
-2026-09-27 10:56 UTC. Borteseier var 0,722485499307 lokalt — 6,9e-10 under
-avrundingsgrensen 0,7224855 — og 0,722485500848 i CI, så 0,722485 ble
-0,722486. Linjen står, siden loggen er append-only, men den er ikke en
-prognoseendring. Terskelen hindrer at det skjer igjen.
+**Også CI mot CI.** Kjøringene 2026-09-27 10:56 UTC (36314089108, Azure
+westus) og 11:20 UTC (36315415718, centralus) hadde samme input (ingen
+produksjonsdata endret etter 10:50), samme image (ubuntu-24.04,
+20260920.314.1) og samme numpy 2.5.3 og scipy 1.18.1. Likevel skilte
+`model.json` seg med opptil 8,9e-09. Det er tre ulike resultater for samme
+input: for Aalesund–Bodø/Glimt ga macOS og centralus 0,722485 og westus
+0,722486; for KFUM Oslo–Brann ga macOS og westus 0,43578 og centralus
+0,435779. Den sannsynlige årsaken er at runnerne har ulike CPU-er og at numpy
+velger regnevei etter CPU; loggene oppgir ikke CPU-modell, så det er ikke
+bekreftet.
+
+**Fire linjer i loggen er støy, ikke endrede prognoser.** Linje 1–72 i
+`2026-09.jsonl` er skrevet av den lokale byggingen 10:18 UTC (macOS). Linje
+73 (Aalesund–Bodø/Glimt, 10:56, westus) og linje 74–76 (KFUM Oslo–Brann,
+Aalesund–Bodø/Glimt og Vålerenga–Rosenborg, 11:20, centralus) avviker hver
+med nøyaktig 1e-06, én avrundingsenhet, fra forrige linje for samme kamp.
+Alle fire ble skrevet av koden før terskelen kom. Med terskelen ville ingen
+av dem blitt skrevet. Linjene står, siden loggen er append-only.
 
 `elo-test/requirements.txt` låser numpy 2.5.3 og scipy 1.18.1, versjonene CI
 brukte. Det hindrer at en scipy-oppgradering flytter tallene; det fjerner ikke
-forskjellen mellom plattformer, som terskelen tar. `model.json` sammenlignes
-fortsatt eksakt, så et plattformbytte — for eksempel ubuntu-latest til
-Ubuntu 26 fra 19. oktober — kan gi én commit av `model.json` uten at dataene
-er endret.
+forskjellen mellom maskiner, som terskelen tar i loggen. `model.json`
+sammenlignes fortsatt eksakt, så en kjøring på en annen CPU enn forrige kan gi
+en commit av `model.json` uten at dataene er endret. Det skjedde i f76708a
+(11:20). Siden viser hele prosent, så slike commits endrer ikke det som vises,
+men de gir commits uten innhold.
 
 **Definisjon:** for en kamp hentes avsparket fra **terminlisten**
 (`fixtures.json`: `date` + `time`, norsk lokaltid, `Europe/Oslo` → UTC). Den
