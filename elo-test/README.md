@@ -45,6 +45,18 @@ leses ikke. `history.json` skrives ikke og vises ikke.
   seg fra produksjonens, at frysregelen er produksjonens modul, at siden henter
   filene fra `emodell/` og ikke `history.json`, og at frosne rader har stempel
   før avspark.
+- **Forrige kamp regnes med oppdatert rating også i lastmatch.json.**
+  `snapshot_probs.js` venter på at sluttoddsen for spilte kamper
+  (`ELO_ODDS_SPILT`) er lastet før lastmatch regnes; ellers ville den regnet
+  med fast rating. Kontroll W åpner siden i Chrome og krever at lastmatch.json
+  har samme forventning og prosentpoeng som `qaLastMatchData` gir direkte, for
+  minst tre lag, og at svaret sier «Ratingen er regnet om ...». I CI
+  installeres puppeteer-core i hver kjøring for dette.
+- **Kontroll R** sammenligner de to frosne registrene kamp for kamp når det
+  finnes frosne kamper: modelltallene i `prekick.json` skal være lik den
+  frosne prognosen i loggen innenfor avrundingen (med odds: OLR mot
+  `elo90_p`; uten odds: outcome av lambda mot `outcome(fit_rates(elo90_p))`).
+  Testet syntetisk (to kamper frosset, avvik 4,6e-05; mutasjon 0,001 feiler).
 
 ## Modellen
 
@@ -173,14 +185,38 @@ linje før avspark kan dermed være fra en tidligere henting, for eksempel
 kamper», og en kamp fjernes først når resultatet står i `matches.json`.
 Definisjonen over tåler det, siden bare linjer med `logget` < avspark teller.
 
+- **Panelene stopper aldri modellen.** `elo-test.yml` har to commits.
+  Først bygges modellen, `kontroll.py` (A til V og E, uten Chrome) kjøres,
+  og `model.json`, `meta.json` og `prognoselogg/` lagres og pushes. Feiler
+  `kontroll.py`, stopper alt der, som før. Deretter regnes panelene,
+  `kontroll_paneler.py` (W, R og panelfilenes tekst i L) kjøres, og først når
+  begge har bestått, lagres de fem panelfilene (`keymatch`, `lastmatch`,
+  `prekick`, `accuracy`, `paneler_grunnlag`) i en egen commit. Feiler
+  panelsteget eller kontrollen, blir de forrige committede panelfilene stående,
+  og jobben blir rød. Kontroll **O** i `kontroll.py` krever denne rekkefølgen,
+  at hver commit tar nøyaktig sine filer, og at ingen `continue-on-error` eller
+  `always()` slipper noe gjennom. Den feiler på den gamle workflowen med én
+  felles `git add elo-test/emodell`.
+  Testet med en simulert kjøring av stegene i en klone med egen origin:
+  (1) med `ELO_ODDS_SPILT` som aldri lastes, fikk panelsteget tidsavbrudd;
+  `model.json` og én ny prognoselinje ble pushet, panelfilene var uendret, og
+  jobben var rød. (2) Uten ventingen i snapshot_probs.js besto panelsteget,
+  men W feilet; resultatet var det samme. (3) Med en endret festet fil feilet
+  `kontroll.py`, og ingenting ble pushet.
+
 Det finnes ingen kunstig historikk: loggen og `prekick.json` starter den
 dagen siden går live. Treffsikkerhetspanelet viser testsidens egne frosne
 kamper fra første runde etter det (9.–12. oktober 2026).
 
 ## Kontroller
 
-`python3 elo-test/scripts/kontroll.py` — hardfeiler. A1 og A2 krever laben og
-hoppes over uten den; resten kjører også i CI.
+`python3 elo-test/scripts/kontroll.py` — hardfeiler og stopper alt. A1 og A2
+krever laben og hoppes over uten den; resten kjører også i CI.
+
+`python3 elo-test/scripts/kontroll_paneler.py` — panelene (W, R og
+panelfilenes tekst i L). Kjøres etter at modellen er lagret; feiler den, lagres
+ikke panelfilene. Chrome-sjekken i W hoppes over lokalt uten puppeteer/Chrome
+og feiler i CI.
 
 Kontroll **M** kjører sidens egne `eloMixLap` og `computeLiveState` i Node mot
 `hva_mix_lap` på samme input: alle 72 gjenstående kamper med trukne resultater

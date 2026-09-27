@@ -2,8 +2,10 @@ name: "ELO-test: bygg modellen"
 
 # Testversjonen under /elo-test/, med ELO-Odds 90 som grunnmodell. Rører INGEN
 # produksjonsfil: skriver bare elo-test/emodell/, og committer bare når
-# modellen eller prognoseloggen faktisk er endret. Uendret prognose gir ingen
-# commit. Se elo-test/README.md.
+# modellen, prognoseloggen eller panelene faktisk er endret. Uendret prognose
+# gir ingen commit. To commits: modellen og prognoseloggen først (stoppes bare
+# av kontroll.py), panelene etterpå (stoppes av panelsteget og
+# kontroll_paneler.py, uten å ta modellen med seg). Se elo-test/README.md.
 #
 # UTLØSES av de tre workflowene som skriver data testsiden leser:
 #   Oppdater kampdata                    matches.json, fixtures.json, odds.json
@@ -60,9 +62,31 @@ jobs:
       - name: Bygg ELO90-modellen
         run: python3 elo-test/scripts/bygg.py
 
+      # MODELLKONTROLLENE (A til V og E, uten Chrome). Feiler en av dem, stopper
+      # alt her: verken modellen, prognoseloggen eller panelene lagres.
+      - name: Kontroller modellen
+        run: python3 elo-test/scripts/kontroll.py
+
+      # MODELLEN OG PROGNOSELOGGEN lagres FØR panelene, i egen commit. Panelene
+      # (under) skal aldri stoppe dem: feiler panelsteget eller
+      # kontroll_paneler.py, er modellen og prognoseloggen allerede pushet.
+      - name: Lagre modellen og prognoseloggen
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add elo-test/emodell/model.json elo-test/emodell/meta.json elo-test/emodell/prognoselogg
+          if git diff --cached --quiet; then
+            echo "Modellen og prognoseloggen er uendret -- ingen commit."
+          else
+            git commit -m "ELO-test: modellen bygget $(date -u +%Y-%m-%dT%H:%MZ)"
+            bash scripts/push_med_rebase.sh
+          fi
+
       # PANELENE: keymatch, lastmatch, prekick og accuracy for /elo-test/,
       # regnet av siden selv (ELO90) med produksjonens egne skript og samme
       # frysregel (scripts/prekick_frys.js). Se elo-test/scripts/paneler.py.
+      # Feiler et steg herfra og ned, hoppes resten over: panelfilene lagres
+      # ikke (de forrige committede står), og jobben blir rød.
       - name: Paneler -- skal de regnes?
         id: paneler
         env:
@@ -70,27 +94,34 @@ jobs:
           HENDELSE: ${{ github.event_name }}
         run: python3 elo-test/scripts/paneler.py port
 
+      # Chrome-oppsett i hver kjøring: panelene trenger det, og kontroll W
+      # sammenligner lastmatch.json med det siden selv regner.
+      - name: Installer puppeteer-core
+        run: npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pp" puppeteer-core@25.11.0
+
       - name: Paneler -- regn dem med /elo-test/
         if: steps.paneler.outputs.kjor == 'true'
         run: |
-          npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pp" puppeteer-core@25.11.0
           CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
           NODE_PATH="$RUNNER_TEMP/pp/node_modules" \
             node scripts/snapshot_probs.js eliteserien --side elo-test --ut elo-test/emodell --uten-historikk
           python3 scripts/accuracy_log.py eliteserien --data elo-test/emodell
           python3 elo-test/scripts/paneler.py etter
 
-      - name: Kontroller
-        run: python3 elo-test/scripts/kontroll.py
-
-      - name: Lagre hvis noe er endret
+      - name: Kontroller panelene
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add elo-test/emodell
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
+          NODE_PATH="$RUNNER_TEMP/pp/node_modules" \
+            python3 elo-test/scripts/kontroll_paneler.py
+
+      - name: Lagre panelene
+        run: |
+          git add elo-test/emodell/keymatch.json elo-test/emodell/lastmatch.json \
+                  elo-test/emodell/prekick.json elo-test/emodell/accuracy.json \
+                  elo-test/emodell/paneler_grunnlag.json
           if git diff --cached --quiet; then
-            echo "Ingenting endret -- ingen commit."
+            echo "Panelene er uendret -- ingen commit."
           else
-            git commit -m "ELO-test: modellen og panelene bygget $(date -u +%Y-%m-%dT%H:%MZ)"
+            git commit -m "ELO-test: panelene regnet $(date -u +%Y-%m-%dT%H:%MZ)"
             bash scripts/push_med_rebase.sh
           fi

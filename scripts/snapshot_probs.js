@@ -88,6 +88,13 @@ function chromePath() {
     page.on('pageerror', e => errs.push(e.message));
     await page.goto(`http://127.0.0.1:${port}/${SIDE}/`, {waitUntil: 'domcontentloaded'});
     await page.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 180000});
+    // Testsiden (/elo-test/) regner "forrige kamp" med ratingen etter det
+    // alternative resultatet, og trenger da sluttoddsen for spilte kamper
+    // (ELO_ODDS_SPILT, hentes ved siden av i boot()). Uten den ville
+    // lastmatch.json blitt regnet med fast rating. Produksjonssidene har ikke
+    // variabelen, og da venter ikke dette. Lastes den aldri, feiler kjøringen
+    // heller enn å skrive feil tall.
+    await page.waitForFunction('typeof ELO_ODDS_SPILT === "undefined" || ELO_ODDS_SPILT !== null', {timeout: 60000});
     const snap = await page.evaluate(() => {
       if (matches.some(m => m.sim || (m.hg != null && !m.played && m.sim))) throw new Error('Siden har simulerte resultater');
       const teams = {};
