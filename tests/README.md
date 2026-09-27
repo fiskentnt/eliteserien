@@ -31,6 +31,7 @@ en bruker ville sett.
 | Lagbytte | bytte av lag flytter ikke siden, men et trykk på et spørsmål scroller til svaret (mobil og PC) |
 | OBOS-ligaen | riktig liga og kolonner (Opprykk, Topp 6, Nedrykk), sonefarger og stiplede linjer på plass 1–2, 3–6, 14 og 15–16, fargeforklaring og kort, og hvert spørsmål svarer med riktig størrelse uten å arve Eliteserien-sonene |
 | OBOS: grensene | kunstige scenarioer der et lag krysser 3.→2., 7.→6., 15.→14. og 14.→13. plass, og sonefargen følger den nye plasseringen |
+| Merker ved poenglikhet | for hver merkegrense og nedrykksgrensen i begge ligaer: ferdigspilt og likt på poeng gir merket bare til laget som står over etter målforskjell; helt likt på poeng, målforskjell og scorede mål gir ingen av dem merket; kan et lag fortsatt nå samme poengsum, venter merket |
 | JS-feil | ingen feil i konsollen gjennom hele kjøringen |
 
 Nye spørsmål i «Spør om tabellen» må legges inn i `QA_EXPECT` i

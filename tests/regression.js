@@ -1644,6 +1644,144 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- Merker ved poenglikhet ----
+    // Et merke ("Seriemester", "Sikret topp 4", "Rykket ned" ...) skal ALDRI
+    // være feil. Tabellen sorteres på poeng, målforskjell og scorede mål, så:
+    //  - ferdigspilt, likt på poeng, ulik målforskjell: bare laget som faktisk
+    //    står over grensen får merket for den grensen
+    //  - kamper igjen: et lag som kan nå samme poengsum kan gå forbi på
+    //    målforskjell, så merket skal vente
+    //  - helt likt på poeng, målforskjell og scorede mål ved en grense: ingen
+    //    av dem får merket, fordi innbyrdes oppgjør ikke er regnet inn
+    // Hver grense i LEAGUE.badges testes, pluss nedrykksgrensen (14./15.), i
+    // begge ligaene. Scenarioet bygges fra dagens tabell: alt 1-1, så justeres
+    // lagene på plass K og K+1 med kamper mot lag langt fra grensen.
+    setGroup('Merker ved poenglikhet');
+    for (const [url, liga] of [[base, 'Eliteserien'], [base.replace('/eliteserien/', '/obos/'), 'OBOS']]) {
+      const mp = await open(1400, 900, url);
+      const grenser = await mp.evaluate(() =>
+        [...LEAGUE.badges.map(b => ({K: b.above, tekst: b.text})),
+         {K: TEAMS.length - 2, tekst: LEAGUE.relegatedBadge.text, ned: true}]);
+      const bygg = (K, delta, apen) => mp.evaluate(({K, delta, apen}) => {
+        document.getElementById('autoFillToggle').checked = false;
+        matches.forEach(m => setMatch(m, null, null, false));
+        const r0 = compute().rows, n = r0.length;
+        const a = r0[K - 1].name, b = r0[K].name;
+        const lag = {}; r0.forEach((r, i) => lag[r.name] = i < K - 1 ? 0 : (r.name === a || r.name === b ? 1 : 2));
+        const tom = matches.filter(m => m.hg == null);
+        // Fast seed, så en feil kan gjenskapes.
+        let frø = 12345;
+        const tilf = () => { frø = (frø * 1103515245 + 12345) % 2147483648; return frø / 2147483648; };
+        const sett = (m, t, u) => { const h = m.home === t;   // u: 'S', 'U' eller 'T' sett fra t
+          if (u === 'U') setMatch(m, 1, 1, false);
+          else if (u === 'S') setMatch(m, h ? 1 : 0, h ? 0 : 1, false);
+          else setMatch(m, h ? 0 : 1, h ? 1 : 0, false); };
+        const utfall = (m, t) => { const [x, y] = m.home === t ? [m.hg, m.ag] : [m.ag, m.hg]; return x > y ? 'S' : x < y ? 'T' : 'U'; };
+        const rad = t => compute().rows.find(r => r.name === t);
+        const mot = t => tom.filter(m => (m.home === t || m.away === t) && ![a, b].includes(m.home === t ? m.away : m.home));
+        for (let forsøk = 0; forsøk < 300; forsøk++) {
+          // Lagene over grensen slår alle under, lagene under taper for alle
+          // over; innen samme gruppe trekkes utfallet. a mot b blir 1-1.
+          tom.forEach(m => {
+            const th = lag[m.home], tb = lag[m.away];
+            if (th !== tb) sett(m, th < tb ? m.home : m.away, 'S');
+            else { const x = tilf(); sett(m, m.home, x < 0.4 ? 'S' : x < 0.7 ? 'U' : 'T'); }
+          });
+          // Juster a og b til like mange poeng med kampene deres mot andre.
+          for (let i = 0; i < 30 && rad(a).pts !== rad(b).pts; i++) {
+            const d = rad(a).pts - rad(b).pts, hi = d > 0 ? a : b, lo = d > 0 ? b : a, D = Math.abs(d);
+            const opp = mot(lo).map(m => [m, lo, utfall(m, lo)]).filter(([, , u]) => u !== 'S')
+              .map(([m, t, u]) => [m, t, u === 'T' && D >= 3 ? 'S' : 'U', u === 'T' && D >= 3 ? 3 : u === 'T' ? 1 : 2]).filter(x => x[3] <= D);
+            const ned = mot(hi).map(m => [m, hi, utfall(m, hi)]).filter(([, , u]) => u !== 'T')
+              .map(([m, t, u]) => [m, t, u === 'S' && D >= 2 ? 'U' : 'T', u === 'S' && D >= 2 ? 2 : u === 'S' ? 3 : 1]).filter(x => x[3] <= D);
+            const valg = [...opp, ...ned];
+            if (!valg.length) break;
+            const [m, t, u] = valg[Math.floor(tilf() * valg.length)];
+            sett(m, t, u);
+          }
+          if (rad(a).pts !== rad(b).pts) continue;
+          const vA = mot(a).find(m => utfall(m, a) === 'S'), vB = mot(b).find(m => utfall(m, b) === 'S');
+          if (!vA || !vB) continue;
+          // Målene: a skal ha `delta` bedre målforskjell, og like mange scorede
+          // mål når delta er 0. Justeres i en seier for hver, så poengene står.
+          const sum = (t, unntak) => { let gf = 0, ga = 0; BASE.forEach(r => { if (r[0] === t) { gf += r[5]; ga += r[6]; } });
+            matches.forEach(m => { if (m === unntak || m.hg == null) return;
+              if (m.home === t) { gf += m.hg; ga += m.ag; } else if (m.away === t) { gf += m.ag; ga += m.hg; } });
+            return {gf, ga}; };
+          const ra = sum(a, vA), rb = sum(b, vB);
+          const x = rb.gf - ra.gf + delta, y = rb.ga - ra.ga;
+          const B2 = Math.max(0, -y), A2 = B2 + y;
+          const B1 = Math.max(B2 + 1, A2 + 1 - x, 1), A1 = B1 + x;
+          setMatch(vA, vA.home === a ? A1 : A2, vA.home === a ? A2 : A1, false);
+          setMatch(vB, vB.home === b ? B1 : B2, vB.home === b ? B2 : B1, false);
+          if (apen) setMatch(vB, null, null, false);
+          const rows = compute().rows, P = rad(a).pts;
+          // Bare a og b skal være med i avgjørelsen: strengt poenggap til
+          // nabolagene på begge sider, ellers prøv på nytt.
+          const over = rows.filter(r => r.name !== a && r.name !== b && lag[r.name] === 0);
+          const under = rows.filter(r => r.name !== a && r.name !== b && lag[r.name] === 2);
+          if (!over.every(r => r.pts > P) || !under.every(r => (apen ? r.max : r.pts) < P)) continue;
+          render();
+          const rA = rad(a), rB = rad(b), rr = compute().rows;
+          return {a, b, forsøk, posA: rr.indexOf(rr.find(r => r.name === a)) + 1, posB: rr.indexOf(rr.find(r => r.name === b)) + 1,
+                  A: `${rA.pts}p ${rA.gd >= 0 ? '+' : ''}${rA.gd} (${rA.gf}-${rA.ga})`,
+                  B: `${rB.pts}p ${rB.gd >= 0 ? '+' : ''}${rB.gd} (${rB.gf}-${rB.ga})${apen ? ', 1 kamp igjen' : ''}`,
+                  likt: rA.pts === rB.pts + (apen ? 3 : 0), tomme: matches.filter(m => m.hg == null).length};
+        }
+        return {feil: `fant ikke et scenario med ${a} og ${b} alene ved grensen etter 300 forsøk`};
+      }, {K, delta, apen});
+      // Merkene regnes i en Worker og patches inn etterpå. Vent til både
+      // simuleringen (hideIfChance leser den) og et merkesvar er på plass.
+      const merker = async (s, forvent) => {
+        await settle(mp);
+        await mp.waitForFunction(forvent, {timeout: 6000}, s).catch(() => {});
+        return mp.evaluate(s => Object.fromEntries([s.a, s.b].map(t =>
+          [t, (document.querySelector(`#tbl tbody tr[data-team="${CSS.escape(t)}"] .badge .bt`) || {}).textContent || ''])), s);
+      };
+      const merkeAv = (s, t) => `(document.querySelector('#tbl tbody tr[data-team="${t.replace(/"/g, '\\"')}"] .badge .bt')||{}).textContent||''`;
+      for (const g of grenser) {
+        const hvor = g.ned ? `${g.K}./${g.K + 1}. plass (${g.tekst})` : `grensen ${g.K}./${g.K + 1}. (${g.tekst})`;
+        // 1) ferdigspilt, likt på poeng, a har 4 bedre målforskjell
+        let s = await bygg(g.K, 4, false);
+        let ok = !s.feil && s.posA === g.K && s.posB === g.K + 1 && s.likt && s.tomme === 0;
+        check(`${liga} ${hvor}: scenarioet ble bygget (ferdigspilt, likt på poeng)`, ok, JSON.stringify(s));
+        if (ok) {
+          const lav = g.ned ? s.b : s.a, hoy = g.ned ? s.a : s.b;
+          const m = await merker(s, `${merkeAv(s, lav)}===${JSON.stringify(g.tekst)} && ${merkeAv(s, hoy)}!==${JSON.stringify(g.tekst)}`);
+          check(`${liga} ${hvor}: ferdigspilt, bare ${g.ned ? s.b : s.a} får «${g.tekst}»`,
+            m[lav] === g.tekst && m[hoy] !== g.tekst,
+            `${s.a} ${s.A}: «${m[s.a]}», ${s.b} ${s.B}: «${m[s.b]}»`);
+        }
+        // 2) helt likt på poeng, målforskjell og scorede mål -- ingen får merket.
+        // Bygges fra 1), så bare målene endres: merkene må regnes på nytt
+        // også når poengene står stille.
+        s = await bygg(g.K, 0, false);
+        ok = !s.feil && s.likt && s.tomme === 0 && s.A === s.B && [s.posA, s.posB].sort((x, y) => x - y).join() === `${g.K},${g.K + 1}`;
+        check(`${liga} ${hvor}: scenarioet ble bygget (helt likt)`, ok, JSON.stringify(s));
+        if (ok) {
+          const m = await merker(s, `${merkeAv(s, s.a)}!==${JSON.stringify(g.tekst)} && ${merkeAv(s, s.b)}!==${JSON.stringify(g.tekst)}`);
+          check(`${liga} ${hvor}: helt likt, ingen av dem får «${g.tekst}»`,
+            m[s.a] !== g.tekst && m[s.b] !== g.tekst,
+            `${s.a} ${s.A}: «${m[s.a]}», ${s.b} ${s.B}: «${m[s.b]}»`);
+        }
+        // 3) kamper igjen: b har én kamp igjen og kan nå a på poeng og gå
+        // forbi på målforskjell. a skal ikke ha merket ennå.
+        if (!g.ned) {
+          s = await bygg(g.K, 4, true);
+          ok = !s.feil && s.likt && s.tomme === 1 && s.posA === g.K;
+          check(`${liga} ${hvor}: scenarioet ble bygget (én kamp igjen)`, ok, JSON.stringify(s));
+          if (ok) {
+            const m = await merker(s, `${merkeAv(s, s.a)}!==${JSON.stringify(g.tekst)}`);
+            check(`${liga} ${hvor}: ${s.b} kan ta igjen ${s.a}, så ${s.a} har ikke «${g.tekst}» ennå`,
+              m[s.a] !== g.tekst, `${s.a} ${s.A}: «${m[s.a]}», ${s.b} ${s.B}: «${m[s.b]}»`);
+          }
+        }
+      }
+      await mp.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); render(); });
+      await mp.close();
+    }
+    await page.bringToFront();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();
