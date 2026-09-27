@@ -2380,7 +2380,7 @@ function flowUpperBoundCount(needArr, idxSet, games){
 // det hele tatt, og er nødvendig for riktig svar: et lag som uansett er
 // avgjort (f.eks. allerede sikret uten hjelp fra en bestemt kamp) skal ikke
 // telle den kampen som reell konkurranse mot noen andre heller.
-function solveDirection(byname, remaining, excludeName, target, direction, deadline){
+function solveDirection(byname, remaining, excludeName, target, direction, deadline, terskler){
   var rows=[]; for(var k in byname) if(k!==excludeName) rows.push(byname[k]);
   // Likt på poeng teller som en trussel i BEGGE retninger: da avgjør
   // målforskjell og scorede mål, og de kan fortsatt endre seg. Et merke kan
@@ -2441,9 +2441,11 @@ function solveDirection(byname, remaining, excludeName, target, direction, deadl
   var localIdx={}; stillIdx.forEach(function(gi,li){ localIdx[gi]=li; });
   var localGames = games.map(function(pair){ return [localIdx[pair[0]], localIdx[pair[1]]]; });
 
-  return searchResidual(metCount, stillIdx.length, need, localGames, direction, deadline);
+  return searchResidual(metCount, stillIdx.length, need, localGames, direction, deadline, terskler);
 }
-function searchResidual(metBase, m, need, games, direction, deadline){
+// terskler (valgfri): merkegrensene antallet sammenlignes med. Da stopper
+// søket så snart merket er avgjort, se tidlig stopp under.
+function searchResidual(metBase, m, need, games, direction, deadline, terskler){
   if(games.length===0){
     var cnt=0; for(var i=0;i<m;i++) if(direction==='above' ? need[i]<=0 : need[i]>=0) cnt++;
     return {count:metBase+cnt, exact:true};
@@ -2471,21 +2473,40 @@ function searchResidual(metBase, m, need, games, direction, deadline){
     var extra = flowUpperBoundCount(remNeed, stillNeedArr, trueConf);
     return mc+extra;
   }
-  var visited=0, timedOut=false;
+  // TIDLIG STOPP: merket avhenger bare av hvilke to terskler antallet ligger
+  // mellom. Det sanne antallet ligger mellom det beste funnet (metBase +
+  // bestFound, stiger under søket) og den øvre grensen (metBase + bound(0),
+  // fast). Når det beste funnet når den høyeste terskelen som ikke er over
+  // grensen, ligger begge mellom de samme to tersklene, og merket er det
+  // samme som et fullført søk (eller et søk som når tidsgrensen) ville gitt.
+  // "atmost" har ingen gyldig øvre grense, men når det beste funnet når den
+  // høyeste terskelen, er svaret "ikke under noen terskel" avgjort.
+  var grense=null, stoppVed=Infinity;
+  if(terskler && terskler.length){
+    if(direction==='above'){
+      grense = metBase + bound(0);
+      var L=0; for(var ti=0; ti<terskler.length; ti++) if(terskler[ti]<=grense && terskler[ti]>L) L=terskler[ti];
+      stoppVed = L - metBase;
+    } else stoppVed = Math.max.apply(null, terskler) - metBase;
+  }
+  function avgjort(){ return direction==='above' ? {count:grense, exact:false} : {count:metBase+bestFound, exact:false}; }
+  if(bestFound>=stoppVed) return avgjort();
+  var visited=0, timedOut=false, stoppet=false;
   function dfs(gi){
-    if(timedOut) return;
+    if(timedOut || stoppet) return;
     visited++;
     if((visited & 511)===0 && Date.now()>deadline){ timedOut=true; return; }
-    if(gi===games.length){ var c=successCount(); if(c>bestFound) bestFound=c; return; }
+    if(gi===games.length){ var c=successCount(); if(c>bestFound){ bestFound=c; if(bestFound>=stoppVed) stoppet=true; } return; }
     if(bound(gi)<=bestFound) return;
     var pair=games[gi], i=pair[0], j=pair[1];
     earned[i]+=3; dfs(gi+1); earned[i]-=3;
-    if(timedOut) return;
+    if(timedOut || stoppet) return;
     earned[j]+=3; dfs(gi+1); earned[j]-=3;
-    if(timedOut) return;
+    if(timedOut || stoppet) return;
     earned[i]+=1; earned[j]+=1; dfs(gi+1); earned[i]-=1; earned[j]-=1;
   }
   dfs(0);
+  if(stoppet) return avgjort();
   var exact=!timedOut;
   var count = metBase + (exact ? bestFound : bound(0));
   return {count:count, exact:exact};
@@ -2513,7 +2534,8 @@ function computeOneBadge(byname, remaining, name, budgetMs, cfg){
   // som er igjen, bare når "above" ikke allerede ga et merke.
   var r=byname[name];
   var deadline=Date.now()+budgetMs;
-  var above=solveDirection(byname, remaining, name, r.pts, 'above', deadline);
+  var above=solveDirection(byname, remaining, name, r.pts, 'above', deadline,
+                          cfg.badges.map(function(b){ return b.above; }));
   var badge=null;
   // "above" gir enten det eksakte antallet eller, når søket når tidsgrensen,
   // en GYLDIG ØVRE GRENSE (maksflyt-avslappingen, aldri for lav). Et merke
@@ -2529,7 +2551,7 @@ function computeOneBadge(byname, remaining, name, budgetMs, cfg){
     }
   }
   if(!badge){
-    var atmost=solveDirection(byname, remaining, name, r.max, 'atmost', deadline);
+    var atmost=solveDirection(byname, remaining, name, r.max, 'atmost', deadline, [2]);
     if(atmost.exact && atmost.count<2) badge={cls:cfg.relegatedBadge.cls, text:cfg.relegatedBadge.text};
   }
   return badge;
@@ -2963,12 +2985,6 @@ function getWorker(){
         if(resolve){ resolve(data); typicalResolvers.delete(data.runId); }
         return;
       }
-      if(data.mode==='badges'){
-        if(data.runId!==badgeRunId) return; // scenariet er endret siden dette kallet startet — forkast
-        lastBadges=data.badges;
-        applyBadgesToDom();
-        return;
-      }
       if(data.mode==='insights'){
         const resolve=insightsResolvers.get(data.runId);
         if(resolve){ resolve(data); insightsResolvers.delete(data.runId); }
@@ -2992,6 +3008,23 @@ function getWorker(){
     };
   }
   return mcWorker;
+}
+// Merkene har sin EGEN Worker (samme kode). Søket kan bruke opptil
+// budgetMs per lag, og i samme Worker ville simuleringen stått i kø bak det,
+// både ved lasting og etter hvert innfylt resultat.
+let badgeWorker=null;
+function getBadgeWorker(){
+  if(!badgeWorker){
+    badgeWorker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'})));
+    badgeWorker.onmessage = e=>{
+      const data=e.data;
+      if(data.mode!=='badges') return;
+      if(data.runId!==badgeRunId) return; // scenariet er endret siden dette kallet startet — forkast
+      lastBadges=data.badges;
+      applyBadgesToDom();
+    };
+  }
+  return badgeWorker;
 }
 // Hvor oddsen for én kamp kommer fra, i klartekst. OBOS bruker ÉN bookmaker
 // per kamp (Pinnacle, ellers bet365, ellers Unibet) og navngir den. Eliteserien
@@ -3785,7 +3818,7 @@ function computeBadgesAsync(rows){
   badgeRunId++;
   const payloadRows = rows.map(r=>({name:r.name, pts:r.pts, gd:r.gd, gf:r.gf, left:r.left, max:r.max}));
   const remainingPairs = matches.filter(isEmpty).map(m=>[m.home,m.away]);
-  getWorker().postMessage({mode:'badges', runId:badgeRunId, rows:payloadRows, remaining:remainingPairs, budgetMs:500,
+  getBadgeWorker().postMessage({mode:'badges', runId:badgeRunId, rows:payloadRows, remaining:remainingPairs, budgetMs:500,
     cfg:{badges:LEAGUE.badges, relegatedBadge:LEAGUE.relegatedBadge}});
 }
 

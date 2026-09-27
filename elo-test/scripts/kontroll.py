@@ -359,8 +359,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # ---------- I: DRIFT mot produksjonssiden -- ADVARSEL, ikke feil
 # elo-test/index.html er en kopi av eliteserien/index.html slik den var i commit
 # 1fc6e8f, med produksjonsrettelsene tatt inn ordrett: merkene (157d9ff),
-# ordlyden i forrige kamp (bf623aa) og avrundingen i svarene (5f415cd).
-# Basisen er derfor 5f415cd. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
+# ordlyden i forrige kamp (bf623aa), avrundingen i svarene (5f415cd) og
+# tidlig stopp og egen Worker for merkene (9cc3590). Basisen er derfor 9cc3590. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
 # rettelse eller ny funksjon der kommer ikke med her. Det er ikke en feil i
 # testsiden, men noen maa ta stilling til det -- derfor en advarsel med antall
 # endrede linjer, og ingen FEIL.
@@ -369,8 +369,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_COMMIT = "5f415cda00e8082d378269167d2300f8f1a28f7d"
-BASE_SHA = "9271d999b9028629bdb5125a4dcaef386de76bd2db836f1b227137affc6ab6e3"
+BASE_COMMIT = "9cc3590caab9d23a708aa803539ca56642c1c95b"
+BASE_SHA = "c27b672724a7f7b8183e4145d89e627b987e994f23064e7a7e574c019d33fdcc"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
