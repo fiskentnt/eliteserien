@@ -235,6 +235,7 @@ gjenstående kamper, så spilte kamper kan ikke oppdateres to ganger).
 | `runMatchImpact` i `WORKER_SRC` | hvert låste utfall simuleres med sin egen `oddsOverride` | workeren kjørte alle utfallene med samme målrater |
 | `qaLastMatchData` | oppgavene for de alternative utfallene merkes `eloAlt` | så `runZoneTasks` kan regne ratingen etter det alternative resultatet |
 | `qaLastMatch`, avsluttende setning | «Lagstyrkene holdes som i dag» → «Ratingen er regnet om for hvert alternative resultat, men holdes fast gjennom resten av sesongen» når `odds.json` er lastet | setningen skal si hva som skjer |
+| `qaLastMatch` og `qaLastMatchLine` | «enn modellen ventet» → `eloVentetAv(...)`: «markedet» når forventningen er regnet fra sluttoddsen, «modellen» ved frosset prognose | teksten sa «modellen» også om et markedstall |
 | `boot()`, `odds.json` | hentes ved siden av, normalisert som i `bygg.py` (`ELO_ODDS_SPILT`) | trengs bare til avspillingen for forrige kamp |
 | `boot()`, datastier | `data/…` → `../eliteserien/data/…` for matches, fixtures, odds_upcoming, status, odds_quota | produksjonens filer leses direkte, ingen kopier |
 | `boot()`, modellsti | `data/model.json` → `emodell/model.json` | egen modell, i en mappe som ikke heter `data` (sitemap) |
@@ -353,6 +354,10 @@ testsidespesifikk og skal ikke porteres. `ELO_EKTE` kan fjernes.
 - **Forrige kamp trenger `odds.json`.** Avspillingen for et alternativt
   resultat bruker sluttoddsen for de spilte kampene. Er filen ikke lastet,
   holdes ratingen fast for alternativet, som før, og svaret sier det.
+- **Produksjonen sier «enn modellen ventet» også når forventningen er regnet
+  fra sluttoddsen** (`qaLastMatch` og `qaLastMatchLine`, begge ligaer).
+  Produksjonen har 0 frosne prognoser, så i dag gjelder det alle 16
+  lagbokslinjene. Ikke endret; testsiden følger kilden.
 - **Produksjonens `rateFor` normaliserer ikke oddsen.** Den bruker rå
   oddstall fra `odds_upcoming.json` (`[o.H, o.D, o.A]`) uten normalisering.
   Rådataene er rundet til fire desimaler og summerer ikke alltid til 1;

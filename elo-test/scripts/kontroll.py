@@ -1064,6 +1064,22 @@ console.log(JSON.stringify({saker, alt}));
     krev("qaLastMatchData merker det alternative resultatet (eloAlt)",
          "eloAlt:{home:m.home, away:m.away, hg, ag}" in _hv)
 
+# ---------- V: "... enn X ventet" i forrige kamp følger kilden
+# Forventningen kan være regnet fra en frosset prognose eller, som reserve, fra
+# sluttoddsen. Teksten sa alltid "modellen". Nå: "markedet" ved sluttodds.
+print("\nV   forrige kamp: \"enn markedet/modellen ventet\" følger kilden")
+_akt = "\n".join(l for l in _h.splitlines() if not l.strip().startswith("//"))
+krev("ingen fast \"enn modellen ventet\" igjen i aktiv kode", "enn modellen ventet" not in _akt,
+     f"{_akt.count('enn modellen ventet')} treff")
+krev("svaret og lagbokslinja bruker eloVentetAv",
+     "enn ${eloVentetAv(data.preKick)} ventet" in _h and "enn ${eloVentetAv(preKickProbs(e.home, e.away))} ventet" in _h)
+_rv = subprocess.run(["node", "-e", _hent("eloVentetAv") + """
+console.log(JSON.stringify([eloVentetAv({kilde:'sluttoddsen'}), eloVentetAv({kilde:'odds og modell'}),
+                            eloVentetAv({kilde:'modellen'}), eloVentetAv(null)]));"""], capture_output=True, text=True)
+krev("eloVentetAv: sluttodds -> markedet, frosset prognose -> modellen",
+     _rv.returncode == 0 and json.loads(_rv.stdout) == ["markedet", "modellen", "modellen", "modellen"],
+     (_rv.stdout or _rv.stderr).strip()[:120])
+
 print("\nE   festede sha256")
 for rel, ventet in FESTET.items():
     p = HER.parent / rel

@@ -4409,7 +4409,7 @@ async function qaLastMatch(team){
   const tall = n===0
     ? ` Det var omtrent det de tre utfallene tilsa før kampen.`
     : ` Før kampen var ${pctTxt(data.expected)} ventet når alle mulige utfall ble tatt med. `+
-      `${qaStor(resultat)} var dermed ${n} prosentpoeng ${bra?'bedre':'verre'} enn modellen ventet.`;
+      `${qaStor(resultat)} var dermed ${n} prosentpoeng ${bra?'bedre':'verre'} enn ${eloVentetAv(data.preKick)} ventet.`;   // ELO-TEST: følger kilden
   // Tre avsnitt: hva som skjedde, hva som var ventet av markedet og hva de
   // andre utfallene ville gitt, og forbeholdet. .qa-answer har pre-line.
   const midt = [overrask, alt].filter(Boolean).join(' ');
@@ -4486,7 +4486,7 @@ function qaLastMatchLine(e){
   const naa = Math.max(0, Math.min(100, Math.round((e.expected||0)*100) + e.pp));
   return {html:`Forrige kamp: ${QA_OUT_LABEL[e.actual]} ${res}. ${qaStor(e.chance)} ble ${naa} %, `+
     `<b class="${e.good?'good':'bad'}">${Math.abs(e.pp)}</b> prosentpoeng `+
-    `${e.good?'bedre':'verre'} enn modellen ventet${qaSjanseKort(e)}.`};
+    `${e.good?'bedre':'verre'} enn ${eloVentetAv(preKickProbs(e.home, e.away))} ventet${qaSjanseKort(e)}.`};   // ELO-TEST: følger kilden
 }
 // Lagets forrige kamp til linja: bruker det workflowen har regnet ut for den
 // VIRKELIGE situasjonen. Er den lagret kampen ikke lagets siste faktisk spilte
@@ -6811,6 +6811,15 @@ function computeLiveState(){
    oppgaven. Ingen dynamisk simulering: ratingen står fast gjennom hver
    simulerte sesong, som ellers. Kontroll U krever at målratene er bit-like
    dem scenarioet selv gir for samme resultat. */
+
+/* "... bedre enn X ventet" i "Hva betydde forrige kamp?" og i linja i
+   lagboksen. Forventningen er regnet fra det preKickProbs fant: en frosset
+   prognose fra før avspark (kilde "odds og modell" eller "modellen") eller,
+   som reserve, sluttoddsen. Før sto det alltid "modellen", også når tallet var
+   regnet fra sluttoddsen alene. */
+function eloVentetAv(pk){
+  return pk && pk.kilde === 'sluttoddsen' ? 'markedet' : 'modellen';
+}
 
 // Målratene for en kamp med ratingen R: byggingens lambda når
 // ratingforskjellen er uendret, ellers tabellene -- samme valg som
