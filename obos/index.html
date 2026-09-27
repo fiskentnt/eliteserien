@@ -2072,7 +2072,24 @@ function computeLiveState(){
 }
 function refreshLiveState(){ LIVE=computeLiveState(); for(const k in RATES) delete RATES[k]; }
 
+// Minne for fitRates: samme inndata (de blandede sannsynlighetene og
+// startpunktet, nøyaktige tall) gir alltid samme svar, så det regnes én gang.
+// Før ble alle kampene med odds regnet på nytt (~25 ms hver) i hver render(),
+// fordi refreshLiveState() tømmer RATES, også når ratingen for kampen ikke var
+// endret. Minnet holder de FIT_MINNE_MAKS sist brukte (eldste kastes), så det
+// ikke vokser gjennom en lang økt. Svaret kopieres ut, så ingen kan endre det
+// som er husket.
+const FIT_MINNE = new Map(), FIT_MINNE_MAKS = 500;
 function fitRates(pH,pB,start){
+  const k = pH+'|'+pB+'|'+start[0]+'|'+start[1];
+  const husket = FIT_MINNE.get(k);
+  if(husket){ FIT_MINNE.delete(k); FIT_MINNE.set(k, husket); return [husket[0], husket[1]]; }
+  const r = fitRatesRegn(pH,pB,start);
+  FIT_MINNE.set(k, r);
+  if(FIT_MINNE.size > FIT_MINNE_MAKS) FIT_MINNE.delete(FIT_MINNE.keys().next().value);
+  return [r[0], r[1]];
+}
+function fitRatesRegn(pH,pB,start){
   let best=[start[0],start[1]], err=1e9;
   const tryAt=(lh,la)=>{ const o=outcome(lh,la), e=(o.H-pH)**2+(o.B-pB)**2; if(e<err){err=e;best=[lh,la];} };
   for(let lh=0.15;lh<=4.5;lh+=0.05) for(let la=0.15;la<=4.5;la+=0.05) tryAt(lh,la);
@@ -3071,6 +3088,13 @@ function getWorker(){
       if(mcScenarioFor.get(runId)==='' && data.done>=data.total){
         const b={}; TEAMS.forEach((t,i)=>b[t]=out[i]); BASE_MC=b;
       }
+      if(data.done>=data.total){
+        mcPagar=Math.max(0, mcPagar-1);
+        // Et resultat ble lagt inn mens denne kjøringen pågikk: send det siste
+        // scenarioet nå. Kjøringen som nettopp ble ferdig, er da utdatert og
+        // forkastes rett under (runId !== mcRunId).
+        if(mcVenter && mcPagar===0){ mcVenter=false; runMCAsync(MC_N); }
+      }
       if(runId!==mcRunId) return; // scenariet er endret siden denne kjøringen startet — forkast
       const outObj={}; TEAMS.forEach((t,i)=>outObj[t]=out[i]);
       lastMC=outObj; lastMCN = data.done; lastMCFinal = data.done>=data.total; fillOdds();
@@ -3156,6 +3180,7 @@ function runMCAsync(N){
   lastMCFinal = false;
   mcRunId++;
   mcScenarioFor.set(mcRunId, scenarioKey);
+  mcPagar++;
   getWorker().postMessage({
     runId:mcRunId, seed:hashStr(scenarioKey), mu:MODEL.mu, H:MODEL.H, k:FORM_K,
     att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
@@ -3269,7 +3294,25 @@ function fillOdds(){
 // rundt 1 prosentpoeng (95 %-margin ved 50 %); målt ca. 0,4 s på en PC i Workeren
 // (4 000 tok 0,17 s), og første anslag kommer etter 1 000 sesonger.
 const MC_N = 10000;
-function scheduleMC(){ clearTimeout(mcTimer); mcTimer=setTimeout(()=>runMCAsync(MC_N), 250); }
+// Tabellsimuleringen sendes MED EN GANG når et resultat er ferdig lagt inn
+// (begge tallene i en kamp fylt ut, eller H/U/B trykket: mcStraks settes av
+// hendelsen rett før render()). Skriver man bare i ett felt, venter den 250 ms
+// som før. VERN MOT KØ: simuleringen går i én synkron løkke i Workeren og kan
+// ikke avbrytes. Pågår en, sendes derfor ingen ny straks; den siste sendes når
+// den pågående er ferdig (mcVenter, se getWorker). Uten vernet ga fem raske
+// klikk fem simuleringer etter hverandre, og det siste scenarioet kom senere
+// enn med ventetiden.
+let mcStraks=false, mcPagar=0, mcVenter=false;
+function scheduleMC(){
+  clearTimeout(mcTimer);
+  if(mcStraks){
+    mcStraks=false;
+    if(mcPagar>0){ mcVenter=true; return; }
+    runMCAsync(MC_N);
+    return;
+  }
+  mcTimer=setTimeout(()=>runMCAsync(MC_N), 250);
+}
 
 // Fyller de gitte kampene med ett "plausibelt scenario": kjøres i Web Workeren
 // (WORKER_SRC, mode:'typical'), som trekker kandidatsesonger kronologisk med
@@ -3485,7 +3528,7 @@ async function onRoundsEvent(e){
   // kamp (ett tall skrevet) eller en tømt kamp (×, eller begge felt slettet)
   // skal ikke utløse noe. En tømt kamp forblir tom, og ingenting annet endres.
   tableSort=null;
-  if(m.hg!=null && m.ag!=null) await updateAutoFill();
+  if(m.hg!=null && m.ag!=null){ await updateAutoFill(); mcStraks=true; }
   render();
 }
 roundsEl.addEventListener('input', onRoundsEvent);
@@ -3579,7 +3622,7 @@ document.getElementById('nmHub').addEventListener('click', async e=>{
   const m = matches.find(x=>x.id===document.getElementById('nextMatch').dataset.id);
   if(!m || !drawQuick(m, b.dataset.q)) return;
   tableSort=null;
-  if(m.hg!=null && m.ag!=null) await updateAutoFill();
+  if(m.hg!=null && m.ag!=null){ await updateAutoFill(); mcStraks=true; }
   render();
 });
 // "Se hele runde N →": hopper til runden i kamplisten. Ligger runden bak

@@ -1996,6 +1996,195 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- Tabellprosentene: minne i fitRates og "send straks" ----
+    // fitRates (~25 ms per kamp med odds) husker svaret for samme inndata, de
+    // 500 sist brukte. Tabellsimuleringen sendes med en gang når en kamp er
+    // ferdig utfylt eller H/U/B er trykket, men aldri mens en annen pågår: da
+    // sendes bare den siste, når den pågående er ferdig.
+    //  1. Samme handlinger med fast frø i Math.random gir bit-like RATES,
+    //     prosenter i kamplisten, lastMC og merker med og uten minnet. Varianten
+    //     uten minnet bygges ved tekstbytting i HTML-en (nøyaktig ett treff).
+    //  2. Minnet overstiger aldri 500 etter mange ulike scenarioer.
+    //  3. Straks: ferdig utfylt kamp og H/U/B sender simuleringen inne i
+    //     render(), uten ventetiden; bare ett felt venter 250 ms som før.
+    //  4. Raske klikk: fem H/U/B med 100 ms mellomrom. Ingen simulering sendes
+    //     mens en annen pågår, og det siste scenarioet sendes uten ventetiden.
+    setGroup('Tabellprosentene: minne og straks');
+    const RP_INSTR = () => {
+      let frø = 20260928; Math.random = () => { frø = (frø * 1103515245 + 12345) % 2147483648; return frø / 2147483648; };
+      const R = window.__rp = {post: [], fin: [], render: [], mcKall: [], merke: -1, sendt: 0, ferdig: 0, regn: 0};
+      const W = window.Worker;
+      window.Worker = function (u, o) {
+        const w = new W(u, o), post = w.postMessage.bind(w);
+        w.postMessage = m => { if (m && !m.mode) { R.post.push({t: performance.now(), iGang: R.sendt - R.ferdig}); R.sendt++; } return post(m); };
+        w.addEventListener('message', e => { const d = e.data;
+          if (d.mode === 'prob' && d.done >= d.total) { R.ferdig++; R.fin.push(performance.now()); }
+          if (d.mode === 'badges') R.merke = d.runId; });
+        return w;
+      };
+      document.addEventListener('DOMContentLoaded', () => {
+        const r = window.render;
+        window.render = function () { const t = performance.now(); try { return r.apply(this, arguments); } finally { R.render.push([t, performance.now()]); } };
+        const mc = window.runMCAsync;
+        window.runMCAsync = function () { R.mcKall.push(performance.now()); return mc.apply(this, arguments); };
+        if (typeof window.fitRatesRegn === 'function') { const f = window.fitRatesRegn; window.fitRatesRegn = function () { R.regn++; return f.apply(this, arguments); }; }
+      });
+    };
+    const rpApne = async (url, bytt) => {
+      const p = await browser.newPage();
+      p.on('pageerror', e => errors.push(`${url}: ${e.message}`));
+      await p.evaluateOnNewDocument(RP_INSTR);
+      let treff = null;
+      if (bytt) {
+        const html = await (await fetch(url)).text();
+        treff = html.split(bytt[0]).length - 1;
+        const ny = html.replace(bytt[0], bytt[1]);
+        await p.setRequestInterception(true);
+        p.on('request', q => q.url().split('#')[0] === url ? q.respond({status: 200, contentType: 'text/html; charset=utf-8', body: ny}) : q.continue());
+      }
+      await p.setViewport({width: 1400, height: 900});
+      await p.goto(`${url}#team=${encodeURIComponent(rpLag)}`, {waitUntil: 'networkidle0'});
+      await p.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000, polling: 50});
+      return {p, treff};
+    };
+    const rpRolig = async p => {
+      await p.waitForFunction(`lastMCFinal===true && lastMCScenarioKey===qaScenarioKey() && __rp.merke===badgeRunId
+        && (typeof mcVenter==='undefined' || !mcVenter)`, {timeout: 60000, polling: 50}).catch(async e => {
+        const st = await p.evaluate(() => JSON.stringify({final: lastMCFinal, key: lastMCScenarioKey === qaScenarioKey(), merke: __rp.merke, badgeRunId,
+          venter: typeof mcVenter === 'undefined' ? null : mcVenter, pagar: typeof mcPagar === 'undefined' ? null : mcPagar, sendt: __rp.sendt, ferdig: __rp.ferdig}));
+        throw new Error(`rpRolig: ${st}`); });
+      await sleep(600);
+    };
+    // Radene handlingene velger mellom: åpne kamper laget som følges ikke spiller.
+    const RP_RADER = `[...document.querySelectorAll('.match')].filter(r => { const m = matches.find(x => x.id === r.dataset.id);
+      return m && m.hg == null && m.home !== ${'${JSON.stringify(rpLag)}'} && m.away !== ${'${JSON.stringify(rpLag)}'} && !r.classList.contains('played'); })`;
+    let rpLag = '';
+    for (const [sti, liga] of [['/eliteserien/', 'Eliteserien'], ['/obos/', 'OBOS']]) {
+      const url = base.replace('/eliteserien/', sti);
+      { const q = await open(1400, 900, url); rpLag = await q.evaluate(() => matches.find(m => m.hg == null).home); await q.close(); }
+      const rader = RP_RADER.replace(/\$\{JSON\.stringify\(rpLag\)\}/g, JSON.stringify(rpLag));
+      const handling = (p, h) => p.evaluate(async (h, rader) => {
+        const row = eval(rader)[h.nr];
+        if (h.type === 'skriv') {
+          const a = row.querySelector('[data-side=h]'), b = row.querySelector('[data-side=a]');
+          a.value = String(h.s[0]); a.dispatchEvent(new Event('input', {bubbles: true}));
+          await new Promise(r => setTimeout(r, 400));
+          b.value = String(h.s[1]); b.dispatchEvent(new Event('input', {bubbles: true}));
+        } else if (h.type === 'knapp') row.querySelector(`button[data-q="${h.q}"]`).click();
+        else { const t = document.getElementById('autoFillToggle'); if (t.checked) t.click(); }
+      }, h, rader);
+      const bilde = p => p.evaluate(() => JSON.stringify({
+        res: matches.map(m => [m.id, m.hg, m.ag, !!m.sim]),
+        rates: Object.keys(RATES).sort().map(k => [k, RATES[k].r[0], RATES[k].r[1]]),
+        pct: [...document.querySelectorAll('.match .quick')].map(q => [...q.querySelectorAll('.pct')].map(x => x.textContent + (x.classList.contains('best') ? '*' : '')).join('/')),
+        mc: lastMC, merker: lastBadges}));
+
+      // 1. Bit-like tall med og uten minnet.
+      const MINNE = ['const husket = FIT_MINNE.get(k);', 'const husket = undefined;'];
+      const med = await rpApne(url), uten = await rpApne(url, MINNE);
+      const steg = [{type: 'skriv', nr: 0, s: [2, 1]}, {type: 'knapp', nr: 3, q: 'H'}, {type: 'av'}, {type: 'skriv', nr: 5, s: [0, 0]},
+                    {type: 'knapp', nr: 7, q: 'B'}, {type: 'knapp', nr: 9, q: 'U'}, {type: 'skriv', nr: 2, s: [1, 3]}];
+      const ulike = []; let tilstander = 0;
+      const sml = async navn => { await rpRolig(med.p); await rpRolig(uten.p); tilstander++;
+        const a = await bilde(med.p), b = await bilde(uten.p);
+        if (a !== b) { const ja = JSON.parse(a), jb = JSON.parse(b); ulike.push(`${navn}: ${Object.keys(ja).filter(k => JSON.stringify(ja[k]) !== JSON.stringify(jb[k])).join(',')}`); } };
+      if (uten.treff === 1) {
+        await sml('lastet');
+        for (const h of steg) { await handling(med.p, h); await handling(uten.p, h); await sml(JSON.stringify(h)); }
+      }
+      const regn = [await med.p.evaluate(() => __rp.regn), await uten.p.evaluate(() => __rp.regn)];
+      console.log(`      ${liga}: ${tilstander} tilstander; fitRates regnet ${regn[0]} ganger med minnet, ${regn[1]} uten`);
+      check(`${liga}: varianten uten minnet bygges (nøyaktig ett treff i tekstbyttingen)`, uten.treff === 1, `${uten.treff} treff`);
+      check(`${liga}: samme handlinger og frø gir bit-like RATES, prosenter, lastMC og merker med og uten minnet`,
+        uten.treff === 1 && tilstander === steg.length + 1 && ulike.length === 0 && regn[0] < regn[1], `${ulike.join('; ')}; regnet ${regn}`);
+      await med.p.close(); await uten.p.close();
+
+      // 2. Minnet overstiger aldri 500.
+      { const {p} = await rpApne(url);
+        const g = await p.evaluate(() => {
+          if (typeof FIT_MINNE === 'undefined') return {finnes: false};
+          let frø = 4242; const tilf = () => { frø = (frø * 1103515245 + 12345) % 2147483648; return frø / 2147483648; };
+          const odds = matches.filter(m => ODDS_UP[m.home + '|' + m.away]);
+          const apne = matches.filter(m => m.hg == null && !ODDS_UP[m.home + '|' + m.away]);
+          const r0 = __rp.regn; let maks = 0, scen = 0;
+          while (__rp.regn - r0 < 560 && scen < 400) {
+            scen++;
+            apne.forEach(m => { if (tilf() < 0.3) setMatch(m, Math.floor(tilf() * 4), Math.floor(tilf() * 4), false); else setMatch(m, null, null, false); });
+            refreshLiveState(); odds.forEach(m => rateFor(m.home, m.away));
+            maks = Math.max(maks, FIT_MINNE.size);
+          }
+          // Sist brukt skal fortsatt være i minnet (eldste kastes, ikke nyeste).
+          const r1 = __rp.regn; odds.forEach(m => { delete RATES[m.home + '|' + m.away]; rateFor(m.home, m.away); });
+          const sistBruktHusket = __rp.regn === r1;
+          apne.forEach(m => setMatch(m, null, null, false)); render();
+          return {finnes: true, regnet: __rp.regn - r0, scen, maks, naa: FIT_MINNE.size, grense: FIT_MINNE_MAKS, sistBruktHusket};
+        });
+        check(`${liga}: minnet overstiger aldri 500 etter mange ulike scenarioer`,
+          g.finnes && g.grense === 500 && g.regnet > 500 && g.maks <= 500 && g.naa === 500 && g.sistBruktHusket, JSON.stringify(g));
+        await p.close(); }
+
+      // 3. Straks: ferdig utfylt kamp og H/U/B uten ventetid; ett felt venter som før.
+      { const {p} = await rpApne(url);
+        await handling(p, {type: 'av'}); await rpRolig(p);
+        const st = await p.evaluate(async rader => {
+          const R = __rp, vent = ms => new Promise(r => setTimeout(r, ms));
+          const iRender = t => R.render.some(([a, b]) => t >= a && t <= b);
+          const row = eval(rader)[0], a = row.querySelector('[data-side=h]'), b = row.querySelector('[data-side=a]');
+          // Ett felt: runMCAsync kommer først etter ventetiden, ikke inne i render().
+          let n = R.mcKall.length, nR = R.render.length;
+          a.value = '2'; a.dispatchEvent(new Event('input', {bubbles: true}));
+          await vent(600);
+          const ettFelt = R.mcKall.slice(n).map(t => ({iRender: iRender(t), etterRender: R.render[nR] ? t - R.render[nR][1] : null}));
+          // Begge felt.
+          n = R.mcKall.length; const nP = R.post.length;
+          b.value = '1'; b.dispatchEvent(new Event('input', {bubbles: true}));
+          await vent(600);
+          const begge = {kall: R.mcKall.slice(n).map(t => iRender(t)), sendt: R.post.length - nP};
+          await vent(1500);
+          // H-knapp i en annen kamp.
+          n = R.mcKall.length; const nP2 = R.post.length;
+          eval(rader)[2].querySelector('button[data-q="H"]').click();
+          await vent(600);
+          const hKnapp = {kall: R.mcKall.slice(n).map(t => iRender(t)), sendt: R.post.length - nP2};
+          return {ettFelt, begge, hKnapp};
+        }, rader);
+        check(`${liga}: begge tallene fylt ut sender tabellsimuleringen uten ventetiden (inne i render())`,
+          st.begge.kall[0] === true && st.begge.sendt >= 1, JSON.stringify(st.begge));
+        check(`${liga}: H/U/B sender tabellsimuleringen uten ventetiden (inne i render())`,
+          st.hKnapp.kall[0] === true && st.hKnapp.sendt >= 1, JSON.stringify(st.hKnapp));
+        check(`${liga}: bare ett felt fylt: venter 250 ms som før`,
+          st.ettFelt.length >= 1 && st.ettFelt[0].iRender === false && st.ettFelt[0].etterRender >= 240, JSON.stringify(st.ettFelt));
+        await p.close(); }
+
+      // 4. Raske klikk, med «Fyll ut runden» av og på.
+      for (const autofyll of ['av', 'på']) {
+        const {p} = await rpApne(url);
+        if (autofyll === 'av') { await handling(p, {type: 'av'}); await rpRolig(p); }
+        const rk = await p.evaluate(async rader => {
+          const R = __rp, nP = R.post.length, rr = eval(rader);
+          const valg = [[1, 'H'], [4, 'U'], [6, 'B'], [8, 'H'], [10, 'B']];
+          let tSiste = 0;
+          await new Promise(res => valg.forEach(([nr, q], i) => setTimeout(() => {
+            rr[nr].querySelector(`button[data-q="${q}"]`).click(); if (i === valg.length - 1) { tSiste = performance.now(); res(); } }, 100 * i)));
+          const t0 = Date.now();
+          while (Date.now() - t0 < 30000 && !(lastMCFinal === true && lastMCScenarioKey === qaScenarioKey() && !(typeof mcVenter !== 'undefined' && mcVenter))) await new Promise(r => setTimeout(r, 5));
+          await new Promise(r => setTimeout(r, 500));
+          const poster = R.post.slice(nP), siste = poster[poster.length - 1];
+          const iRender = R.render.some(([a, b]) => siste.t >= a && siste.t <= b);
+          const etterFerdig = R.fin.filter(t => t <= siste.t + 0.001).map(t => siste.t - t).filter(d => d >= 0);
+          return {sendt: poster.length, iKo: poster.filter(x => x.iGang > 0).length, sisteIRender: iRender,
+                  sisteRettEtterFerdig: etterFerdig.length ? Math.min(...etterFerdig) < 30 : false,
+                  sisteEtterKlikk: Math.round(siste.t - tSiste), riktig: lastMCScenarioKey === qaScenarioKey() && lastMCFinal === true};
+        }, rader);
+        console.log(`      ${liga}, fyll ut runden ${autofyll}: fem raske klikk ga ${rk.sendt} simuleringer, den siste sendt ${rk.sisteEtterKlikk} ms etter siste klikk`);
+        check(`${liga}, fyll ut runden ${autofyll}: raske klikk sender ingen simulering mens en annen pågår`, rk.iKo === 0 && rk.riktig, JSON.stringify(rk));
+        check(`${liga}, fyll ut runden ${autofyll}: det siste scenarioet sendes uten ventetiden (i render() eller rett etter den pågående)`,
+          rk.riktig && (rk.sisteIRender || rk.sisteRettEtterFerdig), JSON.stringify(rk));
+        await p.close();
+      }
+    }
+    await page.bringToFront();
+
     // ---- Prekick: frysing ved avspark ----
     // prekick.json skal bare oppdateres FØR avspark fra terminlisten, og
     // fryses med siste stempel fra før avspark når resultatet kommer. Før
