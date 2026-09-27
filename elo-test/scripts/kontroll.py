@@ -357,7 +357,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 
 # ---------- I: DRIFT mot produksjonssiden -- ADVARSEL, ikke feil
 # elo-test/index.html er en kopi av eliteserien/index.html slik den var i commit
-# 1fc6e8f. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
+# 1fc6e8f, med merkerettelsen fra 157d9ff tatt inn (samme patch, ordrett).
+# Basisen er derfor 157d9ff. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
 # rettelse eller ny funksjon der kommer ikke med her. Det er ikke en feil i
 # testsiden, men noen maa ta stilling til det -- derfor en advarsel med antall
 # endrede linjer, og ingen FEIL.
@@ -366,8 +367,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_COMMIT = "1fc6e8f88874a94a83b4bc7375237d07710f7a5d"
-BASE_SHA = "4a6a32445f340f2fc0e2272e90f7f18e6e0141c80c513a12ecb79b69461d46eb"
+BASE_COMMIT = "157d9ff995461a5030266da26585f057676f1ad1"
+BASE_SHA = "8c35dda095ed2e328d1bbac7b268633ddfb24813ca0eb95bb9d4f7237e05107f"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

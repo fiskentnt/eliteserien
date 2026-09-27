@@ -2382,7 +2382,12 @@ function flowUpperBoundCount(needArr, idxSet, games){
 // telle den kampen som reell konkurranse mot noen andre heller.
 function solveDirection(byname, remaining, excludeName, target, direction, deadline){
   var rows=[]; for(var k in byname) if(k!==excludeName) rows.push(byname[k]);
-  var candNames = rows.filter(function(r){ return direction==='above' ? r.max>target : r.pts<=target; }).map(function(r){ return r.name; });
+  // Likt på poeng teller som en trussel i BEGGE retninger: da avgjør
+  // målforskjell og scorede mål, og de kan fortsatt endre seg. Et merke kan
+  // derfor komme en kamp senere enn strengt nødvendig, men blir aldri feil.
+  // (Før talte "above" bare lag som kunne komme STRENGT over, og et lag som
+  // kunne nå samme poengsum og gå forbi på målforskjell ble oversett.)
+  var candNames = rows.filter(function(r){ return direction==='above' ? r.max>=target : r.pts<=target; }).map(function(r){ return r.name; });
   if(candNames.length===0) return {count:0, exact:true};
 
   var idx={}; candNames.forEach(function(n,i){ idx[n]=i; });
@@ -2409,7 +2414,7 @@ function solveDirection(byname, remaining, excludeName, target, direction, deadl
     for(var i=0;i<n;i++){
       if(resolvedSafe[i]) continue;
       var justResolved=false;
-      if(direction==='above'){ if(curFloor(i)>target){ resolvedSafe[i]=true; justResolved=true; } }
+      if(direction==='above'){ if(curFloor(i)>=target){ resolvedSafe[i]=true; justResolved=true; } }
       else {
         var gamesLeft = games.filter(function(pair){ return pair[0]===i||pair[1]===i; }).length;
         if(curFloor(i)<=target && gamesLeft===0){ resolvedSafe[i]=true; justResolved=true; }
@@ -2432,7 +2437,7 @@ function solveDirection(byname, remaining, excludeName, target, direction, deadl
   var metCount=0; for(var i3=0;i3<n;i3++) if(resolvedSafe[i3]) metCount++;
   if(stillIdx.length===0) return {count:metCount, exact:true};
 
-  var need = stillIdx.map(function(i){ return direction==='above' ? Math.max(0, target-curFloor(i)+1) : target-curFloor(i); });
+  var need = stillIdx.map(function(i){ return direction==='above' ? Math.max(0, target-curFloor(i)) : target-curFloor(i); });
   var localIdx={}; stillIdx.forEach(function(gi,li){ localIdx[gi]=li; });
   var localGames = games.map(function(pair){ return [localIdx[pair[0]], localIdx[pair[1]]]; });
 
@@ -2485,7 +2490,24 @@ function searchResidual(metBase, m, need, games, direction, deadline){
   var count = metBase + (exact ? bestFound : bound(0));
   return {count:count, exact:exact};
 }
+// Ferdigspilt sesong: merkene settes etter faktisk plass, sortert som
+// tabellen (poeng, målforskjell, scorede mål). Et lag som står helt likt med
+// et annet på alle tre, kan ende på begge sider av det: innbyrdes oppgjør er
+// ikke regnet inn. Står de likt ved en grense, får derfor ingen av dem merket
+// for den grensen.
+function finalBadge(byname, name, cfg){
+  var me=byname[name];
+  function cmp(o){ return (o.pts-me.pts) || (o.gd-me.gd) || (o.gf-me.gf); }
+  var kanOver=0, kanUnder=0;
+  for(var k in byname){ if(k===name) continue; var c=cmp(byname[k]); if(c>=0) kanOver++; if(c<=0) kanUnder++; }
+  for(var bi=0; bi<cfg.badges.length; bi++){
+    if(kanOver < cfg.badges[bi].above) return {cls:cfg.badges[bi].cls, text:cfg.badges[bi].text};
+  }
+  if(kanUnder<2) return {cls:cfg.relegatedBadge.cls, text:cfg.relegatedBadge.text};
+  return null;
+}
 function computeOneBadge(byname, remaining, name, budgetMs, cfg){
+  if(remaining.length===0) return finalBadge(byname, name, cfg);
   // Én delt tidsgrense for HELE laget (ikke per sjekk): "above" bruker det
   // meste normalt (avgjør champ/europa/safe), "atmost" (rykket ned) får det
   // som er igjen, bare når "above" ikke allerede ga et merke.
@@ -2493,7 +2515,15 @@ function computeOneBadge(byname, remaining, name, budgetMs, cfg){
   var deadline=Date.now()+budgetMs;
   var above=solveDirection(byname, remaining, name, r.pts, 'above', deadline);
   var badge=null;
-  if(above.exact){
+  // "above" gir enten det eksakte antallet eller, når søket når tidsgrensen,
+  // en GYLDIG ØVRE GRENSE (maksflyt-avslappingen, aldri for lav). Et merke
+  // krever bare at antallet er under grensen, så en øvre grense under den
+  // er like sikker som et eksakt svar. Med likt på poeng som trussel er det
+  // flere kandidater og søket blir oftere ferdig på grensen alene: i sept.
+  // 2026 ga det 9 mulige lag over Viking og Glimt (merket krever under 13)
+  // uten at søket ble ferdig på 20 sekunder. "atmost" krever fortsatt eksakt
+  // svar; grensefunksjonen gjelder ikke den retningen.
+  {
     for(var bi=0; bi<cfg.badges.length; bi++){
       if(above.count < cfg.badges[bi].above){ badge={cls:cfg.badges[bi].cls, text:cfg.badges[bi].text}; break; }
     }
@@ -3690,7 +3720,10 @@ function compute(){
 // kommer, uten en ny full render().
 let lastBadges = null, lastBadgeSignature = null, badgeRunId = 0;
 function badgeSignatureOf(rows){
-  return rows.map(r=>r.name+':'+r.pts+':'+r.left).sort().join('|');
+  // Målforskjell og scorede mål med: i en ferdigspilt sesong avgjør de
+  // merkene ved poenglikhet, og et nytt resultat med samme utfall må da
+  // regne merkene på nytt.
+  return rows.map(r=>r.name+':'+r.pts+':'+r.gd+':'+r.gf+':'+r.left).sort().join('|');
 }
 // Hva merket betyr, vist når det trykkes på (på mobil er merket bare et ikon).
 const BADGE_NOTE = Object.fromEntries(
@@ -3747,7 +3780,7 @@ function computeBadgesAsync(rows){
   if(sig===lastBadgeSignature) return; // ingenting som kan ha endret badge-utfallet
   lastBadgeSignature = sig;
   badgeRunId++;
-  const payloadRows = rows.map(r=>({name:r.name, pts:r.pts, left:r.left, max:r.max}));
+  const payloadRows = rows.map(r=>({name:r.name, pts:r.pts, gd:r.gd, gf:r.gf, left:r.left, max:r.max}));
   const remainingPairs = matches.filter(isEmpty).map(m=>[m.home,m.away]);
   getWorker().postMessage({mode:'badges', runId:badgeRunId, rows:payloadRows, remaining:remainingPairs, budgetMs:500,
     cfg:{badges:LEAGUE.badges, relegatedBadge:LEAGUE.relegatedBadge}});

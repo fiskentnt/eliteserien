@@ -130,8 +130,12 @@ slik den er i dag, altså etterpåklokskap.
 
 ## Avviksliste mot `eliteserien/index.html`
 
-Basis: `eliteserien/index.html` i commit `1fc6e8f` (sha256 `4a6a3244…`).
-Kopien har 6885 linjer mot produksjonens 6721, fordelt på 22 endrede blokker.
+Basis: `eliteserien/index.html` i commit `157d9ff` (sha256 `8c35dda0…`).
+Kopien ble tatt i `1fc6e8f`; merkerettelsen i `157d9ff` (likt på poeng er en
+trussel, ferdigspilt sesong etter faktisk plass) er tatt inn med samme patch,
+ordrett. Kopien har 6854 linjer mot produksjonens 6754, fordelt på 26 endrede
+blokker (`git diff`, vanlig kontekst). Antallet blokker er det samme som før
+rettelsen, så avvikslisten under er uendret.
 Listen er ment å være nok til å portere Elo-laget inn i produksjonssiden uten
 å lese hele diffen. `kontroll.py` (I) advarer hvis produksjonssiden har endret
 seg siden.
