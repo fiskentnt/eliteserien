@@ -16,6 +16,10 @@ modellen virker?".
 
   python3 scripts/accuracy_log.py eliteserien
   python3 scripts/accuracy_log.py obos
+  python3 scripts/accuracy_log.py eliteserien --data elo-test/emodell
+
+--data <mappe>: hvor prekick.json leses og accuracy.json skrives (standard
+<liga>/data). Resultatene (matches.json) leses alltid fra <liga>/data.
 """
 import json
 import math
@@ -46,9 +50,12 @@ def probs_for(entry, kilde):
 
 
 def main():
-    liga = sys.argv[1] if len(sys.argv) > 1 else "eliteserien"
-    data = ROOT / liga / "data"
-    pre_path, res_path = data / "prekick.json", data / "matches.json"
+    argv = sys.argv[1:]
+    mappe = argv[argv.index("--data") + 1] if "--data" in argv else None
+    posisjonelle = [a for i, a in enumerate(argv) if not a.startswith("--") and not (i > 0 and argv[i - 1] == "--data")]
+    liga = posisjonelle[0] if posisjonelle else "eliteserien"
+    data = ROOT / mappe if mappe else ROOT / liga / "data"
+    pre_path, res_path = data / "prekick.json", ROOT / liga / "data" / "matches.json"
     if not pre_path.exists() or not res_path.exists():
         print(f"{liga}: mangler prekick.json eller matches.json", file=sys.stderr)
         return 1

@@ -37,12 +37,24 @@ const ROOT = path.join(__dirname, '..');
 // dette skriptet trenger bare å vite hvilken mappe det skal lese og skrive:
 //   node scripts/snapshot_probs.js            -- Eliteserien
 //   node scripts/snapshot_probs.js obos       -- OBOS-ligaen
-const LEAGUE_DIR = process.argv[2] || 'eliteserien';
+//
+// Side og utmappe kan velges, med dagens verdier som standard:
+//   --side <mappe>     siden som åpnes (standard: ligaen), f.eks. elo-test
+//   --ut <mappe>       hvor filene skrives (standard: <liga>/data)
+//   --uten-historikk   ikke skriv history.json
+// Terminlisten (frysregelen) leses alltid fra <liga>/data/fixtures.json.
+//   node scripts/snapshot_probs.js eliteserien --side elo-test --ut elo-test/emodell --uten-historikk
+const ARGS = process.argv.slice(2);
+const flagg = navn => { const i = ARGS.indexOf(navn); return i >= 0 ? ARGS[i + 1] : null; };
+const LEAGUE_DIR = ARGS.filter((a, i) => !a.startsWith('--') && !(i > 0 && ['--side', '--ut'].includes(ARGS[i - 1])))[0] || 'eliteserien';
 const DATA = path.join(ROOT, LEAGUE_DIR, 'data');
-const HISTORY = path.join(DATA, 'history.json');
-const KEYMATCH = path.join(DATA, 'keymatch.json');
-const LASTMATCH = path.join(DATA, 'lastmatch.json');
-const PREKICK = path.join(DATA, 'prekick.json');
+const SIDE = flagg('--side') || LEAGUE_DIR;
+const UT = flagg('--ut') ? path.join(ROOT, flagg('--ut')) : DATA;
+const MED_HISTORIKK = !ARGS.includes('--uten-historikk');
+const HISTORY = path.join(UT, 'history.json');
+const KEYMATCH = path.join(UT, 'keymatch.json');
+const LASTMATCH = path.join(UT, 'lastmatch.json');
+const PREKICK = path.join(UT, 'prekick.json');
 const MIME = {'.html':'text/html; charset=utf-8','.js':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.ttf':'font/ttf'};
 
 function serve() {
@@ -74,7 +86,7 @@ function chromePath() {
     const page = await browser.newPage();
     const errs = [];
     page.on('pageerror', e => errs.push(e.message));
-    await page.goto(`http://127.0.0.1:${port}/${LEAGUE_DIR}/`, {waitUntil: 'domcontentloaded'});
+    await page.goto(`http://127.0.0.1:${port}/${SIDE}/`, {waitUntil: 'domcontentloaded'});
     await page.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 180000});
     const snap = await page.evaluate(() => {
       if (matches.some(m => m.sim || (m.hg != null && !m.played && m.sim))) throw new Error('Siden har simulerte resultater');
@@ -193,6 +205,7 @@ function chromePath() {
         console.log(`Skrev lastmatch.json for ${Object.keys(lastPer).length} lag.`);
       }
     }
+    if (!MED_HISTORIKK) { console.log('history.json: hoppet over (--uten-historikk).'); return; }
     const fingerprint = crypto.createHash('sha1').update(snap.games.join('\n')).digest('hex').slice(0, 12);
     let hist = {version: 1, note: 'Sannsynligheter (0 til 1) etter hver oppdatering med nye resultater. Se scripts/snapshot_probs.js.', snapshots: []};
     if (fs.existsSync(HISTORY)) hist = JSON.parse(fs.readFileSync(HISTORY, 'utf8'));
