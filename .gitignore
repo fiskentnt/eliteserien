@@ -25,3 +25,6 @@ innlegg/
 # Wranglers lokale tilstand for planleggeren. Skal aldri i repoet:
 # den kan inneholde bygg-cache og kontospesifikk tilstand.
 planlegger/.wrangler/
+
+# Lokalt virtuelt miljo (requirements.txt). Ikke del av repoet.
+.venv/

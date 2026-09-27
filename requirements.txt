@@ -1,3 +1,7 @@
 numpy>=1.26
 scipy>=1.11
 Pillow
+# Bare tests/kilder/test_sesongskifte.py bruker den, til aa lese
+# .github/workflows/*.yml og kontrollere at alarmsteget faktisk staar der.
+# Manglet her, saa suiten stoppet paa ModuleNotFoundError i et rent miljo.
+PyYAML
