@@ -41,8 +41,30 @@ Panelene er skjult.
 
 `emodell/prognoselogg/<YYYY-MM>.jsonl` er append-only. En ny linje skrives
 bare når den publiserte prognosen for en kamp faktisk er **endret** siden
-forrige linje for samme kamp, målt på de samme avrundede tallene som lagres.
-En ny `odds_hentet` alene er ikke en endring.
+forrige linje for samme kamp: minst ett tall må ha flyttet seg **1e-5 eller
+mer**. Modell, dato, avspark og om markedet finnes sammenlignes eksakt. En ny
+`odds_hentet` alene er ikke en endring.
+
+**Hvorfor en terskel.** Byggingen er ikke bit-reproduserbar mellom
+plattformer. Ratingene skiller 2,8e-14 mellom macOS og Linux, men
+`olr_tilpass` bruker scipys Nelder-Mead, som forsterker det til ~8e-09 i
+OLR-parameterne og ~2e-09 i 1X2 — med **samme** numpy- og scipy-versjon på
+begge. Ligger en verdi nær en avrundingsgrense, vipper sjette desimal. 1e-5 er
+ti avrundingsenheter: langt over plattformstøyen, langt under det siden viser.
+
+**Én linje i loggen er plattformstøy, ikke en endret prognose.** Linje 73 i
+`2026-09.jsonl`, Aalesund–Bodø/Glimt, skrevet av den første CI-kjøringen
+2026-09-27 10:56 UTC. Borteseier var 0,722485499307 lokalt — 6,9e-10 under
+avrundingsgrensen 0,7224855 — og 0,722485500848 i CI, så 0,722485 ble
+0,722486. Linjen står, siden loggen er append-only, men den er ikke en
+prognoseendring. Terskelen hindrer at det skjer igjen.
+
+`elo-test/requirements.txt` låser numpy 2.5.3 og scipy 1.18.1, versjonene CI
+brukte. Det hindrer at en scipy-oppgradering flytter tallene; det fjerner ikke
+forskjellen mellom plattformer, som terskelen tar. `model.json` sammenlignes
+fortsatt eksakt, så et plattformbytte — for eksempel ubuntu-latest til
+Ubuntu 26 fra 19. oktober — kan gi én commit av `model.json` uten at dataene
+er endret.
 
 **Definisjon:** for en kamp hentes avsparket fra **terminlisten**
 (`fixtures.json`: `date` + `time`, norsk lokaltid, `Europe/Oslo` → UTC). Den
@@ -106,11 +128,12 @@ funksjonsdeklarasjonen, og deklarasjoner heises, så alle kall — også under
 | `stateRate(state, h, a)` | overstyrt | byggingens λ når ratingforskjellen er uendret (bit-lik laben); ellers `eloOLR` → `fitRates` | `exp(mu + H + att + ha + con − hc)` |
 | `rateFor(h, a)` | overstyrt | 70 %-blanding av **OLR-sannsynlighetene** med markedet; byggingens `blend_lam` når den finnes | blandet `outcome(λ)` med markedet |
 | `oddsOverrideFor(h, a)` | overstyrt | returnerer λ for **alle** kamper, slik at workeren bruker faste rater, som labens `faste` | returnerte λ bare for kamper med odds, ellers `null` |
-| `eloStyrke(R, lag)` | ny | Styrke 0–10 av ratingen om ligasnittet, `/100 · FORM_SPAN` | — |
+| `eloPPK(R, lag)` | ny | balansert forventet poeng per kamp: `eloOLR` mot hvert av de andre lagene **både hjemme og borte**, `3·P(seier) + P(uavgjort)`, snitt over 2·(n−1) kamper. Hjemmefordelen ligger i OLR-tersklene, så begge må med | — |
+| `eloStyrke(R, lag)` | ny | **produksjonens formel**: `5 + (ppk − snitt) · FORM_SPAN`, klippet til [0, 10]. Første utkast brukte `(rating − snitt)/100 · FORM_SPAN`, som ga spenn 1,1–12,9 og klippet Glimt og Viking til 10,0 | — |
 | `formScores()` | overstyrt | `eloStyrke(LIVE.R)` | forventede poeng av att/con |
 | `neutralExpPts()` | overstyrt | returnerer 0, ikke i bruk | forventede poeng på nøytral bane |
 | `renderModelTbl()` | overstyrt | ratingtabell: rating, mot snittet, H/U/B mot snittlag | «Slik fungerer det»: fire forventede mål per lag |
-| `teamFormHistory(team)` | overstyrt | ratingen per kampdag fra `rating_historikk` | kjørte FORM_K-oppdateringen på nytt |
+| `teamFormHistory(team)` | overstyrt | `eloStyrke` på ratingen per kampdag fra `rating_historikk`, altså samme skala som Styrke-kolonnen | kjørte FORM_K-oppdateringen på nytt |
 | `baseRate(h, a)` | overstyrt | byggingens rating → `eloOLR` → `fitRates`. **I praksis død**: eneste bruker er `qaLuck`, som ikke kan nås | statiske att/con |
 
 Globale variabler: `ELO` (modellfilen), `ELO_LAM` (λ, 1X2 og `blend_lam` per
@@ -131,8 +154,44 @@ ratingen, nå satt men ikke lest).
 | `render()`, `baseForm` | `formScores(MODEL.att…)` → `eloStyrke(ELO.rating_alle)` | `MODEL.att` finnes ikke |
 | `renderFaq()` | FAQPage-schemaet injiseres ikke | strukturerte data hører ikke på en noindex-side |
 | spørsmålslisten | `{id:'luck', …}` fjernet | etterpåklokskap, se over |
+| `renderQaHighlight()` | reserven uten valgt lag (og med lag før sonen er klar) **skjuler** knappen i stedet for å vise flaks-spørsmålet; `el.hidden = false` først i funksjonen | `KEYMATCH` er alltid `null` her, så produksjonens reserve ville **alltid** vist «heldig eller uheldig» uten valgt lag. Klikk gjorde ingenting, siden spørsmålet er fjernet |
+| klikk på `qaHighlight` | `dataset.qid \|\| 'luck'` → `\|\| ''` | ingen reserve til et fjernet spørsmål |
 | `LEAGUE.path` | `/eliteserien/` → `/elo-test/` | |
 | `LEAGUE.closingOddsFile` | → `../eliteserien/data/odds_closing.json` | observerte sluttodds, ikke modellberegnet |
+
+### B2. Synlig tekst som beskrev Full
+
+| Sted | Produksjonens tekst | Testsiden |
+|---|---|---|
+| «Om tabellkalkulatoren» | avsnitt om «Hvem har vært heldig eller uheldig» | fjernet |
+| «Slik fungerer det», 1. avsnitt | styrke «fra målene sine … der nye kamper teller mest» | én rating siden 2012, 90 % markedssignal, 10 % resultat |
+| «Slik fungerer det», 2. avsnitt | Styrke «over hele sesongen» | Styrke = rating omregnet til forventede poeng per kamp; egne resultater flytter den ikke |
+| detaljer, simuleringen | «lagstyrken oppdateres etter hver kamp i hver simulerte sesong» | lagstyrken holdes **fast**, som i testene |
+| detaljer, typisk sesongforløp | «med formoppdatering underveis» | «med fast lagstyrke» — `simulateTypicalAsync` bruker `oddsOverrideFor`, som gir faste rater |
+| detaljer, Sarpsborg-avsnittet | Full-styrken flyttet Sarpsborg 08 fra 4,80 til 4,65 | ratingen flyttes etter spilte kamper, ikke av egne resultater |
+| `howP1` | `k = 83.37` | `k = 83,37` |
+| «Hvordan vet vi at modellen virker?» | produksjonens validering: 20 mot 18 prosent, sist validert 24. september, `backtest_zones.py`, kalibreringstabeller | kort tekst: testet i laben mot produksjonsmodellen, labresultatene for ELO-Odds 90 er ikke publisert på siden ennå, treffsikkerhet først etter en sesong. `accuracyLog` og `modelExample` står som skjulte stubber fordi JS skriver til dem |
+| FAQ «Hvordan regnes sannsynlighetene ut?» | «en modell tilpasset på mål og sluttodds» | ELO-Odds 90: én rating per lag siden 2012, 90 % markedssignal |
+
+Kontroll **L** leter etter **hele Full-fraser**, ikke enkeltord, i HTML-tekst
+utenfor script/style/kommentarer og i aktiv JS: produksjonens faktiske
+ordlyd der den beskriver Full («tilpasset på mål og sluttodds», «angreps- og
+en forsvarsstyrke», «Nyere kamper teller mest», «teller halvparten så mye»,
+«tilpasses på nytt», «styrke fra målene» m.fl.), pluss flaks- og
+valideringsfrasene. Kjørt på produksjonssiden finner den 11 av 14, så den
+vokter noe reelt.
+
+Enkeltord er **ikke** forbudt med vilje. Testsiden sier selv «Det finnes ingen
+halveringstid» og «har ikke egne angreps- og forsvarstall» — korrekte
+negasjoner. Et forbud mot ordene ville tvunget bort riktig tekst, og korrekt
+brukertekst skal ikke endres for at en kontroll skal passere.
+
+Kontroll **K** regner Styrke uavhengig i Python og krever likhet med sidens
+`eloStyrke`, og at ingen lag er klippet til 0 eller 10. Den sjekker også
+koblingen statisk: `formScores` returnerer `eloStyrke`, `baseForm` og
+formgrafen bruker den. At siden faktisk viser tallene, er kontrollert ved
+gjengivelse i Chrome: tabellen og Styrke-kortet viste Glimt 7,8 og Viking 7,0,
+tabellen Kristiansund 3,6.
 
 ### C. Head og markering
 
@@ -171,6 +230,7 @@ testsidespesifikk og skal ikke porteres. `ELO_EKTE` kan fjernes.
 - **Scenarioer holder ratingen fast**, som i laben. Fyller brukeren inn et
   resultat, endres tabellen, men ikke lagstyrken. Produksjonssiden justerer
   styrkene. At ratingen burde flyttes er mulig, men utestet.
-- **Flaks-spørsmålet** er fjernet, ikke løst. Det krever å vurdere hver spilt
+- **Flaks-spørsmålet** er fjernet, ikke løst. Det lå også som reserve i
+  `renderQaHighlight`, som kontroll G ikke så; kontroll L gjør det nå. Det krever å vurdere hver spilt
   kamp med ratingen slik den var **før** kampen, som finnes i
   `rating_historikk`, men mekanismen er ikke bygget.

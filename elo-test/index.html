@@ -1118,7 +1118,6 @@
       <h2 id="omSidenTittel">Om tabellkalkulatoren for Eliteserien</h2>
       <p>Tabellkalkulator for Eliteserien 2026 viser dagens tabell og sannsynligheten for at hvert lag vinner serien, tar en europaplass (topp 4), havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 10&nbsp;000 ganger.</p>
       <p>Du kan fylle inn egne resultater, la modellen simulere tomme kamper, følge ett lag og se hvordan tabellen og sjansene endrer seg. Tabellen viser både modellens styrkevurdering for hele sesongen og formen i de fem siste kampene, så du ser forskjellen på hvor sterkt et lag er og hvordan det går akkurat nå. Du kan også se tabellen etter en valgt runde, både for spilte runder og scenarier fremover. Tallene oppdateres automatisk etter hver kamp.</p>
-            <p>Tallene i «Hvem har vært heldig eller uheldig» er faktiske poeng minus modellens forventede poeng i de samme kampene. Modellen er tilpasset på nettopp de kampene, og den har derfor allerede tatt opp i seg en del av avviket. Tallene er altså trolig litt for <strong>små</strong>: et lag har sannsynligvis vært enda heldigere, eller enda uheldigere, enn tallet viser.</p>
       <noscript><p><strong>Tabellen og sannsynlighetene regnes ut i nettleseren og krever JavaScript.</strong> Slå på JavaScript for å bruke kalkulatoren.</p></noscript>
     </section>
     <!-- /LIGA-OM -->
@@ -1131,17 +1130,17 @@
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7"/></svg></span>Slik fungerer det</summary>
   <div class="in">
     <p class="plain-lead">Siden spiller resten av sesongen 10&nbsp;000 ganger og teller hvor ofte hvert lag ender på hver plass.</p>
-    <p>Hvert lag får en styrke fra målene sine og fra hva spillmarkedet har trodd om kampene deres, der nye kamper teller mest. Den er et mål på hele sesongen, ikke på de siste ukene. Står det 52 prosent for topp 4, endte laget blant de fire beste i omtrent 5200 av de 10&nbsp;000 sesongene.</p>
-    <p>Fyller du inn et resultat selv, brukes det i alle 10&nbsp;000 simuleringene, så du ser hvordan det påvirker sjansene. Styrke er modellens vurdering av hvor sterkt laget er, over hele sesongen, på en skala fra 0 til 10, der 5 er et gjennomsnittslag. Form står på samme skala, men er regnet rett ut av de fem siste kampene: vanlige poeng, 3 for seier og 1 for uavgjort, delt på de 15 som var mulige og ganget med 10. Fem seirer gir 10,0, fem uavgjorte 3,3 og fem tap 0,0.</p>
+    <p>Hvert lag har én rating, bygget kamp for kamp siden 2012. Etter hver spilte kamp flyttes ratingen mot det som skjedde, og 90 prosent av det signalet er hva spillmarkedet ventet før kampen, 10 prosent selve resultatet. Eldre kamper glemmes ikke; de er allerede bakt inn i ratingen. Står det 52 prosent for topp 4, endte laget blant de fire beste i omtrent 5200 av de 10&nbsp;000 sesongene.</p>
+    <p>Fyller du inn et resultat selv, brukes det i alle 10&nbsp;000 simuleringene, så du ser hvordan det påvirker tabellen og sjansene. Lagstyrken endres ikke av resultater du fyller inn. Styrke er ratingen regnet om til forventede poeng per kamp mot alle de andre lagene, hjemme og borte, på en skala fra 0 til 10, der 5 er et gjennomsnittslag. Form står på samme skala, men er regnet rett ut av de fem siste kampene: vanlige poeng, 3 for seier og 1 for uavgjort, delt på de 15 som var mulige og ganget med 10. Fem seirer gir 10,0, fem uavgjorte 3,3 og fem tap 0,0.</p>
 
     <details class="details-tech">
       <summary>Vis detaljer</summary>
       <h3>Slik regnes sannsynlighetene</h3>
       <p id="howP1"></p>
       <p id="howP2"></p>
-      <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Topp 4, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
-      <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner resten", "...taper resten", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
-      <p>Styrketallet flytter seg lite fra kamp til kamp. Hver kamp justerer det litt, ut fra hvor mange mål laget scoret og slapp inn mot det modellen ventet. Men justeringene trekkes samtidig tilbake mot utgangspunktet, og modellen tilpasses på nytt på alle kampene hver dag. Over en sesong står derfor styrketallet omtrent stille: sju kamper uten seier flyttet Sarpsborg 08 fra 4,80 til 4,65 i september 2026. Det er meningen. Styrke viser nivå. Vil du se de siste kampene, er det formtallet som sier det.</p>
+      <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene. Lagstyrken holdes fast gjennom hele den simulerte sesongen, slik den gjør i testene modellen er validert med. Topp 4, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
+      <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner resten", "...taper resten", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med fast lagstyrke, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
+      <p>Ratingen flyttes etter hver spilte kamp, mest når utfallet eller markedet avviker fra det ratingen ventet. Resultater du fyller inn selv flytter den ikke. Styrke viser nivå. Vil du se de siste kampene, er det formtallet som sier det.</p>
       <p>Tabellen, kamplisten, simuleringene og svarene bygger alle på nøyaktig den samme lagstyrken. Det finnes ikke lenger en egen variant for visning: ett tall, ett sted.</p>
       <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn, verken i tabellen eller i simuleringene. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
       <div class="tblscroll"><table class="mt" id="modelTbl"></table></div>
@@ -1152,125 +1151,17 @@
 <!-- /LIGA-SLIK -->
 
 <!-- LIGA-MODELLSJEKK -->
+<!-- ELO-TEST: produksjonens valideringsseksjon (kalibrering, 20 mot 18
+     prosent, sist validert 24. september, backtest_zones.py) er ERSTATTET. De
+     tallene gjelder produksjonsmodellen, ikke ELO-Odds 90. accuracyLog og
+     modelExample staar som skjulte stubber fordi JS skriver til dem. -->
 <details class="howitworks modelcheck">
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 20v-7M12 20V6M18 20v-11"/></svg></span>Hvordan vet vi at modellen virker?</summary>
   <div class="in">
-    <p class="plain-lead">Modellen er testet på tidligere sesonger ved å stoppe sesongen på ulike tidspunkt og beregne hvordan tabellen vil ende. Resultatene viser at sannsynlighetene treffer ganske godt. Når modellen for eksempel har gitt rundt 20 prosent sjanse, har det skjedd i omtrent 18 prosent av tilfellene.</p>
-    <p>Beregningen tar utgangspunkt i både tabellen og hvor gode modellen mener lagene er. Lagstyrken betyr mest tidlig og midt i sesongen. Mot slutten betyr poengene stadig mer, fordi det er færre kamper igjen.</p>
-    <p id="modelExample"></p>
-    <p>Lagstyrken beregnes ut fra både resultatene og oddsen på kampene som er spilt. Dermed får modellen indirekte med seg ting som skader, suspensjoner og lagoppstillinger. På kommende kamper brukes markedsoddsen også direkte når den er tilgjengelig.</p>
-
-    <h3>Treffsikkerhet denne sesongen</h3>
-    <p>Tallene under er hentet fra sannsynlighetene som ble lagret FØR avspark, holdt opp mot resultatet. Ingenting er regnet på nytt i etterkant, så tallene kan ikke bli bedre av etterpåklokskap.</p>
-    <div id="accuracyLog"></div>
-
-    <h3>Hvorfor oddsen hentes rett før avspark</h3>
-    <p>Sluttoddsen er siste pris mellom 60 og 15 minutter før avspark, så laguttaket er priset inn. Det er målt, ikke antatt: på 351 spilte kamper i de to ligaene flyttet sannsynlighetene seg i snitt 2,8 prosentpoeng fra dagen før til dette vinduet, favoritten byttet i 2 til 4 prosent av kampene, og odds fra dagen før traff dårligere: 0,0082 ± 0,0041 i log loss, altså 2,0 standardfeil. Har en kamp ingen pris i vinduet, står den uten sluttodds; en eldre pris brukes aldri i stedet.</p>
-
-    <h3>Treffer den?</h3>
-    <p>Bortover står modellens sannsynlighet, oppover hvor ofte det faktisk gikk slik. Ligger punktene nær den stiplede linjen, holder prosentene omtrent vann. Store punkter bygger på mange prediksjoner, små på få, og de små spretter mye av seg selv.</p>
-    <details class="details-tech">
-      <summary>Vis detaljer</summary>
-    <p class="note">Kilder til dataene på siden: ffksupporter.net, ESPN, football-data.co.uk, OddsPapi og The Odds API, alt hentet automatisk. Sluttoddsen kommer fra OddsPapi (Pinnacle, ellers bet365, ellers Unibet), med football-data.co.uk som reserve der vinduet er tomt.</p>
-    <p class="note">Sist validert: 24. september 2026, mot NOR.csv (football-data.co.uk), sesongene 2016–2025. Modellen tilpasses ved fire kuttpunkter i hver sesong (etter 40, 55, 70 og 85 prosent av kampene), resten av sesongen simuleres 100 000 ganger, og tallene er snittet over 640 lag-observasjoner. Standardfeilene er klustret på sesong. Lagene i en sesong er ikke uavhengige forsøk &ndash; bare ett lag kan vinne serien, og de samme sesongene måles ved fire kuttpunkter. Regner man hver lag-observasjon som et eget forsøk, blir standardfeilene rundt halvparten så store, og forskjeller ser mer sikre ut enn de er. Kvalikkampene, som ligger i samme CSV-fil, er holdt utenfor. Hele kjøringen ligger i <code>scripts/backtest_zones.py</code> i kildekoden, så tallene kan reproduseres. De regnes ikke ut i nettleseren.</p>
-    <p class="note">To forbehold om grafen over: intervaller med få prediksjoner svinger mye av seg selv, så et punkt som ligger langt fra diagonalen behøver ikke betyde at modellen er skjev der. Og prediksjonene er ikke uavhengige av hverandre: samme sesong måles ved flere kuttpunkter, og de samme lagene går igjen, så et lag som overrasker gjennom en sesong flytter flere punkter samtidig.</p>
-
-    <h4>Kalibrering, tall</h4>
-      <div class="tblscroll"><table class="mt calib">
-        <thead><tr><th colspan="4">Topp 4</th></tr><tr><th>Intervall</th><th>Antall</th><th><span class="lg">Snitt predikert</span><span class="sm">Snitt pred.</span></th><th><span class="lg">Faktisk andel</span><span class="sm">Faktisk</span></th></tr></thead>
-      <tbody>
-        <tr><td>0–10 %</td><td>393</td><td>1,2 %</td><td>1,5 %</td></tr>
-        <tr><td>10–20 %</td><td>32</td><td>14,2 %</td><td>18,8 %</td></tr>
-        <tr><td>20–30 %</td><td>32</td><td>24,1 %</td><td>18,8 %</td></tr>
-        <tr><td>30–40 %</td><td>20</td><td>35,5 %</td><td>40,0 %</td></tr>
-        <tr><td>40–50 %</td><td>11</td><td>44,8 %</td><td>63,6 %</td></tr>
-        <tr><td>50–60 %</td><td>13</td><td>54,6 %</td><td>46,2 %</td></tr>
-        <tr><td>60–70 %</td><td>17</td><td>64,6 %</td><td>58,8 %</td></tr>
-        <tr><td>70–80 %</td><td>14</td><td>75,8 %</td><td>57,1 %</td></tr>
-        <tr><td>80–90 %</td><td>26</td><td>84,9 %</td><td>84,6 %</td></tr>
-        <tr><td>90–100 %</td><td>82</td><td>98,0 %</td><td>98,8 %</td></tr>
-      </tbody>
-      </table></div>
-      <div class="tblscroll"><table class="mt calib">
-        <thead><tr><th colspan="4">Nedrykk</th></tr><tr><th>Intervall</th><th>Antall</th><th><span class="lg">Snitt predikert</span><span class="sm">Snitt pred.</span></th><th><span class="lg">Faktisk andel</span><span class="sm">Faktisk</span></th></tr></thead>
-      <tbody>
-        <tr><td>0–10 %</td><td>472</td><td>1,0 %</td><td>1,7 %</td></tr>
-        <tr><td>10–20 %</td><td>43</td><td>14,2 %</td><td>7,0 %</td></tr>
-        <tr><td>20–30 %</td><td>33</td><td>24,9 %</td><td>27,3 %</td></tr>
-        <tr><td>30–40 %</td><td>13</td><td>35,1 %</td><td>30,8 %</td></tr>
-        <tr><td>40–50 %</td><td>14</td><td>44,5 %</td><td>35,7 %</td></tr>
-        <tr><td>50–60 %</td><td>19</td><td>54,5 %</td><td>52,6 %</td></tr>
-        <tr><td>60–70 %</td><td>9</td><td>66,4 %</td><td>44,4 %</td></tr>
-        <tr><td>70–80 %</td><td>5</td><td>76,3 %</td><td>100,0 %</td></tr>
-        <tr><td>80–90 %</td><td>10</td><td>86,2 %</td><td>100,0 %</td></tr>
-        <tr><td>90–100 %</td><td>22</td><td>97,4 %</td><td>100,0 %</td></tr>
-      </tbody>
-      </table></div>
-
-    <h3>Brier-score</h3>
-    <p>Brier-score måler hvor nær sannsynlighetene var de faktiske utfallene. Lavere er bedre, og 0 er perfekt. Modellen sammenlignes med tre enklere alternativer:</p>
-    <ul class="baselines">
-      <li><strong>Naiv basisrate:</strong> samme faste sannsynlighet for alle lag, uansett tabell og form: 1/16 for gull, 4/16 for topp 4, 2/16 for nedrykk.</li>
-      <li><strong>Tabellmodell:</strong> starter fra dagens tabell og antar at alle lag er like sterke i de gjenstående kampene, med samme forventede målnivå hjemme og borte (snittet i sesongen så langt). Den bruker ikke tabellplasseringen til å anslå lagstyrke. Dette er den strenge sammenligningen: den viser hva kunnskap om lagene tilfører.</li>
-      <li><strong>Ren Poisson:</strong> lagstyrke tilpasset på mål alene, uten odds, formoppdatering eller Dixon-Coles.</li>
-    </ul>
-    <div class="tblscroll"><table class="mt brier">
-      <thead><tr><th>Modell</th><th>Seriemester</th><th>Topp 4</th><th>Nedrykk</th></tr></thead>
-      <tbody>
-        <tr><td>Naiv basisrate</td><td>0,0586</td><td>0,1875</td><td>0,1094</td></tr>
-        <tr><td>Tabellmodell (alle lag like sterke)</td><td>0,0186</td><td>0,0615</td><td>0,0542</td></tr>
-        <tr><td>Ren Poisson (uten odds)</td><td>0,0177</td><td>0,0663</td><td>0,0530</td></tr>
-        <tr><td>Full modell (i bruk)</td><td>0,0157</td><td>0,0607</td><td>0,0488</td></tr>
-      </tbody>
-    </table></div>
-
-    <p class="note">Det meste av treffsikkerheten kommer av å spille resten av sesongen tusenvis av ganger fra dagens tabell: tabellmodellen gjør nettopp det, med like sterke lag i kampene som står igjen, og kommer nesten hele veien fra basisraten. At modellen i tillegg vet hvor gode lagene er, er verdt mindre enn man skulle tro. Målt parvis mot tabellmodellen er den bedre på nedrykk med 0,0054 ± 0,0027, altså 2,0 standardfeil, nøyaktig på grensen siden bruker ellers. Retningen er den samme ved alle fire kuttpunktene, men ti sesonger er for lite til å si det sikkert. For gull er den bedre med 0,0028 ± 0,0044, altså 0,6 standardfeil, og det er ingen målbar forskjell. For topp 4 er forskjellen 0,0008 ± 0,0044 (0,2 standardfeil), altså ingen målbar forskjell. Ren Poisson er til og med litt dårligere enn tabellmodellen på topp 4 (0,0663 mot 0,0615): det er odds og tabell sammen som gjør jobben, ikke lagstyrke fra mål alene.</p>
-
-    <h3>Ablasjonstest</h3>
-    <p>Samme test, bygget stegvis: hva tilfører hver enkelt del av modellen faktisk sluttplassprediksjonen? Hvert steg legger til én ting på steget over. Forskjellene er målt parvis, på samme lag og kuttpunkt, og "ingen målbar forskjell" betyr at avviket er mindre enn to standardfeil, altså innenfor testens egen støy.</p>
-    <div class="tblscroll"><table class="mt ablation">
-      <thead><tr><th>Steg</th><th>Seriemester</th><th>Topp 4</th><th>Nedrykk</th><th>Effekt</th></tr></thead>
-      <tbody>
-        <tr><td>1. Ren Poisson</td><td data-l="Seriemester">0,0177</td><td data-l="Topp 4">0,0663</td><td data-l="Nedrykk">0,0530</td><td>Utgangspunkt</td></tr>
-        <tr><td>2. + historiske sluttodds</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0615</td><td data-l="Nedrykk">0,0488</td><td>Bedre på alle tre, men innenfor to standardfeil</td></tr>
-        <tr><td>3. + formoppdatering</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0611</td><td data-l="Nedrykk">0,0488</td><td>Ingen målbar forskjell</td></tr>
-        <tr><td>4. + Dixon-Coles</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0613</td><td data-l="Nedrykk">0,0490</td><td>Ingen målbar forskjell (retter mest enkeltkamp-uavgjort)</td></tr>
-        <tr><td>5. Full modell (l1/l2=16/48)</td><td data-l="Seriemester">0,0157</td><td data-l="Topp 4">0,0607</td><td data-l="Nedrykk">0,0488</td><td>Ingen målbar forskjell</td></tr>
-        <tr><td>Sidegren: + rekke-rampe (på steg 3)</td><td data-l="Seriemester">0,0158</td><td data-l="Topp 4">0,0608</td><td data-l="Nedrykk">0,0490</td><td>Ga ingen målbar forskjell, og ble <strong>fjernet</strong> i september 2026.</td></tr>
-      </tbody>
-    </table></div>
-    <p class="note">Hovedfunnet i denne tabellen er hvor små de enkelte stegene er. Ingen av dem er alene utenfor to standardfeil, og oddssteget er det klareste. Det betyr ikke at de ikke virker: lagt sammen gir de en modell som er bedre enn tabellmodellen på nedrykk, men bare så vidt (2,0 standardfeil, se over). Stegene peker samme vei og forsterker hverandre, men testen er ikke stor nok til å måle hvert av dem, så radene bør leses som "ikke dårligere", ikke som "bevist bedre" hver for seg.</p>
-
-    <h4>Forbedring mot tabellmodellen, per kuttpunkt</h4>
-    <p>Negativt tall betyr at modellen er bedre enn å lese tabellen. 160 lag-observasjoner per kuttpunkt.</p>
-    <div class="tblscroll"><table class="mt brier">
-      <thead><tr><th>Spilt</th><th>Gull</th><th>Topp 4</th><th>Nedrykk</th></tr></thead>
-      <tbody>
-        <tr><td>40 %</td><td>−0,0126 ± 0,0056</td><td>−0,0016 ± 0,0089</td><td>−0,0105 ± 0,0056</td></tr>
-        <tr><td>55 %</td><td>−0,0016 ± 0,0062</td><td>+0,0013 ± 0,0042</td><td>−0,0045 ± 0,0036</td></tr>
-        <tr><td>70 %</td><td>+0,0006 ± 0,0045</td><td>−0,0016 ± 0,0042</td><td>−0,0027 ± 0,0026</td></tr>
-        <tr><td>85 %</td><td>+0,0022 ± 0,0026</td><td>−0,0012 ± 0,0026</td><td>−0,0041 ± 0,0029</td></tr>
-      </tbody>
-    </table></div>
-    <p class="note">Bare gull ved 40 prosent spilt er utenfor støyen (2,2 standardfeil). Nedrykk ved samme punkt er 1,9, altså like under. De tretten andre ligger klart innenfor to standardfeil og bør leses som et mønster, ikke som målte effekter hver for seg. Mønsteret er at gevinsten ligger tidlig i sesongen: for gull snur den til og med svakt i tabellmodellens favør ved 70 og 85 prosent.</p>
-
-    <h4>Enkeltkamper: hva er det verdt å vite hvem som spiller?</h4>
-    <p>Samme type test, men på hver enkelt kamp i stedet for sluttplassen, over 1574 kamper i sesongene 2016–2025 (scripts/evaluate_model.py, samme rullerende tilpasning). Modellen sammenlignes med en variant der alle lag er like sterke og bare hjemmefordelen er med.</p>
-    <div class="tblscroll"><table class="mt brier">
-      <thead><tr><th>Modell</th><th><span class="lg">Log loss</span><span class="sm">Log loss</span></th><th><span class="lg">Traff utfallet</span><span class="sm">Traff</span></th></tr></thead>
-      <tbody>
-        <tr><td>Alle lag like sterke</td><td>1,0734</td><td>47,0 %</td></tr>
-        <tr><td>Full modell (i bruk)</td><td>1,0080</td><td>50,3 %</td></tr>
-      </tbody>
-    </table></div>
-    <p class="note">På enkeltkamper er altså lagstyrken tydelig verdt noe: 3,3 prosentpoeng flere riktige utfall. At det likevel betyr lite for sluttplassen, er fordi tabellen som er spilt inn allerede bærer den samme informasjonen, og fordi 30 kamper jevner ut mye.</p>
-
-    <h3>Hvordan testen er gjort</h3>
-    <p>Modellen testes på framtiden, ikke på kampene den allerede har sett. Ved flere tidspunkter i hver sesong tilpasses modellen kun på kampene som var spilt fram til dette tidspunktet. Deretter simuleres resten av sesongen, og sannsynlighetene sammenlignes med det som faktisk skjedde.</p>
-
-    <h3>Begrensninger</h3>
-    <p>Med 10&nbsp;000 simuleringer er usikkerheten høyst omtrent ±1 prosentpoeng, og mindre for lave og høye sannsynligheter, så prosentene på siden bør ikke tolkes på desimalnivå.</p>
-    </details>
+    <p class="plain-lead">ELO-Odds 90 er testet i laben mot produksjonsmodellen, på tidligere sesonger av Eliteserien, med de samme kuttpunktene og simuleringene. Labresultatene for ELO-Odds 90 er ikke publisert på siden ennå.</p>
+    <p>Treffsikkerheten til denne testversjonen kan først måles når prognosene den lagrer før avspark har en sesong bak seg. Til da vises ingen treffsikkerhet.</p>
+    <p id="modelExample" hidden></p>
+    <div id="accuracyLog" hidden></div>
   </div>
 </details>
 <!-- /LIGA-MODELLSJEKK -->
@@ -1336,8 +1227,9 @@ const LEAGUE = {
        const hale = 'De to siste plassene rykker rett ned, og nummer 14 må spille kvalifisering.';
        return t.length ? `Størst nedrykksfare har ${faqListe(t)}. ${hale}` : hale; }},
     {q: 'Hvordan regnes sannsynlighetene ut?',
-     a: () => `Resten av sesongen spilles ${MC_N.toLocaleString('nb-NO')} ganger med en modell `
-       + 'tilpasset på mål og sluttodds. Tallet er andelen av de sesongene laget endte der.'},
+     a: () => `Resten av sesongen spilles ${MC_N.toLocaleString('nb-NO')} ganger med ELO-Odds 90: `
+       + 'én rating per lag, bygget kamp for kamp siden 2012, der 90 prosent av signalet er hva '
+       + 'spillmarkedet ventet før kampen. Tallet er andelen av de sesongene laget endte der.'},
   ],
   // Hva hver plass gir, vist som tittel på plassifferet.
   posTitles: {1: 'Champions League: playoff-runden', 2: 'Champions League: andre kvalifiseringsrunde',
@@ -5667,6 +5559,7 @@ function renderQaButtons(){
 function renderQaHighlight(){
   const el = document.getElementById('qaHighlight');
   if(!el) return;
+  el.hidden = false;  // ELO-TEST: reserven over kan ha skjult den
   if(!SELECTED_TEAM){
     // Rundens viktigste kamp når den er regnet ut og fersk, ellers hell/uhell.
     if(!qaKeyBannerStale()){
@@ -5674,9 +5567,10 @@ function renderQaHighlight(){
       el.dataset.qid = 'keyround';
       el.classList.add('plain'); // hel setning: ingen «...» rundt
     } else {
-      el.textContent = 'Hvem har vært heldig eller uheldig?';
-      el.dataset.qid = 'luck';
-      el.classList.remove('plain');
+      // ELO-TEST: produksjonen faller tilbake til flaks-sporsmaalet her. Det er
+      // fjernet (etterpaaklokskap), og KEYMATCH er alltid null paa testsiden,
+      // saa knappen ville ALLTID vist det uten valgt lag. Skjules i stedet.
+      el.textContent = ''; el.dataset.qid = ''; el.hidden = true;
     }
     return;
   }
@@ -5686,7 +5580,7 @@ function renderQaHighlight(){
     // lastMC ikke klar ennå (rett etter sideinnlasting) -- vis samme
     // fallback som uten lag til den er det, i stedet for en tom knapp.
     if(!qaKeyBannerStale()){ el.textContent = KEYMATCH.banner; el.dataset.qid = 'keyround'; el.classList.add('plain'); }
-    else { el.textContent = 'Hvem har vært heldig eller uheldig?'; el.dataset.qid = 'luck'; }
+    else { el.textContent = ''; el.dataset.qid = ''; el.hidden = true; }  // ELO-TEST: se over
     return;
   }
   // Front-soner og avgjorte saker: spørsmål 1 ("Hvorfor …"), med tekst som ikke
@@ -5700,7 +5594,7 @@ function renderQaHighlight(){
   }
 }
 document.getElementById('qaHighlight').addEventListener('click', ()=>{
-  const qid = document.getElementById('qaHighlight').dataset.qid || 'luck';
+  const qid = document.getElementById('qaHighlight').dataset.qid || '';  // ELO-TEST: ikke 'luck'
   qaJumpToSection();
   runQaQuestion(qid);
 });
@@ -6620,7 +6514,7 @@ async function boot(){
   // faktisk vekt/halveringstid (fra fase A: uendret, men holdt dynamisk i tilfelle).
   // ELO-TEST: teksten beskriver ELO-Odds 90, ikke Fulls angrep/forsvar.
   // MODEL.meta finnes ikke i ELO90-modellen -- den har ingen halveringstid.
-  document.getElementById('howP1').textContent = `Hvert lag har ÉN rating. Den bygges kronologisk fra 2012: etter hver kamp flyttes ratingen mot det som skjedde, der 90 prosent av signalet er hva spillmarkedet ventet før kampen og 10 prosent er selve resultatet med målforskjellen. Læringsraten k = ${ELO.k} er låst. Det finnes ingen halveringstid — eldre kamper glemmes ikke, de er allerede bakt inn i ratingen.`;
+  document.getElementById('howP1').textContent = `Hvert lag har ÉN rating. Den bygges kronologisk fra 2012: etter hver kamp flyttes ratingen mot det som skjedde, der 90 prosent av signalet er hva spillmarkedet ventet før kampen og 10 prosent er selve resultatet med målforskjellen. Læringsraten k = ${String(ELO.k).replace('.', ',')} er låst. Det finnes ingen halveringstid — eldre kamper glemmes ikke, de er allerede bakt inn i ratingen.`;
   document.getElementById('howP2').textContent = `Sjansen for hjemmeseier, uavgjort og borteseier regnes av ratingforskjellen mellom lagene, med én hjemmefordel som gjelder hele ligaen (${Math.round(ELO.hjemmefordel_rating)} ratingpoeng). Der spillselskapene har lagt ut odds for en kommende kamp, blandes de inn med ${Math.round(ELO.blend_w*100)} prosent vekt. Modellen har ikke egne angreps- og forsvarstall, så tabellen under viser ratingen i stedet. Merk at resultater du fyller inn selv IKKE endrer lagstyrken på denne testsiden: ratingen holdes fast, slik den gjør i testene modellen er validert med. Produksjonssiden justerer styrkene underveis.`;
 
   // Gjenstående kamper, gruppert per runde. Kamper som allerede er spilt innad i en runde
@@ -6786,13 +6680,43 @@ function stateRate(state,home,away){
   return fitRates(p[0], p[2], bygd ? bygd.lam : [1.3,1.3]);
 }
 
-/* Styrke 0-10: ratingen skalert om ligasnittet. Ikke forventede poeng av
-   angrep/forsvar -- modellen har ikke de storrelsene. FORM_SPAN beholdes, og
-   ratingen deles paa 100 saa skalaen ligner produksjonens i praksis. */
+/* Styrke 0-10: SAMME SKALA SOM PRODUKSJONEN.
+
+   Produksjonen regner forventede poeng per kamp (ppk) og setter
+   Styrke = 5 + (ppk - snitt) * FORM_SPAN, klippet til [0, 10]. FORM_SPAN er
+   altsaa styrkepoeng PER FORVENTET POENG PER KAMP.
+
+   Forste utkast her brukte 5 + (rating - snitt)/100 * FORM_SPAN, som tolker
+   FORM_SPAN som styrkepoeng per 100 ratingpoeng. Det ga et spenn fra 1,1 til
+   12,9, og baade Glimt og Viking ble klippet til 10,0 selv om de skiller 88
+   ratingpoeng. Funnet ved gjennomgang av den publiserte siden.
+
+   BALANSERT PPK: for hvert lag, eloOLR mot hvert av de andre lagene BAADE
+   hjemme og borte, 3 * P(seier) + P(uavgjort), snittet over de 2*(n-1)
+   kampene. Hjemmefordelen ligger i OLR-tersklene, ikke i ratingen, saa hjemme-
+   og bortekampen maa begge med for at tallet skal vaere noytralt.
+
+   Samme funksjon brukes av Styrke-kolonnen, baseForm og formgrafen, med den
+   ratingen som gjelder for hvert formaal. */
+function eloPPK(R, lag){
+  const ut = {};
+  lag.forEach(t=>{
+    let sum = 0, n = 0;
+    lag.forEach(u=>{
+      if(u === t) return;
+      const h = eloOLR(ELO.olr, (R[t]||0) - (R[u]||0));   // t hjemme
+      sum += 3*h[0] + h[1]; n++;
+      const b = eloOLR(ELO.olr, (R[u]||0) - (R[t]||0));   // t borte
+      sum += 3*b[2] + b[1]; n++;
+    });
+    ut[t] = sum / n;
+  });
+  return ut;
+}
 function eloStyrke(R, lag){
-  const v = lag.map(t=>(R[t]||0));
-  const snitt = v.reduce((a,b)=>a+b,0)/v.length;
-  return lag.map(t=>Math.min(10,Math.max(0, 5+((R[t]||0)-snitt)/100*FORM_SPAN)));
+  const p = eloPPK(R, lag);
+  const snitt = lag.reduce((a,t)=>a+p[t], 0) / lag.length;
+  return lag.map(t=>Math.min(10, Math.max(0, 5 + (p[t]-snitt)*FORM_SPAN)));
 }
 function formScores(){ return eloStyrke(LIVE.R, TEAMS); }
 function neutralExpPts(){ return 0; }   /* ikke i bruk i ELO90 */

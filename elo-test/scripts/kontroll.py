@@ -92,6 +92,13 @@ if _p.exists():
     lab_mod = importlib.util.module_from_spec(_s)
     _s.loader.exec_module(lab_mod)
 
+# A1 OG A2 ER PLATTFORMUAVHENGIGE MOT model.json. De kjorer kjeden to ganger
+# PAA SAMME MASKIN -- en gang med den isolerte modulen, en gang med labens -- og
+# sammenligner de to. model.json brukes bare som liste over kamppar;
+# ratingforskjellen kommer fra den lokale kjoringen. Det er viktig fordi
+# model.json bygges i CI (Linux), og macOS gir ~8e-09 forskjell i OLR. Hadde
+# A1 sammenlignet mot filen med 1e-12, ville den feilet paa plattformen og ikke
+# paa koden. Verifisert: lokalt mot CI-bygget model.json gir 0,000e+00.
 print("A1  den isolerte modulen mot labens egne funksjoner, samme input")
 if lab_mod is None:
     print("     laben finnes ikke -- hoppes over (den trengs aldri ved kjoring)")
@@ -157,7 +164,12 @@ else:
 
 # ---------- B: lambda-parene
 print("\nB   de 72 lambda-parene mot labens fit_rates")
-if lab_mod is not None:
+if lab_mod is None:
+    # Her sto bare "if lab_mod is not None:", uten else. I CI skrev B da
+    # overskriften og ingenting mer -- en STILLE hopping, i motsetning til A1
+    # og A2 som sier fra. Funnet i den forste CI-kjoringen.
+    print("     laben finnes ikke -- hoppes over (den trengs aldri ved kjoring)")
+else:
     dl = 0.0
     for r in M["kamper"]:
         a = lab_mod.fit_rates(r["pH"], r["pB"], RHO)
@@ -390,6 +402,113 @@ else:
     print(f"  ADVARSEL  {_txt}")
     if _os.environ.get("GITHUB_ACTIONS"):
         print(f"::warning title=ELO-test: sesongskiftet er i gang::{_txt}")
+
+# ---------- K: STYRKE, regnet uavhengig og mot sidens egen JS
+# Styrke var feil skalert: 5 + (rating - snitt)/100 * FORM_SPAN, med spenn 1,1
+# til 12,9 og baade Glimt og Viking klippet til 10,0. Funnet ved gjennomgang av
+# den publiserte siden, ikke av en kontroll. Riktig er produksjonens formel,
+# 5 + (ppk - snitt) * FORM_SPAN, med balansert ppk mot alle de andre lagene,
+# hjemme og borte. Her regnes den UAVHENGIG i Python med labens olr_sannsyn, og
+# sammenlignes med sidens eloStyrke kjort i Node.
+print("\nK   Styrke: uavhengig Python mot sidens eloStyrke, og ingen lag paa 0 eller 10")
+_lag = M["teams"]
+_R = M.get("rating_alle") or M["rating"]
+_FS = float(_r2.search(r"const FORM_SPAN\s*=\s*([\d.]+)\s*;", _hoved).group(1))
+_ppk = {}
+for _t in _lag:
+    _v = []
+    for _u in _lag:
+        if _u == _t:
+            continue
+        # _kh/_kb, IKKE _h: _h er HTML-teksten som L trenger. Forste utkast
+        # brukte _h her og overskrev den med en tuppel.
+        _kh = E.olr_sannsyn(M["olr"], _R.get(_t, 0.0) - _R.get(_u, 0.0))
+        _v.append(3 * _kh[0] + _kh[1])
+        _kb = E.olr_sannsyn(M["olr"], _R.get(_u, 0.0) - _R.get(_t, 0.0))
+        _v.append(3 * _kb[2] + _kb[1])
+    _ppk[_t] = sum(_v) / len(_v)
+_sn = sum(_ppk.values()) / len(_lag)
+_py = [min(10.0, max(0.0, 5 + (_ppk[_t] - _sn) * _FS)) for _t in _lag]
+if shutil.which("node") is None:
+    krev("node finnes", False)
+else:
+    _jsK = ("const FORM_SPAN = " + repr(_FS) + ";\nlet ELO=null;\n"
+            + _hent("eloOLR", True) + _hent("eloPPK", True) + _hent("eloStyrke", True)
+            + "\nconst fs=require('fs');\nELO=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));\n"
+              "console.log(JSON.stringify(eloStyrke(ELO.rating_alle||ELO.rating, ELO.teams)));\n")
+    with tempfile.NamedTemporaryFile("w", suffix=".js", delete=False,
+                                     encoding="utf-8") as fh:
+        fh.write(_jsK); _jk = fh.name
+    _rk = subprocess.run(["node", _jk, str(UT / "model.json")],
+                         capture_output=True, text=True)
+    if _rk.returncode:
+        krev("Styrke-sjekken kjorer", False, _rk.stderr.strip()[:150])
+    else:
+        _js = json.loads(_rk.stdout)
+        _d = max(abs(a - b) for a, b in zip(_py, _js))
+        krev("sidens eloStyrke = uavhengig Python-utregning", _d <= 1e-12,
+             f"storste avvik {_d:.2e}")
+        _klipt = [t for t, v in zip(_lag, _js) if v <= 0.0 or v >= 10.0]
+        krev("ingen lag klippet til 0 eller 10 med dagens data", not _klipt,
+             f"spenn {min(_js):.1f} til {max(_js):.1f}"
+             + (f"; klippet: {_klipt}" if _klipt else ""))
+
+# K tester FUNKSJONEN eloStyrke. At SIDEN bruker den, er vist ved aa gjengi
+# siden i Chrome (tabellen og Styrke-kortet viste Glimt 7,8 og Viking 7,0),
+# men det kjorer ikke i CI. Her sjekkes koblingen statisk: den SISTE
+# definisjonen av formScores (den som vinner) maa returnere eloStyrke, og
+# baseForm i tabellraden maa regnes med eloStyrke. Ellers kunne en ny
+# formScores gaa rundt eloStyrke uten at noe feilet.
+_fs_siste = _hent("formScores", True)
+krev("sidens formScores returnerer eloStyrke (Styrke-kolonnen og -kortet)",
+     "return eloStyrke(" in _fs_siste, _fs_siste.strip().splitlines()[0][:70])
+krev("baseForm i tabellen regnes med eloStyrke",
+     "const baseForm=eloStyrke(" in _hoved)
+_tfh = _hent("teamFormHistory", True)
+krev("formgrafen (teamFormHistory) bruker eloStyrke paa rating_historikk",
+     "eloStyrke(" in _tfh and "rating_historikk" in _tfh)
+
+# ---------- L: SYNLIG TEKST skal ikke beskrive Full
+# Testsiden er en kopi av produksjonen, og flere avsnitt beskrev Full-modellen:
+# at styrken kommer fra maalene, at nye kamper teller mest, produksjonens
+# validering, og flaksporsmaalet. Denne ser paa det brukeren kan se:
+#   - HTML-tekst utenfor <script>, <style> og <!-- kommentarer -->
+#   - aktiv JS, med blokk- og linjekommentarer fjernet (strenger der kan vises)
+print("\nL   synlig tekst beskriver ikke Full")
+_stat = _r2.sub(r"<script\b.*?</script>|<style\b.*?</style>|<!--.*?-->", " ",
+                _h, flags=_r2.S)
+_aktiv_js = []
+for _blk in _r2.findall(r"<script\b[^>]*>(.*?)</script>", _h, _r2.S):
+    _blk = _r2.sub(r"/\*.*?\*/", " ", _blk, flags=_r2.S)
+    _aktiv_js.append("\n".join(l for l in _blk.splitlines()
+                               if not l.strip().startswith("//")))
+_aktiv_js = "\n".join(_aktiv_js)
+# HELE FULL-FRASER, ikke enkeltord. Testsidens egen tekst sier med vilje
+# «Det finnes ingen halveringstid» og «har ikke egne angreps- og forsvarstall»
+# -- korrekte negasjoner. Et forbud mot enkeltordene ville tvunget dem bort, og
+# korrekt brukertekst skal ikke endres for at en kontroll skal passere.
+#
+# Frasene er produksjonens FAKTISKE ordlyd der den beskriver Full (sjekket mot
+# eliteserien/index.html), pluss eksempelfrasene fra gjennomgangen. To av dem
+# finnes ikke ordrett i produksjonen: der heter det «en angreps- og en
+# forsvarsstyrke» og «teller halvparten saa mye». Begge variantene er med.
+FULL_FRASER = (
+    "heldig eller uheldig", "backtest_zones", "Sist validert",
+    "gjelder ikke denne siden",
+    # produksjonens beskrivelse av Full, ordrett
+    "tilpasset på mål og sluttodds", "angreps- og en forsvarsstyrke",
+    "Styrkene er beregnet fra alle kampene", "Nyere kamper teller mest",
+    "nye kamper teller mest", "teller halvparten så mye",
+    "tilpasses på nytt", "styrke fra målene",
+    # eksempelfrasene fra gjennomgangen
+    "angreps- og forsvarsstyrke", "halveringstid på",
+)
+for _fr in FULL_FRASER:
+    _i1, _i2 = _stat.count(_fr), _aktiv_js.count(_fr)
+    krev(f"«{_fr}» finnes ikke i synlig tekst", _i1 == 0 and _i2 == 0,
+         f"{_i1} i HTML, {_i2} i aktiv JS")
+krev("qaHighlight faller ikke tilbake til 'luck'",
+     "dataset.qid = 'luck'" not in _aktiv_js and "qid || 'luck'" not in _aktiv_js)
 
 # ---------- E: festede sha256
 print("\nE   festede sha256")

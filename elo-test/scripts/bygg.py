@@ -279,14 +279,43 @@ def main():
             "odds_hentet": oj.get("fetched_at"),
         }
 
-    # Feltene som avgjor om prognosen er ENDRET. logget og odds_hentet er
-    # utenfor med vilje.
-    NOKKEL = ("modell", "p", "elo90_p", "marked", "avspark", "dato")
+    # NAAR ER PROGNOSEN ENDRET? En tallverdi maa ha flyttet seg MINST TERSKEL
+    # mot siste loggede linje for samme kamp.
+    #
+    # HVORFOR EN TERSKEL og ikke likhet paa de avrundede tallene: byggingen er
+    # ikke bit-reproduserbar mellom plattformer. Ratingene skiller 2,8e-14
+    # mellom macOS og Linux, men olr_tilpass bruker scipys Nelder-Mead, som
+    # forsterker det til ~8e-09 i parameterne og ~2e-09 i 1X2. Ligger en verdi
+    # naer en avrundingsgrense, vipper sjette desimal. Det skjedde i den forste
+    # CI-kjoringen: Aalesund - Bodo/Glimt, borteseier 0,722485499307 lokalt, bare
+    # 6,9e-10 under grensen 0,7224855, og 0,722485500848 i CI. En falsk linje.
+    #
+    # 1e-5 er ti avrundingsenheter: langt over plattformstoyen, og langt under
+    # det siden viser (hele prosent). En reell endring fanges; stoy gjor ikke.
+    #
+    # Ikke-tall (modell, dato, avspark, og om markedet finnes) sammenlignes
+    # eksakt. logget og odds_hentet er utenfor med vilje: en ny hentetid alene er
+    # ikke en endret prognose.
+    TERSKEL = 1e-5
+    TALL = ("p", "elo90_p", "marked")
+    EKSAKT = ("modell", "avspark", "dato")
+
+    def endret(gml, rad):
+        if any(gml.get(k) != rad[k] for k in EKSAKT):
+            return True
+        for k in TALL:
+            a, b = gml.get(k), rad[k]
+            if (a is None) != (b is None):
+                return True
+            if a is not None and any(abs(x - y) >= TERSKEL for x, y in zip(a, b)):
+                return True
+        return False
+
     nye = []
     for r in kamper:
         rad = rad_for(r)
         gml = siste.get((r["home"], r["away"]))
-        if gml is not None and all(gml.get(k) == rad[k] for k in NOKKEL):
+        if gml is not None and not endret(gml, rad):
             continue
         nye.append(rad)
     if nye:

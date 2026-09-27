@@ -1,0 +1,13 @@
+# ELO-TESTENS EGNE, LAASTE avhengigheter. Ikke produksjonens requirements.txt.
+#
+# Laast til versjonene CI brukte 27. september 2026 (kjoring 36314089108).
+# Hvorfor: olr_tilpass bruker scipys Nelder-Mead, som forsterker smaa
+# flyttallsforskjeller. En ny scipy-versjon kan flytte OLR-parameterne og gi en
+# commit av model.json uten at noe i dataene er endret. requirements.txt i
+# roten har >=-grenser og kan hente nye versjoner naar som helst.
+#
+# Laasingen fjerner IKKE forskjellen mellom plattformer: lokalt (macOS) og CI
+# (Linux) hadde de samme versjonene og ga likevel ~8e-09 forskjell i OLR.
+# Det er terskelen i bygg.py som tar den.
+numpy==2.5.3
+scipy==1.18.1
