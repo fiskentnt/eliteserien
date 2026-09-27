@@ -4532,7 +4532,7 @@ async function qaLastMatch(team){
   const tall = n===0
     ? ` Det var omtrent det de tre utfallene tilsa før kampen.`
     : ` Før kampen var ${pctTxt(data.expected)} ventet når alle mulige utfall ble tatt med. `+
-      `${qaStor(resultat)} var dermed ${n} prosentpoeng ${bra?'bedre':'verre'} enn modellen ventet.`;
+      `${qaStor(resultat)} var dermed ${n} prosentpoeng ${bra?'bedre':'verre'} enn ${ventetAv(data.preKick)} ventet.`;
   // Tre avsnitt: hva som skjedde, hva som var ventet av markedet og hva de
   // andre utfallene ville gitt, og forbeholdet. .qa-answer har pre-line.
   const midt = [overrask, alt].filter(Boolean).join(' ');
@@ -4546,6 +4546,14 @@ async function qaLastMatch(team){
 // Rekkefølge: det siden selv viste før avspark (prekick.json, lagret mens
 // kampen var uspilt), ellers sluttoddsen med margin fjernet. Aldri regnet på
 // nytt nå: dagens lagstyrker har sett resultatet.
+// "... bedre enn X ventet" i "Hva betydde forrige kamp?" og i linja i
+// lagboksen: X følger kilden forventningen er regnet fra. En frosset prognose
+// fra før avspark (kilde "odds og modell" eller "modellen") er modellens; er
+// den regnet fra sluttoddsen (reserven over), er det markedet som ventet det.
+// Før sto det alltid "modellen", også om et rent markedstall.
+function ventetAv(pk){
+  return pk && pk.kilde === 'sluttoddsen' ? 'markedet' : 'modellen';
+}
 function preKickProbs(home, away){
   const k = `${LEAGUE.season}|${home}|${away}`;
   const p = PREKICK && PREKICK[k];
@@ -4609,7 +4617,7 @@ function qaLastMatchLine(e){
   const naa = Math.max(0, Math.min(100, Math.round((e.expected||0)*100) + e.pp));
   return {html:`Forrige kamp: ${QA_OUT_LABEL[e.actual]} ${res}. ${qaStor(e.chance)} ble ${naa} %, `+
     `<b class="${e.good?'good':'bad'}">${Math.abs(e.pp)}</b> prosentpoeng `+
-    `${e.good?'bedre':'verre'} enn modellen ventet${qaSjanseKort(e)}.`};
+    `${e.good?'bedre':'verre'} enn ${ventetAv(preKickProbs(e.home, e.away))} ventet${qaSjanseKort(e)}.`};
 }
 // Lagets forrige kamp til linja: bruker det workflowen har regnet ut for den
 // VIRKELIGE situasjonen. Er den lagret kampen ikke lagets siste faktisk spilte

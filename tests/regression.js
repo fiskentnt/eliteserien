@@ -1440,7 +1440,7 @@ async function main() {
         `${avsnitt.length} av ${medForventning.length}`);
       const ordlyd = medForventning.filter(([, tx]) =>
         /Før kampen var .+ ventet når alle mulige utfall ble tatt med/.test(tx) &&
-        /\d+ prosentpoeng (bedre|verre) enn modellen ventet/.test(tx) &&
+        /\d+ prosentpoeng (bedre|verre) enn (markedet|modellen) ventet/.test(tx) &&   // ordet følger kilden, se «Forrige kamp: ordlyden følger kilden»
         /Med \w+ ville .+ vært /.test(tx));
       check(`${liga}: ny ordlyd i alle svarene`, ordlyd.length === medForventning.length,
         (medForventning.find(([, tx]) => !ordlyd.some(([t2]) => t2 === tx)) || ['', ''])[1].slice(0, 120));
@@ -1914,6 +1914,46 @@ async function main() {
         'koblingen mangler, eller den gamle oppdateringen står igjen');
       check('OBOS-jobben kjører det samme skriptet (snapshot_probs.js obos)', /snapshot_probs\.js obos/.test(obosWf));
     }
+
+    // ---- Forrige kamp: "enn markedet/modellen ventet" følger kilden ----
+    // Forventningen før kampen er en frosset prognose eller, som reserve,
+    // sluttoddsen. Teksten sa alltid "modellen". Nå "markedet" ved sluttodds.
+    setGroup('Forrige kamp: ordlyden følger kilden');
+    for (const [url, liga] of [[base, 'Eliteserien'], [base.replace('/eliteserien/', '/obos/'), 'OBOS']]) {
+      const sp = await open(1400, 900, url);
+      const r = await sp.evaluate(async () => {
+        const ut = {marked: 0, modell: 0, feil: []};
+        const ordet = pk => pk && pk.kilde === 'sluttoddsen' ? 'markedet' : 'modellen';
+        const gml = PREKICK;
+        for (const t of TEAMS.slice(0, 6)) {
+          const d = await qaLastMatchData(t);
+          if (!d || d.noMatch || !d.preKick) continue;
+          // 1) Som dataene står (i dag: sluttoddsen).
+          let txt = await qaLastMatch(t);
+          let m = txt.match(/enn (\S+) ventet\./);
+          if (m) { const f = ordet(d.preKick); if (m[1] !== f) ut.feil.push(`${t}: «${m[1]}» med kilde ${d.preKick.kilde}`); else ut[f === 'markedet' ? 'marked' : 'modell']++; }
+          // 2) Med en frosset prognose for kampen: da er det modellen.
+          const k = `${LEAGUE.season}|${d.m.home}|${d.m.away}`;
+          PREKICK = Object.assign({}, gml || {}, {[k]: {H: 0.2, U: 0.3, B: 0.5, kilde: 'odds+modell', frosset: true}});
+          txt = await qaLastMatch(t);
+          m = txt.match(/enn (\S+) ventet\./);
+          if (m) { if (m[1] !== 'modellen') ut.feil.push(`${t} med frosset prognose: «${m[1]}»`); else ut.modell++; }
+          PREKICK = gml;
+        }
+        // Linja i lagboksen (lastmatch.json), for lagene som har tall der.
+        for (const [t, e] of Object.entries((LASTMATCH && LASTMATCH.teams) || {})) {
+          const l = qaLastMatchLine(e); const m = l && l.html.match(/enn (\S+) ventet/);
+          if (!m) continue;
+          const f = ordet(preKickProbs(e.home, e.away));
+          if (m[1] !== f) ut.feil.push(`lagboksen, ${t}: «${m[1]}», ventet «${f}»`); else ut[f === 'markedet' ? 'marked' : 'modell']++;
+        }
+        return ut;
+      });
+      check(`${liga}: sluttodds gir «markedet ventet», frosset prognose «modellen ventet» (${r.marked} marked, ${r.modell} modell)`,
+        r.feil.length === 0 && r.marked > 0 && r.modell > 0, r.feil.slice(0, 4).join('; ') || `marked ${r.marked}, modell ${r.modell}`);
+      await sp.close();
+    }
+    await page.bringToFront();
 
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
