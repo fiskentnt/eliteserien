@@ -2222,7 +2222,7 @@ async function main() {
 
       // Én kilde: de delte funksjonene og konstantene.
       const kilde = await lp.evaluate(() => {
-        const navn = ['pois', 'outcome', 'stateRate', 'computeLiveState', 'rateMedStilling', 'fitRates', 'fitRatesRegn',
+        const navn = ['pois', 'poisFyll', 'outcome', 'stateRate', 'computeLiveState', 'rateMedStilling', 'fitRates', 'fitRatesRegn',
                       'liveMedLaast', 'aapenKampFor', 'laastOver', 'dcTau', 'applyDrift'];
         const ut = {mangler: [], ulik: [], flere: [], konst: []};
         for (const n of navn) {
@@ -2243,6 +2243,25 @@ async function main() {
       check(`${liga}: de delte funksjonene i WORKER_SRC er tegn for tegn hovedtrådens, én gang hver, og konstantene er like`,
         !kilde.mangler.length && !kilde.ulik.length && !kilde.flere.length && !kilde.konst.length,
         `mangler ${kilde.mangler.join(',')}; ulik ${kilde.ulik.join(',')}; flere ${kilde.flere.join(',')}; konstanter ${kilde.konst.join('; ')}`);
+
+      // outcome(): bit-lik referansen bygget på pois() for hver celle (slik den
+      // var), over fitRates-rutenettets område og tilfeldige lambda, og minst
+      // dobbelt så rask. Fartskravet er relativt (samme side, samme maskin).
+      const ut = await lp.evaluate(() => {
+        const ref = (lh, la) => { let H = 0, U = 0, B = 0;
+          for (let h = 0; h <= GMAX; h++) for (let a = 0; a <= GMAX; a++) { const p = pois(lh, h) * pois(la, a) * dcTau(h, a, lh, la); if (h > a) H += p; else if (h === a) U += p; else B += p; }
+          const t = H + U + B; return {H: H / t, U: U / t, B: B / t}; };
+        let n = 0, ulike = 0, frø = 99; const tilf = () => { frø = (frø * 1103515245 + 12345) % 2147483648; return frø / 2147483648; };
+        const sjekk = (lh, la) => { n++; const a = outcome(lh, la), b = ref(lh, la); if (!Object.is(a.H, b.H) || !Object.is(a.U, b.U) || !Object.is(a.B, b.B)) ulike++; };
+        for (let lh = 0.15; lh <= 4.5; lh += 0.01) for (let la = 0.15; la <= 4.5; la += 0.1) sjekk(lh, la);
+        for (let i = 0; i < 50000; i++) sjekk(0.01 + 7 * tilf(), 0.01 + 7 * tilf());
+        const tid = f => { const t = performance.now(); for (let i = 0; i < 20000; i++) f(0.5 + (i % 40) * 0.1, 1.1); return performance.now() - t; };
+        tid(outcome); tid(ref);
+        const tNy = Math.min(tid(outcome), tid(outcome)), tRef = Math.min(tid(ref), tid(ref));
+        return {n, ulike, tNy: Math.round(tNy), tRef: Math.round(tRef)};
+      });
+      check(`${liga}: outcome() er bit-lik referansen med pois() per celle (${ut.n} lambda-par) og minst dobbelt så rask`,
+        ut.n > 60000 && ut.ulike === 0 && ut.tNy * 2 <= ut.tRef, `${ut.ulike} ulike; 20 000 kall: ${ut.tNy} ms mot ${ut.tRef} ms`);
 
       for (const medAnnet of [false, true]) {
         if (medAnnet) {
