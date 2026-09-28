@@ -371,6 +371,33 @@ failsafe-tester grønne mot tabellkalkulator.no.
   `fetched_at`. Sjekk i odds_captured.json etter første kampdag med flere
   avspark om det faktisk har skjedd.
 
+- **Hullet i oddshentingen rett før 15 minutter før avspark.** «Odds nær
+  avspark» (`prekick_odds.py`) henter pris bare mens avsparket er 15 til 60
+  minutter unna, med taket ved hentetidspunktet. Kjøringene går hvert tiende
+  minutt, så den siste hentingen skjer 15 til 25 minutter før avspark, og en
+  pris Pinnacle setter mellom den og 15 minutter før, kommer aldri inn,
+  verken i `odds_upcoming.json` eller i den frosne prognosen. Porten står
+  åpen til 10 minutter før, men kjøringene 10 til 15 minutter før henter
+  ingenting. Ingen endring nå (besluttet 28. september 2026).
+
+  Etter de første kampdagene i begge ligaene (OBOS 2.–4. oktober,
+  Eliteserien 9.–12. oktober): se på `minutter_for` for prisene i de frosne
+  radene. Er prisene jevnt over eldre enn 20 minutter, eller endrer Pinnacle
+  seg ofte i hullet, vurderer vi en henting 10 til 15 minutter før avspark
+  med prisene kappet ved 15 minutter.
+  - Den frosne raden i `prekick.json` har ikke `minutter_for` selv. Feltet
+    står i `odds_upcoming.json` i commiten «Odds nær avspark» fra samme
+    kjøring (radens `stamp` er kjøringens hentetidspunkt):
+    `git log -p -- <liga>/data/odds_upcoming.json`.
+  - Om Pinnacle endret seg i hullet: sammenlign prisen i den frosne raden
+    med sluttoddsen for kampen (`obos/data/odds_closing.json`,
+    `eliteserien/data/odds_captured.json`), som er siste pris i hele
+    vinduet 60 til 15 minutter før.
+  - Innføres hentingen 10 til 15 minutter før, må skriveregelen i
+    `scripts/prekick_frys.js` følge med: i dag skrives den frosne raden bare
+    når oddsen ble hentet senest 15 minutter før avspark, så en slik henting
+    ville ikke nådd raden.
+
 - **Grunnlagsfilen på kampdager tidlig i 2027-sesongen.** Filen med svarene
   og tabellen for dagens stilling regnes med fast N = 100 000 på én maskin
   (målt 28.9.2026: 328 s for Eliteserien med 72 åpne kamper). Tiden vokser
