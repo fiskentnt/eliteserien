@@ -150,7 +150,7 @@ async function main() {
   // Kjøres med resten av suiten, eller alene:
   //   node tests/regression.js --bare treffsikkerhet
   const treffsikkerhetTekst = async () => {
-    setGroup('Treffsikkerhet: teksten med få kamper, og datoene');
+    setGroup('Treffsikkerhet og sluttoddsen: teksten i modellsjekken');
     const lite = 'og sier lite før det er flere.';
     const tilfeller = [
       {navn: 'ingen kamper', n: 0, fra: null, til: null,
@@ -169,13 +169,38 @@ async function main() {
         renderAccuracy({n: c.n, fra: c.fra, til: c.til, kilder: c.n ? {side: kilde, modell: kilde, odds: kilde} : {}, kalibrering: []});
         const el = document.getElementById('accuracyLog'), ps = [...el.querySelectorAll('p.note')];
         return {tekst: ps.length ? ps[ps.length - 1].textContent.trim() : '',
+                forklaring: ps.length > 1 ? ps[0].textContent.trim() : '',
                 kamper: [...el.querySelectorAll('tbody tr td:nth-child(2)')].map(x => x.textContent)};
       }), tilfeller);
+      // Avsnittet om sluttoddsen i "Hvordan vet vi at modellen virker?", med
+      // log loss-tallet under "Vis detaljer".
+      const sl = await pg.evaluate(() => {
+        const h = [...document.querySelectorAll('.modelcheck h3')].find(x => x.textContent === 'Hvorfor oddsen hentes rett før avspark');
+        if (!h) return null;
+        const ps = [], d = [];
+        for (let e = h.nextElementSibling; e && e.tagName !== 'H3'; e = e.nextElementSibling) {
+          if (e.tagName === 'P') ps.push(e.textContent.trim());
+          if (e.tagName === 'DETAILS') d.push(e.querySelector('summary').textContent.trim(), e.querySelector('p').textContent.trim());
+        }
+        return {ps, d};
+      });
       await pg.close();
       const side = sti.replace(/\//g, '');
       tilfeller.forEach((c, i) => check(`${side}: ${c.navn}: "${c.ventet}"`,
         r[i].tekst === c.ventet && (c.n === 0 ? r[i].kamper.length === 0 : r[i].kamper.length === 3 && r[i].kamper.every(k => k === String(c.n))),
         JSON.stringify(r[i])));
+      check(`${side}: forklaringen til tabellen har "Traff utfallet" med vanlige anførselstegn`,
+        r.filter((x, i) => tilfeller[i].n > 0).every(x => x.forklaring.startsWith('"Traff utfallet" er hvor ofte')) && !r.some(x => x.forklaring.includes('«')),
+        JSON.stringify(r.map(x => x.forklaring)));
+      const slVentet = [
+        'Sluttoddsen er den siste oddsen vi henter mellom 60 og 15 minutter før avspark. Da er som regel også laguttaket kjent.',
+        'Dette har faktisk betydning. I 351 kamper i Eliteserien og OBOS endret sannsynlighetene seg i snitt 2,9 prosentpoeng fra dagen før til rett før kamp. I 2–4 prosent av kampene skiftet også favoritten. Oddsen rett før kamp traff litt bedre enn oddsen fra dagen før.',
+        'Får vi ikke hentet odds i dette tidsrommet, står kampen uten sluttodds. Vi bruker aldri en eldre odds i stedet.'];
+      check(`${side}: avsnittet om sluttoddsen, med log loss-tallet under "Vis detaljer"`,
+        !!sl && JSON.stringify(sl.ps) === JSON.stringify(slVentet) && sl.d[0] === 'Vis detaljer'
+          && /0,0082 ± 0,0041 høyere log loss enn sluttoddsen, altså 2,0 standardfeil/.test(sl.d[1] || '')
+          && /0,0130 i Eliteserien \(2,3 standardfeil\) og 0,0024 i OBOS \(0,4 standardfeil/.test(sl.d[1] || ''),
+        JSON.stringify(sl));
       check(`${side}: ingen JS-feil`, errors.length === feil0, errors.slice(feil0).join('; '));
     }
   };

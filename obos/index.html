@@ -1218,6 +1218,15 @@
     <p>Tallene under er hentet fra sannsynlighetene som ble lagret FØR avspark, holdt opp mot resultatet. Ingenting er regnet på nytt i etterkant, så tallene kan ikke bli bedre av etterpåklokskap.</p>
     <div id="accuracyLog"></div>
 
+    <h3>Hvorfor oddsen hentes rett før avspark</h3>
+    <p>Sluttoddsen er den siste oddsen vi henter mellom 60 og 15 minutter før avspark. Da er som regel også laguttaket kjent.</p>
+    <p>Dette har faktisk betydning. I 351 kamper i Eliteserien og OBOS endret sannsynlighetene seg i snitt 2,9 prosentpoeng fra dagen før til rett før kamp. I 2–4 prosent av kampene skiftet også favoritten. Oddsen rett før kamp traff litt bedre enn oddsen fra dagen før.</p>
+    <p>Får vi ikke hentet odds i dette tidsrommet, står kampen uten sluttodds. Vi bruker aldri en eldre odds i stedet.</p>
+    <details class="details-tech">
+      <summary>Vis detaljer</summary>
+      <p class="note">At oddsen rett før kamp traff litt bedre, er målt med log loss, som straffer sikre sannsynligheter som bommer; lavere er bedre. Oddsen fra dagen før hadde 0,0082 ± 0,0041 høyere log loss enn sluttoddsen, altså 2,0 standardfeil, med de to ligaene vektet sammen. Hver for seg var forskjellen 0,0130 i Eliteserien (2,3 standardfeil) og 0,0024 i OBOS (0,4 standardfeil, altså ingen sikker forskjell). Sannsynlighetene flyttet seg i snitt 2,75 prosentpoeng i Eliteserien og 3,02 i OBOS, og favoritten byttet i 4 av 167 og 8 av 184 kamper. Målt 22. september 2026 med <code>scripts/odds_drift.py</code>.</p>
+    </details>
+
     <h3>Modell uten odds, mot enklere alternativer</h3>
     <p>Tilbaketesten er kjørt <strong>uten odds</strong>, fordi OBOS-historikken ikke har odds før 2026. Modellen som brukes på denne siden i 2026 bruker i tillegg odds for kampene som kommer, så testen er ikke helt den samme modellen som du ser tallene fra. Brier-score, lavere er bedre:</p>
     <div class="tblscroll"><table class="mt brier">
@@ -6224,7 +6233,7 @@ function renderAccuracy(data){
     `<div class="tblscroll"><table class="mt">`
     + `<thead><tr><th>Kilde</th><th>Kamper</th><th>Traff utfallet</th><th>Log loss</th></tr></thead>`
     + `<tbody>${rows}</tbody></table></div>`
-    + `<p class="note">«Traff utfallet» er hvor ofte det mest sannsynlige utfallet ble det som skjedde. `
+    + `<p class="note">"Traff utfallet" er hvor ofte det mest sannsynlige utfallet ble det som skjedde. `
     + `Log loss straffer sikre prediksjoner som bommer; lavere er bedre.</p>`
     + (kal ? `<h4>Kalibrering denne sesongen</h4>`
       + `<div class="tblscroll"><table class="mt calib">`
