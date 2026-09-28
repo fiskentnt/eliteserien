@@ -367,9 +367,9 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # egen Worker (16934d2) og minnet i fitRates med simuleringen sendt med en
 # gang (e9477ea) og låste utfall i svarene regnet med lagstyrkene etter
 # resultatet (6d6e5b6), den raskere, bit-like outcome() (fbc447c), grovsilingen
-# i poolen (8e085c5), rundens viktigste kamp med 3 000 / 20 000 sesonger
-# (166caa1) og egne forkastingsgrupper i poolen (f29586b). Basisen er derfor
-# f29586b. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
+# i poolen (854abcb), rundens viktigste kamp med 3 000 / 20 000 sesonger
+# (c8c0269) og egne forkastingsgrupper i poolen (54488d8). Basisen er derfor
+# 54488d8. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
 # rettelse eller ny funksjon der kommer ikke med her. Det er ikke en feil i
 # testsiden, men noen maa ta stilling til det -- derfor en advarsel med antall
 # endrede linjer, og ingen FEIL.
@@ -378,7 +378,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_COMMIT = "f29586b553f697740a4f735e2ba4ad46027de2ac"
+BASE_COMMIT = "54488d8415e337fc063350c5cc5e6f2433862ee9"
 BASE_SHA = "6bf85c875aec8f1a9b0b2e9295bfd58d268cda1877470dcc5dde1d3467e5d51c"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
