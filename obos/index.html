@@ -6196,8 +6196,8 @@ function renderAccuracy(data){
   if(!box) return;
   const n = data && data.n || 0;
   if(!n){
-    box.innerHTML = `<p class="note">Ingen kamper er lagret med sannsynlighet fra før avspark ennå. `
-      + `De første kommer etter neste runde, og tabellen fylles ut automatisk.</p>`;
+    box.innerHTML = `<p class="note">Treffsikkerheten vises her etter hvert som kampene spilles. `
+      + `De første tallene kommer etter neste runde.</p>`;
     return;
   }
   const pct = v => v==null ? '–' : `${Math.round(v*100)} %`;
