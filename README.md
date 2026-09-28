@@ -99,6 +99,16 @@ Notert, ikke rettet.
   `qaWhyZoneOverride`, mens de andre svarene følger sonen brukeren kom fra.
   Eksempel: etter «Hvorfor har Ranheim 0 % nedrykksfare?» svarer «heie på»
   for topp 6, ikke for nedrykk.
+- **Fingeravtrykket for grunnlagsfilen dekker ikke all koden i produksjonen.**
+  Avtrykket (`grunnlagAvtrykk`) har med dataene, oppgavene og Worker-koden
+  (`WORKER_SRC`), men ikke koden på hovedtråden som setter sammen det
+  Workerne får (for eksempel `laastTaskOver` og `stillingsGrunnlag`). Endres
+  den koden, kan siden bruke en `grunnlag.json` regnet av den gamle koden
+  fram til `grunnlag.yml` har regnet filen på nytt. Porten
+  (`scripts/grunnlag_port.py`) regner alltid på nytt når siden er endret, så
+  det gjelder noen minutter etter en push. Står slik etter beslutning 28.
+  september 2026. Testsiden har ikke svakheten for ELO-koden sin: den er med
+  i avtrykket (`grunnlagEkstra`).
 
 ## Kjøre lokalt
 
