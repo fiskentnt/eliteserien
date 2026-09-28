@@ -398,6 +398,15 @@ failsafe-tester grønne mot tabellkalkulator.no.
     når oddsen ble hentet senest 15 minutter før avspark, så en slik henting
     ville ikke nådd raden.
 
+- **Git-veksten fra grunnlagsfilen.** `grunnlag.yml` committer
+  `<liga>/data/grunnlag.json` (om lag 155 KB, 64 KB komprimert for
+  Eliteserien) hver gang inndataene er endret, 10–20 ganger på en kampdag.
+  Anslått om lag 100 MB i historikken per år; `.git` var 5,4 MB 28.
+  september 2026. Beholdes som nå (besluttet 28.9). Se på det igjen når
+  `.git` passerer 500 MB (`du -sh .git`, eller størrelsen GitHub oppgir for
+  repoet), for eksempel ved å flytte filen ut av historikken på main (en
+  egen gren som skrives over).
+
 - **Grunnlagsfilen på kampdager tidlig i 2027-sesongen.** Filen med svarene
   og tabellen for dagens stilling regnes med fast N = 100 000 på én maskin
   (målt 28.9.2026: 328 s for Eliteserien med 72 åpne kamper). Tiden vokser
