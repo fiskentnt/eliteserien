@@ -4430,8 +4430,14 @@ function qaNextRoundMatches(openMatches){
 // rask kjerne tar flere oppgaver. Et nytt spørsmål forkaster oppgaver som
 // ikke er startet (poolEpoch), og resultater fra kjøringer som pågikk
 // ignoreres.
-// Forkastingen gjelder per gruppe: "svar" (spørsmålene) og "kort" (kortet
-// "Neste kamp"), så kortet og et spørsmål ikke forkaster hverandres oppgaver.
+// Forkastingen gjelder per gruppe, så ett spørsmål aldri stopper et annet:
+// "heie" ("Heie på"), "runde" ("Rundens viktigste kamp"), "forrige" ("Hva
+// betydde forrige kamp?"), "kort" (kortet "Neste kamp") og én egen per
+// matchImpact-kall. Et nytt kall i SAMME gruppe forkaster de køede
+// oppgavene til det forrige (samme spørsmål stilt på nytt, det gamle svaret
+// vises uansett ikke, se qaRequestSeq). Før delte de tre første gruppen
+// "svar": startet ett mens et annet hadde oppgaver i kø, ble det første
+// aldri ferdig.
 let poolWorkers = [], poolQueue = [], poolEpoker = {}, poolUrl = null;
 const poolSize = () => Math.max(1, Math.min(8, navigator.hardwareConcurrency || 4));
 function pumpPool(){
@@ -4454,7 +4460,7 @@ function ensurePool(n){
 // tasks: [{id, idx, score}] (idx -1 = ingen låst kamp). onTask kalles etter
 // hver ferdige oppgave; løftet løses med {id: {prob, pos}} når alle er ferdige
 // (pos = hele plasseringsfordelingen, bare når payload.wantAll er satt).
-function runZoneTasks(payload, tasks, onTask, gruppe='svar'){
+function runZoneTasks(payload, tasks, onTask, gruppe){
   const epoch = poolEpoker[gruppe] = (poolEpoker[gruppe]||0) + 1, results = {};
   const egen = gruppe.startsWith('impact:');   // egen gruppe: ryddes når den er ferdig
   const grunnlag = stillingsGrunnlag();
@@ -4540,7 +4546,7 @@ async function qaCheerFor(team, onPartial){
   const results = await runZoneTasks(payload, tasks, (id, res)=>{
     const rows = rowsFrom(res);
     if(onPartial && rows.length) onPartial(textFor(rows));
-  });
+  }, 'heie');
   const rows = rowsFrom(results);
   if(!rows.length){
     return `Ingen av de andre kampene i runde ${nr.round} endrer ${navn} med minst to prosentpoeng, uansett hvordan de ender. Den er ${pctTxt(tableP)} nå.`;
@@ -4606,7 +4612,7 @@ async function qaLastMatchData(team){
     att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
     N:QA_LAST_N, ti:TI[team], zone, seed:hashStr(scenarioKey+'|impact')
-  }, tasks);
+  }, tasks, null, 'forrige');
   // Tabellens tall er "det som faktisk skjedde"; alternativene legges oppå som
   // endring fra den samme kjøringen (samme frø), som i spørsmål 3 og 5.
   const tableP = zone.pct;
@@ -4924,7 +4930,7 @@ async function qaKeyRoundData(opts){
     att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
     N, ti:0, zone:QA_KEY_ZONES[0], seed:hashStr(scenarioKey+'|impact'), wantAll:true
-  }, tasks);
+  }, tasks, null, 'runde');
   const zoneOf = key => QA_KEY_ZONES.find(z=>z.key===key);
   const probs = id => { const o={}; QA_KEY_ZONES.forEach(z=>o[z.key]=qaZoneFromPos(res[id].pos, n, z)); return o; };
   const base = probs('base');

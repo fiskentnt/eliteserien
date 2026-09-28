@@ -2332,8 +2332,6 @@ async function main() {
       // imens. Poolen forkaster køede oppgaver når et nytt kall i samme gruppe
       // starter; lå "Hva betyr neste kamp?" i samme gruppe som "Heie på", ble
       // det aldri ferdig. Hvert matchImpact-kall har derfor egen gruppe.
-      // ("Heie på", "Rundens viktigste kamp" og "Hva betydde forrige kamp"
-      // deler fortsatt gruppe, som før; se tests/README.md.)
       const samtidig = await lp.evaluate(async () => {
         const {openMatches} = buildQaOpen(); const nr = qaNextRoundMatches(openMatches);
         const lag = TEAMS.find(t => { const z = qaTargetZone(t); return z && !qaSettled(t, z) && nr.list.some(m => m.home === t || m.away === t); });
@@ -2345,6 +2343,28 @@ async function main() {
         return {ferdig, av: svar.length};
       });
       check(`${liga}: «Hva betyr neste kamp?» og finsilingen blir ferdige når «Heie på» starter samtidig`, samtidig.ferdig.length === samtidig.av, JSON.stringify(samtidig));
+      // "Heie på", "Rundens viktigste kamp" og "Hva betydde forrige kamp?" har
+      // hver sin forkastingsgruppe: startet to og to rett etter hverandre blir
+      // begge ferdige, med nøyaktig samme tall som når de kjøres hver for seg.
+      // Før delte de gruppen "svar", og det første ble aldri ferdig.
+      const par = await lp.evaluate(async () => {
+        const {openMatches} = buildQaOpen(); const nr = qaNextRoundMatches(openMatches);
+        const lag = TEAMS.find(t => { const z = qaTargetZone(t); return z && !qaSettled(t, z) && nr.list.some(m => m.home === t || m.away === t); });
+        const svar = {
+          heie: () => qaCheerFor(lag),
+          runde: async () => { const d = await qaKeyRoundData(); return JSON.stringify(d.list.map(r => [r.m.id, r.total])) + '|' + d.close.map(r => r.m.id).join(); },
+          forrige: () => qaLastMatch(lag)};
+        const alene = {}; for (const k in svar) alene[k] = await svar[k]();
+        const ut = [];
+        for (const [a, b] of [['heie', 'runde'], ['heie', 'forrige'], ['runde', 'forrige'], ['runde', 'heie']]) {
+          const ferdig = {}, pa = svar[a]().then(v => ferdig[a] = v), pb = svar[b]().then(v => ferdig[b] = v);
+          await Promise.race([Promise.all([pa, pb]), new Promise(r => setTimeout(r, 30000))]);
+          ut.push({par: `${a}+${b}`, ferdig: Object.keys(ferdig), like: [a, b].filter(k => ferdig[k] === alene[k])});
+        }
+        return {lag, ut, forrigeSvar: String(alene.forrige).slice(0, 60)};
+      });
+      check(`${liga}: «Heie på», «Rundens viktigste kamp» og «Hva betydde forrige kamp?» startet to og to blir begge ferdige med samme tall som hver for seg`,
+        par.ut.length === 4 && par.ut.every(x => x.ferdig.length === 2 && x.like.length === 2), JSON.stringify(par));
       await lp.close();
     }
     await page.bringToFront();
