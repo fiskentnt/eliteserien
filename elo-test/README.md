@@ -243,15 +243,17 @@ slik den er i dag, altså etterpåklokskap.
 
 ## Avviksliste mot `eliteserien/index.html`
 
-Basis: `eliteserien/index.html` i commit `e9477ea` (sha256 `6f1e2682…`).
+Basis: `eliteserien/index.html` i commit `6d6e5b6` (sha256 `a932e5be…`).
 Kopien ble tatt i `1fc6e8f`. Produksjonsrettelsene etterpå er tatt inn med
 samme patch, ordrett: merkene (`157d9ff`: likt på poeng er en trussel,
 ferdigspilt sesong etter faktisk plass), ordlyden i forrige kamp (`bf623aa`:
 «markedet ventet» ved sluttodds) og avrundingen i svarene (`5f415cd`:
 differansen mellom de viste tallene), merkesøket (`9cc3590`: tidlig stopp og
 egen Worker for merkene), tabellsimuleringen i egen Worker (`16934d2`) og
-minnet i fitRates med simuleringen sendt med en gang (`e9477ea`).
-Kopien har 7186 linjer mot produksjonens 6868, fordelt på 32 endrede
+minnet i fitRates med simuleringen sendt med en gang (`e9477ea`) og
+låste utfall i svarene regnet med lagstyrkene etter resultatet (`6d6e5b6`; her
+går de fortsatt via `eloTaskOver`/`eloKandidatOver`).
+Kopien har 7315 linjer mot produksjonens 6986, fordelt på 32 endrede
 blokker (`git diff`, vanlig kontekst). Merkerettelsen endret ikke antallet
 blokker; scenariooppdateringen (27.9.2026) la til tekstendringer og nye
 funksjoner i blokk A.

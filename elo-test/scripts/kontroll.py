@@ -263,10 +263,12 @@ console.log(JSON.stringify({olr:m1,ub:mU,bl:mB,nB:nB,rek:mR}));
               f"(rho = 0)")
 
 # ---------- F: rho MAA vaere 0 baade paa hovedtraaden og i workeren
-# Workeren har SIN EGEN hardkodede DC_RHO. Endringen paa hovedtraaden naadde den
-# ikke, og det ble funnet ved aa lese workerkilden -- ikke av en kontroll. Da
-# ville simuleringen trukket maal med rho = -0,38 mens lambda er tilpasset
-# rho = 0. Det skal ikke kunne komme tilbake.
+# Workeren hadde SIN EGEN hardkodede DC_RHO. Endringen paa hovedtraaden naadde
+# den ikke, og det ble funnet ved aa lese workerkilden -- ikke av en kontroll.
+# Da ville simuleringen trukket maal med rho = -0,38 mens lambda er tilpasset
+# rho = 0. Det skal ikke kunne komme tilbake. Fra rettelsen av laaste utfall
+# (produksjonen) henter Workeren verdien fra hovedtraaden (${DC_RHO} i
+# WORKER_SRC); da er det hovedtraadens verdi som gjelder, og den maa vaere 0.
 print("\nF   rho = 0 overalt i index.html")
 _h = (HER.parent / "index.html").read_text(encoding="utf-8")
 _i = _h.index("const WORKER_SRC = `")
@@ -275,9 +277,10 @@ _hoved = _h[:_i] + _h[_j:]
 _worker = _h[_i:_j]
 import re as _r2
 _mh = _r2.findall(r"const DC_RHO\s*=\s*([-\d.]+)\s*;", _hoved)
-_mw = _r2.findall(r"var DC_RHO\s*=\s*([-\d.]+)\s*;", _worker)
+_mw = _r2.findall(r"var DC_RHO\s*=\s*([-\d.]+|\$\{DC_RHO\})\s*;", _worker)
 krev("hovedtraadens DC_RHO er 0", _mh == ["0"], f"fant {_mh}")
-krev("workerens DC_RHO er 0", _mw == ["0"], f"fant {_mw}")
+krev("workerens DC_RHO er 0 (tallet 0, eller hentet fra hovedtraaden, som er 0)",
+     len(_mw) == 1 and (_mw[0] == "0" or (_mw[0] == "${DC_RHO}" and _mh == ["0"])), f"fant {_mw}")
 krev('teksten "-0.38" finnes ikke i index.html', "-0.38" not in _h,
      f"{_h.count('-0.38')} forekomster")
 krev("model.json oppgir rho = 0", M.get("rho") == 0.0, f"{M.get('rho')}")
@@ -362,7 +365,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # ordlyden i forrige kamp (bf623aa), avrundingen i svarene (5f415cd) og
 # tidlig stopp og egen Worker for merkene (9cc3590), tabellsimuleringen i
 # egen Worker (16934d2) og minnet i fitRates med simuleringen sendt med en
-# gang (e9477ea). Basisen er derfor e9477ea. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
+# gang (e9477ea) og låste utfall i svarene regnet med lagstyrkene etter
+# resultatet (6d6e5b6). Basisen er derfor 6d6e5b6. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
 # rettelse eller ny funksjon der kommer ikke med her. Det er ikke en feil i
 # testsiden, men noen maa ta stilling til det -- derfor en advarsel med antall
 # endrede linjer, og ingen FEIL.
@@ -371,8 +375,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_COMMIT = "e9477eaa59867ad81d9c74e5972534ab7d1124d6"
-BASE_SHA = "6f1e2682c18a882e8e07595ea15f4b2879730c4bdac4acd71caa78631f194cbc"
+BASE_COMMIT = "6d6e5b6b8d36ed0a6b118a5ad674f7e9bff3c39d"
+BASE_SHA = "a932e5beaad0b06118ccc118a9bebb312b299ec95a809042d9137ba5e00b3172"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
@@ -1098,10 +1102,29 @@ console.log(JSON.stringify({saker, alt}));
 
     # Koblingen: svarene bruker faktisk de egne målratene.
     _hv = _h
+    # Kallstedene er produksjonens (laastTaskOver, grovKandidatOver, fra
+    # rettelsen av låste utfall i svarene). På testsiden er den SISTE
+    # deklarasjonen av hver -- den som gjelder -- en som går til
+    # eloTaskOver/eloKandidatOver, så produksjonens lagstyrke-variant aldri
+    # kjøres her og ingenting regnes dobbelt.
+    def _siste_decl(navn):
+        i = _hv.rfind(f"function {navn}(")
+        if i < 0:
+            return ""
+        j = _hv.find("\n}", i)
+        k = _hv.find("\n", i)
+        return _hv[i:k] if "}" in _hv[i:k] else _hv[i:j + 2]
+    _lt, _lg = _siste_decl("laastTaskOver"), _siste_decl("grovKandidatOver")
     krev("runZoneTasks gir hver oppgave eloTaskOver (låst utfall og forrige kamp)",
-         "...eloTaskOver(payload, t), mode:'zoneTask'" in _hv and "...(t.over||{}), mode:'zoneTask'" not in _hv)
+         "...laastTaskOver(payload, t), mode:'zoneTask'" in _hv and "...(t.over||{}), mode:'zoneTask'" not in _hv
+         and "return eloTaskOver(payload, t);" in _lt, _lt[:90])
+    # runMatchImpactAsync: finsilingen, kortet og "Hva betyr neste kamp?" går i
+    # poolen (runZoneTasks, altså laastTaskOver = eloTaskOver over);
+    # grovsilingen går i hjelpe-Workeren med grovKandidatOver = eloKandidatOver.
     krev("runMatchImpactAsync legger eloKandidatOver på hver kandidat",
-         ".map(c=>({...c, ...eloKandidatOver(base.open, c)}))" in _hv)
+         "}, tasks, null, gruppe" in _hv
+         and "candidates.forEach(c=>Object.assign(c, grovKandidatOver(base.open, c)));" in _hv
+         and "eloKandidatOver(open, c)" in _lg, _lg.split("\n")[1][:90] if "\n" in _lg else _lg[:90])
     _wi = _hv.index("const WORKER_SRC = `"); _wj = _hv.index("`;", _wi); _wk = _hv[_wi:_wj]
     krev("workerens runMatchImpact bruker overHome/overAway/overDraw per utfall",
          "simulateZoneProb(med(c.overHome)" in _wk and "simulateZoneProb(med(c.overAway)" in _wk
