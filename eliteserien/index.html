@@ -4265,6 +4265,10 @@ const QA_VERB = Object.fromEntries(ZONE_KEYS.filter(k=>LEAGUE.zones[k]).map(k=>[
 //   'safe~' / 'out~'  ikke matematisk avgjort, men under 1 % / over 99 % i
 //           simuleringene
 //   null    fortsatt åpent -- svarene kan bruke tall
+// Ingen kamper er spilt, verken ekte eller fylt inn: alle står på null
+// poeng, og rekkefølgen i tabellen er tilfeldig. Da nevner svarene ikke
+// tabellplassen.
+const qaIngenSpilt = () => !MATCHES.length && !matches.some(m=>m.hg!=null && m.ag!=null);
 function qaSettled(team, zone){
   const {rows} = compute();
   const idx = rows.findIndex(r=>r.name===team);
@@ -5287,7 +5291,7 @@ function qaRange(team){
   // og sonen, så den beste plassen simuleringene faktisk nådde (bare når den
   // er sjelden), og til sist det matematisk mulige.
   const pos = idx+1;
-  const naa = (pos===lo || pos===hi) ? '' : `ligger på ${pos}. plass nå og `;
+  const naa = (pos===lo || pos===hi || qaIngenSpilt()) ? '' : `ligger på ${pos}. plass nå og `;
   // Når SIMULERINGSINTERVALLET alt strekker seg til ytterpunktet, sier den
   // matematiske grensen ingenting: når intervallet begynner på 1. plass, er
   // "så høyt som 1. plass" ren gjentakelse. Det er intervallet (lo/hi) som
@@ -5354,6 +5358,9 @@ function baseRate(home,away){
   return [Math.exp(eh), Math.exp(ea)];
 }
 function qaLuck(){
+  // Før første serierunde er alle avvikene 0,0, og "0,0 poeng mer enn
+  // modellen forventet, mest i ligaen" sier ingenting.
+  if(!MATCHES.length) return 'Ingen kamper er spilt ennå, så ingen har tatt flere eller færre poeng enn modellen forventet.';
   const actual={}, expected={}; TEAMS.forEach(t=>{actual[t]=0; expected[t]=0;});
   MATCHES.forEach(m=>{
     if(m.hg>m.ag){ actual[m.home]+=3; } else if(m.hg<m.ag){ actual[m.away]+=3; } else { actual[m.home]++; actual[m.away]++; }
@@ -5663,9 +5670,10 @@ async function qaWhy(team){
     const diff = form - rivalForm;
     const d = Math.abs(field.nearestPts - row.pts);
     // Holder laget førsteplassen, er det "serieleder X", ikke "X på førsteplassen".
-    const leder = field.refLabel==='førsteplassen';
-    const mot = leder ? `serieleder ${field.nearest}` : field.nearest;
-    const hvor = leder ? '' : ` på ${field.refLabel}`;
+    // Før første kamp er plassen tilfeldig, og da nevnes den ikke.
+    const leder = field.refLabel==='førsteplassen', ingen = qaIngenSpilt();
+    const mot = leder && !ingen ? `serieleder ${field.nearest}` : field.nearest;
+    const hvor = leder || ingen ? '' : ` på ${field.refLabel}`;
     const rel = d===0 ? `har like mange poeng som ${mot}`
       : `ligger ${poengTxt(d)} ${row.pts>field.nearestPts?'foran':'bak'} ${mot}`;
     // Tallet er modellens styrkevurdering over hele sesongen, ikke form, og
@@ -5680,7 +5688,8 @@ async function qaWhy(team){
         ? `${team} leder ${rival.t} ${row.pts}-${rivalRow.pts} i poeng, med ${kampTxt(row.left)} igjen.`
         : `${team} ligger bak ${rival.t} ${row.pts}-${rivalRow.pts} i poeng, med ${kampTxt(row.left)} igjen.`;
   } else {
-    part1 = `${team} ligger på ${pos}. plass med ${poengTxt(row.pts)} og ${kampTxt(row.left)} igjen.`;
+    part1 = qaIngenSpilt() ? `Ingen kamper er spilt ennå, og ${team} har ${kampTxt(row.left)} igjen.`
+      : `${team} ligger på ${pos}. plass med ${poengTxt(row.pts)} og ${kampTxt(row.left)} igjen.`;
   }
 
   let part2;
@@ -5868,7 +5877,8 @@ async function qaHowTo(team){
   };
   let first;
   if(threshold!=null && myPts<threshold){
-    first = `${team} trenger trolig rundt ${poengTxt(threshold)} for å ${reach}, altså ${poengTxt(threshold-myPts)} til.`;
+    // Uten poeng (før første kamp) ville "altså 61 poeng til" bare gjenta tallet.
+    first = `${team} trenger trolig rundt ${poengTxt(threshold)} for å ${reach}${myPts>0 ? `, altså ${poengTxt(threshold-myPts)} til` : ''}.`;
   } else if(threshold!=null){
     first = `${team} har allerede ${poengTxt(myPts)}, og med det klarer laget å ${reach} i mer enn halvparten av simuleringene.`;
   } else {
@@ -6463,7 +6473,9 @@ function render(){
     const targetDate = ROUND_LAST_DATE[ownMatch.round] || ownMatch.date;
     document.getElementById('tblInfo').textContent = `etter runde ${ownMatch.round} (${dateNoLong(targetDate)})`;
   } else {
-    document.getElementById('tblInfo').textContent = played? `${played} kamper lagt inn` : `etter ${formatDateNo(MATCHES[MATCHES.length-1].date)}`;
+    // Før første serierunde er det ingen kamp å regne "etter".
+    document.getElementById('tblInfo').textContent = played? `${played} kamper lagt inn`
+      : MATCHES.length ? `etter ${formatDateNo(MATCHES[MATCHES.length-1].date)}` : 'før første runde';
   }
   document.getElementById('simNote').hidden = !matches.some(m=>m.sim);
   // Et scenario er aktivt når minst én uspilt kamp har fått et resultat --
@@ -7061,8 +7073,12 @@ async function boot(){
   // dagen er ferdig. En runde som er 100% ferdigspilt er allerede utelatt
   // fra FIXTURES_IN (se update_data.py), så fravær av dagens dato der
   // betyr "ferdig" like riktig som å finne den og se played:true overalt.
-  const dayComplete = FIXTURES_IN.every(r => r.matches.every(m => m.date !== last.date || m.played));
-  stampEl.textContent = dayComplete
+  // Før første serierunde finnes ingen resultater, og da er det ingen siste
+  // kamp å vise. Før sto siden fast her (last.date), og tabellen ble aldri
+  // regnet.
+  const dayComplete = last && FIXTURES_IN.every(r => r.matches.every(m => m.date !== last.date || m.played));
+  stampEl.textContent = !last ? 'Ingen kamper er spilt ennå.'
+    : dayComplete
     ? `Alle kamper til og med ${formatDateNo(last.date)} er lagt inn.`
     : `Siste resultat: ${last.home} ${last.hg}-${last.ag} ${last.away}, ${weekdayShortDate(last.date)}.`;
   stampEl.title = ODDS_FETCHED_AT !== 'ukjent tidspunkt' ? `Odds hentet ${ODDS_FETCHED_AT}.` : '';

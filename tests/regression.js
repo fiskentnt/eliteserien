@@ -38,11 +38,30 @@ const MIME = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.j
 //   {innhold: {<liga>: tekst}}  dette innholdet i stedet
 //   {forsinkelse: ms}           svaret kommer så mye senere
 let GRUNNLAG_MODUS = null;
+// Sesongstart: med SESONGSTART = true svarer serveren som før første
+// serierunde: matches.json er tom, og alle de spilte kampene står som uspilte i
+// terminlisten (fixtures.json), i sin egen runde. Gjelder alle sidene
+// (testsiden leser kampene fra eliteserien/data).
+let SESONGSTART = false;
+function sesongstartData(rot, liga, fil) {
+  if (fil === 'matches') return '[]';
+  const M = JSON.parse(fs.readFileSync(path.join(rot, liga, 'data', 'matches.json'), 'utf8'));
+  const F = JSON.parse(fs.readFileSync(path.join(rot, liga, 'data', 'fixtures.json'), 'utf8'));
+  for (const m of M) {
+    let r = F.find(x => x.round === m.round);
+    if (!r) { r = {round: m.round, when: '', matches: []}; F.push(r); }
+    r.matches.push({home: m.home, away: m.away, date: m.date, time: m.time, played: false, hg: null, ag: null});
+  }
+  F.sort((a, b) => a.round - b.round);
+  return JSON.stringify(F);
+}
 function serve(rot = ROOT) {
   const server = http.createServer((req, res) => {
     let p = decodeURIComponent(req.url.split('?')[0]);
     if (p.endsWith('/')) p += 'index.html';
     const f = path.join(rot, p);
+    const sm = SESONGSTART && /^\/([^/]+)\/data\/(matches|fixtures)\.json$/.exec(p);
+    if (sm) { res.writeHead(200, {'Content-Type': 'application/json'}); res.end(sesongstartData(rot, sm[1], sm[2])); return; }
     const gm = /^\/([^/]+)\/(?:data|emodell)\/grunnlag\.json$/.exec(p);
     if (gm) {
       const modus = GRUNNLAG_MODUS;
@@ -229,13 +248,92 @@ async function main() {
       check(`${side}: ingen JS-feil`, errors.length === feil0, errors.slice(feil0).join('; '));
     }
   };
+
+  // ---- Sesongstart: siden uten spilte kamper ----
+  // Før første serierunde er matches.json tom. Stempelet øverst leste da
+  // datoen til siste resultat (last.date), og tabellteksten den siste kampen,
+  // uten at noen fantes: oppstarten stoppet, og tabellen ble aldri regnet. På
+  // alle tre sidene: tabellen regnes, stempelet og tabellteksten sier at ingen
+  // kamper er spilt, alle spørsmålene svarer, et innfylt resultat regnes som
+  // vanlig, og ingen JS-feil. Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare sesongstart
+  const sesongstart = async () => {
+    setGroup('Sesongstart: siden uten spilte kamper');
+    if (live) { console.log('  (hoppes over med --live: trenger den lokale serveren)'); return; }
+    SESONGSTART = true;
+    try {
+      for (const side of ['eliteserien', 'obos', 'elo-test']) {
+        const feil0 = errors.length, url = base.replace('/eliteserien/', `/${side}/`);
+        const pg = await browser.newPage();
+        pg.on('pageerror', e => errors.push(`${url} (uten spilte kamper): ${e.message}`));
+        await pg.setViewport({width: 1400, height: 900});
+        await pg.goto(url, {waitUntil: 'networkidle0'});
+        const ferdig = await pg.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 60000})
+          .then(() => true, () => false);
+        const r = !ferdig ? null : await pg.evaluate(async () => {
+          const vent = f => new Promise(ok => { const i = setInterval(() => { if (f()) { clearInterval(i); ok(); } }, 20); });
+          const sum1 = () => TEAMS.every(t => Math.abs(lastMC[t].reduce((a, b) => a + b, 0) - 1) < 1e-9);
+          const rader = [...document.querySelectorAll('#tbl tbody tr')];
+          const tabell = {spilt: MATCHES.length, lag: TEAMS.length, sum: sum1(),
+            celler: rader.length === TEAMS.length && rader.every(tr => tr.querySelector('td.gull') && tr.querySelector('td.gull').textContent.trim() !== '')};
+          const tekst = {stempel: document.querySelector('.stamp').textContent, info: document.getElementById('tblInfo').textContent};
+          const lag = TEAMS[0], sel = document.getElementById('teamSelect');
+          sel.value = lag; sel.dispatchEvent(new Event('change'));
+          await new Promise(ok => setTimeout(ok, 500));
+          const svar = {};
+          for (const q of QA_QUESTIONS) {
+            try { svar[q.id] = String(await q.run(lag, () => {})); } catch (e) { svar[q.id] = `KASTET: ${e.message}`; }
+          }
+          // Alle lagene: plassen i tabellen er tilfeldig før første kamp og
+          // nevnes ikke, og "altså 61 poeng til" gjentar bare tallet.
+          const plassord = /(første|andre|tredje|fjerde|femte|sjette)plassen|\d+\. plass|serieleder/;
+          const alle = {hvorfor: [], ende: [], hva: []};
+          for (const t of TEAMS) {
+            const hv = await qaWhy(t), en = qaRange(t), hm = await qaHowTo(t);
+            if (plassord.test(hv)) alle.hvorfor.push(`${t}: ${hv.split('\n')[0]}`);
+            if (/ligger på \d+\. plass nå/.test(en)) alle.ende.push(`${t}: ${en}`);
+            if (/poeng til/.test(hm)) alle.hva.push(`${t}: ${hm.split('\n')[0]}`);
+          }
+          const m = matches.find(x => x.hg == null);
+          m.hg = 1; m.ag = 0; mcStraks = true; render();
+          await vent(() => lastMCFinal && lastMCScenarioKey === qaScenarioKey());
+          const etter = {scenario: qaScenarioKey() !== '', sum: sum1()};
+          m.hg = null; m.ag = null; render();
+          return {tabell, tekst, svar, alle, etter};
+        });
+        await pg.close();
+        check(`${side}: uten spilte kamper blir tabellen regnet (16 lag, fordelingen summerer til 1, prosentene vises)`,
+          !!r && r.tabell.spilt === 0 && r.tabell.lag === 16 && r.tabell.sum && r.tabell.celler, JSON.stringify(r && r.tabell));
+        check(`${side}: stempelet og tabellteksten sier at ingen kamper er spilt`,
+          !!r && r.tekst.stempel.startsWith('Ingen kamper er spilt ennå.') && r.tekst.info === 'før første runde', JSON.stringify(r && r.tekst));
+        const ids = r ? Object.keys(r.svar) : [];
+        check(`${side}: alle ${ids.length} spørsmålene i "Spør om tabellen" svarer`,
+          ids.length >= 12 && ids.every(k => r.svar[k].length > 10 && !r.svar[k].startsWith('KASTET') && r.svar[k] !== 'Ingen data å regne på ennå.'),
+          JSON.stringify(r && r.svar).slice(0, 500));
+        // Svarene som bygger på spilte kamper, sier at ingen er spilt, og
+        // ingen svar oppgir et avvik på 0,0 poeng som om det var et funn.
+        check(`${side}: svarene om spilte kamper sier at ingen er spilt ennå (forrige kamp${r && r.svar.luck ? ', heldig eller uheldig' : ''}), og ingen oppgir 0,0 poeng`,
+          !!r && /ingen spilte kamper ennå/.test(r.svar.lastmatch)
+            && (!('luck' in r.svar) || r.svar.luck === 'Ingen kamper er spilt ennå, så ingen har tatt flere eller færre poeng enn modellen forventet.')
+            && Object.values(r.svar).every(t => !/0,0 poeng/.test(t)),
+          JSON.stringify(r && {lastmatch: r.svar.lastmatch, luck: r.svar.luck}));
+        check(`${side}: for alle lagene nevner "Hvorfor har ...?" ikke tabellplassen, "Hvor kan ... ende?" ikke "ligger på X. plass nå", og "Hva må ... gjøre?" ikke "altså X poeng til"`,
+          !!r && !r.alle.hvorfor.length && !r.alle.ende.length && !r.alle.hva.length,
+          JSON.stringify(r && {hvorfor: r.alle.hvorfor.slice(0, 2), ende: r.alle.ende.slice(0, 2), hva: r.alle.hva.slice(0, 2)}));
+        check(`${side}: et innfylt resultat regnes som vanlig`, !!r && r.etter.scenario && r.etter.sum, JSON.stringify(r && r.etter));
+        check(`${side}: ingen JS-feil uten spilte kamper`, errors.length === feil0, errors.slice(feil0).join('; '));
+        errors.splice(feil0);   // feilene er rapportert her, ikke igjen under "JS-feil"
+      }
+    } finally { SESONGSTART = false; }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
     if (BARE) {
       // Bare én gruppe (se over).
-      if (BARE !== 'treffsikkerhet') throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet)`);
-      await treffsikkerhetTekst();
+      if (BARE === 'treffsikkerhet') await treffsikkerhetTekst();
+      else if (BARE === 'sesongstart') await sesongstart();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart)`);
     } else {
     // ---- 1. lasting ----
     setGroup('Lasting');
@@ -3489,6 +3587,7 @@ async function main() {
     await page.bringToFront();
 
     await treffsikkerhetTekst();
+    await sesongstart();
 
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
