@@ -357,6 +357,20 @@ failsafe-tester grønne mot tabellkalkulator.no.
   den alderen siden faktisk bruker (tidspunktet i prognoseloggen, ikke
   sluttoddsen). Ingen endring av vekten før det er gjort.
 
+- **odds_captured.json kan avvise sluttodds på dager med flere avspark.**
+  `fetch_odds_upcoming.py` fanger en kamps siste odds før avspark når kampen
+  går fra kommende til spilt, men godtar raden bare hvis filens FELLES
+  `fetched_at` er fra før kampens avspark. `prekick_odds.py` setter
+  `fetched_at` hver gang den oppdaterer en kamp nær avspark. Oppdateres en
+  senere kamp samme dag før den tidligere er registrert som spilt, er
+  `fetched_at` etter den tidligere kampens avspark, og dens sluttodds kan bli
+  avvist som «hentet etter avspark», selv om raden selv (med `priced_at`) er
+  fra før. Filen er bare reserve for kalibreringen (football-data.co.uk og
+  OddsPapi-historikken går foran), så ingenting er endret. Rettelse når det
+  passer: bruk radens egen `priced_at` når den finnes, ellers filens
+  `fetched_at`. Sjekk i odds_captured.json etter første kampdag med flere
+  avspark om det faktisk har skjedd.
+
 - **Grunnlagsfilen på kampdager tidlig i 2027-sesongen.** Filen med svarene
   og tabellen for dagens stilling regnes med fast N = 100 000 på én maskin
   (målt 28.9.2026: 328 s for Eliteserien med 72 åpne kamper). Tiden vokser

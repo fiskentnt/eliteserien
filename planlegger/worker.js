@@ -37,8 +37,7 @@ const WORKFLOWS = [
   "obos-results.yml",
   // Etter update-data.yml: de deler køgruppe (begge skriver model.json), så
   // den som kommer sist, venter på den andre. Porten i
-  // scripts/should_fetch_odds.py (én henting per døgn, og sluttoddsen
-  // 60-15 minutter før avspark på kampdager) avgjør om The Odds
+  // scripts/should_fetch_odds.py (én henting per døgn) avgjør om The Odds
   // API faktisk kalles; de fleste kjøringene avslutter med en gang.
   "update-odds.yml",
 ];

@@ -8,25 +8,21 @@ Kjører videre hvis ALT dette holder:
   - vi ikke har stanset kvoten for denne måneden (se data/odds_quota.json,
     skrevet av fetch_odds_upcoming.py når x-requests-remaining < 100),
   - forrige forsøk ikke feilet for under en time siden (SPERRE_TIMER),
-  - det ikke er hentet i dag (norsk tid), ELLER en kamp starter om 15-60
-    minutter og det ikke er hentet i det vinduet -- TIDSPORTEN under,
+  - det ikke er hentet i dag (norsk tid) -- TIDSPORTEN under,
 med mindre FORCE_FETCH=true (manuell workflow_dispatch uten planlagt=true).
 
-TIDSPORTEN: én vellykket henting per døgn, og på kampdager i tillegg
-SLUTTODDSEN. Den eksterne planleggeren (planlegger/worker.js) starter
-workflowen hvert tiende minutt i 09-21 UTC, og GitHub sin egen cron (08:13 og
-16:13 UTC) er reserve; porten slipper gjennom
-  - den første kjøringen hver dag (norsk tid) som finner at det ikke er
-    hentet ennå, og
-  - én kjøring i vinduet 60-15 minutter før hvert avspark (samme vindu som
-    prekick-odds.yml). Den siste oddsen hentet FØR avspark blir kampens
-    sluttodds i odds_captured.json (reserve for kalibreringen, se
-    fetch_odds_upcoming.py); uten denne hentingen ville den vært fra
-    morgenen. Avspark som ligger tett, dekkes av samme henting.
+TIDSPORTEN: én vellykket henting per døgn. Den eksterne planleggeren
+(planlegger/worker.js) starter workflowen hvert tiende minutt i 09-21 UTC,
+og GitHub sin egen cron (08:13 og 16:13 UTC) er reserve; porten slipper bare
+gjennom den første kjøringen hver dag (norsk tid) som finner at det ikke er
+hentet ennå. Oddsen rett før avspark kommer fra prekick-odds.yml (OddsPapi,
+Pinnacle, 60-15 minutter før), som skriver over radene for kampene som
+starter snart; det er den som står i odds_upcoming.json ved avspark. (En egen
+sluttoddshenting herfra i det samme vinduet ble prøvd og tatt ut igjen: den
+ble overskrevet av prekick-odds.yml uansett.)
 Hvert kall koster én kreditt (regions=eu, markets=h2h); gratisnivået er 500 i
 måneden. BUDSJETTVAKTEN: ligger gjenstående kreditter (fra samme måned) under
-100 + 4 per dag som er igjen av måneden, hentes det bare annenhver dag, og
-ikke sluttodds.
+100 + 4 per dag som er igjen av måneden, hentes det bare annenhver dag.
 
 Tidspunktet for siste vellykkede henting er checked_at i odds_quota.json
 (skrives bare når API-et har svart). Siste forsøk skrives til
@@ -48,7 +44,6 @@ STATUS_PATH = LEAGUE / "data" / "odds_hentestatus.json"
 OSLO = ZoneInfo("Europe/Oslo")
 
 HORISONT_DAGER = 7
-SLUTT_FRA_MIN, SLUTT_TIL_MIN = 60, 15   # sluttoddsvinduet før avspark
 SPERRE_TIMER = 1
 BUDSJETT_DAGER = 2        # under budsjettvakten: høyst annenhver dag
 KVOTE_GULV = 100          # samme som QUOTA_FLOOR i fetch_odds_upcoming.py
@@ -63,21 +58,6 @@ def _tid(s):
     except ValueError:
         return None
     return t if t.tzinfo else t.replace(tzinfo=timezone.utc)
-
-
-def avspark_utc(dato, tid):
-    """Avspark i UTC fra terminlistens dato og klokkeslett (norsk tid).
-    Mangler klokkeslettet, regnes 00:00 norsk tid: heller for tidlig enn for
-    sent, som i frysregelen for prognosene."""
-    naiv = datetime.strptime(f"{dato} {tid or '00:00'}", "%Y-%m-%d %H:%M")
-    return naiv.replace(tzinfo=OSLO).astimezone(timezone.utc)
-
-
-def sluttvindu(now, fixtures):
-    """Tidligste uspilte avspark K der now ligger i [K-60 min, K-15 min), eller None."""
-    ks = [avspark_utc(m["date"], m.get("time")) for r in fixtures for m in r["matches"] if not m.get("played")]
-    ks = [k for k in ks if k - timedelta(minutes=SLUTT_FRA_MIN) <= now < k - timedelta(minutes=SLUTT_TIL_MIN)]
-    return min(ks) if ks else None
 
 
 def dag_oslo(t):
@@ -123,11 +103,6 @@ def vurder(now, fixtures, quota, status, force=False):
     if forsok and (sjekket is None or forsok > sjekket) and now - forsok < timedelta(hours=SPERRE_TIMER):
         return False, (f"forrige forsøk ({forsok.isoformat(timespec='minutes')}) ga ingen vellykket henting; "
                        f"venter minst {SPERRE_TIMER} time mellom forsøk")
-    # Sluttodds: en kamp starter om 15-60 minutter, og siste henting er fra
-    # før vinduet åpnet. Ikke under budsjettvakten.
-    k = sluttvindu(now, fixtures)
-    if k and dager == 1 and (sjekket is None or sjekket < k - timedelta(minutes=SLUTT_FRA_MIN)):
-        return True, f"sluttodds før avspark {k.astimezone(OSLO).strftime('%d.%m %H:%M')} norsk tid"
     if sjekket and (dag_oslo(now) - dag_oslo(sjekket)).days < dager:
         return False, f"hentet {sjekket.astimezone(OSLO).strftime('%d.%m %H:%M')} norsk tid; {grunn_int}"
     return True, f"{len(innen)} uspilt(e) kamp(er) innen {HORISONT_DAGER} dager; {grunn_int}"

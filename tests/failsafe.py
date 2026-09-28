@@ -544,8 +544,7 @@ def main():
 
     # 20. Tidsporten for The Odds API (update-odds.yml via planleggeren hvert
     # tiende minutt). Porten avgjør, uten filer: én vellykket henting per
-    # døgn (norsk tid), og på kampdager én i vinduet 60-15 minutter før hvert
-    # avspark, så sluttoddsen i odds_captured.json er fra rett før kampen. Én
+    # døgn (norsk tid); oddsen rett før avspark kommer fra prekick-odds.yml. Én
     # time sperre etter et mislykket forsøk; budsjettvakt (under 100 + 4 per
     # gjenstående dag i måneden: bare annenhver dag); ingen henting uten kamp
     # innen 7 dager eller med stanset kvote; FORCE tvinger. Falsk klokke.
@@ -594,24 +593,12 @@ def main():
     check("odds-port: FORCE tvinger henting, også samme døgn og under sperren",
           v(uke, kvote(i_dag_morgen), st30, force=True) is True)
     check("odds-port: ingen tidligere henting -> hent", v(uke, None) is True)
-    # Sluttodds på kampdagen: kamper 7.10 kl. 17:00 og 19:00 norsk tid (15:00 og 17:00 UTC),
-    # hentet i dag 09:05 norsk tid.
+    # Ingen ekstra henting på kampdagen: oddsen rett før avspark kommer fra
+    # prekick-odds.yml. En kamp 40 minutter unna gir ingen ny henting når det
+    # er hentet i dag.
     kampdag = fx(("2026-10-07", False, "17:00"), ("2026-10-07", False, "19:00"))
-    t = lambda h, m: _dt(2026, 10, 7, h, m, tzinfo=_tz.utc)
-    check("odds-port: sluttodds: 40 min før avspark, hentet i morges -> hent",
-          v(kampdag, kvote(i_dag_morgen), n=t(14, 20)) is True)
-    check("odds-port: sluttodds: 90 min før avspark (før vinduet) -> vent",
-          v(kampdag, kvote(i_dag_morgen), n=t(13, 30)) is False)
-    check("odds-port: sluttodds: 10 min før avspark (etter vinduet) -> vent",
-          v(kampdag, kvote(i_dag_morgen), n=t(14, 50)) is False)
-    check("odds-port: sluttodds: allerede hentet i vinduet (14:05 UTC) -> ingen ny henting 14:30",
-          v(kampdag, kvote(t(14, 5)), n=t(14, 30)) is False)
-    check("odds-port: sluttodds: neste avspark samme dag får sin egen henting (16:20, hentet 14:05)",
-          v(kampdag, kvote(t(14, 5)), n=t(16, 20)) is True)
-    check("odds-port: sluttodds: ikke under budsjettvakten (190 kreditter igjen)",
-          v(kampdag, kvote(i_dag_morgen, igjen=190), n=t(14, 20)) is False)
-    check("odds-port: sluttodds: spilt kamp gir ingen sluttoddshenting",
-          v(fx(("2026-10-07", True, "17:00"), ("2026-10-09", False)), kvote(i_dag_morgen), n=t(14, 20)) is False)
+    check("odds-port: kamp om 40 minutter, hentet i morges -> ingen ny henting (prekick-odds.yml dekker det)",
+          v(kampdag, kvote(i_dag_morgen), n=_dt(2026, 10, 7, 14, 20, tzinfo=_tz.utc)) is False)
     wf = (ROOT / ".github" / "workflows" / "update-odds.yml").read_text(encoding="utf-8")
     steg = wf.split("\n      - ")
     i_port = next((i for i, x in enumerate(steg) if "should_fetch_odds.py" in x), -1)
