@@ -1169,7 +1169,7 @@
     <!-- LIGA-OM: byttes ut per liga -->
     <section class="about" id="om-siden" aria-labelledby="omSidenTittel">
       <h2 id="omSidenTittel">Om tabellkalkulatoren for OBOS-ligaen</h2>
-      <p>Tabellkalkulator for OBOS-ligaen 2026 viser dagens tabell og sannsynligheten for at hvert lag rykker direkte opp, havner i topp 6 og får spille opprykkskvalifisering, havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 10&nbsp;000 ganger.</p>
+      <p>Tabellkalkulator for OBOS-ligaen 2026 viser dagens tabell og sannsynligheten for at hvert lag rykker direkte opp, havner i topp 6 og får spille opprykkskvalifisering, havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 100&nbsp;000 ganger.</p>
       <p>De to øverste rykker direkte opp i Eliteserien. Lagene på 3. til 6. plass spiller opprykkskvalifisering, og de kampene er ikke regnet inn her: siden sier hvor sannsynlig det er å komme dit, ikke hvor sannsynlig det er å vinne det. 14. plass må spille kvalik, og de to nederste rykker ned.</p>
       <p>Du kan fylle inn egne resultater, la modellen simulere tomme kamper, følge ett lag og se hvordan tabellen og sjansene endrer seg. Tabellen viser både modellens styrkevurdering for hele sesongen og formen i de fem siste kampene, så du ser forskjellen på hvor sterkt et lag er og hvordan det går akkurat nå. Tallene oppdateres automatisk etter hver kamp.</p>
             <p>Tallene i «Hvem har vært heldig eller uheldig» er faktiske poeng minus modellens forventede poeng i de samme kampene. Modellen er tilpasset på nettopp de kampene, og den har derfor allerede tatt opp i seg en del av avviket. Tallene er altså trolig litt for <strong>små</strong>: et lag har sannsynligvis vært enda heldigere, eller enda uheldigere, enn tallet viser.</p>
@@ -1184,16 +1184,16 @@
 <details class="howitworks">
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M4.9 4.9l1.7 1.7M17.4 17.4l1.7 1.7M2.8 12h2.4M18.8 12h2.4M4.9 19.1l1.7-1.7M17.4 6.6l1.7-1.7"/></svg></span>Slik fungerer det</summary>
   <div class="in">
-    <p class="plain-lead">Siden spiller resten av sesongen 10&nbsp;000 ganger og teller hvor ofte hvert lag ender på hver plass.</p>
-    <p>Hvert lag får en styrke fra målene sine og fra hva spillmarkedet har trodd om kampene deres, der nye kamper teller mest. Den er et mål på hele sesongen, ikke på de siste ukene. Står det 52 prosent for topp 6, endte laget blant de seks beste i omtrent 5200 av de 10&nbsp;000 sesongene.</p>
-    <p>Fyller du inn et resultat selv, brukes det i alle 10&nbsp;000 simuleringene, så du ser hvordan det påvirker sjansene. Styrke er modellens vurdering av hvor sterkt laget er, over hele sesongen, på en skala fra 0 til 10, der 5 er et gjennomsnittslag. Form står på samme skala, men er regnet rett ut av de fem siste kampene: vanlige poeng, 3 for seier og 1 for uavgjort, delt på de 15 som var mulige og ganget med 10. Fem seirer gir 10,0, fem uavgjorte 3,3 og fem tap 0,0.</p>
+    <p class="plain-lead">Siden spiller resten av sesongen 100&nbsp;000 ganger og teller hvor ofte hvert lag ender på hver plass.</p>
+    <p>Hvert lag får en styrke fra målene sine og fra hva spillmarkedet har trodd om kampene deres, der nye kamper teller mest. Den er et mål på hele sesongen, ikke på de siste ukene. Står det 52 prosent for topp 6, endte laget blant de seks beste i omtrent 52&nbsp;000 av de 100&nbsp;000 sesongene.</p>
+    <p>Fyller du inn et resultat selv, spiller nettleseren resten av sesongen 10&nbsp;000 ganger med resultatet, så du ser hvordan det påvirker sjansene. Styrke er modellens vurdering av hvor sterkt laget er, over hele sesongen, på en skala fra 0 til 10, der 5 er et gjennomsnittslag. Form står på samme skala, men er regnet rett ut av de fem siste kampene: vanlige poeng, 3 for seier og 1 for uavgjort, delt på de 15 som var mulige og ganget med 10. Fem seirer gir 10,0, fem uavgjorte 3,3 og fem tap 0,0.</p>
 
     <details class="details-tech">
       <summary>Vis detaljer</summary>
       <h3>Slik regnes sannsynlighetene</h3>
       <p id="howP1"></p>
       <p id="howP2"></p>
-      <p>Deretter spilles resten av sesongen 10&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Opprykk, Topp 6, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene.</p>
+      <p>Deretter spilles resten av sesongen 100&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene, der lagstyrken oppdateres etter hver kamp i hver simulerte sesong. Opprykk, Topp 6, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene. Tallene for dagens tabell er regnet på forhånd med 100&nbsp;000 sesonger. Fyller du inn resultater selv, regner nettleseren 10&nbsp;000 sesonger med dem.</p>
       <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner resten", "...taper resten", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med formoppdatering underveis, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet.</p>
       <p>Styrketallet flytter seg lite fra kamp til kamp. Hver kamp justerer det litt, ut fra hvor mange mål laget scoret og slapp inn mot det modellen ventet. Men justeringene trekkes samtidig tilbake mot utgangspunktet, og modellen tilpasses på nytt på alle kampene hver dag. Over en sesong står derfor styrketallet omtrent stille: sju kamper uten seier flyttet Sarpsborg 08 fra 4,80 til 4,65 i september 2026. Det er meningen. Styrke viser nivå. Vil du se de siste kampene, er det formtallet som sier det.</p>
       <p>Tabellen, kamplisten, simuleringene og svarene bygger alle på nøyaktig den samme lagstyrken. Det finnes ikke lenger en egen variant for visning: ett tall, ett sted.</p>
@@ -1255,7 +1255,7 @@
       <h3>Hvordan testen er gjort</h3>
       <p>Modellen testes på framtiden, ikke på kampene den allerede har sett. Ved fire tidspunkter i hver sesong tilpasses modellen kun på kampene som var spilt fram til da. Deretter simuleres resten av sesongen, og sannsynlighetene sammenlignes med det som faktisk skjedde.</p>
       <h3>Begrensninger</h3>
-      <p>Innbyrdes oppgjør er ikke regnet inn som fjerde rangeringskriterium. Opprykksspillet mellom 3. og 6. plass er ikke modellert: siden sier hvor sannsynlig det er å komme dit, ikke hvor sannsynlig det er å rykke opp gjennom det. Kvalikkampen for 14. plass er heller ikke modellert. Med 10&nbsp;000 simuleringer er usikkerheten høyst omtrent ±1 prosentpoeng.</p>
+      <p>Innbyrdes oppgjør er ikke regnet inn som fjerde rangeringskriterium. Opprykksspillet mellom 3. og 6. plass er ikke modellert: siden sier hvor sannsynlig det er å komme dit, ikke hvor sannsynlig det er å rykke opp gjennom det. Kvalikkampen for 14. plass er heller ikke modellert. Med 100&nbsp;000 simuleringer er usikkerheten høyst omtrent ±0,3 prosentpoeng, og ±1 prosentpoeng med de 10&nbsp;000 nettleseren regner når du fyller inn resultater selv.</p>
     </details>
   </div>
 </details>
@@ -1316,7 +1316,7 @@ const LEAGUE = {
        const hale = 'De to siste plassene rykker rett ned, og nummer 14 må spille kvalifisering.';
        return t.length ? `Størst nedrykksfare har ${faqListe(t)}. ${hale}` : hale; }},
     {q: 'Hvordan regnes sannsynlighetene ut?',
-     a: () => `Resten av sesongen spilles ${MC_N.toLocaleString('nb-NO')} ganger med en modell `
+     a: () => `Resten av sesongen spilles ${(lastMCFinal && lastMCN ? lastMCN : MC_N).toLocaleString('nb-NO')} ganger med en modell `
        + 'tilpasset på mål og sluttodds. Tallet er andelen av de sesongene laget endte der.'},
   ],
   posTitles: {1: 'Direkte opprykk til Eliteserien', 2: 'Direkte opprykk til Eliteserien',

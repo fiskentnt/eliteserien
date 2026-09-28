@@ -31,7 +31,7 @@ const LEAGUE = {
        const hale = 'De to siste plassene rykker rett ned, og nummer 14 må spille kvalifisering.';
        return t.length ? `Størst nedrykksfare har ${faqListe(t)}. ${hale}` : hale; }},
     {q: 'Hvordan regnes sannsynlighetene ut?',
-     a: () => `Resten av sesongen spilles ${MC_N.toLocaleString('nb-NO')} ganger med en modell `
+     a: () => `Resten av sesongen spilles ${(lastMCFinal && lastMCN ? lastMCN : MC_N).toLocaleString('nb-NO')} ganger med en modell `
        + 'tilpasset på mål og sluttodds. Tallet er andelen av de sesongene laget endte der.'},
   ],
   posTitles: {1: 'Direkte opprykk til Eliteserien', 2: 'Direkte opprykk til Eliteserien',
