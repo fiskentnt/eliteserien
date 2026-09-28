@@ -6261,10 +6261,18 @@ function renderAccuracy(data){
   const kal = (data.kalibrering||[]).filter(b=>b.n>0).map(b=>
     `<tr><td>${Math.round(b.lo*100)}–${Math.round(b.hi*100)} %</td><td>${b.n}</td>`
     + `<td>${pct(b.ventet)}</td><td>${pct(b.faktisk)}</td></tr>`).join('');
+  // Hvor mange kamper tallene bygger på, og når de ble spilt, med datoene
+  // skrevet helt ut og måneden bare én gang når den er lik: "2. oktober",
+  // "mellom 2. og 3. oktober", "mellom 30. september og 2. oktober".
+  const antall = n===1 ? '1 kamp' : `${n} kamper`;
   const usikker = n < 50
-    ? `<strong>${n} kamper er et lite grunnlag.</strong> Tallene vil derfor variere en del, `
-      + `og små forskjeller mellom kildene betyr foreløpig lite. Grunnlaget blir bedre for hver runde.`
-    : `Tallene bygger på ${n} kamper.`;
+    ? `Tallene bygger på ${antall}, og sier lite før det er flere.`
+    : `Tallene bygger på ${antall}.`;
+  const spilt = !data.fra ? '' : ` ${n===1 ? 'Kampen' : 'Kampene'} ble spilt `
+    + (data.fra===data.til ? `${dateNoLong(data.fra)}.`
+      : data.fra.slice(0,7)===data.til.slice(0,7)
+        ? `mellom ${+data.fra.slice(8,10)}. og ${dateNoLong(data.til)}.`
+        : `mellom ${dateNoLong(data.fra)} og ${dateNoLong(data.til)}.`);
   box.innerHTML =
     `<div class="tblscroll"><table class="mt">`
     + `<thead><tr><th>Kilde</th><th>Kamper</th><th>Traff utfallet</th><th>Log loss</th></tr></thead>`
@@ -6275,7 +6283,7 @@ function renderAccuracy(data){
       + `<div class="tblscroll"><table class="mt calib">`
       + `<thead><tr><th>Modellen sa</th><th>Tilfeller</th><th>Snitt</th><th>Skjedde</th></tr></thead>`
       + `<tbody>${kal}</tbody></table></div>` : '')
-    + `<p class="note">${usikker}${data.fra ? ` Kampene er spilt mellom ${shortDateNo(data.fra)} og ${shortDateNo(data.til)}.` : ''}</p>`;
+    + `<p class="note">${usikker}${spilt}</p>`;
 }
 function qaJumpToSection(){
   qaSetOpen(true); // spørsmålslinjen i banneret åpner seksjonen selv om den er lukket

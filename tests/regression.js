@@ -144,7 +144,49 @@ async function main() {
   const filled = (page, n) => page.waitForFunction(
     `matches.filter(m=>m.hg!=null).length===${n}`, {timeout: 120000});
 
+  // Treffsikkerhetsdelen: teksten uten kamper, med 1 kamp, 3 kamper samme dag
+  // og over to dager, over månedsskiftet og med 50 kamper, på alle tre
+  // sidene. Datoene skrives helt ut, med måneden bare én gang når den er lik.
+  // Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare treffsikkerhet
+  const treffsikkerhetTekst = async () => {
+    setGroup('Treffsikkerhet: teksten med få kamper, og datoene');
+    const lite = 'og sier lite før det er flere.';
+    const tilfeller = [
+      {navn: 'ingen kamper', n: 0, fra: null, til: null,
+       ventet: 'Treffsikkerheten vises her etter hvert som kampene spilles. De første tallene kommer etter neste runde.'},
+      {navn: '1 kamp', n: 1, fra: '2026-10-02', til: '2026-10-02', ventet: `Tallene bygger på 1 kamp, ${lite} Kampen ble spilt 2. oktober.`},
+      {navn: '3 kamper samme dag', n: 3, fra: '2026-10-02', til: '2026-10-02', ventet: `Tallene bygger på 3 kamper, ${lite} Kampene ble spilt 2. oktober.`},
+      {navn: '3 kamper over to dager', n: 3, fra: '2026-10-02', til: '2026-10-03', ventet: `Tallene bygger på 3 kamper, ${lite} Kampene ble spilt mellom 2. og 3. oktober.`},
+      {navn: 'kamper over månedsskiftet', n: 3, fra: '2026-09-30', til: '2026-10-02', ventet: `Tallene bygger på 3 kamper, ${lite} Kampene ble spilt mellom 30. september og 2. oktober.`},
+      {navn: '50 kamper', n: 50, fra: '2026-10-02', til: '2026-11-08', ventet: 'Tallene bygger på 50 kamper. Kampene ble spilt mellom 2. oktober og 8. november.'},
+    ];
+    for (const sti of ['/eliteserien/', '/obos/', '/elo-test/']) {
+      const feil0 = errors.length;
+      const pg = await open(1400, 900, base.replace('/eliteserien/', sti));
+      const r = await pg.evaluate(t => t.map(c => {
+        const kilde = {n: c.n, treff: 0.5, logloss: 1.01};
+        renderAccuracy({n: c.n, fra: c.fra, til: c.til, kilder: c.n ? {side: kilde, modell: kilde, odds: kilde} : {}, kalibrering: []});
+        const el = document.getElementById('accuracyLog'), ps = [...el.querySelectorAll('p.note')];
+        return {tekst: ps.length ? ps[ps.length - 1].textContent.trim() : '',
+                kamper: [...el.querySelectorAll('tbody tr td:nth-child(2)')].map(x => x.textContent)};
+      }), tilfeller);
+      await pg.close();
+      const side = sti.replace(/\//g, '');
+      tilfeller.forEach((c, i) => check(`${side}: ${c.navn}: "${c.ventet}"`,
+        r[i].tekst === c.ventet && (c.n === 0 ? r[i].kamper.length === 0 : r[i].kamper.length === 3 && r[i].kamper.every(k => k === String(c.n))),
+        JSON.stringify(r[i])));
+      check(`${side}: ingen JS-feil`, errors.length === feil0, errors.slice(feil0).join('; '));
+    }
+  };
+  const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
+
   try {
+    if (BARE) {
+      // Bare én gruppe (se over).
+      if (BARE !== 'treffsikkerhet') throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet)`);
+      await treffsikkerhetTekst();
+    } else {
     // ---- 1. lasting ----
     setGroup('Lasting');
     let page = await open();
@@ -3333,9 +3375,12 @@ async function main() {
     }
     await page.bringToFront();
 
+    await treffsikkerhetTekst();
+
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));
     await page.close();
+    }
   } finally {
     await browser.close();
     if (server) server.close();
