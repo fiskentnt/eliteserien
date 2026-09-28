@@ -20,6 +20,7 @@ produksjonsfil er endret for å få testsiden til å virke.
 
 | `emodell/keymatch.json`, `lastmatch.json`, `prekick.json` | egne, skrevet av produksjonens `scripts/snapshot_probs.js` kjørt mot **/elo-test/** (`--side elo-test --ut elo-test/emodell --uten-historikk`) |
 | `emodell/accuracy.json` | egen, `scripts/accuracy_log.py eliteserien --data elo-test/emodell` |
+| `emodell/grunnlag.json` | egen: tabellen og svarene for dagens stilling med ELO90 og N = 100 000, regnet av produksjonens `scripts/lag_grunnlag.js elo-test --ut elo-test/emodell` i `grunnlag.yml`, etter «ELO-test: bygg modellen». Siden bruker den bare når fingeravtrykket stemmer, som produksjonen |
 
 **Panelene** (rundens viktigste kamp, forrige kamp i lagboksen, prekick og
 treffsikkerhet) regnes av testsiden selv, med ELO90, i `elo-test.yml` --
@@ -287,6 +288,8 @@ funksjonsdeklarasjonen, og deklarasjoner heises, så alle kall — også under
 | `neutralExpPts()` | overstyrt | returnerer 0, ikke i bruk | forventede poeng på nøytral bane |
 | `renderModelTbl()` | overstyrt | ratingtabell: rating, mot snittet, H/U/B mot snittlag | «Slik fungerer det»: fire forventede mål per lag |
 | `teamFormHistory(team)` | overstyrt | `eloStyrke` på ratingen per kampdag fra `rating_historikk`, altså samme skala som Styrke-kolonnen | kjørte FORM_K-oppdateringen på nytt |
+| `grunnlagFil()` | overstyrt | grunnlagsfilen ligger i `emodell/grunnlag.json` | `data/grunnlag.json` |
+| `grunnlagEkstra()` | overstyrt | legger ELO-modellen (alt i `emodell/model.json` unntatt `built`, `note` og `rating_historikk`), `ELO_HVA` og ELO-koden som kjører på hovedtråden (`eloMixLap`, `eloTaskOver` osv.) til fingeravtrykket. Den koden ligger ikke i `WORKER_SRC` | `null` |
 | `baseRate(h, a)` | overstyrt | `stateRate` med byggingens rating. **I praksis død**: eneste bruker er `qaLuck`, som ikke kan nås | statiske att/con |
 
 Globale variabler: `ELO` (modellfilen), `ELO_LAM` (λ, 1X2 og `blend_lam` per

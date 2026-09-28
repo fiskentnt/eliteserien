@@ -15,8 +15,9 @@
  * Feiler noe, står den forrige filen urørt, og kjøringen avslutter med 1.
  *
  *   NODE_PATH=<puppeteer-core> node scripts/lag_grunnlag.js <side> [--ut <mappe>] [--inndata <hash>]
- *   side      eliteserien | obos (sidens mappe)
- *   --ut      mappen filen skrives til (standard <side>/data)
+ *   side      eliteserien | obos | elo-test (sidens mappe)
+ *   --ut      mappen filen skrives til (standard <side>/data; testsiden:
+ *             elo-test/emodell)
  *   --inndata sha256 av inndatafilene fra scripts/grunnlag_port.py, lagres i
  *             filen så porten kan se om noe er endret siden
  *   --n       BARE for testene: annen N enn sidens GRUNNLAG_N. Avtrykket

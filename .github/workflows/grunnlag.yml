@@ -10,6 +10,11 @@ name: "Grunnlag: tabellen og svarene regnet på forhånd"
 # jobbene som skriver det siden regner med, ved push av sidene eller
 # skriptet, og manuelt.
 #
+# Testsiden (elo-test/emodell/grunnlag.json, med ELO-Odds 90) regnes her
+# også, etter «ELO-test: bygg modellen», som bygger modellen den regner med.
+# Ikke som et steg i elo-test.yml: da ville en lang regning (om lag en time
+# ved sesongstart) holdt av køen for byggingen av modellen.
+#
 # Porten (scripts/grunnlag_port.py) ser om inndataene er endret siden filen
 # ble regnet. Nesten alle kjøringene stopper der, etter noen sekunder, uten
 # nettleser. Fast N på én maskin per liga, i kø per liga: bare den nyeste
@@ -26,6 +31,7 @@ on:
       - "Odds nær avspark"
       - "OBOS: hent resultater"
       - "Bygg ligasidene"
+      - "ELO-test: bygg modellen"
     types: [completed]
     branches: [main]
   push:
@@ -33,6 +39,7 @@ on:
     paths:
       - eliteserien/index.html
       - obos/index.html
+      - elo-test/index.html
       - scripts/lag_grunnlag.js
       - scripts/grunnlag_port.py
       - .github/workflows/grunnlag.yml
@@ -57,11 +64,21 @@ jobs:
         with:
           ref: main
 
+      # Etter «ELO-test: bygg modellen» bare testsiden, etter de andre
+      # jobbene bare ligaene (testsidens modell er ikke bygget ennå), ellers
+      # alle tre.
       - name: Er inndataene endret siden filen ble regnet?
         id: port
         env:
           TVING: ${{ inputs.tving && 'true' || 'false' }}
-        run: python3 scripts/grunnlag_port.py eliteserien obos
+          UTLOSER: ${{ github.event.workflow_run.name || '' }}
+        run: |
+          case "$UTLOSER" in
+            "ELO-test: bygg modellen") sider="elo-test" ;;
+            "") sider="eliteserien obos elo-test" ;;
+            *) sider="eliteserien obos" ;;
+          esac
+          python3 scripts/grunnlag_port.py $sider
 
   regn:
     needs: port
@@ -104,16 +121,19 @@ jobs:
         if: steps.port.outputs.ligaer != '[]'
         env:
           INNDATA: ${{ steps.port.outputs.inndata }}
+          UT: ${{ steps.port.outputs.ut }}
         run: |
           CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
-          NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/lag_grunnlag.js "${{ matrix.liga }}" --inndata "$INNDATA"
+          NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/lag_grunnlag.js "${{ matrix.liga }}" --ut "$UT" --inndata "$INNDATA"
 
       - name: Lagre
         if: steps.port.outputs.ligaer != '[]'
+        env:
+          UT: ${{ steps.port.outputs.ut }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add "${{ matrix.liga }}/data/grunnlag.json"
+          git add "$UT/grunnlag.json"
           if git diff --cached --quiet; then echo "Uendret."; exit 0; fi
           git commit -q -m "Grunnlag (${{ matrix.liga }}) $(date -u +%Y-%m-%dT%H:%MZ)"
           bash scripts/push_med_rebase.sh

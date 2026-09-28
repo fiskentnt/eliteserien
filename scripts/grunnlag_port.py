@@ -8,13 +8,18 @@ tiende minutt). Porten ser på innholdet i det siden regner med, og slipper
 gjennom bare når noe av det er endret siden filen ble regnet:
 
   <side>/index.html          koden, med Worker-koden og konstantene
-  data/model.json            lagstyrkene (teams, mu, H, att, con, ha, hc),
-                             uten fitted_at og meta
+  modellen                   produksjonen: data/model.json, lagstyrkene
+                             (teams, mu, H, att, con, ha, hc) uten fitted_at
+                             og meta; testsiden: emodell/model.json, alt
+                             unntatt tidsstempelet (built) og noten
   data/matches.json          resultatene
   data/fixtures.json         kampene som gjenstår
   data/odds_upcoming.json    prisene (hjemme, borte, H, D, A per kamp), uten
                              tidsstempler og kilde
   scripts/lag_grunnlag.js    skriptet som regner filen
+
+Testsiden (elo-test) leser kampdataene og oddsen fra eliteserien/data og
+har filen i elo-test/emodell.
 
 Hashen av dette (inndata) lagres i filen av lag_grunnlag.js. Porten er bare
 en billig forhåndssjekk uten nettleser. Siden bruker filen bare når SITT
@@ -29,6 +34,7 @@ Bruk:  python3 scripts/grunnlag_port.py <side> [<side> ...]
     ligaer=<JSON-liste over sidene som må regnes>
     inndata_<side>=<hash>
     inndata=<hash>          (bare med én side)
+    ut=<mappe>              (bare med én side: der filen ligger)
   TVING=true: alle sidene regnes (workflow_dispatch med tving).
 """
 import hashlib
@@ -38,7 +44,18 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
-SIDER = ("eliteserien", "obos")
+# Per side: siden, mappen med kampdata og odds, modellfilen, feltene i den
+# som teller (None: alle unntatt tidsstempel og note), og mappen filen ligger i.
+PROD_FELT = ("teams", "mu", "H", "att", "con", "ha", "hc")
+SIDER = {
+    "eliteserien": {"side": "eliteserien/index.html", "data": "eliteserien/data",
+                    "modell": "eliteserien/data/model.json", "felt": PROD_FELT, "ut": "eliteserien/data"},
+    "obos": {"side": "obos/index.html", "data": "obos/data",
+             "modell": "obos/data/model.json", "felt": PROD_FELT, "ut": "obos/data"},
+    "elo-test": {"side": "elo-test/index.html", "data": "eliteserien/data",
+                 "modell": "elo-test/emodell/model.json", "felt": None, "ut": "elo-test/emodell"},
+}
+UTEN = ("built", "note", "fitted_at")
 
 
 def _json(p):
@@ -48,21 +65,23 @@ def _json(p):
 def inndata(side, root=ROOT):
     """sha256 av det siden regner med, se over. Mangler en fil, tas det med
     som null, så hashen blir en annen enn med filen."""
-    d = root / side / "data"
+    c = SIDER[side]
+    d = root / c["data"]
 
-    def les(navn, hvordan):
-        p = d / navn
+    def les(p, hvordan):
         if not p.exists():
             return None
         return hvordan(_json(p))
 
+    felt = c["felt"]
     deler = {
-        "side": hashlib.sha256((root / side / "index.html").read_bytes()).hexdigest(),
+        "side": hashlib.sha256((root / c["side"]).read_bytes()).hexdigest(),
         "skript": hashlib.sha256((root / "scripts" / "lag_grunnlag.js").read_bytes()).hexdigest(),
-        "modell": les("model.json", lambda m: {k: m.get(k) for k in ("teams", "mu", "H", "att", "con", "ha", "hc")}),
-        "resultater": les("matches.json", lambda m: m),
-        "terminliste": les("fixtures.json", lambda f: f),
-        "odds": les("odds_upcoming.json", lambda o: sorted(
+        "modell": les(root / c["modell"], lambda m: {k: m.get(k) for k in felt} if felt
+                      else {k: v for k, v in m.items() if k not in UTEN}),
+        "resultater": les(d / "matches.json", lambda m: m),
+        "terminliste": les(d / "fixtures.json", lambda f: f),
+        "odds": les(d / "odds_upcoming.json", lambda o: sorted(
             [r.get("home"), r.get("away"), r.get("H"), r.get("D"), r.get("A")] for r in (o.get("matches") or []))),
     }
     tekst = json.dumps(deler, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
@@ -74,7 +93,7 @@ def vurder(side, root=ROOT, tving=False):
     h = inndata(side, root)
     if tving:
         return True, h, "tvunget (workflow_dispatch)"
-    fil = root / side / "data" / "grunnlag.json"
+    fil = root / SIDER[side]["ut"] / "grunnlag.json"
     if not fil.exists():
         return True, h, "filen finnes ikke"
     try:
@@ -99,6 +118,7 @@ def main(argv):
     ut.append(f"ligaer={json.dumps(regnes)}")
     if len(sider) == 1:
         ut.append(f"inndata={ut[0].split('=', 1)[1]}")
+        ut.append(f"ut={SIDER[sider[0]]['ut']}")
     gh = os.environ.get("GITHUB_OUTPUT")
     if gh:
         with open(gh, "a", encoding="utf-8") as f:

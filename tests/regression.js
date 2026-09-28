@@ -32,7 +32,8 @@ const MIME = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.j
 
 // Grunnlagsfilen (<liga>/data/grunnlag.json) svarer 404 som standard, så
 // testene prøver sidens egen regning, som før filen fantes (den brukes fortsatt
-// med et scenario). Gruppen «Grunnlagsfilen på siden» slår den på:
+// med et scenario). Testsidens fil ligger i elo-test/emodell. Gruppen
+// «Grunnlagsfilen på siden» slår den på:
 //   {}                          filen fra repoet
 //   {innhold: {<liga>: tekst}}  dette innholdet i stedet
 //   {forsinkelse: ms}           svaret kommer så mye senere
@@ -42,7 +43,7 @@ function serve(rot = ROOT) {
     let p = decodeURIComponent(req.url.split('?')[0]);
     if (p.endsWith('/')) p += 'index.html';
     const f = path.join(rot, p);
-    const gm = /^\/([^/]+)\/data\/grunnlag\.json$/.exec(p);
+    const gm = /^\/([^/]+)\/(?:data|emodell)\/grunnlag\.json$/.exec(p);
     if (gm) {
       const modus = GRUNNLAG_MODUS;
       const svar = () => {
@@ -2914,9 +2915,11 @@ async function main() {
     // lasting og endres med hver inndata, at oppgavene dekker det svarene
     // faktisk sender til poolen (samme id, kamp, resultat og frø), at
     // regningen er bit for bit poolens, og at skriptet bare skriver en fil
-    // når alt stemmer. Begge produksjonssidene.
+    // når alt stemmer. Alle tre sidene; på testsiden går de låste utfallene
+    // gjennom eloTaskOver, og ELO-modellen og -koden er med i avtrykket.
     setGroup('Grunnlagsfilen: fingeravtrykket, oppgavene og regningen');
-    for (const [url, liga] of [[base, 'eliteserien'], [base.replace('/eliteserien/', '/obos/'), 'obos']]) {
+    for (const [url, liga] of [[base, 'eliteserien'], [base.replace('/eliteserien/', '/obos/'), 'obos'],
+                               [base.replace('/eliteserien/', '/elo-test/'), 'elo-test']]) {
       const s1 = await open(1400, 900, url), s2 = await open(1400, 900, url);
       const a1 = await s1.evaluate(() => grunnlagAvtrykk()), a2 = await s2.evaluate(() => grunnlagAvtrykk());
       await s2.close();
@@ -2928,10 +2931,24 @@ async function main() {
         const prov = async (navn, gjor, angre) => { gjor(); ut[navn] = (await grunnlagAvtrykk()) !== f; angre(); };
         const m = matches.find(x => x.hg == null);
         await prov('et resultat fylt inn', () => { m.hg = 1; m.ag = 0; }, () => { m.hg = null; m.ag = null; });
-        const a0 = MODEL.att[0];
-        await prov('lagstyrke i modellen', () => { MODEL.att[0] = a0 + 1e-12; }, () => { MODEL.att[0] = a0; });
-        const mu0 = MODEL.mu;
-        await prov('mu i modellen', () => { MODEL.mu = mu0 + 1e-12; }, () => { MODEL.mu = mu0; });
+        if (typeof ELO !== 'undefined' && ELO) {
+          // Testsiden: ELO-modellen (emodell/model.json) og -koden.
+          const lag0 = Object.keys(ELO.rating_alle || ELO.rating)[0], R = ELO.rating_alle || ELO.rating, r0 = R[lag0];
+          await prov('ratingen i ELO-modellen', () => { R[lag0] = r0 + 1e-9; }, () => { R[lag0] = r0; });
+          const h0 = ELO.hjemmefordel_rating;
+          await prov('hjemmefordelen i ELO-modellen', () => { ELO.hjemmefordel_rating = h0 + 1e-9; }, () => { ELO.hjemmefordel_rating = h0; });
+          const l0 = ELO.lam_tabell.lh[0];
+          await prov('lambda-tabellen i ELO-modellen', () => { ELO.lam_tabell.lh[0] = l0 + 1e-9; }, () => { ELO.lam_tabell.lh[0] = l0; });
+          const e = grunnlagInndata(GRUNNLAG_N).ekstra;
+          ut['ELO-koden og ELO_HVA er med, ikke tidsstempelet og rating_historikk'] = !!e && /function eloMixLap/.test(e.kode)
+            && /function eloTaskOver/.test(e.kode) && JSON.stringify(e.ELO_HVA) === JSON.stringify(ELO_HVA)
+            && !('built' in e.modell) && !('rating_historikk' in e.modell) && 'lam_tabell' in e.modell;
+        } else {
+          const a0 = MODEL.att[0];
+          await prov('lagstyrke i modellen', () => { MODEL.att[0] = a0 + 1e-12; }, () => { MODEL.att[0] = a0; });
+          const mu0 = MODEL.mu;
+          await prov('mu i modellen', () => { MODEL.mu = mu0 + 1e-12; }, () => { MODEL.mu = mu0; });
+        }
         const k = Object.keys(ODDS_UP)[0], h0 = k && ODDS_UP[k].H;
         if (k) await prov('en oddspris', () => { ODDS_UP[k].H = h0 + 1e-6; }, () => { ODDS_UP[k].H = h0; });
         else ut['en oddspris'] = 'ingen odds';
@@ -3081,16 +3098,18 @@ async function main() {
       const ferdig = pg => pg.waitForFunction('typeof GRUNNLAG_STATUS!=="undefined" && GRUNNLAG_STATUS!=="venter" && lastMC && lastMCFinal',
         {timeout: 120000, polling: 50});
       const lagMedSone = `TEAMS.find(t => { const z = qaTargetZone(t); return z && !qaSettled(t, z) && z.pct > 0.05 && z.pct < 0.95; }) || TEAMS[0]`;
-      // Filen for hver liga: den i repoet når siden godtar den (samme data som
+      // Filen for hver side: den i repoet når siden godtar den (samme data som
       // da CI regnet den), ellers regnet på nytt med lag_grunnlag.js i en kopi.
+      const SIDENE = ['eliteserien', 'obos', 'elo-test'];
+      const utMappe = liga => liga === 'elo-test' ? 'elo-test/emodell' : `${liga}/data`;
       const filer = {};
-      for (const liga of ['eliteserien', 'obos']) {
+      for (const liga of SIDENE) {
         GRUNNLAG_MODUS = {};
         const pr = await aapneMaalt(base.replace('/eliteserien/', `/${liga}/`));
         await ferdig(pr);
         const st = await pr.evaluate(() => GRUNNLAG_STATUS);
         await pr.close();
-        if (st === 'i bruk') { filer[liga] = fs.readFileSync(path.join(ROOT, liga, 'data', 'grunnlag.json'), 'utf8'); continue; }
+        if (st === 'i bruk') { filer[liga] = fs.readFileSync(path.join(ROOT, utMappe(liga), 'grunnlag.json'), 'utf8'); continue; }
         const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'grunnlag-side-'));
         try {
           for (const f of execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], {cwd: ROOT}).toString().split('\0').filter(Boolean)) {
@@ -3100,14 +3119,14 @@ async function main() {
             fs.copyFileSync(fra, path.join(TMP, f));
           }
           const pp = require.resolve('puppeteer-core');
-          const r = spawnSync(process.execPath, [path.join(TMP, 'scripts', 'lag_grunnlag.js'), liga], {cwd: TMP, encoding: 'utf8', timeout: 900000,
+          const r = spawnSync(process.execPath, [path.join(TMP, 'scripts', 'lag_grunnlag.js'), liga, '--ut', utMappe(liga)], {cwd: TMP, encoding: 'utf8', timeout: 900000,
             env: {...process.env, NODE_PATH: [pp.slice(0, pp.lastIndexOf(`${path.sep}puppeteer-core${path.sep}`)), process.env.NODE_PATH].filter(Boolean).join(path.delimiter)}});
           console.log(`    (${liga}: filen i repoet ble ikke godtatt (${st}); regnet på nytt: ${(r.stdout || '').trim().split('\n')[0]})`);
-          filer[liga] = fs.readFileSync(path.join(TMP, liga, 'data', 'grunnlag.json'), 'utf8');
+          filer[liga] = fs.readFileSync(path.join(TMP, utMappe(liga), 'grunnlag.json'), 'utf8');
         } finally { fs.rmSync(TMP, {recursive: true, force: true}); }
       }
 
-      for (const liga of ['eliteserien', 'obos']) {
+      for (const liga of SIDENE) {
         const url = base.replace('/eliteserien/', `/${liga}/`), g = JSON.parse(filer[liga]);
         GRUNNLAG_MODUS = {innhold: {[liga]: filer[liga]}};
         const pg = await aapneMaalt(url);
@@ -3284,7 +3303,7 @@ async function main() {
         }
         return tider.sort((a, b) => a - b)[2];
       };
-      for (const liga of ['eliteserien', 'obos']) {
+      for (const liga of SIDENE) {
         const uten = await tidTil(liga, null), med = await tidTil(liga, {innhold: {[liga]: filer[liga]}}),
               treg = await tidTil(liga, {innhold: {[liga]: filer[liga]}, forsinkelse: 3000});
         const grense = uten * 1.15 + 30;

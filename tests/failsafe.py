@@ -717,6 +717,39 @@ def main():
         check("grunnlag-port: alt tilbake -> hopp over", v()[0] is False)
         (d / "grunnlag.json").write_text("{ødelagt", encoding="utf-8")
         check("grunnlag-port: filen kan ikke leses -> regn", v()[0] is True)
+    # Testsiden: egen side og ELO-modell, kampdata og odds fra Eliteserien,
+    # filen i elo-test/emodell.
+    with _tf.TemporaryDirectory() as _t:
+        rot = Path(_t)
+        (rot / "scripts").mkdir()
+        _sh.copy(ROOT / "scripts" / "lag_grunnlag.js", rot / "scripts")
+        (rot / "elo-test" / "emodell").mkdir(parents=True)
+        (rot / "eliteserien" / "data").mkdir(parents=True)
+        _sh.copy(ROOT / "elo-test" / "index.html", rot / "elo-test")
+        _sh.copy(ROOT / "elo-test" / "emodell" / "model.json", rot / "elo-test" / "emodell")
+        for f in ("matches.json", "fixtures.json", "odds_upcoming.json"):
+            _sh.copy(ROOT / "eliteserien" / "data" / f, rot / "eliteserien" / "data")
+        v = lambda: _gp.vurder("elo-test", root=rot)
+        (rot / "elo-test" / "emodell" / "grunnlag.json").write_text(json.dumps({"inndata": v()[1]}), encoding="utf-8")
+        check("grunnlag-port, testsiden: filen i elo-test/emodell er regnet av dagens inndata -> hopp over", v()[0] is False)
+        em = rot / "elo-test" / "emodell" / "model.json"
+        gml = em.read_text(encoding="utf-8")
+        m = json.loads(gml); m.update(built="2099-01-01T00:00:00+00:00", note="annen")
+        em.write_text(json.dumps(m), encoding="utf-8")
+        check("grunnlag-port, testsiden: built og note i ELO-modellen endret -> hopp over", v()[0] is False)
+        m["hjemmefordel_rating"] = m["hjemmefordel_rating"] + 1e-9
+        em.write_text(json.dumps(m), encoding="utf-8")
+        check("grunnlag-port, testsiden: ELO-modellen endret -> regn", v()[0] is True)
+        em.write_text(gml, encoding="utf-8")
+        ek = rot / "eliteserien" / "data" / "matches.json"
+        gml = ek.read_text(encoding="utf-8"); mm = json.loads(gml); mm[0]["hg"] += 1
+        ek.write_text(json.dumps(mm), encoding="utf-8")
+        check("grunnlag-port, testsiden: et resultat i eliteserien/data endret -> regn", v()[0] is True)
+        ek.write_text(gml, encoding="utf-8")
+        check("grunnlag-port, testsiden: alt tilbake -> hopp over", v()[0] is False)
+    ut_ = subprocess.run([sys.executable, str(ROOT / "scripts" / "grunnlag_port.py"), "elo-test"], capture_output=True, text=True).stdout
+    check("grunnlag-port: med én side skrives mappen filen ligger i (ut=elo-test/emodell)", "\nut=elo-test/emodell" in "\n" + ut_, ut_)
+
     # Porten tar med de datafilene siden faktisk regner med (boot()).
     side = (ROOT / "eliteserien" / "index.html").read_text(encoding="utf-8")
     check("grunnlag-port: filene er de siden laster i boot() (matches, fixtures, model, odds_upcoming)",
@@ -733,9 +766,12 @@ def main():
                 break
     utlosere = gw.split("workflows:", 1)[1].split("types:", 1)[0]
     utlosere = [l.strip()[2:].strip().strip('"') for l in utlosere.splitlines() if l.strip().startswith("- ")]
-    check("grunnlag.yml: utløses etter datajobbene, oddsjobbene og byggingen av ligasidene, med navn som finnes",
-          sorted(navn_wf.get(n, "?") for n in utlosere) == ["build-leagues.yml", "obos-results.yml", "prekick-odds.yml", "update-data.yml", "update-odds.yml"],
+    check("grunnlag.yml: utløses etter datajobbene, oddsjobbene, byggingen av ligasidene og ELO-modellen, med navn som finnes",
+          sorted(navn_wf.get(n, "?") for n in utlosere) == ["build-leagues.yml", "elo-test.yml", "obos-results.yml", "prekick-odds.yml", "update-data.yml", "update-odds.yml"],
           str(utlosere))
+    check("grunnlag.yml: etter ELO-modellen bare testsiden, etter datajobbene bare ligaene, ellers alle tre",
+          '"ELO-test: bygg modellen") sider="elo-test" ;;' in gw and '"") sider="eliteserien obos elo-test" ;;' in gw
+          and '*) sider="eliteserien obos" ;;' in gw and "python3 scripts/grunnlag_port.py $sider" in gw)
     check("grunnlag.yml: bare kjøringer på main utløser den, og push av sidene og skriptene",
           "types: [completed]\n    branches: [main]\n" in gw and all(f"      - {p_}\n" in gw for p_ in
           ("eliteserien/index.html", "obos/index.html", "scripts/lag_grunnlag.js", "scripts/grunnlag_port.py")))
@@ -745,8 +781,9 @@ def main():
     check("grunnlag.yml: porten sjekkes på nytt i regnejobben før Chrome, så regnes og lagres det",
           0 < i_p2 < i_nd < i_rg < i_lg and "concurrency:\n      group: grunnlag-${{ matrix.liga }}\n      cancel-in-progress: false" in gw
           and "if: needs.port.outputs.ligaer != '[]'" in gw, f"{i_p2} {i_nd} {i_rg} {i_lg}")
-    check("grunnlag.yml: fast N (ingen --n), og bare grunnlagsfilen committes",
-          i_rg > 0 and "--n" not in gst[i_rg] and 'git add "${{ matrix.liga }}/data/grunnlag.json"\n' in gst[i_lg]
+    check("grunnlag.yml: fast N (ingen --n), filen der porten sier, og bare grunnlagsfilen committes",
+          i_rg > 0 and "--n" not in gst[i_rg] and '--ut "$UT"' in gst[i_rg] and "UT: ${{ steps.port.outputs.ut }}" in gst[i_rg]
+          and 'git add "$UT/grunnlag.json"\n' in gst[i_lg]
           and gst[i_lg].count("git add") == 1 and "bash scripts/push_med_rebase.sh" in gst[i_lg])
     check("datajobbene nevner ikke grunnlagsfilen: regningen kan ikke stoppe eller forsinke dem",
           not any(n_ in (wfd / f).read_text(encoding="utf-8") for f in ("update-data.yml", "obos-results.yml", "update-odds.yml", "prekick-odds.yml")
