@@ -1,0 +1,41 @@
+name: "Måling: forhåndsregning av svarene (del 2)"
+
+# Bare manuell. Måler hvor lang tid forhåndsregningen av tabellen og svarene
+# for dagens stilling tar på GitHub sine maskiner, med N sesonger per oppgave,
+# før grunnlag.yml bygges. Skriver ingenting og committer ingenting.
+on:
+  workflow_dispatch:
+    inputs:
+      sesonger:
+        description: "N, sesonger per oppgave"
+        default: "100000"
+      sider:
+        description: "Hvilke sider (mellomrom mellom)"
+        default: "eliteserien obos elo-test"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: maal-grunnlag
+  cancel-in-progress: false
+
+jobs:
+  mal:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Installer puppeteer-core
+        run: npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pp" puppeteer-core@25.11.0
+      - name: Mål forhåndsregningen
+        run: |
+          nproc
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
+          NODE_PATH="$RUNNER_TEMP/pp/node_modules" \
+            node scripts/maal_grunnlag.js ${{ inputs.sesonger || '100000' }} ${{ inputs.sider || 'eliteserien obos elo-test' }}
