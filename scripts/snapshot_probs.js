@@ -30,7 +30,7 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
-const {avsparkFraTerminliste, oppdaterPrekick} = require('./prekick_frys');
+const {avsparkFraTerminliste, oppdaterPrekick, kamperIVinduet} = require('./prekick_frys');
 
 const ROOT = path.join(__dirname, '..');
 // Hvilken liga. Alt som skiller ligaene ligger i LEAGUE på selve siden, så
@@ -44,13 +44,39 @@ const ROOT = path.join(__dirname, '..');
 //   --uten-historikk   ikke skriv history.json
 // Terminlisten (frysregelen) leses alltid fra <liga>/data/fixtures.json.
 //   node scripts/snapshot_probs.js eliteserien --side elo-test --ut elo-test/emodell --uten-historikk
+//
+// Prognosen før avspark (prekick.json) har to skrivere, delt etter tid (se
+// scripts/prekick_frys.js):
+//   --uten-prekick-vindu  datajobbene (update-data, obos-results): rør ikke
+//                         rader med avspark innen 80 minutter
+//   --bare-prekick        prekick-odds.yml: BARE prekick.json, og bare radene
+//                         i vinduet, med oddsen fra "Odds nær avspark" og de
+//                         nyeste lagstyrkene. Ingen keymatch, lastmatch eller
+//                         historikk. Er ingen kamp i vinduet, avsluttes det
+//                         før Chrome startes.
+//   --oddstid <ISO>       (bare med --bare-prekick) da kjøringen hentet oddsen.
+//                         Raden skrives når det var 70 til 15 minutter før
+//                         avspark (og senest 10 minutter før avspark nå), og
+//                         tidspunktet blir stempelet. Standard: nå.
+//   --dry-run             (bare med --bare-prekick) skriv ingenting, vis hva
+//                         som ville blitt endret
+// Uten noen av dem: alle uspilte rader før avspark (testsiden, der
+// elo-test.yml er eneste skriver).
 const ARGS = process.argv.slice(2);
 const flagg = navn => { const i = ARGS.indexOf(navn); return i >= 0 ? ARGS[i + 1] : null; };
-const LEAGUE_DIR = ARGS.filter((a, i) => !a.startsWith('--') && !(i > 0 && ['--side', '--ut'].includes(ARGS[i - 1])))[0] || 'eliteserien';
+const LEAGUE_DIR = ARGS.filter((a, i) => !a.startsWith('--') && !(i > 0 && ['--side', '--ut', '--oddstid'].includes(ARGS[i - 1])))[0] || 'eliteserien';
 const DATA = path.join(ROOT, LEAGUE_DIR, 'data');
 const SIDE = flagg('--side') || LEAGUE_DIR;
 const UT = flagg('--ut') ? path.join(ROOT, flagg('--ut')) : DATA;
 const MED_HISTORIKK = !ARGS.includes('--uten-historikk');
+const BARE_PREKICK = ARGS.includes('--bare-prekick');
+const PREKICK_MODUS = BARE_PREKICK ? 'bare-vindu' : ARGS.includes('--uten-prekick-vindu') ? 'uten-vindu' : 'alle';
+const DRY_RUN = ARGS.includes('--dry-run');
+if (DRY_RUN && !BARE_PREKICK) { console.error('--dry-run gjelder bare sammen med --bare-prekick.'); process.exit(2); }
+if (flagg('--oddstid') != null && !BARE_PREKICK) { console.error('--oddstid gjelder bare sammen med --bare-prekick.'); process.exit(2); }
+const ODDSTID = flagg('--oddstid') != null ? Date.parse(flagg('--oddstid')) : Date.now();
+if (!Number.isFinite(ODDSTID)) { console.error(`--oddstid: ugyldig tidspunkt ${flagg('--oddstid')}`); process.exit(2); }
+const isoSek = ms => new Date(ms).toISOString().replace(/\.\d+Z$/, 'Z');
 const HISTORY = path.join(UT, 'history.json');
 const KEYMATCH = path.join(UT, 'keymatch.json');
 const LASTMATCH = path.join(UT, 'lastmatch.json');
@@ -78,6 +104,12 @@ function chromePath() {
 }
 
 (async () => {
+  if (BARE_PREKICK) {
+    const fx = JSON.parse(fs.readFileSync(path.join(DATA, 'fixtures.json'), 'utf8'));
+    const iVindu = kamperIVinduet(fx, ODDSTID, Date.now());
+    if (!iVindu.length) { console.log(`prekick.json (${LEAGUE_DIR}): ingen kamp i vinduet med odds hentet ${isoSek(ODDSTID)} -- ingenting å gjøre.`); return; }
+    console.log(`prekick.json (${LEAGUE_DIR}): ${iVindu.length} kamp(er) i vinduet med odds hentet ${isoSek(ODDSTID)}: ${iVindu.join(', ')}`);
+  }
   const puppeteer = require('puppeteer-core');
   const server = await serve();
   const port = server.address().port;
@@ -95,7 +127,7 @@ function chromePath() {
     // variabelen, og da venter ikke dette. Lastes den aldri, feiler kjøringen
     // heller enn å skrive feil tall.
     await page.waitForFunction('typeof ELO_ODDS_SPILT === "undefined" || ELO_ODDS_SPILT !== null', {timeout: 60000});
-    const snap = await page.evaluate(() => {
+    const snap = BARE_PREKICK ? null : await page.evaluate(() => {
       if (matches.some(m => m.sim || (m.hg != null && !m.played && m.sim))) throw new Error('Siden har simulerte resultater');
       const teams = {};
       TEAMS.forEach(t => {
@@ -118,7 +150,7 @@ function chromePath() {
     // qaKeyBanner, så ordlyden finnes bare ett sted. Her i CI med sidens
     // QA_KEY_N_CI / QA_KEY_CLOSE_CI (mange sesonger, stram grense), ikke
     // nettleserens lavere N; filen sier hvilke som ble brukt.
-    const key = await page.evaluate(async () => {
+    const key = BARE_PREKICK ? undefined : await page.evaluate(async () => {
       const d = await qaKeyRoundData({N: QA_KEY_N_CI, close: QA_KEY_CLOSE_CI});
       const banner = qaKeyBanner(d);
       if (!d || !d.best || !banner) return null;
@@ -128,7 +160,8 @@ function chromePath() {
         teams: d.best.teams.map(t => t.team)};
     });
     if (errs.length) console.warn('Sidefeil:', errs.join('; '));
-    if (key) {
+    if (BARE_PREKICK) { /* keymatch hoppes over */ }
+    else if (key) {
       const next = {version: 1, note: 'Rundens viktigste kamp, regnet ut av scripts/snapshot_probs.js etter hver oppdatering. Banneret på siden viser "banner" som den er.', ...key};
       const same = fs.existsSync(KEYMATCH) && (() => {
         const old = JSON.parse(fs.readFileSync(KEYMATCH, 'utf8'));
@@ -177,13 +210,25 @@ function chromePath() {
       const avspark = avsparkFraTerminliste(JSON.parse(fs.readFileSync(path.join(DATA, 'fixtures.json'), 'utf8')));
       const spilte = await page.evaluate(() =>
         MATCHES.map(m => `${LEAGUE.season}|${m.home}|${m.away}`));
-      const n = oppdaterPrekick(old, pre, spilte, avspark, Date.now(),
-                                new Date().toISOString().replace(/\.\d+Z$/, 'Z'));
+      const foer = JSON.parse(JSON.stringify(old.matches || {}));
+      // 'bare-vindu': tiden for oddsen i kjøringen avgjør og blir stempelet,
+      // og klokken nå må være før skrivestoppen (prekick_frys.js).
+      const naa = BARE_PREKICK ? ODDSTID : Date.now();
+      const n = oppdaterPrekick(old, pre, spilte, avspark, naa, isoSek(naa), PREKICK_MODUS, BARE_PREKICK ? Date.now() : naa);
       old.version = 1;
-      old.note = 'Sannsynlighet for hvert utfall før avspark, per kamp. Oppdateres bare før avspark fra terminlisten og fryses med siste stempel fra før avspark når kampen er spilt, så "forrige kamp" og treffsikkerheten er uten etterpåklokskap.';
-      fs.writeFileSync(PREKICK, JSON.stringify(old, null, 1) + '\n');
-      console.log(`prekick.json: ${n.nye} nye, ${n.oppdatert} oppdatert, ${n.etterAvspark} ikke rørt etter avspark, ${n.frosne} frosset, ${Object.keys(old.matches).length} totalt.`);
+      old.note = 'Sannsynlighet for hvert utfall før avspark, per kamp. Oppdateres bare før avspark fra terminlisten og fryses med siste stempel fra før avspark når kampen er spilt, så "forrige kamp" og treffsikkerheten er uten etterpåklokskap. Fra 70 til 15 minutter før avspark skrives raden av "Odds nær avspark", med sluttoddsen.';
+      const endret = Object.keys(old.matches).filter(k => JSON.stringify(old.matches[k]) !== JSON.stringify(foer[k]));
+      if (BARE_PREKICK) for (const k of endret) {
+        const r = old.matches[k], f = foer[k];
+        console.log(`  ${r.home} - ${r.away}: H/U/B ${f ? `${f.H}/${f.U}/${f.B} -> ` : ''}${r.H}/${r.U}/${r.B}, ` +
+          `odds ${r.odds ? `${r.odds.bookmaker || 'snitt'} ${r.odds.H}/${r.odds.U}/${r.odds.B}` : 'ingen'}, modell ${r.modell.H}/${r.modell.U}/${r.modell.B}, stempel ${r.stamp}`);
+      }
+      if (DRY_RUN) console.log(`prekick.json: TØRRKJØRING -- ville endret ${endret.length} rad(er), skrev ingenting.`);
+      else fs.writeFileSync(PREKICK, JSON.stringify(old, null, 1) + '\n');
+      console.log(`prekick.json (${PREKICK_MODUS}): ${n.nye} nye, ${n.oppdatert} oppdatert, ${n.etterAvspark} ikke rørt etter avspark, ` +
+        `${n.vinduHoppet} i vinduet til "Odds nær avspark", ${n.frosne} frosset, ${Object.keys(old.matches).length} totalt.`);
     }
+    if (BARE_PREKICK) return;
     // Hva forrige kamp betydde, for alle 16 lag. Samme regnestykke som
     // spørsmålet i "Spør om tabellen" (qaLastMatchData), og siden bygger selve
     // linja av disse feltene (qaLastMatchLine), så ordlyden finnes ett sted.

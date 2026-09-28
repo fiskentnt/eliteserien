@@ -76,7 +76,7 @@ jobs:
           # resultatene er endret siden forrige.
           npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pp" puppeteer-core@25.11.0
           CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
-          NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/snapshot_probs.js
+          NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/snapshot_probs.js --uten-prekick-vindu
 
       - name: Treffsikkerhetslogg (lagrede sannsynligheter mot resultat)
         if: steps.gate.outputs.should_fetch == 'true'

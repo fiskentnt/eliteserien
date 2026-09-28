@@ -23,7 +23,7 @@ og lar repoet bestemme:
 | `update-data.yml` | `should_fetch.py` avgjør som ved schedule |
 | `obos-results.yml` | `should_fetch.py obos` avgjør — sparer OddsPapi-kvoten |
 | `arkiver-kildehtml.yml` | kampvinduet i `arkiver_kildehtml.py` avgjør |
-| `prekick-odds.yml` | vinduet 15–60 minutter før avspark i `prekick_odds.py` avgjør |
+| `prekick-odds.yml` | porten `prekick_vindu.py` (70–10 minutter før avspark) avgjør; `prekick_odds.py` henter pris 60–15 minutter før, og prognosen før avspark (`prekick.json`) regnes på nytt ved hver kjøring med kamp i vinduet |
 | `update-odds.yml` | tidsporten i `should_fetch_odds.py` avgjør: The Odds API kalles høyst én gang per døgn (norsk tid), bare med kamp innen 7 dager, med én time sperre etter et mislykket forsøk og budsjettvakt (under 100 + 4 kreditter per gjenstående dag: annenhver dag). Oddsen rett før avspark kommer fra `prekick-odds.yml` (Pinnacle) |
 
 En manuell kjøring **uten** flagget tvinger fortsatt henting, som før.

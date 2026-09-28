@@ -30,6 +30,10 @@ on:
         description: "Bare vis hva som ville skjedd"
         type: boolean
         default: false
+      simuler_tid:
+        description: "Bare med dry_run: late som klokka er dette (ISO, UTC), for å se prognosen før avspark regnes for en kamp i vinduet"
+        type: string
+        default: ""
 
 permissions:
   contents: write
@@ -43,9 +47,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
+      # En tørrkjøring (dry_run) sjekker ut grenen den startes fra, så en gren
+      # kan prøves i CI før den går til main. Den skriver ingenting.
       - uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ inputs.dry_run && github.ref_name || 'main' }}
 
       - name: Er en kamp i sluttoddsvinduet nå?
         id: gate
@@ -54,7 +60,11 @@ jobs:
           # som en planlagt kjoring: vinduet avgjor. En manuell kjoring uten
           # flagget tvinger fortsatt henting.
           FORCE_FETCH: ${{ github.event_name == 'workflow_dispatch' && !inputs.planlagt && 'true' || 'false' }}
-        run: python3 scripts/prekick_vindu.py
+        # naa: da kjøringen henter oddsen. Den avgjør om den frosne
+        # prognosen skrives (før 15 minutter før avspark), og blir stempelet.
+        run: |
+          echo "naa=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+          python3 scripts/prekick_vindu.py
 
       - name: Hent odds nær avspark
         if: steps.gate.outputs.should_fetch == 'true'
@@ -85,3 +95,71 @@ jobs:
             git pull --rebase --autostash origin main || true
             bash scripts/push_med_rebase.sh
           fi
+
+      # PROGNOSEN FØR AVSPARK (prekick.json) MED SLUTTODDSEN. Fra 70
+      # minutter før avspark eier denne jobben raden (scripts/prekick_frys.js);
+      # datajobbene (--uten-prekick-vindu) rører den ikke da. Kjøres HVER gang
+      # porten er åpen, ikke bare når det kom nye priser: prognosen er 30
+      # prosent modell, og blir en tidligere kamp samme dag ferdig mens en
+      # senere er i vinduet, skal de nye lagstyrkene med. Henter main først,
+      # så resultatene og oddsen er de nyeste. Rører ingen andre filer, og
+      # kaller ingen API-er (0 kall mot OddsPapi). continue-on-error: en feil
+      # her skal aldri stoppe oddsen over.
+      #
+      # Når oddsen hentes og når raden skrives er to ting: hentingen over er
+      # uendret (porten 70 til 10 minutter før avspark, pris 60 til 15). Raden
+      # skrives når kjøringen hentet oddsen 70 til 15 minutter før avspark
+      # (--oddstid, porten sitt tidspunkt, blir stempelet), og skrivingen må
+      # lande senest 10 minutter før. Så mister ikke en kjøring som hentet 16
+      # minutter før og skriver 14 minutter før, den siste prisen.
+      #
+      # Blir pushen avvist, fjernes bare DENNE commiten, main hentes på nytt og
+      # radene regnes igjen oppå den (deterministisk ut fra filene), høyst tre
+      # ganger. Oddscommiten over røres aldri.
+      - uses: actions/setup-node@v4
+        if: ${{ always() && steps.gate.outputs.should_fetch == 'true' }}
+        with:
+          node-version: "22"
+
+      - name: Installer puppeteer-core
+        if: ${{ always() && steps.gate.outputs.should_fetch == 'true' }}
+        run: npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pp" puppeteer-core@25.11.0
+
+      - name: Prognosen før avspark med sluttoddsen (prekick.json)
+        if: ${{ always() && steps.gate.outputs.should_fetch == 'true' }}
+        continue-on-error: true
+        env:
+          ODDSTID: ${{ steps.gate.outputs.naa }}
+          # Bare i en tørrkjøring: late som klokka er simuler_tid (ISO, UTC).
+          FALSK_KLOKKE: ${{ inputs.dry_run && inputs.simuler_tid || '' }}
+        run: |
+          export CHROME_PATH="$(command -v google-chrome || command -v chromium || true)"
+          export NODE_PATH="$RUNNER_TEMP/pp/node_modules"
+          if [ "${{ inputs.dry_run }}" = "true" ]; then
+            if [ -n "$FALSK_KLOKKE" ]; then
+              export NODE_OPTIONS="--require ./tests/falsk_klokke.js"
+              ODDSTID="$FALSK_KLOKKE"
+              echo "Tørrkjøring med falsk klokke: $FALSK_KLOKKE"
+            fi
+            for liga in eliteserien obos; do
+              node scripts/snapshot_probs.js "$liga" --bare-prekick --oddstid "$ODDSTID" --dry-run
+            done
+            exit 0
+          fi
+          GREN="${GITHUB_REF_NAME:-main}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          for forsok in 1 2 3; do
+            git pull -q --rebase --autostash origin "$GREN" || { git rebase --abort 2>/dev/null || true; echo "Henting av $GREN feilet."; exit 1; }
+            for liga in eliteserien obos; do
+              node scripts/snapshot_probs.js "$liga" --bare-prekick --oddstid "$ODDSTID" || exit 1
+            done
+            git add eliteserien/data/prekick.json obos/data/prekick.json
+            if git diff --cached --quiet; then echo "prekick.json er uendret."; exit 0; fi
+            git commit -q -m "Prognosen før avspark $(date -u +%Y-%m-%dT%H:%MZ)"
+            if git push -q origin "HEAD:$GREN"; then echo "Pushet prekick.json."; exit 0; fi
+            echo "Push avvist (forsøk $forsok) -- fjerner denne commiten og regner radene på nytt oppå $GREN."
+            git reset -q --hard HEAD~1
+          done
+          echo "::warning title=Prognosen før avspark::Klarte ikke pushe prekick.json etter tre forsøk."
+          exit 1

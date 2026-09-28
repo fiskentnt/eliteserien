@@ -30,12 +30,12 @@ const ROOT = path.join(__dirname, '..');
 const MIME = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json',
   '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.ttf': 'font/ttf'};
 
-function serve() {
+function serve(rot = ROOT) {
   const server = http.createServer((req, res) => {
     let p = decodeURIComponent(req.url.split('?')[0]);
     if (p.endsWith('/')) p += 'index.html';
-    const f = path.join(ROOT, p);
-    if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
+    const f = path.join(rot, p);
+    if (!f.startsWith(rot) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, {'Content-Type': MIME[path.extname(f)] || 'application/octet-stream'});
     fs.createReadStream(f).pipe(res);
   });
@@ -2520,15 +2520,267 @@ async function main() {
         check(`${liga}: en frosset rad røres aldri`, fil.matches[k].H === 0.41 && n5.oppdatert === 0,
           JSON.stringify(fil.matches[k]));
       }
+      // HVEM SOM SKRIVER RADEN. Datajobbene (--uten-prekick-vindu) lar rader
+      // med avspark innen 80 minutter være; "Odds nær avspark" (--bare-prekick)
+      // skriver bare dem, når oddsen i kjøringen ble hentet 70 til 15 minutter
+      // før avspark og skrivingen lander senest 10 minutter før. Se
+      // scripts/prekick_frys.js. Feiler på koden fra før (uten modus skrev
+      // begge alt).
+      {
+        const a = F.avsparkUtcMs('2026-10-02', '19:00'), a2 = a + 3 * 3600e3, M = 60e3;
+        const avspark = {'A|B': a, 'C|D': a2};
+        const iso = ms => new Date(ms).toISOString().replace(/\.\d+Z$/, 'Z');
+        const rad = (H) => ({'2026|A|B': {home: 'A', away: 'B', H, U: 0.3, B: 0.7 - H},
+                             '2026|C|D': {home: 'C', away: 'D', H, U: 0.3, B: 0.7 - H}});
+        const start = () => ({version: 1, matches: {'2026|A|B': {home: 'A', away: 'B', H: 0.1, stamp: 'gml'},
+                                                     '2026|C|D': {home: 'C', away: 'D', H: 0.1, stamp: 'gml'}}});
+        // Datajobben
+        const dj = min => { const f = start(); const n = F.oppdaterPrekick(f, rad(0.5), [], avspark, a - min * M, iso(a - min * M), 'uten-vindu'); return {f, n}; };
+        const d81 = dj(81), d80 = dj(80), d40 = dj(40), d5 = dj(5);
+        check('datajobben skriver raden 81 minutter før avspark',
+          d81.f.matches['2026|A|B'].H === 0.5 && d81.n.vinduHoppet === 0, JSON.stringify(d81.f.matches['2026|A|B']));
+        check('datajobben lar raden være fra 80 minutter før avspark (80, 40 og 5 min), men skriver kampen tre timer senere',
+          [d80, d40, d5].every(x => x.f.matches['2026|A|B'].H === 0.1 && x.n.vinduHoppet === 1 && x.f.matches['2026|C|D'].H === 0.5),
+          [d80, d40, d5].map(x => JSON.stringify(x.n)).join(' '));
+        const df = start(); F.oppdaterPrekick(df, {}, ['2026|A|B'], avspark, a + 3 * 3600e3, iso(a + 3 * 3600e3), 'uten-vindu');
+        check('datajobben fryser fortsatt raden når resultatet kommer', df.matches['2026|A|B'].frosset === true && df.matches['2026|A|B'].stamp === 'gml',
+          JSON.stringify(df.matches['2026|A|B']));
+        // "Odds nær avspark": oddstid (porten) og klokken når raden skrives
+        const pk = (odds, ekte, spilte = []) => { const f = start(); const n = F.oppdaterPrekick(f, rad(0.5), spilte, avspark, a - odds * M, iso(a - odds * M), 'bare-vindu', a - ekte * M); return {f, n, r: f.matches['2026|A|B']}; };
+        const skrevet = x => x.r.H === 0.5, urort = x => x.r.H === 0.1 && x.r.stamp === 'gml';
+        const tilfeller = [[71, 71, false], [70, 70, true], [40, 40, true], [16, 16, true], [15, 15, true], [14, 14, false],
+                           [16, 14, true], [16, 10, true], [16, 9, false], [40, 41, false], [5, 5, false], [-1, -1, false]];
+        const feil = tilfeller.filter(([o, e, ja]) => { const x = pk(o, e); return ja ? !(skrevet(x) && x.r.stamp === iso(a - o * M)) : !urort(x); });
+        check('"Odds nær avspark" skriver raden bare når oddsen ble hentet 70 til 15 min før avspark, og senest 10 min før',
+          feil.length === 0, feil.map(([o, e, ja]) => `odds ${o} min, skrevet ${e} min: ${ja ? 'skulle skrives' : 'skulle ikke'}`).join('; '));
+        const strad = pk(16, 14);
+        check('odds hentet 16 min før, skrevet 14 min før: raden får oddsen, med stempelet fra hentingen',
+          skrevet(strad) && strad.r.stamp === iso(a - 16 * M), JSON.stringify(strad.r));
+        const pkAnnen = pk(40, 40, ['2026|C|D']);
+        check('"Odds nær avspark" rører ikke rader utenfor vinduet og fryser ingenting',
+          pkAnnen.f.matches['2026|C|D'].H === 0.1 && pkAnnen.f.matches['2026|C|D'].stamp === 'gml' && !pkAnnen.f.matches['2026|C|D'].frosset && pkAnnen.n.frosne === 0,
+          JSON.stringify(pkAnnen.f.matches['2026|C|D']));
+        // De to skriverne tar aldri samme rad tett i tid: regner datajobben
+        // raden dMin minutter før avspark, kan "Odds nær avspark" tidligst
+        // skrive den over ti minutter senere (bufferen). Da rekker datajobben
+        // å pushe først (målt: under ti sekunder fra snapshot til push), og
+        // rebasen går rent. Uten bufferen (BUFFER_MIN = 0) feiler denne.
+        const kollisjon = [];
+        for (let dMin = 300; dMin > 0; dMin--) {
+          if (F.datajobbenHopperOver(a, a - dMin * M)) continue;
+          for (let s = 0; s <= 10; s++) {
+            const o = dMin - s;
+            if (F.prekickSkriver(a, a - o * M, a - o * M)) kollisjon.push(`datajobb ${dMin} min, odds ${o} min før`);
+          }
+        }
+        check('datajobben og "Odds nær avspark" skriver aldri samme rad innen ti minutter av hverandre', kollisjon.length === 0,
+          kollisjon.slice(0, 5).join('; '));
+        const fx = [{matches: [{home: 'A', away: 'B', date: '2026-10-02', time: '19:00', played: false},
+                               {home: 'C', away: 'D', date: '2026-10-02', time: '22:00', played: false},
+                               {home: 'E', away: 'F', date: '2026-10-02', time: '19:00', played: true}]}];
+        check('kamperIVinduet finner de uspilte kampene "Odds nær avspark" skal skrive',
+          JSON.stringify(F.kamperIVinduet(fx, a - 40 * M)) === '["A|B"]' && F.kamperIVinduet(fx, a - 16 * M, a - 14 * M).length === 1
+            && F.kamperIVinduet(fx, a - 16 * M, a - 9 * M).length === 0 && F.kamperIVinduet(fx, a - 90 * M).length === 0,
+          JSON.stringify(F.kamperIVinduet(fx, a - 40 * M)));
+        // Grensene er de samme som i porten og sluttoddsvinduet (Python).
+        const {execFileSync} = require('child_process');
+        const [fra, til, cFra, cTil] = execFileSync('python3', ['-c',
+          'import sys; sys.path.insert(0, "scripts"); import prekick_vindu as v, oddswindow as w; print(v.FRA_MIN, v.TIL_MIN, w.CLOSE_FROM_MIN, w.CLOSE_TO_MIN)'],
+          {cwd: ROOT, encoding: 'utf8'}).trim().split(' ').map(Number);
+        check('grensene følger porten og sluttoddsvinduet: 70 = FRA_MIN, 15 = CLOSE_TO_MIN, 10 = TIL_MIN, og vinduet dekker 60 = CLOSE_FROM_MIN',
+          F.VINDU_MIN === fra && F.SLUTT_MIN === cTil && F.SKRIVESTOPP_MIN === til && F.VINDU_MIN >= cFra && F.BUFFER_MIN >= 5,
+          `VINDU_MIN ${F.VINDU_MIN}/${fra}, SLUTT_MIN ${F.SLUTT_MIN}/${cTil}, SKRIVESTOPP_MIN ${F.SKRIVESTOPP_MIN}/${til}, CLOSE_FROM_MIN ${cFra}`);
+        // Hentingen av oddsen er uendret: prekick_odds.py velger kampene med
+        // sluttoddsvinduet (60 til 15 min), ikke med noe fra frysregelen.
+        const po = fs.readFileSync(path.join(ROOT, 'scripts', 'prekick_odds.py'), 'utf8');
+        check('prekick_odds.py henter fortsatt oddsen 60 til 15 minutter før avspark, uavhengig av når raden skrives',
+          po.includes('fra = now + timedelta(minutes=oddswindow.CLOSE_TO_MIN)') && po.includes('til = now + timedelta(minutes=oddswindow.CLOSE_FROM_MIN)')
+            && po.includes('if ko and fra <= ko <= til:') && !/prekick_frys|SKRIVESTOPP|SLUTT_MIN|prekick\.json/.test(po), '');
+      }
+
       // Samme skript for begge ligaer: snapshot_probs.js bruker regelen og
       // leser terminlisten i ligaens egen mappe, og OBOS-jobben kjører det.
       const snap = fs.readFileSync(path.join(ROOT, 'scripts', 'snapshot_probs.js'), 'utf8');
       const obosWf = fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'obos-results.yml'), 'utf8');
       check('snapshot_probs.js bruker frysregelen og ligaens egen terminliste',
-        /require\('\.\/prekick_frys'\)/.test(snap) && /oppdaterPrekick\(old, pre, spilte, avspark, Date\.now\(\)/.test(snap)
+        /require\('\.\/prekick_frys'\)/.test(snap) && /const naa = BARE_PREKICK \? ODDSTID : Date\.now\(\);/.test(snap)
+          && /oppdaterPrekick\(old, pre, spilte, avspark, naa, isoSek\(naa\), PREKICK_MODUS, BARE_PREKICK \? Date\.now\(\) : naa\)/.test(snap)
           && /path\.join\(DATA, 'fixtures\.json'\)/.test(snap) && !/old\.matches\[k\] = \{\.\.\.v, stamp/.test(snap),
         'koblingen mangler, eller den gamle oppdateringen står igjen');
       check('OBOS-jobben kjører det samme skriptet (snapshot_probs.js obos)', /snapshot_probs\.js obos/.test(obosWf));
+    }
+
+    // ---- Prekick: «Odds nær avspark» regner raden med de nyeste lagstyrkene ----
+    // Prognosen før avspark er 30 prosent modell. Blir en tidligere kamp samme
+    // dag ferdig mens en senere er i vinduet, skal neste kjøring av «Odds nær
+    // avspark» (snapshot_probs.js --bare-prekick) regne raden med lagstyrkene
+    // etter den kampen, også når prisen for den senere kampen er den samme.
+    // Testen kjører det ekte skriptet i en kopi av repoet med falsk klokke
+    // (tests/falsk_klokke.js). Resultatet legges inn slik OBOS-jobben gjør
+    // (matches.json, fixtures.json), og modellen tilpasses på nytt med samme
+    // tilpasning som den (fit_fast med parameterne i obos_build_data.py).
+    // At hjelperen gir samme modell som jobben, sjekkes først mot siste
+    // commit som bygde model.json, med filene fra den commiten: sluttoddsen
+    // kan ha blitt hentet på nytt etterpå uten at modellen er bygget igjen
+    // (28.9: odds_closing.json skrevet om 14:46Z, modellen bygget 09:02Z).
+    // Før kjøring A tilpasses modellen derfor på nytt med dagens filer, så A
+    // og B skiller seg BARE i resultatet.
+    setGroup('Prekick: «Odds nær avspark» bruker de nyeste lagstyrkene');
+    if (!live) {
+      const os = require('os'), {execFileSync, spawnSync} = require('child_process');
+      const F = require(path.join(ROOT, 'scripts', 'prekick_frys.js'));
+      const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'prekick-'));
+      let tmpServer = null;
+      try {
+        const filer = execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], {cwd: ROOT}).toString().split('\0').filter(Boolean);
+        for (const f of filer) {
+          const fra = path.join(ROOT, f);
+          if (!fs.existsSync(fra) || fs.statSync(fra).isDirectory()) continue;
+          fs.mkdirSync(path.dirname(path.join(TMP, f)), {recursive: true});
+          fs.copyFileSync(fra, path.join(TMP, f));
+        }
+        const D = path.join(TMP, 'obos', 'data');
+        const tekst = f => fs.existsSync(path.join(D, f)) ? fs.readFileSync(path.join(D, f), 'utf8') : null;
+        const les = f => JSON.parse(tekst(f));
+        const skriv = (f, d) => fs.writeFileSync(path.join(D, f), JSON.stringify(d, null, 1) + '\n');
+        const iso = ms => new Date(ms).toISOString().replace(/\.\d+Z$/, 'Z');
+        const M = 60e3;
+        const py = fs.existsSync(path.join(ROOT, '.venv', 'bin', 'python3')) ? path.join(ROOT, '.venv', 'bin', 'python3') : 'python3';
+        const TILPASS = [
+          'import json, sys',
+          'sys.path.insert(0, "scripts")',
+          'import fit_fast, obos_build_data as B',
+          'from pathlib import Path',
+          'D = sys.argv[1] if len(sys.argv) > 1 and not sys.argv[1].startswith("--") else "obos/data/"',
+          'B.ODDS_PATH = Path(D) / "odds_closing.json"',
+          'spilte = json.load(open(D + "matches.json", encoding="utf-8"))',
+          'model = json.load(open(D + "model.json", encoding="utf-8"))',
+          'lag = model["teams"]; TI = {t: i for i, t in enumerate(lag)}',
+          'closing = B.load_closing_odds()',
+          'fm = [{"date": m["date"], "home": m["home"], "away": m["away"], "hg": m["hg"], "ag": m["ag"], "odds": closing.get((m["home"], m["away"]))} for m in spilte]',
+          'n = sum(1 for m in fm if m["odds"])',
+          'res = fit_fast.fit_model_fast(fm, lag, TI, odds_weight=B.ODDS_WEIGHT if n else 0.0, half_life_goals=B.HALF_LIFE, half_life_odds=B.HALF_LIFE, l1=B.L1, l2=B.L2, ref_date=max(m["date"] for m in spilte), isolate_global=True)',
+          'ny = dict(model, mu=res["mu"], H=res["H"], att=list(res["att"]), con=list(res["con"]), ha=list(res["ha"]), hc=list(res["hc"]))',
+          'if "--skriv" in sys.argv: open(D + "model.json", "w", encoding="utf-8").write(json.dumps(ny, ensure_ascii=False, indent=1) + "\\n")',
+          'print(json.dumps({k: ny[k] for k in ("mu", "H", "att", "con", "ha", "hc")}))'].join('\n');
+        const tilpass = (...a) => JSON.parse(execFileSync(py, ['-c', TILPASS, ...a], {cwd: TMP, encoding: 'utf8'}));
+
+        // Hjelperen gir samme modell som OBOS-jobben: filene fra siste commit
+        // som skrev model.json, tilpasset på nytt, gir den samme model.json.
+        const rev = execFileSync('git', ['log', '-1', '--format=%h', '--', 'obos/data/model.json'], {cwd: ROOT, encoding: 'utf8'}).trim();
+        const REV = path.join(TMP, 'rev', 'obos', 'data');
+        fs.mkdirSync(REV, {recursive: true});
+        for (const f of ['matches.json', 'model.json', 'odds_closing.json'])
+          fs.writeFileSync(path.join(REV, f), execFileSync('git', ['show', `${rev}:obos/data/${f}`], {cwd: ROOT}));
+        const jobb = JSON.parse(fs.readFileSync(path.join(REV, 'model.json'), 'utf8')), gjen = tilpass(REV + path.sep);
+        const avvik = (x, y) => Math.max(Math.abs(x.mu - y.mu), Math.abs(x.H - y.H),
+          ...['att', 'con', 'ha', 'hc'].flatMap(f => x[f].map((v, i) => Math.abs(v - y[f][i]))));
+        check(`tilpasningen i testen gir samme modell som OBOS-jobben (filene fra ${rev})`, avvik(gjen, jobb) < 1e-9,
+          `største avvik ${avvik(gjen, jobb)}`);
+        const naaModell = les('model.json');
+        const modellA = tilpass('--skriv');
+
+        // To kamper i samme runde samme dag: E kl. 15 og S kl. 19, norsk tid.
+        const fx = les('fixtures.json');
+        const runde = fx.find(r => r.matches.filter(m => !m.played).length >= 2);
+        const [E, S] = runde.matches.filter(m => !m.played);
+        E.date = S.date; E.time = '15:00'; S.time = '19:00';
+        skriv('fixtures.json', fx);
+        const a = F.avsparkUtcMs(S.date, '19:00');
+        // Pinnacle-prisen for S slik «Odds nær avspark» skrev den. Den står
+        // uendret gjennom hele testen.
+        const opp = les('odds_upcoming.json');
+        opp.matches = (opp.matches || []).filter(m => !(m.home === S.home && m.away === S.away));
+        opp.matches.push({home: S.home, away: S.away, commence_time: new Date(a).toISOString(), H: 0.4, D: 0.27, A: 0.33,
+          odds: {H: 2.4, U: 3.55, B: 2.9}, n_bookmakers: 1, bookmaker: 'pinnacle', priced_at: iso(a - 45 * M), prekick: true, minutter_for: 45});
+        skriv('odds_upcoming.json', opp);
+        const oddsTekst = tekst('odds_upcoming.json');
+        const andre = ['keymatch.json', 'lastmatch.json', 'history.json'].map(f => [f, tekst(f)]);
+        const foer = les('prekick.json');
+        const k = `${naaModell.meta.season}|${S.home}|${S.away}`;
+        const pp = require.resolve('puppeteer-core');
+        const nodePath = [pp.slice(0, pp.lastIndexOf(`${path.sep}puppeteer-core${path.sep}`)), process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
+        const kjor = (oddsMin, klokkeMin) => {
+          const r = spawnSync(process.execPath, ['--require', path.join(TMP, 'tests', 'falsk_klokke.js'), path.join(TMP, 'scripts', 'snapshot_probs.js'),
+            'obos', '--bare-prekick', '--oddstid', iso(a - oddsMin * M)],
+            {cwd: TMP, encoding: 'utf8', timeout: 300000,
+             env: {...process.env, NODE_PATH: nodePath, FALSK_KLOKKE: new Date(a - klokkeMin * M).toISOString()}});
+          return {kode: r.status, ut: `${r.stdout || ''}${r.stderr || ''}`.trim(), rad: les('prekick.json').matches[k]};
+        };
+        // Sidens egne tall for S med filene slik de står nå: modellen alene
+        // (lagstyrkene fra model.json), og prognosen siden viser.
+        tmpServer = await serve(TMP);
+        const sidenNaa = async () => {
+          const pg = await browser.newPage();
+          pg.on('pageerror', e => errors.push(`prekick-kopi: ${e.message}`));
+          await pg.goto(`http://127.0.0.1:${tmpServer.address().port}/obos/`, {waitUntil: 'networkidle0'});
+          await pg.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 180000});
+          const r = await pg.evaluate((h, b) => {
+            const mf = MODEL, ih = mf.teams.indexOf(h), ib = mf.teams.indexOf(b);
+            // Rett fra model.json, uten sidens tilstand: samme formel som stateRate.
+            const lh = Math.exp(Math.min(MAX_LAMBDA_LOG, mf.mu + mf.H + mf.att[ih] + mf.ha[ih] + mf.con[ib] - mf.hc[ib]));
+            const lb = Math.exp(Math.min(MAX_LAMBDA_LOG, mf.mu + mf.att[ib] - mf.ha[ib] + mf.con[ih] + mf.hc[ih]));
+            const md = outcome(lh, lb), o = outcome(...rateFor(h, b));
+            return {md: {H: md.H, U: md.U, B: md.B}, o: {H: o.H, U: o.U, B: o.B}};
+          }, S.home, S.away);
+          await pg.close();
+          return r;
+        };
+        const likt = (rad, tall) => rad && ['H', 'U', 'B'].every(x => Math.abs(rad[x] - tall[x]) <= 0.00005 + 1e-12);
+
+        // 1) 18.20: E er ferdig, men resultatet er ikke inne ennå.
+        const A = kjor(40, 40), sideA = await sidenNaa();
+        check(`kjøring 40 min før avspark skriver raden for ${S.home} - ${S.away}, med stempelet fra hentingen`,
+          A.kode === 0 && A.rad && A.rad.stamp === iso(a - 40 * M) && A.rad.odds && A.rad.odds.bookmaker === 'pinnacle',
+          `kode ${A.kode}, rad ${JSON.stringify(A.rad)}\n${A.ut.slice(-600)}`);
+        check('modelldelen er modellen fra model.json, og prognosen er den siden viser',
+          likt(A.rad && A.rad.modell, sideA.md) && likt(A.rad, sideA.o), `rad ${JSON.stringify(A.rad)}, siden ${JSON.stringify(sideA)}`);
+
+        // 2) Resultatet i E kommer inn (OBOS-jobben): matches.json,
+        // fixtures.json og ny modell. Oddsen for S er den samme.
+        const ms = les('matches.json');
+        ms.push({date: E.date, time: '15:00', round: runde.round, home: E.home, away: E.away, hg: 5, ag: 0});
+        skriv('matches.json', ms);
+        Object.assign(E, {played: true, hg: 5, ag: 0});
+        skriv('fixtures.json', fx);
+        tilpass('--skriv');
+        const B = kjor(30, 30), sideB = await sidenNaa();
+        const flytt = A.rad && B.rad ? Math.max(...['H', 'U', 'B'].map(x => Math.abs(B.rad.modell[x] - A.rad.modell[x]))) : 0;
+        check(`neste kjøring (30 min før) bruker lagstyrkene etter ${E.home} - ${E.away} 5-0: modelldelen flytter seg (${flytt.toFixed(4)})`,
+          B.kode === 0 && B.rad && B.rad.stamp === iso(a - 30 * M) && flytt >= 0.001,
+          `flyttet ${flytt.toFixed(4)}; A ${JSON.stringify(A.rad && A.rad.modell)}, B ${JSON.stringify(B.rad && B.rad.modell)}\n${B.ut.slice(-600)}`);
+        const modellB = les('model.json');
+        check('... med modellen fra den nye model.json, og prognosen siden viser nå',
+          likt(B.rad && B.rad.modell, sideB.md) && likt(B.rad, sideB.o) && !likt(B.rad && B.rad.modell, sideA.md) && avvik(modellA, modellB) > 0,
+          `rad ${JSON.stringify(B.rad)}, siden ${JSON.stringify(sideB)}`);
+        check('... selv om prisen for kampen er den samme (odds_upcoming.json uendret, samme odds i raden)',
+          tekst('odds_upcoming.json') === oddsTekst && A.rad && B.rad && JSON.stringify(A.rad.odds) === JSON.stringify(B.rad.odds),
+          `${JSON.stringify(A.rad && A.rad.odds)} mot ${JSON.stringify(B.rad && B.rad.odds)}`);
+
+        // 3) Oddsen hentet 16 min før, raden skrevet 14 min før: skrives,
+        // med stempelet fra hentingen. Senere enn 10 min før, eller odds
+        // hentet 14 min før: ingenting.
+        const C = kjor(16, 14);
+        check('odds hentet 16 min før og skrevet 14 min før: raden skrives, stempel 16 min før',
+          C.kode === 0 && C.rad && C.rad.stamp === iso(a - 16 * M), `kode ${C.kode}, ${JSON.stringify(C.rad)}\n${C.ut.slice(-400)}`);
+        const etterC = tekst('prekick.json');
+        const Dk = kjor(16, 9), Ek = kjor(14, 14);
+        check('skrevet 9 min før, eller odds hentet 14 min før: ingenting skrives',
+          Dk.kode === 0 && Ek.kode === 0 && tekst('prekick.json') === etterC && /ingen kamp i vinduet/.test(Dk.ut) && /ingen kamp i vinduet/.test(Ek.ut),
+          `${Dk.ut}\n${Ek.ut}`);
+
+        // 4) Ingenting annet er rørt: bare raden for S, og verken keymatch,
+        // lastmatch eller historikken.
+        const etter = les('prekick.json');
+        const endret = [...new Set([...Object.keys(foer.matches), ...Object.keys(etter.matches)])]
+          .filter(x => JSON.stringify(foer.matches[x]) !== JSON.stringify(etter.matches[x]));
+        check('bare raden i vinduet er endret i prekick.json', endret.length === 1 && endret[0] === k, endret.join(', '));
+        check('keymatch, lastmatch og historikken er urørt', andre.every(([f, t]) => tekst(f) === t),
+          andre.filter(([f, t]) => tekst(f) !== t).map(([f]) => f).join(', '));
+      } finally {
+        if (tmpServer) tmpServer.close();
+        fs.rmSync(TMP, {recursive: true, force: true});
+      }
     }
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----

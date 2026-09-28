@@ -610,6 +610,65 @@ def main():
     check("update-odds.yml deler køgruppe med update-data.yml (begge skriver model.json)",
           "group: update-data" in wf and "group: update-data" in (ROOT / ".github" / "workflows" / "update-data.yml").read_text(encoding="utf-8"))
 
+    # 21. Prognosen før avspark (prekick.json) med sluttoddsen. «Odds nær
+    # avspark» regner raden i vinduet på nytt HVER gang porten er åpen, ikke
+    # bare når det kom nye priser (prognosen er 30 prosent modell, og nye
+    # lagstyrker etter en tidligere kamp samme dag skal med). Datajobbene lar
+    # vinduet være, så to jobber aldri skriver samme rad. Hentingen av oddsen
+    # er uendret og kommer først; en feil i prognosesteget stopper den aldri.
+    # Selve regelen og en kjøring med nye lagstyrker testes i regression.js.
+    wfd = ROOT / ".github" / "workflows"
+    pk = (wfd / "prekick-odds.yml").read_text(encoding="utf-8")
+    inputs = pk.split("workflow_dispatch:", 1)[1].split("\npermissions:", 1)[0]
+    # Valget sitt eget innrykk (8 mellomrom) til neste valg.
+    sim = inputs.split("      simuler_tid:\n", 1)[1] if "      simuler_tid:\n" in inputs else ""
+    sim = "\n".join(l for l in sim.splitlines()[:4] if l.startswith("        "))
+    check("prekick-odds.yml: simuler_tid er et valg under workflow_dispatch.inputs (tekst), ved siden av dry_run",
+          "        type: string" in sim.splitlines() and "      dry_run:\n" in inputs, sim)
+    # Stegene uten kommentarlinjer (en kommentar foran et steg havner ellers
+    # i steget over).
+    pst = ["\n".join(l for l in x.splitlines() if not l.lstrip().startswith("#")) for x in pk.split("\n      - ")]
+    finn = lambda tekst: next((i for i, x in enumerate(pst) if tekst in x), -1)
+    i_port, i_hent, i_lagre = finn("prekick_vindu.py"), finn("prekick_odds.py"), finn("Lagre hvis noe endret seg")
+    i_node, i_pp, i_prog = finn("actions/setup-node"), finn("Installer puppeteer-core"), finn("--bare-prekick")
+    check("prekick-odds.yml: porten, hentingen og lagringen av oddsen kommer først, prognosesteget etter",
+          0 <= i_port < i_hent < i_lagre < i_node < i_pp < i_prog, f"{i_port} {i_hent} {i_lagre} {i_node} {i_pp} {i_prog}")
+    check("prekick-odds.yml: hentingen av oddsen har samme betingelse som før (bare porten)",
+          i_hent > 0 and "if: steps.gate.outputs.should_fetch == 'true'\n" in pst[i_hent], pst[i_hent][:120] if i_hent > 0 else "")
+    check("prekick-odds.yml: porten skriver tidspunktet for hentingen (naa) før den vurderer vinduet",
+          i_port >= 0 and 'echo "naa=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"\n          python3 scripts/prekick_vindu.py' in pst[i_port])
+    prog = pst[i_prog] if i_prog >= 0 else ""
+    betingelse = "if: ${{ always() && steps.gate.outputs.should_fetch == 'true' }}\n"
+    check("prekick-odds.yml: prognosen regnes hver gang porten er åpen, ikke bare når det kom nye priser",
+          min(i_node, i_pp, i_prog) >= 0 and all(betingelse in pst[i] for i in (i_node, i_pp, i_prog))
+          and "git diff" not in prog.split("for forsok", 1)[0]
+          and "steps.hent" not in prog and "outputs.endret" not in prog)
+    check("prekick-odds.yml: prognosesteget kan aldri stoppe oddsen (continue-on-error, etter lagringen)",
+          "continue-on-error: true" in prog and i_lagre < i_prog)
+    check("prekick-odds.yml: begge ligaer, bare vinduet, med tidspunktet fra porten",
+          'for liga in eliteserien obos; do' in prog and 'node scripts/snapshot_probs.js "$liga" --bare-prekick --oddstid "$ODDSTID" ||' in prog
+          and "ODDSTID: ${{ steps.gate.outputs.naa }}" in prog)
+    check("prekick-odds.yml: bare de to prekick.json committes, og en avvist push regnes på nytt oppå main, høyst tre ganger",
+          "git add eliteserien/data/prekick.json obos/data/prekick.json\n" in prog and "for forsok in 1 2 3; do" in prog
+          and "git reset -q --hard HEAD~1" in prog and 'git push -q origin "HEAD:$GREN"' in prog)
+    torr = prog.split('if [ "${{ inputs.dry_run }}" = "true" ]; then', 1)[1].split("exit 0", 1)[0] if "inputs.dry_run" in prog else ""
+    check("prekick-odds.yml: tørrkjøringen skriver ingenting, og den falske klokka virker bare der",
+          "--dry-run" in torr and "git " not in torr and "FALSK_KLOKKE: ${{ inputs.dry_run && inputs.simuler_tid || '' }}" in prog
+          and 'export NODE_OPTIONS="--require ./tests/falsk_klokke.js"' in torr and prog.count("NODE_OPTIONS") == 1)
+    check("prekick-odds.yml: lagringen av oddsen tar ikke med prekick.json",
+          i_lagre > 0 and "prekick.json" not in pst[i_lagre])
+    check("prekick-odds.yml: en tørrkjøring sjekker ut grenen den startes fra, ellers main",
+          "ref: ${{ inputs.dry_run && github.ref_name || 'main' }}" in pk)
+    for navn, kall in (("update-data.yml", "node scripts/snapshot_probs.js --uten-prekick-vindu\n"),
+                       ("obos-results.yml", "node scripts/snapshot_probs.js obos --uten-prekick-vindu\n")):
+        t = (wfd / navn).read_text(encoding="utf-8")
+        check(f"{navn}: snapshot-steget lar raden i vinduet være (--uten-prekick-vindu)",
+              kall in t and t.count("snapshot_probs.js") == t.count("--uten-prekick-vindu") + t.count("se scripts/snapshot_probs.js")
+              and "--bare-prekick" not in t)
+    elo = (wfd / "elo-test.yml").read_text(encoding="utf-8")
+    check("elo-test.yml: testsiden er eneste skriver av sin prekick.json og bruker ingen av modusene",
+          "--uten-prekick-vindu" not in elo and "--bare-prekick" not in elo and "--ut elo-test/emodell" in elo)
+
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare
     # kall som aldri skjedde, av selve testene.
