@@ -188,7 +188,6 @@ jobs:
           [ -f eliteserien/data/ffk_cache.json ] && git add eliteserien/data/ffk_cache.json
           [ -f eliteserien/data/audit_state.json ] && git add eliteserien/data/audit_state.json
           [ -f eliteserien/data/history.json ] && git add eliteserien/data/history.json
-          [ -f eliteserien/data/keymatch.json ] && git add eliteserien/data/keymatch.json
           [ -f eliteserien/data/lastmatch.json ] && git add eliteserien/data/lastmatch.json
           [ -f eliteserien/data/prekick.json ] && git add eliteserien/data/prekick.json
           [ -f eliteserien/data/accuracy.json ] && git add eliteserien/data/accuracy.json

@@ -1,15 +1,17 @@
 #!/usr/bin/env node
-/* Lagrer to ting, begge lest ut av selve siden:
+/* Lagrer, lest ut av selve siden:
  *
  *   eliteserien/data/history.json   lagenes sannsynligheter (gull, Europa,
  *                                   kvalik, nedrykk) hver gang nye resultater
  *                                   har kommet inn -- ett punkt per runde.
- *   eliteserien/data/keymatch.json  rundens viktigste kamp, med den ferdige
- *                                   banner-setningen. Siden viser den med en
- *                                   gang ved innlasting i stedet for å regne
- *                                   den ut i nettleseren.
  *   eliteserien/data/lastmatch.json hva forrige kamp betydde, for alle 16 lag
  *                                   -- linja nederst i lagboksen.
+ *   eliteserien/data/prekick.json   sannsynligheten før avspark, se under.
+ *
+ * Banneret (keymatch.json, rundens viktigste kamp) skrives IKKE her lenger,
+ * men av scripts/lag_grunnlag.js, fra grunnlagsfilen, så banneret og svaret
+ * bygger på de samme tallene (del 2, steg 5). Én skriver: to jobber som
+ * committer samme fil, kan gi rebasekonflikt.
  *
  * Tallene hentes fra selve siden (headless Chrome), ikke fra en egen
  * gjenskapning av modellen: da er de nøyaktig de samme som tabellen viser,
@@ -22,9 +24,8 @@
  *
  * Et nytt historikkpunkt legges til bare når fingeravtrykket av de spilte
  * kampene (dato, lag og resultat) er et annet enn i forrige punkt, så filen
- * vokser bare når noe faktisk har skjedd. keymatch.json skrives når innholdet
- * er endret -- den avhenger også av oddsen, som oppdateres oftere enn
- * resultatene. lastmatch.json skrives på samme vilkår.
+ * vokser bare når noe faktisk har skjedd. lastmatch.json skrives når innholdet
+ * er endret.
  */
 const http = require('http');
 const fs = require('fs');
@@ -51,7 +52,7 @@ const ROOT = path.join(__dirname, '..');
 //                         rader med avspark innen 80 minutter
 //   --bare-prekick        prekick-odds.yml: BARE prekick.json, og bare radene
 //                         i vinduet, med oddsen fra "Odds nær avspark" og de
-//                         nyeste lagstyrkene. Ingen keymatch, lastmatch eller
+//                         nyeste lagstyrkene. Ingen lastmatch eller
 //                         historikk. Er ingen kamp i vinduet, avsluttes det
 //                         før Chrome startes.
 //   --oddstid <ISO>       (bare med --bare-prekick) da kjøringen hentet oddsen.
@@ -78,7 +79,6 @@ const ODDSTID = flagg('--oddstid') != null ? Date.parse(flagg('--oddstid')) : Da
 if (!Number.isFinite(ODDSTID)) { console.error(`--oddstid: ugyldig tidspunkt ${flagg('--oddstid')}`); process.exit(2); }
 const isoSek = ms => new Date(ms).toISOString().replace(/\.\d+Z$/, 'Z');
 const HISTORY = path.join(UT, 'history.json');
-const KEYMATCH = path.join(UT, 'keymatch.json');
 const LASTMATCH = path.join(UT, 'lastmatch.json');
 const PREKICK = path.join(UT, 'prekick.json');
 const MIME = {'.html':'text/html; charset=utf-8','.js':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.ttf':'font/ttf'};
@@ -145,37 +145,7 @@ function chromePath() {
         teams
       };
     });
-    // Rundens viktigste kamp. Samme regnestykke som spørsmålet i "Spør om
-    // tabellen" (qaKeyRoundData), og banner-setningen bygges av sidens egen
-    // qaKeyBanner, så ordlyden finnes bare ett sted. Her i CI med sidens
-    // QA_KEY_N_CI / QA_KEY_CLOSE_CI (mange sesonger, stram grense), ikke
-    // nettleserens lavere N; filen sier hvilke som ble brukt.
-    const key = BARE_PREKICK ? undefined : await page.evaluate(async () => {
-      const d = await qaKeyRoundData({N: QA_KEY_N_CI, close: QA_KEY_CLOSE_CI});
-      const banner = qaKeyBanner(d);
-      if (!d || !d.best || !banner) return null;
-      return {round: d.round, banner, sesonger: d.sesonger, grense: d.grense,
-        match: {home: d.best.m.home, away: d.best.m.away, date: d.best.m.date},
-        zone: d.best.topZone.key,
-        teams: d.best.teams.map(t => t.team)};
-    });
     if (errs.length) console.warn('Sidefeil:', errs.join('; '));
-    if (BARE_PREKICK) { /* keymatch hoppes over */ }
-    else if (key) {
-      const next = {version: 1, note: 'Rundens viktigste kamp, regnet ut av scripts/snapshot_probs.js etter hver oppdatering. Banneret på siden viser "banner" som den er.', ...key};
-      const same = fs.existsSync(KEYMATCH) && (() => {
-        const old = JSON.parse(fs.readFileSync(KEYMATCH, 'utf8'));
-        return old.banner === next.banner && old.round === next.round && JSON.stringify(old.teams) === JSON.stringify(next.teams)
-          && old.sesonger === next.sesonger && old.grense === next.grense;
-      })();
-      if (same) console.log('Rundens viktigste kamp uendret.');
-      else {
-        fs.writeFileSync(KEYMATCH, JSON.stringify({...next, updated: new Date().toISOString().replace(/\.\d+Z$/, 'Z')}, null, 1) + '\n');
-        console.log('Skrev keymatch.json:', next.banner);
-      }
-    } else {
-      console.log('Ingen viktigste kamp å lagre (ingen runde igjen, eller ingen kamp flytter nok).');
-    }
     // Sannsynlighetene for hvert utfall FØR avspark, per kamp. Lagres mens
     // kampen fortsatt er uspilt, og fryses i det den er spilt: da er tallet
     // fritt for etterpåklokskap. Uten dette måtte "forrige kamp" regne

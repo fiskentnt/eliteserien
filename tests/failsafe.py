@@ -781,10 +781,23 @@ def main():
     check("grunnlag.yml: porten sjekkes på nytt i regnejobben før Chrome, så regnes og lagres det",
           0 < i_p2 < i_nd < i_rg < i_lg and "concurrency:\n      group: grunnlag-${{ matrix.liga }}\n      cancel-in-progress: false" in gw
           and "if: needs.port.outputs.ligaer != '[]'" in gw, f"{i_p2} {i_nd} {i_rg} {i_lg}")
-    check("grunnlag.yml: fast N (ingen --n), filen der porten sier, og bare grunnlagsfilen committes",
+    check("grunnlag.yml: fast N (ingen --n), filen der porten sier, og bare grunnlagsfilen og banneret committes",
           i_rg > 0 and "--n" not in gst[i_rg] and '--ut "$UT"' in gst[i_rg] and "UT: ${{ steps.port.outputs.ut }}" in gst[i_rg]
-          and 'git add "$UT/grunnlag.json"\n' in gst[i_lg]
-          and gst[i_lg].count("git add") == 1 and "bash scripts/push_med_rebase.sh" in gst[i_lg])
+          and 'git add "$UT/grunnlag.json"\n' in gst[i_lg] and '[ -f "$UT/keymatch.json" ] && git add "$UT/keymatch.json"' in gst[i_lg]
+          and gst[i_lg].count("git add") == 2 and "bash scripts/push_med_rebase.sh" in gst[i_lg])
+    # Banneret (keymatch.json) har én skriver: lag_grunnlag.js, fra
+    # grunnlagsfilen, i grunnlag.yml. To jobber som committer samme fil, kan
+    # gi rebasekonflikt, og da kan en datajobb miste commiten sin.
+    lg = (ROOT / "scripts" / "lag_grunnlag.js").read_text(encoding="utf-8")
+    sp = (ROOT / "scripts" / "snapshot_probs.js").read_text(encoding="utf-8")
+    check("banneret regnes fra grunnlagsfilen: lag_grunnlag.js skriver keymatch.json med keymatchFra(await qaKeyRoundData())",
+          "keymatchFra(await qaKeyRoundData())" in lg and "path.join(UT, 'keymatch.json')" in lg
+          and "if (v.status !== 'i bruk') throw" in lg)
+    check("snapshot_probs.js regner og skriver ikke banneret lenger",
+          "qaKeyRoundData" not in sp and "KEYMATCH" not in sp and "writeFileSync(path.join(UT, 'keymatch.json')" not in sp)
+    check("ingen andre jobber committer keymatch.json (datajobbene og elo-test.yml)",
+          not any("keymatch.json" in "\n".join(l for l in (wfd / f).read_text(encoding="utf-8").splitlines() if not l.lstrip().startswith("#"))
+                  for f in ("update-data.yml", "obos-results.yml", "elo-test.yml", "prekick-odds.yml", "update-odds.yml")))
     check("datajobbene nevner ikke grunnlagsfilen: regningen kan ikke stoppe eller forsinke dem",
           not any(n_ in (wfd / f).read_text(encoding="utf-8") for f in ("update-data.yml", "obos-results.yml", "update-odds.yml", "prekick-odds.yml")
                   for n_ in ("grunnlag.json", "lag_grunnlag", "grunnlag_port", "grunnlag.yml")))

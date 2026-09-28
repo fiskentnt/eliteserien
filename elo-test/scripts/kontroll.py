@@ -575,8 +575,10 @@ for _b in _re.split(r"\n      - ", _wft.split("\n    steps:\n", 1)[1])[1:] if "\
     _steg.append((_n.group(1).strip() if _n else _b.split("\n")[0], _b))
 _navn = [n for n, _ in _steg]
 _MODELLFILER = ("elo-test/emodell/model.json", "elo-test/emodell/meta.json", "elo-test/emodell/prognoselogg")
+# Banneret (keymatch.json) er ikke med: det regnes av grunnlag.yml fra
+# grunnlagsfilen (scripts/lag_grunnlag.js), som i produksjonen.
 _PANELFILER = tuple(f"elo-test/emodell/{f}" for f in
-                    ("keymatch.json", "lastmatch.json", "prekick.json", "accuracy.json", "paneler_grunnlag.json"))
+                    ("lastmatch.json", "prekick.json", "accuracy.json", "paneler_grunnlag.json"))
 def _adds(tekst):
     """Stiene i git add-linjene i et steg (med linjeskift-fortsettelser)."""
     t = tekst.replace("\\\n", " ")
@@ -596,7 +598,7 @@ if -1 not in (_iK, _iKP, _iLM, _iLP):
     _am, _ap = _adds(_steg[_iLM][1]), _adds(_steg[_iLP][1])
     krev("modellcommiten tar model.json, meta.json og prognoseloggen -- og ingen panelfil",
          sorted(_am) == sorted(_MODELLFILER), str(_am))
-    krev("panelcommiten tar de fem panelfilene -- og ikke modellen eller loggen",
+    krev("panelcommiten tar de fire panelfilene -- ikke banneret (grunnlag.yml), modellen eller loggen",
          sorted(_ap) == sorted(_PANELFILER), str(_ap))
     krev("ingen git add av hele elo-test/emodell (da ville panelene følge med modellen)",
          "git add elo-test/emodell\n" not in _wft and not _re.search(r"git add elo-test/emodell/?\s*$", _wft, _re.M))

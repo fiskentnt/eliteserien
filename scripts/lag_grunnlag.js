@@ -12,7 +12,14 @@
  *   - en NY lasting av siden regner det samme fingeravtrykket
  *   - hver fordeling går opp: hvert lag har én plass og hver plass ett lag i
  *     hver sesong, så radene og kolonnene summerer til N
- * Feiler noe, står den forrige filen urørt, og kjøringen avslutter med 1.
+ *   - en ny lasting av siden med den NYE filen godtar den (GRUNNLAG_STATUS
+ *     "i bruk")
+ *
+ * BANNERET (keymatch.json i samme mappe) regnes i den samme lastingen, fra
+ * filen: rundens viktigste kamp med qaKeyRoundData(), altså akkurat det svaret
+ * i "Spør om tabellen" gir med filen, og keymatchFra() på siden. Filen og
+ * banneret skrives sammen, eller ingen av dem. Feiler noe, står de forrige
+ * filene urørt, og kjøringen avslutter med 1.
  *
  *   NODE_PATH=<puppeteer-core> node scripts/lag_grunnlag.js <side> [--ut <mappe>] [--inndata <hash>]
  *   side      eliteserien | obos | elo-test (sidens mappe)
@@ -21,7 +28,8 @@
  *   --inndata sha256 av inndatafilene fra scripts/grunnlag_port.py, lagres i
  *             filen så porten kan se om noe er endret siden
  *   --n       BARE for testene: annen N enn sidens GRUNNLAG_N. Avtrykket
- *             regnes med den N-en, så siden godtar aldri en slik fil.
+ *             regnes med den N-en, så siden godtar aldri en slik fil; derfor
+ *             prøves den ikke på siden, og banneret skrives ikke.
  */
 const http = require('http');
 const fs = require('fs');
@@ -48,10 +56,14 @@ function chromePath() {
   return f;
 }
 
+// Filer serveren gir med annet innhold enn på disk (den nye grunnlagsfilen,
+// før den er skrevet).
+const OVERSTYR = new Map();
 function serve() {
   const server = http.createServer((req, res) => {
     let p = decodeURIComponent(req.url.split('?')[0]);
     if (p.endsWith('/')) p += 'index.html';
+    if (OVERSTYR.has(p)) { res.writeHead(200, {'Content-Type': 'application/json'}); res.end(OVERSTYR.get(p)); return; }
     const f = path.join(ROOT, p);
     if (!f.startsWith(ROOT) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, {'Content-Type': MIME[path.extname(f)] || 'application/octet-stream'});
@@ -89,6 +101,24 @@ function sjekkFordelinger(r) {
   return feil;
 }
 
+// keymatch.json ved siden av filen. Uendret banner (samme kåring, runde, lag,
+// sesonger og grense) skrives ikke på nytt, så et nytt tidsstempel alene ikke
+// gir en commit.
+function skrivBanner(key) {
+  const KEYMATCH = path.join(UT, 'keymatch.json');
+  if (!key) { console.log('Ingen viktigste kamp å lagre (ingen runde igjen, eller ingen kamp flytter nok).'); return; }
+  const next = {version: 1, note: 'Rundens viktigste kamp, regnet fra grunnlagsfilen av scripts/lag_grunnlag.js, med de samme tallene som svaret i "Spør om tabellen". Banneret på siden viser "banner" som den er.', ...key};
+  const same = fs.existsSync(KEYMATCH) && (() => {
+    const old = JSON.parse(fs.readFileSync(KEYMATCH, 'utf8'));
+    return old.banner === next.banner && old.round === next.round && JSON.stringify(old.teams) === JSON.stringify(next.teams)
+      && old.sesonger === next.sesonger && old.grense === next.grense && JSON.stringify(old.match) === JSON.stringify(next.match);
+  })();
+  if (same) { console.log('Rundens viktigste kamp uendret.'); return; }
+  fs.writeFileSync(KEYMATCH, JSON.stringify({...next, updated: new Date().toISOString().replace(/\.\d+Z$/, 'Z')}, null, 1) + '\n');
+  console.log(`Skrev ${path.relative(ROOT, KEYMATCH)}: ${next.banner}`);
+  if (process.env.GITHUB_STEP_SUMMARY) fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `  - banneret: ${next.banner}\n`);
+}
+
 (async () => {
   const puppeteer = require('puppeteer-core');
   const server = await serve();
@@ -114,7 +144,6 @@ function sjekkFordelinger(r) {
     if (igjen !== r.fingeravtrykk) throw new Error(`en ny lasting av siden ga et annet avtrykk (${igjen.slice(0, 16)}... mot ${r.fingeravtrykk.slice(0, 16)}...)`);
     const f = sjekkFordelinger(r);
     if (f.length) throw new Error(`fordelingene går ikke opp: ${f.slice(0, 3).join('; ')}`);
-    if (feil.length) throw new Error(`JS-feil på siden: ${feil.slice(0, 3).join('; ')}`);
 
     // Én linje per oppgave, så filen er lesbar og diffen følger oppgavene.
     const hode = {versjon: r.versjon, side: SIDE, sesonger: r.sesonger, laget: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
@@ -123,13 +152,42 @@ function sjekkFordelinger(r) {
     const linjer = Object.entries(hode).map(([k, v]) => ` ${JSON.stringify(k)}: ${JSON.stringify(v)}`);
     linjer.push(` "oppgaver": [\n${r.oppgaver.map(o => `  ${JSON.stringify(o)}`).join(',\n')}\n ]`);
     linjer.push(` "utfall": {\n${r.oppgaver.map(([id]) => `  ${JSON.stringify(id)}: ${JSON.stringify(r.utfall[id])}`).join(',\n')}\n }`);
+    const tekst = `{\n${linjer.join(',\n')}\n}\n`;
+    JSON.parse(tekst);   // gyldig JSON
+
+    // Siden med den NYE filen: den skal godta den, og banneret regnes fra den.
+    let key;
+    if (TEST_N == null) {
+      const p0 = await browser.newPage();
+      await p0.goto(`http://127.0.0.1:${port}/${SIDE}/`, {waitUntil: 'domcontentloaded'});
+      await p0.waitForFunction('typeof grunnlagFil==="function"', {timeout: 60000});
+      const sti = await p0.evaluate(() => new URL(grunnlagFil(), location.href).pathname);
+      await p0.close();
+      OVERSTYR.set(sti, tekst);
+      const pv = await aapne(browser, port, feil);
+      await pv.waitForFunction('GRUNNLAG_STATUS!=="venter"', {timeout: 60000, polling: 50});
+      const v = await pv.evaluate(async () => {
+        const status = GRUNNLAG_STATUS;
+        if (status !== 'i bruk') return {status};
+        return {status, N: lastMCN, key: keymatchFra(await qaKeyRoundData())};
+      });
+      await pv.close();
+      OVERSTYR.delete(sti);
+      if (v.status !== 'i bruk') throw new Error(`siden godtok ikke den nye filen (${v.status})`);
+      if (v.N !== r.sesonger) throw new Error(`tabellen på siden bygger på ${v.N} sesonger, ikke filens ${r.sesonger}`);
+      if (v.key && v.key.sesonger !== r.sesonger) throw new Error(`banneret bygger på ${v.key.sesonger} sesonger, ikke filens ${r.sesonger}`);
+      key = v.key;
+    } else console.log(`Testmodus (--n ${TEST_N}): filen prøves ikke på siden, og banneret skrives ikke.`);
+    if (feil.length) throw new Error(`JS-feil på siden: ${feil.slice(0, 3).join('; ')}`);
+
     fs.mkdirSync(UT, {recursive: true});
     const tmp = FIL + '.tmp';
-    fs.writeFileSync(tmp, `{\n${linjer.join(',\n')}\n}\n`);
+    fs.writeFileSync(tmp, tekst);
     try { JSON.parse(fs.readFileSync(tmp, 'utf8')); }   // gyldig JSON før den erstatter den gamle
     catch (e) { fs.unlinkSync(tmp); throw e; }
     fs.renameSync(tmp, FIL);
     console.log(`Skrev ${FIL.startsWith(ROOT) ? path.relative(ROOT, FIL) : FIL} (${(fs.statSync(FIL).size / 1024).toFixed(0)} KB).`);
+    if (TEST_N == null) skrivBanner(key);
     if (process.env.GITHUB_STEP_SUMMARY)
       fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `- ${SIDE}: ${r.oppgaver.length} oppgaver x ${r.sesonger} sesonger på ${sek.toFixed(0)} s\n`);
   } finally {

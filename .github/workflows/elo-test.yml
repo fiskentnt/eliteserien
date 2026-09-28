@@ -82,9 +82,11 @@ jobs:
             bash scripts/push_med_rebase.sh
           fi
 
-      # PANELENE: keymatch, lastmatch, prekick og accuracy for /elo-test/,
-      # regnet av siden selv (ELO90) med produksjonens egne skript og samme
-      # frysregel (scripts/prekick_frys.js). Se elo-test/scripts/paneler.py.
+      # PANELENE: lastmatch, prekick og accuracy for /elo-test/, regnet av
+      # siden selv (ELO90) med produksjonens egne skript og samme frysregel
+      # (scripts/prekick_frys.js). Se elo-test/scripts/paneler.py. Banneret
+      # (keymatch.json) regnes av grunnlag.yml fra grunnlagsfilen, som i
+      # produksjonen.
       # Feiler et steg herfra og ned, hoppes resten over: panelfilene lagres
       # ikke (de forrige committede står), og jobben blir rød.
       - name: Paneler -- skal de regnes?
@@ -116,7 +118,7 @@ jobs:
 
       - name: Lagre panelene
         run: |
-          git add elo-test/emodell/keymatch.json elo-test/emodell/lastmatch.json \
+          git add elo-test/emodell/lastmatch.json \
                   elo-test/emodell/prekick.json elo-test/emodell/accuracy.json \
                   elo-test/emodell/paneler_grunnlag.json
           if git diff --cached --quiet; then

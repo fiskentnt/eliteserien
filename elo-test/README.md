@@ -18,8 +18,9 @@ produksjonsfil er endret for å få testsiden til å virke.
 | `emodell/model.json` | egen, bygget av `scripts/bygg.py` |
 | `emodell/historikk.json` | fryst grunnlag 2012–2025 |
 
-| `emodell/keymatch.json`, `lastmatch.json`, `prekick.json` | egne, skrevet av produksjonens `scripts/snapshot_probs.js` kjørt mot **/elo-test/** (`--side elo-test --ut elo-test/emodell --uten-historikk`) |
+| `emodell/lastmatch.json`, `prekick.json` | egne, skrevet av produksjonens `scripts/snapshot_probs.js` kjørt mot **/elo-test/** (`--side elo-test --ut elo-test/emodell --uten-historikk`) |
 | `emodell/accuracy.json` | egen, `scripts/accuracy_log.py eliteserien --data elo-test/emodell` |
+| `emodell/keymatch.json` | eget banner: rundens viktigste kamp regnet fra `emodell/grunnlag.json` av `scripts/lag_grunnlag.js` i `grunnlag.yml`, i samme kjøring som filen og med samme tall som svaret, som i produksjonen |
 | `emodell/grunnlag.json` | egen: tabellen og svarene for dagens stilling med ELO90 og N = 100 000, regnet av produksjonens `scripts/lag_grunnlag.js elo-test --ut elo-test/emodell` i `grunnlag.yml`, etter «ELO-test: bygg modellen». Siden bruker den bare når fingeravtrykket stemmer, som produksjonen |
 
 **Panelene** (rundens viktigste kamp, forrige kamp i lagboksen, prekick og
@@ -191,8 +192,9 @@ Definisjonen over tåler det, siden bare linjer med `logget` < avspark teller.
   og `model.json`, `meta.json` og `prognoselogg/` lagres og pushes. Feiler
   `kontroll.py`, stopper alt der, som før. Deretter regnes panelene,
   `kontroll_paneler.py` (W, R og panelfilenes tekst i L) kjøres, og først når
-  begge har bestått, lagres de fem panelfilene (`keymatch`, `lastmatch`,
-  `prekick`, `accuracy`, `paneler_grunnlag`) i en egen commit. Feiler
+  begge har bestått, lagres de fire panelfilene (`lastmatch`, `prekick`,
+  `accuracy`, `paneler_grunnlag`) i en egen commit. Banneret (`keymatch`)
+  lagres av `grunnlag.yml`, sammen med grunnlagsfilen. Feiler
   panelsteget eller kontrollen, blir de forrige committede panelfilene stående,
   og jobben blir rød. Kontroll **O** i `kontroll.py` krever denne rekkefølgen,
   at hver commit tar nøyaktig sine filer, og at ingen `continue-on-error` eller

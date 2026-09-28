@@ -4851,9 +4851,10 @@ function renderModelExample(){
 // TO NIVÅER. Når siden regner selv i nettleseren (svaret i "Spør om
 // tabellen"), QA_KEY_N / QA_KEY_CLOSE: 3 000 sesonger, og grensa for "omtrent
 // like viktige" tilsvarende bredere (spriket vokser med kvadratroten av
-// 6000/3000). Når kåringen regnes i CI -- banneret i keymatch.json via
-// scripts/snapshot_probs.js, og innleggene i scripts/lag_innlegg.js --
-// QA_KEY_N_CI / QA_KEY_CLOSE_CI: mange flere sesonger og den strammere grensa.
+// 6000/3000). Når kåringen regnes med mange sesonger -- banneret i
+// keymatch.json, fra grunnlagsfilen (100 000, scripts/lag_grunnlag.js), og
+// innleggene i scripts/lag_innlegg.js (QA_KEY_N_CI) -- og når svaret selv
+// kommer fra grunnlagsfilen: den strammere grensa QA_KEY_CLOSE_CI.
 // Målt 28.9.2026 (dagens tabell + 20 scenarioer per liga): 3 000 / 0,901 gir
 // samme kåring som 6 000 / 0,93 i 86 % (Eliteserien) og 95 % (OBOS) av
 // tabellene, og nevner alltid lederen fra 40 000 sesonger; på en etterlignet
@@ -5026,7 +5027,7 @@ async function grunnlagRegn(N = GRUNNLAG_N){
           oppgaver:tasks.map(t=>[t.id, t.idx, t.score]), utfall};
 }
 async function qaKeyRoundData(opts){
-  const N = (opts && opts.N) || QA_KEY_N, grense = (opts && opts.close) || QA_KEY_CLOSE;
+  const N = (opts && opts.N) || QA_KEY_N;
   if(!lastMC) return null;
   const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
   const nr = qaNextRoundMatches(openMatches);
@@ -5045,6 +5046,11 @@ async function qaKeyRoundData(opts){
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
     N, ti:0, zone:QA_KEY_ZONES[0], seed:hashStr(scenarioKey+'|impact'), wantAll:true
   }, tasks, null, 'runde');
+  // Grensa for "omtrent like viktige" følger antallet sesonger tallene faktisk
+  // bygger på: den strammere CI-grensa når de er minst QA_KEY_N_CI (også når
+  // svaret kommer fra grunnlagsfilen, 100 000), ellers nettleserens. Da gir
+  // banneret (keymatch.json, regnet fra filen) og svaret samme kåring.
+  const grense = (opts && opts.close) || (res.sesonger >= QA_KEY_N_CI ? QA_KEY_CLOSE_CI : QA_KEY_CLOSE);
   const zoneOf = key => QA_KEY_ZONES.find(z=>z.key===key);
   const probs = id => { const o={}; QA_KEY_ZONES.forEach(z=>o[z.key]=qaZoneFromPos(res[id].pos, n, z)); return o; };
   const base = probs('base');
@@ -5100,8 +5106,19 @@ function qaZoneNow(team, key){
   if(!d) return 0;
   return zoneSum(d, key);
 }
+// keymatch.json (banneret): rundens viktigste kamp slik svaret kårer den.
+// scripts/lag_grunnlag.js skriver den fra grunnlagsfilen, i samme kjøring som
+// filen, så banneret og svaret bygger på de samme tallene. null når ingen
+// kamp kan kåres.
+function keymatchFra(d){
+  const banner = qaKeyBanner(d);
+  if(!d || !d.best || !banner) return null;
+  return {round:d.round, banner, sesonger:d.sesonger, grense:d.grense,
+    match:{home:d.best.m.home, away:d.best.m.away, date:d.best.m.date},
+    zone:d.best.topZone.key, teams:d.best.teams.map(t=>t.team)};
+}
 // Banner-linja (én setning). Bygges her, ikke i workflowen, så ordlyden bare
-// finnes ett sted -- scripts/snapshot_probs.js kaller denne.
+// finnes ett sted -- keymatchFra over bruker den.
 function qaKeyBanner(data){
   if(!data || !data.best || !data.best.teams.length) return null;
   const b = data.best, k = data.close.length;

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Panelene på testsiden: når de skal regnes, og hva som er en ekte endring.
 
-Panelfilene (keymatch.json, lastmatch.json, prekick.json, accuracy.json) i
-elo-test/emodell/ skrives av scripts/snapshot_probs.js mot /elo-test/ og av
+Panelfilene (lastmatch.json, prekick.json, accuracy.json) i elo-test/emodell/
+skrives av scripts/snapshot_probs.js mot /elo-test/ og av
 scripts/accuracy_log.py --data elo-test/emodell, i elo-test.yml. Samme skript og
-samme frysregel (scripts/prekick_frys.js) som produksjonen.
+samme frysregel (scripts/prekick_frys.js) som produksjonen. Banneret
+(keymatch.json) regnes av scripts/lag_grunnlag.js fra grunnlagsfilen, i
+grunnlag.yml, som i produksjonen.
 
   python3 elo-test/scripts/paneler.py port    # skriver kjor=true/false
   python3 elo-test/scripts/paneler.py etter   # etter kjøringen, se under
@@ -31,7 +33,7 @@ ROT = Path(__file__).resolve().parents[2]
 EM = ROT / "elo-test" / "emodell"
 ODDS = ROT / "eliteserien" / "data" / "odds_upcoming.json"
 GRUNNLAG = EM / "paneler_grunnlag.json"
-FILER = ("keymatch.json", "lastmatch.json", "prekick.json", "accuracy.json")
+FILER = ("lastmatch.json", "prekick.json", "accuracy.json")
 ALLTID = ("Odds nær avspark",)
 
 

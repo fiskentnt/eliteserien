@@ -2482,16 +2482,19 @@ async function main() {
 
     // ---- Rundens viktigste kamp: lav N i nettleseren, høy N i CI ----
     // Svaret som regnes i nettleseren bruker QA_KEY_N / QA_KEY_CLOSE (3 000 /
-    // 0,901). Banneret i keymatch.json (snapshot_probs.js) og innleggene
-    // (lag_innlegg.js) regnes med QA_KEY_N_CI / QA_KEY_CLOSE_CI: minst 6 000 og
-    // 0,93. Testen fanger N som faktisk sendes til poolen, og sjekker at
-    // skriptene sender CI-konstantene.
+    // 0,901). Innleggene (lag_innlegg.js) regnes med QA_KEY_N_CI /
+    // QA_KEY_CLOSE_CI: minst 6 000 og 0,93. Banneret i keymatch.json regnes fra
+    // grunnlagsfilen (lag_grunnlag.js, 100 000 sesonger, grensa 0,93, se
+    // «Grunnlagsfilen på siden»). Testen fanger N som faktisk sendes til
+    // poolen, og sjekker hvilke konstanter skriptene bruker.
     setGroup('Rundens viktigste kamp: N i nettleseren og i CI');
     {
-      const skript = ['snapshot_probs.js', 'lag_innlegg.js'].map(f => [f, fs.readFileSync(path.join(ROOT, 'scripts', f), 'utf8')]);
-      for (const [f, t] of skript)
-        check(`${f} regner kåringen med CI-nivået (QA_KEY_N_CI, QA_KEY_CLOSE_CI)`,
-          t.includes('qaKeyRoundData({N: QA_KEY_N_CI, close: QA_KEY_CLOSE_CI})') && !/qaKeyRoundData\(\)/.test(t), f);
+      const innl = fs.readFileSync(path.join(ROOT, 'scripts', 'lag_innlegg.js'), 'utf8');
+      check('lag_innlegg.js regner kåringen med CI-nivået (QA_KEY_N_CI, QA_KEY_CLOSE_CI)',
+        innl.includes('qaKeyRoundData({N: QA_KEY_N_CI, close: QA_KEY_CLOSE_CI})') && !/qaKeyRoundData\(\)/.test(innl), 'lag_innlegg.js');
+      const lg = fs.readFileSync(path.join(ROOT, 'scripts', 'lag_grunnlag.js'), 'utf8'), sp = fs.readFileSync(path.join(ROOT, 'scripts', 'snapshot_probs.js'), 'utf8');
+      check('banneret regnes fra grunnlagsfilen av lag_grunnlag.js (samme kall som svaret), ikke av snapshot_probs.js',
+        lg.includes('keymatchFra(await qaKeyRoundData())') && !sp.includes('qaKeyRoundData'), '');
       for (const [sti, liga] of [['/eliteserien/', 'Eliteserien'], ['/obos/', 'OBOS']]) {
         const kp = await open(1400, 900, base.replace('/eliteserien/', sti));
         const r = await kp.evaluate(async () => {
@@ -3065,6 +3068,41 @@ async function main() {
         const r3 = kjor('finnes-ikke', '--n', '300', '--ut', 'obos/data');
         check('en side som ikke finnes: exit 1, den forrige filen står', r3.status === 1 && fs.readFileSync(FIL, 'utf8') === foer,
           `kode ${r3.status}: ${r3.stderr.slice(-300)}`);
+        const KM = path.join(TMP, 'obos', 'data', 'keymatch.json');
+        const kmFoer = fs.existsSync(KM) ? fs.readFileSync(KM, 'utf8') : null;
+        check('i testmodus (--n) prøves ikke filen på siden, og banneret skrives ikke',
+          /Testmodus/.test(r.stdout) && (fs.existsSync(KM) ? fs.readFileSync(KM, 'utf8') : null) === kmFoer, r.stdout.slice(-300));
+
+        // Hele veien, billig: siden i kopien regner med GRUNNLAG_N = 300.
+        // Filen prøves på siden med den nye filen, og banneret skrives fra den.
+        const N300 = sideTekst.replace('const GRUNNLAG_VERSJON = 1, GRUNNLAG_N = 100000;', 'const GRUNNLAG_VERSJON = 1, GRUNNLAG_N = 300;');
+        fs.writeFileSync(sideFil, N300);
+        const r4 = kjor('obos', '--inndata', 'def456');
+        const g4 = JSON.parse(fs.readFileSync(FIL, 'utf8')), km4 = fs.existsSync(KM) ? JSON.parse(fs.readFileSync(KM, 'utf8')) : null;
+        check('siden godtar den nye filen, og banneret (keymatch.json) skrives fra den, med filens sesonger',
+          r4.status === 0 && g4.sesonger === 300 && g4.inndata === 'def456' && !!km4 && km4.sesonger === 300 && /keymatch\.json/.test(r4.stdout),
+          `kode ${r4.status}: ${(r4.stdout + r4.stderr).slice(-400)}`);
+        // Banneret er svaret: siden med de to filene kårer det samme, og viser
+        // banneret som det står.
+        GRUNNLAG_MODUS = {};
+        const pb = await open(1400, 900, `http://127.0.0.1:${tmpServer.address().port}/obos/`);
+        await pb.waitForFunction('GRUNNLAG_STATUS!=="venter"', {timeout: 60000, polling: 50});
+        const b4 = await pb.evaluate(async () => ({status: GRUNNLAG_STATUS, key: keymatchFra(await qaKeyRoundData()),
+          vist: document.getElementById('qaHighlight') ? document.getElementById('qaHighlight').textContent : null, gammelt: qaKeyBannerStale()}));
+        await pb.close();
+        GRUNNLAG_MODUS = null;
+        const felt = k => k && JSON.stringify([k.banner, k.round, k.match, k.zone, k.teams, k.sesonger, k.grense]);
+        check('svaret på siden med filen kårer det samme som banneret, og banneret vises som det står',
+          b4.status === 'i bruk' && felt(b4.key) === felt(km4) && (b4.gammelt || b4.vist === km4.banner), JSON.stringify({b4, km4}).slice(0, 700));
+        // Godtar ikke siden filen, skrives verken filen eller banneret.
+        const g4tekst = fs.readFileSync(FIL, 'utf8'), km4tekst = fs.readFileSync(KM, 'utf8');
+        fs.writeFileSync(sideFil, N300.replace("if(avtrykk!==g.fingeravtrykk){ GRUNNLAG_STATUS='feil avtrykk'; return; }",
+          "if(true){ GRUNNLAG_STATUS='feil avtrykk'; return; }"));
+        const r5 = kjor('obos', '--inndata', 'ghi789');
+        check('godtar ikke siden den nye filen: exit 1, og verken filen eller banneret er endret',
+          r5.status === 1 && /godtok ikke den nye filen/.test(r5.stderr) && fs.readFileSync(FIL, 'utf8') === g4tekst && fs.readFileSync(KM, 'utf8') === km4tekst,
+          `kode ${r5.status}: ${r5.stderr.slice(-300)}`);
+        fs.writeFileSync(sideFil, sideTekst);
       } finally {
         if (tmpServer) tmpServer.close();
         fs.rmSync(TMP, {recursive: true, force: true});
@@ -3156,6 +3194,10 @@ async function main() {
           return {lag, tekster, sesonger: kd.sesonger, kort: kort && !kort.hidden ? kort.textContent : null,
                   zoneTask: __poster.filter(p => p.mode === 'zoneTask').length - z0, tabell: __poster.filter(p => p.mode === 'tabell').length - t0};
         }, lagMedSone);
+        const kg = await pg.evaluate(async () => { const d = await qaKeyRoundData();
+          return {sesonger: d.sesonger, grense: d.grense, CI: QA_KEY_CLOSE_CI, holder: d.close.every(x => x.total >= d.best.total * QA_KEY_CLOSE_CI)}; });
+        check(`${liga}: rundens viktigste kamp fra filen bruker 100 000 sesonger og den strammere grensa (0,93)`,
+          kg.sesonger === 100000 && kg.grense === 0.93 && kg.CI === 0.93 && kg.holder, JSON.stringify(kg));
         check(`${liga}: svarene og kortet kommer fra filen, uten simulering (0 oppgaver til poolen, ingen ny tabellsimulering), for ${sv.lag}`,
           sv.zoneTask === 0 && sv.tabell === 0 && sv.sesonger === 100000 && Object.values(sv.tekster).every(t => t && t.length > 20) && !!sv.kort,
           JSON.stringify({zoneTask: sv.zoneTask, tabell: sv.tabell, sesonger: sv.sesonger, kort: sv.kort}));
@@ -3165,7 +3207,10 @@ async function main() {
         const tk = await pg.evaluate(async lag => {
           const kjor = async () => ({heie: await qaCheerFor(lag), neste: await qaNextMatch(lag), betyr: await qaKeyMatches(lag), runde: await qaKeyRound()});
           const medFil = await kjor(), G = GRUNNLAG, ekte = runZoneTasks;
-          runZoneTasks = (payload, tasks) => { GRUNNLAG = G; try { return Promise.resolve(grunnlagSvar(payload, tasks, 'test')); } finally { GRUNNLAG = null; } };
+          // Samme tall som filen, også hvor mange sesonger de bygger på (som
+          // poolen oppgir sin N): da velger svaret samme grense.
+          runZoneTasks = (payload, tasks) => { GRUNNLAG = G; try { const r = grunnlagSvar(payload, tasks, 'test');
+            Object.defineProperty(r, 'sesonger', {value: G.N}); return Promise.resolve(r); } finally { GRUNNLAG = null; } };
           GRUNNLAG = null;
           let utenFil;
           try { utenFil = await kjor(); } finally { runZoneTasks = ekte; GRUNNLAG = G; }
