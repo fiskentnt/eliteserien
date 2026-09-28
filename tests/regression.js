@@ -30,11 +30,30 @@ const ROOT = path.join(__dirname, '..');
 const MIME = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json',
   '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.ttf': 'font/ttf'};
 
+// Grunnlagsfilen (<liga>/data/grunnlag.json) svarer 404 som standard, så
+// testene prøver sidens egen regning, som før filen fantes (den brukes fortsatt
+// med et scenario). Gruppen «Grunnlagsfilen på siden» slår den på:
+//   {}                          filen fra repoet
+//   {innhold: {<liga>: tekst}}  dette innholdet i stedet
+//   {forsinkelse: ms}           svaret kommer så mye senere
+let GRUNNLAG_MODUS = null;
 function serve(rot = ROOT) {
   const server = http.createServer((req, res) => {
     let p = decodeURIComponent(req.url.split('?')[0]);
     if (p.endsWith('/')) p += 'index.html';
     const f = path.join(rot, p);
+    const gm = /^\/([^/]+)\/data\/grunnlag\.json$/.exec(p);
+    if (gm) {
+      const modus = GRUNNLAG_MODUS;
+      const svar = () => {
+        const inn = modus && modus.innhold && modus.innhold[gm[1]] != null ? modus.innhold[gm[1]]
+          : modus && fs.existsSync(f) ? fs.readFileSync(f) : null;
+        if (inn == null) { res.writeHead(404); res.end(); return; }
+        res.writeHead(200, {'Content-Type': 'application/json'}); res.end(inn);
+      };
+      if (modus && modus.forsinkelse) setTimeout(svar, modus.forsinkelse); else svar();
+      return;
+    }
     if (!f.startsWith(rot) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
     res.writeHead(200, {'Content-Type': MIME[path.extname(f)] || 'application/octet-stream'});
     fs.createReadStream(f).pipe(res);
@@ -2872,7 +2891,7 @@ async function main() {
         const res = await runZoneTasks({mu: MODEL.mu, H: MODEL.H, k: FORM_K,
           att: Array.from(LIVE.att), con: Array.from(LIVE.con), ha: Array.from(LIVE.ha), hc: Array.from(LIVE.hc),
           P0: Array.from(P0), G0: Array.from(G0), F0: Array.from(F0), open, oddsOverride,
-          N, ti: 3, zone: QA_KEY_ZONES[1], seed: hashStr(scenarioKey + '|impact'), wantAll: true}, utvalg, null, 'test-grunnlag');
+          N, ti: 3, zone: QA_KEY_ZONES[1], seed: hashStr(scenarioKey + '|impact'), wantAll: true}, utvalg, null, 'grunnlag-test');
         const n = TEAMS.length;
         const like = utvalg.every(t => JSON.stringify(res[t.id].pos.map(p => Math.round(p * N))) === JSON.stringify(r.utfall[t.id]));
         const summer = r.oppgaver.every(([id]) => { const u = r.utfall[id];
@@ -2942,6 +2961,246 @@ async function main() {
         if (tmpServer) tmpServer.close();
         fs.rmSync(TMP, {recursive: true, force: true});
       }
+    }
+
+    // ---- Grunnlagsfilen på siden (del 2, steg 3) ----
+    // Siden henter grunnlag.json samtidig med de andre datafilene, venter
+    // ikke på den, og bytter til filens tall når den er lastet og avtrykket
+    // stemmer. Da kommer tabellen og svarene fra filen, uten simulering. Med
+    // et resultat fylt inn, en annen sone (qaWhyZoneOverride), feil avtrykk,
+    // en ødelagt eller manglende fil regner siden selv, som før.
+    setGroup('Grunnlagsfilen på siden: tabellen og svarene fra filen');
+    if (!live) {
+      const {execFileSync, spawnSync} = require('child_process'), os = require('os');
+      // Siden med tellere for alt som sendes til Workerne (modus 'tabell' er
+      // tabellsimuleringen, 'zoneTask' oppgavene i poolen).
+      const aapneMaalt = async url => {
+        const pg = await browser.newPage();
+        pg.on('pageerror', e => errors.push(`${url}: ${e.message}`));
+        await pg.evaluateOnNewDocument(() => {
+          window.__poster = [];
+          const W = window.Worker;
+          window.Worker = function (u, o) { const w = new W(u, o), post = w.postMessage.bind(w);
+            w.postMessage = m => { window.__poster.push({mode: (m && m.mode) || 'tabell', N: m && m.N}); return post(m); }; return w; };
+        });
+        await pg.setViewport({width: 1400, height: 900});
+        await pg.goto(url, {waitUntil: 'domcontentloaded'});
+        return pg;
+      };
+      const ferdig = pg => pg.waitForFunction('typeof GRUNNLAG_STATUS!=="undefined" && GRUNNLAG_STATUS!=="venter" && lastMC && lastMCFinal',
+        {timeout: 120000, polling: 50});
+      const lagMedSone = `TEAMS.find(t => { const z = qaTargetZone(t); return z && !qaSettled(t, z) && z.pct > 0.05 && z.pct < 0.95; }) || TEAMS[0]`;
+      // Filen for hver liga: den i repoet når siden godtar den (samme data som
+      // da CI regnet den), ellers regnet på nytt med lag_grunnlag.js i en kopi.
+      const filer = {};
+      for (const liga of ['eliteserien', 'obos']) {
+        GRUNNLAG_MODUS = {};
+        const pr = await aapneMaalt(base.replace('/eliteserien/', `/${liga}/`));
+        await ferdig(pr);
+        const st = await pr.evaluate(() => GRUNNLAG_STATUS);
+        await pr.close();
+        if (st === 'i bruk') { filer[liga] = fs.readFileSync(path.join(ROOT, liga, 'data', 'grunnlag.json'), 'utf8'); continue; }
+        const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'grunnlag-side-'));
+        try {
+          for (const f of execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], {cwd: ROOT}).toString().split('\0').filter(Boolean)) {
+            const fra = path.join(ROOT, f);
+            if (!fs.existsSync(fra) || fs.statSync(fra).isDirectory()) continue;
+            fs.mkdirSync(path.dirname(path.join(TMP, f)), {recursive: true});
+            fs.copyFileSync(fra, path.join(TMP, f));
+          }
+          const pp = require.resolve('puppeteer-core');
+          const r = spawnSync(process.execPath, [path.join(TMP, 'scripts', 'lag_grunnlag.js'), liga], {cwd: TMP, encoding: 'utf8', timeout: 900000,
+            env: {...process.env, NODE_PATH: [pp.slice(0, pp.lastIndexOf(`${path.sep}puppeteer-core${path.sep}`)), process.env.NODE_PATH].filter(Boolean).join(path.delimiter)}});
+          console.log(`    (${liga}: filen i repoet ble ikke godtatt (${st}); regnet på nytt: ${(r.stdout || '').trim().split('\n')[0]})`);
+          filer[liga] = fs.readFileSync(path.join(TMP, liga, 'data', 'grunnlag.json'), 'utf8');
+        } finally { fs.rmSync(TMP, {recursive: true, force: true}); }
+      }
+
+      for (const liga of ['eliteserien', 'obos']) {
+        const url = base.replace('/eliteserien/', `/${liga}/`), g = JSON.parse(filer[liga]);
+        GRUNNLAG_MODUS = {innhold: {[liga]: filer[liga]}};
+        const pg = await aapneMaalt(url);
+        await ferdig(pg);
+        const tab = await pg.evaluate(g => {
+          const n = TEAMS.length, N = g.sesonger, fra = (t, i) => g.utfall.base.slice(i * n, i * n + n).map(c => c / N);
+          const celler = [...document.querySelectorAll('#tbl tbody tr')].map(tr => {
+            const d = lastMC[tr.dataset.team], v = zoneSum(d, 'gull');
+            return tr.querySelector('td.gull').textContent === (v === 0 ? '–' : pctTxt(v)); });
+          return {status: GRUNNLAG_STATUS, N: lastMCN,
+            tabell: TEAMS.every((t, i) => JSON.stringify(lastMC[t]) === JSON.stringify(fra(t, i))),
+            basis: TEAMS.every((t, i) => JSON.stringify(BASE_MC[t]) === JSON.stringify(fra(t, i))),
+            celler: celler.length === n && celler.every(Boolean)};
+        }, g);
+        check(`${liga}: med gyldig fil og uten scenario er tabellen filens (100 000 sesonger), også grunnlaget for delingsteksten`,
+          tab.status === 'i bruk' && tab.N === 100000 && tab.tabell && tab.basis && tab.celler, JSON.stringify(tab));
+
+        // Svarene fra filen: ingen oppgaver til poolen og ingen ny
+        // tabellsimulering. Kortet "Neste kamp" for et valgt lag også.
+        const sv = await pg.evaluate(async lagKode => {
+          const lag = eval(lagKode), z0 = __poster.filter(p => p.mode === 'zoneTask').length, t0 = __poster.filter(p => p.mode === 'tabell').length;
+          const tekster = {heie: await qaCheerFor(lag), neste: await qaNextMatch(lag), betyr: await qaKeyMatches(lag), runde: await qaKeyRound()};
+          const kd = await qaKeyRoundData();
+          const sel = document.getElementById('teamSelect'); sel.value = lag; sel.dispatchEvent(new Event('change'));
+          await new Promise(r => setTimeout(r, 600));
+          const kort = document.getElementById('nmImpact');
+          return {lag, tekster, sesonger: kd.sesonger, kort: kort && !kort.hidden ? kort.textContent : null,
+                  zoneTask: __poster.filter(p => p.mode === 'zoneTask').length - z0, tabell: __poster.filter(p => p.mode === 'tabell').length - t0};
+        }, lagMedSone);
+        check(`${liga}: svarene og kortet kommer fra filen, uten simulering (0 oppgaver til poolen, ingen ny tabellsimulering), for ${sv.lag}`,
+          sv.zoneTask === 0 && sv.tabell === 0 && sv.sesonger === 100000 && Object.values(sv.tekster).every(t => t && t.length > 20) && !!sv.kort,
+          JSON.stringify({zoneTask: sv.zoneTask, tabell: sv.tabell, sesonger: sv.sesonger, kort: sv.kort}));
+
+        // Teksten er bygget av de samme funksjonene: med poolen byttet ut med
+        // en som gir filens tall, og filen slått av, blir teksten den samme.
+        const tk = await pg.evaluate(async lag => {
+          const kjor = async () => ({heie: await qaCheerFor(lag), neste: await qaNextMatch(lag), betyr: await qaKeyMatches(lag), runde: await qaKeyRound()});
+          const medFil = await kjor(), G = GRUNNLAG, ekte = runZoneTasks;
+          runZoneTasks = (payload, tasks) => { GRUNNLAG = G; try { return Promise.resolve(grunnlagSvar(payload, tasks, 'test')); } finally { GRUNNLAG = null; } };
+          GRUNNLAG = null;
+          let utenFil;
+          try { utenFil = await kjor(); } finally { runZoneTasks = ekte; GRUNNLAG = G; }
+          return {medFil, utenFil};
+        }, sv.lag);
+        check(`${liga}: teksten i svarene er den samme med filen og med poolen som gir samme tall`,
+          JSON.stringify(tk.medFil) === JSON.stringify(tk.utenFil), JSON.stringify(tk).slice(0, 600));
+
+        // Filens tall mot siden selv: bit for bit med samme frø og N, og
+        // innenfor 3 standardfeil mot en regning med annet frø og N = 20 000,
+        // for en kamp i neste runde (Brann mot Viking når den er der): H, U, B
+        // og utgangspunktet, for de to lagene og ett til.
+        const st = await pg.evaluate(async g => {
+          const n = TEAMS.length, N = g.sesonger;
+          const {P0, G0, F0, open, openMatches, oddsOverride, scenarioKey} = buildQaOpen();
+          const nr = qaNextRoundMatches(openMatches), m = nr.list.find(x => x.home === 'Brann' && x.away === 'Viking') || nr.list[0], idx = openMatches.indexOf(m);
+          const tasks = grunnlagOppgaver(openMatches).filter(t => t.id === 'base' || t.idx === idx);
+          const payload = (N, seed) => ({mu: MODEL.mu, H: MODEL.H, k: FORM_K, att: Array.from(LIVE.att), con: Array.from(LIVE.con),
+            ha: Array.from(LIVE.ha), hc: Array.from(LIVE.hc), P0: Array.from(P0), G0: Array.from(G0), F0: Array.from(F0), open, oddsOverride,
+            N, ti: 0, zone: QA_KEY_ZONES[0], seed, wantAll: true});
+          const utvalg = tasks.filter(t => t.id === 'base' || t.id.endsWith(':U'));
+          const samme = await runZoneTasks(payload(N, hashStr(scenarioKey + '|impact')), utvalg, null, 'grunnlag-test');
+          const bitlik = utvalg.every(t => samme[t.id].pos.every((p, i) => Math.round(p * N) === g.utfall[t.id][i]));
+          const NL = 20000, annen = await runZoneTasks(payload(NL, hashStr(scenarioKey + '|kontroll')), tasks, null, 'grunnlag-test');
+          const tredje = TEAMS.map((t, i) => i).filter(i => i !== TI[m.home] && i !== TI[m.away] && qaTargetZone(TEAMS[i]))
+            .sort((a, b) => Math.abs(qaTargetZone(TEAMS[a]).pct - 0.5) - Math.abs(qaTargetZone(TEAMS[b]).pct - 0.5))[0];
+          const rader = [];
+          for (const t of tasks) for (const ti of [TI[m.home], TI[m.away], tredje]) {
+            const zone = qaTargetZone(TEAMS[ti]); if (!zone) continue;
+            const pf = qaZoneFromPos(g.utfall[t.id].map(c => c / N), n, zone)[ti], pl = qaZoneFromPos(annen[t.id].pos, n, zone)[ti];
+            const pp = (pf * N + pl * NL) / (N + NL), se = Math.sqrt(pp * (1 - pp) * (1 / N + 1 / NL));
+            rader.push({id: t.id, lag: TEAMS[ti], sone: zone.key, fil: +pf.toFixed(4), live: +pl.toFixed(4), z: se > 0 ? +(Math.abs(pf - pl) / se).toFixed(2) : (pf === pl ? 0 : 99)});
+          }
+          return {kamp: `${m.home} mot ${m.away}`, bitlik, utvalg: utvalg.map(t => t.id), rader};
+        }, g);
+        check(`${liga}: filen er bit for bit det siden regner selv med samme frø og N (${st.utvalg.join(', ')})`, st.bitlik, JSON.stringify(st.utvalg));
+        check(`${liga}: filen og siden selv med annet frø (N = 20 000) ligger innenfor 3 standardfeil: ${st.kamp}, ${st.rader.length} tall, største ${Math.max(...st.rader.map(r => r.z))} SE`,
+          st.rader.length >= 9 && st.rader.every(r => r.z <= 3), JSON.stringify(st.rader.filter(r => r.z > 3)));
+
+        // Et resultat fylt inn: siden regner selv. Nullstill: filen igjen,
+        // uten ny simulering. En annen sone (qaWhyZoneOverride): selv.
+        const sc = await pg.evaluate(async lagKode => {
+          const lag = eval(lagKode), vent = f => new Promise(r => { const i = setInterval(() => { if (f()) { clearInterval(i); r(); } }, 20); });
+          const tell = modus => __poster.filter(p => p.mode === modus).length;
+          const m = matches.find(x => x.hg == null), t0 = tell('tabell'), z0 = tell('zoneTask');
+          m.hg = 2; m.ag = 0; mcStraks = true; render();
+          await vent(() => lastMCFinal && lastMCScenarioKey !== '' && lastMCScenarioKey === qaScenarioKey());
+          await qaCheerFor(lag);
+          const med = {tabell: tell('tabell') - t0, zoneTask: tell('zoneTask') - z0, N: lastMCN, MC_N};
+          m.hg = null; m.ag = null; mcStraks = true; render();
+          await vent(() => lastMCScenarioKey === '' && lastMCFinal);
+          const t1 = tell('tabell'), g = GRUNNLAG.fil, n = TEAMS.length;
+          const tilbake = lastMCN === g.sesonger && TEAMS.every((t, i) => lastMC[t].every((v, k) => v === g.utfall.base[i * n + k] / g.sesonger));
+          await new Promise(r => setTimeout(r, 400));
+          // Et lag og en annen sone enn lagets egen som ikke er avgjort
+          // (ellers svarer spørsmålet med en fast tekst uten å regne).
+          let lagA = null, andre = null;
+          for (const t of TEAMS) for (const k of Object.keys(LEAGUE.zones)) {
+            const z = !lagA && qaTargetZone(t) && k !== qaTargetZone(t).key && qaZoneByKey(t, k);
+            if (z && !qaSettled(t, z) && z.pct > 0.02 && z.pct < 0.98) { lagA = t; andre = k; }
+          }
+          const z1 = tell('zoneTask');
+          qaWhyZoneOverride = andre; await qaNextMatch(lagA); qaWhyZoneOverride = null;
+          const zN = tell('zoneTask') - z1; await qaNextMatch(lagA);
+          return {med, tilbake, nyTabell: tell('tabell') - t1, annenSone: zN, egenSone: tell('zoneTask') - z1 - zN, lagA, andre};
+        }, lagMedSone);
+        check(`${liga}: med ett resultat fylt inn regner siden selv (tabellsimulering og oppgaver til poolen)`,
+          sc.med.tabell >= 1 && sc.med.zoneTask > 0 && sc.med.N === sc.med.MC_N, JSON.stringify(sc.med));
+        check(`${liga}: tømmes scenarioet, gjelder filen igjen, uten ny simulering`, sc.tilbake && sc.nyTabell === 0, JSON.stringify(sc));
+        check(`${liga}: et svar for en annen sone enn lagets egen (qaWhyZoneOverride) regnes av siden selv (${sc.lagA}, ${sc.andre})`,
+          !!sc.andre && sc.annenSone > 0 && sc.egenSone === 0, JSON.stringify(sc));
+        await pg.close();
+
+        // Filen gjelder ikke: siden regner selv, uten JS-feil.
+        const feil0 = errors.length;
+        const tilfeller = {
+          'feil avtrykk': JSON.stringify({...g, fingeravtrykk: g.fingeravtrykk.replace(/.$/, c => c === '0' ? '1' : '0')}),
+          'ugyldig': JSON.stringify({...g, sesonger: 1000}),
+          'mangler (ødelagt JSON)': filer[liga].slice(0, 5000),
+          'mangler (404)': null,
+        };
+        const utfall = {};
+        for (const [navn, inn] of Object.entries(tilfeller)) {
+          GRUNNLAG_MODUS = inn == null ? null : {innhold: {[liga]: inn}};
+          const pf = await aapneMaalt(url);
+          await ferdig(pf);
+          utfall[navn] = await pf.evaluate(async lagKode => {
+            const lag = eval(lagKode), z0 = __poster.filter(p => p.mode === 'zoneTask').length;
+            await qaCheerFor(lag);
+            return {status: GRUNNLAG_STATUS, N: lastMCN, MC_N, zoneTask: __poster.filter(p => p.mode === 'zoneTask').length - z0};
+          }, lagMedSone);
+          await pf.close();
+        }
+        check(`${liga}: feil avtrykk, feil N, ødelagt eller manglende fil: siden regner selv, uten JS-feil`,
+          Object.entries(utfall).every(([navn, u]) => navn.startsWith(u.status) && u.N === u.MC_N && u.zoneTask > 0) && errors.length === feil0,
+          JSON.stringify(utfall) + errors.slice(feil0).join('; '));
+
+        // Filen kommer sent (2,5 s): tabellen og et svar som står, regnes
+        // først av siden selv, og byttes til filens når den kommer.
+        GRUNNLAG_MODUS = {innhold: {[liga]: filer[liga]}, forsinkelse: 2500};
+        const ps = await aapneMaalt(url);
+        await ps.waitForFunction('typeof lastMC!=="undefined" && lastMC && lastMCFinal', {timeout: 120000, polling: 50});
+        const sen = await ps.evaluate(async lagKode => {
+          const lag = eval(lagKode), foer = {status: GRUNNLAG_STATUS, N: lastMCN};
+          const sel = document.getElementById('teamSelect'); sel.value = lag; sel.dispatchEvent(new Event('change'));
+          runQaQuestion('cheer', false, true);
+          const vent = f => new Promise(r => { const i = setInterval(() => { if (f()) { clearInterval(i); r(); } }, 20); });
+          const svarTekst = () => { const el = document.getElementById('qaAnswer'); return el && !el.className.includes('loading') ? el.textContent : null; };
+          await vent(() => svarTekst());
+          const svarFoer = svarTekst();
+          await vent(() => GRUNNLAG_STATUS !== 'venter');
+          await vent(() => { const el = document.getElementById('qaAnswer'); return el && !el.className.includes('loading') && qaAnswerKey === qaStateKey(); });
+          await new Promise(r => setTimeout(r, 300));
+          return {foer, etter: {status: GRUNNLAG_STATUS, N: lastMCN}, svarFoer, svarEtter: svarTekst(), fraFil: await qaCheerFor(lag)};
+        }, lagMedSone);
+        await ps.close();
+        check(`${liga}: kommer filen sent, regner siden selv først, og bytter tabellen og svaret som står til filens når den kommer`,
+          sen.foer.status === 'venter' && sen.foer.N === 10000 && sen.etter.status === 'i bruk' && sen.etter.N === 100000
+            && sen.svarEtter === sen.fraFil, JSON.stringify(sen).slice(0, 800));
+      }
+
+      // Tid til første prosenter i tabellen: ikke lengre med filen enn uten,
+      // heller ikke når den er treg. Median av fem lastinger per tilfelle.
+      const tidTil = async (liga, modus) => {
+        const tider = [];
+        for (let i = 0; i < 5; i++) {
+          GRUNNLAG_MODUS = modus;
+          const pg = await browser.newPage();
+          await pg.setViewport({width: 1400, height: 900});
+          const t0 = Date.now();
+          await pg.goto(base.replace('/eliteserien/', `/${liga}/`), {waitUntil: 'domcontentloaded'});
+          await pg.waitForFunction(() => { const c = document.querySelector('#tbl tbody tr td.gull'); return c && c.textContent.trim() !== ''; }, {timeout: 60000, polling: 10});
+          tider.push(Date.now() - t0);
+          await pg.close();
+        }
+        return tider.sort((a, b) => a - b)[2];
+      };
+      for (const liga of ['eliteserien', 'obos']) {
+        const uten = await tidTil(liga, null), med = await tidTil(liga, {innhold: {[liga]: filer[liga]}}),
+              treg = await tidTil(liga, {innhold: {[liga]: filer[liga]}, forsinkelse: 3000});
+        const grense = uten * 1.15 + 30;
+        check(`${liga}: tid til første prosenter i tabellen er ikke lengre med filen (${med} ms) eller en treg fil (${treg} ms) enn uten (${uten} ms)`,
+          med <= grense && treg <= grense, `grense ${Math.round(grense)} ms`);
+      }
+      GRUNNLAG_MODUS = null;
     }
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----

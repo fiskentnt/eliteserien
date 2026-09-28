@@ -3161,7 +3161,7 @@ function getWorker(){
       // Basis fanges FØR forkastingen under: åpner man en delt lenke, rekker
       // den tomme kjøringen ofte å bli forbigått av scenarioet før den er
       // ferdig, men tallene den gir er like fullt basissituasjonen.
-      if(mcScenarioFor.get(runId)==='' && data.done>=data.total){
+      if(mcScenarioFor.get(runId)==='' && data.done>=data.total && !GRUNNLAG){
         const b={}; TEAMS.forEach((t,i)=>b[t]=out[i]); BASE_MC=b;
       }
       if(data.done>=data.total){
@@ -3297,6 +3297,9 @@ function runMCAsync(N){
   // ikke selv endrer noe resultat).
   const scenarioKey = scenarioParts.join('_');
   if(scenarioKey===lastMCScenarioKey && lastMC) return;
+  // Dagens stilling uten scenario, og grunnlagsfilen er godkjent: tabellen
+  // kommer fra filen, uten simulering (for eksempel etter Nullstill).
+  if(scenarioKey==='' && GRUNNLAG){ grunnlagTilTabell(); return; }
   lastMCScenarioKey = scenarioKey;
   lastMCFinal = false;
   mcRunId++;
@@ -3712,7 +3715,7 @@ async function oppdaterNesteKampLinje(m){
   const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
   const idx = openMatches.indexOf(openMatches.find(x=>x.id===m.id));
   if(idx<0){ el.hidden = true; return; }
-  const key = `${lag}|${zone.key}|${m.id}|${scenarioKey}`;
+  const key = `${lag}|${zone.key}|${m.id}|${scenarioKey}|${GRUNNLAG?'fil':''}`;
   if(key===nmImpactKey) return;          // alt vist for dette scenarioet
   nmImpactKey = key;
   try{
@@ -4461,8 +4464,17 @@ function ensurePool(n){
 // hver ferdige oppgave; løftet løses med {id: {prob, pos}} når alle er ferdige
 // (pos = hele plasseringsfordelingen, bare når payload.wantAll er satt).
 function runZoneTasks(payload, tasks, onTask, gruppe){
-  const epoch = poolEpoker[gruppe] = (poolEpoker[gruppe]||0) + 1, results = {};
   const egen = gruppe.startsWith('impact:');   // egen gruppe: ryddes når den er ferdig
+  // Grunnlagsfilen har alle oppgavene: svaret kommer derfra, uten simulering.
+  // Et nytt kall i gruppen forkaster fortsatt oppgavene til det forrige.
+  const fraFil = grunnlagSvar(payload, tasks, gruppe);
+  if(fraFil){
+    if(!egen) poolEpoker[gruppe] = (poolEpoker[gruppe]||0) + 1;
+    Object.defineProperty(fraFil, 'sesonger', {value:GRUNNLAG.N});
+    return Promise.resolve().then(()=>{ if(onTask) tasks.forEach(t=>onTask(t.id, fraFil)); return fraFil; });
+  }
+  const epoch = poolEpoker[gruppe] = (poolEpoker[gruppe]||0) + 1, results = {};
+  Object.defineProperty(results, 'sesonger', {value:payload.N});
   const grunnlag = stillingsGrunnlag();
   ensurePool(Math.min(poolSize(), tasks.length));
   return new Promise(resolve=>{
@@ -4926,9 +4938,10 @@ function qaZoneFromPos(pos, n, zone){
 //                   viktigste kamp") og hvert lags neste kamp (kortet "Neste
 //                   kamp", "Hva betyr neste kamp?")
 // Hver oppgave har hele plasseringsfordelingen for alle lag, som antall
-// sesonger. Filen skal bare brukes når fingeravtrykket (grunnlagAvtrykk) er
+// sesonger. Siden bruker filen bare når fingeravtrykket (grunnlagAvtrykk) er
 // det samme som siden selv regner av dataene og koden den har lastet, og
-// ingen resultater er fylt inn. Siden bruker ikke filen ennå.
+// ingen resultater er fylt inn: da kommer tabellen og svarene fra samme fil.
+// Se grunnlagMottatt() under.
 const GRUNNLAG_VERSJON = 1, GRUNNLAG_N = 100000;
 function grunnlagOppgaver(openMatches){
   const medU = new Set(qaNextRoundMatches(openMatches).list.map(m=>openMatches.indexOf(m)));
@@ -4966,6 +4979,74 @@ function grunnlagEkstra(){ return null; }
 async function grunnlagAvtrykk(N = GRUNNLAG_N){
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(grunnlagInndata(N))));
   return Array.from(new Uint8Array(b), x=>x.toString(16).padStart(2,'0')).join('');
+}
+// SIDEN TAR FILEN I BRUK. Den hentes samtidig med de andre datafilene, men
+// siden venter ikke på den: tabellsimuleringen starter som før, og tallene
+// byttes til filens når den er lastet og godkjent. Godkjent betyr riktig
+// versjon, N og lag, alle oppgavene med en fordeling, og samme fingeravtrykk
+// som siden selv regner for dagens stilling uten scenario (også når en delt
+// lenke har fylt inn resultater: da gjelder filen når scenarioet tømmes).
+// Mangler filen, er den ødelagt, kommer den sent eller stemmer ikke
+// avtrykket, regner siden selv, som før.
+let GRUNNLAG = null;                  // den godkjente filen, se grunnlagMottatt
+let GRUNNLAG_STATUS = 'venter';       // venter | i bruk | mangler | ugyldig | feil avtrykk | feil
+function grunnlagFil(){ return 'data/grunnlag.json'; }   // testsiden: sin egen mappe
+const grunnlagTomtScenario = () => !matches.some(m=>m.hg!=null&&m.ag!=null);
+// fn() med alle innfylte resultater midlertidig fjernet (synkront, settes
+// tilbake straks): dagens stilling uten scenario.
+function grunnlagUtenScenario(fn){
+  const lagret = matches.map(m=>[m.hg, m.ag]);
+  matches.forEach(m=>{ m.hg=null; m.ag=null; });
+  try{ return fn(); } finally { matches.forEach((m,i)=>{ m.hg=lagret[i][0]; m.ag=lagret[i][1]; }); }
+}
+async function grunnlagMottatt(g){
+  if(!g){ GRUNNLAG_STATUS='mangler'; return; }
+  const n = TEAMS.length;
+  const ok = g.versjon===GRUNNLAG_VERSJON && g.sesonger===GRUNNLAG_N && Array.isArray(g.lag) && g.lag.join('|')===TEAMS.join('|')
+    && Array.isArray(g.oppgaver) && g.utfall && Array.isArray(g.utfall.base)
+    && g.oppgaver.every(o=>Array.isArray(o) && Array.isArray(g.utfall[o[0]]) && g.utfall[o[0]].length===n*n);
+  if(!ok){ GRUNNLAG_STATUS='ugyldig'; return; }
+  const tekst = grunnlagUtenScenario(()=>JSON.stringify(grunnlagInndata(GRUNNLAG_N)));
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(tekst));
+  const avtrykk = Array.from(new Uint8Array(b), x=>x.toString(16).padStart(2,'0')).join('');
+  if(avtrykk!==g.fingeravtrykk){ GRUNNLAG_STATUS='feil avtrykk'; return; }
+  GRUNNLAG = {fil:g, n, N:g.sesonger, oppg:new Map(g.oppgaver.map(o=>[o[0], o])), seed:hashStr('|impact')};
+  GRUNNLAG_STATUS = 'i bruk';
+  BASE_MC = grunnlagFordeling('base');
+  if(grunnlagTomtScenario()) grunnlagTilTabell();
+}
+// Fordelingen for én oppgave i samme form som tabellsimuleringen gir
+// (lag -> sjanse for hver plass).
+function grunnlagFordeling(id){
+  const u = GRUNNLAG.fil.utfall[id], n = GRUNNLAG.n, N = GRUNNLAG.N, o = {};
+  TEAMS.forEach((t,i)=>{ o[t] = u.slice(i*n, i*n+n).map(c=>c/N); });
+  return o;
+}
+// Tabellen fra filen. En pågående simulering av samme stilling forkastes
+// (mcRunId), så den ikke skriver over filens tall når den blir ferdig.
+function grunnlagTilTabell(){
+  mcRunId++;
+  lastMCScenarioKey = ''; lastMC = grunnlagFordeling('base'); lastMCN = GRUNNLAG.N; lastMCFinal = true;
+  fillOdds();
+}
+// Svaret på oppgavene fra filen, eller null: bare når ALLE oppgavene finnes
+// der (samme kamp, resultat og frø), stillingen er dagens uten scenario, og
+// svaret ikke gjelder en annen sone enn lagets egen (qaWhyZoneOverride).
+// Aldri en blanding av filen og poolen, så endringen mot utgangspunktet
+// alltid er fra samme kjøring. Regningen av selve filen (gruppe 'grunnlag')
+// bruker aldri filen.
+function grunnlagSvar(payload, tasks, gruppe){
+  if(!GRUNNLAG || gruppe.startsWith('grunnlag') || qaWhyZoneOverride || payload.seed!==GRUNNLAG.seed || !grunnlagTomtScenario()) return null;
+  const n = GRUNNLAG.n, N = GRUNNLAG.N, ut = {};
+  for(const t of tasks){
+    const f = GRUNNLAG.oppg.get(t.id);
+    if(t.over || !f || f[1]!==t.idx || JSON.stringify(f[2])!==JSON.stringify(t.score)) return null;
+    const u = GRUNNLAG.fil.utfall[t.id];
+    let treff = 0;
+    for(let k=payload.zone.lo-1; k<=payload.zone.hi-1; k++) treff += u[payload.ti*n+k];
+    ut[t.id] = {prob:treff/N, pos:payload.wantAll ? u.map(c=>c/N) : null};
+  }
+  return ut;
 }
 // Regner innholdet i filen. Kjøres av scripts/lag_grunnlag.js, ikke av siden
 // selv: alle oppgavene i poolen med samme frø, og for hver oppgave hele
@@ -5055,7 +5136,7 @@ async function qaKeyRoundData(opts){
   // Jevn runde: kampene som ligger nær lederen skal ikke skjules bak en
   // påstand om ÉN viktigste kamp (se QA_KEY_CLOSE).
   const close = rows.slice(1).filter(r=>r.total >= rows[0].total*grense);
-  return {round:nr.round, list:rows, best:rows[0], close, sesonger:N, grense};
+  return {round:nr.round, list:rows, best:rows[0], close, sesonger:res.sesonger || N, grense};
 }
 // Tabellens tall for sonen (utgangspunktet svarene regner endringen oppå).
 function qaZoneNow(team, key){
@@ -5962,7 +6043,9 @@ let qaActiveId = null, qaRequestSeq = 0, qaExtraOpen = false;
 // om for den nye tilstanden (se renderQaButtons), aldri stående igjen.
 let qaAnswerKey = null, qaAnswerTeam = null;
 const qaScenarioKey = () => matches.filter(m=>m.hg!=null&&m.ag!=null).map(m=>`${TI[m.home]}.${TI[m.away]}.${m.hg}.${m.ag}`).join('_');
-const qaStateKey = () => `${SELECTED_TEAM}|${qaScenarioKey()}`;
+// Tas grunnlagsfilen i bruk mens et svar står, regnes svaret om fra filen,
+// så tabellen og svaret kommer fra samme fil.
+const qaStateKey = () => `${SELECTED_TEAM}|${qaScenarioKey()}|${GRUNNLAG?'fil':''}`;
 // Tabell-simuleringen for gjeldende scenario er ferdig (svarene bygger på den).
 const qaReady = () => !!(lastMC && lastMCFinal && lastMCScenarioKey===qaScenarioKey());
 function renderQaButtons(){
@@ -6771,6 +6854,9 @@ async function updateOddsQuotaNote(){
 // nettleseren, kun rask JSON-henting.
 async function boot(){
   let MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN, ACCURACY_IN;
+  // Grunnlagsfilen hentes samtidig med de andre, men utenfor Promise.all:
+  // siden venter ikke på den (se grunnlagMottatt).
+  const GRUNNLAG_P = fetch(grunnlagFil()).then(r=>r.ok?r.json():null).catch(()=>null);
   try{
     [MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN, ACCURACY_IN] = await Promise.all([
       fetch('data/matches.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/matches.json'); return r.json(); }),
@@ -7046,6 +7132,7 @@ async function boot(){
   await applyScenario();
   if(!hadScenario) await updateAutoFill();
   render();
+  GRUNNLAG_P.then(grunnlagMottatt).catch(err=>{ GRUNNLAG_STATUS='feil'; console.warn('Grunnlagsfilen', err); });
 }
 boot();
 </script>
