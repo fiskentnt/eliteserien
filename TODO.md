@@ -357,6 +357,15 @@ failsafe-tester grønne mot tabellkalkulator.no.
   den alderen siden faktisk bruker (tidspunktet i prognoseloggen, ikke
   sluttoddsen). Ingen endring av vekten før det er gjort.
 
+- **Grunnlagsfilen på kampdager tidlig i 2027-sesongen.** Filen med svarene
+  og tabellen for dagens stilling regnes med fast N = 100 000 på én maskin
+  (målt 28.9.2026: 328 s for Eliteserien med 72 åpne kamper). Tiden vokser
+  med antall åpne kamper og oppgaver, så ved sesongstart (om lag 240 åpne
+  kamper) tar én regning langt over en time, og filen vil ofte være
+  utdatert på kampdager -- da regner siden selv, som i dag. Vurder da å dele
+  regningen på flere parallelle jobber (en matrise per bit av oppgavene),
+  hvis filen ofte er utdatert på kampdager.
+
 ## Etter sesongslutt 8. november 2026
 
 - **Kalibrer OBOS-parameterne på OBOS-tall, med tog- og testsett.**

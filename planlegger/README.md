@@ -24,7 +24,7 @@ og lar repoet bestemme:
 | `obos-results.yml` | `should_fetch.py obos` avgjør — sparer OddsPapi-kvoten |
 | `arkiver-kildehtml.yml` | kampvinduet i `arkiver_kildehtml.py` avgjør |
 | `prekick-odds.yml` | vinduet 15–60 minutter før avspark i `prekick_odds.py` avgjør |
-| `update-odds.yml` | tidsporten i `should_fetch_odds.py` avgjør: The Odds API kalles høyst hver 12. time (over 48 t til neste avspark), hver 4. (6–48 t) eller hver time (under 6 t), med én time sperre etter et mislykket forsøk og budsjettvakt (under 100 + 4 kreditter per gjenstående dag: hver 12. time) |
+| `update-odds.yml` | tidsporten i `should_fetch_odds.py` avgjør: The Odds API kalles én gang per døgn (norsk tid), og på kampdager én gang i vinduet 60–15 minutter før hvert avspark, så sluttoddsen i `odds_captured.json` er fra rett før kampen; bare med kamp innen 7 dager, med én time sperre etter et mislykket forsøk og budsjettvakt (under 100 + 4 kreditter per gjenstående dag: annenhver dag, ingen sluttodds) |
 
 En manuell kjøring **uten** flagget tvinger fortsatt henting, som før.
 

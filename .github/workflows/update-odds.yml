@@ -34,8 +34,10 @@ jobs:
       # PORTEN FØRST. Planleggeren (planlegger/worker.js) starter workflowen
       # hvert tiende minutt i 09-21 UTC; porten avgjør om det hentes: kamper
       # innen 7 dager, kvoten ikke lav, én time sperre etter et mislykket
-      # forsøk, og tidsporten (hver 12. / 4. / 1. time etter tiden til neste
-      # avspark). Se scripts/should_fetch_odds.py.
+      # forsøk, og tidsporten: én henting per døgn (norsk tid), og på
+      # kampdager én i vinduet 60-15 minutter før hvert avspark (sluttoddsen);
+      # annenhver dag og ingen sluttodds under budsjettvakten.
+      # Se scripts/should_fetch_odds.py.
       - name: Sjekk om det er noen vits (tidsport, kamper innen 7 dager, kvote ikke lav)
         id: gate
         env:
