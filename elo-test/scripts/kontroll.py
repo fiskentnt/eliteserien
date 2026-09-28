@@ -372,9 +372,16 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # (e83cf10: fingeravtrykket og regningen; bfeb464: siden bruker filen) og
 # tekstene om 100 000 simuleringer, treffsikkerheten og sluttoddsen
 # (172b0c6, 1f304c6, aaf12ed, d5dc74f), vanlige anførselstegn (e8e9f81) og
-# banneret fra grunnlagsfilen (938d959), flettet inn med git merge-file. Der
-# testsiden har sin egen tekst (ELO-Odds 90), er den beholdt, med samme ordlyd
-# om 100 000 og 10 000 simuleringer. Basisen er derfor 938d959.
+# banneret fra grunnlagsfilen (938d959) og banneret med én kamp uten den døde
+# grenen i qaKeyBanner, flettet inn med git merge-file. Der testsiden har sin
+# egen tekst (ELO-Odds 90), er den beholdt, med samme ordlyd om 100 000 og
+# 10 000 simuleringer.
+#
+# BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
+# eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
+# ved behov (den nyeste med samme innhold). Før sto commit-hashen her, og den
+# ble ugyldig hver gang commiten ble rebaset før push (to ganger 28.9.2026),
+# og en commit som endret begge sidene, kunne ikke peke på seg selv.
 # Endres produksjonssiden etterpaa, drifter de fra hverandre: en
 # rettelse eller ny funksjon der kommer ikke med her. Det er ikke en feil i
 # testsiden, men noen maa ta stilling til det -- derfor en advarsel med antall
@@ -384,41 +391,42 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_COMMIT = "938d959a86a1f3fbafc9ccf6a8c463e9352e921f"
-BASE_SHA = "54f874a2b532ec442be89ba2707f2038f51dc215f0d3fd222a77706a251633b4"
+BASE_SHA = "f667fb46dbc4781395d1f02f4866abaf8b341f8d2ae035dd7ab0ccbb8f568ea2"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
     print(f"  OK    produksjonssiden er uendret siden kopien ble tatt "
-          f"({BASE_COMMIT[:7]}, sha256 {BASE_SHA[:16]}...)")
+          f"(sha256 {BASE_SHA[:16]}...)")
 else:
     def _basis():
-        """Basisversjonen fra git. I CI er klonen grunn, saa commiten hentes
-        ved behov; mangler den likevel, returneres None."""
+        """(commit, tekst) for den nyeste versjonen av eliteserien/index.html
+        med sha256 BASE_SHA, eller None. I CI er klonen grunn, saa hele
+        historikken hentes ved behov."""
         for forsok in (0, 1):
-            r = subprocess.run(["git", "-C", str(ROT), "show",
-                                f"{BASE_COMMIT}:eliteserien/index.html"],
-                               capture_output=True, text=True)
-            if r.returncode == 0:
-                return r.stdout
+            r = subprocess.run(["git", "-C", str(ROT), "log", "--format=%H", "--",
+                                "eliteserien/index.html"], capture_output=True, text=True)
+            for _c in r.stdout.split():
+                v = subprocess.run(["git", "-C", str(ROT), "show", f"{_c}:eliteserien/index.html"],
+                                   capture_output=True)
+                if v.returncode == 0 and hashlib.sha256(v.stdout).hexdigest() == BASE_SHA:
+                    return _c, v.stdout.decode("utf-8")
             if forsok == 0:
-                subprocess.run(["git", "-C", str(ROT), "fetch", "--quiet",
-                                "--depth=1", "origin", BASE_COMMIT],
+                subprocess.run(["git", "-C", str(ROT), "fetch", "--quiet", "--unshallow", "origin"],
                                capture_output=True, text=True)
         return None
     import difflib as _dl
     _b = _basis()
     if _b is None:
-        _txt = (f"produksjonssiden er ENDRET siden {BASE_COMMIT[:7]} "
-                f"(sha256 {_naa[:16]}...), men basisversjonen kunne ikke hentes, "
-                f"saa antall endrede linjer er ukjent")
+        _txt = (f"produksjonssiden er ENDRET siden kopien ble tatt "
+                f"(sha256 {_naa[:16]}..., basis {BASE_SHA[:16]}...), men basisversjonen "
+                f"finnes ikke i historikken, saa antall endrede linjer er ukjent")
     else:
-        _a = _b.splitlines(); _c = _prod.read_text(encoding="utf-8").splitlines()
+        _a = _b[1].splitlines(); _c = _prod.read_text(encoding="utf-8").splitlines()
         _sm = _dl.SequenceMatcher(None, _a, _c, autojunk=False)
-        _fj = sum(i2 - i1 for t, i1, i2, j1, j2 in _sm.get_opcodes() if t != "equal")
-        _lt = sum(j2 - j1 for t, i1, i2, j1, j2 in _sm.get_opcodes() if t != "equal")
+        _fj = sum(i2 - i1 for t_, i1, i2, j1, j2 in _sm.get_opcodes() if t_ != "equal")
+        _lt = sum(j2 - j1 for t_, i1, i2, j1, j2 in _sm.get_opcodes() if t_ != "equal")
         _txt = (f"produksjonssiden er ENDRET siden kopien ble tatt i "
-                f"{BASE_COMMIT[:7]}: {_fj} linjer fjernet/endret og {_lt} "
+                f"{_b[0][:7]}: {_fj} linjer fjernet/endret og {_lt} "
                 f"lagt til/endret. Endringene er IKKE med i elo-test/index.html.")
     print(f"  ADVARSEL  {_txt}")
     if _os.environ.get("GITHUB_ACTIONS"):

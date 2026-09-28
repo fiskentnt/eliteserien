@@ -5168,14 +5168,12 @@ function keymatchFra(d){
     zone:d.best.topZone.key, teams:d.best.teams.map(t=>t.team)};
 }
 // Banner-linja (én setning). Bygges her, ikke i workflowen, så ordlyden bare
-// finnes ett sted -- keymatchFra over bruker den.
+// finnes ett sted -- keymatchFra over bruker den. Den nevner bare ÉN kamp,
+// også når flere er omtrent like viktige (data.close): banneret skal ikke ta
+// mer plass, og svaret i "Spør om tabellen" nevner de andre.
 function qaKeyBanner(data){
   if(!data || !data.best || !data.best.teams.length) return null;
-  const b = data.best, k = data.close.length;
-  // Er flere kamper omtrent like viktige, sies DET, i stedet for et "tett foran
-  // to andre" som ikke forteller leseren hva det betyr. Listen står i svaret.
-  if(k){ const ord = QA_NUM[k+1] || String(k+1);
-    return `${b.m.home} mot ${b.m.away} påvirker ${b.topZone.strid} mest denne runden.`; }
+  const b = data.best;
   return `${b.m.home} mot ${b.m.away} påvirker ${b.topZone.strid} mest denne runden.`;
 }
 async function qaKeyRound(){

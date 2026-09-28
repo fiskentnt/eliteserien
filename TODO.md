@@ -302,6 +302,18 @@ vernene er bygget for.
 
 Runde 23 åpner 9. oktober 19.00 med Brann mot Viking.
 
+## 25. oktober 2026: flytt cron-tidene til vintertid
+
+Klokkeslettene i `.github/workflows/*.yml` er UTC og forutsetter norsk
+sommertid (UTC+2). Når vintertiden begynner 25. oktober, går jobbene derfor
+en time TIDLIGERE på norsk klokke: 05.17 UTC er 07.17 om sommeren og 06.17
+om vinteren. For å beholde de norske klokkeslettene skyves UTC-tidene én
+time fram. Se kommentaren i `update-data.yml`.
+
+Commiten er forberedt og ligger lokalt på grenen `vintertid` (ikke pushet).
+Push den rett før 25. oktober, etter en rebase på main. Skyv tilbake igjen
+når sommertiden begynner i slutten av mars 2027.
+
 ## Når den nye kjeden har stått stabilt: fjern returveien
 
 `reconcile_gammel()` i `scripts/update_data.py` er den gamle
@@ -343,9 +355,10 @@ failsafe-tester grønne mot tabellkalkulator.no.
   bare hvis forskjellen er utenfor støyen.
 
 - **Vurder oddsvekten (ODDS_W, i dag 70 % marked) på nytt.** Tidligst når
-  `update-odds.yml` går via planleggeren (tidsporten 12/4/1 time) og
   prognoseloggene (`prekick.json`, `prognoselogg/`) har frosne prognoser fra
-  ekte kamper med resultat.
+  ekte kamper med resultat. `update-odds.yml` går via planleggeren siden 28.
+  september 2026, med én henting per døgn; oddsen rett før avspark kommer fra
+  «Odds nær avspark».
 
   Bakgrunn: labens walk-forward-test (`resultater/oddsvekter_2026`, 26.
   september 2026) fant at mer marked traff bedre ved avspark, og at bare
@@ -471,11 +484,6 @@ failsafe-tester grønne mot tabellkalkulator.no.
   Fargene i dag er Wikipedias draktmalfarger. De treffer fargen, men er ikke
   klubbenes eksakte merkevarefarger (Stabæk og Ranheim er begge «malens blå»).
 
-- **Flytt cron-tidene når vintertiden begynner (25. oktober 2026).**
-  Klokkeslettene i `.github/workflows/*.yml` er UTC og forutsetter norsk
-  sommertid, så alle jobbene går en time for sent fra den datoen. Se
-  kommentaren i `update-data.yml`.
-
 ## Etter sesongslutt 8. november 2026: overgangen til 2027
 
 Kartlagt 24. september 2026. **Ikke start før sesongen er ferdigspilt.**
@@ -500,9 +508,11 @@ treffsikkerhet som statisk data:
     eliteserien/2026/index.html
     eliteserien/2026/data/frosset.json
 
-Disse 9 filene utgjør sesongtilstanden og må fryses: `matches.json`,
+Disse 11 filene utgjør sesongtilstanden og må fryses: `matches.json`,
 `fixtures.json`, `model.json`, `odds.json`, `odds_closing.json`,
-`accuracy.json`, `history.json`, `lastmatch.json`, `keymatch.json`.
+`accuracy.json`, `history.json`, `lastmatch.json`, `keymatch.json`,
+`prekick.json` (prognosene før avspark, som treffsikkerheten og «forrige
+kamp» regnes av) og `grunnlag.json` (tabellen og svarene regnet på forhånd).
 
 **Risikabelt.** Fryser vi for tidlig blir tallene feil for godt, og fryser vi
 uten å verifisere oppdager vi det ikke før noen spør.
