@@ -342,6 +342,21 @@ failsafe-tester grønne mot tabellkalkulator.no.
   runder, altså tidligst i slutten av oktober, før tallet betyr noe. Bytt
   bare hvis forskjellen er utenfor støyen.
 
+- **Vurder oddsvekten (ODDS_W, i dag 70 % marked) på nytt.** Tidligst når
+  `update-odds.yml` går via planleggeren (tidsporten 12/4/1 time) og
+  prognoseloggene (`prekick.json`, `prognoselogg/`) har frosne prognoser fra
+  ekte kamper med resultat.
+
+  Bakgrunn: labens walk-forward-test (`resultater/oddsvekter_2026`, 26.
+  september 2026) fant at mer marked traff bedre ved avspark, og at bare
+  marked slo 70/30 (−0,0043 ± 0,0014 i log loss, 2 384 kamper). Den brukte
+  sluttodds; oddsen siden blander inn er ofte eldre, og effekten av
+  blandingen på sluttabellen er ikke testet.
+
+  Test da blandingen både på enkeltkamper og på sluttabellen, med odds av
+  den alderen siden faktisk bruker (tidspunktet i prognoseloggen, ikke
+  sluttoddsen). Ingen endring av vekten før det er gjort.
+
 ## Etter sesongslutt 8. november 2026
 
 - **Kalibrer OBOS-parameterne på OBOS-tall, med tog- og testsett.**
