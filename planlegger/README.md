@@ -23,6 +23,8 @@ og lar repoet bestemme:
 | `update-data.yml` | `should_fetch.py` avgjør som ved schedule |
 | `obos-results.yml` | `should_fetch.py obos` avgjør — sparer OddsPapi-kvoten |
 | `arkiver-kildehtml.yml` | kampvinduet i `arkiver_kildehtml.py` avgjør |
+| `prekick-odds.yml` | vinduet 15–60 minutter før avspark i `prekick_odds.py` avgjør |
+| `update-odds.yml` | tidsporten i `should_fetch_odds.py` avgjør: The Odds API kalles høyst hver 12. time (over 48 t til neste avspark), hver 4. (6–48 t) eller hver time (under 6 t), med én time sperre etter et mislykket forsøk og budsjettvakt (under 100 + 4 kreditter per gjenstående dag: hver 12. time) |
 
 En manuell kjøring **uten** flagget tvinger fortsatt henting, som før.
 
@@ -127,7 +129,7 @@ slingringsmonnet, sender healthchecks e-post.
 
 | Sjekk | Livstegn når | Hemmelighet |
 |---|---|---|
-| `tabellkalkulator-planlegger` | workeren fikk 204 fra GitHub for alle fire utløsningene i en planlagt runde | `HEALTHCHECK_URL` i Cloudflare |
+| `tabellkalkulator-planlegger` | workeren fikk 204 fra GitHub for alle utløsningene i en planlagt runde | `HEALTHCHECK_URL` i Cloudflare |
 | `tabellkalkulator-update-data` | en kjøring av `update-data.yml` er grønn (siste steg) | `HEALTHCHECK_UPDATE_DATA` i GitHub |
 | `tabellkalkulator-obos-results` | en kjøring av `obos-results.yml` er grønn (siste steg) | `HEALTHCHECK_OBOS` i GitHub |
 

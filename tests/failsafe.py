@@ -542,6 +542,71 @@ def main():
         except NTF.EsDataError as e:
             check("NTF: ugyldig dato på terminlisten stopper fortsatt fetch_all", "manglende dato" in str(e), str(e))
 
+    # 20. Tidsporten for The Odds API (update-odds.yml via planleggeren hvert
+    # tiende minutt). Porten avgjør, uten filer: hver 12. time over 48 timer
+    # til neste avspark, hver 4. ved 6-48 timer, hver time under 6 timer (og
+    # derfor fram til siste avspark den dagen); én time sperre etter et
+    # mislykket forsøk; budsjettvakt (under 100 + 4 per gjenstående dag i
+    # måneden: tilbake til 12 timer); ingen henting uten kamp innen 7 dager
+    # eller med stanset kvote; FORCE tvinger. Falsk klokke.
+    import should_fetch_odds as SFO
+    from datetime import datetime as _dt, timezone as _tz, timedelta as _td
+    naa = _dt(2026, 10, 7, 12, 0, tzinfo=_tz.utc)          # onsdag, midt i måneden
+    def fx(*kamper):   # (dato, tid, spilt) -> fixtures.json-form
+        return [{"round": 23, "matches": [{"home": f"H{i}", "away": f"B{i}", "date": d, "time": t, "played": sp}
+                                          for i, (d, t, sp) in enumerate(kamper)]}]
+    def kvote(timer_siden, igjen=400, mnd=None):
+        t = naa - _td(hours=timer_siden)
+        return {"remaining": igjen, "checked_at": (t if mnd is None else mnd).isoformat()}
+    def v(fix, q, st=None, force=False, n=naa):
+        return SFO.vurder(n, fix, q, st, force=force)[0]
+    # neste avspark 9.10 19:00 norsk = 17:00 UTC, 53 timer fram: 12 timer
+    langt = fx(("2026-10-09", "19:00", False))
+    check("odds-port: over 48 t til avspark: 11 t siden siste henting -> vent", v(langt, kvote(11)) is False)
+    check("odds-port: over 48 t til avspark: 13 t siden siste henting -> hent", v(langt, kvote(13)) is True)
+    # neste avspark 8.10 19:00 norsk = 17:00 UTC, 29 timer fram: 4 timer
+    naer = fx(("2026-10-08", "19:00", False))
+    check("odds-port: 6-48 t til avspark: 3 t siden -> vent, 5 t siden -> hent",
+          v(naer, kvote(3)) is False and v(naer, kvote(5)) is True)
+    # neste avspark i dag 17:00 norsk = 15:00 UTC, 3 timer fram: hver time
+    idag = fx(("2026-10-07", "17:00", False), ("2026-10-07", "20:00", False))
+    check("odds-port: under 6 t til avspark: 50 min siden -> vent, 70 min siden -> hent",
+          v(idag, kvote(50 / 60)) is False and v(idag, kvote(70 / 60)) is True)
+    # etter første avspark (16:00 UTC): neste er dagens siste, 20:00 norsk = 18:00 UTC -> fortsatt hver time
+    etter = naa.replace(hour=16)
+    check("odds-port: mellom to avspark samme dag gjelder fortsatt hver time",
+          SFO.intervall_timer(etter, idag)[0] == 1)
+    # sperre: forsøk for 30 min siden etter siste vellykkede -> vent, selv om intervallet er passert
+    st30 = {"siste_forsok": (naa - _td(minutes=30)).isoformat()}
+    st70 = {"siste_forsok": (naa - _td(minutes=70)).isoformat()}
+    check("odds-port: mislykket forsøk for 30 min siden -> sperre; for 70 min siden -> hent",
+          v(langt, kvote(20), st30) is False and v(langt, kvote(20), st70) is True)
+    check("odds-port: et forsøk som GIKK BRA (eldre enn siste henting) gir ingen sperre",
+          v(idag, kvote(70 / 60), {"siste_forsok": (naa - _td(minutes=75)).isoformat()}) is True)
+    # budsjettvakt: 7.10, 25 dager igjen -> krav 100 + 4*25 = 200
+    check("odds-port: budsjettvakten: 190 kreditter igjen -> tilbake til 12 t (2 t siden -> vent)",
+          v(idag, kvote(2, igjen=190)) is False and v(idag, kvote(13, igjen=190)) is True)
+    check("odds-port: budsjettvakten slår ikke til med nok kreditter (210 igjen, 2 t siden -> hent)",
+          v(idag, kvote(2, igjen=210)) is True)
+    check("odds-port: lavt tall fra FORRIGE måned teller ikke i budsjettvakten",
+          v(idag, kvote(0, igjen=120, mnd=_dt(2026, 9, 30, 20, 0, tzinfo=_tz.utc))) is True)
+    check("odds-port: ingen uspilt kamp innen 7 dager -> ingen henting",
+          v(fx(("2026-10-20", "19:00", False)), kvote(48)) is False and v(fx(("2026-10-08", "19:00", True)), kvote(48)) is False)
+    check("odds-port: stanset kvote denne måneden -> ingen henting",
+          v(idag, {"remaining": 90, "checked_at": (naa - _td(hours=5)).isoformat(), "stopped_until_month": "2026-10"}) is False)
+    check("odds-port: FORCE tvinger henting", v(idag, kvote(0), st30, force=True) is True)
+    check("odds-port: ingen tidligere henting -> hent", v(idag, None) is True)
+    wf = (ROOT / ".github" / "workflows" / "update-odds.yml").read_text(encoding="utf-8")
+    steg = wf.split("\n      - ")
+    i_port = next((i for i, x in enumerate(steg) if "should_fetch_odds.py" in x), -1)
+    i_ark = next((i for i, x in enumerate(steg) if "arkiver_til_lab.sh for-henting" in x), -1)
+    check("update-odds.yml: porten står foran arkiveringen, som bare kjøres når porten er åpen",
+          0 <= i_port < i_ark and "if: steps.gate.outputs.should_fetch == 'true'" in steg[i_ark], f"port {i_port}, arkiv {i_ark}")
+    check("update-odds.yml: siste forsøk (odds_hentestatus.json) committes, også når hentingen feiler",
+          "git add eliteserien/data/odds_hentestatus.json" in wf)
+    check("update-odds.yml deler køgruppe med update-data.yml (begge skriver model.json)",
+          "group: update-data" in wf and "group: update-data" in (ROOT / ".github" / "workflows" / "update-data.yml").read_text(encoding="utf-8"))
+
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare
     # kall som aldri skjedde, av selve testene.

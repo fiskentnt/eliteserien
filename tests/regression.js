@@ -2407,7 +2407,7 @@ async function main() {
 
     // ---- Dødmannsknappen: livstegn bare når alt gikk bra ----
     // planlegger/worker.js sender livstegn til healthchecks.io bare etter en
-    // PLANLAGT runde innenfor vinduet der alle fire utløsningene fikk 204.
+    // PLANLAGT runde innenfor vinduet der alle utløsningene fikk 204.
     // Feiler en runde, sendes ingenting (varselet skal komme når noe har vært
     // galt en stund, ikke ved hver feil), og aldri til /fail. update-data.yml
     // og obos-results.yml sender livstegn i SISTE steg, bare når jobben er
@@ -2435,17 +2435,20 @@ async function main() {
                 fail: kall.filter(u => u.includes('/fail')).length};
       };
       const inne = '2026-10-02T12:00:00Z', ute = '2026-10-02T23:00:00Z';
+      const liste = (kilde.match(/const WORKFLOWS = \[([\s\S]*?)\];/) || [])[1] || '';
+      const antall = (liste.match(/"[a-z-]+\.yml"/g) || []).length;
+      check('planleggeren: WORKFLOWS har update-odds.yml (tidsporten avgjør om The Odds API kalles)', /"update-odds\.yml"/.test(liste) && antall >= 5, `${antall} workflows`);
       const r1 = await kjor({utc: inne});
-      check('planleggeren: planlagt runde, alle 204: ett livstegn', r1.utlost === 4 && r1.ping.length === 1 && r1.ping[0] === 'https://hc-ping.com/test', JSON.stringify(r1));
+      check('planleggeren: planlagt runde, alle 204: ett livstegn', r1.utlost === antall && r1.ping.length === 1 && r1.ping[0] === 'https://hc-ping.com/test', JSON.stringify(r1));
       const r2 = await kjor({utc: inne, status: u => u.includes('update-data') ? 500 : 204});
-      check('planleggeren: én utløsning feilet: ingen livstegn, ingen /fail', r2.utlost === 4 && r2.ping.length === 0 && r2.fail === 0, JSON.stringify(r2));
+      check('planleggeren: én utløsning feilet: ingen livstegn, ingen /fail', r2.utlost === antall && r2.ping.length === 0 && r2.fail === 0, JSON.stringify(r2));
       const r3 = await kjor({utc: ute});
       check('planleggeren: utenfor vinduet 09-21 UTC: ingen utløsning, ingen livstegn', r3.utlost === 0 && r3.ping.length === 0, JSON.stringify(r3));
       const r4 = await kjor({utc: inne, manuell: true});
-      check('planleggeren: manuell utløsning teller ikke som livstegn', r4.utlost === 4 && r4.ping.length === 0, JSON.stringify(r4));
+      check('planleggeren: manuell utløsning teller ikke som livstegn', r4.utlost === antall && r4.ping.length === 0, JSON.stringify(r4));
       const r5 = await kjor({utc: inne, env: {HEALTHCHECK_URL: ''}});
       const r6 = await kjor({utc: inne, env: {GITHUB_TOKEN: ''}});
-      check('planleggeren: uten HEALTHCHECK_URL eller GITHUB_TOKEN: ingen livstegn, ingen krasj', r5.utlost === 4 && r5.ping.length === 0 && r6.utlost === 0 && r6.ping.length === 0, JSON.stringify({r5, r6}));
+      check('planleggeren: uten HEALTHCHECK_URL eller GITHUB_TOKEN: ingen livstegn, ingen krasj', r5.utlost === antall && r5.ping.length === 0 && r6.utlost === 0 && r6.ping.length === 0, JSON.stringify({r5, r6}));
       check('planleggeren: koden sender aldri til /fail', !kilde.includes('/fail'), '');
       for (const [wf, navn] of [['update-data.yml', 'HEALTHCHECK_UPDATE_DATA'], ['obos-results.yml', 'HEALTHCHECK_OBOS']]) {
         const t = fs.readFileSync(path.join(ROOT, '.github', 'workflows', wf), 'utf8');
