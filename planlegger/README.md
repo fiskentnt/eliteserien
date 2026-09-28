@@ -117,9 +117,70 @@ i referrer-headeren og i nettleserhistorikken.
 Til slutt: sjekk i Actions at kjøringene dukker opp som `workflow_dispatch`,
 og at portene stopper dem når det ikke er noe å gjøre.
 
+## Dødmannsknapp (healthchecks.io)
+
+Varsel når noe har vært galt en stund, uten åpen økt, Mac eller GitHub sin
+cron. Tre sjekker hos healthchecks.io, hver med sin hemmelige ping-adresse.
+Hver av dem får et livstegn bare når alt gikk bra; feiler en runde eller en
+kjøring, sendes ingenting. Kommer det ikke livstegn innenfor tidsplanen pluss
+slingringsmonnet, sender healthchecks e-post.
+
+| Sjekk | Livstegn når | Hemmelighet |
+|---|---|---|
+| `tabellkalkulator-planlegger` | workeren fikk 204 fra GitHub for alle fire utløsningene i en planlagt runde | `HEALTHCHECK_URL` i Cloudflare |
+| `tabellkalkulator-update-data` | en kjøring av `update-data.yml` er grønn (siste steg) | `HEALTHCHECK_UPDATE_DATA` i GitHub |
+| `tabellkalkulator-obos-results` | en kjøring av `obos-results.yml` er grønn (siste steg) | `HEALTHCHECK_OBOS` i GitHub |
+
+Adressene er hemmeligheter: den som har dem, kan sende falske livstegn og
+skjule et stopp. De skal aldri i koden, `wrangler.toml`, git eller en chat.
+Mangler en hemmelighet, sendes det ikke livstegn, og ingenting annet endres.
+Et livstegn som ikke kommer fram, kan aldri gjøre en kjøring rød.
+
+### Oppsett hos healthchecks.io
+
+1. Gratis konto på healthchecks.io (20 sjekker og e-post er gratis).
+2. For HVER av de tre sjekkene over: **Add Check**, navn som i tabellen,
+   **Schedule → Cron**, uttrykket `*/10 9-21 * * *`, tidssone **UTC**,
+   **Grace time 60 minutter**. Utenfor 09-21 UTC venter den ingen livstegn,
+   så natten gir ikke varsel.
+3. **Integrations → Email**: la «Notify when a check goes **down**» stå på,
+   og skru **av** «Notify when a check goes **up**». Du får da e-post når en
+   sjekk har vært uten livstegn i om lag en time, og ikke når den kommer
+   tilbake.
+4. Kopier ping-adressen til hver sjekk (`https://hc-ping.com/<uuid>`).
+
+### Hemmelighetene
+
+    # Cloudflare (planleggeren), fra planlegger/:
+    npx wrangler secret put HEALTHCHECK_URL
+    # lim inn adressen til tabellkalkulator-planlegger når den spør
+
+    # GitHub (jobbene), fra repo-roten:
+    gh secret set HEALTHCHECK_UPDATE_DATA
+    gh secret set HEALTHCHECK_OBOS
+    # hver av dem spør om verdien og leser den uten å vise den
+
+Eller på github.com: **Settings → Secrets and variables → Actions → New
+repository secret**. Gi aldri verdien som argument på kommandolinjen.
+
+### Publiser og kontroller
+
+    cd planlegger && npx wrangler deploy
+
+Koden i repoet og den publiserte workeren skal være like. Etter 10-20
+minutter (innenfor vinduet) skal alle tre sjekkene stå som «up» med livstegn
+hvert tiende minutt. «Send test notification» i healthchecks viser at
+e-posten kommer fram.
+
+Dette fanger at planleggeren eller en av jobbene har stått stille eller vært
+rød i om lag en time. Det fanger ikke at dataene er utdaterte selv om alt er
+grønt (en kilde som leverer gamle tall uten å feile).
+
 ## Når tokenen går ut
 
-Planleggeren slutter å virke uten å si fra -- dispatch svarer 401 og
-`scheduled` logger det, men ingen ser Cloudflare-loggen til daglig. Det
+Uten dødmannsknappen slutter planleggeren å virke uten å si fra -- dispatch
+svarer 401 og `scheduled` logger det, men ingen ser Cloudflare-loggen til
+daglig. Med den (over) kommer det ikke livstegn, og du får e-post etter om lag
+en time. Det
 synlige tegnet er at kjøringene faller tilbake til GitHub sin egen kadens,
 altså rundt fem i døgnet. Derfor står utløpsdatoen i `TODO.md`.

@@ -75,7 +75,36 @@ function likeStrenger(a, b) {
 }
 
 
-async function kjor(env) {
+// DØDMANNSKNAPP (healthchecks.io, se README). Etter en planlagt runde der
+// ALLE utløsningene ble godtatt av GitHub (204), får healthchecks et livstegn.
+// Feiler en runde, sendes ingenting -- det er meningen: varselet skal komme
+// når noe har vært galt en stund (ingen ping innenfor tidsplanen pluss
+// slingringsmonnet), ikke ved hver enkelt feil. Adressen er en HEMMELIGHET
+// (HEALTHCHECK_URL): den som har den, kan sende falske livstegn og skjule at
+// planleggeren har stoppet.
+async function livstegn(env, resultater) {
+  const url = env.HEALTHCHECK_URL;
+  if (!url) {
+    console.log("HEALTHCHECK_URL er ikke satt -- ingen livstegn.");
+    return false;
+  }
+  if (resultater.length !== WORKFLOWS.length || !resultater.every((r) => r.ok)) {
+    console.log("Ikke alle utløsningene ble godtatt -- ingen livstegn denne runden.");
+    return false;
+  }
+  try {
+    const svar = await fetch(url, { method: "GET", headers: { "User-Agent": "tabellkalkulator-planlegger" } });
+    if (!svar.ok) console.log(`Livstegnet til healthchecks svarte ${svar.status}.`);
+    return svar.ok;
+  } catch (e) {
+    console.log(`Livstegnet til healthchecks feilet: ${e}`);
+    return false;
+  }
+}
+
+// ping: true bare fra scheduled(). En manuell utløsning skal ikke telle som
+// livstegn, ellers kunne den skjule at den planlagte kjøringen har stoppet.
+async function kjor(env, { ping = false } = {}) {
   const token = env.GITHUB_TOKEN;
   if (!token) {
     console.log("FEIL: GITHUB_TOKEN mangler som hemmelighet -- gjør ingenting.");
@@ -100,12 +129,13 @@ async function kjor(env) {
   for (const r of resultater) {
     console.log(r.ok ? `OK  ${r.workflow}` : `FEIL ${r.workflow}: ${r.status} ${r.tekst}`);
   }
+  if (ping) await livstegn(env, resultater);
   return resultater;
 }
 
 export default {
   async scheduled(event, env, ctx) {
-    ctx.waitUntil(kjor(env));
+    ctx.waitUntil(kjor(env, { ping: true }));
   },
 
   // Manuell utløsning. Adressen til en Cloudflare-worker er lett å gjette, og

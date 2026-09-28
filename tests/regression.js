@@ -2405,6 +2405,61 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- Dødmannsknappen: livstegn bare når alt gikk bra ----
+    // planlegger/worker.js sender livstegn til healthchecks.io bare etter en
+    // PLANLAGT runde innenfor vinduet der alle fire utløsningene fikk 204.
+    // Feiler en runde, sendes ingenting (varselet skal komme når noe har vært
+    // galt en stund, ikke ved hver feil), og aldri til /fail. update-data.yml
+    // og obos-results.yml sender livstegn i SISTE steg, bare når jobben er
+    // grønn, og steget kan aldri gjøre jobben rød. Workeren kjøres her i Node
+    // med fetch og klokka byttet ut.
+    setGroup('Dødmannsknappen: livstegn bare når alt gikk bra');
+    {
+      const {pathToFileURL} = require('url');
+      const kilde = fs.readFileSync(path.join(ROOT, 'planlegger', 'worker.js'), 'utf8');
+      const W = (await import(pathToFileURL(path.join(ROOT, 'planlegger', 'worker.js')).href + `?t=${Date.now()}`)).default;
+      const EkteDate = Date, ekteFetch = globalThis.fetch;
+      const kjor = async ({utc, status = () => 204, env = {}, manuell = false}) => {
+        const kall = [];
+        globalThis.Date = class extends EkteDate { constructor(...a) { super(...(a.length ? a : [utc])); } static now() { return new EkteDate(utc).getTime(); } };
+        globalThis.fetch = async (url, o = {}) => { kall.push(String(url));
+          if (String(url).startsWith('https://api.github.com/')) { const st = status(String(url)); return {status: st, ok: st === 204, text: async () => 'feil'}; }
+          return {status: 200, ok: true, text: async () => ''}; };
+        const fullEnv = {GITHUB_TOKEN: 'x', HEALTHCHECK_URL: 'https://hc-ping.com/test', UTLOSER_NOKKEL: 'n', ...env};
+        const ekteLog = console.log; console.log = () => {};   // workerens egen logg hører ikke hjemme i testutskriften
+        try {
+          if (manuell) await W.fetch(new Request('https://w.example/?kjor=1', {headers: {'x-planlegger-nokkel': 'n'}}), fullEnv);
+          else { const vent = []; await W.scheduled({}, fullEnv, {waitUntil: p => vent.push(p)}); await Promise.all(vent); }
+        } finally { globalThis.Date = EkteDate; globalThis.fetch = ekteFetch; console.log = ekteLog; }
+        return {utlost: kall.filter(u => u.startsWith('https://api.github.com/')).length, ping: kall.filter(u => u.startsWith('https://hc-ping.com/')),
+                fail: kall.filter(u => u.includes('/fail')).length};
+      };
+      const inne = '2026-10-02T12:00:00Z', ute = '2026-10-02T23:00:00Z';
+      const r1 = await kjor({utc: inne});
+      check('planleggeren: planlagt runde, alle 204: ett livstegn', r1.utlost === 4 && r1.ping.length === 1 && r1.ping[0] === 'https://hc-ping.com/test', JSON.stringify(r1));
+      const r2 = await kjor({utc: inne, status: u => u.includes('update-data') ? 500 : 204});
+      check('planleggeren: én utløsning feilet: ingen livstegn, ingen /fail', r2.utlost === 4 && r2.ping.length === 0 && r2.fail === 0, JSON.stringify(r2));
+      const r3 = await kjor({utc: ute});
+      check('planleggeren: utenfor vinduet 09-21 UTC: ingen utløsning, ingen livstegn', r3.utlost === 0 && r3.ping.length === 0, JSON.stringify(r3));
+      const r4 = await kjor({utc: inne, manuell: true});
+      check('planleggeren: manuell utløsning teller ikke som livstegn', r4.utlost === 4 && r4.ping.length === 0, JSON.stringify(r4));
+      const r5 = await kjor({utc: inne, env: {HEALTHCHECK_URL: ''}});
+      const r6 = await kjor({utc: inne, env: {GITHUB_TOKEN: ''}});
+      check('planleggeren: uten HEALTHCHECK_URL eller GITHUB_TOKEN: ingen livstegn, ingen krasj', r5.utlost === 4 && r5.ping.length === 0 && r6.utlost === 0 && r6.ping.length === 0, JSON.stringify({r5, r6}));
+      check('planleggeren: koden sender aldri til /fail', !kilde.includes('/fail'), '');
+      for (const [wf, navn] of [['update-data.yml', 'HEALTHCHECK_UPDATE_DATA'], ['obos-results.yml', 'HEALTHCHECK_OBOS']]) {
+        const t = fs.readFileSync(path.join(ROOT, '.github', 'workflows', wf), 'utf8');
+        const steg = t.split('\n      - ').slice(1), siste = steg[steg.length - 1] || '', nest = steg[steg.length - 2] || '';
+        const kode = siste.split('\n').filter(l => !l.trim().startsWith('#')).join('\n');
+        check(`${wf}: livstegnet er siste steg, etter kildevakten, bare når jobben er grønn`,
+          /healthchecks/i.test(siste.split('\n')[0]) && nest.includes('hentelogg.py sjekk') && !/\n\s*if:/.test(kode) && !kode.includes('continue-on-error'),
+          siste.split('\n')[0]);
+        check(`${wf}: livstegnet bruker hemmeligheten ${navn} og kan aldri gjøre jobben rød`,
+          kode.includes(`HC_URL: \${{ secrets.${navn} }}`) && kode.includes('exit 0') && /if curl .*; then .*; else .*; fi/.test(kode) && !kode.includes('/fail'),
+          '');
+      }
+    }
+
     // ---- Prekick: frysing ved avspark ----
     // prekick.json skal bare oppdateres FØR avspark fra terminlisten, og
     // fryses med siste stempel fra før avspark når resultatet kommer. Før

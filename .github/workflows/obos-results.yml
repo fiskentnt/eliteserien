@@ -293,3 +293,17 @@ jobs:
         # der, mens hentelogget viser feil paa feil paa feil.
         if: always()
         run: python3 scripts/hentelogg.py sjekk
+
+      - name: Livstegn til healthchecks.io (bare når hele kjøringen er grønn)
+        # SIST, etter kildevakten. Dødmannsknappen (planlegger/README.md):
+        # livstegnet sendes bare når alle stegene over gikk bra (standard-
+        # vilkåret success()). En rød kjøring sender ingenting, og kommer det
+        # ikke livstegn innenfor tidsplanen (09-21 UTC, 60 minutter
+        # slingringsmonn), får eieren e-post. Livstegnet kan aldri gjøre
+        # kjøringen rød: mangler hemmeligheten eller svarer ikke healthchecks,
+        # avsluttes steget med 0.
+        env:
+          HC_URL: ${{ secrets.HEALTHCHECK_OBOS }}
+        run: |
+          if [ -z "$HC_URL" ]; then echo "HEALTHCHECK_OBOS er ikke satt -- ingen livstegn."; exit 0; fi
+          if curl -fsS -m 10 --retry 3 -o /dev/null "$HC_URL"; then echo "Livstegn sendt."; else echo "Livstegnet feilet (ingen betydning for kjøringen)."; fi
