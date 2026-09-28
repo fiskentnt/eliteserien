@@ -366,8 +366,10 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # tidlig stopp og egen Worker for merkene (9cc3590), tabellsimuleringen i
 # egen Worker (16934d2) og minnet i fitRates med simuleringen sendt med en
 # gang (e9477ea) og låste utfall i svarene regnet med lagstyrkene etter
-# resultatet (6d6e5b6) og den raskere, bit-like outcome() (fbc447c).
-# Basisen er derfor fbc447c. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
+# resultatet (6d6e5b6), den raskere, bit-like outcome() (fbc447c), grovsilingen
+# i poolen (8e085c5), rundens viktigste kamp med 3 000 / 20 000 sesonger
+# (166caa1) og egne forkastingsgrupper i poolen (f29586b). Basisen er derfor
+# f29586b. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
 # rettelse eller ny funksjon der kommer ikke med her. Det er ikke en feil i
 # testsiden, men noen maa ta stilling til det -- derfor en advarsel med antall
 # endrede linjer, og ingen FEIL.
@@ -376,8 +378,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_COMMIT = "fbc447c4fe9b27b23e60739b06493fa48f82cbd6"
-BASE_SHA = "08c88d246c3f0f4b6199a112e787cf2a671c9923e1b501e1d1c6daa794d8af61"
+BASE_COMMIT = "f29586b553f697740a4f735e2ba4ad46027de2ac"
+BASE_SHA = "6bf85c875aec8f1a9b0b2e9295bfd58d268cda1877470dcc5dde1d3467e5d51c"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
@@ -995,8 +997,7 @@ else:
                        _hent("eloTabellOppslag"), _hent("eloOddsFor"), _hent("eloMixLap"), _hent("eloScenarioKamper"),
                        _hent("computeLiveState", True), _hent("stateRate", True), _hent("rateFor", True),
                        _hent("oddsOverrideFor", True), _hent("eloLamFor"), _hent("eloRatingMedLaast"),
-                       _hent("eloRatingMedAlternativ"), _hent("eloOverrideFor"), _hent("eloTaskOver"),
-                       _hent("eloKandidatOver")])
+                       _hent("eloRatingMedAlternativ"), _hent("eloOverrideFor"), _hent("eloTaskOver")])
             + r"""
 const fs=require('fs');
 const M=JSON.parse(fs.readFileSync(process.argv[2],'utf8'));
@@ -1024,20 +1025,18 @@ function laast(forfylt, home, away, hg, ag){
   const aapne=matches.filter(m=>m.hg==null), open=aapne.map(m=>[TI[m.home],TI[m.away]]);
   const idx=aapne.findIndex(m=>m.home===home&&m.away===away);
   const ov=eloTaskOver({open}, {idx, score:[hg,ag]}).oddsOverride;
-  const kand=eloKandidatOver(open, {idx, homeScore:[hg,ag], awayScore:null, drawScore:null}).overHome;
   const fast=aapne.map(m=>oddsOverrideFor(m.home,m.away));
-  const ut={}, utK={}, utF={};
-  aapne.forEach((m,j)=>{ if(j===idx) return; ut[m.home+"|"+m.away]=ov[j]; utK[m.home+"|"+m.away]=kand[j]; utF[m.home+"|"+m.away]=fast[j]; });
-  return {ut, utK, utF};
+  const ut={}, utF={};
+  aapne.forEach((m,j)=>{ if(j===idx) return; ut[m.home+"|"+m.away]=ov[j]; utF[m.home+"|"+m.away]=fast[j]; });
+  return {ut, utF};
 }
 const saker=[];
 for(const [f, h, a, hg, ag] of INN.saker){
   const s=scenario(f,h,a,hg,ag), l=laast(f,h,a,hg,ag);
-  let ulik=0, ulikK=0, endret=0, n=0;
+  let ulik=0, endret=0, n=0;
   for(const k in s){ n++; if(JSON.stringify(s[k])!==JSON.stringify(l.ut[k])) ulik++;
-    if(JSON.stringify(s[k])!==JSON.stringify(l.utK[k])) ulikK++;
     if(JSON.stringify(s[k])!==JSON.stringify(l.utF[k])) endret++; }
-  saker.push({sak:`${h}-${a} ${hg}-${ag}${f.length?' (med '+f.map(x=>x[0]+'-'+x[1]+' '+x[2]+'-'+x[3]).join(', ')+' utfylt)':''}`, n, ulik, ulikK, endret});
+  saker.push({sak:`${h}-${a} ${hg}-${ag}${f.length?' (med '+f.map(x=>x[0]+'-'+x[1]+' '+x[2]+'-'+x[3]).join(', ')+' utfylt)':''}`, n, ulik, endret});
 }
 // Forrige kamp: sidens avspilling for alternativt resultat.
 matches=INN.termin.map(m=>({...m})); LIVE=computeLiveState();
@@ -1070,8 +1069,8 @@ console.log(JSON.stringify({saker, alt}));
         for s in _du["saker"]:
             krev(f"{s['sak']}: svarveien = scenarioet for {s['n']} åpne kamper "
                  f"({s['endret']} endret mot fast rating)",
-                 s["ulik"] == 0 and s["ulikK"] == 0 and s["endret"] > 0,
-                 f"runZoneTasks {s['ulik']} ulike, matchImpact {s['ulikK']} ulike")
+                 s["ulik"] == 0 and s["endret"] > 0,
+                 f"eloTaskOver {s['ulik']} ulike (alle svarene med låste utfall går via den)")
         # Avspillingen i Python: fra dagen før kampen, over de ekte kampene med
         # normalisert sluttodds, med hva_mix_lap. Faktisk resultat skal gi
         # byggingens rating; alternativet skal gi det siden gir.
@@ -1103,11 +1102,12 @@ console.log(JSON.stringify({saker, alt}));
 
     # Koblingen: svarene bruker faktisk de egne målratene.
     _hv = _h
-    # Kallstedene er produksjonens (laastTaskOver, grovKandidatOver, fra
-    # rettelsen av låste utfall i svarene). På testsiden er den SISTE
-    # deklarasjonen av hver -- den som gjelder -- en som går til
-    # eloTaskOver/eloKandidatOver, så produksjonens lagstyrke-variant aldri
-    # kjøres her og ingenting regnes dobbelt.
+    # Kallstedet er produksjonens (laastTaskOver, fra rettelsen av låste
+    # utfall i svarene). På testsiden er den SISTE deklarasjonen -- den som
+    # gjelder -- en som går til eloTaskOver, så produksjonens lagstyrke-
+    # variant aldri kjøres her og ingenting regnes dobbelt. Alle svarene med
+    # låste utfall (også kortet, "Hva betyr neste kamp?" og begge silingene i
+    # "Hvilke kamper betyr mest?") går i poolen via runZoneTasks.
     def _siste_decl(navn):
         i = _hv.rfind(f"function {navn}(")
         if i < 0:
@@ -1115,21 +1115,13 @@ console.log(JSON.stringify({saker, alt}));
         j = _hv.find("\n}", i)
         k = _hv.find("\n", i)
         return _hv[i:k] if "}" in _hv[i:k] else _hv[i:j + 2]
-    _lt, _lg = _siste_decl("laastTaskOver"), _siste_decl("grovKandidatOver")
+    _lt = _siste_decl("laastTaskOver")
     krev("runZoneTasks gir hver oppgave eloTaskOver (låst utfall og forrige kamp)",
          "...laastTaskOver(payload, t), mode:'zoneTask'" in _hv and "...(t.over||{}), mode:'zoneTask'" not in _hv
          and "return eloTaskOver(payload, t);" in _lt, _lt[:90])
-    # runMatchImpactAsync: finsilingen, kortet og "Hva betyr neste kamp?" går i
-    # poolen (runZoneTasks, altså laastTaskOver = eloTaskOver over);
-    # grovsilingen går i hjelpe-Workeren med grovKandidatOver = eloKandidatOver.
-    krev("runMatchImpactAsync legger eloKandidatOver på hver kandidat",
-         "}, tasks, null, gruppe" in _hv
-         and "candidates.forEach(c=>Object.assign(c, grovKandidatOver(base.open, c)));" in _hv
-         and "eloKandidatOver(open, c)" in _lg, _lg.split("\n")[1][:90] if "\n" in _lg else _lg[:90])
-    _wi = _hv.index("const WORKER_SRC = `"); _wj = _hv.index("`;", _wi); _wk = _hv[_wi:_wj]
-    krev("workerens runMatchImpact bruker overHome/overAway/overDraw per utfall",
-         "simulateZoneProb(med(c.overHome)" in _wk and "simulateZoneProb(med(c.overAway)" in _wk
-         and "simulateZoneProb(med(c.overDraw)" in _wk)
+    krev("runMatchImpactAsync går i poolen (runZoneTasks -> laastTaskOver = eloTaskOver), ingen annen vei",
+         "}, tasks, null, gruppe" in _hv and "mode:'matchImpact'" not in _hv and "grovKandidatOver" not in _hv
+         and "eloKandidatOver" not in _hv)
     krev("qaLastMatchData merker det alternative resultatet (eloAlt)",
          "eloAlt:{home:m.home, away:m.away, hg, ag}" in _hv)
 
