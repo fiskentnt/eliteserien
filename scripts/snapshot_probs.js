@@ -193,8 +193,14 @@ function chromePath() {
           kilde: info.odds ? 'odds+modell' : 'modell',
           oddsvekt: info.odds ? ODDS_W : 0,
           // Oddsen slik den sto, og modellen alene, så de kan skilles senere.
+          // Når prisen ble satt (priced_at) og hvor mange minutter før
+          // avspark (minutter_for, fra "Odds nær avspark") tas med når
+          // oddsen har dem: da står det i den frosne raden hvor gammel
+          // prisen var ved avspark.
           odds: info.odds ? {H: +info.mk[0].toFixed(4), U: +info.mk[1].toFixed(4), B: +info.mk[2].toFixed(4),
-                             bookmaker: (info.meta || {}).bookmaker || null} : null,
+                             bookmaker: (info.meta || {}).bookmaker || null,
+                             ...((info.meta || {}).priced_at ? {priced_at: info.meta.priced_at} : {}),
+                             ...((info.meta || {}).minutter_for != null ? {minutter_for: info.meta.minutter_for} : {})} : null,
           modell: {H: +(info.md ? info.md.H : o.H).toFixed(4),
                    U: +(info.md ? info.md.U : o.U).toFixed(4),
                    B: +(info.md ? info.md.B : o.B).toFixed(4)},

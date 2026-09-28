@@ -2735,6 +2735,9 @@ async function main() {
           `kode ${A.kode}, rad ${JSON.stringify(A.rad)}\n${A.ut.slice(-600)}`);
         check('modelldelen er modellen fra model.json, og prognosen er den siden viser',
           likt(A.rad && A.rad.modell, sideA.md) && likt(A.rad, sideA.o), `rad ${JSON.stringify(A.rad)}, siden ${JSON.stringify(sideA)}`);
+        check('raden har prisens tidspunkt og minutter før avspark fra «Odds nær avspark» (priced_at, minutter_for)',
+          A.rad && A.rad.odds && A.rad.odds.priced_at === iso(a - 45 * M) && A.rad.odds.minutter_for === 45,
+          JSON.stringify(A.rad && A.rad.odds));
 
         // 2) Resultatet i E kommer inn (OBOS-jobben): matches.json,
         // fixtures.json og ny modell. Oddsen for S er den samme.
@@ -2768,6 +2771,17 @@ async function main() {
         check('skrevet 9 min før, eller odds hentet 14 min før: ingenting skrives',
           Dk.kode === 0 && Ek.kode === 0 && tekst('prekick.json') === etterC && /ingen kamp i vinduet/.test(Dk.ut) && /ingen kamp i vinduet/.test(Ek.ut),
           `${Dk.ut}\n${Ek.ut}`);
+
+        // Uten priced_at og minutter_for i oddsraden (samme priser): heller
+        // ikke i den frosne raden.
+        const uten = les('odds_upcoming.json');
+        uten.matches.filter(m => m.home === S.home && m.away === S.away).forEach(m => { delete m.priced_at; delete m.minutter_for; });
+        skriv('odds_upcoming.json', uten);
+        const F2 = kjor(20, 20);
+        check('uten priced_at og minutter_for i oddsraden står de heller ikke i den frosne raden, med samme priser',
+          F2.kode === 0 && F2.rad && F2.rad.odds && !('priced_at' in F2.rad.odds) && !('minutter_for' in F2.rad.odds)
+            && ['H', 'U', 'B', 'bookmaker'].every(x => F2.rad.odds[x] === B.rad.odds[x]) && F2.rad.stamp === iso(a - 20 * M),
+          `${JSON.stringify(F2.rad && F2.rad.odds)}\n${F2.ut.slice(-300)}`);
 
         // 4) Ingenting annet er rørt: bare raden for S, og verken keymatch,
         // lastmatch eller historikken.

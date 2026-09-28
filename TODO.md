@@ -385,9 +385,12 @@ failsafe-tester grønne mot tabellkalkulator.no.
   radene. Er prisene jevnt over eldre enn 20 minutter, eller endrer Pinnacle
   seg ofte i hullet, vurderer vi en henting 10 til 15 minutter før avspark
   med prisene kappet ved 15 minutter.
-  - Den frosne raden i `prekick.json` har ikke `minutter_for` selv. Feltet
-    står i `odds_upcoming.json` i commiten «Odds nær avspark» fra samme
-    kjøring (radens `stamp` er kjøringens hentetidspunkt):
+  - Den frosne raden i `prekick.json` har `odds.minutter_for` og
+    `odds.priced_at` når prisen kom fra «Odds nær avspark» (lagt til før
+    første OBOS-kampdag 2. oktober 2026; OBOS-radene fra den daglige
+    hentingen har bare `priced_at`). Rader frosset før det har dem ikke; da står de i
+    `odds_upcoming.json` i commiten «Odds nær avspark» fra samme kjøring
+    (radens `stamp` er kjøringens hentetidspunkt):
     `git log -p -- <liga>/data/odds_upcoming.json`.
   - Om Pinnacle endret seg i hullet: sammenlign prisen i den frosne raden
     med sluttoddsen for kampen (`obos/data/odds_closing.json`,
