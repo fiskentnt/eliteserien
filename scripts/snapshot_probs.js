@@ -115,12 +115,14 @@ function chromePath() {
     });
     // Rundens viktigste kamp. Samme regnestykke som spørsmålet i "Spør om
     // tabellen" (qaKeyRoundData), og banner-setningen bygges av sidens egen
-    // qaKeyBanner, så ordlyden finnes bare ett sted.
+    // qaKeyBanner, så ordlyden finnes bare ett sted. Her i CI med sidens
+    // QA_KEY_N_CI / QA_KEY_CLOSE_CI (mange sesonger, stram grense), ikke
+    // nettleserens lavere N; filen sier hvilke som ble brukt.
     const key = await page.evaluate(async () => {
-      const d = await qaKeyRoundData();
+      const d = await qaKeyRoundData({N: QA_KEY_N_CI, close: QA_KEY_CLOSE_CI});
       const banner = qaKeyBanner(d);
       if (!d || !d.best || !banner) return null;
-      return {round: d.round, banner,
+      return {round: d.round, banner, sesonger: d.sesonger, grense: d.grense,
         match: {home: d.best.m.home, away: d.best.m.away, date: d.best.m.date},
         zone: d.best.topZone.key,
         teams: d.best.teams.map(t => t.team)};
@@ -130,7 +132,8 @@ function chromePath() {
       const next = {version: 1, note: 'Rundens viktigste kamp, regnet ut av scripts/snapshot_probs.js etter hver oppdatering. Banneret på siden viser "banner" som den er.', ...key};
       const same = fs.existsSync(KEYMATCH) && (() => {
         const old = JSON.parse(fs.readFileSync(KEYMATCH, 'utf8'));
-        return old.banner === next.banner && old.round === next.round && JSON.stringify(old.teams) === JSON.stringify(next.teams);
+        return old.banner === next.banner && old.round === next.round && JSON.stringify(old.teams) === JSON.stringify(next.teams)
+          && old.sesonger === next.sesonger && old.grense === next.grense;
       })();
       if (same) console.log('Rundens viktigste kamp uendret.');
       else {

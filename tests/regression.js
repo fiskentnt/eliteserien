@@ -2349,6 +2349,42 @@ async function main() {
     }
     await page.bringToFront();
 
+    // ---- Rundens viktigste kamp: lav N i nettleseren, høy N i CI ----
+    // Svaret som regnes i nettleseren bruker QA_KEY_N / QA_KEY_CLOSE (3 000 /
+    // 0,901). Banneret i keymatch.json (snapshot_probs.js) og innleggene
+    // (lag_innlegg.js) regnes med QA_KEY_N_CI / QA_KEY_CLOSE_CI: minst 6 000 og
+    // 0,93. Testen fanger N som faktisk sendes til poolen, og sjekker at
+    // skriptene sender CI-konstantene.
+    setGroup('Rundens viktigste kamp: N i nettleseren og i CI');
+    {
+      const skript = ['snapshot_probs.js', 'lag_innlegg.js'].map(f => [f, fs.readFileSync(path.join(ROOT, 'scripts', f), 'utf8')]);
+      for (const [f, t] of skript)
+        check(`${f} regner kåringen med CI-nivået (QA_KEY_N_CI, QA_KEY_CLOSE_CI)`,
+          t.includes('qaKeyRoundData({N: QA_KEY_N_CI, close: QA_KEY_CLOSE_CI})') && !/qaKeyRoundData\(\)/.test(t), f);
+      for (const [sti, liga] of [['/eliteserien/', 'Eliteserien'], ['/obos/', 'OBOS']]) {
+        const kp = await open(1400, 900, base.replace('/eliteserien/', sti));
+        const r = await kp.evaluate(async () => {
+          if (typeof QA_KEY_N_CI === 'undefined') return {finnes: false};
+          const zt = window.runZoneTasks, N = [];
+          window.runZoneTasks = function (payload, ...rest) { N.push(payload.N); return zt.call(this, payload, ...rest); };
+          try {
+            const nett = await qaKeyRoundData(), ci = await qaKeyRoundData({N: QA_KEY_N_CI, close: QA_KEY_CLOSE_CI});
+            return {finnes: true, konst: [QA_KEY_N, QA_KEY_CLOSE, QA_KEY_N_CI, QA_KEY_CLOSE_CI], sendt: N,
+                    nett: [nett.sesonger, nett.grense], ci: [ci.sesonger, ci.grense],
+                    // grensa brukes: med CI-grensa er ingen i "close" under 93 % av lederen
+                    ciGrenseHolder: ci.close.every(x => x.total >= ci.best.total * QA_KEY_CLOSE_CI)};
+          } finally { window.runZoneTasks = zt; }
+        });
+        check(`${liga}: nettleseren regner rundens viktigste kamp med 3 000 sesonger og grense 0,901`,
+          r.finnes && r.konst[0] === 3000 && r.konst[1] === 0.901 && r.sendt[0] === 3000 && r.nett.join() === '3000,0.901', JSON.stringify(r));
+        check(`${liga}: CI-nivået er minst 6 000 sesonger med grense 0,93, og brukes når det sendes`,
+          r.finnes && r.konst[2] >= 6000 && r.konst[3] === 0.93 && r.sendt[1] === r.konst[2] && r.ci.join() === `${r.konst[2]},0.93` && r.ciGrenseHolder,
+          JSON.stringify(r));
+        await kp.close();
+      }
+    }
+    await page.bringToFront();
+
     // ---- Prekick: frysing ved avspark ----
     // prekick.json skal bare oppdateres FØR avspark fra terminlisten, og
     // fryses med siste stempel fra før avspark når resultatet kommer. Før

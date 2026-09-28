@@ -4868,20 +4868,30 @@ function renderModelExample(){
 //   en der det jevne utfallet gjør det. Gull ligger inni Europa, så et lag
 //   som rykker på gulltoppen teller i begge -- det er to reelle spørsmål,
 //   ikke dobbelttelling av samme.
-// Samme workerbasseng, antall simuleringer og frø som "heie på", så tallene
-// for samme kamp stemmer med det svaret. ----
-// Flere simuleringer enn "heie på" (2 500): viktigheten summerer 48 ledd
-// (16 lag x 3 soner) av |endring|, og der legger støyen seg oppå i stedet for
-// å kansellere, siden alle leddene er positive. Målt sprik mellom frø faller
-// fra rundt 1,6 til 0,6 prosentpoeng når antallet firedobles. 6 000 tar rundt
-// 0,55 sekunder på PC, og banneret regnes uansett ut i workflowen.
-const QA_KEY_N = 6000;
+// Samme workerbasseng og frø som "heie på". ----
+// Viktigheten summerer 48 ledd (16 lag x 3 soner) av |endring|, og der legger
+// støyen seg oppå i stedet for å kansellere, siden alle leddene er positive.
+// Målt sprik mellom frø faller fra rundt 1,6 til 0,6 prosentpoeng når antallet
+// firedobles, og er rundt 3 prosent av totalen ved 6 000 simuleringer.
+//
+// TO NIVÅER. Når siden regner selv i nettleseren (svaret i "Spør om
+// tabellen"), QA_KEY_N / QA_KEY_CLOSE: 3 000 sesonger, og grensa for "omtrent
+// like viktige" tilsvarende bredere (spriket vokser med kvadratroten av
+// 6000/3000). Når kåringen regnes i CI -- banneret i keymatch.json via
+// scripts/snapshot_probs.js, og innleggene i scripts/lag_innlegg.js --
+// QA_KEY_N_CI / QA_KEY_CLOSE_CI: mange flere sesonger og den strammere grensa.
+// Målt 28.9.2026 (dagens tabell + 20 scenarioer per liga): 3 000 / 0,901 gir
+// samme kåring som 6 000 / 0,93 i 86 % (Eliteserien) og 95 % (OBOS) av
+// tabellene, og nevner alltid lederen fra 40 000 sesonger; på en etterlignet
+// telefon (2 kjerner, 4x) tar den 3,7 s mot 7,3 s med 6 000.
+const QA_KEY_N = 3000;
 // Kamper innenfor denne andelen av lederen regnes som omtrent like viktige.
-// Spriket mellom frø er rundt 3 prosent av totalen ved 6 000 simuleringer, så
-// grensa er satt på to standardavvik: en ledelse under 7 prosent er ikke til å
-// skille fra tilfeldig utslag, og da skal svaret si det i stedet for å kåre
-// én vinner.
-const QA_KEY_CLOSE = 0.93;
+// Grensa er satt slik at en ledelse som ikke er til å skille fra tilfeldig
+// utslag, ikke kåres som én vinner: 0,93 (7 %) ved 6 000 simuleringer, der
+// spriket er rundt 3 prosent; bredere ved færre.
+const QA_KEY_CLOSE = 0.901;
+// I CI (banneret og innleggene): minst 6 000 med 0,93; her 20 000.
+const QA_KEY_N_CI = 20000, QA_KEY_CLOSE_CI = 0.93;
 const QA_KEY_ZONES = ['gull', 'europa', 'nedrykk'].map(k => ({
   key: k, strid: LEAGUE.zones[k].strid, chance: LEAGUE.zones[k].chance,
   lo: LEAGUE.zones[k].lo, hi: LEAGUE.zones[k].hi,
@@ -4893,7 +4903,10 @@ function qaZoneFromPos(pos, n, zone){
   for(let t=0;t<n;t++) for(let k=zone.lo-1;k<=zone.hi-1;k++) out[t] += pos[t*n+k];
   return out;
 }
-async function qaKeyRoundData(){
+// opts: {N, close} -- CI sender QA_KEY_N_CI / QA_KEY_CLOSE_CI, nettleseren
+// bruker QA_KEY_N / QA_KEY_CLOSE. Svaret sier hvilke som ble brukt.
+async function qaKeyRoundData(opts){
+  const N = (opts && opts.N) || QA_KEY_N, grense = (opts && opts.close) || QA_KEY_CLOSE;
   if(!lastMC) return null;
   const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
   const nr = qaNextRoundMatches(openMatches);
@@ -4910,7 +4923,7 @@ async function qaKeyRoundData(){
     mu:MODEL.mu, H:MODEL.H, k:FORM_K,
     att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
-    N:QA_KEY_N, ti:0, zone:QA_KEY_ZONES[0], seed:hashStr(scenarioKey+'|impact'), wantAll:true
+    N, ti:0, zone:QA_KEY_ZONES[0], seed:hashStr(scenarioKey+'|impact'), wantAll:true
   }, tasks);
   const zoneOf = key => QA_KEY_ZONES.find(z=>z.key===key);
   const probs = id => { const o={}; QA_KEY_ZONES.forEach(z=>o[z.key]=qaZoneFromPos(res[id].pos, n, z)); return o; };
@@ -4958,8 +4971,8 @@ async function qaKeyRoundData(){
   }).sort((a,b)=>b.total-a.total);
   // Jevn runde: kampene som ligger nær lederen skal ikke skjules bak en
   // påstand om ÉN viktigste kamp (se QA_KEY_CLOSE).
-  const close = rows.slice(1).filter(r=>r.total >= rows[0].total*QA_KEY_CLOSE);
-  return {round:nr.round, list:rows, best:rows[0], close};
+  const close = rows.slice(1).filter(r=>r.total >= rows[0].total*grense);
+  return {round:nr.round, list:rows, best:rows[0], close, sesonger:N, grense};
 }
 // Tabellens tall for sonen (utgangspunktet svarene regner endringen oppå).
 function qaZoneNow(team, key){

@@ -67,7 +67,8 @@ const pst = v => Math.round(v * 100);
 // betyr mest for. Samme data som banneret og svaret "rundens viktigste kamp".
 async function forRunden(page, liga){
   return page.evaluate(async () => {
-    const d = await qaKeyRoundData();
+    // Som banneret: CI-nivået (mange sesonger, stram grense), ikke nettleserens.
+    const d = await qaKeyRoundData({N: QA_KEY_N_CI, close: QA_KEY_CLOSE_CI});
     if(!d || !d.best) return null;
     const ut = [];
     // Toppkampen og de som er omtrent like viktige: alle er kandidater, så
