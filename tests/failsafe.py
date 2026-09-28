@@ -669,6 +669,89 @@ def main():
     check("elo-test.yml: testsiden er eneste skriver av sin prekick.json og bruker ingen av modusene",
           "--uten-prekick-vindu" not in elo and "--bare-prekick" not in elo and "--ut elo-test/emodell" in elo)
 
+    # 22. Grunnlagsfilen (del 2, steg 2): porten slipper gjennom bare når det
+    # siden regner med er endret, og workflowen kan ikke stoppe datajobbene.
+    import shutil as _sh
+    import tempfile as _tf
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import grunnlag_port as _gp
+    with _tf.TemporaryDirectory() as _t:
+        rot = Path(_t)
+        (rot / "scripts").mkdir()
+        _sh.copy(ROOT / "scripts" / "lag_grunnlag.js", rot / "scripts")
+        (rot / "eliteserien" / "data").mkdir(parents=True)
+        _sh.copy(ROOT / "eliteserien" / "index.html", rot / "eliteserien")
+        for f in ("model.json", "matches.json", "fixtures.json", "odds_upcoming.json"):
+            _sh.copy(ROOT / "eliteserien" / "data" / f, rot / "eliteserien" / "data")
+        d = rot / "eliteserien" / "data"
+        les = lambda f: json.loads((d / f).read_text(encoding="utf-8"))
+        skriv = lambda f, x: (d / f).write_text(json.dumps(x, ensure_ascii=False, indent=1), encoding="utf-8")
+        v = lambda **k: _gp.vurder("eliteserien", root=rot, **k)
+        check("grunnlag-port: ingen fil -> regn", v()[0] is True and "finnes ikke" in v()[2])
+        (d / "grunnlag.json").write_text(json.dumps({"inndata": v()[1]}), encoding="utf-8")
+        check("grunnlag-port: filen er regnet av dagens inndata -> hopp over", v()[0] is False)
+        check("grunnlag-port: tving -> regn", v(tving=True)[0] is True)
+
+        def prov(navn, f, endre, regn):
+            gml = (d / f).read_text(encoding="utf-8")
+            x = les(f)
+            endre(x)
+            skriv(f, x)
+            check(f"grunnlag-port: {navn} -> {'regn' if regn else 'hopp over'}", v()[0] is regn)
+            (d / f).write_text(gml, encoding="utf-8")
+
+        prov("fitted_at og meta i model.json endret", "model.json",
+             lambda m: m.update(fitted_at="2099-01-01T00:00:00+00:00", meta={"note": "annen"}), False)
+        prov("en lagstyrke i model.json endret", "model.json", lambda m: m["att"].__setitem__(0, m["att"][0] + 1e-9), True)
+        prov("fetched_at og bookmaker/priced_at i odds_upcoming.json endret", "odds_upcoming.json",
+             lambda o: (o.update(fetched_at="2099-01-01T00:00:00+00:00"),
+                        [r.update(bookmaker="annen", priced_at="2099") for r in o["matches"]]), False)
+        prov("en oddspris endret", "odds_upcoming.json", lambda o: o["matches"][0].update(H=o["matches"][0]["H"] + 0.0001), True)
+        prov("et resultat i matches.json endret", "matches.json", lambda m: m[0].update(hg=m[0]["hg"] + 1), True)
+        prov("terminlisten endret", "fixtures.json", lambda f: f[0]["matches"][0].update(time="23:59"), True)
+        for navn, fil in (("siden (index.html)", rot / "eliteserien" / "index.html"), ("skriptet (lag_grunnlag.js)", rot / "scripts" / "lag_grunnlag.js")):
+            gml = fil.read_text(encoding="utf-8")
+            fil.write_text(gml + "\n<!-- endret -->\n", encoding="utf-8")
+            check(f"grunnlag-port: {navn} endret -> regn", v()[0] is True)
+            fil.write_text(gml, encoding="utf-8")
+        check("grunnlag-port: alt tilbake -> hopp over", v()[0] is False)
+        (d / "grunnlag.json").write_text("{ødelagt", encoding="utf-8")
+        check("grunnlag-port: filen kan ikke leses -> regn", v()[0] is True)
+    # Porten tar med de datafilene siden faktisk regner med (boot()).
+    side = (ROOT / "eliteserien" / "index.html").read_text(encoding="utf-8")
+    check("grunnlag-port: filene er de siden laster i boot() (matches, fixtures, model, odds_upcoming)",
+          all(f"fetch('data/{f}')" in side for f in ("matches.json", "fixtures.json", "model.json", "odds_upcoming.json")))
+    for s_ in ("eliteserien", "obos"):
+        t = (ROOT / s_ / "index.html").read_text(encoding="utf-8")
+        check(f"{s_}/index.html: fast N = 100 000 i grunnlagsfilen (GRUNNLAG_N)", "const GRUNNLAG_VERSJON = 1, GRUNNLAG_N = 100000;" in t)
+    gw = (wfd / "grunnlag.yml").read_text(encoding="utf-8")
+    navn_wf = {}
+    for f in wfd.glob("*.yml"):
+        for l in f.read_text(encoding="utf-8").splitlines():
+            if l.startswith("name:"):
+                navn_wf[l.split(":", 1)[1].strip().strip('"')] = f.name
+                break
+    utlosere = gw.split("workflows:", 1)[1].split("types:", 1)[0]
+    utlosere = [l.strip()[2:].strip().strip('"') for l in utlosere.splitlines() if l.strip().startswith("- ")]
+    check("grunnlag.yml: utløses etter datajobbene, oddsjobbene og byggingen av ligasidene, med navn som finnes",
+          sorted(navn_wf.get(n, "?") for n in utlosere) == ["build-leagues.yml", "obos-results.yml", "prekick-odds.yml", "update-data.yml", "update-odds.yml"],
+          str(utlosere))
+    check("grunnlag.yml: bare kjøringer på main utløser den, og push av sidene og skriptene",
+          "types: [completed]\n    branches: [main]\n" in gw and all(f"      - {p_}\n" in gw for p_ in
+          ("eliteserien/index.html", "obos/index.html", "scripts/lag_grunnlag.js", "scripts/grunnlag_port.py")))
+    gst = ["\n".join(l for l in x.splitlines() if not l.lstrip().startswith("#")) for x in gw.split("\n      - ")]
+    gi = lambda tekst: next((i for i, x in enumerate(gst) if tekst in x), -1)
+    i_p2, i_nd, i_rg, i_lg = gi("Fortsatt endret?"), gi("actions/setup-node"), gi("lag_grunnlag.js \"${{ matrix.liga }}\""), gi("name: Lagre")
+    check("grunnlag.yml: porten sjekkes på nytt i regnejobben før Chrome, så regnes og lagres det",
+          0 < i_p2 < i_nd < i_rg < i_lg and "concurrency:\n      group: grunnlag-${{ matrix.liga }}\n      cancel-in-progress: false" in gw
+          and "if: needs.port.outputs.ligaer != '[]'" in gw, f"{i_p2} {i_nd} {i_rg} {i_lg}")
+    check("grunnlag.yml: fast N (ingen --n), og bare grunnlagsfilen committes",
+          i_rg > 0 and "--n" not in gst[i_rg] and 'git add "${{ matrix.liga }}/data/grunnlag.json"\n' in gst[i_lg]
+          and gst[i_lg].count("git add") == 1 and "bash scripts/push_med_rebase.sh" in gst[i_lg])
+    check("datajobbene nevner ikke grunnlagsfilen: regningen kan ikke stoppe eller forsinke dem",
+          not any(n_ in (wfd / f).read_text(encoding="utf-8") for f in ("update-data.yml", "obos-results.yml", "update-odds.yml", "prekick-odds.yml")
+                  for n_ in ("grunnlag.json", "lag_grunnlag", "grunnlag_port", "grunnlag.yml")))
+
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare
     # kall som aldri skjedde, av selve testene.

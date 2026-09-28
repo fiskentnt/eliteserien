@@ -4858,6 +4858,83 @@ function qaZoneFromPos(pos, n, zone){
 }
 // opts: {N, close} -- CI sender QA_KEY_N_CI / QA_KEY_CLOSE_CI, nettleseren
 // bruker QA_KEY_N / QA_KEY_CLOSE. Svaret sier hvilke som ble brukt.
+// ---- GRUNNLAGSFILEN (<liga>/data/grunnlag.json) ----
+// Tabellen og svarene med låste utfall for dagens stilling (uten scenario),
+// regnet på forhånd i CI med GRUNNLAG_N sesonger per oppgave, med sidens egen
+// kode: scripts/lag_grunnlag.js kjører grunnlagRegn() under i Chrome, og
+// .github/workflows/grunnlag.yml committer filen. Oppgavene er de samme som
+// svarene sender til poolen (samme frø, scenarioet + '|impact', og samme
+// resultat for hvert låste utfall, se forcedScoreline), så et svar kan slås
+// opp i filen i stedet for å regnes:
+//   'base'          utgangspunktet uten låst kamp (tabellen)
+//   '<i>:H', '<i>:B'  hjemmeseier og borteseier i åpen kamp nr. i, for alle
+//                   åpne kamper ("Hvilke kamper betyr mest?")
+//   '<i>:U'         uavgjort, for kampene i neste runde ("Heie på", "Rundens
+//                   viktigste kamp") og hvert lags neste kamp (kortet "Neste
+//                   kamp", "Hva betyr neste kamp?")
+// Hver oppgave har hele plasseringsfordelingen for alle lag, som antall
+// sesonger. Filen skal bare brukes når fingeravtrykket (grunnlagAvtrykk) er
+// det samme som siden selv regner av dataene og koden den har lastet, og
+// ingen resultater er fylt inn. Siden bruker ikke filen ennå.
+const GRUNNLAG_VERSJON = 1, GRUNNLAG_N = 100000;
+function grunnlagOppgaver(openMatches){
+  const medU = new Set(qaNextRoundMatches(openMatches).list.map(m=>openMatches.indexOf(m)));
+  // Hvert lags neste kamp, valgt som i qaNextMatch.
+  TEAMS.forEach(t=>{
+    const neste = openMatches.filter(m=>m.home===t||m.away===t).sort((a,b)=>a.date.localeCompare(b.date))[0];
+    if(neste) medU.add(openMatches.indexOf(neste));
+  });
+  const tasks = [{id:'base', idx:-1, score:null}];
+  openMatches.forEach((m, idx)=>{
+    tasks.push({id:idx+':H', idx, score:forcedScoreline(m.home, m.away, true)},
+               {id:idx+':B', idx, score:forcedScoreline(m.home, m.away, false)});
+    if(medU.has(idx)) tasks.push({id:idx+':U', idx, score:forcedDrawScoreline(m.home, m.away)});
+  });
+  return tasks;
+}
+// Alt tallene i filen regnes av: modellen, stillingen (poeng, målforskjell og
+// scorede mål), kampene og de åpne kampene, oddsen, konstantene, oppgavene,
+// frøet, N og Worker-koden (som også har hovedtrådens delte funksjoner, se
+// WORKER_SRC). Endres noe av det, endres avtrykket. Bare inndata og heltall,
+// ingen avledede desimaltall, så avtrykket er det samme i alle nettlesere.
+function grunnlagInndata(N){
+  const q = buildQaOpen();
+  return {versjon:GRUNNLAG_VERSJON, N, seed:hashStr(q.scenarioKey+'|impact'), lag:TEAMS,
+    modell:{lag:MODEL.teams, mu:MODEL.mu, H:MODEL.H, att:MODEL.att, con:MODEL.con, ha:MODEL.ha, hc:MODEL.hc},
+    FORM_K, ODDS_W, P0:Array.from(q.P0), G0:Array.from(q.G0), F0:Array.from(q.F0), open:q.open,
+    kamper:matches.map(m=>[m.date, m.round, m.home, m.away, m.hg, m.ag]),
+    odds:Object.keys(ODDS_UP).sort().map(k=>[k, ODDS_UP[k].H, ODDS_UP[k].D, ODDS_UP[k].A]),
+    oppgaver:grunnlagOppgaver(q.openMatches).map(t=>[t.id, t.idx, t.score]),
+    worker:WORKER_SRC, ekstra:grunnlagEkstra()};
+}
+// Det en side regner med i tillegg (testsiden: sin egen modell).
+function grunnlagEkstra(){ return null; }
+// SHA-256 (heksadesimalt) av grunnlagInndata(N) som JSON.
+async function grunnlagAvtrykk(N = GRUNNLAG_N){
+  const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(grunnlagInndata(N))));
+  return Array.from(new Uint8Array(b), x=>x.toString(16).padStart(2,'0')).join('');
+}
+// Regner innholdet i filen. Kjøres av scripts/lag_grunnlag.js, ikke av siden
+// selv: alle oppgavene i poolen med samme frø, og for hver oppgave hele
+// plasseringsfordelingen for alle lag, som antall sesonger (lag*n + plass).
+// Avtrykket regnes før og etter; er dataene endret underveis, gis ingenting.
+async function grunnlagRegn(N = GRUNNLAG_N){
+  if(matches.some(m=>m.hg!=null || m.ag!=null)) throw new Error('grunnlagRegn: resultater er fylt inn');
+  const avtrykk = await grunnlagAvtrykk(N);
+  const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
+  const tasks = grunnlagOppgaver(openMatches);
+  const res = await runZoneTasks({
+    mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
+    N, ti:0, zone:QA_KEY_ZONES[0], seed:hashStr(scenarioKey+'|impact'), wantAll:true
+  }, tasks, null, 'grunnlag');
+  if(await grunnlagAvtrykk(N) !== avtrykk) throw new Error('grunnlagRegn: dataene ble endret underveis');
+  const utfall = {};
+  tasks.forEach(t=>{ utfall[t.id] = res[t.id].pos.map(p=>Math.round(p*N)); });
+  return {versjon:GRUNNLAG_VERSJON, sesonger:N, fingeravtrykk:avtrykk, lag:TEAMS.slice(),
+          oppgaver:tasks.map(t=>[t.id, t.idx, t.score]), utfall};
+}
 async function qaKeyRoundData(opts){
   const N = (opts && opts.N) || QA_KEY_N, grense = (opts && opts.close) || QA_KEY_CLOSE;
   if(!lastMC) return null;

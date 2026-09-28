@@ -1,0 +1,119 @@
+name: "Grunnlag: tabellen og svarene regnet på forhånd"
+
+# Grunnlagsfilen (<liga>/data/grunnlag.json): tabellen og svarene med låste
+# utfall for dagens stilling, regnet med N = 100 000 sesonger per oppgave med
+# sidens egen kode (scripts/lag_grunnlag.js, grunnlagRegn() på siden).
+#
+# Egen workflow, ikke et steg i datajobbene: den kan verken forsinke eller
+# stoppe dem, og den fanger også oddsendringene fra «Oppdater odds for
+# kommende kamper» og «Odds nær avspark». Den utløses etter hver kjøring av
+# jobbene som skriver det siden regner med, ved push av sidene eller
+# skriptet, og manuelt.
+#
+# Porten (scripts/grunnlag_port.py) ser om inndataene er endret siden filen
+# ble regnet. Nesten alle kjøringene stopper der, etter noen sekunder, uten
+# nettleser. Fast N på én maskin per liga, i kø per liga: bare den nyeste
+# ventende jobben står i kø, og den sjekker porten på nytt før den regner.
+#
+# Feiler regningen, skrives ingen fil, og den forrige blir stående. Siden
+# bruker filen bare når fingeravtrykket stemmer med det den selv regner, og
+# regner ellers selv, som før.
+on:
+  workflow_run:
+    workflows:
+      - "Oppdater kampdata"
+      - "Oppdater odds for kommende kamper"
+      - "Odds nær avspark"
+      - "OBOS: hent resultater"
+      - "Bygg ligasidene"
+    types: [completed]
+    branches: [main]
+  push:
+    branches: [main]
+    paths:
+      - eliteserien/index.html
+      - obos/index.html
+      - scripts/lag_grunnlag.js
+      - scripts/grunnlag_port.py
+      - .github/workflows/grunnlag.yml
+  workflow_dispatch:
+    inputs:
+      tving:
+        description: "Regn begge ligaene selv om inndataene er uendret"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+jobs:
+  port:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      ligaer: ${{ steps.port.outputs.ligaer }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Er inndataene endret siden filen ble regnet?
+        id: port
+        env:
+          TVING: ${{ inputs.tving && 'true' || 'false' }}
+        run: python3 scripts/grunnlag_port.py eliteserien obos
+
+  regn:
+    needs: port
+    if: needs.port.outputs.ligaer != '[]'
+    strategy:
+      fail-fast: false
+      matrix:
+        liga: ${{ fromJSON(needs.port.outputs.ligaer) }}
+    concurrency:
+      group: grunnlag-${{ matrix.liga }}
+      cancel-in-progress: false
+    runs-on: ubuntu-latest
+    # Regnetiden er proporsjonal med oppgaver x åpne kamper x N: 5,5 min for
+    # Eliteserien i september 2026 (72 åpne kamper), men om lag en time ved
+    # sesongstart (om lag 240 åpne kamper). Se TODO.md om parallelle jobber.
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      # Porten på nytt: jobben kan ha ventet i kø mens en annen regnet de
+      # samme inndataene ferdig.
+      - name: Fortsatt endret?
+        id: port
+        env:
+          TVING: ${{ inputs.tving && 'true' || 'false' }}
+        run: python3 scripts/grunnlag_port.py "${{ matrix.liga }}"
+
+      - uses: actions/setup-node@v4
+        if: steps.port.outputs.ligaer != '[]'
+        with:
+          node-version: "22"
+
+      - name: Installer puppeteer-core
+        if: steps.port.outputs.ligaer != '[]'
+        run: npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pp" puppeteer-core@25.11.0
+
+      - name: Regn grunnlagsfilen (N = 100 000)
+        if: steps.port.outputs.ligaer != '[]'
+        env:
+          INNDATA: ${{ steps.port.outputs.inndata }}
+        run: |
+          CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
+          NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/lag_grunnlag.js "${{ matrix.liga }}" --inndata "$INNDATA"
+
+      - name: Lagre
+        if: steps.port.outputs.ligaer != '[]'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${{ matrix.liga }}/data/grunnlag.json"
+          if git diff --cached --quiet; then echo "Uendret."; exit 0; fi
+          git commit -q -m "Grunnlag (${{ matrix.liga }}) $(date -u +%Y-%m-%dT%H:%MZ)"
+          bash scripts/push_med_rebase.sh

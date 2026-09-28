@@ -129,10 +129,11 @@ tests/run.sh
 
 To sett, og begge må være grønne før noe publiseres:
 
-- **`tests/failsafe.py`** — 76 tester, ingen nett og ingen nettleser. Sjekker
+- **`tests/failsafe.py`** — 153 tester, ingen nett og ingen nettleser. Sjekker
   resultatkjeden, sluttoddsvinduet, at `obos/index.html` er bygget av dagens
-  kilde, og at xG-data aldri havner i repoet.
-- **`tests/regression.js`** — 575 tester i hodeløs Chrome via `puppeteer-core`.
+  kilde, at xG-data aldri havner i repoet, og portene og oppsettet i
+  workflowene.
+- **`tests/regression.js`** — 768 tester i hodeløs Chrome via `puppeteer-core`.
   Sjekker tallene i tabellen og kortene mot simuleringen, alle svarene i «Spør
   om tabellen», deling, scenariolenker, og oppsettet på PC og mobil i lys og
   mørk modus. `--live` kjører dem mot den publiserte siden i stedet.

@@ -2783,6 +2783,153 @@ async function main() {
       }
     }
 
+    // ---- Grunnlagsfilen: fingeravtrykket, oppgavene og regningen ----
+    // Del 2, steg 2: grunnlag.json regnes i CI med sidens egne funksjoner
+    // (grunnlagRegn, grunnlagAvtrykk), av scripts/lag_grunnlag.js. Siden
+    // bruker ikke filen ennå. Testene krever at avtrykket er det samme ved hver
+    // lasting og endres med hver inndata, at oppgavene dekker det svarene
+    // faktisk sender til poolen (samme id, kamp, resultat og frø), at
+    // regningen er bit for bit poolens, og at skriptet bare skriver en fil
+    // når alt stemmer. Begge produksjonssidene.
+    setGroup('Grunnlagsfilen: fingeravtrykket, oppgavene og regningen');
+    for (const [url, liga] of [[base, 'eliteserien'], [base.replace('/eliteserien/', '/obos/'), 'obos']]) {
+      const s1 = await open(1400, 900, url), s2 = await open(1400, 900, url);
+      const a1 = await s1.evaluate(() => grunnlagAvtrykk()), a2 = await s2.evaluate(() => grunnlagAvtrykk());
+      await s2.close();
+      check(`${liga}: avtrykket er det samme ved to lastinger (SHA-256), og avhenger av N`,
+        /^[0-9a-f]{64}$/.test(a1) && a1 === a2 && (await s1.evaluate(() => grunnlagAvtrykk(1000))) !== a1, `${a1} / ${a2}`);
+      // Hver inndata endrer avtrykket; tilstanden settes tilbake etterpå.
+      const endr = await s1.evaluate(async () => {
+        const f = await grunnlagAvtrykk(), ut = {};
+        const prov = async (navn, gjor, angre) => { gjor(); ut[navn] = (await grunnlagAvtrykk()) !== f; angre(); };
+        const m = matches.find(x => x.hg == null);
+        await prov('et resultat fylt inn', () => { m.hg = 1; m.ag = 0; }, () => { m.hg = null; m.ag = null; });
+        const a0 = MODEL.att[0];
+        await prov('lagstyrke i modellen', () => { MODEL.att[0] = a0 + 1e-12; }, () => { MODEL.att[0] = a0; });
+        const mu0 = MODEL.mu;
+        await prov('mu i modellen', () => { MODEL.mu = mu0 + 1e-12; }, () => { MODEL.mu = mu0; });
+        const k = Object.keys(ODDS_UP)[0], h0 = k && ODDS_UP[k].H;
+        if (k) await prov('en oddspris', () => { ODDS_UP[k].H = h0 + 1e-6; }, () => { ODDS_UP[k].H = h0; });
+        else ut['en oddspris'] = 'ingen odds';
+        const inn = grunnlagInndata(GRUNNLAG_N);
+        ut['Worker-koden, FORM_K og ODDS_W er med'] = inn.worker === WORKER_SRC && inn.FORM_K === FORM_K && inn.ODDS_W === ODDS_W;
+        ut['tilbake til utgangspunktet'] = (await grunnlagAvtrykk()) === f;
+        return ut;
+      });
+      check(`${liga}: avtrykket endres med et resultat, modellen og oddsen, og har Worker-koden og konstantene`,
+        Object.values(endr).every(v => v === true), JSON.stringify(endr));
+
+      // Oppgavene svarene sender til poolen (runZoneTasks byttes ut og
+      // fanger dem), for alle 16 lag: "Heie på", "Hva betyr neste kamp?",
+      // "Hvilke kamper betyr mest?" (grov- og finsiling) og "Rundens
+      // viktigste kamp". Hver av dem skal finnes i filens oppgaver med samme
+      // kamp og resultat, og frøet skal være filens.
+      const dekn = await s1.evaluate(async () => {
+        const {openMatches, scenarioKey} = buildQaOpen();
+        const fil = new Map(grunnlagOppgaver(openMatches).map(t => [t.id, t])), seed = hashStr(scenarioKey + '|impact');
+        const n = TEAMS.length, sett = [], ekte = runZoneTasks;
+        runZoneTasks = (payload, tasks, onTask, gruppe) => {
+          tasks.forEach(t => sett.push({t, seed: payload.seed, gruppe}));
+          const res = {};
+          tasks.forEach(t => { res[t.id] = {prob: 0.5, pos: new Array(n * n).fill(1 / n)}; });
+          if (onTask) tasks.forEach(t => onTask(t.id, res));
+          return Promise.resolve(res);
+        };
+        try {
+          for (const lag of TEAMS) { await qaCheerFor(lag); await qaNextMatch(lag); await qaKeyMatches(lag); }
+          await qaKeyRoundData();
+        } finally { runZoneTasks = ekte; }
+        const mangler = sett.filter(x => { const f = fil.get(x.t.id);
+          return !f || f.idx !== x.t.idx || JSON.stringify(f.score) !== JSON.stringify(x.t.score); });
+        return {antall: sett.length, grupper: [...new Set(sett.map(x => x.gruppe.split(':')[0]))].sort(),
+                mangler: mangler.slice(0, 5).map(x => `${x.gruppe} ${x.t.id} ${JSON.stringify(x.t.score)}`), nMangler: mangler.length,
+                feilFro: sett.filter(x => x.seed !== seed).length, oppgaver: fil.size};
+      });
+      check(`${liga}: filens ${dekn.oppgaver} oppgaver dekker alle ${dekn.antall} oppgavene svarene sender, med samme frø`,
+        dekn.antall > 100 && dekn.nMangler === 0 && dekn.feilFro === 0 && ['heie', 'impact', 'runde'].every(g => dekn.grupper.includes(g)),
+        JSON.stringify(dekn));
+
+      // Regningen er poolens, bit for bit: samme oppgave med samme frø og N
+      // rett i runZoneTasks gir samme antall. Hver fordeling går opp.
+      const regn = await s1.evaluate(async () => {
+        const N = 300, r = await grunnlagRegn(N);
+        const {P0, G0, F0, open, openMatches, oddsOverride, scenarioKey} = buildQaOpen();
+        const utvalg = grunnlagOppgaver(openMatches).filter((t, i, a) => t.id === 'base' || t.id.endsWith(':U') || i === a.length - 1).slice(0, 3);
+        const res = await runZoneTasks({mu: MODEL.mu, H: MODEL.H, k: FORM_K,
+          att: Array.from(LIVE.att), con: Array.from(LIVE.con), ha: Array.from(LIVE.ha), hc: Array.from(LIVE.hc),
+          P0: Array.from(P0), G0: Array.from(G0), F0: Array.from(F0), open, oddsOverride,
+          N, ti: 3, zone: QA_KEY_ZONES[1], seed: hashStr(scenarioKey + '|impact'), wantAll: true}, utvalg, null, 'test-grunnlag');
+        const n = TEAMS.length;
+        const like = utvalg.every(t => JSON.stringify(res[t.id].pos.map(p => Math.round(p * N))) === JSON.stringify(r.utfall[t.id]));
+        const summer = r.oppgaver.every(([id]) => { const u = r.utfall[id];
+          for (let i = 0; i < n; i++) { let a = 0, b = 0; for (let j = 0; j < n; j++) { a += u[i * n + j]; b += u[j * n + i]; } if (a !== N || b !== N) return false; }
+          return true; });
+        let avvist = null;
+        const m = matches.find(x => x.hg == null); m.hg = 2; m.ag = 1;
+        try { await grunnlagRegn(N); } catch (e) { avvist = e.message; } finally { m.hg = null; m.ag = null; }
+        return {like, summer, utvalg: utvalg.map(t => t.id), avtrykk: r.fingeravtrykk === await grunnlagAvtrykk(N), avvist, n: r.oppgaver.length};
+      });
+      check(`${liga}: grunnlagRegn gir poolens tall bit for bit (${regn.utvalg.join(', ')}), fordelingene går opp, og avtrykket er sidens`,
+        regn.like && regn.summer && regn.avtrykk, JSON.stringify(regn));
+      check(`${liga}: grunnlagRegn nekter å regne med et resultat fylt inn`, /resultater er fylt inn/.test(regn.avvist || ''), String(regn.avvist));
+      await s1.close();
+    }
+
+    // Skriptet (scripts/lag_grunnlag.js) i en kopi av repoet, med liten N:
+    // filen skrives med sidens avtrykk og én linje per oppgave; med et avtrykk
+    // som er ulikt fra lasting til lasting, eller en side som ikke finnes,
+    // skrives ingenting og den forrige filen står.
+    setGroup('Grunnlagsfilen: skriptet skriver bare når alt stemmer');
+    if (!live) {
+      const os = require('os'), {execFileSync, spawnSync} = require('child_process');
+      const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'grunnlag-'));
+      let tmpServer = null;
+      try {
+        for (const f of execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], {cwd: ROOT}).toString().split('\0').filter(Boolean)) {
+          const fra = path.join(ROOT, f);
+          if (!fs.existsSync(fra) || fs.statSync(fra).isDirectory()) continue;
+          fs.mkdirSync(path.dirname(path.join(TMP, f)), {recursive: true});
+          fs.copyFileSync(fra, path.join(TMP, f));
+        }
+        const pp = require.resolve('puppeteer-core');
+        const nodePath = [pp.slice(0, pp.lastIndexOf(`${path.sep}puppeteer-core${path.sep}`)), process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
+        const kjor = (...a) => spawnSync(process.execPath, [path.join(TMP, 'scripts', 'lag_grunnlag.js'), ...a],
+          {cwd: TMP, encoding: 'utf8', timeout: 300000, env: {...process.env, NODE_PATH: nodePath}});
+        const FIL = path.join(TMP, 'obos', 'data', 'grunnlag.json');
+        const r = kjor('obos', '--n', '300', '--inndata', 'abc123');
+        const tekst = fs.existsSync(FIL) ? fs.readFileSync(FIL, 'utf8') : '';
+        const g = tekst ? JSON.parse(tekst) : {};
+        tmpServer = await serve(TMP);
+        const pg = await open(1400, 900, `http://127.0.0.1:${tmpServer.address().port}/obos/`);
+        const sidens = await pg.evaluate(() => grunnlagAvtrykk(300)), sidensN = await pg.evaluate(() => grunnlagAvtrykk());
+        const oppg = await pg.evaluate(() => grunnlagOppgaver(buildQaOpen().openMatches).map(t => [t.id, t.idx, t.score]));
+        await pg.close();
+        check('lag_grunnlag.js skriver filen med sidens avtrykk for N = 300, inndata og alle oppgavene',
+          r.status === 0 && g.versjon === 1 && g.side === 'obos' && g.sesonger === 300 && g.fingeravtrykk === sidens && g.inndata === 'abc123'
+            && JSON.stringify(g.oppgaver) === JSON.stringify(oppg) && Object.keys(g.utfall || {}).length === oppg.length,
+          `kode ${r.status}: ${(r.stdout + r.stderr).slice(-400)}`);
+        check('... og siden godtar den ikke som en fil for N = 100 000 (annet avtrykk)', g.fingeravtrykk !== sidensN, '');
+        check('... med én linje per oppgave', tekst.split('\n').filter(l => /^  "[^"]+": \[/.test(l)).length === oppg.length, '');
+        // Avtrykk som er ulikt fra lasting til lasting: kontrollen med en ny
+        // lasting skal stoppe skrivingen.
+        const sideFil = path.join(TMP, 'obos', 'index.html'), sideTekst = fs.readFileSync(sideFil, 'utf8');
+        fs.writeFileSync(sideFil, sideTekst.replace('function grunnlagEkstra(){ return null; }',
+          'const EKSTRA_TILF = Math.random(); function grunnlagEkstra(){ return EKSTRA_TILF; }'));
+        const foer = fs.readFileSync(FIL, 'utf8');
+        const r2 = kjor('obos', '--n', '300');
+        check('et avtrykk som endres fra lasting til lasting: ingen fil skrives, den forrige står',
+          r2.status === 1 && fs.readFileSync(FIL, 'utf8') === foer && /IKKE skrevet.*annet avtrykk/s.test(r2.stderr) && !fs.existsSync(FIL + '.tmp'),
+          `kode ${r2.status}: ${r2.stderr.slice(-300)}`);
+        fs.writeFileSync(sideFil, sideTekst);
+        const r3 = kjor('finnes-ikke', '--n', '300', '--ut', 'obos/data');
+        check('en side som ikke finnes: exit 1, den forrige filen står', r3.status === 1 && fs.readFileSync(FIL, 'utf8') === foer,
+          `kode ${r3.status}: ${r3.stderr.slice(-300)}`);
+      } finally {
+        if (tmpServer) tmpServer.close();
+        fs.rmSync(TMP, {recursive: true, force: true});
+      }
+    }
+
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen
     // regnet før avrunding, gikk tallene i samme setning ikke opp ("til 15 %
