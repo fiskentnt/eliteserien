@@ -371,10 +371,10 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # (c8c0269), egne forkastingsgrupper i poolen (54488d8), grunnlagsfilen
 # (e83cf10: fingeravtrykket og regningen; bfeb464: siden bruker filen) og
 # tekstene om 100 000 simuleringer, treffsikkerheten og sluttoddsen
-# (172b0c6, 1f304c6, aaf12ed, d5dc74f) og vanlige anførselstegn (e8e9f81),
-# flettet inn med git merge-file. Der testsiden har sin egen tekst (ELO-Odds
-# 90), er den beholdt, med samme ordlyd om 100 000 og 10 000 simuleringer.
-# Basisen er derfor e8e9f81.
+# (172b0c6, 1f304c6, aaf12ed, d5dc74f), vanlige anførselstegn (e8e9f81) og
+# banneret fra grunnlagsfilen (938d959), flettet inn med git merge-file. Der
+# testsiden har sin egen tekst (ELO-Odds 90), er den beholdt, med samme ordlyd
+# om 100 000 og 10 000 simuleringer. Basisen er derfor 938d959.
 # Endres produksjonssiden etterpaa, drifter de fra hverandre: en
 # rettelse eller ny funksjon der kommer ikke med her. Det er ikke en feil i
 # testsiden, men noen maa ta stilling til det -- derfor en advarsel med antall
@@ -384,8 +384,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_COMMIT = "e8e9f81de02a2848eb40ad1814b5edfc035e6654"
-BASE_SHA = "d688b2cc33fe2dd1c363a1c174d872eba678376327d9772b0fd5b4270a4f9402"
+BASE_COMMIT = "938d959a86a1f3fbafc9ccf6a8c463e9352e921f"
+BASE_SHA = "54f874a2b532ec442be89ba2707f2038f51dc215f0d3fd222a77706a251633b4"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
