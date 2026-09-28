@@ -2203,8 +2203,8 @@ async function main() {
     // oddsratene fra før resultatet.
     //  I tillegg: de delte funksjonene i WORKER_SRC er tegn for tegn
     // hovedtrådens (Function.toString), deklarert én gang, og konstantene er
-    // like; og matchImpact i poolen gir identiske tall som i hjelpe-Workeren
-    // med samme utgangsstillinger.
+    // like; og grovsilingen i "Hvilke kamper betyr mest?" går i poolen med
+    // egen stilling per låst utfall.
     setGroup('Svarene: låste utfall som scenarioet');
     for (const [sti, liga] of [['/eliteserien/', 'Eliteserien'], ['/obos/', 'OBOS']]) {
       const url = base.replace('/eliteserien/', sti);
@@ -2311,31 +2311,23 @@ async function main() {
           `${r.ulike} ulike av ${r.par}, største avvik ${r.maksAvvik.toExponential(1)}, avspilling mulig: ${r.kanSpille}: ${r.eks.join('; ')}`);
       }
 
-      // matchImpact i poolen = hjelpe-Workeren med samme utgangsstillinger.
-      const flytt = await lp.evaluate(async () => {
-        if (typeof laastOver !== 'function' || typeof stillingsGrunnlag !== 'function') return {mulig: false};
-        const {P0, G0, F0, open, openMatches, oddsOverride, scenarioKey} = buildQaOpen();
-        const nr = qaNextRoundMatches(openMatches);
+      // Grovsilingen i "Hvilke kamper betyr mest?" går i poolen, 400 sesonger,
+      // med egen utgangsstilling per låst utfall (før: hjelpe-Workeren, uten
+      // egen stilling). Alle oppgavene med N = QA_N_IMPACT er låste og merket
+      // laastStilling, to per kandidatkamp, og ingen matchImpact-melding sendes.
+      const grov = await lp.evaluate(async () => {
+        const {openMatches} = buildQaOpen(); const nr = qaNextRoundMatches(openMatches);
         const lag = TEAMS.find(t => { const z = qaTargetZone(t); return z && !qaSettled(t, z) && nr.list.some(m => m.home === t || m.away === t); });
-        const zone = qaTargetZone(lag);
-        const specs = nr.list.slice(0, 3).map(m => ({idx: openMatches.indexOf(m), match: m, needsDraw: true}));
-        const base = {P0, G0, F0, open, oddsOverride, N: 2000, wantBaseline: true};
-        const pool = await runMatchImpactAsync(lag, zone, specs, scenarioKey, base);
-        // Hjelpe-Workeren, som før flyttingen: utgangsstillingene regnet med laastOver.
-        const cands = specs.map(c => { const hs = forcedScoreline(c.match.home, c.match.away, true), as = forcedScoreline(c.match.home, c.match.away, false),
-          ds = forcedDrawScoreline(c.match.home, c.match.away);
-          return {idx: c.idx, homeScore: hs, awayScore: as, drawScore: ds, seed: hashStr(scenarioKey + '|impact'),
-                  overHome: laastOver(open, c.idx, hs), overAway: laastOver(open, c.idx, as), overDraw: laastOver(open, c.idx, ds)}; });
-        matchImpactRunId++; const runId = matchImpactRunId;
-        const hj = await new Promise(res => { matchImpactResolvers.set(runId, res); getHjelpWorker().postMessage({mode: 'matchImpact', runId,
-          mu: MODEL.mu, H: MODEL.H, k: FORM_K, att: Array.from(LIVE.att), con: Array.from(LIVE.con), ha: Array.from(LIVE.ha), hc: Array.from(LIVE.hc),
-          P0: Array.from(P0), G0: Array.from(G0), F0: Array.from(F0), open, oddsOverride, N: 2000, wantBaseline: true, ti: TI[lag], zone, candidates: cands}); });
-        const ulike = [];
-        pool.results.forEach((r, i) => { for (const f of ['homeProb', 'drawProb', 'awayProb', 'baseProb']) if (!Object.is(r[f], hj.results[i][f])) ulike.push(`${r.idx} ${f}: ${r[f]} mot ${hj.results[i][f]}`); });
-        return {mulig: true, n: pool.results.length * 4, ulike};
+        const kand = buildMatchImpactCandidates(lag, openMatches).length;
+        __sendt.length = 0;
+        await qaKeyMatches(lag);
+        const g = __sendt.filter(m => m.mode === 'zoneTask' && m.N === QA_N_IMPACT);
+        return {lag, kand, N: QA_N_IMPACT, oppgaver: g.length, laaste: g.filter(m => m.forcedIdx >= 0 && m.laastStilling).length,
+                matchImpact: __sendt.filter(m => m.mode === 'matchImpact').length};
       });
-      check(`${liga}: matchImpact i poolen gir identiske tall som i hjelpe-Workeren med samme utgangsstillinger`,
-        flytt.mulig && flytt.n >= 12 && flytt.ulike.length === 0, JSON.stringify(flytt));
+      check(`${liga}: grovsilingen går i poolen med 400 sesonger og egen utgangsstilling per låst utfall`,
+        grov.N === 400 && grov.kand >= 10 && grov.oppgaver === 2 * grov.kand && grov.laaste === grov.oppgaver && grov.matchImpact === 0,
+        JSON.stringify(grov));
       // matchImpact-svarene i poolen blir ferdige også når et annet svar starter
       // imens. Poolen forkaster køede oppgaver når et nytt kall i samme gruppe
       // starter; lå "Hva betyr neste kamp?" i samme gruppe som "Heie på", ble

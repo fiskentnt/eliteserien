@@ -2405,7 +2405,6 @@ self.onmessage = function(e){
   if(d.mode==='typical'){ runTypical(d); }
   else if(d.mode==='badges'){ runBadges(d); }
   else if(d.mode==='insights'){ runInsights(d); }
-  else if(d.mode==='matchImpact'){ runMatchImpact(d); }
   // Bare for testene: utgangsstillingen Workeren ville brukt for et låst utfall.
   else if(d.mode==='laastStilling'){ var ml = medLaast(d);
     postMessage({runId:d.runId, mode:'laastStilling', att:ml.att, con:ml.con, ha:ml.ha, hc:ml.hc, oddsOverride:ml.oddsOverride}); }
@@ -2972,36 +2971,13 @@ function runInsights(d){
   });
 }
 
-// ---- "Spør om tabellen", spørsmål 3: for et lite, relevant utvalg
-// gjenstående kamper (hovedtråden begrenser til lagets egne kamper og de
-// nærmeste konkurrentenes, se buildMatchImpactCandidates() -- å kjøre ALLE
-// ~70 gjenstående kamper i hele ligaen i to retninger hver ville vært for
-// tregt til en enkelt spørsmålsklikk), simuleres scenarioet MED den kampen
-// låst til hver av de to utfallene, og forskjellen i lagets sonesannsynlig-
-// het (samme sone som spørsmål 1) måles. Samme frø for begge retninger av
-// SAMME kamp (variansreduksjon -- støyen kansellerer bedre i differansen enn
-// med to uavhengige frø). Frøet er felles for alle kampene i scenarioet (se
-// runMatchImpactAsync), så utgangspunktet er det samme for alle og samme kamp
-// gir samme tall i spørsmål 3, 5 og "heie på".
-function runMatchImpact(d){
-  var results = d.candidates.map(function(c){
-    // Hvert låste utfall har egen utgangsstilling (c.overHome osv.: lagstyrker
-    // og oddsOverride etter det utfallet), regnet på hovedtråden, se laastOver.
-    var med = function(ov){ return ov ? Object.assign({}, d, ov) : d; };
-    var homeProb = simulateZoneProb(med(c.overHome), c.idx, c.homeScore, c.seed);
-    var awayProb = simulateZoneProb(med(c.overAway), c.idx, c.awayScore, c.seed);
-    // drawScore er valgfri -- bare spørsmål 5 (ett resultat om gangen, alle
-    // tre utfall) trenger den; spørsmål 3 (mange kandidatkamper, bare
-    // seier/tap-forskjellen) lar den stå tom for å spare en tredje kjøring.
-    var drawProb = c.drawScore ? simulateZoneProb(med(c.overDraw), c.idx, c.drawScore, c.seed) : null;
-    // Utgangspunktet uten låst kamp, samme frø som de låste kjøringene, så
-    // endringen (utfall minus utgangspunkt) kan legges oppå tabellens tall.
-    // Bare spørsmål 3 (finpuss) og 5 ber om den.
-    var baseProb = d.wantBaseline ? simulateZoneProb(d, -1, null, c.seed) : null;
-    return {idx:c.idx, homeProb:homeProb, drawProb:drawProb, awayProb:awayProb, baseProb:baseProb, diff:Math.abs(homeProb-awayProb)};
-  });
-  postMessage({runId:d.runId, mode:'matchImpact', results:results});
-}
+// "Spør om tabellen", spørsmål 3 og 5, kortet "Neste kamp" og "Heie på": hvert
+// låst utfall (og utgangspunktet uten låst kamp) er én oppgave i poolen
+// (mode:'zoneTask', simulateZoneProb under), se runMatchImpactAsync og
+// runZoneTasks på hovedtråden. Samme frø for alle utfallene av SAMME kamp og
+// for utgangspunktet (variansreduksjon: støyen kansellerer i differansen), og
+// felles for alle kampene i scenarioet, så samme kamp gir samme tall i alle
+// svarene.
 // wantAll: ta også vare på HELE plasseringsfordelingen for ALLE lag (til
 // "rundens viktigste kamp", som trenger gull/Europa/nedrykk for hvert lag,
 // ikke bare ett lags sone). Tellingen ligger etter at plasseringen er avgjort
@@ -3113,13 +3089,15 @@ let lastTypicalDiagnostics = null; // for feilsøking/verifisering, se console
 let lastSimSeed = null, lastSimMatchIds = null;
 // "Spør om tabellen": samme resolver-mønster som typicalResolvers, ett kart
 // per mode siden runId-tellerne er uavhengige.
-const insightsResolvers = new Map(), matchImpactResolvers = new Map();
-let insightsRunId = 0, matchImpactRunId = 0;
+const insightsResolvers = new Map();
+let insightsRunId = 0;
 // Tabellsimuleringen (runMCAsync) har sin EGEN Worker, som bare den bruker.
-// Alt annet -- "Neste kamp" (matchImpact), "Spør om tabellen" (insights) og
-// "typisk sesong" (typical) -- går i hjelpe-Workeren under, merkene i sin, og
-// "heie på" i bassenget. Før sto tabellens prosenter i kø bak kortet "Neste
-// kamp" (2500 × 4 sesonger), som sendes før tabellsimuleringen.
+// "Spør om tabellen" (insights) og "typisk sesong" (typical) går i
+// hjelpe-Workeren under, merkene i sin, og svarene med låste utfall (kortet
+// "Neste kamp", "Hva betyr neste kamp?", "Heie på", "Hvilke kamper betyr
+// mest?", "Rundens viktigste kamp") i bassenget. Før sto tabellens prosenter
+// i kø bak kortet "Neste kamp" (2500 × 4 sesonger), som sendes før
+// tabellsimuleringen.
 function getWorker(){
   if(!mcWorker){
     mcWorker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'})));
@@ -3154,7 +3132,7 @@ function getHjelpWorker(){
     hjelpWorker.onmessage = e=>{
       const data=e.data;
       const kart = data.mode==='typical' ? typicalResolvers : data.mode==='insights' ? insightsResolvers
-                 : data.mode==='matchImpact' ? matchImpactResolvers : null;
+                 : null;
       if(!kart) return;
       const resolve=kart.get(data.runId);
       if(resolve){ resolve(data); kart.delete(data.runId); }
@@ -3234,11 +3212,6 @@ function laastTaskOver(payload, t){
   if(t.idx>=0 && t.score) over.laastStilling = true;
   return over;
 }
-// Grovsilingen i "Hvilke kamper betyr mest?" (QA_N_IMPACT sesonger, over 80
-// utfall) viser aldri tall, den velger bare ut kampene. Den regner som før,
-// uten egen utgangsstilling per låst utfall; finsilingen (de tre som vises)
-// gjør det. Testsiden erstatter denne med ELO-ratingen etter utfallet.
-function grovKandidatOver(open, c){ return {}; }
 // Det Workeren trenger for å regne en låst stilling selv (se settGrunnlag i
 // WORKER_SRC): data, ikke kode. Minnet for fitRates tas med.
 function stillingsGrunnlag(){
@@ -4136,7 +4109,7 @@ function closeFormModal(){ document.getElementById('formModalBackdrop').hidden=t
 // ==== "Spør om tabellen": ferdige spørsmål, svart ut fra modellen og
 // simuleringene -- ALDRI forhåndsskrevet tekst. Rekkefølge/tekst/regler er
 // spesifisert i oppgaven; se qaTargetZone() for "mest aktuelt"-regelen delt
-// av spørsmål 1, 2 og 6, og WORKER_SRC (mode:'insights'/'matchImpact') for
+// av spørsmål 1, 2 og 6, og WORKER_SRC (mode:'insights'/'zoneTask') for
 // de tunge beregningene (3 og 6 særlig) som ikke skal fryse siden. ----
 
 // Sone-objekt for en EKSPLISITT nøkkel (gull/europa/kvalik/nedrykk) -- delt
@@ -5150,7 +5123,7 @@ function qaLuck(){
 }
 
 // ---- Spørsmål 1, 2, 3, 6, 7: krever simulering, kjøres i Workeren (se
-// mode:'insights'/'matchImpact' i WORKER_SRC) så siden ikke fryser. ----
+// mode:'insights'/'zoneTask' i WORKER_SRC) så siden ikke fryser. ----
 
 // Samme P0/G0/F0-oppbygging som runMCAsync (låste resultater, også grå
 // simulerte, teller som spilt), men med rundenummer på hver gjenstående kamp
@@ -5226,9 +5199,13 @@ function buildMatchImpactCandidates(team, openMatches){
 // Seier, uavgjort og tap i én eller flere kamper for ett lag, pluss
 // utgangspunktet uten låst kamp (wantBaseline). Kjøringene går i poolen, én
 // oppgave per utfall, så de regnes samtidig på flere kjerner; hvert låst utfall
-// får egen utgangsstilling (laastTaskOver). Samme frø og samme simuleringer
-// som før i hjelpe-Workeren, så tallene er de samme. base.grov: grovsilingen
-// i "Hvilke kamper betyr mest?", som går som før i hjelpe-Workeren.
+// får egen utgangsstilling (laastTaskOver). Ett frø for alle oppgavene
+// (scenarioet + '|impact'), som "Heie på" og "Rundens viktigste kamp", så
+// samme kamp og utfall gir samme tall i alle svarene. Også grovsilingen i
+// "Hvilke kamper betyr mest?" (QA_N_IMPACT sesonger, over 80 utfall) går her,
+// med riktige lagstyrker: i poolen er den både raskere og treffer de tre
+// kampene med høy N oftere enn før i hjelpe-Workeren uten egen stilling
+// (målt 28.9.2026: 72 mot 458 ms, 41 mot 36 % samme tre som 20 000 sesonger).
 // gruppe: forkastingsgruppen i poolen ("kort" for kortet "Neste kamp": et nytt
 // kort erstatter det gamle). Uten gruppe får kallet sin egen, så et annet svar
 // som starter imens aldri forkaster oppgavene det venter på (før gikk
@@ -5239,41 +5216,24 @@ function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base, grup
     idx:c.idx,
     homeScore: forcedScoreline(c.match.home, c.match.away, true),
     awayScore: forcedScoreline(c.match.home, c.match.away, false),
-    drawScore: c.needsDraw ? forcedDrawScoreline(c.match.home, c.match.away) : null,
-    seed: hashStr(scenarioKey+'|impact')
+    drawScore: c.needsDraw ? forcedDrawScoreline(c.match.home, c.match.away) : null
   }));
-  if(!base.grov){
-    const tasks = [];
-    if(base.wantBaseline) tasks.push({id:'base', idx:-1, score:null});
-    candidates.forEach(c=>{
-      tasks.push({id:c.idx+':H', idx:c.idx, score:c.homeScore}, {id:c.idx+':B', idx:c.idx, score:c.awayScore});
-      if(c.drawScore) tasks.push({id:c.idx+':U', idx:c.idx, score:c.drawScore});
-    });
-    return runZoneTasks({
-      mu:MODEL.mu, H:MODEL.H, k:FORM_K,
-      att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
-      P0:Array.from(base.P0), G0:Array.from(base.G0), F0:Array.from(base.F0), open:base.open,
-      oddsOverride:base.oddsOverride, N:base.N||QA_N_IMPACT, ti:TI[team], zone, seed:hashStr(scenarioKey+'|impact')
-    }, tasks, null, gruppe || `impact:${++impactGruppeNr}`).then(res=>({results: candidates.map(c=>{
-      const h=res[c.idx+':H'].prob, a=res[c.idx+':B'].prob;
-      return {idx:c.idx, homeProb:h, awayProb:a, drawProb:c.drawScore ? res[c.idx+':U'].prob : null,
-              baseProb:base.wantBaseline ? res.base.prob : null, diff:Math.abs(h-a)};
-    })}));
-  }
-  candidates.forEach(c=>Object.assign(c, grovKandidatOver(base.open, c)));
-  matchImpactRunId++;
-  const runId = matchImpactRunId;
-  return new Promise(resolve=>{
-    matchImpactResolvers.set(runId, resolve);
-    getHjelpWorker().postMessage({
-      mode:'matchImpact', runId,
-      mu:MODEL.mu, H:MODEL.H, k:FORM_K,
-      att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
-      P0:Array.from(base.P0), G0:Array.from(base.G0), F0:Array.from(base.F0), open:base.open,
-      oddsOverride:base.oddsOverride, N:base.N||QA_N_IMPACT, wantBaseline:!!base.wantBaseline,
-      ti:TI[team], zone, candidates
-    });
+  const tasks = [];
+  if(base.wantBaseline) tasks.push({id:'base', idx:-1, score:null});
+  candidates.forEach(c=>{
+    tasks.push({id:c.idx+':H', idx:c.idx, score:c.homeScore}, {id:c.idx+':B', idx:c.idx, score:c.awayScore});
+    if(c.drawScore) tasks.push({id:c.idx+':U', idx:c.idx, score:c.drawScore});
   });
+  return runZoneTasks({
+    mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    P0:Array.from(base.P0), G0:Array.from(base.G0), F0:Array.from(base.F0), open:base.open,
+    oddsOverride:base.oddsOverride, N:base.N||QA_N_IMPACT, ti:TI[team], zone, seed:hashStr(scenarioKey+'|impact')
+  }, tasks, null, gruppe || `impact:${++impactGruppeNr}`).then(res=>({results: candidates.map(c=>{
+    const h=res[c.idx+':H'].prob, a=res[c.idx+':B'].prob;
+    return {idx:c.idx, homeProb:h, awayProb:a, drawProb:c.drawScore ? res[c.idx+':U'].prob : null,
+            baseProb:base.wantBaseline ? res.base.prob : null, diff:Math.abs(h-a)};
+  })}));
 }
 
 // Nærmeste konkurrent om AKKURAT samme sone: laget nærmest i poeng som har en
@@ -5687,7 +5647,7 @@ async function qaKeyMatches(team){
   const base = {P0,G0,F0,open,oddsOverride};
   // Trinn 1: grovsilting av alle kandidatkamper (få simuleringer per kamp).
   const candidateSpecs = buildMatchImpactCandidates(team, openMatches);
-  const screen = await runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, {...base, grov:true});
+  const screen = await runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base);
   const top = screen.results.slice().sort((a,b)=>b.diff-a.diff).slice(0,3);
   // Trinn 2 (samme antall simuleringer og frø som spørsmål 5, så samme kamp
   // gir samme tall i begge svar): finpuss av de tre beste med et utgangspunkt
