@@ -35,6 +35,7 @@ en bruker ville sett.
 | Prekick: frysing ved avspark | avspark fra terminlisten regnes om fra norsk tid til UTC (også over sommertidsskiftet); for begge ligaer: en rad oppdateres før avspark, røres ikke ved og etter avspark, lages ikke etter avspark, og fryses med stempelet fra før avspark når resultatet kommer; `snapshot_probs.js` bruker regelen, og OBOS-jobben kjører samme skript |
 | Forrige kamp: ordlyden følger kilden | «bedre/verre enn markedet ventet» når forventningen er regnet fra sluttoddsen, «enn modellen ventet» ved frosset prognose (injisert), både i svaret og i linja i lagboksen, begge ligaer |
 | Svarene: vist nivå minus vist nå = vist differanse | deterministisk (simuleringen og nå-nivået byttes ut): «Hva betyr neste kamp?», «Hvilke kamper betyr mest?» og «heie på» for én fremre og én bakre sone i begge ligaer, nå fra 0,3 % til 99,7 %; differansen i parentes og «reduserer … med N» er forskjellen mellom de viste tallene, også over «<1 %» og «>99 %»; pluss ekte simulering for to lag |
+| Svarene: låste utfall som scenarioet | begge ligaer: de delte funksjonene i `WORKER_SRC` er tegn for tegn hovedtrådens (`Function.toString`), én gang hver, og konstantene er like; hver låste oppgave fra «Rundens viktigste kamp», «Hva betyr neste kamp?», «Heie på» og finsilingen i «Hvilke kamper betyr mest?» spilles av i en Worker (`laastStilling`), og lagstyrkene og målratene er bit-like scenarioets med samme resultat utfylt, uten og med et annet resultat fylt inn; matchImpact i poolen gir identiske tall som i hjelpe-Workeren; «Hva betyr neste kamp?» og finsilingen blir ferdige når «Heie på» starter samtidig |
 | JS-feil | ingen feil i konsollen gjennom hele kjøringen |
 
 Nye spørsmål i «Spør om tabellen» må legges inn i `QA_EXPECT` i
@@ -49,6 +50,14 @@ tallet mangler i svaret, eller om bare ordlyden er ny. Mønstrene godtar de
 gyldige «ingenting i spill»-svarene (avgjort sone, ferdig sesong), se `SETTLED`.
 
 ## Ikke dekket
+
+Kjent svakhet, ikke rettet: «Heie på», «Rundens viktigste kamp» og «Hva
+betydde forrige kamp» deler forkastingsgruppe i poolen (`runZoneTasks`,
+gruppe «svar»). Starter ett av dem mens et annet har oppgaver i kø, forkastes
+de køede, og det første blir aldri ferdig. Visningen viser da riktig svar for
+det siste spørsmålet (`qaRequestSeq`), men et svar som ble stilt direkte fra
+kode, kan henge. matchImpact-svarene har egen gruppe per kall og er ikke
+berørt.
 
 Firefox og Safari (testen kjører bare Chrome), utseende og farger, og
 workflowen som skriver datafilene. Den siste kan kjøres manuelt:

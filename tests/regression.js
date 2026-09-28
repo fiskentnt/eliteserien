@@ -1939,6 +1939,8 @@ async function main() {
     // i en annen kamp, som en bruker. Kortet gjøres ti ganger tyngre (N × 10)
     // så rekkefølgen ikke avhenger av maskinen: på en rask maskin er kortet
     // ellers ferdig før tabellsimuleringen sendes (render() + 250 ms).
+    // Kortets oppgaver går nå i poolen (én per utfall); kravet er at ingen av
+    // dem går i tabellens Worker.
     // Kontrollert på de tre sidene: Eliteserien, OBOS og testsiden.
     setGroup('Tabellsimuleringen i egen Worker');
     for (const [sti, liga] of [['/eliteserien/', 'Eliteserien'], ['/obos/', 'OBOS'], ['/elo-test/', 'ELO-test']]) {
@@ -1966,8 +1968,11 @@ async function main() {
       await settle(wp);
       await sleep(1500);
       const r = await wp.evaluate(async lag => {
-        const orig = window.runMatchImpactAsync;
-        window.runMatchImpactAsync = (t, z, c, k, b) => orig(t, z, c, k, {...b, N: (b.N || 400) * 10});
+        // Kortet gjøres tyngre, og tiden det er ferdig måles når kortets kall
+        // er ferdig (oppgavene går i poolen eller, før, i én Worker).
+        const orig = window.runMatchImpactAsync; let kortFerdig = null;
+        window.runMatchImpactAsync = (t, z, c, k, b, g) => orig(t, z, c, k, {...b, N: (b.N || 400) * 10}, g)
+          .then(r => { if (kortFerdig === null) kortFerdig = performance.now(); return r; });
         const row = [...document.querySelectorAll('.match')].find(r => { const m = matches.find(x => x.id === r.dataset.id);
           return m && m.hg == null && m.home !== lag && m.away !== lag && !r.querySelector('[data-side=h]').value; });
         const nP = __ws.poster.length, nS = __ws.svar.length;
@@ -1976,20 +1981,20 @@ async function main() {
         a.value = '1'; a.dispatchEvent(new Event('input', {bubbles: true}));
         const t0 = Date.now();
         while (Date.now() - t0 < 60000 && !(__ws.svar.slice(nS).some(x => x.mode === 'prob' && x.done >= 10000)
-                                             && __ws.svar.slice(nS).some(x => x.mode === 'matchImpact'))) await new Promise(r => setTimeout(r, 20));
+                                             && kortFerdig !== null)) await new Promise(r => setTimeout(r, 20));
         window.runMatchImpactAsync = orig;
         const poster = __ws.poster.slice(nP), svar = __ws.svar.slice(nS);
         const tabellW = new Set(poster.filter(x => x.mode === 'tabell').map(x => x.id));
-        const kortW = new Set(poster.filter(x => x.mode === 'matchImpact').map(x => x.id));
-        const forste = svar.find(x => x.mode === 'prob'), kort = svar.find(x => x.mode === 'matchImpact');
-        const kortPost = poster.find(x => x.mode === 'matchImpact'), tabPost = poster.find(x => x.mode === 'tabell');
+        const kortW = new Set(poster.filter(x => x.mode === 'matchImpact' || x.mode === 'zoneTask').map(x => x.id));
+        const forste = svar.find(x => x.mode === 'prob'), kort = kortFerdig === null ? null : {t: kortFerdig};
+        const kortPost = poster.find(x => x.mode === 'matchImpact' || x.mode === 'zoneTask'), tabPost = poster.find(x => x.mode === 'tabell');
         return {tabellW: [...tabellW], kortW: [...kortW], felles: [...tabellW].filter(x => kortW.has(x)),
                 kortForTabell: !!(kortPost && tabPost && kortPost.t < tabPost.t),
                 forste: forste ? Math.round(forste.t - poster[0].t) : null, kort: kort ? Math.round(kort.t - poster[0].t) : null};
       }, lag);
       console.log(`      ${liga} (følger ${lag}): kortet sendt før tabellen: ${r.kortForTabell}; første prosenter ${r.forste} ms, «Neste kamp» ferdig ${r.kort} ms (kortet × 10)`);
       check(`${liga}: tabellsimuleringen og «Neste kamp» går i ulike Workere`,
-        r.tabellW.length === 1 && r.kortW.length === 1 && r.felles.length === 0, JSON.stringify(r));
+        r.tabellW.length === 1 && r.kortW.length >= 1 && r.felles.length === 0, JSON.stringify(r));
       check(`${liga}: tabellens første prosenter kommer før «Neste kamp» er ferdig`,
         r.forste != null && r.kort != null && r.forste < r.kort, `første ${r.forste} ms, kortet ${r.kort} ms`);
       await wp.close();
@@ -2182,6 +2187,154 @@ async function main() {
           rk.riktig && (rk.sisteIRender || rk.sisteRettEtterFerdig), JSON.stringify(rk));
         await p.close();
       }
+    }
+    await page.bringToFront();
+
+    // ---- Svarene: låste utfall regnes som scenarioet ----
+    // Et svar som låser en åpen kamp til et resultat skal regne med samme
+    // lagstyrker og målrater som scenarioet bruker med samme resultat utfylt
+    // (som kontroll U på testsiden). Utgangsstillingen regnes i Workerne. Testen
+    // fanger oppgavene svarveien faktisk sender ("Rundens viktigste kamp", "Hva
+    // betyr neste kamp?", "Heie på", finsilingen i "Hvilke kamper betyr
+    // mest?"), spiller hver låste oppgave av i en Worker (mode laastStilling,
+    // samme kode som oppgaven kjører) og sammenligner bit for bit med LIVE og
+    // oddsOverrideFor etter setMatch + refreshLiveState. Uten og med et annet
+    // resultat allerede fylt inn. Før fikk den låste kjøringen lagstyrkene og
+    // oddsratene fra før resultatet.
+    //  I tillegg: de delte funksjonene i WORKER_SRC er tegn for tegn
+    // hovedtrådens (Function.toString), deklarert én gang, og konstantene er
+    // like; og matchImpact i poolen gir identiske tall som i hjelpe-Workeren
+    // med samme utgangsstillinger.
+    setGroup('Svarene: låste utfall som scenarioet');
+    for (const [sti, liga] of [['/eliteserien/', 'Eliteserien'], ['/obos/', 'OBOS']]) {
+      const url = base.replace('/eliteserien/', sti);
+      const lp = await browser.newPage();
+      lp.on('pageerror', e => errors.push(`${url}: ${e.message}`));
+      await lp.evaluateOnNewDocument(() => {
+        window.__sendt = [];
+        const W = window.Worker;
+        window.Worker = function (u, o) { const w = new W(u, o), post = w.postMessage.bind(w);
+          w.postMessage = m => { if (m && (m.mode === 'zoneTask' || m.mode === 'matchImpact')) window.__sendt.push(m); return post(m); }; return w; };
+      });
+      await lp.setViewport({width: 1400, height: 900});
+      await lp.goto(url, {waitUntil: 'networkidle0'});
+      await lp.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000, polling: 50});
+
+      // Én kilde: de delte funksjonene og konstantene.
+      const kilde = await lp.evaluate(() => {
+        const navn = ['pois', 'outcome', 'stateRate', 'computeLiveState', 'rateMedStilling', 'fitRates', 'fitRatesRegn',
+                      'liveMedLaast', 'aapenKampFor', 'laastOver', 'dcTau', 'applyDrift'];
+        const ut = {mangler: [], ulik: [], flere: [], konst: []};
+        for (const n of navn) {
+          const hoved = typeof window[n] === 'function' ? window[n].toString() : null;
+          const antall = WORKER_SRC.split(`function ${n}(`).length - 1;
+          if (!hoved || antall === 0) { ut.mangler.push(n); continue; }
+          if (antall !== 1) ut.flere.push(`${n} (${antall})`);
+          const i = WORKER_SRC.indexOf(`function ${n}(`);
+          if (WORKER_SRC.slice(i, i + hoved.length) !== hoved) ut.ulik.push(n);
+        }
+        const W = {}; try { (new Function('W', 'var self={}; var postMessage=function(){};' + WORKER_SRC +
+          '; W.v={GMAX, DC_RHO, DRIFT_CAP_ATTCON, DRIFT_CAP_HAHC, DRIFT_REVERSION, MAX_LAMBDA_LOG, FIT_MINNE_MAKS};'))(W); } catch (e) { ut.konst.push('feil: ' + e.message); }
+        const hk = {GMAX, DC_RHO, DRIFT_CAP_ATTCON, DRIFT_CAP_HAHC, DRIFT_REVERSION, MAX_LAMBDA_LOG,
+                    FIT_MINNE_MAKS: typeof FIT_MINNE_MAKS === 'undefined' ? null : FIT_MINNE_MAKS};
+        for (const k in hk) if (!W.v || !Object.is(W.v[k], hk[k])) ut.konst.push(`${k}: ${W.v && W.v[k]} mot ${hk[k]}`);
+        return {navn: navn.length, ...ut};
+      });
+      check(`${liga}: de delte funksjonene i WORKER_SRC er tegn for tegn hovedtrådens, én gang hver, og konstantene er like`,
+        !kilde.mangler.length && !kilde.ulik.length && !kilde.flere.length && !kilde.konst.length,
+        `mangler ${kilde.mangler.join(',')}; ulik ${kilde.ulik.join(',')}; flere ${kilde.flere.join(',')}; konstanter ${kilde.konst.join('; ')}`);
+
+      for (const medAnnet of [false, true]) {
+        if (medAnnet) {
+          await lp.evaluate(() => { const m = matches.filter(x => x.hg == null).slice(-1)[0]; setMatch(m, 2, 0); render(); });
+          await settle(lp);
+        }
+        const r = await lp.evaluate(async () => {
+          const {openMatches} = buildQaOpen(); const nr = qaNextRoundMatches(openMatches);
+          const lag = TEAMS.find(t => { const z = qaTargetZone(t); return z && !qaSettled(t, z) && nr.list.some(m => m.home === t || m.away === t); });
+          __sendt.length = 0;
+          await qaKeyRoundData(); await qaNextMatch(lag); await qaCheerFor(lag); await qaKeyMatches(lag);
+          // Hver låste oppgave, spilt av i en egen Worker: stillingen den regner.
+          const laaste = __sendt.filter(m => m.mode === 'zoneTask' && m.forcedIdx >= 0);
+          const merket = laaste.filter(m => m.laastStilling).length;
+          const kanSpille = WORKER_SRC.includes("d.mode==='laastStilling'");
+          const stillinger = [];
+          if (kanSpille) {
+            const w = new Worker(URL.createObjectURL(new Blob([WORKER_SRC], {type: 'application/javascript'})));
+            const svar = new Map(); w.onmessage = e => svar.set(e.data.runId, e.data);
+            laaste.forEach((m, i) => w.postMessage({...m, mode: 'laastStilling', runId: i}));
+            const t0 = Date.now(); while (svar.size < laaste.length && Date.now() - t0 < 60000) await new Promise(r => setTimeout(r, 20));
+            w.terminate();
+            laaste.forEach((m, i) => stillinger.push(svar.get(i)));
+          }
+          const likt = (a, b) => a.length === b.length && a.every((x, i) => Object.is(x, b[i]));
+          const ulike = []; let par = 0, maksAvvik = 0;
+          laaste.forEach((m, i) => {
+            const st = stillinger[i] || {att: m.att, con: m.con, ha: m.ha, hc: m.hc, oddsOverride: m.oddsOverride};
+            const o = m.open[m.forcedIdx], x = matches.find(y => !(y.hg != null && y.ag != null) && TI[y.home] === o[0] && TI[y.away] === o[1]);
+            setMatch(x, m.forcedScore[0], m.forcedScore[1], false); refreshLiveState();
+            const navn = `${x.home}-${x.away} ${m.forcedScore.join('-')}`;
+            for (const f of ['att', 'con', 'ha', 'hc']) { par++;
+              if (!likt(Array.from(st[f]), Array.from(LIVE[f]))) { ulike.push(`${navn}: ${f}`); maksAvvik = Math.max(maksAvvik, ...Array.from(LIVE[f]).map((v, j) => Math.abs(v - st[f][j]))); } }
+            m.open.forEach((oo, j) => { if (j === m.forcedIdx) return;
+              const sc = oddsOverrideFor(TEAMS[oo[0]], TEAMS[oo[1]]), sendt = (st.oddsOverride || [])[j] || null; par++;
+              if (!((sc === null && sendt === null) || (sc && sendt && likt(sc, sendt)))) ulike.push(`${navn}: oddsOverride ${TEAMS[oo[0]]}-${TEAMS[oo[1]]}`); });
+            setMatch(x, null, null, false); refreshLiveState();
+          });
+          render();
+          return {lag, kjoringer: laaste.length, merket, kanSpille, kamper: new Set(laaste.map(m => m.forcedIdx)).size, par, ulike: ulike.length, eks: ulike.slice(0, 4), maksAvvik};
+        });
+        await settle(lp);
+        const hvor = medAnnet ? 'med et annet resultat fylt inn' : 'uten scenario';
+        console.log(`      ${liga} ${hvor} (følger ${r.lag}): ${r.kjoringer} låste oppgaver i ${r.kamper} kamper, ${r.merket} regnet i Workeren, ${r.par} sammenligninger`);
+        check(`${liga}, ${hvor}: lagstyrkene og målratene Workerne regner for låste utfall er bit-like scenarioets med samme resultat`,
+          r.kanSpille && r.kjoringer >= 20 && r.kamper >= 5 && r.merket === r.kjoringer && r.ulike === 0,
+          `${r.ulike} ulike av ${r.par}, største avvik ${r.maksAvvik.toExponential(1)}, avspilling mulig: ${r.kanSpille}: ${r.eks.join('; ')}`);
+      }
+
+      // matchImpact i poolen = hjelpe-Workeren med samme utgangsstillinger.
+      const flytt = await lp.evaluate(async () => {
+        if (typeof laastOver !== 'function' || typeof stillingsGrunnlag !== 'function') return {mulig: false};
+        const {P0, G0, F0, open, openMatches, oddsOverride, scenarioKey} = buildQaOpen();
+        const nr = qaNextRoundMatches(openMatches);
+        const lag = TEAMS.find(t => { const z = qaTargetZone(t); return z && !qaSettled(t, z) && nr.list.some(m => m.home === t || m.away === t); });
+        const zone = qaTargetZone(lag);
+        const specs = nr.list.slice(0, 3).map(m => ({idx: openMatches.indexOf(m), match: m, needsDraw: true}));
+        const base = {P0, G0, F0, open, oddsOverride, N: 2000, wantBaseline: true};
+        const pool = await runMatchImpactAsync(lag, zone, specs, scenarioKey, base);
+        // Hjelpe-Workeren, som før flyttingen: utgangsstillingene regnet med laastOver.
+        const cands = specs.map(c => { const hs = forcedScoreline(c.match.home, c.match.away, true), as = forcedScoreline(c.match.home, c.match.away, false),
+          ds = forcedDrawScoreline(c.match.home, c.match.away);
+          return {idx: c.idx, homeScore: hs, awayScore: as, drawScore: ds, seed: hashStr(scenarioKey + '|impact'),
+                  overHome: laastOver(open, c.idx, hs), overAway: laastOver(open, c.idx, as), overDraw: laastOver(open, c.idx, ds)}; });
+        matchImpactRunId++; const runId = matchImpactRunId;
+        const hj = await new Promise(res => { matchImpactResolvers.set(runId, res); getHjelpWorker().postMessage({mode: 'matchImpact', runId,
+          mu: MODEL.mu, H: MODEL.H, k: FORM_K, att: Array.from(LIVE.att), con: Array.from(LIVE.con), ha: Array.from(LIVE.ha), hc: Array.from(LIVE.hc),
+          P0: Array.from(P0), G0: Array.from(G0), F0: Array.from(F0), open, oddsOverride, N: 2000, wantBaseline: true, ti: TI[lag], zone, candidates: cands}); });
+        const ulike = [];
+        pool.results.forEach((r, i) => { for (const f of ['homeProb', 'drawProb', 'awayProb', 'baseProb']) if (!Object.is(r[f], hj.results[i][f])) ulike.push(`${r.idx} ${f}: ${r[f]} mot ${hj.results[i][f]}`); });
+        return {mulig: true, n: pool.results.length * 4, ulike};
+      });
+      check(`${liga}: matchImpact i poolen gir identiske tall som i hjelpe-Workeren med samme utgangsstillinger`,
+        flytt.mulig && flytt.n >= 12 && flytt.ulike.length === 0, JSON.stringify(flytt));
+      // matchImpact-svarene i poolen blir ferdige også når et annet svar starter
+      // imens. Poolen forkaster køede oppgaver når et nytt kall i samme gruppe
+      // starter; lå "Hva betyr neste kamp?" i samme gruppe som "Heie på", ble
+      // det aldri ferdig. Hvert matchImpact-kall har derfor egen gruppe.
+      // ("Heie på", "Rundens viktigste kamp" og "Hva betydde forrige kamp"
+      // deler fortsatt gruppe, som før; se tests/README.md.)
+      const samtidig = await lp.evaluate(async () => {
+        const {openMatches} = buildQaOpen(); const nr = qaNextRoundMatches(openMatches);
+        const lag = TEAMS.find(t => { const z = qaTargetZone(t); return z && !qaSettled(t, z) && nr.list.some(m => m.home === t || m.away === t); });
+        const ferdig = [];
+        const svar = [['neste kamp', () => qaNextMatch(lag)], ['heie på', () => qaCheerFor(lag)], ['betyr mest', () => qaKeyMatches(lag)],
+                      ['neste kamp igjen', () => qaNextMatch(lag)]]
+          .map(([n, f]) => f().then(() => ferdig.push(n)));
+        await Promise.race([Promise.all(svar), new Promise(r => setTimeout(r, 30000))]);
+        return {ferdig, av: svar.length};
+      });
+      check(`${liga}: «Hva betyr neste kamp?» og finsilingen blir ferdige når «Heie på» starter samtidig`, samtidig.ferdig.length === samtidig.av, JSON.stringify(samtidig));
+      await lp.close();
     }
     await page.bringToFront();
 

@@ -2097,13 +2097,21 @@ function fitRatesRegn(pH,pB,start){
   for(let lh=h0-0.05;lh<=h0+0.05;lh+=0.005) for(let la=a0-0.05;la<=a0+0.05;la+=0.005) if(lh>0&&la>0) tryAt(lh,la);
   return best;
 }
-function rateFor(home,away){
-  const k=home+"|"+away; if(RATES[k]) return RATES[k].r;
-  const base=stateRate(LIVE,home,away), o=ODDS_UP[k];
-  if(!o){ RATES[k]={r:base,odds:false}; return base; }
+// Målratene for en kamp i en gitt stilling (lagstyrker): modellens rater, og
+// for kamper med odds blandingen med oddsen (ODDS_W) regnet om med fitRates.
+// Scenarioet (rateFor, med LIVE) og svarene med låst utfall (laastOver, med
+// stillingen etter det utfallet) bruker denne samme funksjonen, så de får
+// bit-like målrater for samme stilling.
+function rateMedStilling(state,home,away){
+  const k=home+"|"+away, base=stateRate(state,home,away), o=ODDS_UP[k];
+  if(!o) return {r:base,odds:false};
   const mk=[o.H,o.D,o.A], md=outcome(base[0],base[1]);
   const pH=ODDS_W*mk[0]+(1-ODDS_W)*md.H, pB=ODDS_W*mk[2]+(1-ODDS_W)*md.B;
-  const r=fitRates(pH,pB,base); RATES[k]={r,odds:true,mk,md,meta:o}; return r;
+  return {r:fitRates(pH,pB,base),odds:true,mk,md,meta:o};
+}
+function rateFor(home,away){
+  const k=home+"|"+away; if(RATES[k]) return RATES[k].r;
+  RATES[k]=rateMedStilling(LIVE,home,away); return RATES[k].r;
 }
 function predict(home,away){ const [lh,la]=rateFor(home,away); return [Math.round(lh), Math.round(la)]; }
 
@@ -2338,17 +2346,14 @@ window.addEventListener('resize', ()=>{
 // første anslag postes etter 1000 sesonger, det endelige etter 10 000. ----
 const WORKER_SRC = `
 function mulberry32(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; var t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
-var GMAX = 15; // samme grense overalt -- se kommentaren ved hovedtrådens GMAX
-// Dixon-Coles tau, delt med hovedtråden (samme DC_RHO og formel som der --
-// se kommentaren ved dcTau() på hovedtråden for hvorfor -0,38).
-var DC_RHO = -0.38;
-function dcTau(x,y,lh,la){
-  if(x===0&&y===0) return Math.max(0, 1-lh*la*DC_RHO);
-  if(x===1&&y===0) return Math.max(0, 1+la*DC_RHO);
-  if(x===0&&y===1) return Math.max(0, 1+lh*DC_RHO);
-  if(x===1&&y===1) return Math.max(0, 1-DC_RHO);
-  return 1;
-}
+// Konstantene og funksjonene Workeren deler med hovedtråden, hentes fra
+// hovedtråden når WORKER_SRC bygges (verdiene og Function.toString), så det
+// finnes én kilde. Se også den delte blokken nederst.
+var GMAX = ${GMAX}; // samme grense overalt -- se kommentaren ved hovedtrådens GMAX
+// Dixon-Coles tau, samme DC_RHO og formel som hovedtråden (se kommentaren ved
+// dcTau() der for hvorfor -0,38).
+var DC_RHO = ${DC_RHO};
+${dcTau}
 // H/U/B-sannsynligheter fra et Poisson-par (lh,la), samme grid som outcome() på hovedtråden.
 function outcomeProbs(lh, la){
   var ph=new Array(GMAX+1), pa=new Array(GMAX+1);
@@ -2391,8 +2396,14 @@ self.onmessage = function(e){
   else if(d.mode==='badges'){ runBadges(d); }
   else if(d.mode==='insights'){ runInsights(d); }
   else if(d.mode==='matchImpact'){ runMatchImpact(d); }
+  // Bare for testene: utgangsstillingen Workeren ville brukt for et låst utfall.
+  else if(d.mode==='laastStilling'){ var ml = medLaast(d);
+    postMessage({runId:d.runId, mode:'laastStilling', att:ml.att, con:ml.con, ha:ml.ha, hc:ml.hc, oddsOverride:ml.oddsOverride}); }
   else if(d.mode==='zoneTask'){
-    var zr = simulateZoneProb(d, d.forcedIdx, d.forcedScore, d.seed, d.wantAll);
+    // Låst utfall: utgangsstillingen (lagstyrker og målrater etter utfallet)
+    // regnes her i Workeren, med hovedtrådens egne funksjoner, se medLaast.
+    var dz = d.laastStilling ? medLaast(d) : d;
+    var zr = simulateZoneProb(dz, d.forcedIdx, d.forcedScore, d.seed, d.wantAll);
     postMessage({runId:d.runId, mode:'zoneTask', taskId:d.taskId, prob:d.wantAll?zr.prob:zr, pos:d.wantAll?zr.pos:null});
   }
   else { runProb(d); }
@@ -2667,14 +2678,11 @@ function runBadges(d){
 // tall og samme formel som applyDrift()/DRIFT_CAP_* der -- se kommentaren
 // ved den definisjonen for hvorfor grensene er akkurat 0,5/0,35, og hvorfor
 // en simulert sesong ellers kan løpe løpsk).
-var DRIFT_CAP_ATTCON = 0.5, DRIFT_CAP_HAHC = 0.35, DRIFT_REVERSION = 0.02;
-function applyDrift(arr, base, i, delta, cap){
-  var v = arr[i] + delta - DRIFT_REVERSION*(arr[i]-base[i]);
-  arr[i] = Math.min(base[i]+cap, Math.max(base[i]-cap, v));
-}
+var DRIFT_CAP_ATTCON = ${DRIFT_CAP_ATTCON}, DRIFT_CAP_HAHC = ${DRIFT_CAP_HAHC}, DRIFT_REVERSION = ${DRIFT_REVERSION};
+${applyDrift}
 // Samme absolutte mål-tak som hovedtråden (MAX_LAMBDA_LOG der) -- se
 // kommentaren ved den definisjonen.
-var MAX_LAMBDA_LOG = Math.log(6);
+var MAX_LAMBDA_LOG = ${MAX_LAMBDA_LOG};
 // ---- Europa/Ned/lagboksen: 10 000 "hot" simulerte sesonger. Frøet (d.seed)
 // er avledet av de låste resultatene i scenarioet (se hashStr()/
 // runMCAsync() i hovedtråden), ikke Math.random() -- samme scenario skal
@@ -2967,12 +2975,15 @@ function runInsights(d){
 // gir samme tall i spørsmål 3, 5 og "heie på".
 function runMatchImpact(d){
   var results = d.candidates.map(function(c){
-    var homeProb = simulateZoneProb(d, c.idx, c.homeScore, c.seed);
-    var awayProb = simulateZoneProb(d, c.idx, c.awayScore, c.seed);
+    // Hvert låste utfall har egen utgangsstilling (c.overHome osv.: lagstyrker
+    // og oddsOverride etter det utfallet), regnet på hovedtråden, se laastOver.
+    var med = function(ov){ return ov ? Object.assign({}, d, ov) : d; };
+    var homeProb = simulateZoneProb(med(c.overHome), c.idx, c.homeScore, c.seed);
+    var awayProb = simulateZoneProb(med(c.overAway), c.idx, c.awayScore, c.seed);
     // drawScore er valgfri -- bare spørsmål 5 (ett resultat om gangen, alle
     // tre utfall) trenger den; spørsmål 3 (mange kandidatkamper, bare
     // seier/tap-forskjellen) lar den stå tom for å spare en tredje kjøring.
-    var drawProb = c.drawScore ? simulateZoneProb(d, c.idx, c.drawScore, c.seed) : null;
+    var drawProb = c.drawScore ? simulateZoneProb(med(c.overDraw), c.idx, c.drawScore, c.seed) : null;
     // Utgangspunktet uten låst kamp, samme frø som de låste kjøringene, så
     // endringen (utfall minus utgangspunkt) kan legges oppå tabellens tall.
     // Bare spørsmål 3 (finpuss) og 5 ber om den.
@@ -3037,6 +3048,29 @@ function simulateZoneProb(d, forcedIdx, forcedScore, seed, wantAll){
     return {prob:hitCount/d.N, pos:out};
   }
   return hitCount/d.N;
+}
+// ---- DELT MED HOVEDTRÅDEN: låste utfall i svarene. Funksjonene under er
+// hovedtrådens egne (Function.toString når WORKER_SRC bygges), ikke kopier:
+// Workeren regner lagstyrkene etter et låst resultat (computeLiveState) og
+// målratene for kampene med odds i den stillingen (rateMedStilling,
+// fitRates) med nøyaktig samme kode som scenarioet bruker. Regression.js
+// krever at hver av dem er tegn for tegn lik hovedtrådens.
+var TEAMS = [], TI = {}, MTI = {}, MODEL = null, matches = [], ODDS_UP = {}, FORM_K = 0, ODDS_W = 0;
+var FIT_MINNE = new Map(), FIT_MINNE_MAKS = ${FIT_MINNE_MAKS};
+${[pois, outcome, stateRate, computeLiveState, rateMedStilling, fitRates, fitRatesRegn, liveMedLaast, aapenKampFor, laastOver].map(String).join('\n')}
+// Grunnlaget fra hovedtråden (stillingsGrunnlag): data, ikke kode. Minnet for
+// fitRates fylles med hovedtrådens oppføringer, så kampene et låst utfall
+// ikke endrer, ikke regnes på nytt her.
+function settGrunnlag(g){
+  TEAMS = g.TEAMS; TI = g.TI; MTI = g.MTI; MODEL = g.MODEL; matches = g.matches;
+  ODDS_UP = g.ODDS_UP; FORM_K = g.FORM_K; ODDS_W = g.ODDS_W;
+  (g.minne || []).forEach(function(e){ if(!FIT_MINNE.has(e[0])) FIT_MINNE.set(e[0], e[1]); });
+  while(FIT_MINNE.size > FIT_MINNE_MAKS) FIT_MINNE.delete(FIT_MINNE.keys().next().value);
+}
+// Oppgaven med egen utgangsstilling for det låste utfallet (forcedIdx, forcedScore).
+function medLaast(d){
+  settGrunnlag(d.grunnlag);
+  return Object.assign({}, d, laastOver(d.open, d.forcedIdx, d.forcedScore));
 }
 `;
 let mcWorker=null, mcRunId=0, mcTimer=null, lastMC=null, lastMCScenarioKey=null;
@@ -3151,6 +3185,56 @@ function oddsKilde(meta){
 // bakgrunnen: dette var reelt ulikt før).
 function oddsOverrideFor(home,away){
   return ODDS_UP[home+"|"+away] ? rateFor(home,away) : null;
+}
+// LÅSTE UTFALL I SVARENE. Et svar som låser en åpen kamp til et resultat
+// (kortet "Neste kamp", "Hva betyr neste kamp?", "Heie på", "Hvilke kamper
+// betyr mest?", "Rundens viktigste kamp") skal regne som scenarioet med samme
+// resultat utfylt: lagstyrkene oppdateres med resultatet (computeLiveState),
+// og målratene for kampene med odds regnes i den stillingen. Før flyttet den
+// låste kampen bare poeng og mål i simuleringen; lagstyrkene og oddsratene
+// sto som før resultatet, og svaret kunne avvike fra scenarioet med flere
+// standardfeil (Bodø/Glimt-Kristiansund 3-4: 63,2 mot 59,3 %).
+// Stillingen med kampen (et objekt fra `matches`) midlertidig satt til hg-ag.
+function liveMedLaast(m, hg, ag){
+  const hg0=m.hg, ag0=m.ag;
+  m.hg=hg; m.ag=ag;
+  try{ return computeLiveState(); } finally { m.hg=hg0; m.ag=ag0; }
+}
+// Den åpne kampen bak en rad i `open` ([h, a, runde], se buildQaOpen).
+function aapenKampFor(o){
+  return matches.find(m=>!(m.hg!=null&&m.ag!=null) && TI[m.home]===o[0] && TI[m.away]===o[1]);
+}
+// Utgangsstillingen for én kjøring med open[idx] låst til score: lagstyrkene
+// og oddsOverride for alle åpne kamper, slik runMCAsync ville sendt dem med
+// resultatet utfylt. Kjøres i Workerne (medLaast i WORKER_SRC), ikke her:
+// fitRates for oddskampene i hver låste stilling tok opptil 1,6 s på
+// hovedtråden i "Hvilke kamper betyr mest?".
+function laastOver(open, idx, score){
+  const S = liveMedLaast(aapenKampFor(open[idx]), score[0], score[1]);
+  return {att:Array.from(S.att), con:Array.from(S.con), ha:Array.from(S.ha), hc:Array.from(S.hc),
+          oddsOverride: open.map(o=>{ const h=TEAMS[o[0]], a=TEAMS[o[1]];
+            return ODDS_UP[h+"|"+a] ? rateMedStilling(S,h,a).r : null; })};
+}
+// For én oppgave i runZoneTasks: et låst utfall får egen utgangsstilling,
+// regnet i Workeren (laastStilling), oppå en eventuell t.over (egen
+// startstilling, "Hva betydde forrige kamp").
+function laastTaskOver(payload, t){
+  const over = Object.assign({}, t.over || {});
+  if(t.idx>=0 && t.score) over.laastStilling = true;
+  return over;
+}
+// Grovsilingen i "Hvilke kamper betyr mest?" (QA_N_IMPACT sesonger, over 80
+// utfall) viser aldri tall, den velger bare ut kampene. Den regner som før,
+// uten egen utgangsstilling per låst utfall; finsilingen (de tre som vises)
+// gjør det. Testsiden erstatter denne med ELO-ratingen etter utfallet.
+function grovKandidatOver(open, c){ return {}; }
+// Det Workeren trenger for å regne en låst stilling selv (se settGrunnlag i
+// WORKER_SRC): data, ikke kode. Minnet for fitRates tas med.
+function stillingsGrunnlag(){
+  return {TEAMS, TI, MTI, FORM_K, ODDS_W, ODDS_UP,
+          MODEL:{mu:MODEL.mu, H:MODEL.H, att:MODEL.att, con:MODEL.con, ha:MODEL.ha, hc:MODEL.hc},
+          matches:matches.map(m=>({date:m.date, home:m.home, away:m.away, hg:m.hg, ag:m.ag})),
+          minne:[...FIT_MINNE]};
 }
 function runMCAsync(N){
   const n=TEAMS.length, P0=new Float64Array(n), G0=new Float64Array(n), F0=new Float64Array(n);
@@ -3596,7 +3680,7 @@ async function oppdaterNesteKampLinje(m){
   nmImpactKey = key;
   try{
     const data = await runMatchImpactAsync(lag, zone, [{idx, match:m, needsDraw:true}], scenarioKey,
-      {P0,G0,F0,open,oddsOverride,N:2500,wantBaseline:true});
+      {P0,G0,F0,open,oddsOverride,N:2500,wantBaseline:true}, 'kort');
     if(nmImpactKey!==key) return;        // scenarioet er endret mens det regnet
     const r = data.results[0];
     const isHome = m.home===lag;
@@ -4309,13 +4393,15 @@ function qaNextRoundMatches(openMatches){
 // rask kjerne tar flere oppgaver. Et nytt spørsmål forkaster oppgaver som
 // ikke er startet (poolEpoch), og resultater fra kjøringer som pågikk
 // ignoreres.
-let poolWorkers = [], poolQueue = [], poolEpoch = 0, poolUrl = null;
+// Forkastingen gjelder per gruppe: "svar" (spørsmålene) og "kort" (kortet
+// "Neste kamp"), så kortet og et spørsmål ikke forkaster hverandres oppgaver.
+let poolWorkers = [], poolQueue = [], poolEpoker = {}, poolUrl = null;
 const poolSize = () => Math.max(1, Math.min(8, navigator.hardwareConcurrency || 4));
 function pumpPool(){
   for(const w of poolWorkers){
     if(w.job) continue;
     let job;
-    while((job = poolQueue.shift()) && job.epoch!==poolEpoch){ /* forkastet */ }
+    while((job = poolQueue.shift()) && job.epoch!==poolEpoker[job.gruppe]){ /* forkastet */ }
     if(!job) return;
     w.job = job; w.postMessage(job.msg);
   }
@@ -4324,16 +4410,17 @@ function ensurePool(n){
   if(!poolUrl) poolUrl = URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'}));
   while(poolWorkers.length<n){
     const w = new Worker(poolUrl);
-    w.onmessage = e=>{ const job=w.job; w.job=null; if(job && job.epoch===poolEpoch) job.done(e.data); pumpPool(); };
+    w.onmessage = e=>{ const job=w.job; w.job=null; if(job && job.epoch===poolEpoker[job.gruppe]) job.done(e.data); pumpPool(); };
     poolWorkers.push(w);
   }
 }
 // tasks: [{id, idx, score}] (idx -1 = ingen låst kamp). onTask kalles etter
 // hver ferdige oppgave; løftet løses med {id: {prob, pos}} når alle er ferdige
 // (pos = hele plasseringsfordelingen, bare når payload.wantAll er satt).
-function runZoneTasks(payload, tasks, onTask){
-  poolEpoch++;
-  const epoch = poolEpoch, results = {};
+function runZoneTasks(payload, tasks, onTask, gruppe='svar'){
+  const epoch = poolEpoker[gruppe] = (poolEpoker[gruppe]||0) + 1, results = {};
+  const egen = gruppe.startsWith('impact:');   // egen gruppe: ryddes når den er ferdig
+  const grunnlag = stillingsGrunnlag();
   ensurePool(Math.min(poolSize(), tasks.length));
   return new Promise(resolve=>{
     let left = tasks.length;
@@ -4341,8 +4428,9 @@ function runZoneTasks(payload, tasks, onTask){
       // t.over: egen utgangsstilling for AKKURAT denne kjøringen (brukes av
       // "hva betydde forrige kamp", der det er startpunktet som varieres, ikke
       // en gjenstående kamp). Samme frø som de andre, så støyen kansellerer.
-      poolQueue.push({epoch, msg:{...payload, ...(t.over||{}), mode:'zoneTask', runId:epoch, taskId:t.id, forcedIdx:t.idx, forcedScore:t.score},
-        done:data=>{ results[t.id]={prob:data.prob, pos:data.pos}; if(onTask) onTask(t.id, results); if(--left===0) resolve(results); }});
+      poolQueue.push({epoch, gruppe, msg:{...payload, grunnlag, ...laastTaskOver(payload, t), mode:'zoneTask', runId:epoch, taskId:t.id, forcedIdx:t.idx, forcedScore:t.score},
+        done:data=>{ results[t.id]={prob:data.prob, pos:data.pos}; if(onTask) onTask(t.id, results);
+          if(--left===0){ if(egen) delete poolEpoker[gruppe]; resolve(results); } }});
     });
     pumpPool();
   });
@@ -5124,7 +5212,18 @@ function buildMatchImpactCandidates(team, openMatches){
     .map((m,i)=>({idx:i, match:m}))
     .filter(c=>rivals.has(c.match.home) || rivals.has(c.match.away));
 }
-function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base){
+// Seier, uavgjort og tap i én eller flere kamper for ett lag, pluss
+// utgangspunktet uten låst kamp (wantBaseline). Kjøringene går i poolen, én
+// oppgave per utfall, så de regnes samtidig på flere kjerner; hvert låst utfall
+// får egen utgangsstilling (laastTaskOver). Samme frø og samme simuleringer
+// som før i hjelpe-Workeren, så tallene er de samme. base.grov: grovsilingen
+// i "Hvilke kamper betyr mest?", som går som før i hjelpe-Workeren.
+// gruppe: forkastingsgruppen i poolen ("kort" for kortet "Neste kamp": et nytt
+// kort erstatter det gamle). Uten gruppe får kallet sin egen, så et annet svar
+// som starter imens aldri forkaster oppgavene det venter på (før gikk
+// matchImpact i hjelpe-Workeren, der ingenting ble forkastet).
+let impactGruppeNr = 0;
+function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base, gruppe=null){
   const candidates = candidateSpecs.map(c=>({
     idx:c.idx,
     homeScore: forcedScoreline(c.match.home, c.match.away, true),
@@ -5132,6 +5231,25 @@ function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base){
     drawScore: c.needsDraw ? forcedDrawScoreline(c.match.home, c.match.away) : null,
     seed: hashStr(scenarioKey+'|impact')
   }));
+  if(!base.grov){
+    const tasks = [];
+    if(base.wantBaseline) tasks.push({id:'base', idx:-1, score:null});
+    candidates.forEach(c=>{
+      tasks.push({id:c.idx+':H', idx:c.idx, score:c.homeScore}, {id:c.idx+':B', idx:c.idx, score:c.awayScore});
+      if(c.drawScore) tasks.push({id:c.idx+':U', idx:c.idx, score:c.drawScore});
+    });
+    return runZoneTasks({
+      mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+      att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+      P0:Array.from(base.P0), G0:Array.from(base.G0), F0:Array.from(base.F0), open:base.open,
+      oddsOverride:base.oddsOverride, N:base.N||QA_N_IMPACT, ti:TI[team], zone, seed:hashStr(scenarioKey+'|impact')
+    }, tasks, null, gruppe || `impact:${++impactGruppeNr}`).then(res=>({results: candidates.map(c=>{
+      const h=res[c.idx+':H'].prob, a=res[c.idx+':B'].prob;
+      return {idx:c.idx, homeProb:h, awayProb:a, drawProb:c.drawScore ? res[c.idx+':U'].prob : null,
+              baseProb:base.wantBaseline ? res.base.prob : null, diff:Math.abs(h-a)};
+    })}));
+  }
+  candidates.forEach(c=>Object.assign(c, grovKandidatOver(base.open, c)));
   matchImpactRunId++;
   const runId = matchImpactRunId;
   return new Promise(resolve=>{
@@ -5558,7 +5676,7 @@ async function qaKeyMatches(team){
   const base = {P0,G0,F0,open,oddsOverride};
   // Trinn 1: grovsilting av alle kandidatkamper (få simuleringer per kamp).
   const candidateSpecs = buildMatchImpactCandidates(team, openMatches);
-  const screen = await runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base);
+  const screen = await runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, {...base, grov:true});
   const top = screen.results.slice().sort((a,b)=>b.diff-a.diff).slice(0,3);
   // Trinn 2 (samme antall simuleringer og frø som spørsmål 5, så samme kamp
   // gir samme tall i begge svar): finpuss av de tre beste med et utgangspunkt
