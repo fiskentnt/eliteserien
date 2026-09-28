@@ -201,6 +201,30 @@ async function main() {
           && /0,0082 ± 0,0041 høyere log loss enn sluttoddsen, altså 2,0 standardfeil/.test(sl.d[1] || '')
           && /0,0130 i Eliteserien \(2,3 standardfeil\) og 0,0024 i OBOS \(0,4 standardfeil/.test(sl.d[1] || ''),
         JSON.stringify(sl));
+      // Ingen « » i det brukeren ser: teksten på siden (også lukkede
+      // seksjoner) og anførselstegnene banneret setter rundt spørsmålet.
+      const gaase = await (async () => {
+        const p2 = await open(1400, 900, base.replace('/eliteserien/', sti));
+        const r2 = await p2.evaluate(async () => {
+          // Tekstnodene utenfor <script> og <style>: det siden viser, også i
+          // lukkede seksjoner.
+          const w = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT,
+            {acceptNode: n => ['SCRIPT', 'STYLE'].includes(n.parentNode.nodeName) ? NodeFilter.FILTER_REJECT : NodeFilter.FILTER_ACCEPT});
+          const funn = [];
+          for (let n = w.nextNode(); n; n = w.nextNode()) if (/[«»]/.test(n.nodeValue)) funn.push(n.nodeValue.trim().slice(0, 80));
+          // Banneret med et valgt lag er et spørsmål i anførselstegn.
+          const sel = document.getElementById('teamSelect'); sel.value = TEAMS[0]; sel.dispatchEvent(new Event('change'));
+          await new Promise(r => setTimeout(r, 300));
+          const el = document.getElementById('qaHighlight');
+          return {tekst: funn.slice(0, 5), sporsmal: !el.classList.contains('plain'),
+                  foer: getComputedStyle(el, '::before').content, etter: getComputedStyle(el, '::after').content};
+        });
+        await p2.close();
+        return r2;
+      })();
+      check(`${side}: ingen « » i teksten på siden, og banneret bruker vanlige anførselstegn`,
+        !gaase.tekst.length && gaase.sporsmal && gaase.foer === '"\\""' && gaase.etter.startsWith('"\\"') && !/[«»]/.test(gaase.foer + gaase.etter),
+        JSON.stringify(gaase));
       check(`${side}: ingen JS-feil`, errors.length === feil0, errors.slice(feil0).join('; '));
     }
   };

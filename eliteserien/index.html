@@ -322,10 +322,10 @@
      Ved hover understrekes den. Stor tekst (over 18 px
      halvfet) trenger bare 3:1 mot banneret; alle klubbfarger har over 4,5:1. */
   .qa-highlight{display:block;margin:18px 0 6px;background:none;border:none;padding:0;color:var(--team-text);font:600 19px/1.25 var(--cond);letter-spacing:.005em;text-align:left;cursor:pointer;max-width:100%}
-  .qa-highlight::before{content:"\00AB"}
+  .qa-highlight::before{content:'"'}
   .qa-highlight.plain::before{content:none}
   .qa-highlight.plain::after{content:"\00A0\00A0\2192"}
-  .qa-highlight::after{content:"\00BB\00A0\00A0\2192"}
+  .qa-highlight::after{content:'"\00A0\00A0\2192'}
   .qa-highlight:hover,.qa-highlight:focus-visible{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
   .qa-highlight:empty{display:none}
   /* Lagboksen (når et lag følges): et kort øverst i høyrekolonnen. */
@@ -1156,7 +1156,7 @@
       <h2 id="omSidenTittel">Om tabellkalkulatoren for Eliteserien</h2>
       <p>Tabellkalkulator for Eliteserien 2026 viser dagens tabell og sannsynligheten for at hvert lag vinner serien, tar en europaplass (topp 4), havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 100&nbsp;000 ganger.</p>
       <p>Du kan fylle inn egne resultater, la modellen simulere tomme kamper, følge ett lag og se hvordan tabellen og sjansene endrer seg. Tabellen viser både modellens styrkevurdering for hele sesongen og formen i de fem siste kampene, så du ser forskjellen på hvor sterkt et lag er og hvordan det går akkurat nå. Du kan også se tabellen etter en valgt runde, både for spilte runder og scenarier fremover. Tallene oppdateres automatisk etter hver kamp.</p>
-            <p>Tallene i «Hvem har vært heldig eller uheldig» er faktiske poeng minus modellens forventede poeng i de samme kampene. Modellen er tilpasset på nettopp de kampene, og den har derfor allerede tatt opp i seg en del av avviket. Tallene er altså trolig litt for <strong>små</strong>: et lag har sannsynligvis vært enda heldigere, eller enda uheldigere, enn tallet viser.</p>
+            <p>Tallene i "Hvem har vært heldig eller uheldig" er faktiske poeng minus modellens forventede poeng i de samme kampene. Modellen er tilpasset på nettopp de kampene, og den har derfor allerede tatt opp i seg en del av avviket. Tallene er altså trolig litt for <strong>små</strong>: et lag har sannsynligvis vært enda heldigere, eller enda uheldigere, enn tallet viser.</p>
       <noscript><p><strong>Tabellen og sannsynlighetene regnes ut i nettleseren og krever JavaScript.</strong> Slå på JavaScript for å bruke kalkulatoren.</p></noscript>
     </section>
     <!-- /LIGA-OM -->
@@ -4509,7 +4509,7 @@ async function qaCheerFor(team, onPartial){
   // Lagets egen kamp tas ut: at laget bør heie på seg selv er gitt, og hva den
   // betyr svarer "Hva betyr neste kamp" på.
   const others = nr.list.filter(m=>m.home!==team && m.away!==team);
-  if(!others.length) return `Runde ${nr.round} har ingen andre kamper enn den ${team} spiller selv. «Hva betyr neste kamp for ${team}?» viser hva den betyr.`;
+  if(!others.length) return `Runde ${nr.round} har ingen andre kamper enn den ${team} spiller selv. "Hva betyr neste kamp for ${team}?" viser hva den betyr.`;
   // Ett frø for alle kjøringene (samme som spørsmål 3 og 5): utgangspunktet
   // regnes bare én gang, og støyen kansellerer i differansene (se
   // simulateZoneProb). Oppgave-id: 'base' eller `${kampindeks}:${H|U|B}`.
@@ -6516,7 +6516,7 @@ function render(){
       line2Title = '';
     } else {
       line2 = `${followed.pts} poeng, ${followed.left} kamper igjen`;
-      line2Title = [verdictTxt, sub, `Sjekken regner tomme kamper som tap for ${SELECTED_TEAM} og seier for alle andre. Sier den «sikret», er det sikkert.`].filter(Boolean).join(' ');
+      line2Title = [verdictTxt, sub, `Sjekken regner tomme kamper som tap for ${SELECTED_TEAM} og seier for alle andre. Sier den "sikret", er det sikkert.`].filter(Boolean).join(' ');
     }
     // Lagnavn øverst på egen linje (item 2b), så plass og poeng/kamper igjen (eller sluttresultatet).
     const posLine = seasonDone ? `<b>${pos}.</b> plass, ${line2}` : `<b>${pos}.</b> plass, ${line2}`;

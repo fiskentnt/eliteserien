@@ -752,6 +752,28 @@ def main():
           not any(n_ in (wfd / f).read_text(encoding="utf-8") for f in ("update-data.yml", "obos-results.yml", "update-odds.yml", "prekick-odds.yml")
                   for n_ in ("grunnlag.json", "lag_grunnlag", "grunnlag_port", "grunnlag.yml")))
 
+    # 23. Anførselstegn: tekst brukeren ser, bruker vanlige anførselstegn (").
+    # Ingen « » i statisk tekst, FAQ-en, tekstene svarene bygger eller CSS
+    # (banneret satte « » rundt spørsmålet med content:"\00AB"). Kommentarer
+    # i koden teller ikke: de fjernes før søket (HTML-, CSS/JS-blokk- og
+    # linjekommentarer; // teller som kommentar bare først på linjen eller
+    # etter mellomrom, så https:// i en streng står).
+    import re as _re
+    def _uten_kommentarer(t):
+        nl = lambda m: "\n" * m.group(0).count("\n")
+        t = _re.sub(r"<!--.*?-->", nl, t, flags=_re.S)
+        t = _re.sub(r"/\*.*?\*/", nl, t, flags=_re.S)
+        return _re.sub(r"(^|[ \t])//[^\n]*", r"\1", t, flags=_re.M)
+    _gaase = _re.compile(r"[«»]|\\00a[bB]|\\00b[bB]|\\00A[bB]|\\00B[bB]|\\u00a[bB]|\\u00b[bB]|&laquo;|&raquo;|&#171;|&#187;")
+    _funn = []
+    for f in ["eliteserien/index.html", "obos/index.html", "elo-test/index.html",
+              *sorted(str(x.relative_to(ROOT)) for x in (ROOT / "obos" / "page").iterdir())]:
+        for nr, linje in enumerate(_uten_kommentarer((ROOT / f).read_text(encoding="utf-8")).split("\n"), 1):
+            if _gaase.search(linje):
+                _funn.append(f"{f}:{nr}: {linje.strip()[:120]}")
+    check("ingen « » i tekst brukeren ser eller i strengene svarene bygger (alle tre sidene og obos/page)",
+          not _funn, "\n      ".join(_funn))
+
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare
     # kall som aldri skjedde, av selve testene.
