@@ -824,6 +824,79 @@ def main():
     check("ingen « » i tekst brukeren ser eller i strengene svarene bygger (alle tre sidene og obos/page)",
           not _funn, "\n      ".join(_funn))
 
+    # 24. Sommer- og vintertid uten å flytte noe: jobbene med et norsk
+    # klokkeslett har én cron-linje for hver, og scripts/norsk_klokke.py
+    # slipper gjennom den som gjelder etter den PLANLAGTE tiden; jobbene med
+    # vinduer har vinduer som dekker begge. Falsk klokke: før og etter
+    # vintertiden 25. oktober 2026 (01.00 UTC), og på selve dagen.
+    import norsk_klokke as _nk
+    from datetime import timezone as _tzu
+    U = lambda *a: _dt(*a, tzinfo=_tzu.utc)
+    tilfeller = [
+        # (hendelse, cron-linje, norsk time, klokka, skal kjøre, hva)
+        ("schedule", "17 5 * * *", 7, U(2026, 10, 20, 5, 17), True, "20. oktober, sommertid: 05.17 UTC er 07.17"),
+        ("schedule", "17 6 * * *", 7, U(2026, 10, 20, 6, 17), False, "20. oktober, sommertid: vinterlinja (06.17 UTC er 08.17) avslutter"),
+        ("schedule", "17 5 * * *", 7, U(2026, 10, 25, 5, 17), False, "25. oktober, vintertid fra 01.00 UTC: sommerlinja (06.17 norsk) avslutter"),
+        ("schedule", "17 6 * * *", 7, U(2026, 10, 25, 6, 17), True, "25. oktober, vintertid: 06.17 UTC er 07.17"),
+        ("schedule", "17 5 * * *", 7, U(2026, 11, 2, 5, 17), False, "2. november: sommerlinja avslutter"),
+        ("schedule", "17 6 * * *", 7, U(2026, 11, 2, 6, 17), True, "2. november: vinterlinja kjører"),
+        ("schedule", "17 5 * * *", 7, U(2026, 10, 20, 7, 40), True, "sommerlinja forsinket over to timer (07.40 UTC) kjører likevel"),
+        ("schedule", "17 5 * * *", 7, U(2027, 3, 29, 5, 17), True, "29. mars 2027, sommertid igjen: sommerlinja kjører"),
+        ("schedule", "17 6 * * *", 7, U(2027, 3, 29, 6, 17), False, "29. mars 2027: vinterlinja avslutter"),
+        ("schedule", "40 6 * * 1", 8, U(2026, 10, 19, 6, 40), True, "mandag 19. oktober: 06.40 UTC er 08.40"),
+        ("schedule", "40 7 * * 1", 8, U(2026, 10, 19, 7, 40), False, "mandag 19. oktober: vinterlinja avslutter"),
+        ("schedule", "40 6 * * 1", 8, U(2026, 10, 26, 6, 40), False, "mandag 26. oktober: sommerlinja avslutter"),
+        ("schedule", "40 7 * * 1", 8, U(2026, 10, 26, 7, 40), True, "mandag 26. oktober: 07.40 UTC er 08.40"),
+        ("workflow_dispatch", "", 7, U(2026, 10, 20, 13, 3), True, "planleggeren og manuelt kjører alltid"),
+    ]
+    for hend, plan, t, naa, ventet, hva in tilfeller:
+        kjor, grunn = _nk.skal_kjore(hend, plan, t, naa)
+        check(f"norsk klokke: {hva} -> {'kjører' if ventet else 'avslutter'}", kjor is ventet, grunn)
+    # Kommandolinja, slik workflowen kaller den (falsk klokke i KLOKKE_NAA).
+    def _nk_cli(time, plan, naa):
+        r = subprocess.run([sys.executable, str(ROOT / "scripts" / "norsk_klokke.py"), str(time)], capture_output=True, text=True,
+                           env={**os.environ, "HENDELSE": "schedule", "PLAN": plan, "KLOKKE_NAA": naa, "GITHUB_OUTPUT": ""})
+        return r.stdout.strip()
+    check("norsk klokke fra kommandolinja: sommerlinja før 25. oktober, vinterlinja etter",
+          _nk_cli(7, "17 5 * * *", "2026-10-24T05:17:00+00:00") == "kjor=true" and _nk_cli(7, "17 6 * * *", "2026-10-24T06:17:00+00:00") == "kjor=false"
+          and _nk_cli(7, "17 5 * * *", "2026-10-26T05:17:00+00:00") == "kjor=false" and _nk_cli(7, "17 6 * * *", "2026-10-26T06:17:00+00:00") == "kjor=true")
+
+    def _timer(felt):
+        ut = set()
+        for d in felt.split(","):
+            if "-" in d:
+                a_, b_ = d.split("-"); ut.update(range(int(a_), int(b_) + 1))
+            else:
+                ut.add(int(d))
+        return ut
+    def _crons(navn):
+        t = (wfd / navn).read_text(encoding="utf-8")
+        return [l.split('"')[1] for l in t.splitlines() if l.strip().startswith('- cron:')]
+    # Jobbene med et norsk klokkeslett: begge linjene, og klokkejobben først.
+    for navn, linjer, time in (("obos-results.yml", ["17 5 * * *", "17 6 * * *"], 7),
+                               ("obos-odds-history.yml", ["40 6 * * 1", "40 7 * * 1"], 8)):
+        t = (wfd / navn).read_text(encoding="utf-8")
+        check(f"{navn}: én cron-linje for sommertid og én for vintertid, og klokkejobben slipper gjennom den som gjelder",
+              _crons(navn) == linjer and f"run: python3 scripts/norsk_klokke.py {time}\n" in t
+              and "PLAN: ${{ github.event.schedule }}" in t and "    if: github.event_name == 'schedule'\n" in t
+              and "    needs: klokke\n    if: ${{ !cancelled() && (github.event_name != 'schedule' || needs.klokke.outputs.kjor == 'true') }}\n" in t,
+              str(_crons(navn)))
+    # Jobbene med vinduer: hver norsk time i vinduet er dekket både om
+    # sommeren (UTC+2) og om vinteren (UTC+1), med samme kadens.
+    def _dekker(navn, cron_nr, norske_timer):
+        c = _crons(navn)[cron_nr].split()
+        timer = _timer(c[1])
+        mangler = [(h, s) for h in norske_timer for s, fs in (("sommer", 2), ("vinter", 1)) if (h - fs) % 24 not in timer]
+        return mangler
+    check("update-data.yml: hvert 20. minutt kl 12-22 norsk tid, både sommer og vinter",
+          not _dekker("update-data.yml", 0, range(12, 23)) and _crons("update-data.yml")[0].split()[0] == "5,25,45",
+          str(_dekker("update-data.yml", 0, range(12, 23))))
+    alle = set(range(24))
+    t0, t1 = _timer(_crons("update-data.yml")[0].split()[1]), _timer(_crons("update-data.yml")[1].split()[1])
+    check("update-data.yml: resten av døgnet hver time, uten hull (alle 24 timene i UTC)", t0 | t1 == alle and not (t0 & t1), f"{sorted(t0)} {sorted(t1)}")
+    check("arkiver-kildehtml.yml: hvert 20. minutt kl 12-23 norsk tid, både sommer og vinter",
+          not _dekker("arkiver-kildehtml.yml", 0, range(12, 24)), str(_dekker("arkiver-kildehtml.yml", 0, range(12, 24))))
+
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare
     # kall som aldri skjedde, av selve testene.

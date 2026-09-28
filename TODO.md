@@ -255,11 +255,21 @@ nettopp en slik funksjon.
 
 Feeden har IKKE resultater. Resultatsiden maa altsaa fortsatt skrapes.
 
-UAVKLART, undersoek samtidig: OBOS-feeden hadde 58 kamper 25. september, mens
-det gjensto 56. To for mange. Mulige forklaringer: kamper som alt er spilt
-men ligger igjen i feeden, en utsatt kamp som staar to steder, eller
-kvalifiseringskamper. Finn ut hvilken for feeden tas i bruk -- en feed med
-to ukjente kamper kan ikke vaere terminlistekilde.
+AVKLART 28. september 2026: OBOS-feeden har 58 kamper mot 56 gjenstaaende
+fordi to kamper staar to ganger: Raufoss - Moss og Sandnes Ulf - Haugesund
+(runde 25, 11. oktober 17.00). Hver dublett er identisk bortsett fra UID og
+LAST-MODIFIED (alle fire endret 27. august innenfor sju sekunder). Ellers
+stemmer alle 56 med terminlisten paa runde, dato og tid, uten spilte kamper,
+kvalifiseringskamper eller ukjente lagnavn. Eliteserien-feeden: 72 av 72,
+ingen dubletter.
+
+Kjeden skal derfor:
+- slaa sammen identiske dubletter (samme lag, runde, dato og tid);
+- feile TYDELIG hvis to oppfoeringer av samme kamp har ulik runde, dato
+  eller tid -- da vet vi ikke hvilken som gjelder;
+- lese bare mellom BEGIN:VEVENT og END:VEVENT. Tidssonedefinisjonen
+  (VTIMEZONE) har egne DTSTART-linjer (20160301T020000 osv.), og en parser
+  som leser forbi END:VEVENT, gir feil dato. Det skjedde i undersoekelsen.
 
 ## 3.–8. oktober 2026: les arkivet og legg inn de observerte statusene
 
@@ -301,18 +311,6 @@ overtid eller med forsinket start, og det er nettopp det øyeblikket
 vernene er bygget for.
 
 Runde 23 åpner 9. oktober 19.00 med Brann mot Viking.
-
-## 25. oktober 2026: flytt cron-tidene til vintertid
-
-Klokkeslettene i `.github/workflows/*.yml` er UTC og forutsetter norsk
-sommertid (UTC+2). Når vintertiden begynner 25. oktober, går jobbene derfor
-en time TIDLIGERE på norsk klokke: 05.17 UTC er 07.17 om sommeren og 06.17
-om vinteren. For å beholde de norske klokkeslettene skyves UTC-tidene én
-time fram. Se kommentaren i `update-data.yml`.
-
-Commiten er forberedt og ligger lokalt på grenen `vintertid` (ikke pushet).
-Push den rett før 25. oktober, etter en rebase på main. Skyv tilbake igjen
-når sommertiden begynner i slutten av mars 2027.
 
 ## Når den nye kjeden har stått stabilt: fjern returveien
 

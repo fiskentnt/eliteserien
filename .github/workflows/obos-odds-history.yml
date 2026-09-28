@@ -8,7 +8,11 @@ name: "OBOS: hent historiske sluttodds"
 # 0 tellende kall. Bare --refresh-fixtures koster 1.
 on:
   schedule:
-    - cron: "40 6 * * 1"   # mandag 08.40 norsk sommertid, etter resultatjobben
+    # Mandag 08.40 norsk tid hele året, etter resultatjobben: én linje for
+    # sommertid (UTC+2) og én for vintertid (UTC+1); jobben «klokke» slipper
+    # gjennom den som gjelder.
+    - cron: "40 6 * * 1"   # mandag 08.40 norsk sommertid
+    - cron: "40 7 * * 1"   # mandag 08.40 norsk vintertid
   workflow_dispatch:
     inputs:
       max:
@@ -30,7 +34,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Planlagte kjøringer: to cron-linjer, én for sommertid og én for
+  # vintertid. Jobben under slipper bare gjennom den som gjelder i dag
+  # (scripts/norsk_klokke.py, etter den PLANLAGTE tiden, så en forsinket
+  # kjøring ikke går tapt); den andre avslutter med en gang. Andre hendelser
+  # (planleggeren, manuelt) hopper over sjekken.
+  klokke:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      kjor: ${{ steps.klokke.outputs.kjor }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/norsk_klokke.py
+          sparse-checkout-cone-mode: false
+      - name: Er denne cron-linja 08.40 norsk tid i dag?
+        id: klokke
+        env:
+          HENDELSE: ${{ github.event_name }}
+          PLAN: ${{ github.event.schedule }}
+        run: python3 scripts/norsk_klokke.py 8
+
   fetch:
+    needs: klokke
+    if: ${{ !cancelled() && (github.event_name != 'schedule' || needs.klokke.outputs.kjor == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:

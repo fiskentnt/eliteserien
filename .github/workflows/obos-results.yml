@@ -5,7 +5,10 @@ name: "OBOS: hent resultater"
 # publiseres uten at valideringen går gjennom -- se scripts/obos_results.py.
 on:
   schedule:
+    # 07.17 norsk tid hele året: én linje for sommertid (UTC+2) og én for
+    # vintertid (UTC+1); jobben «klokke» slipper gjennom den som gjelder.
     - cron: "17 5 * * *"   # 07.17 norsk sommertid
+    - cron: "17 6 * * *"   # 07.17 norsk vintertid
   workflow_dispatch:
     inputs:
       planlagt:
@@ -28,7 +31,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # Planlagte kjøringer: to cron-linjer, én for sommertid og én for
+  # vintertid. Jobben under slipper bare gjennom den som gjelder i dag
+  # (scripts/norsk_klokke.py, etter den PLANLAGTE tiden, så en forsinket
+  # kjøring ikke går tapt); den andre avslutter med en gang. Andre hendelser
+  # (planleggeren, manuelt) hopper over sjekken.
+  klokke:
+    if: github.event_name == 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      kjor: ${{ steps.klokke.outputs.kjor }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/norsk_klokke.py
+          sparse-checkout-cone-mode: false
+      - name: Er denne cron-linja 07.17 norsk tid i dag?
+        id: klokke
+        env:
+          HENDELSE: ${{ github.event_name }}
+          PLAN: ${{ github.event.schedule }}
+        run: python3 scripts/norsk_klokke.py 7
+
   results:
+    needs: klokke
+    if: ${{ !cancelled() && (github.event_name != 'schedule' || needs.klokke.outputs.kjor == 'true') }}
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:

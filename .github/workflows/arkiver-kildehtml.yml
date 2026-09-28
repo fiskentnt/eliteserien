@@ -28,9 +28,10 @@ name: "Arkiver kilde-HTML (diagnostikk)"
 
 on:
   schedule:
-    # Hvert 20. minutt kl 12-23 norsk sommertid. Ikke runde klokkeslett:
+    # Hvert 20. minutt kl 12-23 norsk tid hele året: 10-22 UTC dekker både
+    # sommertid (UTC+2) og vintertid (UTC+1). Ikke runde klokkeslett:
     # GitHub sin cron er mest forsinket på hele og halve timer.
-    - cron: "3,23,43 10-21 * * *"
+    - cron: "3,23,43 10-22 * * *"
   workflow_dispatch:
     inputs:
       planlagt:
