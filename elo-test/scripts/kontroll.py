@@ -366,7 +366,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # tidlig stopp og egen Worker for merkene (9cc3590), tabellsimuleringen i
 # egen Worker (16934d2) og minnet i fitRates med simuleringen sendt med en
 # gang (e9477ea) og låste utfall i svarene regnet med lagstyrkene etter
-# resultatet (6d6e5b6). Basisen er derfor 6d6e5b6. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
+# resultatet (6d6e5b6) og den raskere, bit-like outcome() (fbc447c).
+# Basisen er derfor fbc447c. Endres produksjonssiden etterpaa, drifter de fra hverandre: en
 # rettelse eller ny funksjon der kommer ikke med her. Det er ikke en feil i
 # testsiden, men noen maa ta stilling til det -- derfor en advarsel med antall
 # endrede linjer, og ingen FEIL.
@@ -375,8 +376,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_COMMIT = "6d6e5b6b8d36ed0a6b118a5ad674f7e9bff3c39d"
-BASE_SHA = "a932e5beaad0b06118ccc118a9bebb312b299ec95a809042d9137ba5e00b3172"
+BASE_COMMIT = "fbc447c4fe9b27b23e60739b06493fa48f82cbd6"
+BASE_SHA = "08c88d246c3f0f4b6199a112e787cf2a671c9923e1b501e1d1c6daa794d8af61"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

@@ -1869,6 +1869,16 @@ function setMatch(m,hg,ag,writeInputs=true,sim=false){
 // ubetydelig.
 const GMAX = 15;
 function pois(l,k){ let p=Math.exp(-l); for(let i=1;i<=k;i++) p*=l/i; return p; }
+// Alle Poisson-leddene 0..GMAX for én lambda, lagt i r. Samme regneoperasjoner
+// i samme rekkefølge som pois(l,k) (start i exp(-l), gang med l/i), så r[k] er
+// bit for bit pois(l,k). outcome() bruker dette i stedet for å kalle pois() for
+// hver celle i rutenettet (GMAX+1 i kvadrat ganger): fitRates kaller outcome()
+// rundt 8 000 ganger per kamp. Faste buffere (OUT_PH, OUT_PA), ingen
+// allokering per kall: nye tabeller i hvert kall gjorde "Heie på" tregere når
+// 8 Workere regnet samtidig. outcome() kaller ingenting som bruker bufferne,
+// så de kan ikke overskrives midt i et kall.
+const OUT_PH = new Float64Array(GMAX+1), OUT_PA = new Float64Array(GMAX+1);
+function poisFyll(l, r){ let p=Math.exp(-l); r[0]=p; for(let i=1;i<=GMAX;i++){ p*=l/i; r[i]=p; } return r; }
 // Dixon-Coles tau (1997): uavhengig Poisson undervurderer uavgjorte, særlig
 // 0-0 og 1-1 -- korreksjonen flytter litt sannsynlighet fra 1-0/0-1 til
 // 0-0/1-1 ved lave resultater (uendret for alle andre resultater). rho=-0,38
@@ -1892,8 +1902,8 @@ function dcTau(x,y,lh,la){
   if(x===1&&y===1) return Math.max(0, 1-DC_RHO);
   return 1;
 }
-function outcome(lh,la){ let H=0,U=0,B=0;
-  for(let h=0;h<=GMAX;h++) for(let a=0;a<=GMAX;a++){ const p=pois(lh,h)*pois(la,a)*dcTau(h,a,lh,la); if(h>a)H+=p; else if(h===a)U+=p; else B+=p; }
+function outcome(lh,la){ let H=0,U=0,B=0; const ph=poisFyll(lh, OUT_PH), pa=poisFyll(la, OUT_PA);
+  for(let h=0;h<=GMAX;h++) for(let a=0;a<=GMAX;a++){ const p=ph[h]*pa[a]*dcTau(h,a,lh,la); if(h>a)H+=p; else if(h===a)U+=p; else B+=p; }
   const t=H+U+B; return {H:H/t,U:U/t,B:B/t}; }
 
 // Form (0-10): et lags forventede poeng per kamp mot en tenkt SNITTLAG (ingen
@@ -2977,7 +2987,8 @@ function simulateZoneProb(d, forcedIdx, forcedScore, seed, wantAll){
 // krever at hver av dem er tegn for tegn lik hovedtrådens.
 var TEAMS = [], TI = {}, MTI = {}, MODEL = null, matches = [], ODDS_UP = {}, FORM_K = 0, ODDS_W = 0;
 var FIT_MINNE = new Map(), FIT_MINNE_MAKS = ${FIT_MINNE_MAKS};
-${[pois, outcome, stateRate, computeLiveState, rateMedStilling, fitRates, fitRatesRegn, liveMedLaast, aapenKampFor, laastOver].map(String).join('\n')}
+var OUT_PH = new Float64Array(GMAX+1), OUT_PA = new Float64Array(GMAX+1);
+${[pois, poisFyll, outcome, stateRate, computeLiveState, rateMedStilling, fitRates, fitRatesRegn, liveMedLaast, aapenKampFor, laastOver].map(String).join('\n')}
 // Grunnlaget fra hovedtråden (stillingsGrunnlag): data, ikke kode. Minnet for
 // fitRates fylles med hovedtrådens oppføringer, så kampene et låst utfall
 // ikke endrer, ikke regnes på nytt her.
