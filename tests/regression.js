@@ -157,6 +157,40 @@ async function main() {
     await page.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
     return page;
   };
+  // Grunnlagsfilen for en side: den i repoet når siden godtar den (samme
+  // data som da CI regnet den), ellers regnet på nytt med lag_grunnlag.js i
+  // en kopi av arbeidstreet. Én gang per kjøring, delt av gruppen
+  // «Grunnlagsfilen på siden» og Nullstill-testen.
+  const grunnlagFilMinne = {};
+  const grunnlagFilFor = async liga => {
+    if (grunnlagFilMinne[liga]) return grunnlagFilMinne[liga];
+    const {execFileSync, spawnSync} = require('child_process'), os = require('os');
+    const utMappe = liga === 'elo-test' ? 'elo-test/emodell' : `${liga}/data`;
+    const forrige = GRUNNLAG_MODUS;
+    let st;
+    GRUNNLAG_MODUS = {};
+    try {
+      const pr = await open(1400, 900, base.replace('/eliteserien/', `/${liga}/`));
+      await pr.waitForFunction('typeof GRUNNLAG_STATUS!=="undefined" && GRUNNLAG_STATUS!=="venter"', {timeout: 120000});
+      st = await pr.evaluate(() => GRUNNLAG_STATUS);
+      await pr.close();
+    } finally { GRUNNLAG_MODUS = forrige; }
+    if (st === 'i bruk') return (grunnlagFilMinne[liga] = fs.readFileSync(path.join(ROOT, utMappe, 'grunnlag.json'), 'utf8'));
+    const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'grunnlag-side-'));
+    try {
+      for (const f of execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], {cwd: ROOT}).toString().split('\0').filter(Boolean)) {
+        const fra = path.join(ROOT, f);
+        if (!fs.existsSync(fra) || fs.statSync(fra).isDirectory()) continue;
+        fs.mkdirSync(path.dirname(path.join(TMP, f)), {recursive: true});
+        fs.copyFileSync(fra, path.join(TMP, f));
+      }
+      const pp = require.resolve('puppeteer-core');
+      const r = spawnSync(process.execPath, [path.join(TMP, 'scripts', 'lag_grunnlag.js'), liga, '--ut', utMappe], {cwd: TMP, encoding: 'utf8', timeout: 900000,
+        env: {...process.env, NODE_PATH: [pp.slice(0, pp.lastIndexOf(`${path.sep}puppeteer-core${path.sep}`)), process.env.NODE_PATH].filter(Boolean).join(path.delimiter)}});
+      console.log(`    (${liga}: filen i repoet ble ikke godtatt (${st}); regnet på nytt: ${(r.stdout || '').trim().split('\n')[0]})`);
+      return (grunnlagFilMinne[liga] = fs.readFileSync(path.join(TMP, utMappe, 'grunnlag.json'), 'utf8'));
+    } finally { fs.rmSync(TMP, {recursive: true, force: true}); }
+  };
   // Klikk som en bruker, men med elementet midt i vinduet. puppeteer ruller
   // bare når elementet er utenfor vinduet, og den faste menyen øverst dekker
   // et element som ligger rett under den (29.9.2026: Nullstill lå under menyen
@@ -1029,6 +1063,118 @@ async function main() {
       await pg.close();
     }
   };
+  // Nullstill skal gi nøyaktig samme tabell og svar som en ny lasting, fra
+  // grunnlagsfilen, uten ny tabellsimulering. Før ble filen avvist ("feil
+  // avtrykk") når den kom mens et scenario var fylt inn (vanlig på mobil) eller
+  // siden ble åpnet med et scenario i adressen: lagstyrkene var fortsatt
+  // scenarioets da avtrykket ble regnet. Da ga Nullstill sidens egen tabell
+  // (10 000 sesonger: Glimt 80 %) i stedet for filens (79 %) (29.9.2026).
+  // Testen trykker på selve Nullstill-knappen etter en simulert runde, et
+  // resultat skrevet med tastaturet og "Simuler tomme kamper", med filen
+  // lastet først og med filen holdt tilbake til scenarioet er fylt inn, og
+  // etter å ha åpnet siden med et scenario i adressen. Kjøres med resten av
+  // suiten, eller alene:
+  //   node tests/regression.js --bare nullstill
+  const nullstillGrunnlag = async () => {
+    setGroup('Nullstill gir grunnlagsfilens tabell og svar');
+    // Testserveren svarer 404 på grunnlagsfilen som standard; her leveres
+    // Eliteseriens fil (lokalt: den siden godtar, se grunnlagFilFor).
+    if (!live) GRUNNLAG_MODUS = {innhold: {eliteserien: await grunnlagFilFor('eliteserien')}};
+    try {
+      const lag = 'Vålerenga', url = base + '#team=' + encodeURIComponent(lag);
+      const SPM = ['why', 'nextmatch', 'keyround'];
+      // Tabellen og svarene slik siden viser dem, og hvor tabellen kommer fra.
+      // Venter på merkene for tilstanden som vises (siste svar fra merke-
+      // Workeren gjelder gjeldende badgeRunId), så leses tabellen.
+      const tilstand = async pg => { await pg.waitForFunction(() => window.__merkeRun === badgeRunId, {timeout: 60000}); return pg.evaluate(async (t, spm) => {
+        const svar = {};
+        for (const id of spm) svar[id] = await QA_QUESTIONS.find(q => q.id === id).run(t, () => {});
+        return {status: GRUNNLAG_STATUS, N: lastMCN, filN: GRUNNLAG ? GRUNNLAG.N : null, key: lastMCScenarioKey, final: lastMCFinal,
+          mc: JSON.stringify(lastMC), tabell: document.querySelector('#tbl tbody').innerText, svar,
+          gull: TEAMS.filter(x => lastMC[x][0] > 0.001).map(x => `${x} ${(lastMC[x][0] * 100).toFixed(2)}`).join(', ')};
+      }, lag, SPM); };
+      // Siden, med tabellsimuleringene talt (Worker-meldinger uten mode) og
+      // grunnlagsfilen eventuelt holdt tilbake til slipp() kalles.
+      const aapne = async (adresse, holdTilbake) => {
+        const pg = await browser.newPage();
+        pg.on('pageerror', e => errors.push(`${adresse}: ${e.message}`));
+        await pg.evaluateOnNewDocument(() => {
+          window.__tabellsim = 0; window.__merkeRun = null;
+          const W = window.Worker;
+          window.Worker = function (u, o) { const w = new W(u, o), post = w.postMessage.bind(w);
+            w.postMessage = m => { if (m && !m.mode) window.__tabellsim++; return post(m); };
+            // Merkene ("Sikret plass") kommer fra sin egen Worker etter tabellen.
+            w.addEventListener('message', e => { if (e.data && e.data.mode === 'badges') window.__merkeRun = e.data.runId; });
+            return w; };
+        });
+        let holdt = null, slipp = () => {};
+        if (holdTilbake) {
+          await pg.setRequestInterception(true);
+          pg.on('request', r => { if (/grunnlag\.json/.test(r.url()) && !holdt) holdt = r; else r.continue(); });
+          slipp = () => { if (holdt) holdt.continue(); };
+        }
+        await pg.setViewport({width: 1400, height: 1000});
+        await pg.goto(adresse, {waitUntil: 'domcontentloaded'});
+        await pg.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
+        if (!holdTilbake) await pg.waitForFunction('GRUNNLAG_STATUS!=="venter"', {timeout: 60000});
+        return {pg, slipp: () => slipp()};
+      };
+      // Referansen: en vanlig lasting.
+      const ref0 = await aapne(url, false);
+      await settle(ref0.pg);
+      const ref = await tilstand(ref0.pg);
+      check(`referansen: filen er i bruk ved sidelasting (${ref.gull})`, ref.status === 'i bruk' && ref.N === ref.filN, `${ref.status}, N ${ref.N}`);
+      // Et scenario til adressen i tilfelle 7: runden simulert.
+      const R = await ref0.pg.evaluate(() => Math.min(...matches.filter(m => m.round).map(m => m.round)));
+      await ref0.pg.close();
+      const lagScenario = {
+        runde: async pg => { const r = await pg.evaluate(t => matches.filter(x => x.home === t || x.away === t).sort((a, b) => a.date.localeCompare(b.date))[0].round, lag);
+          await klikk(pg, `.round-sim[data-round="${r}"]`);
+          await pg.waitForFunction(rr => matches.filter(m => m.round === rr).every(m => m.hg != null), {timeout: 60000}, r); },
+        tastatur: async pg => { const id = await pg.evaluate(() => matches[0].id), rad = `.match[data-id="${id}"]`;
+          await pg.$eval(rad, el => el.scrollIntoView({block: 'center'}));
+          await pg.click(`${rad} [data-side=h]`); await pg.keyboard.type('2');
+          await pg.click(`${rad} [data-side=a]`); await pg.keyboard.type('1'); await pg.keyboard.press('Tab');
+          await pg.waitForFunction(i => { const m = matches.find(x => x.id === i); return m.hg === 2 && m.ag === 1; }, {timeout: 20000}, id); },
+        tomme: async pg => { await klikk(pg, '#simRest'); await pg.waitForFunction('matches.every(m=>m.hg!=null)', {timeout: 60000}); },
+      };
+      const vurder = async (pg, navn) => {
+        const foer = await pg.evaluate(() => window.__tabellsim);
+        await klikk(pg, '#reset');
+        await settle(pg);
+        await new Promise(r => setTimeout(r, 800));
+        const e = await tilstand(pg), nye = await pg.evaluate(() => window.__tabellsim) - foer;
+        const ulikeSvar = SPM.filter(id => e.svar[id] !== ref.svar[id]);
+        check(`${navn}: Nullstill bruker grunnlagsfilen (${e.gull}), uten ny tabellsimulering`,
+          e.status === 'i bruk' && e.N === e.filN && e.key === '' && e.final && nye === 0,
+          `status ${e.status}, N ${e.N}, nye tabellsimuleringer ${nye}`);
+        check(`${navn}: tabellen og svarene (${SPM.join(', ')}) er identiske med sidelastingen`,
+          e.mc === ref.mc && e.tabell === ref.tabell && ulikeSvar.length === 0,
+          `tabelltall ${e.mc === ref.mc ? 'like' : 'ulike'}, visning ${e.tabell === ref.tabell ? 'lik' : `ulik (${(() => { const a = e.tabell.split('\n'), b = ref.tabell.split('\n'); const i = a.findIndex((x, k) => x !== b[k]); return `nå «${(a[i] || '').replace(/\t/g, ' | ')}», ved lasting «${(b[i] || '').replace(/\t/g, ' | ')}»`; })()})`}, ulike svar: ${ulikeSvar.join(', ') || 'ingen'}${ulikeSvar.length ? ` (${e.svar[ulikeSvar[0]].slice(0, 80)} / ${ref.svar[ulikeSvar[0]].slice(0, 80)})` : ''}`);
+      };
+      for (const [hva, tekst] of [['runde', 'runden simulert'], ['tastatur', 'resultat skrevet med tastaturet'], ['tomme', '"Simuler tomme kamper"']]) {
+        for (const sent of [false, true]) {
+          const {pg, slipp} = await aapne(url, sent);
+          await lagScenario[hva](pg);
+          await settle(pg);
+          if (sent) { slipp(); await pg.waitForFunction('GRUNNLAG_STATUS!=="venter"', {timeout: 60000}); await settle(pg); }
+          await vurder(pg, `${tekst}, filen ${sent ? 'kom etter scenarioet (som på mobil)' : 'lastet først'}`);
+          await pg.close();
+        }
+      }
+      // Åpnet med et scenario i adressen (delt lenke).
+      const {pg: p0} = await aapne(url, false);
+      await lagScenario.runde(p0);
+      const kode = await p0.evaluate(() => encodeScenario());
+      await p0.close();
+      const {pg} = await aapne(`${base}#s=${kode}&team=${encodeURIComponent(lag)}`, false);
+      await settle(pg);
+      const aapnet = await pg.evaluate(() => ({fylt: matches.filter(m => m.hg != null).length, status: GRUNNLAG_STATUS}));
+      check(`åpnet med et scenario i adressen: filen godtas (${aapnet.fylt} kamper fylt)`, aapnet.fylt > 0 && aapnet.status === 'i bruk', JSON.stringify(aapnet));
+      await vurder(pg, 'åpnet med scenario i adressen');
+      await pg.close();
+    } finally { if (!live) GRUNNLAG_MODUS = null; }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -1042,7 +1188,8 @@ async function main() {
       else if (BARE === 'forrige') await forrigeKampScenario();
       else if (BARE === 'neste') await nesteKampKort();
       else if (BARE === 'nestelinje') await nesteKampLinje();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje)`);
+      else if (BARE === 'nullstill') await nullstillGrunnlag();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill)`);
     } else {
     // ---- 1. lasting ----
     setGroup('Lasting');
@@ -1855,6 +2002,7 @@ async function main() {
     await forrigeKampScenario();
     await nesteKampKort();
     await nesteKampLinje();
+    await nullstillGrunnlag();
     await page.bringToFront();
 
     // ---- 18. rulling til svaret på iPad-bredder ----
@@ -3937,33 +4085,11 @@ async function main() {
       const ferdig = pg => pg.waitForFunction('typeof GRUNNLAG_STATUS!=="undefined" && GRUNNLAG_STATUS!=="venter" && lastMC && lastMCFinal',
         {timeout: 120000, polling: 50});
       const lagMedSone = `TEAMS.find(t => { const z = qaTargetZone(t); return z && !qaSettled(t, z) && z.pct > 0.05 && z.pct < 0.95; }) || TEAMS[0]`;
-      // Filen for hver side: den i repoet når siden godtar den (samme data som
-      // da CI regnet den), ellers regnet på nytt med lag_grunnlag.js i en kopi.
+      // Filen for hver side (grunnlagFilFor): den i repoet når siden godtar
+      // den, ellers regnet på nytt med lag_grunnlag.js i en kopi.
       const SIDENE = ['eliteserien', 'obos', 'elo-test'];
-      const utMappe = liga => liga === 'elo-test' ? 'elo-test/emodell' : `${liga}/data`;
       const filer = {};
-      for (const liga of SIDENE) {
-        GRUNNLAG_MODUS = {};
-        const pr = await aapneMaalt(base.replace('/eliteserien/', `/${liga}/`));
-        await ferdig(pr);
-        const st = await pr.evaluate(() => GRUNNLAG_STATUS);
-        await pr.close();
-        if (st === 'i bruk') { filer[liga] = fs.readFileSync(path.join(ROOT, utMappe(liga), 'grunnlag.json'), 'utf8'); continue; }
-        const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'grunnlag-side-'));
-        try {
-          for (const f of execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], {cwd: ROOT}).toString().split('\0').filter(Boolean)) {
-            const fra = path.join(ROOT, f);
-            if (!fs.existsSync(fra) || fs.statSync(fra).isDirectory()) continue;
-            fs.mkdirSync(path.dirname(path.join(TMP, f)), {recursive: true});
-            fs.copyFileSync(fra, path.join(TMP, f));
-          }
-          const pp = require.resolve('puppeteer-core');
-          const r = spawnSync(process.execPath, [path.join(TMP, 'scripts', 'lag_grunnlag.js'), liga, '--ut', utMappe(liga)], {cwd: TMP, encoding: 'utf8', timeout: 900000,
-            env: {...process.env, NODE_PATH: [pp.slice(0, pp.lastIndexOf(`${path.sep}puppeteer-core${path.sep}`)), process.env.NODE_PATH].filter(Boolean).join(path.delimiter)}});
-          console.log(`    (${liga}: filen i repoet ble ikke godtatt (${st}); regnet på nytt: ${(r.stdout || '').trim().split('\n')[0]})`);
-          filer[liga] = fs.readFileSync(path.join(TMP, utMappe(liga), 'grunnlag.json'), 'utf8');
-        } finally { fs.rmSync(TMP, {recursive: true, force: true}); }
-      }
+      for (const liga of SIDENE) filer[liga] = await grunnlagFilFor(liga);
 
       for (const liga of SIDENE) {
         const url = base.replace('/eliteserien/', `/${liga}/`), g = JSON.parse(filer[liga]);

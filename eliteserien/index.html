@@ -5055,11 +5055,22 @@ let GRUNNLAG_STATUS = 'venter';       // venter | i bruk | mangler | ugyldig | f
 function grunnlagFil(){ return 'data/grunnlag.json'; }   // testsiden: sin egen mappe
 const grunnlagTomtScenario = () => !matches.some(m=>m.hg!=null&&m.ag!=null);
 // fn() med alle innfylte resultater midlertidig fjernet (synkront, settes
-// tilbake straks): dagens stilling uten scenario.
+// tilbake straks): dagens stilling uten scenario. Lagstyrkene (LIVE) regnes
+// også uten scenarioet mens fn() kjører: de tvungne resultatene i oppgavene
+// (forcedScoreline -> predict) bygger på dem. Før ble de stående slik
+// scenarioet hadde justert dem, så en fil som kom mens et scenario var fylt
+// inn (på mobil rakk man ofte å simulere først), eller en side åpnet med et
+// scenario i adressen, fikk "feil avtrykk" og ble aldri tatt i bruk: Nullstill
+// ga sidens egen tabell (10 000 sesonger, Glimt 80 %), ikke filens (79 %).
 function grunnlagUtenScenario(fn){
   const lagret = matches.map(m=>[m.hg, m.ag]);
+  const medScenario = lagret.some(([h,a])=>h!=null || a!=null);
   matches.forEach(m=>{ m.hg=null; m.ag=null; });
-  try{ return fn(); } finally { matches.forEach((m,i)=>{ m.hg=lagret[i][0]; m.ag=lagret[i][1]; }); }
+  if(medScenario) refreshLiveState();
+  try{ return fn(); } finally {
+    matches.forEach((m,i)=>{ m.hg=lagret[i][0]; m.ag=lagret[i][1]; });
+    if(medScenario) refreshLiveState();
+  }
 }
 async function grunnlagMottatt(g){
   if(!g){ GRUNNLAG_STATUS='mangler'; return; }
