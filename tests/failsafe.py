@@ -515,9 +515,16 @@ def main():
         except TypeError as e:
             check(f"NTF: ugyldig dato {navn} stopper fortsatt hentingen", False, f"TypeError: {e}")
     # Hele fetch_all, med sidene fra en lokal mappe og matches.json fra repoet.
+    # Hentelogget får en egen, tom katalog her. Test 2 (obos_results.py
+    # --break-wikipedia) logger også obos/ntf-resultater, i sin egen fil og
+    # ofte i samme sekund som hentingen under. Tidsstempelet har hele sekunder,
+    # og ved likt sekund sorterer les() på filnavnet, så "siste linje" kunne
+    # være subprosessens (184 kamper, ingen melding), og testen feilet av og til.
     import tempfile as _tf
     import hentelogg as HL2
+    gml_katalog = HL2.KATALOG
     with _tf.TemporaryDirectory() as d:
+        HL2.KATALOG = Path(d) / "hentelogg"
         Path(d, "obos_resultater.html").write_text(side, encoding="utf-8")
         Path(d, "obos_terminliste.html").write_text(
             ntf_rad("Ranheim", "Egersund", '02.10.<span class="schedule__match__item--date__year">2026</span>',
@@ -541,6 +548,7 @@ def main():
             check("NTF: ugyldig dato på terminlisten stopper fortsatt fetch_all", False, "ingen feil ble kastet")
         except NTF.EsDataError as e:
             check("NTF: ugyldig dato på terminlisten stopper fortsatt fetch_all", "manglende dato" in str(e), str(e))
+    HL2.KATALOG = gml_katalog
 
     # 20. Tidsporten for The Odds API (update-odds.yml via planleggeren hvert
     # tiende minutt). Porten avgjør, uten filer: én vellykket henting per
