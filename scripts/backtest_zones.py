@@ -34,8 +34,16 @@ Modellene som sammenlignes:
               sterke baselinjen -- den som viser hva lagstyrke tilfører.
   poisson     modellen tilpasset på mål alene, uten odds, uten formoppdatering
               og uten Dixon-Coles.
-  full        som siden bruker: mål + sluttodds, formoppdatering underveis i
-              hver simulerte sesong, Dixon-Coles og l1/l2 = 16/48.
+  full        modellen fra model.json slik siden simulerer med den: mål +
+              sluttodds i tilpasningen, formoppdatering underveis i hver
+              simulerte sesong, Dixon-Coles og l1/l2 = 16/48. Siden blander i
+              tillegg inn oddsen for neste runde (ODDS_W); det gjør ikke full.
+  kjede       som full, men første runde etter kuttet får målrater fra
+              sluttoddsen blandet 70/30 med modellen og regnet om med fitRates,
+              slik siden gjør med oddsen den har for neste runde. Formen
+              oppdateres mot de ratene, som i Workeren. OPTIMISTISK: siden har
+              odds hentet før avspark, mens sluttoddsen er satt rett før kampen
+              og vet mer. Bare der CSV-en har odds (ikke OBOS).
 
 Bruk (CSV-en ligger ikke i repoet):
   curl -s https://football-data.co.uk/new/NOR.csv -o /tmp/NOR.csv
@@ -95,6 +103,10 @@ ODDS_WEIGHT, HALF_LIFE, L1_FULL, L2_FULL = 40.0, 35.0, 16.0, 48.0
 L1_PLAIN, L2_PLAIN = 2.0, 6.0
 FORM_K = 0.015
 DRIFT_CAP_ATTCON, DRIFT_CAP_HAHC, DRIFT_REVERSION = 0.5, 0.35, 0.02
+# Taket på målratene, som på siden. Kontrollert 29. september 2026: av 151 200
+# tilpassede rater ut av utvalg (Eliteserien og OBOS 2012-2025, alle varianter
+# og innstillinger i studien av tilpasningen) gikk ingen over 6; den største
+# var 4,64. Taket binder altså ikke for tilpassede rater. Avklart.
 MAX_LAMBDA_LOG = np.log(6.0)
 DC_RHO = -0.38
 # Rekke-rampen (bare i Form-visningen på siden, se STREAK_BONUS i index.html):
@@ -161,13 +173,17 @@ def draw_goals(lh, la, rng, dc_rho):
 
 def simulate(remaining, TI, n, pts0, gd0, gf0, N, rng, *, mu, Hp,
              att=None, con=None, ha=None, hc=None, form_k=0.0, dc_rho=0.0,
-             flat=None, ramp=False):
+             flat=None, ramp=False, faste=None):
     """Simulerer de gjenstående kampene N ganger og returnerer sluttplassering
     per lag og simulering, (N, n).
 
     flat: (lambda_hjemme, lambda_borte) -- tabellmodellen, der alle lag er like
     sterke. Ellers brukes lagstyrkene, og med form_k > 0 oppdateres de underveis
-    i hver simulerte sesong (samme drift og tak som Workeren)."""
+    i hver simulerte sesong (samme drift og tak som Workeren).
+
+    faste: {indeks i remaining: (lambda_hjemme, lambda_borte)} -- faste rater
+    for kamper med odds (varianten kjede), som oddsOverride i Workeren. Formen
+    oppdateres mot de faste ratene."""
     pts = np.tile(pts0, (N, 1)); gd = np.tile(gd0, (N, 1)); gf = np.tile(gf0, (N, 1))
     if flat is None:
         A = np.tile(att, (N, 1)); C = np.tile(con, (N, 1))
@@ -176,10 +192,12 @@ def simulate(remaining, TI, n, pts0, gd0, gf0, N, rng, *, mu, Hp,
         # Rekke-rampe: lengden på inneværende strake rekke per lag og
         # simulering (+ for seire, - for tap, 0 rett etter uavgjort).
         streak = np.zeros((N, n), dtype=np.int16) if ramp else None
-    for m in remaining:
+    for j, m in enumerate(remaining):
         h, a = TI[m["home"]], TI[m["away"]]
         if flat is not None:
             lh = np.full(N, flat[0]); la = np.full(N, flat[1])
+        elif faste and j in faste:
+            lh = np.full(N, faste[j][0]); la = np.full(N, faste[j][1])
         else:
             eh = np.clip(mu + Hp + A[:, h] + HA[:, h] + C[:, a] - HC[:, a], -9, MAX_LAMBDA_LOG)
             ea = np.clip(mu + A[:, a] - HA[:, a] + C[:, h] + HC[:, h], -9, MAX_LAMBDA_LOG)
@@ -226,6 +244,33 @@ def zone_probs(pos, n, targets):
     return out
 
 
+ODDS_W = 0.7   # oddsens vekt i kommende kamper på siden (ODDS_W i index.html)
+
+
+def neste_runde_med_odds(remaining, TI, n, r, dc_rho):
+    """Faste rater for første runde etter kuttet, som siden regner dem:
+    ODDS_W * oddsen + (1 - ODDS_W) * modellen, regnet om til målrater med
+    fitRates (samme rutenett som siden, Dixon-Coles med dc_rho). Runden er de
+    første kampene der ingen lag går igjen, høyst n/2."""
+    import dc_rho_studie as S   # fitRates og utfallsrutenettet, som på siden
+    att, con, ha, hc = (np.array(r[x]) for x in ("att", "con", "ha", "hc"))
+    brukt, faste = set(), {}
+    for j, m in enumerate(remaining):
+        if m["home"] in brukt or m["away"] in brukt or len(brukt) >= n:
+            break
+        brukt |= {m["home"], m["away"]}
+        if not m.get("odds"):
+            continue
+        h, a = TI[m["home"]], TI[m["away"]]
+        lh = float(np.exp(np.clip(r["mu"] + r["H"] + att[h] + ha[h] + con[a] - hc[a], -9, MAX_LAMBDA_LOG)))
+        la = float(np.exp(np.clip(r["mu"] + att[a] - ha[a] + con[h] + hc[h], -9, MAX_LAMBDA_LOG)))
+        mH, _, mB = S.utfall(S.rutenett(np.array([lh]), np.array([la]), dc_rho))
+        pH = ODDS_W * m["odds"][0] + (1 - ODDS_W) * float(mH[0])
+        pB = ODDS_W * m["odds"][2] + (1 - ODDS_W) * float(mB[0])
+        faste[j] = tuple(float(v) for v in S.fit_rates([pH], [pB], dc_rho)[0])
+    return faste
+
+
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--csv", required=True)
@@ -269,6 +314,8 @@ def main():
         "+form":     (ow, L1_PLAIN, L2_PLAIN, FORM_K, 0.0),
         "+dc":       (ow, L1_PLAIN, L2_PLAIN, FORM_K, DC_RHO),
         "full":      (ow, L1_FULL,  L2_FULL,  FORM_K, DC_RHO),
+        # Som full, men neste runde med sluttoddsen blandet inn (se toppen).
+        "kjede":     (ow, L1_FULL,  L2_FULL,  FORM_K, DC_RHO, False, True),
         # Sidegren, ikke del av kjeden: rampen er IKKE med i modellen som brukes.
         "+rampe":    (ow, L1_PLAIN, L2_PLAIN, FORM_K, 0.0, True),
     }
@@ -277,7 +324,10 @@ def main():
         VARIANTS = {"tabell": VARIANTS["tabell"], "poisson": VARIANTS["poisson"],
                     "+odds": (ODDS_WEIGHT, L1_PLAIN, L2_PLAIN, 0.0, 0.0),
                     "+form": VARIANTS["+form"], "+dc": VARIANTS["+dc"],
-                    "full": VARIANTS["full"], "+rampe": VARIANTS["+rampe"]}
+                    "full": VARIANTS["full"], "kjede": VARIANTS["kjede"],
+                    "+rampe": VARIANTS["+rampe"]}
+    else:
+        del VARIANTS["kjede"]   # OBOS-historikken har ingen odds å blande inn
     ALT = None
     if args.dc_rho_alt is not None:
         ALT = f"rho {args.dc_rho_alt:g}"
@@ -359,16 +409,18 @@ def main():
                 else:
                     ow, l1, l2, fk, dcr = cfg[:5]
                     rmp = len(cfg) > 5 and cfg[5]
+                    kjede = len(cfg) > 6 and cfg[6]
                     key = (ow, l1, l2)
                     if key not in fits:
                         fits[key] = fit_fast.fit_model_fast(
                             played, teams, TI, odds_weight=ow, half_life_goals=HALF_LIFE,
                             half_life_odds=HALF_LIFE, l1=l1, l2=l2, ref_date=ref, isolate_global=True)
                     r = fits[key]
+                    faste = neste_runde_med_odds(remaining, TI, n, r, dcr) if kjede else None
                     pos = simulate(remaining, TI, n, pts0, gd0, gf0, args.sims, rng,
                                    mu=r["mu"], Hp=r["H"], att=np.array(r["att"]), con=np.array(r["con"]),
                                    ha=np.array(r["ha"]), hc=np.array(r["hc"]), form_k=fk,
-                                   dc_rho=dcr, ramp=rmp)
+                                   dc_rho=dcr, ramp=rmp, faste=faste)
                 probs[name] = dict(zip(targets, zone_probs(pos, n, lcfg["targets"])))
 
             for name in models:
@@ -418,7 +470,7 @@ def main():
     # Rampen er en sidegren: den sammenlignes med +form, ikke med raden over.
     BASE_OF = {"tabell": "basisrate", "poisson": "tabell", "+odds": "poisson",
                "+form": "+odds" if "+odds" in E else "poisson",
-               "+dc": "+form", "full": "+dc", "+rampe": "+form"}
+               "+dc": "+form", "full": "+dc", "+rampe": "+form", "kjede": "full"}
     if ALT:
         BASE_OF[ALT] = "full"   # samme modell, bare en annen rho
     # Per kuttpunkt: hvor mye modellen slår tabellmodellen når det er mye igjen
