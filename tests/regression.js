@@ -157,6 +157,11 @@ async function main() {
     await page.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
     return page;
   };
+  // Klikk som en bruker, men med elementet midt i vinduet. puppeteer ruller
+  // bare når elementet er utenfor vinduet, og den faste menyen øverst dekker
+  // et element som ligger rett under den (29.9.2026: Nullstill lå under menyen
+  // når kortet "Neste kamp" var skjult, og klikket traff menyen).
+  const klikk = async (pg, sel) => { await pg.$eval(sel, el => el.scrollIntoView({block: 'center'})); await pg.click(sel); };
   const settle = page => page.waitForFunction(
     'lastMCFinal===true && lastMCScenarioKey===qaScenarioKey()', {timeout: 120000});
   // Utfyllingsknappene er asynkrone, og scenarionøkkelen rekker ikke å endre
@@ -622,8 +627,9 @@ async function main() {
   // Boksen sier bare resultatet og hva det gjorde med lagets sjanse: "Forrige
   // kamp: 2-1 mot Bodø/Glimt. Seieren økte Branns sjanse for topp 4 med 6
   // prosentpoeng." Under 2 prosentpoeng: "Resultatet endret lite på ...". Er
-  // kampen fylt inn eller simulert: "Forrige kamp i scenarioet: ...". Svaret
-  // starter med samme kamp, sone og endring, med tallet nå og før kampen.
+  // lagets siste kamp simulert eller fylt inn: "Simulert forrige kamp: ...",
+  // og "Det simulerte tapet ..." i svaret. Svaret starter med samme kamp, sone
+  // og endring, med tallet nå og før kampen.
   // Sonen er en av dem kortet over viser, tallet nå er kortets, og "økte" /
   // "senket" følger fortegnet, ikke resultatet: uavgjort skal kunne gå begge
   // veier. Meldt samme dag: med runde 23 simulert og Vålerenga 4-0 borte mot
@@ -634,41 +640,52 @@ async function main() {
   const forrigeKampScenario = async () => {
     setGroup('Forrige kamp: boksen, svaret og kortet');
     const tall = x => x === '<1' ? 0 : x === '>99' ? 100 : +x;
-    const PC = '(<1|>99|\\d+)';
-    const boksRe = /^Forrige kamp( i scenarioet)?: (\d+-\d+) mot ([^.]+)\.(?: (Seieren|Uavgjort|Tapet) (økte|senket) (.+) med (\d+) prosentpoeng\.| Resultatet endret lite på (.+)\.)?$/;
-    const svarRe = new RegExp(`^(Seieren|Uavgjort|Tapet) (\\d+-\\d+) mot (.+?)( i scenarioet)? (?:(økte|senket) (.+) med (\\d+) prosentpoeng, til ${PC} %\\. Før kampen var den ${PC} %\\.|endret lite på (.+)\\. Den er ${PC} %(?:, det samme som før kampen|, og før kampen var den ${PC} %)\\.)$`);
-    // Leser boksen, første avsnitt i svaret og kortets tall for sonen.
+    // "Forrige kamp" er alltid en spilt kamp; en simulert eller innfylt kamp
+    // heter "Simulert forrige kamp", og svaret starter med "Det simulerte
+    // tapet", "Den simulerte seieren" eller "Simulert uavgjort".
+    const SIM = {'Den simulerte seieren': 'Seieren', 'Simulert uavgjort': 'Uavgjort', 'Det simulerte tapet': 'Tapet'};
+    const boksRe = /^(?<pre>Simulert forrige kamp|Forrige kamp): (?<res>\d+-\d+) mot (?<opp>[^.]+)\.(?: (?<ord>Seieren|Uavgjort|Tapet) (?<verb>økte|senket) (?<sone>.+) med (?<n>\d+) prosentpoeng\.| Resultatet endret lite på (?<liteSone>.+)\.)?$/;
+    const PC = '(?:<1|>99|\\d+)';
+    const svarRe = new RegExp(`^(?<ord>Seieren|Uavgjort|Tapet|${Object.keys(SIM).join('|')}) (?<res>\\d+-\\d+) mot (?<opp>.+?) (?:(?<verb>økte|senket) (?<sone>.+) med (?<n>\\d+) prosentpoeng, til (?<naa>${PC}) %\\. Før kampen var den (?<foer>${PC}) %\\.|endret lite på (?<liteSone>.+)\\. Den er (?<liteNaa>${PC}) %(?:, det samme som før kampen|, og før kampen var den (?<liteFoer>${PC}) %)\\.)$`);
+    // Leser boksen, første avsnitt i svaret, kortets tall for sonen og
+    // spørsmålsknappen.
     const les = (pg, lag) => pg.evaluate(async t => {
       const el = document.querySelector('#odds .lastmatch'), z = qaTargetZone(t);
       const knapp = z && document.querySelector(`#odds .odds-jump[data-zone="${z.key}"] strong`);
-      return {boks: el ? el.textContent.trim() : '', svar: (await qaLastMatch(t)).split('\n\n')[0],
+      const svar = await qaLastMatch(t);
+      return {boks: el ? el.textContent.trim() : '', svar: svar.split('\n\n')[0], helt: svar,
         kort: knapp ? knapp.textContent.trim() : null, flat: !!document.querySelector('#odds .odds-row.flat'),
-        frase: z && typeof lagSone === 'function' ? lagSone(t, z.key) : null};
+        frase: z && typeof lagSone === 'function' ? lagSone(t, z.key) : null,
+        lag: t, spm: (b => b ? b.textContent.trim() : null)(document.querySelector('#qaButtons button[data-id="lastmatch"]'))};
     }, lag);
     // Feilene for ett lag (tom liste = alt stemmer), og hva boksen sa.
-    const vurder = (r, iScen) => {
-      const b = r.boks.match(boksRe), s = r.svar.match(svarRe), f = [];
-      if (!b) return {f: [`boksen: "${r.boks}"`]};
-      if (!s) return {f: [`svaret: "${r.svar}"`]};
-      if (!!b[1] !== iScen || !!s[4] !== iScen) f.push(`"i scenarioet" skulle ${iScen ? '' : 'ikke '}stått`);
-      if (b[2] !== s[2] || b[3] !== s[3]) f.push(`ulik kamp: ${b[2]} mot ${b[3]} / ${s[2]} mot ${s[3]}`);
-      const naa = s[5] ? s[8] : s[11], foer = s[5] ? s[9] : (s[12] || s[11]);
+    const vurder = (r, simulert) => {
+      const bm = r.boks.match(boksRe), sm = r.svar.match(svarRe), f = [];
+      if (!bm) return {f: [`boksen: "${r.boks}"`]};
+      if (!sm) return {f: [`svaret: "${r.svar}"`]};
+      const b = bm.groups, s = sm.groups;
+      if (/scenari/i.test(r.boks + r.helt)) f.push('"scenario" i boksen eller svaret');
+      if ((b.pre === 'Simulert forrige kamp') !== simulert) f.push(`boksen skulle ${simulert ? '' : 'ikke '}sagt "Simulert forrige kamp"`);
+      if ((s.ord in SIM) !== simulert) f.push(`svaret skulle ${simulert ? '' : 'ikke '}sagt "simulert"`);
+      if (r.spm !== `Hva betydde ${simulert ? 'simulert forrige kamp' : 'forrige kamp'} for ${r.lag}?`) f.push(`spørsmålet: "${r.spm}"`);
+      if (b.res !== s.res || b.opp !== s.opp) f.push(`ulik kamp: ${b.res} mot ${b.opp} / ${s.res} mot ${s.opp}`);
+      const naa = s.verb ? s.naa : s.liteNaa, foer = s.verb ? s.foer : (s.liteFoer || s.liteNaa);
       const n = tall(naa) - tall(foer);
       if (!r.flat && r.kort !== `${naa} %`) f.push(`kortet viser ${r.kort}, svaret ${naa} %`);
-      if (b[5]) {
-        const N = +b[7] * (b[5] === 'økte' ? 1 : -1);
-        if (!s[5]) f.push('boksen har en endring, svaret "endret lite"');
-        else if (b[4] !== s[1] || b[5] !== s[5] || b[6] !== s[6] || b[7] !== s[7]) f.push(`ulik endring: ${b[4]} ${b[5]} ${b[6]} ${b[7]} / ${s[1]} ${s[5]} ${s[6]} ${s[7]}`);
-        if (N !== n) f.push(`${b[5]} ${b[7]}, men ${naa} % nå og ${foer} % før`);
+      if (b.verb) {
+        const N = +b.n * (b.verb === 'økte' ? 1 : -1);
+        if (!s.verb) f.push('boksen har en endring, svaret "endret lite"');
+        else if (b.ord !== (SIM[s.ord] || s.ord) || b.verb !== s.verb || b.sone !== s.sone || b.n !== s.n) f.push(`ulik endring: ${b.ord} ${b.verb} ${b.sone} ${b.n} / ${s.ord} ${s.verb} ${s.sone} ${s.n}`);
+        if (N !== n) f.push(`${b.verb} ${b.n}, men ${naa} % nå og ${foer} % før`);
         if (Math.abs(N) < 2) f.push(`endring ${N} under 2, skulle vært "endret lite"`);
-        if (b[6] !== r.frase) f.push(`sonen "${b[6]}", kortet og svaret bruker "${r.frase}"`);
-        if (!r.flat && (tall(naa) - N < 0 || tall(naa) - N > 100)) f.push(`motsier kortet: ${b[5]} ${b[7]} og ${r.kort}`);
-      } else if (b[8]) {
-        if (s[5]) f.push('boksen "endret lite", svaret har en endring');
+        if (b.sone !== r.frase) f.push(`sonen "${b.sone}", kortet og svaret bruker "${r.frase}"`);
+        if (!r.flat && (tall(naa) - N < 0 || tall(naa) - N > 100)) f.push(`motsier kortet: ${b.verb} ${b.n} og ${r.kort}`);
+      } else if (b.liteSone) {
+        if (s.verb) f.push('boksen "endret lite", svaret har en endring');
         if (Math.abs(n) >= 2) f.push(`"endret lite", men ${naa} % nå og ${foer} % før`);
-        if (b[8] !== r.frase || s[10] !== r.frase) f.push(`sonen "${b[8]}"/"${s[10]}", kortet "${r.frase}"`);
+        if (b.liteSone !== r.frase || s.liteSone !== r.frase) f.push(`sonen "${b.liteSone}"/"${s.liteSone}", kortet "${r.frase}"`);
       } else f.push('boksen har bare resultatet, svaret har tall');
-      return {f, ord: b[4], verb: b[5], n};
+      return {f, ord: b.ord, verb: b.verb, n};
     };
     const velg = async (pg, lag) => {
       await pg.select('#teamSelect', lag);
@@ -710,8 +727,8 @@ async function main() {
       }, lag);
       await velg(pg, lag);
       const m = await les(pg, lag), vm = vurder(m, true);
-      check(`${liga}: med runde ${k.runde} simulert: "Forrige kamp i scenarioet: 4-0 mot ${k.opp}", og svaret om samme kamp, sone og endring`,
-        vm.f.length === 0 && m.boks.startsWith(`Forrige kamp i scenarioet: 4-0 mot ${k.opp}.`) && !m.svar.includes(k.forrige),
+      check(`${liga}: med runde ${k.runde} simulert: "Simulert forrige kamp: 4-0 mot ${k.opp}", "Den simulerte seieren 4-0 ..." i svaret, samme sone og endring`,
+        vm.f.length === 0 && m.boks.startsWith(`Simulert forrige kamp: 4-0 mot ${k.opp}.`) && m.svar.startsWith(`Den simulerte seieren 4-0 mot ${k.opp} `) && !m.svar.includes(k.forrige),
         `${m.boks} | ${m.svar} | kortet ${m.kort} | ${vm.f.join('; ')}`);
       await pg.click('#odds .lastmatch');
       await pg.waitForFunction(`(()=>{const a=document.getElementById('qaAnswer');return a&&!a.classList.contains('loading')&&a.textContent.length>20})()`, {timeout: 60000});
@@ -773,6 +790,151 @@ async function main() {
       await pg.close();
     }
   };
+  // Kortet "Neste kamp" viser bare kamper uten resultat (29.9.2026). Før tok
+  // det lagets første gjenstående kamp uansett resultat: med runde 23
+  // simulert, eller KFUM Oslo-Vålerenga skrevet inn, sto den kampen der med
+  // dato og H/U/B-prosenter, som om den var uspilt. Nå: lagets tidligste kamp
+  // uten resultat (uten valgt lag: seriens), og kortet skjules når laget ikke
+  // har flere. Etter et trykk på H/U/B står "Simulert: ..." øverst, og neste
+  // kamp uten resultat under; et nytt trykk gjelder den. Formtipsene sier
+  // "simulert" også om resultater som er fylt inn. Kjøres med resten av
+  // suiten, eller alene:
+  //   node tests/regression.js --bare neste
+  const nesteKampKort = async () => {
+    setGroup('Neste kamp: bare kamper uten resultat');
+    // Kortet slik brukeren ser det, og hvilken kamp det burde vist (regnet
+    // her, uten sidens egen hjelper).
+    const kort = (pg, lag) => pg.evaluate(t => {
+      const nm = document.getElementById('nextMatch'), m = matches.find(x => x.id === nm.dataset.id);
+      const ventet = matches.filter(x => (x.hg == null || x.ag == null) && (!t || x.home === t || x.away === t))
+        .sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''))[0];
+      const res = document.getElementById('nmRes');
+      return {skjult: nm.hidden, kamp: m && !nm.hidden ? `${m.home}-${m.away}` : null, harResultat: !!m && m.hg != null,
+        ventet: ventet ? `${ventet.home}-${ventet.away}` : null, tekst: nm.innerText.replace(/\s+/g, ' ').trim(),
+        bekreftelse: res && !res.hidden ? res.textContent.replace(/\s+/g, ' ').trim() : null};
+    }, lag);
+    const ferdig = async pg => { await settle(pg); await new Promise(r => setTimeout(r, 400)); };
+    const boksen = pg => pg.evaluate(() => { const el = document.querySelector('#odds .lastmatch'); return el ? el.textContent.trim() : ''; });
+    for (const [sti, lag] of [['/eliteserien/', 'Vålerenga'], ['/obos/', 'Moss']]) {
+      const liga = sti.slice(1, -1), url = base.replace('/eliteserien/', sti);
+      const pg = await open(1400, 1000, url + '#team=' + encodeURIComponent(lag));
+      await ferdig(pg);
+      const r0 = await kort(pg, lag);
+      const runde = await pg.evaluate(t => matches.filter(x => x.home === t || x.away === t).sort((a, b) => a.date.localeCompare(b.date))[0].round, lag);
+      check(`${liga}: uten scenario viser kortet lagets neste kamp (${r0.ventet})`,
+        !r0.skjult && r0.kamp === r0.ventet && !r0.harResultat && !r0.bekreftelse, JSON.stringify(r0));
+      // 1) Runden simulert med sidens egen knapp.
+      await pg.evaluate(R => document.querySelector(`.round-sim[data-round="${R}"]`).scrollIntoView({block: 'center'}), runde);
+      await new Promise(r => setTimeout(r, 300));
+      await pg.click(`.round-sim[data-round="${runde}"]`);
+      await pg.waitForFunction(R => matches.filter(m => m.round === R).every(m => m.hg != null), {timeout: 60000}, runde);
+      await ferdig(pg);
+      const r1 = await kort(pg, lag), b1 = await boksen(pg);
+      check(`${liga}: runde ${runde} simulert: kortet viser ${r1.ventet}, ikke den simulerte kampen`,
+        !r1.skjult && r1.kamp === r1.ventet && !r1.harResultat && !r1.bekreftelse, JSON.stringify(r1));
+      check(`${liga}: runde ${runde} simulert: lagboksen sier "Simulert forrige kamp"`, /^Simulert forrige kamp: \d+-\d+ mot /.test(b1), b1);
+      // 2) Nullstilt, og lagets kamp skrevet inn med tastaturet: hjemmelaget
+      // vinner 2-0.
+      await klikk(pg, '#reset');
+      await ferdig(pg);
+      const id = await pg.evaluate(t => matches.filter(x => x.home === t || x.away === t).sort((a, b) => a.date.localeCompare(b.date))[0].id, lag);
+      const rad = `.match[data-id="${id}"]`;
+      await pg.evaluate(r => document.querySelector(r).scrollIntoView({block: 'center'}), rad);
+      await new Promise(r => setTimeout(r, 300));
+      await pg.click(`${rad} [data-side=h]`); await pg.keyboard.type('2');
+      await pg.click(`${rad} [data-side=a]`); await pg.keyboard.type('0');
+      await pg.keyboard.press('Tab');
+      await pg.waitForFunction(i => { const m = matches.find(x => x.id === i); return m.hg === 2 && m.ag === 0; }, {timeout: 20000}, id);
+      await ferdig(pg);
+      const r2 = await kort(pg, lag);
+      // Siste kamp med resultat for laget, regnet her. "Tabell på samme
+      // tidspunkt" kan ha fylt inn flere av lagets kamper etter den som ble
+      // skrevet inn (OBOS: Moss); da er det den seneste som er "simulert
+      // forrige kamp".
+      const k2 = await pg.evaluate((i, t) => {
+        const m = matches.filter(x => x.hg != null && (x.home === t || x.away === t)).sort((a, b) => b.date.localeCompare(a.date))[0];
+        const h = m.home === t;
+        return {home: m.home, away: m.away, skrevet: m.id === i, opp: h ? m.away : m.home, res: `${h ? m.hg : m.ag}-${h ? m.ag : m.hg}`,
+          ord: m.hg === m.ag ? 'Simulert uavgjort' : (m.hg > m.ag) === h ? 'Den simulerte seieren' : 'Det simulerte tapet'};
+      }, id, lag);
+      await pg.waitForFunction(() => { const el = document.querySelector('#odds .lastmatch'); return !!el && /prosentpoeng\.$|endret lite på .+\.$/.test(el.textContent.trim()); }, {timeout: 30000}).catch(() => {});
+      const b2 = await boksen(pg);
+      const svar2 = await pg.evaluate(async t => (await qaLastMatch(t)).split('\n')[0], lag);
+      check(`${liga}: kamp skrevet inn: kortet viser ${r2.ventet}, ikke den innfylte kampen`,
+        !r2.skjult && r2.kamp === r2.ventet && !r2.harResultat && (lag !== 'Vålerenga' || k2.skrevet), JSON.stringify({r2, k2}));
+      check(`${liga}: skrevet inn: "Simulert forrige kamp: ${k2.res} mot ${k2.opp}" og "${k2.ord} ${k2.res} mot ${k2.opp}" i svaret${k2.skrevet ? ' (kampen som ble skrevet inn)' : ' (fylt inn av "Tabell på samme tidspunkt")'}`,
+        b2.startsWith(`Simulert forrige kamp: ${k2.res} mot ${k2.opp}.`) && svar2.startsWith(`${k2.ord} ${k2.res} mot ${k2.opp} `) && !/scenari/i.test(b2 + svar2),
+        `${b2} | ${svar2}`);
+      // 3) H i kortet: kampen får resultat, "Simulert: ..." står øverst, og
+      // kortet går videre. Så B, som gjelder den nye kampen.
+      for (const q of ['H', 'B']) {
+        const foer = await kort(pg, lag);
+        await pg.evaluate(() => document.getElementById('nextMatch').scrollIntoView({block: 'center'}));
+        await pg.click(`#nmHub button[data-q="${q}"]`);
+        await pg.waitForFunction(k => { const m = matches.find(x => `${x.home}-${x.away}` === k && x.hg != null); return !!m; }, {timeout: 20000}, foer.kamp);
+        await ferdig(pg);
+        const etter = await kort(pg, lag);
+        const trukket = await pg.evaluate(k => { const m = matches.find(x => `${x.home}-${x.away}` === k); return {hg: m.hg, ag: m.ag, home: m.home, away: m.away}; }, foer.kamp);
+        const ok = q === 'H' ? trukket.hg > trukket.ag : trukket.hg < trukket.ag;
+        check(`${liga}: ${q} i kortet for ${foer.kamp}: "Simulert: ${trukket.home} ${trukket.hg}-${trukket.ag} ${trukket.away}" øverst, og kortet viser ${etter.ventet}`,
+          ok && etter.bekreftelse === `Simulert: ${trukket.home} ${trukket.hg}-${trukket.ag} ${trukket.away}` && etter.kamp === etter.ventet && etter.kamp !== foer.kamp && !etter.harResultat
+            && etter.tekst.indexOf('Simulert:') < etter.tekst.indexOf(etter.kamp.split('-')[0]),
+          JSON.stringify({foer: foer.kamp, etter}));
+      }
+      // 4) Formtipset: minst tre av lagets fem siste er fylt inn eller
+      // trukket (skrevet inn, H og B i kortet, og det "Tabell på samme
+      // tidspunkt" fylte), og alle heter "simulert": tallet i tipset er det
+      // samme som rutene merket "(simulert)".
+      const tips = await pg.evaluate(t => {
+        const rad = document.querySelector(`#tbl tr[data-team="${t}"]`);
+        return {tips: (rad.querySelector('.form5') || {}).title || '', ruter: [...rad.querySelectorAll('.form b')].map(b => b.title)};
+      }, lag);
+      const nSim = tips.ruter.filter(x => /\(simulert\)$/.test(x)).length;
+      check(`${liga}: formtipset: "${['', 'én', 'to', 'tre', 'fire', 'fem'][nSim]} av dem simulert", like mange som rutene merket "(simulert)", ingen "lagt inn" eller "scenario"`,
+        nSim >= 3 && tips.tips.endsWith(`, ${['', 'én', 'to', 'tre', 'fire', 'fem'][nSim]} av dem simulert`) && !/lagt inn|scenari/.test(tips.tips + tips.ruter.join()),
+        `${tips.tips} | ${tips.ruter.join(', ')}`);
+      // 5) Alle lagets kamper fylt: kortet skjules, og "Hva betyr neste
+      // kamp?" sier at laget ikke har flere. Resultatene velges så sonen ikke
+      // er avgjort (da svarer spørsmålet med det i stedet): uavgjort i alle,
+      // ellers annenhver seier og tap, fra dagens tabell.
+      let r5 = null, nesteSvar = null, moenster = null;
+      for (const mo of ['uavgjort', 'seier og tap']) {
+        await klikk(pg, '#reset');
+        await ferdig(pg);
+        await pg.evaluate((t, mo) => {
+          matches.filter(x => x.hg == null && (x.home === t || x.away === t)).forEach((x, i) => {
+            const vinn = mo === 'uavgjort' ? null : i % 2 === 0;
+            if (vinn === null) setMatch(x, 1, 1);
+            else if ((x.home === t) === vinn) setMatch(x, 2, 0); else setMatch(x, 0, 2);
+          });
+          render();
+        }, lag, mo);
+        await ferdig(pg);
+        r5 = await kort(pg, lag);
+        nesteSvar = await pg.evaluate(async t => { const z = qaTargetZone(t); return {svar: await qaNextMatch(t), avgjort: !!qaSettled(t, z)}; }, lag);
+        moenster = mo;
+        if (!nesteSvar.avgjort) break;
+      }
+      check(`${liga}: alle lagets kamper fylt (${moenster}): kortet er skjult, og "Hva betyr neste kamp?" sier "${lag} har ingen kamper uten resultat igjen."`,
+        r5.skjult && !nesteSvar.avgjort && nesteSvar.svar === `${lag} har ingen kamper uten resultat igjen.`, `${JSON.stringify(r5)} | ${JSON.stringify(nesteSvar)}`);
+      await pg.close();
+      // 6) Uten valgt lag: seriens neste kamp uten resultat, også når den
+      // første er fylt inn.
+      const u = await open(1400, 1000, url + '#team=');
+      await ferdig(u);
+      const u0 = await kort(u, null);
+      await u.evaluate(() => { const m = matches.filter(x => x.hg == null).sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''))[0]; setMatch(m, 3, 1); render(); });
+      await ferdig(u);
+      const u1 = await kort(u, null);
+      check(`${liga}: uten valgt lag: kortet viser seriens neste kamp uten resultat (${u0.ventet}, så ${u1.ventet})`,
+        !u0.skjult && u0.kamp === u0.ventet && !u1.skjult && u1.kamp === u1.ventet && u1.kamp !== u0.kamp && !u1.harResultat,
+        JSON.stringify({u0, u1}));
+      // Ingen "scenariet" i sidens kilde: bøyningen er "scenarioet".
+      const kilde = await u.evaluate(async () => (await fetch(location.pathname)).text());
+      check(`${liga}: sidens kilde har ikke "scenariet"`, !kilde.includes('scenariet'), `${(kilde.match(/scenariet/g) || []).length} treff`);
+      await u.close();
+    }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -784,7 +946,8 @@ async function main() {
       else if (BARE === 'del') await delKnapp();
       else if (BARE === 'telefon') await telefonTabell();
       else if (BARE === 'forrige') await forrigeKampScenario();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige)`);
+      else if (BARE === 'neste') await nesteKampKort();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste)`);
     } else {
     // ---- 1. lasting ----
     setGroup('Lasting');
@@ -872,7 +1035,7 @@ async function main() {
     await page.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); document.getElementById('autoFillToggle').checked = false; render(); });
     await settle(page);
     const total = await page.evaluate(() => matches.length);
-    await page.click('#fxPanel #simRest');
+    await klikk(page, '#fxPanel #simRest');
     await filled(page, total);
     await settle(page);
     const greyAll = await page.evaluate(() => matches.filter(m => m.sim).length);
@@ -887,7 +1050,7 @@ async function main() {
       `før ${greyBefore}, etter ${greyAfter}`);
     const ownStays = await page.evaluate(() => { const m = matches[0]; return m.hg === 4 && m.ag === 0 && !m.sim; });
     check('eget resultat er lagret som eget (ikke grått)', ownStays);
-    await page.click('#fxPanel #reset');
+    await klikk(page, '#fxPanel #reset');
     await settle(page);
     const afterReset = await page.evaluate(() => matches.filter(m => m.hg != null).length);
     check('Nullstill tømmer alt', afterReset === 0, `${afterReset} igjen`);
@@ -920,11 +1083,11 @@ async function main() {
       backToPos.join(',') === backToPos.slice().sort((a, b) => a - b).join(','), backToPos.join(','));
     await page.evaluate(k => cycleSort(k), 'gull');
     await sleep(300);
-    await page.click('#fxPanel #simRest');
+    await klikk(page, '#fxPanel #simRest');
     await filled(page, total);
     await settle(page);
     check('sortering nullstilles ved simulering', await page.evaluate(() => tableSort === null));
-    await page.click('#fxPanel #reset');
+    await klikk(page, '#fxPanel #reset');
     await settle(page);
 
     // ---- 7. delingslenker ----
@@ -953,7 +1116,7 @@ async function main() {
     // grått sett: frø-snarveien i lenken skal gi samme sesong
     await page.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); render(); });
     await settle(page);
-    await page.click('#fxPanel #simRest');
+    await klikk(page, '#fxPanel #simRest');
     await filled(page, total);
     await settle(page);
     const simBefore = await page.evaluate(() => ({hash: encodeScenario(),
@@ -1595,6 +1758,7 @@ async function main() {
       await fk.close();
     }
     await forrigeKampScenario();
+    await nesteKampKort();
     await page.bringToFront();
 
     // ---- 18. rulling til svaret på iPad-bredder ----
@@ -2097,8 +2261,8 @@ async function main() {
     await page.bringToFront();
 
     // ---- 27. Nullstill rydder også adressen ----
-    // "Del scenario" legger scenariet i hashen. Nullstill tømte tabellen, men
-    // lot s= stå -- og en oppfriskning leste scenariet inn igjen, så tabellen
+    // "Del scenario" legger scenarioet i hashen. Nullstill tømte tabellen, men
+    // lot s= stå -- og en oppfriskning leste scenarioet inn igjen, så tabellen
     // fylte seg selv på nytt.
     setGroup('Nullstill rydder adressen');
     for (const [url, liga, lag] of [[base, 'Eliteserien', 'Brann'], [obosUrl, 'OBOS', 'Bryne']]) {
@@ -2114,21 +2278,21 @@ async function main() {
         await sp.evaluate(() => document.getElementById('share').click());
         await new Promise(r => setTimeout(r, 700));
         const med = await sp.evaluate(() => location.hash);
-        check(`${liga}/${knapp}: "Del scenario" legger scenariet i adressen`, /s=/.test(med), med.slice(0, 40));
+        check(`${liga}/${knapp}: "Del scenario" legger scenarioet i adressen`, /s=/.test(med), med.slice(0, 40));
         await sp.evaluate(i => document.getElementById(i).click(), knapp);
         await new Promise(r => setTimeout(r, 1200));
         const etter = await sp.evaluate(() => ({hash: location.hash,
           fylte: matches.filter(m => m.hg != null).length}));
         check(`${liga}/${knapp}: nullstill tømmer tabellen`, etter.fylte === 0, `${etter.fylte}`);
-        check(`${liga}/${knapp}: nullstill fjerner scenariet fra adressen`,
+        check(`${liga}/${knapp}: nullstill fjerner scenarioet fra adressen`,
           !/s=/.test(etter.hash), etter.hash || '(tom)');
-        // Det avgjørende: en oppfriskning skal ikke hente scenariet tilbake.
+        // Det avgjørende: en oppfriskning skal ikke hente scenarioet tilbake.
         await sp.reload({waitUntil: 'networkidle0', timeout: 60000});
         await settle(sp);
         await new Promise(r => setTimeout(r, 1500));
         const igjen = await sp.evaluate(() => ({fylte: matches.filter(m => m.hg != null).length,
                                                 lag: SELECTED_TEAM}));
-        check(`${liga}/${knapp}: oppfriskning gir ikke scenariet tilbake`, igjen.fylte === 0,
+        check(`${liga}/${knapp}: oppfriskning gir ikke scenarioet tilbake`, igjen.fylte === 0,
           `${igjen.fylte} fylte`);
         check(`${liga}/${knapp}: fulgt lag er beholdt`, igjen.lag === lag, igjen.lag);
         await sp.close();

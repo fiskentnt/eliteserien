@@ -367,7 +367,7 @@ def main():
           f0.index("goatcounter.com/count") < f0.index("location.replace('/eliteserien/'"))
     for navn in ("eliteserien", "obos"):
         # Uten path-funksjonen ville hver delte lenke (#s=...) blitt sin egen side.
-        check(f"statistikk: {navn} teller stien, ikke scenariet",
+        check(f"statistikk: {navn} teller stien, ikke scenarioet",
               "path: function()" in sider[navn] and "location.pathname" in sider[navn])
         # Forsiden videresender med location.replace, og da blir referrer
         # forsiden selv. Den ytre henvisningen må hentes fra det forsiden la unna.

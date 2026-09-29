@@ -370,11 +370,10 @@
   .nm-hub{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
   .nm-hub button{padding:9px 6px;border-radius:8px;border:1px solid var(--line);background:var(--input-bg);color:var(--ink);font-weight:700;font-size:13.5px}
   .nm-hub button:hover{border-color:var(--ink)}
-  .nm-hub button.on{background:var(--team-fill);border-color:var(--team-fill);color:var(--team-fill-text)}
-  /* Resultatet av H/U/B står i kortet, så siden ikke behøver å flytte seg. */
-  .nm-res{margin:12px 0 0;text-align:center;font:600 14px/1.2 var(--body);color:var(--ink)}
-  .nm-res b{font:800 19px/1 var(--cond);margin:0 1px}
-  .nm-round{display:block;margin:8px auto 0;text-align:center}
+  /* Bekreftelsen etter et trykk på H/U/B: kampen som ble trukket, står øverst,
+     og neste kamp uten resultat under (renderNextMatch). */
+  .nm-res{margin:0 0 12px;padding:0 0 10px;border-bottom:1px solid var(--line);text-align:center;font:600 13.5px/1.2 var(--body);color:var(--muted)}
+  .nm-res b{font:800 17px/1 var(--cond);margin:0 1px;color:var(--ink)}
   /* Kamper-seksjonen (verktøy + forrige runde + gjenstående) */
   .kamper{display:flex;flex-direction:column;gap:20px;min-width:0}
   /* Verktøyknappene ligger nå INNE i "Gjenstående kamper"-panelet, rett over
@@ -1023,7 +1022,7 @@
               <span>Nullstill</span></button>
             <button type="button" id="headShare" class="head-reset" hidden
               aria-label="Del scenarioet"
-              title="Kopierer en lenke som gjenskaper dette scenariet">
+              title="Kopierer en lenke som gjenskaper dette scenarioet">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
               <span>Del</span></button>
@@ -1088,14 +1087,13 @@
         <button type="button" class="head-link" id="nmAll">Se alle kamper →</button>
       </div>
       <div class="nm-body">
+        <p class="nm-res" id="nmRes" hidden></p>
         <p class="nm-when" id="nmWhen"></p>
         <div class="nm-teams"><span id="nmHome"></span><span class="nm-dash">–</span><span id="nmAway"></span></div>
         <div class="nm-hub" id="nmHub">
           <button type="button" data-q="H"></button><button type="button" data-q="U"></button><button type="button" data-q="B"></button>
         </div>
         <p class="nm-impact" id="nmImpact" hidden></p>
-        <p class="nm-res" id="nmRes" hidden></p>
-        <button type="button" class="head-link nm-round" id="nmRound" hidden></button>
       </div>
     </section>
 
@@ -1118,7 +1116,7 @@
         <button id="followLose"></button>
         <button id="simRest" title="Fyller inn et plausibelt resultat i alle tomme kamper">Simuler tomme kamper</button>
         <button class="reset" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
-        <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
+        <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenarioet">Del scenario</button>
         <!-- Skjult til kopieringen er bekreftet stabil i Chrome på PC. Koden
              bak er rettet (ingen prompt, og teksten beskriver brukerens egne
              valg), men knappene står ute til det er prøvd i praksis. -->
@@ -1504,7 +1502,7 @@ let ROUND_LAST_DATE = {}; // runde -> siste kampdato i runden (uansett spilt ell
 let ODDS_UP = {}, ODDS_FETCHED_AT = null; // odds for kommende kamper, nøkkel "hjemme|borte"
 const RATES = {};
 
-// ---- Form: lagstyrkene følger resultatene i scenariet ----
+// ---- Form: lagstyrkene følger resultatene i scenarioet ----
 // Elo-lignende oppdatering: et resultat bedre enn ventet løfter et lags
 // angreps- og hjemme/borte-styrke (og senker motstanderens forsvarsstyrke)
 // med k ganger avviket mellom faktiske og forventede mål. mu og
@@ -1590,7 +1588,7 @@ function buildLeagueMenu(){
   if(sub) sub.textContent = `Tabellkalkulator for ${LEAGUE.name}`;
   try{ localStorage.setItem(LAST_LEAGUE_KEY, LEAGUE.id); }catch(e){}
   if(!tabs) return;
-  // Samme del av siden følger med over, men ingenting annet: scenariet (s=) og
+  // Samme del av siden følger med over, men ingenting annet: scenarioet (s=) og
   // det fulgte laget (team=) hører til ÉN liga og skal ikke dras med. Derfor
   // bygges lenken av seksjonsankeret alene.
   const section = () => {
@@ -1958,7 +1956,7 @@ function formScores(attArr,conArr){
 // H/U/B-knappene simulerer kampen: trekker et tilfeldig resultat fra modellens
 // fordeling for kampen, GITT utfallet (hjemmeseier, uavgjort eller borteseier).
 // Samme fordeling som simuleringene bruker (Poisson med Dixon-Coles, forventede
-// mål fra rateFor: lagenes NÅVÆRENDE styrke i scenariet, så formen virker inn,
+// mål fra rateFor: lagenes NÅVÆRENDE styrke i scenarioet, så formen virker inn,
 // blandet med odds der de finnes). Cellene som gir utfallet får sin
 // sannsynlighet, normalisert, og ett resultat trekkes. Ny trykk = nytt trekk.
 function drawScoreGivenOutcome(home, away, q){
@@ -2007,7 +2005,7 @@ function computeLiveState(){
   // anslag akkurat nå, ikke sesongstart i kalendersans. Riktig referanse
   // uansett når på sesongen dette kalles: kampene som allerede er inne har
   // allerede flyttet MODEL.att/con et stykke, og det er bevegelsen HERFRA og
-  // videre (resten av det som fylles inn i scenariet) grensen skal dempe.
+  // videre (resten av det som fylles inn i scenarioet) grensen skal dempe.
   const att0=Float64Array.from(att), con0=Float64Array.from(con), ha0=Float64Array.from(ha), hc0=Float64Array.from(hc);
   const state={att,con,ha,hc};
   // Flat FORM_K for alle kamper. Samme tilstand driver tabellen, kamplisten,
@@ -2104,11 +2102,9 @@ const form5AvListe = liste => {
 const form5Tips = liste => {
   const s = (liste||[]).slice(-5);
   const p = s.reduce((a,x)=>a+(x.res==='W'?3:x.res==='D'?1:0),0);
-  const simulert = s.filter(x=>x.sim).length, lagtInn = s.filter(x=>x.scen && !x.sim).length;
-  let hale = '';
-  if(simulert && lagtInn) hale = `, ${ANTALL[simulert+lagtInn]} av dem fra scenarioet`;
-  else if(simulert) hale = `, ${ANTALL[simulert]} av ${simulert===1?'dem':'dem'} simulert`;
-  else if(lagtInn) hale = `, ${ANTALL[lagtInn]} av dem lagt inn`;
+  // Simulerte og innfylte resultater heter begge "simulert" (29.9.2026).
+  const simulert = s.filter(x=>x.sim || x.scen).length;
+  const hale = simulert ? `, ${ANTALL[simulert]} av dem simulert` : '';
   return `${p} av ${3*s.length} poeng i ${ANTALL_KAMPER[s.length]}${hale}`;
 };
 const ANTALL = ['','én','to','tre','fire','fem'];
@@ -2117,7 +2113,7 @@ const somListe = arr => (arr||[]).map(r => ({res:r, scen:false, sim:false}));
 const form5Html = (v, liste) => { if(v==null) return '';
   return `<b class="form5" title="${form5Tips(liste)}">${f1(v)}</b>`; };
 const femSisteHtml = liste => `<span class="form">${(liste||[]).slice(-5).map(x =>
-  `<b class="${x.res}${x.scen?' scen':''}" title="${{W:'Seier',D:'Uavgjort',L:'Tap'}[x.res]}${x.sim?' (simulert)':(x.scen?' (lagt inn)':'')}"></b>`).join('')}</span>`;
+  `<b class="${x.res}${x.scen?' scen':''}" title="${{W:'Seier',D:'Uavgjort',L:'Tap'}[x.res]}${x.sim || x.scen ? ' (simulert)' : ''}"></b>`).join('')}</span>`;
 const formHtmlFrom=arr=>`<span class="form">${arr.slice(-5).map(r=>`<b class="${r}" title="${{W:'Seier',D:'Uavgjort',L:'Tap'}[r]}"></b>`).join('')}</span>`;
 const formHtml=t=>formHtmlFrom(STATS[t].form);
 const f1=x=>x.toFixed(1).replace('.',',');
@@ -3043,7 +3039,7 @@ function getWorker(){
         // forkastes rett under (runId !== mcRunId).
         if(mcVenter && mcPagar===0){ mcVenter=false; runMCAsync(MC_N); }
       }
-      if(runId!==mcRunId) return; // scenariet er endret siden denne kjøringen startet — forkast
+      if(runId!==mcRunId) return; // scenarioet er endret siden denne kjøringen startet — forkast
       const outObj={}; TEAMS.forEach((t,i)=>outObj[t]=out[i]);
       lastMC=outObj; lastMCN = data.done; lastMCFinal = data.done>=data.total; fillOdds();
       if(lastMCFinal) innsiktForhand();
@@ -3075,7 +3071,7 @@ function getBadgeWorker(){
     badgeWorker.onmessage = e=>{
       const data=e.data;
       if(data.mode!=='badges') return;
-      if(data.runId!==badgeRunId) return; // scenariet er endret siden dette kallet startet — forkast
+      if(data.runId!==badgeRunId) return; // scenarioet er endret siden dette kallet startet — forkast
       lastBadges=data.badges;
       applyBadgesToDom();
     };
@@ -3468,7 +3464,7 @@ roundsEl.addEventListener('click', async e=>{
   render();
 });
 // Nullstill må også rydde adressen. Har man trykket "Del scenario", ligger
-// scenariet i hashen, og en oppfriskning etter nullstilling leste det inn
+// scenarioet i hashen, og en oppfriskning etter nullstilling leste det inn
 // igjen -- tabellen fylte seg selv på nytt. Bare s=-delen fjernes; team= og
 // et eventuelt seksjonsanker står, så lagvalget og hoppet i siden beholdes.
 function fjernScenarioFraAdressen(){
@@ -3535,15 +3531,24 @@ async function onRoundsEvent(e){
 roundsEl.addEventListener('input', onRoundsEvent);
 roundsEl.addEventListener('click', onRoundsEvent);
 
-// ---- Neste kamp: neste ekte kamp for laget du følger (ellers neste i serien),
-// med H/U/B-sjansene fra modellen. Knappene setter resultatet slik som H/U/B-
-// knappene i kamplisten (samme hendelse), så alt annet følger med. ----
+// ---- Neste kamp: lagets neste kamp UTEN resultat (uten valgt lag: seriens
+// neste), etter dato og klokkeslett, med H/U/B-sjansene fra modellen. En kamp
+// som er simulert eller fylt inn, står aldri her (29.9.2026: kortet viste
+// KFUM Oslo-Vålerenga med resultatet under, som om kampen var uspilt, fordi
+// det tok lagets første gjenstående kamp uansett resultat). Har laget ingen
+// kamper uten resultat igjen, skjules kortet. Knappene setter resultatet slik
+// som H/U/B-knappene i kamplisten (samme hendelse); kampen som ble trukket,
+// står øverst ("Simulert: ..."), og kortet går videre til neste kamp uten
+// resultat, så et nytt trykk gjelder den. ----
+let nmTrukket = null;   // id-en til kampen H/U/B i kortet trakk sist
+function nesteKampFor(team){
+  return matches.filter(m=>(m.hg==null || m.ag==null) && (!team || m.home===team || m.away===team))
+    .sort((a,b)=>a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||''))[0] || null;
+}
 function renderNextMatch(){
   const box = document.getElementById('nextMatch');
   if(!box) return;
-  const m = SELECTED_TEAM
-    ? (matches.find(x=>x.home===SELECTED_TEAM||x.away===SELECTED_TEAM) || matches[0])
-    : matches[0];
+  const m = nesteKampFor(SELECTED_TEAM);
   if(!m){ box.hidden = true; return; }
   box.hidden = false;
   box.dataset.id = m.id;
@@ -3552,19 +3557,17 @@ function renderNextMatch(){
   document.getElementById('nmHome').textContent = m.home;
   document.getElementById('nmAway').textContent = m.away;
   const [lh,la] = rateFor(m.home, m.away), o = outcome(lh,la);
-  const set = m.hg!=null && m.ag!=null;
   const pct = v => Math.round(v*100)+' %';
-  [['H',o.H,set&&m.hg>m.ag],['U',o.U,set&&m.hg===m.ag],['B',o.B,set&&m.hg<m.ag]].forEach(([q,v,on])=>{
-    const b = document.querySelector(`#nmHub button[data-q="${q}"]`);
-    b.textContent = `${q} ${pct(v)}`;
-    b.classList.toggle('on', !!on);
+  [['H',o.H],['U',o.U],['B',o.B]].forEach(([q,v])=>{
+    document.querySelector(`#nmHub button[data-q="${q}"]`).textContent = `${q} ${pct(v)}`;
   });
-  // Resultatet står i kortet når kampen er fylt ut, med lenke til runden.
-  const res = document.getElementById('nmRes'), rl = document.getElementById('nmRound');
-  res.hidden = !set;
-  if(set) res.innerHTML = `${m.home} <b>${m.hg}</b>-<b>${m.ag}</b> ${m.away}`;
-  rl.hidden = !set;
-  if(set){ rl.textContent = `Se hele runde ${m.round} →`; rl.dataset.round = m.round; }
+  // Bekreftelsen: kampen H/U/B sist trakk, så lenge den har et resultat og
+  // gjelder laget som følges (eller ingen lag er valgt).
+  const res = document.getElementById('nmRes');
+  const t = nmTrukket && matches.find(x=>x.id===nmTrukket);
+  const vis = !!t && t.hg!=null && t.ag!=null && (!SELECTED_TEAM || t.home===SELECTED_TEAM || t.away===SELECTED_TEAM);
+  res.hidden = !vis;
+  if(vis) res.innerHTML = `Simulert: ${t.home} <b>${t.hg}</b>-<b>${t.ag}</b> ${t.away}`;
   oppdaterNesteKampLinje(m);
 }
 // Linja under utfallene: hva seier, uavgjort og tap gjør med sjansen til
@@ -3622,20 +3625,10 @@ document.getElementById('nmHub').addEventListener('click', async e=>{
   const b = e.target.closest('button'); if(!b) return;
   const m = matches.find(x=>x.id===document.getElementById('nextMatch').dataset.id);
   if(!m || !drawQuick(m, b.dataset.q)) return;
+  nmTrukket = m.id;
   tableSort=null;
   if(m.hg!=null && m.ag!=null){ await updateAutoFill(); mcStraks=true; }
   render();
-});
-// "Se hele runde N →": hopper til runden i kamplisten. Ligger runden bak
-// "Vis alle runder", åpnes den først.
-document.getElementById('nmRound').addEventListener('click', ()=>{
-  const r = document.getElementById('nmRound').dataset.round;
-  let el = document.querySelector(`#rounds .round[data-round="${r}"]`);
-  if(el && el.closest('#hiddenRounds[hidden]')){
-    const btn = document.getElementById('showAllRounds');
-    if(btn && !btn.hidden) btn.click();
-  }
-  if(el) el.scrollIntoView({behavior:'smooth', block:'start'});
 });
 document.getElementById('nmAll').addEventListener('click', ()=> scrollToSection('fxPanel'));
 
@@ -3951,7 +3944,7 @@ function computeBadgesAsync(rows){
 }
 
 // "Slik fungerer det"-tabellen: forventede mål ut fra de LEVENDE lagstyrkene
-// (LIVE), altså etter at resultatene i scenariet er tatt med — ikke de
+// (LIVE), altså etter at resultatene i scenarioet er tatt med — ikke de
 // statiske tallene fra data/model.json.
 function renderModelTbl(){
   const {mu,H}=MODEL, {att,con,ha,hc}=LIVE;
@@ -4252,7 +4245,7 @@ async function qaNextMatch(team){
   if(st) return qaSettledText(team, zone, st);
   const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
   const next = openMatches.filter(m=>m.home===team||m.away===team).sort((a,b)=>a.date.localeCompare(b.date))[0];
-  if(!next) return `${team} har ingen gjenstående kamper i dette scenariet.`;
+  if(!next) return `${team} har ingen kamper uten resultat igjen.`;
   const idx = openMatches.indexOf(next);
   const isHome = next.home===team;
   const opp = isHome?next.away:next.home;
@@ -4387,7 +4380,7 @@ async function qaCheerFor(team, onPartial){
   if(st) return qaSettledText(team, zone, st);
   const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
   const nr = qaNextRoundMatches(openMatches);
-  if(!nr.list.length) return `${team} har ingen gjenstående kamper i dette scenariet.`;
+  if(!nr.list.length) return `${team} har ingen kamper uten resultat igjen.`;
   // Lagets egen kamp tas ut: at laget bør heie på seg selv er gitt, og hva den
   // betyr svarer "Hva betyr neste kamp" på.
   const others = nr.list.filter(m=>m.home!==team && m.away!==team);
@@ -4479,6 +4472,10 @@ function sisteKampFor(team){
   });
   return best;
 }
+// Er lagets forrige kamp simulert eller fylt inn? Da heter den "simulert
+// forrige kamp" i boksen, i svaret og i spørsmålet. "Forrige kamp" alene er
+// alltid en faktisk spilt kamp.
+const forrigeSimulert = team => { const m = sisteKampFor(team); return !!m && matches.includes(m); };
 // Lagets siste faktisk spilte kamp.
 function lastPlayedFor(team){
   let best = null;
@@ -4574,9 +4571,10 @@ async function qaLastMatch(team){
   // "topp 6-sjansen", men "nedrykksfaren": ingen ønsker seg nedrykk.
   const navn = qaSjanse(zone);
   const clamp = v => Math.min(1, Math.max(0, v));
-  // Kampen nevnes med resultatet, og "i scenarioet" når den er fylt inn eller
-  // simulert, så det er klart hvilken kamp svaret gjelder.
-  const head = `${QA_FORRIGE_ORD[actual]} ${gf}-${ga} mot ${opp}${matches.includes(m) ? ' i scenarioet' : ''}`;
+  // Kampen nevnes med resultatet, og som "simulert" når den er simulert eller
+  // fylt inn ("Det simulerte tapet 0-2 mot KFUM Oslo"), så det er klart
+  // hvilken kamp svaret gjelder.
+  const head = `${(matches.includes(m) ? QA_SIMULERT_ORD : QA_FORRIGE_ORD)[actual]} ${gf}-${ga} mot ${opp}`;
   const headLiten = head.charAt(0).toLowerCase()+head.slice(1);
   // ELO-TEST: ratingen regnes om for hvert alternative resultat
   // (eloRatingMedAlternativ) når sluttoddsen for spilte kamper er lastet.
@@ -4627,8 +4625,10 @@ async function qaLastMatch(team){
   const midt = [overrask, alt].filter(Boolean).join(' ');
   return [first, midt, anslag.trim()].filter(Boolean).join('\n\n');
 }
-// "Seieren", "Uavgjort", "Tapet": ordet boksen og svaret starter med.
+// "Seieren", "Uavgjort", "Tapet": ordet boksen og svaret starter med. For en
+// simulert eller innfylt kamp starter svaret med QA_SIMULERT_ORD.
 const QA_FORRIGE_ORD = {win:'Seieren', draw:'Uavgjort', loss:'Tapet'};
+const QA_SIMULERT_ORD = {win:'Den simulerte seieren', draw:'Simulert uavgjort', loss:'Det simulerte tapet'};
 // Det laget vil oppnå eller unngå, sett fra laget: "Branns sjanse for topp
 // 4", "KFUM Oslos nedrykksfare". "Sjanse" for det laget vil oppnå, "fare" for
 // det laget vil unngå (lagSone i LEAGUE.zones). Navn som slutter på s, x eller
@@ -4666,7 +4666,7 @@ function preKickProbs(home, away){
 // det var bra eller dårlig for laget.
 function qaLastMatchLine(team, e){
   if(!e) return null;
-  const res = `Forrige kamp${e.iScen ? ' i scenarioet' : ''}: ${e.gf}-${e.ga} mot ${e.opp}.`;
+  const res = `${e.iScen ? 'Simulert forrige kamp' : 'Forrige kamp'}: ${e.gf}-${e.ga} mot ${e.opp}.`;
   const r = e.zone ? forrigeEndring(qaZoneByKey(team, e.zone), e.expected) : null;
   if(!r) return {html:res};
   const hvem = lagSone(team, e.zone);
@@ -5139,7 +5139,7 @@ function qaKeyBanner(data){
 async function qaKeyRound(){
   const data = await qaKeyRoundData();
   if(!data) return 'Ingen data å regne på ennå.';
-  if(!data.list.length) return 'Alle kampene i scenariet har resultat.';
+  if(!data.list.length) return 'Alle kampene har resultat.';
   const b = data.best;
   const roundTxt = `runde ${data.round}`;
   if(!b.teams.length){
@@ -6018,7 +6018,7 @@ async function qaKeyMatches(team){
   const st = qaSettled(team, zone);
   if(st) return qaSettledText(team, zone, st);
   const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
-  if(!openMatches.length) return `${team} har ingen gjenstående kamper i dette scenariet.`;
+  if(!openMatches.length) return `${team} har ingen kamper uten resultat igjen.`;
   const base = {P0,G0,F0,open,oddsOverride};
   // Trinn 1: grovsilting av alle kandidatkamper (få simuleringer per kamp).
   const candidateSpecs = buildMatchImpactCandidates(team, openMatches);
@@ -6172,7 +6172,7 @@ const QA_QUESTIONS = [
   {id:'keymatches', needsTeam:true, run:qaKeyMatches, label:team=>`Hvilke kamper betyr mest for ${team}?`},
   {id:'keyround', needsTeam:false, run:(team,onPartial)=>qaKeyRound(), label:()=>'Hva er rundens viktigste kamp i ligaen?'},
   {id:'runin', needsTeam:false, run:()=>qaToughestRunIn(), label:()=>'Hvem har det tøffeste restprogrammet?'},
-  {id:'lastmatch', needsTeam:true, run:qaLastMatch, label:team=>`Hva betydde forrige kamp for ${team}?`},
+  {id:'lastmatch', needsTeam:true, run:qaLastMatch, label:team=>`Hva betydde ${forrigeSimulert(team) ? 'simulert forrige kamp' : 'forrige kamp'} for ${team}?`},
   {id:'nextmatch', needsTeam:true, run:team=>qaNextMatch(team), label:team=>`Hva betyr neste kamp for ${team}?`},
   {id:'hardest', needsTeam:true, run:team=>qaHardestMatch(team), label:team=>`Hvilken kamp blir vanskeligst for ${team}?`},
   {id:'cheer', needsTeam:true, run:qaCheerFor, label:team=>`Hvem bør ${team} heie på denne runden?`},
@@ -6656,16 +6656,16 @@ function render(){
     else { verdictTxt='Kan fortsatt rykke ned.'; sub=`${canPass} lag kan i teorien ende foran eller likt med ${SELECTED_TEAM}, så ${SELECTED_TEAM} kan ende så lavt som ${Math.min(worst,TEAMS.length)}. plass.`; }
 
     // Linje to: poeng/kamper igjen som standard, eller sluttresultatet når sesongen
-    // er ferdig i dette scenariet. Den matematiske sikker/usikker-vurderingen vises
+    // er ferdig i dette scenarioet. Den matematiske sikker/usikker-vurderingen vises
     // ikke lenger direkte — den er tooltip på linja i stedet.
     const seasonDone = played===matches.length;
     let line2, line2Title;
     if(seasonDone){
       const safePos = LEAGUE.zones.kvalik.boundary || 13;
-      line2 = pos<=LEAGUE.zones.europa.hi ? `Sesongen er ferdig i dette scenariet: ${SELECTED_TEAM} ${LEAGUE.zones.europa.verb}.`
-        : pos<=safePos ? `Sesongen er ferdig i dette scenariet: ${SELECTED_TEAM} har ny kontrakt.`
-        : pos===LEAGUE.zones.kvalik.lo ? `Sesongen er ferdig i dette scenariet: ${SELECTED_TEAM} må spille kvalik.`
-        : `Sesongen er ferdig i dette scenariet: ${SELECTED_TEAM} rykker ned.`;
+      line2 = pos<=LEAGUE.zones.europa.hi ? `Sesongen er ferdig i dette scenarioet: ${SELECTED_TEAM} ${LEAGUE.zones.europa.verb}.`
+        : pos<=safePos ? `Sesongen er ferdig i dette scenarioet: ${SELECTED_TEAM} har ny kontrakt.`
+        : pos===LEAGUE.zones.kvalik.lo ? `Sesongen er ferdig i dette scenarioet: ${SELECTED_TEAM} må spille kvalik.`
+        : `Sesongen er ferdig i dette scenarioet: ${SELECTED_TEAM} rykker ned.`;
       line2Title = '';
     } else {
       line2 = `${followed.pts} poeng, ${followed.left} kamper igjen`;
@@ -7298,9 +7298,9 @@ async function boot(){
   }
 
   // Auto-fyllingen fyller bare tomme kamper, men en delt lenke skal gjenskape
-  // scenariet nøyaktig som det ble delt, uten at noe fylles på ved siden av.
+  // scenarioet nøyaktig som det ble delt, uten at noe fylles på ved siden av.
   // Bare kjør auto-fyllingen ved vanlig sidelasting, ikke når en lenke
-  // allerede satte scenariet.
+  // allerede satte scenarioet.
   const hadScenario = /s=/.test(location.hash);
   // Basissannsynlighetene til delingsteksten: sett i gang den tomme kjøringen
   // FØR scenarioet legges på. Ved vanlig sidelasting skjer dette av seg selv
@@ -7419,7 +7419,7 @@ function eloMixLap(R, kamper, hjemme_r, w, k){
   return R;
 }
 
-// Utfylte kamper i scenariet, sortert som bygg.py sorterer spilte kamper.
+// Utfylte kamper i scenarioet, sortert som bygg.py sorterer spilte kamper.
 // Vanlig <-sammenligning, ikke localeCompare: Python sorterer paa kodepunkt.
 function eloScenarioKamper(){
   const cmp = (x, y) => x < y ? -1 : (x > y ? 1 : 0);
