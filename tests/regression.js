@@ -326,6 +326,144 @@ async function main() {
       }
     } finally { SESONGSTART = false; }
   };
+
+  // ---- "Hva må ... gjøre?": grensen fra den glattede kurven, og tekstmodellen ----
+  // Deterministisk: tellingene er laget her (innsiktData byttes ut), og
+  // sonen og sjansen settes direkte, så testen ikke avhenger av dagens
+  // tabell. Grensen er punktet der den glattede kurven passerer 50 %, rundet
+  // av (den gamle regelen, første poengsum over 50 %, ga ett poeng mer i
+  // tilfellet under). Neste setning sier laget som nesten alltid er det b-te
+  // beste av de andre (minst QA_DOMINANS = 75 % av sesongene), ellers plassen.
+  // Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare hvamaa
+  const hvaMaaTekst = async () => {
+    setGroup('"Hva må ... gjøre?": grensen fra den glattede kurven, og lagnavn eller plass');
+    for (const [url, liga] of [[base, 'Eliteserien'], [base.replace('/eliteserien/', '/obos/'), 'OBOS']]) {
+      const sp = await open(1400, 900, url);
+      const r = await sp.evaluate(async () => {
+        const orig = {innsiktData, qaTargetZone, qaSettled};
+        const t = TEAMS[0], R = TEAMS[1], ti = TI[t], n = TEAMS.length, PM = 200;
+        const soner = innsiktSoner().map(z => z.key), Z = soner.length;
+        const m = compute().rows.find(x => x.name === t).pts;
+        const maxPts = 3 * buildQaOpen().open.filter(o => o[0] === ti || o[1] === ti).length;
+        // Tellinger for laget i én sone: kurve {poeng: [sesonger, i mål]},
+        // bLag {lag: andel av sesongene}, R ender alltid på rPoeng.
+        const lagA = (sone, kurve, bLag, rPoeng) => {
+          const N = Object.values(kurve).reduce((s, [a]) => s + a, 0), zi = soner.indexOf(sone);
+          const A = {N, PM, soner, runder: [], P0: new Array(n).fill(0), pts: new Float64Array(n * PM), succ: new Float64Array(n * Z * PM),
+            kteLag: new Float64Array(n * Z * n), dec: new Float64Array(n * Z), ahead: new Float64Array(n * n), behind: new Float64Array(n * n)};
+          A.P0[ti] = m;
+          for (const [p, [a, b]] of Object.entries(kurve)) { A.pts[ti * PM + +p] = a; A.succ[(ti * Z + zi) * PM + +p] = b; }
+          let rest = N;
+          for (const [l, andel] of Object.entries(bLag)) { const c = Math.round(andel * N); A.kteLag[(ti * Z + zi) * n + TI[l]] = c; rest -= c; }
+          A.kteLag[(ti * Z + zi) * n + TI[TEAMS[2]]] += rest;
+          A.pts[TI[R] * PM + rPoeng] = N;
+          return A;
+        };
+        const svar = async (sone, pct, A) => {
+          const z = {...qaZoneByKey(t, sone), pct};
+          qaTargetZone = () => z; qaSettled = () => null; innsiktData = () => Promise.resolve(A);
+          try { return await qaHowTo(t); } finally { innsiktData = orig.innsiktData; qaTargetZone = orig.qaTargetZone; qaSettled = orig.qaSettled; }
+        };
+        const T = m + 17, ut = {t, R, m, T, maxPts};
+        // Den gamle regelen ga T + 1 her: 49,9 % ved T, 70 % ved T + 1.
+        const kurve = {[T - 1]: [10000, 4000], [T]: [10000, 4990], [T + 1]: [10000, 7000], [T + 2]: [10000, 7500], [T + 3]: [10000, 8200], [T + 4]: [10000, 9000]};
+        ut.gull = await svar('gull', 0.79, lagA('gull', kurve, {[R]: 0.9}, T));
+        ut.gull75 = await svar('gull', 0.79, lagA('gull', kurve, {[R]: 0.75}, T));
+        ut.gull7499 = await svar('gull', 0.79, lagA('gull', kurve, {[R]: 0.7499}, T));
+        ut.lang = await svar('gull', 0.2, lagA('gull', kurve, {[R]: 0.9}, T));
+        ut.langPlass = await svar('gull', 0.2, lagA('gull', kurve, {[R]: 0.5}, T));
+        // Sjansen ved grensen er 38 %: tallet sies, ikke "omtrent halvparten".
+        const k38 = {[T - 1]: [10000, 2000], [T]: [10000, 3800], [T + 1]: [10000, 6500], [T + 3]: [10000, 9000]};
+        ut.ikkeHalv = await svar('gull', 0.79, lagA('gull', k38, {[R]: 0.9}, T));
+        ut.ikkeHalvLang = await svar('gull', 0.2, lagA('gull', k38, {[R]: 0.9}, T));
+        // Rå tall som faller (48 % ved T, 35 % ved T + 1): glattet til samme sjanse.
+        const kGlatt = qaGlattKurve({totalAtPts: Object.assign(new Array(PM).fill(0), {[T]: 1000, [T + 1]: 1000}),
+          successAtPts: Object.assign(new Array(PM).fill(0), {[T]: 480, [T + 1]: 350})});
+        ut.glatt = kGlatt.map(([p, s]) => [p - T, +s.toFixed(4)]);
+        // Nesten sikkert (97 %): marginen er der kurven passerer 95 %, rundet
+        // av (94,9 % ved m + 4, 99 % ved m + 5: m + 4; den gamle regelen: m + 5).
+        ut.sikker = await svar('gull', 0.97, lagA('gull', {[m + 3]: [10000, 8000], [m + 4]: [10000, 9490], [m + 5]: [10000, 9900]}, {[R]: 0.9}, T));
+        // Kryssingen rundes ned til poengene laget alt har (45 % der): da er
+        // grensen neste poengsum. Holder de alt (60 %): "har allerede".
+        ut.kant = await svar('gull', 0.5, lagA('gull', {[m]: [10000, 4500], [m + 1]: [10000, 9000], [m + 4]: [10000, 9900]}, {[R]: 0.9}, T));
+        ut.allerede = await svar('gull', 0.5, lagA('gull', {[m]: [10000, 6000], [m + 1]: [10000, 9000]}, {[R]: 0.9}, T));
+        // Plassen for hver sone, uten et lag som dominerer (også 'direkte', 14. plass).
+        ut.plass = innsiktSoner().map(z => { const A = lagA(z.key, kurve, {[R]: 0.5}, T);
+          return [z.key, z.dir === 'front' ? z.hi : z.boundary, qaHvorfor(A, innsiktFor(A, t, z.key), z).plass]; });
+        ut.reach = QA_REACH_PHRASE.gull; ut.verb = QA_VERB.gull;
+        // Kvalikavsnittet i nedrykksstriden: tabellens sjanser for laget settes
+        // direkte (trygg 1.-13., kvalik 14., direkte nedrykk 15.-16.), og
+        // tellingene har grensen for 13. plass ved T13 og for 14. plass ved T14
+        // (20 % poengsummen før, 60 % ved grensen: kurven passerer 50 % ved
+        // grensen minus 0,25). Ingen dominerer, så første avsnitt sier plassen.
+        const kvalik = async (trygg, kval, direkte, T13, T14) => {
+          const N = 72000, A = {N, PM, soner, runder: [], P0: new Array(n).fill(0), pts: new Float64Array(n * PM), succ: new Float64Array(n * Z * PM),
+            kteLag: new Float64Array(n * Z * n), dec: new Float64Array(n * Z), ahead: new Float64Array(n * n), behind: new Float64Array(n * n)};
+          A.P0[ti] = m;
+          const andel = (p, G) => p < G - 1 ? 0.1 : p === G - 1 ? 0.2 : p === G ? 0.6 : 0.9;
+          for (let p = m + 1; p <= m + 18; p++) {
+            A.pts[ti * PM + p] = 4000;
+            for (const [sone, G] of [['nedrykk', T13], ['kvalik', T13], ['direkte', T14]]) A.succ[(ti * Z + soner.indexOf(sone)) * PM + p] = 4000 * andel(p, G);
+          }
+          for (const sone of soner) { A.kteLag[(ti * Z + soner.indexOf(sone)) * n + TI[TEAMS[1]]] = N / 2; A.kteLag[(ti * Z + soner.indexOf(sone)) * n + TI[TEAMS[2]]] = N / 2; }
+          const fordeling = new Array(n).fill(0); fordeling[0] = trygg; fordeling[13] = kval; fordeling[14] = direkte;
+          const z = {...qaZoneByKey(t, 'nedrykk'), pct: direkte}, lmc = lastMC;
+          qaTargetZone = () => z; qaSettled = () => null; innsiktData = () => Promise.resolve(A); lastMC = {...lmc, [t]: fordeling};
+          try { return await qaHowTo(t); } finally { lastMC = lmc; innsiktData = orig.innsiktData; qaTargetZone = orig.qaTargetZone; qaSettled = orig.qaSettled; }
+        };
+        ut.kv = {
+          vanlig: await kvalik(0.63, 0.18, 0.19, m + 7, m + 5),     // to poeng lavere: grensen for 14. plass med
+          ettPoeng: await kvalik(0.63, 0.18, 0.19, m + 7, m + 6),   // ett poeng lavere: bare sjansene
+          under15: await kvalik(0.70, 0.151, 0.149, m + 7, m + 5),  // direkte nedrykk under 15 %: ikke noe avsnitt
+          akkurat15: await kvalik(0.70, 0.15, 0.15, m + 7, m + 5),  // akkurat 15 %: avsnittet
+          lang: await kvalik(0.16, 0.13, 0.71, m + 14, m + 11),     // lang sjanse: første avsnitt har alt sjansen for å bli trygg
+        };
+        ut.reachNed = QA_REACH_PHRASE.nedrykk; ut.verbNed = QA_VERB.nedrykk;
+        return ut;
+      });
+      await sp.close();
+      const {t, R, T, m, maxPts} = r, ord = {1: 'førsteplass', 2: 'andreplass', 4: 'fjerdeplass', 6: 'sjetteplass', 13: '13. plass', 14: '14. plass'};
+      const pt = x => `${x >= 0 && x < 10 ? ['null', 'ett', 'to', 'tre', 'fire', 'fem', 'seks', 'sju', 'åtte', 'ni'][x] : x} poeng`;
+      const forste = `${t} trenger trolig rundt ${pt(T)} for å ${r.reach}, altså ${pt(T - m)} til.`;
+      check(`${liga}: grensen er der den glattede kurven passerer 50 %, rundet av (${T}, ikke ${T + 1} som den gamle regelen), og laget som dominerer nevnes`,
+        r.gull === `${forste} Det holder i omtrent halvparten av simuleringene, fordi ${R} vanligvis ender rundt ${T} poeng. Med ${T + 3} poeng er sjansen rundt 82 %.`, r.gull);
+      check(`${liga}: laget nevnes fra 75 % av sesongene, under det sies plassen uten eget tall`,
+        r.gull75 === r.gull && r.gull7499 === `${forste} Det er omtrent det som vanligvis kreves for ${ord[r.plass[0][1]]}. Med ${T + 3} poeng er sjansen rundt 82 %.`,
+        JSON.stringify([r.gull75, r.gull7499]));
+      check(`${liga}: lang sjanse: sjansen først, så grensen og hvorfor`,
+        r.lang === `Det skal mye til: ${t} ${r.verb} i rundt 20 % av simuleringene. Rundt ${T} poeng gir dem omtrent halvparten, fordi ${R} vanligvis ender rundt ${T} poeng.`
+          && r.langPlass === `Det skal mye til: ${t} ${r.verb} i rundt 20 % av simuleringene. Rundt ${T} poeng gir dem omtrent halvparten. Det er omtrent det som vanligvis kreves for ${ord[r.plass[0][1]]}.`,
+        JSON.stringify([r.lang, r.langPlass]));
+      check(`${liga}: er sjansen ved grensen utenfor 40 til 60 %, sies tallet (38 %)`,
+        r.ikkeHalv === `${forste} Det holder i rundt 38 % av simuleringene, fordi ${R} vanligvis ender rundt ${T} poeng. Med ${T + 3} poeng er sjansen rundt 90 %.`
+          && r.ikkeHalvLang.endsWith(`Rundt ${T} poeng gir dem en sjanse på rundt 38 %, fordi ${R} vanligvis ender rundt ${T} poeng.`),
+        JSON.stringify([r.ikkeHalv, r.ikkeHalvLang]));
+      check(`${liga}: kurven glattes (48 % og 35 % blir 41,5 % begge)`, JSON.stringify(r.glatt) === JSON.stringify([[0, 0.415], [1, 0.415]]), JSON.stringify(r.glatt));
+      check(`${liga}: "nesten sikkert"-marginen er der den samme kurven passerer 95 %, rundet av`,
+        r.sikker === `${t} ${r.verb} i nesten alle simuleringene. Det skal mye til for at det glipper, men rundt 4 av ${maxPts} mulige poeng holder med god margin.`, r.sikker);
+      check(`${liga}: rundes grensen ned til poengene laget alt har uten at de holder, er den neste poengsum; holder de, "har allerede"`,
+        r.kant.startsWith(`${t} trenger trolig rundt ${pt(m + 1)} for å ${r.reach}, altså ett poeng til.`)
+          && r.allerede === `${t} har allerede ${pt(m)}, og med det klarer laget å ${r.reach} i mer enn halvparten av simuleringene.`,
+        JSON.stringify([r.kant, r.allerede]));
+      check(`${liga}: plassen er sonegrensen for hver sone (${r.plass.map(x => `${x[0]} ${x[2]}`).join(', ')})`,
+        r.plass.every(([, b, p]) => p === ord[b]), JSON.stringify(r.plass));
+      // Kvalikavsnittet
+      const kv = r.kv, forsteNed = `${t} trenger trolig rundt ${pt(m + 7)} for å ${r.reachNed}, altså ${pt(7)} til. Det er omtrent det som vanligvis kreves for 13. plass.`;
+      check(`${liga}: kvalikavsnittet med minst 15 % direkte nedrykk: sjansen for minst kvalikplass, for å bli helt trygg, og grensen for 14. plass når den er to poeng lavere`,
+        kv.vanlig.startsWith(forsteNed) && kv.vanlig.endsWith(`\n\n${t} når minst kvalikplass i rundt 81 % av simuleringene, men blir helt trygg i 63 %. `
+          + `For minst kvalikplass holder trolig rundt ${pt(m + 5)}, to poeng færre enn for å bli helt trygg.`), kv.vanlig);
+      check(`${liga}: grensen for 14. plass bare ett poeng lavere: den tas ikke med`,
+        kv.ettPoeng.endsWith(`\n\n${t} når minst kvalikplass i rundt 81 % av simuleringene, men blir helt trygg i 63 %.`), kv.ettPoeng);
+      check(`${liga}: under 15 % direkte nedrykk ikke noe kvalikavsnitt, fra 15 % avsnittet`,
+        !kv.under15.includes('kvalikplass') && kv.akkurat15.includes(`\n\n${t} når minst kvalikplass i rundt 85 % av simuleringene, men blir helt trygg i 70 %.`),
+        JSON.stringify([kv.under15, kv.akkurat15]));
+      check(`${liga}: står sjansen for å bli helt trygg alt i første avsnitt (lang sjanse), gjentas den ikke; forskjellen i poeng er den faktiske (tre)`,
+        kv.lang.startsWith(`Det skal mye til: ${t} ${r.verbNed} i rundt 16 % av simuleringene.`)
+          && kv.lang.endsWith(`\n\n${t} når minst kvalikplass i rundt 29 % av simuleringene. For minst kvalikplass holder trolig rundt ${pt(m + 11)}, tre poeng færre enn for å bli helt trygg.`)
+          && (kv.lang.match(/16 %/g) || []).length === 1, kv.lang);
+    }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -333,7 +471,8 @@ async function main() {
       // Bare én gruppe (se over).
       if (BARE === 'treffsikkerhet') await treffsikkerhetTekst();
       else if (BARE === 'sesongstart') await sesongstart();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart)`);
+      else if (BARE === 'hvamaa') await hvaMaaTekst();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa)`);
     } else {
     // ---- 1. lasting ----
     setGroup('Lasting');
@@ -3147,11 +3286,17 @@ async function main() {
         const oppg = await pg.evaluate(() => grunnlagOppgaver(buildQaOpen().openMatches).map(t => [t.id, t.idx, t.score]));
         await pg.close();
         check('lag_grunnlag.js skriver filen med sidens avtrykk for N = 300, inndata og alle oppgavene',
-          r.status === 0 && g.versjon === 1 && g.side === 'obos' && g.sesonger === 300 && g.fingeravtrykk === sidens && g.inndata === 'abc123'
+          r.status === 0 && g.versjon === 2 && g.side === 'obos' && g.sesonger === 300 && g.fingeravtrykk === sidens && g.inndata === 'abc123'
             && JSON.stringify(g.oppgaver) === JSON.stringify(oppg) && Object.keys(g.utfall || {}).length === oppg.length,
           `kode ${r.status}: ${(r.stdout + r.stderr).slice(-400)}`);
         check('... og siden godtar den ikke som en fil for N = 100 000 (annet avtrykk)', g.fingeravtrykk !== sidensN, '');
-        check('... med én linje per oppgave', tekst.split('\n').filter(l => /^  "[^"]+": \[/.test(l)).length === oppg.length, '');
+        const utfallLinjer = (tekst.split(' "utfall": {\n')[1] || '').split('\n }')[0].split('\n');
+        check('... med én linje per oppgave', utfallLinjer.filter(l => /^  "[^"]+": \[/.test(l)).length === oppg.length && utfallLinjer.length === oppg.length,
+          `${utfallLinjer.length} linjer under "utfall", ${oppg.length} oppgaver`);
+        check('... og innsiktsblokken med én linje per lag, i lagenes rekkefølge',
+          !!g.innsikt && Array.isArray(g.innsikt.lag) && g.innsikt.lag.length === g.lag.length
+            && tekst.split('\n').filter(l => /^   \{"fra":/.test(l)).length === g.lag.length
+            && g.innsikt.lag.every(x => x.poeng.reduce((s, v) => s + v, 0) === 300), JSON.stringify(g.innsikt || null).slice(0, 200));
         // Avtrykk som er ulikt fra lasting til lasting: kontrollen med en ny
         // lasting skal stoppe skrivingen.
         const sideFil = path.join(TMP, 'obos', 'index.html'), sideTekst = fs.readFileSync(sideFil, 'utf8');
@@ -3173,7 +3318,7 @@ async function main() {
 
         // Hele veien, billig: siden i kopien regner med GRUNNLAG_N = 300.
         // Filen prøves på siden med den nye filen, og banneret skrives fra den.
-        const N300 = sideTekst.replace('const GRUNNLAG_VERSJON = 1, GRUNNLAG_N = 100000;', 'const GRUNNLAG_VERSJON = 1, GRUNNLAG_N = 300;');
+        const N300 = sideTekst.replace('const GRUNNLAG_VERSJON = 2, GRUNNLAG_N = 100000;', 'const GRUNNLAG_VERSJON = 2, GRUNNLAG_N = 300;');
         fs.writeFileSync(sideFil, N300);
         const r4 = kjor('obos', '--inndata', 'def456');
         const g4 = JSON.parse(fs.readFileSync(FIL, 'utf8')), km4 = fs.existsSync(KM) ? JSON.parse(fs.readFileSync(KM, 'utf8')) : null;
@@ -3210,9 +3355,9 @@ async function main() {
     // ---- Grunnlagsfilen på siden (del 2, steg 3) ----
     // Siden henter grunnlag.json samtidig med de andre datafilene, venter
     // ikke på den, og bytter til filens tall når den er lastet og avtrykket
-    // stemmer. Da kommer tabellen og svarene fra filen, uten simulering. Med
-    // et resultat fylt inn, en annen sone (qaWhyZoneOverride), feil avtrykk,
-    // en ødelagt eller manglende fil regner siden selv, som før.
+    // stemmer. Da kommer tabellen og svarene fra filen, uten simulering, også
+    // for en annen sone enn lagets egen (qaWhyZoneOverride). Med et resultat
+    // fylt inn, feil avtrykk, en ødelagt eller manglende fil regner siden selv.
     setGroup('Grunnlagsfilen på siden: tabellen og svarene fra filen');
     if (!live) {
       const {execFileSync, spawnSync} = require('child_process'), os = require('os');
@@ -3300,6 +3445,29 @@ async function main() {
           sv.zoneTask === 0 && sv.tabell === 0 && sv.sesonger === 100000 && Object.values(sv.tekster).every(t => t && t.length > 20) && !!sv.kort,
           JSON.stringify({zoneTask: sv.zoneTask, tabell: sv.tabell, sesonger: sv.sesonger, kort: sv.kort}));
 
+        // Innsiktssvarene ("Hvorfor har ...?", "Hva må ... gjøre?", "Når kan
+        // det være avgjort?", "Hvem kjemper ... mot?") kommer fra filens blokk,
+        // uten kjøring i Workeren. Blokken er bit for bit det siden regner selv
+        // med samme frø og N, og suksessen i den går opp mot tabellen (de
+        // samme sesongene).
+        const ins = await pg.evaluate(async (lagKode, g) => {
+          const lag = eval(lagKode), tell = () => __poster.filter(p => p.mode === 'insightsAlle').length, i0 = tell();
+          const tekster = {why: await qaWhy(lag), howto: await qaHowTo(lag), decided: await qaWhenDecided(lag), rivals: await qaRivals(lag)};
+          const fraFil = tell() - i0;
+          const live = await innsiktKjor(innsiktPayload(g.sesonger));
+          const bitlik = JSON.stringify(innsiktPakk(live)) === JSON.stringify(g.innsikt);
+          const n = TEAMS.length, soner = innsiktSoner();
+          const motTabell = TEAMS.every((t, ti) => soner.every((z, zi) => {
+            const lo = z.dir === 'front' ? z.lo : 1, hi = z.dir === 'front' ? z.hi : z.boundary;
+            let tab = 0; for (let k = lo; k <= hi; k++) tab += g.utfall.base[ti * n + k - 1];
+            return g.innsikt.lag[ti].suksess[zi].reduce((s, v) => s + v, 0) === tab; }));
+          return {lag, fraFil, bitlik, motTabell, N: GRUNNLAG.innsikt.N, tekster};
+        }, lagMedSone, g);
+        check(`${liga}: innsiktssvarene kommer fra filens blokk (100 000 sesonger), uten kjøring i Workeren, for ${ins.lag}`,
+          ins.fraFil === 0 && ins.N === 100000 && Object.values(ins.tekster).every(t => t && t.length > 20), JSON.stringify(ins).slice(0, 600));
+        check(`${liga}: blokken er bit for bit det siden regner selv med samme frø og N, og suksessen går opp mot tabellen`,
+          ins.bitlik && ins.motTabell, JSON.stringify({bitlik: ins.bitlik, motTabell: ins.motTabell}));
+
         // Teksten er bygget av de samme funksjonene: med poolen byttet ut med
         // en som gir filens tall, og filen slått av, blir teksten den samme.
         const tk = await pg.evaluate(async lag => {
@@ -3348,8 +3516,10 @@ async function main() {
         check(`${liga}: filen og siden selv med annet frø (N = 20 000) ligger innenfor 3 standardfeil: ${st.kamp}, ${st.rader.length} tall, største ${Math.max(...st.rader.map(r => r.z))} SE`,
           st.rader.length >= 9 && st.rader.every(r => r.z <= 3), JSON.stringify(st.rader.filter(r => r.z > 3)));
 
-        // Et resultat fylt inn: siden regner selv. Nullstill: filen igjen,
-        // uten ny simulering. En annen sone (qaWhyZoneOverride): selv.
+        // Et resultat fylt inn: siden regner selv, innsikten med like mange
+        // sesonger som tabellen, én gang for alle spørsmålene i scenarioet.
+        // Nullstill: filen igjen, uten ny simulering. En annen sone
+        // (qaWhyZoneOverride): også fra filen.
         const sc = await pg.evaluate(async lagKode => {
           const lag = eval(lagKode), vent = f => new Promise(r => { const i = setInterval(() => { if (f()) { clearInterval(i); r(); } }, 20); });
           const tell = modus => __poster.filter(p => p.mode === modus).length;
@@ -3358,6 +3528,11 @@ async function main() {
           await vent(() => lastMCFinal && lastMCScenarioKey !== '' && lastMCScenarioKey === qaScenarioKey());
           await qaCheerFor(lag);
           const med = {tabell: tell('tabell') - t0, zoneTask: tell('zoneTask') - z0, N: lastMCN, MC_N};
+          const i0 = tell('insightsAlle');
+          await qaHowTo(lag);
+          const iN = __poster.filter(p => p.mode === 'insightsAlle').map(p => p.N), i1 = tell('insightsAlle');
+          await qaWhy(TEAMS.find(t => t !== lag)); await qaRivals(lag); await qaWhenDecided(lag);
+          const innsikt = {forste: i1 - i0, N: iN[iN.length - 1], flere: tell('insightsAlle') - i1};
           m.hg = null; m.ag = null; mcStraks = true; render();
           await vent(() => lastMCScenarioKey === '' && lastMCFinal);
           const t1 = tell('tabell'), g = GRUNNLAG.fil, n = TEAMS.length;
@@ -3370,16 +3545,23 @@ async function main() {
             const z = !lagA && qaTargetZone(t) && k !== qaTargetZone(t).key && qaZoneByKey(t, k);
             if (z && !qaSettled(t, z) && z.pct > 0.02 && z.pct < 0.98) { lagA = t; andre = k; }
           }
-          const z1 = tell('zoneTask');
-          qaWhyZoneOverride = andre; await qaNextMatch(lagA); qaWhyZoneOverride = null;
-          const zN = tell('zoneTask') - z1; await qaNextMatch(lagA);
-          return {med, tilbake, nyTabell: tell('tabell') - t1, annenSone: zN, egenSone: tell('zoneTask') - z1 - zN, lagA, andre};
+          const iT = tell('insightsAlle'); await qaHowTo(lag); const utenScenario = tell('insightsAlle') - iT;
+          const z1 = tell('zoneTask'), i2 = tell('insightsAlle');
+          qaWhyZoneOverride = andre;
+          const nesteAnnen = await qaNextMatch(lagA), hvorforAnnen = await qaWhy(lagA);
+          qaWhyZoneOverride = null;
+          const zN = tell('zoneTask') - z1, iA = tell('insightsAlle') - i2; await qaNextMatch(lagA);
+          return {med, innsikt, utenScenario, tilbake, nyTabell: tell('tabell') - t1, annenSone: zN, annenInnsikt: iA,
+                  egenSone: tell('zoneTask') - z1 - zN, lagA, andre, pctAnnen: pctTxt(qaZoneByKey(lagA, andre).pct), hvorforAnnen, nesteAnnen};
         }, lagMedSone);
         check(`${liga}: med ett resultat fylt inn regner siden selv (tabellsimulering og oppgaver til poolen)`,
           sc.med.tabell >= 1 && sc.med.zoneTask > 0 && sc.med.N === sc.med.MC_N, JSON.stringify(sc.med));
-        check(`${liga}: tømmes scenarioet, gjelder filen igjen, uten ny simulering`, sc.tilbake && sc.nyTabell === 0, JSON.stringify(sc));
-        check(`${liga}: et svar for en annen sone enn lagets egen (qaWhyZoneOverride) regnes av siden selv (${sc.lagA}, ${sc.andre})`,
-          !!sc.andre && sc.annenSone > 0 && sc.egenSone === 0, JSON.stringify(sc));
+        check(`${liga}: med ett resultat fylt inn regnes innsikten én gang med MC_N sesonger, og de neste spørsmålene gjenbruker den`,
+          sc.innsikt.forste === 1 && sc.innsikt.N === sc.med.MC_N && sc.innsikt.flere === 0, JSON.stringify(sc.innsikt));
+        check(`${liga}: tømmes scenarioet, gjelder filen igjen, uten ny simulering`, sc.tilbake && sc.nyTabell === 0 && sc.utenScenario === 0, JSON.stringify(sc));
+        check(`${liga}: svar for en annen sone enn lagets egen (qaWhyZoneOverride) kommer fra filen, med den sonens sjanse (${sc.lagA}, ${sc.andre})`,
+          !!sc.andre && sc.annenSone === 0 && sc.annenInnsikt === 0 && sc.egenSone === 0 && sc.hvorforAnnen.includes(` ${sc.pctAnnen} av dem`),
+          JSON.stringify(sc).slice(0, 900));
         await pg.close();
 
         // Filen gjelder ikke: siden regner selv, uten JS-feil.
@@ -3455,6 +3637,8 @@ async function main() {
       }
       GRUNNLAG_MODUS = null;
     }
+
+    await hvaMaaTekst();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen

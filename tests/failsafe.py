@@ -756,7 +756,35 @@ def main():
           all(f"fetch('data/{f}')" in side for f in ("matches.json", "fixtures.json", "model.json", "odds_upcoming.json")))
     for s_ in ("eliteserien", "obos"):
         t = (ROOT / s_ / "index.html").read_text(encoding="utf-8")
-        check(f"{s_}/index.html: fast N = 100 000 i grunnlagsfilen (GRUNNLAG_N)", "const GRUNNLAG_VERSJON = 1, GRUNNLAG_N = 100000;" in t)
+        check(f"{s_}/index.html: fast N = 100 000 i grunnlagsfilen (GRUNNLAG_N), versjon 2 med innsiktsblokken", "const GRUNNLAG_VERSJON = 2, GRUNNLAG_N = 100000;" in t)
+    # Innsiktssvarene ("Hvorfor har ...?", "Hva må ... gjøre?", "Når kan det
+    # være avgjort?", "Hvem kjemper ... mot?") kommer fra én kjøring for alle
+    # lag og soner: filens blokk når den gjelder, ellers siden selv med like
+    # mange sesonger som tabellen. Den gamle kjøringen per spørsmål (1 500
+    # sesonger, eget frø per lag og sone) finnes ikke lenger på noen av sidene.
+    for s_ in ("eliteserien", "obos", "elo-test"):
+        t = (ROOT / s_ / "index.html").read_text(encoding="utf-8")
+        check(f"{s_}/index.html: innsiktssvarene fra runInsightsAlle, uten den gamle kjøringen per spørsmål",
+              "function runInsightsAlle(d){" in t and "d.mode==='insightsAlle'){ runInsightsAlle(d); }" in t
+              and not any(x in t for x in ("function runInsights(", "runInsightsAsync", "QA_N_INSIGHTS", "mode:'insights'", "qaPointCurve")))
+        check(f"{s_}/index.html: uten filen regnes innsikten med MC_N (samme antall som tabellen) og tabellens frø for scenarioet",
+              "const payload = innsiktPayload(MC_N), nokkel = JSON.stringify(payload);" in t
+              and "seed:hashStr(scenarioKey+'|impact'), zones:innsiktSoner(), checkpoints:buildCheckpoints(open)};" in t)
+        check(f"{s_}/index.html: filen svarer også for en annen sone enn lagets egen (ingen qaWhyZoneOverride i grunnlagSvar)",
+              "if(!GRUNNLAG || gruppe.startsWith('grunnlag') || payload.seed!==GRUNNLAG.seed || !grunnlagTomtScenario()) return null;" in t
+              and "if(GRUNNLAG && grunnlagTomtScenario()) return Promise.resolve(GRUNNLAG.innsikt);" in t)
+        # Kvalikavsnittet i "Hva må ... gjøre?": fra 15 % direkte nedrykk, med
+        # grensen for 14. plass fra en egen sone i blokken (14. plass eller bedre).
+        check(f"{s_}/index.html: kvalikavsnittet fra 15 % direkte nedrykk, med egen sone for 14. plass i innsiktsblokken",
+              "const QA_KVALIK_DIREKTE = 0.15;" in t and "if(direkte<QA_KVALIK_DIREKTE || minstKvalik<0.01) return '';" in t
+              and "if(ned) soner.push({key:'direkte', lo:ned.lo, hi:ned.hi, boundary:ned.lo-1, dir:'back'});" in t
+              and "if(T13!=null && T14!=null && T14>myPts && T13-T14>=2)" in t)
+        check(f"{s_}/index.html: sonene og rundekontrollpunktene i innsiktsblokken er med i fingeravtrykket",
+              "innsikt:{soner:innsiktSoner(), kontrollpunkter:buildCheckpoints(q.open)}," in t)
+    lg_ = (ROOT / "scripts" / "lag_grunnlag.js").read_text(encoding="utf-8")
+    check("lag_grunnlag.js: innsiktsblokken sjekkes mot tabellen før filen skrives",
+          lg_.index("const fi = sjekkInnsikt(r);") < lg_.index("fs.writeFileSync(tmp, tekst);")
+          and "tabellen gir ${tabell}" in lg_)
     gw = (wfd / "grunnlag.yml").read_text(encoding="utf-8")
     navn_wf = {}
     for f in wfd.glob("*.yml"):

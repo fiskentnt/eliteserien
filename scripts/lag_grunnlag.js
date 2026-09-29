@@ -12,6 +12,9 @@
  *   - en NY lasting av siden regner det samme fingeravtrykket
  *   - hver fordeling går opp: hvert lag har én plass og hver plass ett lag i
  *     hver sesong, så radene og kolonnene summerer til N
+ *   - innsiktsblokken er regnet fra de samme sesongene som tabellen: for hvert
+ *     lag og hver sone er antall sesonger laget nådde målet det samme som
+ *     tabellens ('base') plasseringer i sonen gir, og hver telling går opp
  *   - en ny lasting av siden med den NYE filen godtar den (GRUNNLAG_STATUS
  *     "i bruk")
  *
@@ -101,6 +104,35 @@ function sjekkFordelinger(r) {
   return feil;
 }
 
+// Innsiktsblokken mot tabellen ('base'): hver telling dekker N sesonger, og
+// sesongene der laget nådde målet i en sone er like mange som tabellens
+// plasseringer i sonen gir. Det holder bare når blokken er regnet fra de samme
+// sesongene. Et lag er aldri ved siden av seg selv eller det b-te beste av
+// "de andre".
+function sjekkInnsikt(r) {
+  const n = r.lag.length, N = r.sesonger, b = r.innsikt, base = r.utfall.base, feil = [];
+  const sum = a => a.reduce((s, x) => s + x, 0);
+  if (!b || JSON.stringify(b.soner) !== JSON.stringify(r.soner.map(z => z.key)) || !Array.isArray(b.lag) || b.lag.length !== n)
+    return ['feil form (sonene eller lagene)'];
+  b.lag.forEach((x, t) => {
+    const navn = r.lag[t];
+    if (sum(x.poeng) !== N) feil.push(`${navn}: poengene summerer til ${sum(x.poeng)}`);
+    if (x.foran[t] || x.bak[t]) feil.push(`${navn}: ved siden av seg selv`);
+    if (sum(x.foran) !== N - base[t * n]) feil.push(`${navn}: rett foran summerer til ${sum(x.foran)}, ikke ${N - base[t * n]}`);
+    if (sum(x.bak) !== N - base[t * n + n - 1]) feil.push(`${navn}: rett bak summerer til ${sum(x.bak)}, ikke ${N - base[t * n + n - 1]}`);
+    r.soner.forEach((z, zi) => {
+      const lo = z.dir === 'front' ? z.lo : 1, hi = z.dir === 'front' ? z.hi : z.boundary;
+      let tabell = 0;
+      for (let k = lo; k <= hi; k++) tabell += base[t * n + k - 1];
+      if (sum(x.suksess[zi]) !== tabell) feil.push(`${navn} ${z.key}: ${sum(x.suksess[zi])} sesonger i mål, tabellen gir ${tabell}`);
+      if (x.suksess[zi].some((s, p) => s > x.poeng[p])) feil.push(`${navn} ${z.key}: flere i mål enn med poengsummen`);
+      if (sum(x.bLag[zi]) !== N || x.bLag[zi][t]) feil.push(`${navn} ${z.key}: det b-te beste av de andre går ikke opp`);
+      if (sum(x.avgjort[zi]) !== N) feil.push(`${navn} ${z.key}: avgjort summerer til ${sum(x.avgjort[zi])}`);
+    });
+  });
+  return feil;
+}
+
 // keymatch.json ved siden av filen. Uendret banner (samme kåring, runde, lag,
 // sesonger og grense) skrives ikke på nytt, så et nytt tidsstempel alene ikke
 // gir en commit.
@@ -129,7 +161,7 @@ function skrivBanner(key) {
   try {
     const page = await aapne(browser, port, feil);
     const t0 = Date.now();
-    const r = await page.evaluate(N => grunnlagRegn(N == null ? undefined : N), TEST_N);
+    const r = await page.evaluate(async N => ({...await grunnlagRegn(N == null ? undefined : N), soner: innsiktSoner()}), TEST_N);
     const sek = (Date.now() - t0) / 1000;
     const kjerner = await page.evaluate(() => [poolWorkers.length, navigator.hardwareConcurrency]);
     await page.close();
@@ -144,14 +176,18 @@ function skrivBanner(key) {
     if (igjen !== r.fingeravtrykk) throw new Error(`en ny lasting av siden ga et annet avtrykk (${igjen.slice(0, 16)}... mot ${r.fingeravtrykk.slice(0, 16)}...)`);
     const f = sjekkFordelinger(r);
     if (f.length) throw new Error(`fordelingene går ikke opp: ${f.slice(0, 3).join('; ')}`);
+    const fi = sjekkInnsikt(r);
+    if (fi.length) throw new Error(`innsiktsblokken går ikke opp mot tabellen: ${fi.slice(0, 3).join('; ')}`);
 
     // Én linje per oppgave, så filen er lesbar og diffen følger oppgavene.
     const hode = {versjon: r.versjon, side: SIDE, sesonger: r.sesonger, laget: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
       fingeravtrykk: r.fingeravtrykk, inndata: INNDATA || null, lag: r.lag,
-      note: 'Tabellen og svarene med låste utfall for dagens stilling, regnet på forhånd av scripts/lag_grunnlag.js med sidens egen kode. utfall[oppgave][lag*n + plass] = antall sesonger. Brukes bare når fingeravtrykket stemmer med det siden selv regner, og ingen resultater er fylt inn.'};
+      note: 'Tabellen og svarene med låste utfall for dagens stilling, regnet på forhånd av scripts/lag_grunnlag.js med sidens egen kode. utfall[oppgave][lag*n + plass] = antall sesonger. innsikt: tellingene bak "Hvorfor har ...?", "Hva må ... gjøre?", "Når kan det være avgjort?" og "Hvem kjemper ... mot?" for de samme sesongene som utfall.base, per lag (i samme rekkefølge som lag) og sone. Brukes bare når fingeravtrykket stemmer med det siden selv regner, og ingen resultater er fylt inn.'};
     const linjer = Object.entries(hode).map(([k, v]) => ` ${JSON.stringify(k)}: ${JSON.stringify(v)}`);
     linjer.push(` "oppgaver": [\n${r.oppgaver.map(o => `  ${JSON.stringify(o)}`).join(',\n')}\n ]`);
     linjer.push(` "utfall": {\n${r.oppgaver.map(([id]) => `  ${JSON.stringify(id)}: ${JSON.stringify(r.utfall[id])}`).join(',\n')}\n }`);
+    linjer.push(` "innsikt": {\n  "soner": ${JSON.stringify(r.innsikt.soner)},\n  "runder": ${JSON.stringify(r.innsikt.runder)},\n  "lag": [\n` +
+      `${r.innsikt.lag.map(x => `   ${JSON.stringify(x)}`).join(',\n')}\n  ]\n }`);
     const tekst = `{\n${linjer.join(',\n')}\n}\n`;
     JSON.parse(tekst);   // gyldig JSON
 

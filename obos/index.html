@@ -2413,7 +2413,7 @@ self.onmessage = function(e){
   var d = e.data;
   if(d.mode==='typical'){ runTypical(d); }
   else if(d.mode==='badges'){ runBadges(d); }
-  else if(d.mode==='insights'){ runInsights(d); }
+  else if(d.mode==='insightsAlle'){ runInsightsAlle(d); }
   // Bare for testene: utgangsstillingen Workeren ville brukt for et låst utfall.
   else if(d.mode==='laastStilling'){ var ml = medLaast(d);
     postMessage({runId:d.runId, mode:'laastStilling', att:ml.att, con:ml.con, ha:ml.ha, hc:ml.hc, oddsOverride:ml.oddsOverride}); }
@@ -2845,24 +2845,20 @@ function runTypical(d){
   }});
 }
 
-// ---- "Spør om tabellen", spørsmål 1/2/6/7: én N-sesongers "hot" simulering
-// (samme motor som runProb), men samler i tillegg -- for ÉT lag (d.ti) og
-// sonen hovedtråden bestemte (d.zone, se qaTargetZone()) -- alt disse fire
-// spørsmålene trenger, i samme gjennomløp, i stedet for fire separate
-// kjøringer:
-// 1: gjennomsnittlig sluttpoengsum, poengsum ved sonegrensa, og hvilke lag
-//    som oftest tar plassen laget vil ha (favorAheadCount).
-// 2: hvor mange seire laget tar, og hvor mange tap "hovedkonkurrenten" (den
-//    som ble funnet i 1) får, i AKKURAT de sesongene laget når målet sitt.
-// 6: ved hvert rundekontrollpunkt (d.checkpoints, forhåndsregnet på
-//    hovedtråden fra den faktiske kampplanen): er sonen avgjort (sikret
-//    ELLER helt ute av bildet)? Bruker samme "verste/beste fall"-formel som
-//    lagboksens egen sikker/usikker-vurdering (canPass i render() på
-//    hovedtråden), generalisert til en vilkårlig grense -- se
-//    worstBestRank(). Eksakte poeng-likheter telles konservativt som "ikke
-//    avgjort ennå" (samme forenkling som canPass gjør: den krysssjekker ikke
-//    målforskjell på et delvis simulert tidspunkt).
-// 7: hvilket lag som oftest ligger rett foran/bak laget på sluttabellen.
+// ---- "Spør om tabellen", spørsmål 1, 2, 6 og 7 ("Hvorfor har ...?", "Hva må
+// ... gjøre?", "Når kan det være avgjort?", "Hvem kjemper ... mot?"): én
+// N-sesongers simulering med samme motor og samme tilfeldighetsstrøm som
+// simulateZoneProb, så samme frø gir de SAMME sesongene som utgangspunktet der
+// (tabellen i grunnlagsfilen). Den teller for ALLE lag og ALLE soner (d.zones)
+// i samme gjennomløp, så et spørsmål om et annet lag eller en annen sone ikke
+// trenger en ny kjøring. Se runInsightsAlle under.
+// Spørsmål 6 ser ved hvert rundekontrollpunkt (d.checkpoints, regnet på
+// hovedtråden fra den faktiske kampplanen) om sonen er avgjort (sikret ELLER
+// helt ute av bildet). Samme "verste/beste fall"-formel som lagboksens egen
+// sikker/usikker-vurdering (canPass i render() på hovedtråden), generalisert
+// til en vilkårlig grense -- se worstBestRank(). Eksakte poeng-likheter telles
+// konservativt som "ikke avgjort ennå" (samme forenkling som canPass gjør: den
+// krysssjekker ikke målforskjell på et delvis simulert tidspunkt).
 function worstBestRank(P, left, ti, n){
   var teamPts = P[ti], teamMax = P[ti] + 3*left[ti];
   var worstCount = 0, bestCount = 0;
@@ -2879,34 +2875,43 @@ function zoneDecided(worst, best, zone){
   if(best>boundary) return -1; // ute av bildet
   return 0; // ikke avgjort ennå
 }
-function runInsights(d){
-  var mu=d.mu, H=d.H, k=d.k, P0=d.P0, G0=d.G0, F0=d.F0, open=d.open, N=d.N, runId=d.runId, oddsOverride=d.oddsOverride;
-  var ti=d.ti, zone=d.zone, checkpoints=d.checkpoints, rivalIdx=d.rivalIdx;
-  var n = P0.length;
-  var rnd = mulberry32(d.seed);
+// Tellingene, alle som antall sesonger (PM = 200 poengsummer, 199 eller mer
+// telles som 199):
+//   pts[t*PM + p]            lag t endte på p poeng
+//   succ[(t*Z + z)*PM + p]   ... og nådde målet i sone z: i sonen for
+//                            gull/Europa, innenfor grensen (13. plass eller
+//                            bedre) for kvalik/nedrykk
+//   kteLag[(t*Z + z)*n + l]  l var det b-te beste av de ANDRE lagene, med b =
+//                            sonegrensen: siste plass i sonen (gull 1, topp 4
+//                            4) eller 13. plass for kvalik/nedrykk. Laget når
+//                            målet omtrent når det ender foran det laget.
+//   dec[(t*Z + z)*(C+1) + c] sone z ble først avgjort for t ved
+//                            kontrollpunkt c; c = C: ikke avgjort før slutt
+//   ahead[t*n + l], behind[t*n + l]   l endte rett foran / rett bak t
+// Grunnlagsfilen har dette med N = 100 000 (grunnlagRegn), ellers regner
+// siden det selv med like mange sesonger som tabellen (innsiktData).
+function runInsightsAlle(d){
+  var mu=d.mu, H=d.H, k=d.k, open=d.open, N=d.N, oddsOverride=d.oddsOverride||[];
+  var zones=d.zones, Z=zones.length, cps=d.checkpoints, C=cps.length;
+  var n=d.P0.length, PM=200;
+  var rnd=mulberry32(d.seed);
   var P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
   var attS=new Float64Array(n), conS=new Float64Array(n), haS=new Float64Array(n), hcS=new Float64Array(n);
-  var ord=[]; for(var i2=0;i2<n;i2++) ord.push(i2);
+  var ord=[]; for(var i=0;i<n;i++) ord.push(i);
+  var pos=new Int32Array(n), avgjort=new Uint8Array(n*Z);
+  var pts=new Float64Array(n*PM), succ=new Float64Array(n*Z*PM), kteLag=new Float64Array(n*Z*n), dec=new Float64Array(n*Z*(C+1));
+  var ahead=new Float64Array(n*n), behind=new Float64Array(n*n);
+  var kz=new Int32Array(Z);
+  for(var z0=0;z0<Z;z0++) kz[z0] = zones[z0].dir==='front' ? zones[z0].hi : zones[z0].boundary;
 
-  var sumFinalPts=0, sumBoundaryPts=0, sumRivalFinalPts=0;
-  var favorAheadCount=new Float64Array(n), coStruggleCount=new Float64Array(n);
-  var aheadOfT=new Float64Array(n), behindT=new Float64Array(n);
-  var successCount=0, successWinSumT=0, successPtsSumT=0;
-  var successLossSum=new Float64Array(n);
-  var totalAtPts=new Float64Array(200), successAtPts=new Float64Array(200);
-  var decidedHist={};
-  var lossThis=new Float64Array(n);
-
-  for(var s=1;s<=N;s++){
-    P.set(P0); G.set(G0); F.set(F0);
+  for(var s=0;s<N;s++){
+    P.set(d.P0); G.set(d.G0); F.set(d.F0);
     attS.set(d.att); conS.set(d.con); haS.set(d.ha); hcS.set(d.hc);
-    lossThis.fill(0);
-    var winsT=0, ptsT=0, decidedThisSim=false, cpIdx=0;
+    avgjort.fill(0);
+    var cp=0;
     for(var j=0;j<open.length;j++){
-      var h=open[j][0], a=open[j][1];
-      var forced = oddsOverride && oddsOverride[j];
-      var lh, la;
-      if(forced){ lh=forced[0]; la=forced[1]; }
+      var h=open[j][0], a=open[j][1], fo=oddsOverride[j], lh, la;
+      if(fo){ lh=fo[0]; la=fo[1]; }
       else {
         var eh=mu+H+attS[h]+haS[h]+conS[a]-hcS[a], ea=mu+attS[a]-haS[a]+conS[h]+hcS[h];
         eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
@@ -2914,70 +2919,47 @@ function runInsights(d){
       }
       var xy=sampleScoreDC(lh,la,rnd), x=xy[0], y=xy[1];
       G[h]+=x-y; G[a]+=y-x; F[h]+=x; F[a]+=y;
-      if(x>y){ P[h]+=3; lossThis[a]++; if(h===ti){ winsT++; ptsT+=3; } }
-      else if(x<y){ P[a]+=3; lossThis[h]++; if(a===ti){ winsT++; ptsT+=3; } }
-      else { P[h]++; P[a]++; if(h===ti||a===ti) ptsT++; }
+      if(x>y) P[h]+=3; else if(x<y) P[a]+=3; else { P[h]++; P[a]++; }
       var rh=x-lh, ra=y-la;
       applyDrift(attS,d.att,h,k*rh,DRIFT_CAP_ATTCON); applyDrift(haS,d.ha,h,k*rh,DRIFT_CAP_HAHC);
       applyDrift(conS,d.con,a,k*rh,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,a,-k*rh,DRIFT_CAP_HAHC);
       applyDrift(attS,d.att,a,k*ra,DRIFT_CAP_ATTCON); applyDrift(haS,d.ha,a,-k*ra,DRIFT_CAP_HAHC);
       applyDrift(conS,d.con,h,k*ra,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,h,k*ra,DRIFT_CAP_HAHC);
 
-      if(!decidedThisSim && cpIdx<checkpoints.length && (j+1)>=checkpoints[cpIdx].afterIdx){
-        var wb = worstBestRank(P, checkpoints[cpIdx].left, ti, n);
-        var dec = zoneDecided(wb[0], wb[1], zone);
-        if(dec!==0){
-          decidedThisSim = true;
-          var rr = checkpoints[cpIdx].round;
-          decidedHist[rr] = (decidedHist[rr]||0)+1;
+      if(cp<C && (j+1)>=cps[cp].afterIdx){
+        for(var t=0;t<n;t++){
+          var wb=null;
+          for(var z=0;z<Z;z++){
+            if(avgjort[t*Z+z]) continue;
+            if(!wb) wb=worstBestRank(P, cps[cp].left, t, n);
+            if(zoneDecided(wb[0], wb[1], zones[z])!==0){ avgjort[t*Z+z]=1; dec[(t*Z+z)*(C+1)+cp]++; }
+          }
         }
-        cpIdx++;
+        cp++;
       }
     }
-    if(!decidedThisSim){ decidedHist['end'] = (decidedHist['end']||0)+1; }
+    for(var t1=0;t1<n*Z;t1++) if(!avgjort[t1]) dec[t1*(C+1)+C]++;
 
     for(var i3=0;i3<n;i3++) R[i3]=rnd();
     ord.sort(function(p,q){ return P[q]-P[p] || G[q]-G[p] || F[q]-F[p] || R[q]-R[p]; });
-    var posOfT = ord.indexOf(ti); // 0-indeksert
-    sumFinalPts += P[ti];
-    sumBoundaryPts += P[ord[zone.boundary-1]];
-    if(rivalIdx!=null) sumRivalFinalPts += P[rivalIdx];
-
-    var tInTarget = (posOfT+1)>=zone.lo && (posOfT+1)<=zone.hi;
-    for(var i4=0;i4<n;i4++){
-      if(i4===ti) continue;
-      var posI = ord.indexOf(i4)+1;
-      if(!tInTarget){
-        var iInFavor = posI>=zone.lo && posI<=zone.hi;
-        if(iInFavor) favorAheadCount[i4]++;
-        else if(zone.dir!=='front' && posI>zone.boundary) coStruggleCount[i4]++;
+    for(var i4=0;i4<n;i4++) pos[ord[i4]]=i4;
+    for(var t2=0;t2<n;t2++){
+      var pt=pos[t2], pp=Math.min(PM-1,P[t2]);
+      pts[t2*PM+pp]++;
+      for(var z2=0;z2<Z;z2++){
+        var zz=zones[z2], kk=kz[z2], zi=t2*Z+z2;
+        var ok = zz.dir==='front' ? (pt+1>=zz.lo && pt+1<=zz.hi) : (pt+1)<=zz.boundary;
+        if(ok) succ[zi*PM+pp]++;
+        // Det b-te beste av de andre: plass b i tabellen, eller b+1 når laget
+        // selv ligger foran den.
+        kteLag[zi*n+ord[pt>=kk ? kk-1 : kk]]++;
       }
-    }
-    if(posOfT>0) aheadOfT[ord[posOfT-1]]++;
-    if(posOfT<n-1) behindT[ord[posOfT+1]]++;
-
-    // "Suksess" = laget når det som er målet: i sonen selv for gull/Europa,
-    // eller INNENFOR trygghetsgrensa (unngår sonen) for kvalik/nedrykk.
-    var success = zone.dir==='front' ? tInTarget : (posOfT+1)<=zone.boundary;
-    var pi = Math.min(199, P[ti]);
-    totalAtPts[pi]++;
-    if(success) successAtPts[pi]++;
-    if(success){
-      successCount++;
-      successWinSumT += winsT;
-      successPtsSumT += ptsT; // lagets FAKTISKE poeng i gjenstående kamper (uavgjort teller 1)
-      for(var i5=0;i5<n;i5++){ if(i5!==ti) successLossSum[i5]+=lossThis[i5]; }
+      if(pt>0) ahead[t2*n+ord[pt-1]]++;
+      if(pt<n-1) behind[t2*n+ord[pt+1]]++;
     }
   }
-
-  postMessage({runId:runId, mode:'insights', N:N,
-    avgFinalPts: sumFinalPts/N, avgBoundaryPts: sumBoundaryPts/N, avgRivalFinalPts: rivalIdx!=null?sumRivalFinalPts/N:null,
-    favorAheadCount: Array.from(favorAheadCount), coStruggleCount: Array.from(coStruggleCount),
-    aheadOfT: Array.from(aheadOfT), behindT: Array.from(behindT),
-    successCount: successCount, successWinSumT: successWinSumT, successPtsSumT: successPtsSumT, successLossSum: Array.from(successLossSum),
-    decidedHist: decidedHist,
-    totalAtPts: Array.from(totalAtPts), successAtPts: Array.from(successAtPts)
-  });
+  postMessage({runId:d.runId, mode:'insightsAlle', N:N, PM:PM, C:C,
+    pts:pts, succ:succ, kteLag:kteLag, dec:dec, ahead:ahead, behind:behind});
 }
 
 // "Spør om tabellen", spørsmål 3 og 5, kortet "Neste kamp" og "Heie på": hvert
@@ -3140,7 +3122,7 @@ function getHjelpWorker(){
     hjelpWorker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'})));
     hjelpWorker.onmessage = e=>{
       const data=e.data;
-      const kart = data.mode==='typical' ? typicalResolvers : data.mode==='insights' ? insightsResolvers
+      const kart = data.mode==='typical' ? typicalResolvers : data.mode==='insightsAlle' ? insightsResolvers
                  : null;
       if(!kart) return;
       const resolve=kart.get(data.runId);
@@ -4121,7 +4103,7 @@ function closeFormModal(){ document.getElementById('formModalBackdrop').hidden=t
 // ==== "Spør om tabellen": ferdige spørsmål, svart ut fra modellen og
 // simuleringene -- ALDRI forhåndsskrevet tekst. Rekkefølge/tekst/regler er
 // spesifisert i oppgaven; se qaTargetZone() for "mest aktuelt"-regelen delt
-// av spørsmål 1, 2 og 6, og WORKER_SRC (mode:'insights'/'zoneTask') for
+// av spørsmål 1, 2 og 6, og WORKER_SRC (mode:'insightsAlle'/'zoneTask') for
 // de tunge beregningene (3 og 6 særlig) som ikke skal fryse siden. ----
 
 // Sone-objekt for en EKSPLISITT nøkkel (gull/europa/kvalik/nedrykk) -- delt
@@ -4899,11 +4881,14 @@ function qaZoneFromPos(pos, n, zone){
 //                   viktigste kamp") og hvert lags neste kamp (kortet "Neste
 //                   kamp", "Hva betyr neste kamp?")
 // Hver oppgave har hele plasseringsfordelingen for alle lag, som antall
-// sesonger. Siden bruker filen bare når fingeravtrykket (grunnlagAvtrykk) er
-// det samme som siden selv regner av dataene og koden den har lastet, og
-// ingen resultater er fylt inn: da kommer tabellen og svarene fra samme fil.
-// Se grunnlagMottatt() under.
-const GRUNNLAG_VERSJON = 1, GRUNNLAG_N = 100000;
+// sesonger. I tillegg har filen innsiktsblokken ('innsikt'): tellingene fra
+// runInsightsAlle for de samme sesongene som 'base', for alle lag og soner
+// ("Hvorfor har ...?", "Hva må ... gjøre?", "Når kan det være avgjort?",
+// "Hvem kjemper ... mot?"), se innsiktPakk. Siden bruker filen bare når
+// fingeravtrykket (grunnlagAvtrykk) er det samme som siden selv regner av
+// dataene og koden den har lastet, og ingen resultater er fylt inn: da kommer
+// tabellen og svarene fra samme fil. Se grunnlagMottatt() under.
+const GRUNNLAG_VERSJON = 2, GRUNNLAG_N = 100000;
 function grunnlagOppgaver(openMatches){
   const medU = new Set(qaNextRoundMatches(openMatches).list.map(m=>openMatches.indexOf(m)));
   // Hvert lags neste kamp, valgt som i qaNextMatch.
@@ -4921,7 +4906,7 @@ function grunnlagOppgaver(openMatches){
 }
 // Alt tallene i filen regnes av: modellen, stillingen (poeng, målforskjell og
 // scorede mål), kampene og de åpne kampene, oddsen, konstantene, oppgavene,
-// frøet, N og Worker-koden (som også har hovedtrådens delte funksjoner, se
+// sonene og rundekontrollpunktene i innsiktsblokken, frøet, N og Worker-koden (som også har hovedtrådens delte funksjoner, se
 // WORKER_SRC). Endres noe av det, endres avtrykket. Bare inndata og heltall,
 // ingen avledede desimaltall, så avtrykket er det samme i alle nettlesere.
 function grunnlagInndata(N){
@@ -4932,6 +4917,7 @@ function grunnlagInndata(N){
     kamper:matches.map(m=>[m.date, m.round, m.home, m.away, m.hg, m.ag]),
     odds:Object.keys(ODDS_UP).sort().map(k=>[k, ODDS_UP[k].H, ODDS_UP[k].D, ODDS_UP[k].A]),
     oppgaver:grunnlagOppgaver(q.openMatches).map(t=>[t.id, t.idx, t.score]),
+    innsikt:{soner:innsiktSoner(), kontrollpunkter:buildCheckpoints(q.open)},
     worker:WORKER_SRC, ekstra:grunnlagEkstra()};
 }
 // Det en side regner med i tillegg (testsiden: sin egen modell).
@@ -4944,7 +4930,8 @@ async function grunnlagAvtrykk(N = GRUNNLAG_N){
 // SIDEN TAR FILEN I BRUK. Den hentes samtidig med de andre datafilene, men
 // siden venter ikke på den: tabellsimuleringen starter som før, og tallene
 // byttes til filens når den er lastet og godkjent. Godkjent betyr riktig
-// versjon, N og lag, alle oppgavene med en fordeling, og samme fingeravtrykk
+// versjon, N og lag, alle oppgavene med en fordeling, innsiktsblokken med
+// sidens soner og runder og N sesonger per lag, og samme fingeravtrykk
 // som siden selv regner for dagens stilling uten scenario (også når en delt
 // lenke har fylt inn resultater: da gjelder filen når scenarioet tømmes).
 // Mangler filen, er den ødelagt, kommer den sent eller stemmer ikke
@@ -4966,12 +4953,13 @@ async function grunnlagMottatt(g){
   const ok = g.versjon===GRUNNLAG_VERSJON && g.sesonger===GRUNNLAG_N && Array.isArray(g.lag) && g.lag.join('|')===TEAMS.join('|')
     && Array.isArray(g.oppgaver) && g.utfall && Array.isArray(g.utfall.base)
     && g.oppgaver.every(o=>Array.isArray(o) && Array.isArray(g.utfall[o[0]]) && g.utfall[o[0]].length===n*n);
-  if(!ok){ GRUNNLAG_STATUS='ugyldig'; return; }
+  const innsikt = ok ? grunnlagUtenScenario(()=>innsiktPakkUt(g.innsikt, g.sesonger)) : null;
+  if(!ok || !innsikt){ GRUNNLAG_STATUS='ugyldig'; return; }
   const tekst = grunnlagUtenScenario(()=>JSON.stringify(grunnlagInndata(GRUNNLAG_N)));
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(tekst));
   const avtrykk = Array.from(new Uint8Array(b), x=>x.toString(16).padStart(2,'0')).join('');
   if(avtrykk!==g.fingeravtrykk){ GRUNNLAG_STATUS='feil avtrykk'; return; }
-  GRUNNLAG = {fil:g, n, N:g.sesonger, oppg:new Map(g.oppgaver.map(o=>[o[0], o])), seed:hashStr('|impact')};
+  GRUNNLAG = {fil:g, n, N:g.sesonger, oppg:new Map(g.oppgaver.map(o=>[o[0], o])), seed:hashStr('|impact'), innsikt};
   GRUNNLAG_STATUS = 'i bruk';
   BASE_MC = grunnlagFordeling('base');
   if(grunnlagTomtScenario()) grunnlagTilTabell();
@@ -4991,13 +4979,14 @@ function grunnlagTilTabell(){
   fillOdds();
 }
 // Svaret på oppgavene fra filen, eller null: bare når ALLE oppgavene finnes
-// der (samme kamp, resultat og frø), stillingen er dagens uten scenario, og
-// svaret ikke gjelder en annen sone enn lagets egen (qaWhyZoneOverride).
-// Aldri en blanding av filen og poolen, så endringen mot utgangspunktet
-// alltid er fra samme kjøring. Regningen av selve filen (gruppe 'grunnlag')
-// bruker aldri filen.
+// der (samme kamp, resultat og frø) og stillingen er dagens uten scenario.
+// Filen har plasseringsfordelingen for alle lag, så sjansen regnes for sonen
+// svaret gjelder, også en annen enn lagets egen (qaWhyZoneOverride). Aldri en
+// blanding av filen og poolen, så endringen mot utgangspunktet alltid er fra
+// samme kjøring. Regningen av selve filen (gruppe 'grunnlag') bruker aldri
+// filen.
 function grunnlagSvar(payload, tasks, gruppe){
-  if(!GRUNNLAG || gruppe.startsWith('grunnlag') || qaWhyZoneOverride || payload.seed!==GRUNNLAG.seed || !grunnlagTomtScenario()) return null;
+  if(!GRUNNLAG || gruppe.startsWith('grunnlag') || payload.seed!==GRUNNLAG.seed || !grunnlagTomtScenario()) return null;
   const n = GRUNNLAG.n, N = GRUNNLAG.N, ut = {};
   for(const t of tasks){
     const f = GRUNNLAG.oppg.get(t.id);
@@ -5012,6 +5001,7 @@ function grunnlagSvar(payload, tasks, gruppe){
 // Regner innholdet i filen. Kjøres av scripts/lag_grunnlag.js, ikke av siden
 // selv: alle oppgavene i poolen med samme frø, og for hver oppgave hele
 // plasseringsfordelingen for alle lag, som antall sesonger (lag*n + plass).
+// Så innsiktsblokken, med samme frø og N som 'base', altså de samme sesongene.
 // Avtrykket regnes før og etter; er dataene endret underveis, gis ingenting.
 async function grunnlagRegn(N = GRUNNLAG_N){
   if(matches.some(m=>m.hg!=null || m.ag!=null)) throw new Error('grunnlagRegn: resultater er fylt inn');
@@ -5024,11 +5014,53 @@ async function grunnlagRegn(N = GRUNNLAG_N){
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
     N, ti:0, zone:QA_KEY_ZONES[0], seed:hashStr(scenarioKey+'|impact'), wantAll:true
   }, tasks, null, 'grunnlag');
+  const innsikt = innsiktPakk(await innsiktKjor(innsiktPayload(N)));
   if(await grunnlagAvtrykk(N) !== avtrykk) throw new Error('grunnlagRegn: dataene ble endret underveis');
   const utfall = {};
   tasks.forEach(t=>{ utfall[t.id] = res[t.id].pos.map(p=>Math.round(p*N)); });
   return {versjon:GRUNNLAG_VERSJON, sesonger:N, fingeravtrykk:avtrykk, lag:TEAMS.slice(),
-          oppgaver:tasks.map(t=>[t.id, t.idx, t.score]), utfall};
+          oppgaver:tasks.map(t=>[t.id, t.idx, t.score]), utfall, innsikt};
+}
+// Innsiktsblokken i filen: tellingene fra runInsightsAlle, per lag med
+// poengene bare i spennet der laget har sesonger (suksess ligger alltid
+// innenfor det), og per sone suksess, hvilket lag som var det b-te beste av de
+// andre (bLag, se qaHvorfor), og når sonen ble avgjort.
+function innsiktPakk(A){
+  const n = TEAMS.length, Z = A.soner.length, PM = A.PM, C = A.runder.length;
+  const tall = (arr, fra, len) => Array.from(arr.slice(fra, fra+len));
+  return {soner:A.soner, runder:A.runder, lag:TEAMS.map((t,ti)=>{
+    const p = tall(A.pts, ti*PM, PM), fra = p.findIndex(x=>x>0), til = PM-1-p.slice().reverse().findIndex(x=>x>0);
+    return {fra, poeng:p.slice(fra, til+1),
+      suksess:A.soner.map((s,zi)=>tall(A.succ, (ti*Z+zi)*PM+fra, til-fra+1)),
+      bLag:A.soner.map((s,zi)=>tall(A.kteLag, (ti*Z+zi)*n, n)),
+      avgjort:A.soner.map((s,zi)=>tall(A.dec, (ti*Z+zi)*(C+1), C+1)),
+      foran:tall(A.ahead, ti*n, n), bak:tall(A.behind, ti*n, n)};
+  })};
+}
+// Tilbake til tellingene i samme form som innsiktKjor gir, for stillingen uten
+// scenario (kalles i grunnlagUtenScenario), eller null når blokken ikke har den
+// formen siden venter: sidens soner og runder, alle tellingene hele tall, og N
+// sesonger per lag i hver telling som dekker alle sesongene.
+function innsiktPakkUt(b, N){
+  const n = TEAMS.length, PM = 200, q = buildQaOpen();
+  const soner = innsiktSoner().map(z=>z.key), runder = buildCheckpoints(q.open).map(c=>c.round), Z = soner.length, C = runder.length;
+  const tall = (a, len) => Array.isArray(a) && (len==null || a.length===len) && a.every(x=>Number.isInteger(x) && x>=0);
+  const sum = a => a.reduce((s,x)=>s+x, 0);
+  if(!b || JSON.stringify(b.soner)!==JSON.stringify(soner) || JSON.stringify(b.runder)!==JSON.stringify(runder)
+     || !Array.isArray(b.lag) || b.lag.length!==n) return null;
+  const A = {N, PM, soner, runder, P0:Array.from(q.P0), pts:new Float64Array(n*PM), succ:new Float64Array(n*Z*PM),
+    kteLag:new Float64Array(n*Z*n), dec:new Float64Array(n*Z*(C+1)), ahead:new Float64Array(n*n), behind:new Float64Array(n*n)};
+  for(let ti=0;ti<n;ti++){
+    const x = b.lag[ti], L = x && Array.isArray(x.poeng) ? x.poeng.length : -1;
+    if(!x || !Number.isInteger(x.fra) || x.fra<0 || L<1 || x.fra+L>PM || !tall(x.poeng) || sum(x.poeng)!==N
+       || !tall(x.foran, n) || !tall(x.bak, n) || ![x.suksess, x.bLag, x.avgjort].every(a=>Array.isArray(a) && a.length===Z)) return null;
+    A.pts.set(x.poeng, ti*PM+x.fra); A.ahead.set(x.foran, ti*n); A.behind.set(x.bak, ti*n);
+    for(let zi=0;zi<Z;zi++){
+      if(!tall(x.suksess[zi], L) || !tall(x.bLag[zi], n) || sum(x.bLag[zi])!==N || !tall(x.avgjort[zi], C+1) || sum(x.avgjort[zi])!==N) return null;
+      A.succ.set(x.suksess[zi], (ti*Z+zi)*PM+x.fra); A.kteLag.set(x.bLag[zi], (ti*Z+zi)*n); A.dec.set(x.avgjort[zi], (ti*Z+zi)*(C+1));
+    }
+  }
+  return A;
 }
 async function qaKeyRoundData(opts){
   const N = (opts && opts.N) || QA_KEY_N;
@@ -5331,7 +5363,7 @@ function qaLuck(){
 }
 
 // ---- Spørsmål 1, 2, 3, 6, 7: krever simulering, kjøres i Workeren (se
-// mode:'insights'/'zoneTask' i WORKER_SRC) så siden ikke fryser. ----
+// mode:'insightsAlle'/'zoneTask' i WORKER_SRC) så siden ikke fryser. ----
 
 // Samme P0/G0/F0-oppbygging som runMCAsync (låste resultater, også grå
 // simulerte, teller som spilt), men med rundenummer på hver gjenstående kamp
@@ -5373,22 +5405,75 @@ function buildCheckpoints(open){
   });
   return checkpoints;
 }
-const QA_N_INSIGHTS = 1500, QA_N_IMPACT = 400;
-function runInsightsAsync(team, zone, rivalName){
+const QA_N_IMPACT = 400;
+// ---- Spørsmål 1, 2, 6 og 7: tallene fra runInsightsAlle i Workeren, for alle
+// lag og alle soner på én gang. Med grunnlagsfilen (dagens stilling, ingen
+// scenario) kommer de fra filens innsiktsblokk, altså de 100 000 sesongene bak
+// tabellen, også for en annen sone enn lagets egen (qaWhyZoneOverride). Ellers
+// regner siden dem selv med like mange sesonger som tabellen (MC_N) og samme
+// frø som svarene med låste utfall. Svaret tas vare på for dette scenarioet,
+// så neste spørsmål (et annet lag eller en annen sone) ikke regner på nytt.
+// Sonene i fast rekkefølge, med grensene svarene bruker (som qaZoneByKey).
+// Til slutt "unngå direkte nedrykk" ('direkte': 14. plass eller bedre), som
+// bare kvalikavsnittet i "Hva må ... gjøre?" bruker (qaKvalikAvsnitt).
+function innsiktSoner(){
+  const soner = ZONE_KEYS.filter(k=>LEAGUE.zones[k]).map(k=>{
+    const z = LEAGUE.zones[k];
+    return {key:k, lo:z.lo, hi:z.hi, boundary: z.boundary!=null ? z.boundary : z.hi, dir: z.boundary!=null ? 'back' : 'front'};
+  });
+  const ned = LEAGUE.zones.nedrykk;
+  if(ned) soner.push({key:'direkte', lo:ned.lo, hi:ned.hi, boundary:ned.lo-1, dir:'back'});
+  return soner;
+}
+function innsiktPayload(N){
   const {P0,G0,F0,open,oddsOverride,scenarioKey} = buildQaOpen();
-  const checkpoints = buildCheckpoints(open);
+  return {mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride, N,
+    seed:hashStr(scenarioKey+'|impact'), zones:innsiktSoner(), checkpoints:buildCheckpoints(open)};
+}
+// Én kjøring i hjelpe-Workeren. Svaret er tellingene (se runInsightsAlle) med
+// sonene, rundene og stillingen (P0) de ble regnet for.
+function innsiktKjor(payload){
   insightsRunId++;
   const runId = insightsRunId;
   return new Promise(resolve=>{
-    insightsResolvers.set(runId, resolve);
-    getHjelpWorker().postMessage({
-      mode:'insights', runId, seed:hashStr(scenarioKey+'|'+team+'|'+zone.key),
-      mu:MODEL.mu, H:MODEL.H, k:FORM_K,
-      att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
-      P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride, N:QA_N_INSIGHTS,
-      ti:TI[team], zone, checkpoints, rivalIdx: rivalName!=null ? TI[rivalName] : null
-    });
+    insightsResolvers.set(runId, d=>resolve({N:d.N, PM:d.PM, soner:payload.zones.map(z=>z.key),
+      runder:payload.checkpoints.map(c=>c.round), P0:payload.P0,
+      pts:d.pts, succ:d.succ, kteLag:d.kteLag, dec:d.dec, ahead:d.ahead, behind:d.behind}));
+    getHjelpWorker().postMessage({...payload, mode:'insightsAlle', runId});
   });
+}
+let innsiktSiste = null;   // {nokkel, svar}: siste kjøring siden regnet selv
+function innsiktData(){
+  if(GRUNNLAG && grunnlagTomtScenario()) return Promise.resolve(GRUNNLAG.innsikt);
+  const payload = innsiktPayload(MC_N), nokkel = JSON.stringify(payload);
+  if(!innsiktSiste || innsiktSiste.nokkel!==nokkel) innsiktSiste = {nokkel, svar:innsiktKjor(payload)};
+  return innsiktSiste.svar;
+}
+// Tallene for ett lag og én sone, i den formen svarene bruker.
+function innsiktFor(A, team, zoneKey){
+  const n = TEAMS.length, Z = A.soner.length, PM = A.PM, C = A.runder.length, ti = TI[team], zi = A.soner.indexOf(zoneKey);
+  const del = (arr, fra, len) => Array.from(arr.slice(fra, fra+len));
+  const totalAtPts = del(A.pts, ti*PM, PM), successAtPts = del(A.succ, (ti*Z+zi)*PM, PM);
+  const dec = del(A.dec, (ti*Z+zi)*(C+1), C+1), decidedHist = {};
+  A.runder.forEach((r,c)=>{ if(dec[c]) decidedHist[r] = (decidedHist[r]||0) + dec[c]; });
+  if(dec[C]) decidedHist.end = dec[C];
+  // Poengene laget tar i de gjenstående kampene: sluttpoengene minus dagens.
+  let successCount = 0, successPtsSumT = 0, sum = 0;
+  for(let p=0;p<PM;p++){ successCount += successAtPts[p]; successPtsSumT += (p-A.P0[ti])*successAtPts[p]; sum += p*totalAtPts[p]; }
+  return {N:A.N, avgFinalPts:sum/A.N, totalAtPts, successAtPts, kteLag:del(A.kteLag, (ti*Z+zi)*n, n),
+    successCount, successPtsSumT, decidedHist, aheadOfT:del(A.ahead, ti*n, n), behindT:del(A.behind, ti*n, n)};
+}
+// Sluttpoengene til et lag (sesonger per poengsum), og snitt og median av en
+// slik fordeling.
+const innsiktPoeng = (A, team) => Array.from(A.pts.slice(TI[team]*A.PM, TI[team]*A.PM+A.PM));
+function qaSnitt(h){ let n = 0, s = 0; h.forEach((c,p)=>{ n += c; s += c*p; }); return n ? s/n : null; }
+function qaMedian(h){
+  const n = h.reduce((a,b)=>a+b, 0);
+  let acc = 0;
+  for(let p=0;p<h.length && n>0;p++){ acc += h[p]; if(acc>=n/2) return p; }
+  return null;
 }
 // Kandidatkamper til spørsmål 3: å teste alle ~70 gjenstående kamper i hele
 // ligaen (to retninger hver) er for tregt til ett knappeklikk -- begrenser
@@ -5601,7 +5686,9 @@ async function qaWhy(team){
   if(st) return qaSettledText(team, zone, st);
   const field = qaFieldInWay(team, zone);
   const rival = field ? {t:field.nearest} : qaFindRival(team, zone);
-  const data = await runInsightsAsync(team, zone, rival ? rival.t : null);
+  const A = await innsiktData();
+  const data = innsiktFor(A, team, zone.key);
+  const rivalSnitt = rival ? qaSnitt(innsiktPoeng(A, rival.t)) : null;
   const {rows} = compute();
   const row = rows.find(r=>r.name===team);
   const pos = rows.indexOf(row)+1;
@@ -5709,8 +5796,8 @@ async function qaWhy(team){
     }
   }
   const utfall = `${qaUtfallTxt(zone)} i ${pctTxt(zone.pct)} av dem`;
-  const part3 = rival && data.avgRivalFinalPts!=null
-    ? `I simuleringene ender ${team} i snitt på ${poengTxt(data.avgFinalPts)} mot ${Math.round(data.avgRivalFinalPts)} for ${rival.t}, og ${utfall}.`
+  const part3 = rival && rivalSnitt!=null
+    ? `I simuleringene ender ${team} i snitt på ${poengTxt(data.avgFinalPts)} mot ${Math.round(rivalSnitt)} for ${rival.t}, og ${utfall}.`
     : `I simuleringene ender ${team} i snitt på ${poengTxt(data.avgFinalPts)} og ${utfall}.`;
 
   // To avsnitt: situasjonen nå i det første, simuleringene i det andre.
@@ -5719,17 +5806,15 @@ async function qaWhy(team){
     .filter(Boolean).join('\n\n');
 }
 
-// Poengkurve til spørsmål 2: sjansen for målet ved noen sluttpoengsummer rundt
-// terskelen (terskel-3, terskel, +3, +6, altså omtrent én seier hver), fra
-// tellingene per sluttpoengsum som insights-kjøringen allerede samler
-// (totalAtPts/successAtPts, samme "suksess" som terskelen). Sjansen kan bare
-// stige med poengene, så tallene glattes til en ikke-fallende kurve (samlede
-// nabopunkter, vektet med antall simuleringer) -- ellers kan støy gi at 50 poeng
-// ser bedre ut enn 53. Poengsummer med for få simuleringer bak vises ikke, og
-// under to punkter vises ingen kurve.
+// Den glattede kurven til spørsmål 2: sjansen for målet for hver sluttpoengsum,
+// fra tellingene per poengsum (totalAtPts/successAtPts, samme "suksess" som i
+// runInsightsAlle). Sjansen kan bare stige med poengene, så tallene glattes til
+// en ikke-fallende kurve (samlede nabopunkter, vektet med antall sesonger, PAV)
+// -- ellers kan støy gi at 65 poeng ser bedre ut enn 66. Gir [poeng, sjanse]
+// for hver poengsum med sesonger bak.
 const QA_MIN_AT_PTS = 40;
-function qaPointCurve(data, threshold, zone){
-  const blocks = []; // {from, to, n, hit}: samlede nabopunkter (PAV)
+function qaGlattKurve(data){
+  const blocks = []; // {from, to, n, hit}: samlede nabopunkter
   for(let p=0;p<data.totalAtPts.length;p++){
     if(!data.totalAtPts[p]) continue;
     blocks.push({from:p, to:p, n:data.totalAtPts[p], hit:data.successAtPts[p]});
@@ -5739,55 +5824,80 @@ function qaPointCurve(data, threshold, zone){
       blocks.splice(blocks.length-2, 2, {from:a.from, to:b.to, n:a.n+b.n, hit:a.hit+b.hit});
     }
   }
-  const shareAt = p => { const b = blocks.find(x=>p>=x.from && p<=x.to); return b ? b.hit/b.n : null; };
-  const pts = [-3,0,3,6].map(step=>threshold+step)
-    .filter(p=>p>=0 && p<data.totalAtPts.length && data.totalAtPts[p]>=QA_MIN_AT_PTS)
-    .map(p=>({p, share:shareAt(p)}));
-  // Bare punktene som sier noe: et punkt der det nesten aldri eller nesten
-  // alltid går, forteller ikke leseren mer enn nabopunktet gjør.
-  const nyttige = pts.filter(x=>x.share!=null && x.share>0.05 && x.share<0.97);
-  if(!nyttige.length) return '';
-  // Et utvalg på noen titalls simuleringer kan ikke love 0 eller 100 %.
-  const pc = qaPctCap;
-  const parts = nyttige.map((x,i)=> i===0
-    ? `Med ${poengTxt(x.p)} er sjansen omtrent ${pc(x.share)}`
-    : `med ${poengTxt(x.p)} rundt ${pc(x.share)}`);
-  const list = parts.length>2 ? parts.slice(0,-1).join(', ')+' og '+parts[parts.length-1] : parts.join(', ');
-  return ` ${list}.`;
+  const kurve = [];
+  blocks.forEach(b=>{ for(let p=b.from;p<=b.to;p++) if(data.totalAtPts[p]) kurve.push([p, b.hit/b.n]); });
+  return kurve;
 }
-// ---- Spørsmål 2: hva må laget gjøre for å nå målet? Filtrerer simulerings-
-// resultatene på suksess (samme betingelse som "success" i runInsights:
-// i sonen for gull/Europa, trygg for kvalik/nedrykk) og ser på lagets egne
-// seire og hovedkonkurrentens tap I AKKURAT DE sesongene.
+const qaKurveVed = (kurve, p) => { const x = kurve.find(k=>k[0]===p); return x ? x[1] : null; };
+// Grensen for "trenger trolig rundt": 50 %-punktet (qaPoenggrense). Rundes den
+// ned til poengene laget alt har, uten at de holder, er den neste poengsum,
+// ikke "null poeng til".
+function qaGrense(kurve, myPts){
+  let T = qaPoenggrense(kurve, 0.5);
+  if(T!=null && T<=myPts && !(qaKurveVed(kurve, myPts)>=0.5)) T = myPts+1;
+  return T;
+}
+// Poenggrensen for et nivå (0,5: "trenger trolig rundt", 0,95: "holder med god
+// margin"): punktet der den glattede kurven passerer nivået, mellom de to
+// nærmeste poengsummene, rundet av. Punktet flytter seg jevnt med tallene, så
+// grensen ikke vipper mellom to poengsummer når sjansen ved den ene ligger rett
+// ved nivået (Bodø/Glimt: 50,1 % ved 67 poeng). Når laget nivået alt med færrest
+// mulige poeng, er grensen den poengsummen; når kurven aldri dit, null.
+function qaPoenggrense(kurve, nivaa){
+  if(!kurve.length) return null;
+  if(kurve[0][1]>=nivaa) return kurve[0][0];
+  for(let i=1;i<kurve.length;i++){
+    const [p0,s0] = kurve[i-1], [p1,s1] = kurve[i];
+    if(s0<nivaa && s1>=nivaa) return Math.round(p0 + (p1-p0)*(nivaa-s0)/(s1-s0));
+  }
+  return null;
+}
+// Hvorfor grensen ligger der: laget når målet omtrent når det ender foran det
+// b-te beste av de ANDRE lagene, med b = sonegrensen (siste plass i sonen, eller
+// 13. plass for kvalik og nedrykk). Er det samme laget det i minst QA_DOMINANS
+// av sesongene, sies det lagets navn og vanlige sluttpoeng (medianen); ellers
+// er det plassen som avgjør, og den sies uten eget tall. Alle sonene regnes
+// likt; bare tallene bestemmer hvilken form svaret får.
+// QA_DOMINANS er ikke en optimal terskel, men den konservative grensen vi
+// bruker for å nevne et konkret lag. Den bygger på en måling 28. september
+// 2026 (begge ligaer, dagens tabell og med resultatene tatt ut etter runde 6,
+// 10, 14 og 18, 100 000 sesonger): svarene med lagnavn lå på 88 til 100 %
+// (gullstriden i Eliteserien), de med plass på 59 % eller lavere, med ett
+// mellomtilfelle på 71 % (Bodø/Glimt etter runde 6). Dataene sier derfor ikke
+// hvor i hullet grensen best står.
+const QA_DOMINANS = 0.75;
+const QA_PLASS_ORD = {1:'førsteplass', 2:'andreplass', 3:'tredjeplass', 4:'fjerdeplass', 5:'femteplass', 6:'sjetteplass'};
+function qaHvorfor(A, data, zone){
+  let l = 0;
+  data.kteLag.forEach((c,i)=>{ if(c>data.kteLag[l]) l = i; });
+  if(data.kteLag[l]/data.N >= QA_DOMINANS){
+    const lag = TEAMS[l];
+    return {lag, poeng:qaMedian(innsiktPoeng(A, lag))};
+  }
+  const b = zone.dir==='front' ? zone.hi : zone.boundary;
+  return {plass: QA_PLASS_ORD[b] || `${b}. plass`};
+}
+// ---- Spørsmål 2: hva må laget gjøre for å nå målet? Poenggrensen og sjansen
+// én seier over den fra den glattede kurven, og hvorfor grensen ligger der.
+// "Suksess" er som i runInsightsAlle: i sonen for gull/Europa, trygg for
+// kvalik/nedrykk.
 async function qaHowTo(team){
   const zone = qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
   const st = qaSettled(team, zone);
   if(st) return qaSettledText(team, zone, st);
-  const data = await runInsightsAsync(team, zone);
+  const A = await innsiktData();
+  const data = innsiktFor(A, team, zone.key);
   if(data.successCount===0){
     return `Ingen av de ${data.N.toLocaleString('nb-NO')} simulerte sesongene endte med at ${team} klarte å ${QA_REACH_PHRASE[zone.key]}.`;
   }
-  // Samme konkurrentvalg som spørsmål 1: nærmest i poeng blant lagene med
-  // reell sjanse for sonen (5 til 95 %), se qaFieldInWay()/qaFindRival().
-  const field = qaFieldInWay(team, zone);
-  const rivalName = field ? field.nearest : (qaFindRival(team, zone)||{}).t;
   // Snitt av lagets faktiske poeng (seier 3, uavgjort 1) i de gjenstående
-  // kampene, summert per simulering -- IKKE regnet om fra antall seire.
+  // kampene, i sesongene der laget når målet.
   const avgPts = Math.round(data.successPtsSumT/data.successCount);
   const maxPts = 3 * buildQaOpen().open.filter(o=>o[0]===TI[team]||o[1]===TI[team]).length;
-  // Terskel: laveste sluttpoengsum der laget klarer målet i over halvparten
-  // av simuleringene som endte på akkurat den poengsummen (minst 10 slike, så
-  // enkeltutslag i halen ikke avgjør).
-  let threshold = null;
-  for(let p=0;p<data.totalAtPts.length;p++){
-    if(data.totalAtPts[p]>=10 && data.successAtPts[p]/data.totalAtPts[p]>0.5){ threshold=p; break; }
-  }
+  const kurve = qaGlattKurve(data);
   const myPts = compute().rows.find(r=>r.name===team).pts;
-  // Nesten alltid i mål: "klarer å ..." i "100 %" av sesongene leses rart, så
-  // svaret sies rett ut. Marginen er poengene laget trenger utover dagens for
-  // å lykkes i minst 95 % av simuleringene som endte på akkurat den poengsummen
-  // (minst 10 slike per poengsum, så enkeltutslag ikke avgjør).
+  const threshold = qaGrense(kurve, myPts);
   // Sjansen som NEVNES, er tabellens (lastMC), som i alle de andre svarene --
   // ellers står samme sjanse med to verdier på siden (Egersund: 10 % her, 12 %
   // i tabellen). Simuleringen over brukes bare til poengtallene. Målet er å
@@ -5798,10 +5908,10 @@ async function qaHowTo(team){
     : zone.dir==='front' ? zone.pct
     : dist.slice(0, zone.boundary).reduce((a,b)=>a+b, 0);
   if(successShare>0.95){
-    let safe = null;
-    for(let p=0;p<data.totalAtPts.length;p++){
-      if(data.totalAtPts[p]>=10 && data.successAtPts[p]/data.totalAtPts[p]>=0.95){ safe=p; break; }
-    }
+    // Nesten alltid i mål: "klarer å ..." i "100 %" av sesongene leses rart, så
+    // svaret sies rett ut. Marginen er poengene laget trenger utover dagens for
+    // å lykkes i 95 % av simuleringene, på den samme glattede kurven.
+    const safe = qaPoenggrense(kurve, 0.95);
     // "havner i topp 6", "vinner serien"; for kvalik/nedrykk er målet å
     // sikre plassen, og da brukes sonens eget verb.
     const verb = zone.dir==='front' ? qaUtfallTxt(zone) : LEAGUE.zones[zone.key].verb;
@@ -5813,36 +5923,64 @@ async function qaHowTo(team){
       : ` Det skal mye til for at ${fails}, men rundt ${need} av ${maxPts} mulige poeng holder med god margin.`;
     return `${team} ${verb} i ${all} simuleringene.${marginTxt}`;
   }
-  // Konklusjon først: hvor mange poeng laget trolig trenger, og hvor mange
-  // det er til. Så de punktene på poengkurven som sier noe, og til sist
-  // hvem det også avhenger av.
   const reach = QA_REACH_PHRASE[zone.key];
-  const curveTxt = threshold==null ? '' : qaPointCurve(data, threshold, zone);
-  const rivalTail = rivalName ? ` Hvor mange poeng som trengs, avhenger av ${qaGen(rivalName)} resultater.` : '';
-  // Poengkurven og forbeholdet om konkurrenten hører sammen, men er en annen
-  // sak enn terskelen: eget avsnitt.
-  const avsnitt = (kurve, hale) => {
-    const rest = `${kurve}${hale}`.trim();
-    return rest ? `\n\n${rest}` : '';
-  };
-  let first;
-  if(threshold!=null && myPts<threshold){
-    // Uten poeng (før første kamp) ville "altså 61 poeng til" bare gjenta tallet.
-    first = `${team} trenger trolig rundt ${poengTxt(threshold)} for å ${reach}${myPts>0 ? `, altså ${poengTxt(threshold-myPts)} til` : ''}.`;
-  } else if(threshold!=null){
-    first = `${team} har allerede ${poengTxt(myPts)}, og med det klarer laget å ${reach} i mer enn halvparten av simuleringene.`;
-  } else {
-    first = `I simuleringene der ${team} klarer å ${reach}, tar laget i snitt ${avgPts} av ${maxPts} mulige poeng.`;
-  }
-  // Lang sjanse: si det først, så ingen leser terskelen som noe laget ofte når.
+  const hv = qaHvorfor(A, data, zone);
+  const fordi = hv.lag ? `, fordi ${hv.lag} vanligvis ender rundt ${poengTxt(hv.poeng)}` : '';
+  const plassTxt = hv.plass ? ` Det er omtrent det som vanligvis kreves for ${hv.plass}.` : '';
+  // Sjansen ved grensen: "omtrent halvparten" når den er det (40 til 60 %),
+  // ellers tallet. Grensen er rundet av, og mellom to poengsummer kan sjansen
+  // hoppe fra under 40 til over 60 %.
+  const ved = threshold==null ? null : qaKurveVed(kurve, threshold);
+  const halv = ved!=null && Math.round(ved*100)>=40 && Math.round(ved*100)<=60;
+  // I nedrykksstriden kan et avsnitt om kvalikplassen følge (qaKvalikAvsnitt).
+  // tryggNevnt: første avsnitt oppgir alt sjansen for å bli helt trygg.
+  const medKvalik = (tekst, tryggNevnt) => tekst + qaKvalikAvsnitt(A, team, zone, tryggNevnt, threshold, myPts);
+  // Lang sjanse: si det først, så ingen leser grensen som noe laget ofte når.
   if(successShare<0.25){
     // QA_VERB er presens ("ender i topp 4", "vinner serien"); reach er
     // infinitiv ("nå topp 4") og ville gitt "Brann nå topp 4".
-    return `Det skal mye til: ${team} ${QA_VERB[zone.key]} i ${pctTxt(successShare)} av simuleringene. `+
-      `I dem tar laget i snitt ${avgPts} av ${maxPts} mulige poeng.`+
-      avsnitt(curveTxt, rivalTail);
+    const start = `Det skal mye til: ${team} ${QA_VERB[zone.key]} i rundt ${pctTxt(successShare)} av simuleringene.`;
+    if(threshold==null || threshold<=myPts || ved==null) return medKvalik(`${start} I dem tar laget i snitt ${avgPts} av ${maxPts} mulige poeng.`, true);
+    return medKvalik(`${start} Rundt ${poengTxt(threshold)} gir dem ${halv ? 'omtrent halvparten' : `en sjanse på rundt ${pctTxt(ved)}`}${fordi}.${plassTxt}`, true);
   }
-  return `${first}`+avsnitt(curveTxt, rivalTail);
+  if(threshold==null || ved==null){
+    return medKvalik(`I simuleringene der ${team} klarer å ${reach}, tar laget i snitt ${avgPts} av ${maxPts} mulige poeng.`, false);
+  }
+  if(threshold<=myPts){
+    return medKvalik(`${team} har allerede ${poengTxt(myPts)}, og med det klarer laget å ${reach} i mer enn halvparten av simuleringene.`, false);
+  }
+  // Én seier over grensen: hvor sikkert det da er. Bare med nok sesonger bak.
+  const over = threshold+3, vedOver = qaKurveVed(kurve, over);
+  const overTxt = vedOver!=null && data.totalAtPts[over]>=QA_MIN_AT_PTS ? ` Med ${poengTxt(over)} er sjansen rundt ${qaPctCap(vedOver)}.` : '';
+  const andre = hv.lag
+    ? ` Det holder i ${halv ? 'omtrent halvparten' : `rundt ${pctTxt(ved)}`} av simuleringene${fordi}.`
+    : plassTxt;
+  // Uten poeng (før første kamp) ville "altså 61 poeng til" bare gjenta tallet.
+  const til = myPts>0 ? `, altså ${poengTxt(threshold-myPts)} til` : '';
+  return medKvalik(`${team} trenger trolig rundt ${poengTxt(threshold)} for å ${reach}${til}.${andre}${overTxt}`, false);
+}
+// Kvalikavsnittet til "Hva må ... gjøre?" i nedrykksstriden. Er direkte nedrykk
+// (15. eller 16. plass) en reell risiko, minst QA_KVALIK_DIREKTE i tabellen, er
+// kvalikplassen et mål i seg selv. Avsnittet sier sjansen for minst kvalikplass
+// (14. plass eller bedre), og sjansen for å bli helt trygg når første avsnitt
+// ikke alt har sagt den (tryggNevnt). Poenggrensen for 14. plass (samme
+// beregning som for 13. plass, på sonen 'direkte' i innsiktsblokken) tas med
+// bare når den er minst to poeng lavere enn grensen for å bli helt trygg (T13);
+// ellers sier den lite nytt. Tomt når regelen ikke gjelder, eller laget i
+// praksis ikke kan nå 14. plass (under 1 %).
+const QA_KVALIK_DIREKTE = 0.15;
+function qaKvalikAvsnitt(A, team, zone, tryggNevnt, T13, myPts){
+  const ned = LEAGUE.zones.nedrykk, d = lastMC && lastMC[team];
+  if(zone.dir!=='back' || !ned || !d || !A.soner.includes('direkte')) return '';
+  const sum = (fra, til) => d.slice(fra, til).reduce((a,b)=>a+b, 0);
+  const direkte = sum(ned.lo-1, ned.hi), minstKvalik = sum(0, ned.lo-1), trygg = sum(0, zone.boundary);
+  if(direkte<QA_KVALIK_DIREKTE || minstKvalik<0.01) return '';
+  let tekst = `${team} når minst kvalikplass i rundt ${pctTxt(minstKvalik)} av simuleringene`
+    + (tryggNevnt ? '.' : `, men blir helt trygg i ${pctTxt(trygg)}.`);
+  const T14 = qaGrense(qaGlattKurve(innsiktFor(A, team, 'direkte')), myPts);
+  if(T13!=null && T14!=null && T14>myPts && T13-T14>=2)
+    tekst += ` For minst kvalikplass holder trolig rundt ${poengTxt(T14)}, ${poengTxt(T13-T14)} færre enn for å bli helt trygg.`;
+  return `\n\n${tekst}`;
 }
 
 // ---- Spørsmål 3: hvilke kamper betyr mest? Se buildMatchImpactCandidates()
@@ -5916,7 +6054,7 @@ async function qaWhenDecided(team){
   // Allerede avgjort (eller sesongen ferdig): si det, ikke "avgjort senest runde N".
   const st = qaSettled(team, zone);
   if(st) return qaSettledText(team, zone, st);
-  const data = await runInsightsAsync(team, zone);
+  const data = innsiktFor(await innsiktData(), team, zone.key);
   const rounds = Object.keys(data.decidedHist).filter(k=>k!=='end').map(Number).sort((a,b)=>a-b);
   const lastRound = Math.max(...matches.filter(isEmpty).map(m=>m.round));
   let cum=0, answerRound=null;
@@ -5953,7 +6091,7 @@ async function qaRivals(team){
     if(idx<rows.length-1) parts.push(`rett foran ${rows[idx+1].name}`);
     return `Sesongen er ferdig: ${team} endte på ${idx+1}. plass med ${poengTxt(rows[idx].pts)}${parts.length?', '+parts.join(' og '):''}.`;
   }
-  const data = await runInsightsAsync(team, zone);
+  const data = innsiktFor(await innsiktData(), team, zone.key);
   const others = TEAMS.filter(t=>t!==team);
   const aheadTop = others.map(t=>({t,c:data.aheadOfT[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
   const behindTop = others.map(t=>({t,c:data.behindT[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
