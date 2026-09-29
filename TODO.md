@@ -538,6 +538,10 @@ failsafe-tester grønne mot tabellkalkulator.no.
   "Etter sesongslutt: gjennomgang av delene uten publisert metode").
 - **Endringsloggen** på siden: utkast i rapporten 30.9.2026. Tallene regnes
   på nytt med den endelige koden, og teksten vises før commit.
+- **Tekstene til siden er ferdige** (30.9.2026, gjennomgått setning for
+  setning). Legges inn sammen med selve modelloppdateringen; tallene
+  kontrolleres mot den endelige koden, og teksten vises før commit. Se
+  "Tekstene til oktoberoppdateringen" rett under.
 - **Rho-detaljene** (foreløpig valgt 29.9.2026): én `DC_RHO` ≈ -0,04 overalt
   (modellens sannsynligheter, oddstilpasningen i `fitRates()`, trekningen og
   tabellsimuleringen), i stedet for -0,38.
@@ -584,6 +588,96 @@ failsafe-tester grønne mot tabellkalkulator.no.
   grunnlagsfilene regnes på nytt av seg selv. Sjekk testene som låser tall
   fra dagens trekning.
 
+### Tekstene til oktoberoppdateringen (endelige, 30.9.2026)
+
+**Endringslogg** (for brukerne):
+
+> **Endringer i modellen, oktober 2026**
+>
+> Etter runde 23 har modellen fått én samlet oppdatering med tre endringer. Eliteserien og OBOS-ligaen bruker samme modell med samme innstillinger. Modellen står deretter uendret ut 2026-sesongen, også vekten oddsen får for neste runde.
+>
+> Ikke alle deler av modellen kommer fra forskningslitteraturen. Der vi bruker egne praktiske eller empiriske valg, merker vi dem som det.
+>
+> **Hva er endret**
+>
+> - **Uavgjort (Dixon og Coles, 1997).** Modellen har en justering for kamper med få mål, fra Dixon og Coles. Styrken på justeringen ble stilt inn med en test som hadde feil oppsett. Modellen ga derfor 31 prosent sjanse for uavgjort, mens 24 prosent av kampene endte uavgjort. Styrken er nå estimert fra resultatene 2012–2025. Søket ga −0,04 i Eliteserien og −0,02 i OBOS-ligaen. Forskjellen var uten praktisk betydning i OBOS-ligaen, og vi bruker derfor −0,04 i begge ligaene.
+> - **Marginen i oddsen (Shin, 1993).** Oddsen inneholder en margin for spillselskapet. Nå bruker vi Shins metode, som fordeler marginen ulikt mellom utfallene i stedet for å redusere alle tre forholdsvis like mye.
+> - **En feil i beregningen av lagstyrkene er rettet.** Lagstyrkene justeres steg for steg mot det som passer best med målene og oddsen. For det generelle målnivået og hjemmefordelen ble oddsen ikke tatt med i stegene, selv om den var med i det som skulle passe best. Det kunne få beregningen til å stoppe før den hadde funnet et konsistent svar. Rettingen i seg selv endrer lite på treffsikkerheten.
+>
+> **Hva tilbaketesten viste**
+>
+> Vi spådde alle kampene i Eliteserien og OBOS-ligaen 2012–2025 på nytt, hver gang bare med kamper som var spilt før kampen: 2 800 kamper i hver liga. Styrken på uavgjort-justeringen ble valgt på de samme sesongene, og flere av modellens andre innstillinger er valgt på overlappende historikk. Dette er derfor ikke en helt uavhengig test.
+>
+> - Uavgjort: modellen gir nå 24 prosent i snitt, mot 31 før. I virkeligheten endte 24 prosent av kampene i Eliteserien og 23 prosent i OBOS-ligaen uavgjort.
+> - Favorittene: lagene som var favoritter i markedet, vant 53 og 54 prosent av kampene. Modellen gir dem nå 50 og 49 prosent i snitt, mot 46 og 45 før.
+> - Treffsikkerheten per kamp, målt som log loss (lavere er bedre), ble 0,0136 ± 0,0027 bedre i Eliteserien og 0,0175 ± 0,0035 bedre i OBOS-ligaen.
+> - For sjansene for gull, topp 4, opprykk og nedrykk viste testen ingen sikker forskjell.
+>
+> Kampene fra 15. april i Eliteserien og fra 1. mai i OBOS-ligaen til 20. september 2026 ble ikke brukt til å velge noe av dette. Utsatte kamper fra tidligere runder er med. Hver kamp ble spådd med modellen tilpasset på kampene spilt før kampdagen. Log loss gikk fra 0,9606 til 0,9435 i Eliteserien (139 kamper) og fra 0,9973 til 0,9756 i OBOS-ligaen (154 kamper). Dette er den eneste testen der styrken på uavgjort-justeringen ikke har sett dataene. Utvalget er lite, og de tre endringene ble testet samlet, så det støtter endringen uten å bevise den.
+>
+> **Det som fortsatt ikke er godt nok**
+>
+> - Favorittene er fortsatt noe undervurdert: modellen gir dem 50 og 49 prosent, mens de vant 53 og 54.
+> - Spillselskapenes sluttodds treffer fortsatt bedre enn modellen, kamp for kamp. Forskjellen er omtrent halvert, men ikke borte.
+>
+> **Praktiske og empiriske valg som ikke er endret**
+>
+> - Historiske odds inngår når lagstyrkene estimeres. Formen på dette leddet og vekten 40 er empiriske valg, ikke hentet fra en publisert fotballmodell. I de historiske rullerende testene hjelper leddet: log loss per kamp er 0,035 ± 0,003 lavere enn med mål alene i Eliteserien, og 0,035 ± 0,004 lavere i OBOS-ligaen.
+> - Oddsen for neste runde blandes inn med 70 prosent vekt. Å blande prognoser lineært er en etablert metode, men vekten 0,7 er ikke målt.
+> - Etter hvert simulert eller innfylt resultat justeres lagstyrkene litt. Det er en praktisk regel. I tilbaketesten for Eliteserien ga den ingen målbar forbedring.
+> - Knappene som fyller inn kamper, velger et plausibelt forløp med et filter. Det påvirker ikke prosentene.
+>
+> Disse står uendret ut sesongen og blir gjennomgått etter sesongslutt. Hvor mye oddsen bør veie, undersøker vi videre. Endringer derfra tas i bruk tidligst fra 2027.
+
+**Den tekniske forklaringen** (for lesere som vil vite nøyaktig hvordan
+modellen er bygget, også fagfolk):
+
+> **Slik regnes sannsynlighetene**
+>
+> Hvert lag får en angreps- og en forsvarsstyrke, tilpasset på målene og sluttoddsen i sesongens kamper. Styrkene gir forventede mål i hver kamp som gjenstår, og av dem sjansen for hjemmeseier, uavgjort og borteseier. Så spilles resten av sesongen mange tusen ganger.
+>
+> Ikke alle deler av modellen kommer fra forskningslitteraturen. Delene er derfor delt i det som er hentet fra forskningslitteraturen, våre empiriske valg, tilpasningen og praktiske regler.
+>
+> **1. Fra forskningslitteraturen**
+>
+> - **Poisson-modell for mål.** Målene til hvert lag modelleres som to betinget uavhengige Poisson-fordelinger, én for hjemmelaget og én for bortelaget, med en angrepsstyrke for laget og en forsvarsstyrke for motstanderen (Maher 1982).
+> - **Justering for kamper med få mål.** Sannsynlighetene for 0-0, 1-0, 0-1 og 1-1 justeres med én parameter, ρ (Dixon og Coles 1997).
+> - **Tidsvekting.** Nyere kamper teller mer enn eldre, med vekter som avtar eksponentielt med alderen (Dixon og Coles 1997).
+> - **Hjemmefordel per lag.** At hjemmefordelen varierer mellom lag, er vist av Clarke og Norman (1995). Hvert lag har derfor sin egen hjemmefordel, i både angrep og forsvar. Måten den er lagt inn i modellen på, er vår egen.
+> - **Marginen i oddsen.** Marginen tas ut med Shins metode (Shin 1993). Štrumbelj (2014) fant i sin sammenligning at Shin-metoden samlet sett ga bedre resultater enn enkel normalisering og regresjonsmetodene som ble undersøkt.
+> - **Regularisering mot et felles nivå.** Hierarkiske modeller som Baio og Blangiardo (2010) bruker samme grunnidé, at lagstyrker trekkes mot et felles nivå. Vår ridge-regularisering er ikke deres modell.
+> - **Kombinasjon av prognoser.** Å kombinere prognoser som et vektet snitt er en etablert metode (Stone 1961; Bates og Granger 1969).
+> - **Simulering av resten av sesongen.** Kampene som gjenstår, spilles 100 000 ganger med tilfeldige resultater fra modellen. Sannsynligheten for en plass er andelen av sesongene der laget endte der. Tallene for dagens tabell er regnet på forhånd; fyller du inn resultater selv, regner nettleseren 10 000 sesonger. Sesongsimulering med en Poisson-modell er brukt av blant andre Lee (1997).
+>
+> **2. Våre empiriske valg**
+>
+> Disse er valgt i historiske rullerende tester. Hver kamp er spådd bare med kamper spilt før den, men valgene er gjort på den samme historikken som testene bruker.
+>
+> - **Halveringstiden på fem uker** (35 dager) for tidsvektingen.
+> - **Styrken på regulariseringen** (l1/l2 16/48). Den er valgt både på treffsikkerhet per kamp og på målforskjellen i simulerte sesonger.
+> - **Oddsleddet, med vekt 40.** Lagstyrkene tilpasses både på målene og på sluttoddsen i kampene som er spilt. Vi minimerer kvadratavviket mellom modellens og markedets sannsynligheter for hjemmeseier, uavgjort og borteseier, med vekt 40 mot målene. Formen på leddet er vår egen, ikke hentet fra en publisert fotballmodell. Egidi, Pauli og Torelli (2018) kombinerer mål og odds på en beslektet måte, der vekten estimeres i modellen. Den bruker vi ikke. I de historiske rullerende testene ga leddet 0,035 ± 0,003 lavere log loss per kamp enn mål alene i Eliteserien, og 0,035 ± 0,004 lavere i OBOS-ligaen.
+> - **ρ = −0,04.** Styrken på justeringen for få mål ble valgt ved å søke etter verdien som gir de faktiske resultatene 2012–2025 høyest sannsynlighet, med modellens forventede mål fra de historiske rullerende testene. Søket ga −0,04 i Eliteserien og −0,02 i OBOS. Forskjellen var uten praktisk betydning i OBOS, og vi bruker derfor −0,04 i begge ligaene. Tilbaketesten 2012–2025 bruker den samme perioden. Kampene i 2026 er den eneste testen der ρ ikke har sett dataene.
+> - **70/30-blandingen for neste runde.** Der spillselskapene har lagt ut odds, blandes markedets og modellens sannsynligheter: 70 prosent marked og 30 prosent modell. Vekten 0,7 er ikke målt. Blandingen regnes om til forventede mål med en praktisk numerisk inversjon av Poisson/Dixon–Coles-modellen: et søk etter målratene som gir de blandede sannsynlighetene. Egidi, Pauli og Torelli (2018) løser et beslektet ligningssystem for ren Poisson-modell.
+>
+> **3. Tilpasningen**
+>
+> Alle parametrene estimeres samlet ved å minimere én målfunksjon som består av målene, oddsleddet og regulariseringen. Optimeringsmetoden bruker gradienten.
+>
+> Fram til oktober 2026 samsvarte ikke gradienten fullt med målfunksjonen: oddsleddet var med i målfunksjonen, men ikke i gradienten for det generelle målnivået og hjemmefordelen. Dette kunne få optimeringen til å stoppe før et konsistent optimum var nådd. Produksjonsmodellen for Eliteserien stoppet etter rundt åtte steg, med gradient opptil 3,7. Dette er rettet.
+>
+> **4. Praktiske regler**
+>
+> Disse er verken hentet fra en publisert modell eller valgt i testene over. De er ikke en del av Poisson- eller Dixon–Coles-modellen.
+>
+> - **Bare inneværende sesong.** Styrkene tilpasses bare på kampene i inneværende sesong. Vi testet å ta med tidligere sesonger og begge divisjonene i én tilpasning med én tidsvekt, på lignende måte som Dixon og Coles (1997). Det ga ikke bedre treffsikkerhet, og mer vekt på tidligere sesonger ga dårligere.
+> - **Opprykkslag starter på snittet.** Et nyopprykket lag har ingen kamper i ligaen ennå og starter derfor på ligasnittet.
+> - **Samme innstillinger i begge ligaene.** OBOS-ligaen bruker innstillingene som ble valgt for Eliteserien.
+> - **Ren Poisson i tilpasningen.** Justeringen for få mål brukes når sannsynlighetene regnes ut, ikke når styrkene tilpasses. Dixon og Coles estimerte alt samlet. Med ρ = −0,04 er forskjellen i treffsikkerhet liten.
+> - **Formoppdatering med grenser og tilbaketrekking.** Etter hvert simulert eller innfylt resultat justeres de to lagenes styrker litt, ut fra hvor mange mål de scoret og slapp inn mot det modellen ventet. Justeringen holdes innenfor faste grenser og trekkes litt tilbake mot utgangspunktet etter hver kamp. Styrken på justeringen ble satt med én regresjon mot sluttodds, grensene ut fra én ekstremverdi og tilbaketrekkingen etter skjønn. I tilbaketesten for Eliteserien ga regelen ingen målbar forbedring av sjansene for gull, topp 4 og nedrykk. Den gjennomgås etter sesongen.
+> - **Scenariofilteret.** Knappene som fyller inn kamper, trekker utfall med under 10 prosent sjanse på nytt, og forkaster sesonger med vesentlig flere eller færre overraskelser enn forventet. Det er et valg for visningen og påvirker ikke prosentene.
+> - **Rangering uten innbyrdes oppgjør.** Poeng, målforskjell, scorede mål. Innbyrdes oppgjør er ikke regnet inn.
+> - **Tekniske tak.** Forventede mål per lag er begrenset til 6, og det nås ikke i praksis. Resultater regnes med opptil 15 mål per lag. Omregningen fra odds søker mellom 0,15 og 4,5 forventede mål.
+
 ## Upresise tekster under tabellen (legendNote)
 
 Funnet i modellgjennomgangen 29. september 2026. Ikke rettet ennå. Sjekk
@@ -622,16 +716,22 @@ Tilstanden er slik den blir etter oktoberoppdateringen.
 - P (prinsipp): hjemmefordelen varierer mellom lag (Clarke og Norman 1995).
   R (implementasjon): ha og hc i Poisson-ratene, krympet med l2, er vår egen.
 - P: tidsvekting som avtar eksponentielt (Dixon og Coles 1997).
-  U: halveringstiden 35 dager, valgt på et rutenett ut av utvalg (log loss,
-  Poisson-NLL og RPS; se `fit_model.py`). Prosedyren er dokumentert, men ble
-  ikke skrevet ned før søket, og dataene overlapper med tilbaketesten.
+  U: halveringstiden 35 dager, valgt på et rutenett i de historiske
+  rullerende testene (log loss, Poisson-NLL og RPS; se `fit_model.py`).
+  Prognosene er tidsmessig ut av utvalg, men parameteren er valgt på
+  overlappende historikk. Prosedyren er dokumentert, men ble ikke skrevet
+  ned før søket.
 - P (prinsipp): regularisering av lagstyrkene mot et felles snitt
-  (hierarkisk regularisering, for eksempel Baio og Blangiardo 2010).
+  (hierarkisk regularisering: Baio og Blangiardo 2010 lar lagparametrene
+  komme fra en felles normalfordeling, og beskriver selv "overshrinkage",
+  som de løser med en blandingsmodell; originalen er sjekket, UCL Discovery).
+  Det støtter bare prinsippet, ikke vår konkrete ridge-implementasjon.
   R (implementasjon): vår regularisering (ridge-straff med faste styrker) og
-  styrken l1/l2 16/48 er egen implementasjon. Styrken er valgt ut av utvalg
-  på log loss og Poisson-NLL, men valget så i tillegg på målforskjellen i
-  simulerte sesonger, og dataene (NOR.csv 2012-2026) overlapper med
-  tilbaketesten. Fortsatt best i Eliteserien med konsistent tilpasning
+  styrken l1/l2 16/48 er egen implementasjon. Styrken er valgt i de
+  historiske rullerende testene på log loss og Poisson-NLL, men valget så i
+  tillegg på målforskjellen i simulerte sesonger. Prognosene er tidsmessig
+  ut av utvalg, men styrken er valgt på overlappende historikk (NOR.csv
+  2012-2026). Fortsatt best i Eliteserien med konsistent tilpasning
   (-0,08 +/- 0,30 x 10^-3 for beste alternativ); ikke i OBOS.
 - P: Dixon og Colesʼ justering for kamper med få mål (1997).
   U: rho -0,04. Valgt ved et rutenettsøk (-0,45 til 0,10, steg 0,01) som
@@ -659,10 +759,14 @@ Tilstanden er slik den blir etter oktoberoppdateringen.
   markedssannsynlighetene i spilte kamper, vekt 40. Formen er ikke
   publisert. Publisert alternativ: Egidi, Pauli og Torelli (2018), der
   ratene er en konveks kombinasjon av historikk og odds, med vekten
-  estimert i en bayesiansk modell. Vekten er
-  valgt ut av utvalg, men kurven er flat fra 30. Nytte ut av utvalg: log
-  loss per kamp 0,035 bedre enn bare mål i begge ligaene (13 og 10 SE);
-  sone-Brier nedrykk -0,0055 +/- 0,0028 (2,0 SE), topp 4 -0,0086 +/- 0,0049.
+  estimert i en bayesiansk modell. Vekten er valgt i de historiske
+  rullerende testene (prognosene tidsmessig ut av utvalg, vekten valgt på
+  overlappende historikk), og kurven er flat fra 30. Nytte i de samme
+  testene (samme oppsett og rho -0,04 som pakken): log loss per kamp
+  0,0348 +/- 0,0027 lavere enn bare mål i Eliteserien og 0,0349 +/- 0,0035
+  i OBOS. I sonekjeden (`backtest_zones.py`, Eliteserien 2012-2025, med dagens
+  rho -0,38 og l1/l2 2/6 i det steget): nedrykk -0,0055 +/- 0,0028 (2,0 SE),
+  topp 4 -0,0086 +/- 0,0049.
 - P (metode): lineær blanding av prognoser (Stone 1961; Bates og Granger
   1969).
   R (implementasjon): 0,7 * marked + 0,3 * modell for kamper med odds; 0,7
