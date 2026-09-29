@@ -572,6 +572,29 @@ reglene i kildene før teksten skrives, og vis ny tekst før commit.
   Eliteserien: del i tog- og testsett, søk på togsettet, og rapporter bare
   tallene fra testsettet.
 
+  Funn fra studien av tilpasningen (29.-30. september 2026), IKKE tatt i
+  bruk: på OBOS-historikken 2012-2025 (odds fra lab, rullerende ut av utvalg,
+  Dixon-Coles rho -0,04, konsistent tilpasning) ga kortere halveringstid og
+  svakere krymping sammen lavere log loss per kamp enn dagens 35 dager og
+  l1/l2 16/48 (1,0017):
+
+  | halveringstid | l1/l2 | log loss | mot i dag |
+  |---|---|---|---|
+  | 10 dager | 2/6 | 0,9992 | -2,6 +/- 1,2 (x 10^-3) |
+  | 14 dager | 4/12 | 0,9993 | -2,4 +/- 0,8 |
+  | 10 dager | 4/12 | 0,9995 | |
+  | 21 dager | 8/24 | 1,0001 | |
+
+  Flaten er flat langs en diagonal (kortere minne og svakere krymping
+  sammen), og optimum lå i kanten av rutenettet hver gang det ble utvidet:
+  først 21 dager og 8/24, så 14 dager og 4/12, så 10 dager, som var den
+  korteste halveringstiden som ble prøvd. Utvidelsen ble stoppet med vilje.
+  I Eliteserien er 35 dager og 16/48 fortsatt best innenfor støyen
+  (-0,08 +/- 0,30 x 10^-3), så dette holder bare i én liga. Prinsippet er én
+  felles modell for begge ligaene; egne OBOS-innstillinger vurderes først her,
+  etter sesongslutt, med 2026 som testsett som ikke er brukt til å velge noe.
+  Tallene over er dermed bare et utgangspunkt for togsettet, ikke et valg.
+
   Oddsvekten er ikke målt på OBOS-tall ennå. Målingen 22. september 2026
   (`scripts/obos_odds_weight.py`) regnet ratene med feil formel: hjemmelaget
   fikk +hc for motstanderen i stedet for -hc, og bortelaget manglet både -ha
