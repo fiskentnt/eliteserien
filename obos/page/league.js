@@ -41,7 +41,7 @@ const LEAGUE = {
     // Kortform i det smale tokolonnesområdet (1100 til 1219 px), som «Nedr.»:
     // «Opprykk» er 16 px bredere enn Eliteseriens «Gull», og uten kortformen
     // måtte OBOS-tabellen scrolles sidelengs ved 1100 px.
-    {key: 'gull', head: 'Opprykk', headSm: 'Oppr.', card: 'Direkte opprykk', cls: 'gull hide-m',
+    {key: 'gull', head: 'Opprykk', headSm: 'Oppr.', card: 'Direkte opprykk', cls: 'gull',
      title: 'Sannsynlighet for direkte opprykk, altså 1. eller 2. plass. Klikk for å sortere.'},
     {key: 'europa', head: 'Topp 6', card: 'Topp 6', cls: 'p3',
      title: 'Sannsynlighet for 1. til 6. plass, altså direkte opprykk eller opprykkskvalifisering. Klikk for å sortere.'},

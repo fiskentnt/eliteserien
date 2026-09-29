@@ -528,6 +528,96 @@ async function main() {
           && (kv.lang.match(/16 %/g) || []).length === 1, kv.lang);
     }
   };
+  // Tabellen på telefon. Under 760 px står kortnavnene fra LEAGUE.shortNames
+  // i tabellen (Strømmen og Sandefjord står fullt ut), og Gull (Opprykk i
+  // OBOS) vises ved siden av Styrke. Under 340 px viker Gull. Ingen bredde
+  // skal gi sidelengs scroll, og lagnavn, merke og pil står på én linje. Med
+  // merke og plasspil (▼15) på hver rad (verste scenario) gjelder det samme på
+  // 390 og 430 px; på 360 px godtas noen få piksler (målt 29.9.2026: 1-2 px,
+  // før 14-16). Alle tre sidene. Kjøres med
+  // resten av suiten, eller alene:
+  //   node tests/regression.js --bare telefon
+  const telefonTabell = async () => {
+    setGroup('Tabellen på telefon: kortnavn, Gull og Styrke');
+    for (const [sti, korte, fulle] of [
+      ['/eliteserien/', ['S08', 'Glimt', 'FFK', 'KBK'], ['Sandefjord']],
+      ['/obos/', ['KIL', 'Godset', 'FKH'], ['Strømmen']],
+      ['/elo-test/', ['S08', 'Glimt', 'FFK', 'KBK'], ['Sandefjord']],
+    ]) {
+      const liga = sti.slice(1, -1);
+      const pg = await open(800, 900, base.replace('/eliteserien/', sti));
+      // Verste scenario: hvert merke i LEAGUE.badges på alle radene etter tur
+      // (tegnet av applyBadgesToDom, som på siden), med plasspil på hver rad.
+      // Det dårligste tallet for hvert mål teller.
+      const verst = () => pg.evaluate(() => {
+        const ekte = badgeFor, res = [];
+        try {
+          for (const cfg of LEAGUE.badges) {
+            badgeFor = () => cfg;
+            applyBadgesToDom();
+            res.push(maalTabell(true));
+          }
+        } finally { badgeFor = ekte; applyBadgesToDom(); }
+        return {overflow: Math.max(...res.map(r => r.overflow)), sideways: Math.max(...res.map(r => r.sideways)),
+          inside: res.every(r => r.inside), tolinjer: [...new Set(res.flatMap(r => r.tolinjer))],
+          merke: Math.max(...res.map(r => r.merke)), merker: LEAGUE.badges.length};
+      });
+      const maal = () => pg.evaluate(() => maalTabell(false));
+      await pg.evaluate(() => { window.maalTabell = medPil => {
+        const vis = el => !!el && getComputedStyle(el).display !== 'none';
+        document.querySelectorAll('#tbl td.team .diff').forEach(e => e.remove());
+        if (medPil) document.querySelectorAll('#tbl td.team').forEach(td =>
+          td.insertAdjacentHTML('beforeend', '<span class="diff down">▼15</span>'));
+        const wrap = document.querySelector('.tblwrap'), wr = wrap.getBoundingClientRect();
+        const cells = [...document.querySelectorAll('#tbl tbody td')].filter(vis);
+        // Én linje: alle bitene i lagcellen overlapper i høyden.
+        const tolinjer = [...document.querySelectorAll('#tbl td.team')].filter(td => {
+          const r = [...td.children].filter(vis).flatMap(e => [...e.getClientRects()]);
+          return Math.max(...r.map(x => x.top)) >= Math.min(...r.map(x => x.bottom));
+        }).map(td => td.querySelector('.teamname').innerText.trim());
+        const gull = document.getElementById('gullHeader');
+        const merker = [...document.querySelectorAll('#tbl tbody .badge')].filter(b => b.className !== 'badge');
+        const r = {
+          overflow: wrap.scrollWidth - wrap.clientWidth,
+          sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth,
+          inside: cells.every(c => c.getBoundingClientRect().right <= wr.right + 0.5),
+          tolinjer,
+          names: [...document.querySelectorAll('#tbl .teamname')].map(e => e.innerText.trim()),
+          gull: vis(gull) ? gull.innerText.trim() : null,
+          gullCeller: [...document.querySelectorAll('#tbl tbody td.gull')].filter(vis).length,
+          styrke: vis(document.getElementById('formHeader')),
+          merke: merker.length ? Math.max(...merker.map(b => Math.round(b.getBoundingClientRect().width * 10) / 10)) : null,
+        };
+        document.querySelectorAll('#tbl td.team .diff').forEach(e => e.remove());
+        return r;
+      }; });
+      for (const w of [800, 760, 430, 390, 360, 339, 320]) {
+        await pg.setViewport({width: w, height: 900});
+        await sleep(400);
+        const n = await maal();
+        const kort = w <= 760;
+        check(`${liga} ${w} px: ingen sidelengs scroll, alle kolonnene innenfor`,
+          n.overflow === 0 && n.sideways === 0 && n.inside,
+          `tabell ${n.overflow}, side ${n.sideways}, innenfor ${n.inside}`);
+        check(`${liga} ${w} px: ${kort ? `kortnavn (${korte.join(', ')}), ${fulle.join(', ')} fullt ut` : 'fulle lagnavn'}, aldri "SIF"`,
+          (kort ? korte.every(k => n.names.includes(k)) : !korte.some(k => n.names.includes(k)))
+            && fulle.every(k => n.names.includes(k)) && !n.names.includes('SIF') && n.tolinjer.length === 0,
+          `${n.names.join(', ')}${n.tolinjer.length ? ` | på to linjer: ${n.tolinjer.join(', ')}` : ''}`);
+        check(`${liga} ${w} px: Styrke vises, ${w < 340 ? 'Gull viker' : 'Gull vises'}`,
+          n.styrke && (w < 340 ? n.gull === null && n.gullCeller === 0 : !!n.gull && n.gullCeller === 16),
+          `Styrke ${n.styrke}, Gull-overskrift ${JSON.stringify(n.gull)}, ${n.gullCeller} Gull-celler`);
+        if (w <= 430 && w >= 360) {
+          const p = await verst(), tol = w === 360 ? 3 : 0;
+          check(`${liga} ${w} px: merke og plasspil på hver rad gir ${tol ? `høyst ${tol} px` : 'ingen'} sidelengs scroll`,
+            p.merker > 0 && p.overflow <= tol && p.sideways === 0 && (tol > 0 || p.inside) && p.tolinjer.length === 0,
+            `${p.merker} merker prøvd, tabell ${p.overflow}, side ${p.sideways}, innenfor ${p.inside}, på to linjer: ${p.tolinjer.join(', ') || 'ingen'}`);
+          // Kompakt merke: pillen var 20 px bred før 29.9.2026, nå 15.
+          if (w === 390) check(`${liga} 390 px: merket er kompakt (under 17 px bredt)`, p.merke > 0 && p.merke < 17, `bredeste ${p.merke} px`);
+        }
+      }
+      await pg.close();
+    }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -537,7 +627,8 @@ async function main() {
       else if (BARE === 'sesongstart') await sesongstart();
       else if (BARE === 'hvamaa') await hvaMaaTekst();
       else if (BARE === 'del') await delKnapp();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del)`);
+      else if (BARE === 'telefon') await telefonTabell();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon)`);
     } else {
     // ---- 1. lasting ----
     setGroup('Lasting');
@@ -794,31 +885,8 @@ async function main() {
       return {vist: t && !t.hidden, txt: t ? t.textContent : null};
     });
     check('trykk på merket forklarer det', tip.vist && /kan (ikke|verken)/.test(tip.txt || ''), JSON.stringify(tip));
-    // Smale skjermer: alt skal få plass, og under 340 px brukes de korte
-    // lagnavnene fra kamplisten.
-    for (const w of [390, 360, 339, 320]) {
-      await mob.setViewport({width: w, height: 800});
-      await sleep(500);
-      const n = await mob.evaluate(() => {
-        const wrap = document.querySelector('.tblwrap');
-        const wr = wrap.getBoundingClientRect();
-        const ned = [...document.querySelectorAll('#tbl tbody td.ned')];
-        const names = [...document.querySelectorAll('.teamname')].map(e => e.innerText.trim());
-        return {
-          overflow: wrap.scrollWidth - wrap.clientWidth,
-          sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth,
-          nedInside: ned.every(c => c.getBoundingClientRect().right <= wr.right + 0.5),
-          short: names.includes('S08') && names.includes('Glimt'),
-          longest: names.slice().sort((a, b) => b.length - a.length)[0],
-        };
-      });
-      check(`${w} px: alt får plass uten sidelengs scroll`,
-        n.overflow === 0 && n.sideways === 0 && n.nedInside,
-        `tabell ${n.overflow}, side ${n.sideways}, siste kolonne innenfor ${n.nedInside}`);
-      check(`${w} px: ${w < 340 ? 'korte' : 'fulle'} lagnavn`, w < 340 ? n.short : !n.short,
-        `bredeste navn "${n.longest}"`);
-    }
-    await mob.setViewport({width: 390, height: 800});
+    // Smale skjermer: kortnavn, Gull og Styrke, ingen sidelengs scroll.
+    await telefonTabell();
 
     // ---- 10. lagbytte skal ikke scrolle ----
     setGroup('Lagbytte scroller ikke siden');

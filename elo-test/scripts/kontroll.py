@@ -375,8 +375,9 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # banneret fra grunnlagsfilen (938d959), banneret med én kamp uten den døde
 # grenen i qaKeyBanner, siden uten spilte kamper (sesongstart),
 # innsiktssvarene fra én kjøring for alle lag og soner (innsiktsblokken i
-# grunnlagsfilen, ellers 10 000 sesonger) og én delingsknapp ("Del scenario",
-# delingsmenyen bare på berøringsskjerm), flettet inn med git merge-file. Der
+# grunnlagsfilen, ellers 10 000 sesonger), én delingsknapp ("Del scenario",
+# delingsmenyen bare på berøringsskjerm) og tabellen på telefon (Gull vises,
+# kortnavn under 760 px), flettet inn med git merge-file. Der
 # testsiden har sin egen tekst (ELO-Odds 90), er den beholdt, med samme ordlyd om 100 000 og
 # 10 000 simuleringer.
 #
@@ -394,7 +395,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "16735db3395826e79a0db6dc85bdb75601c695db39d68b3485c34b8e39bfb144"
+BASE_SHA = "ff927645f40df98ab3857b95cd524e0060b10a5841845efd05a8600ea7a6da07"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

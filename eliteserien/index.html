@@ -585,16 +585,34 @@
     .badge.safe .bi::before{content:"✓"}
     .badge.relegated .bi::before{content:"↓"}
   }
+  /* Telefon: mindre pille og plasspil, så lagkolonnen ikke blir bredere enn
+     kortnavnet trenger, og Gull får plass ved siden av Styrke (se .teamname
+     .sm under). Målt 29.9.2026: pillen går fra 20 til 15 px. */
+  @media (max-width:640px){
+    .badge{margin-left:3px;padding:0 3px;font-size:9.5px;line-height:1.5}
+    .diff{margin-left:3px;font-size:10.5px}
+  }
 
   /* Lagnavnet: et trykk følger laget (som "Følg laget ditt"), et nytt trykk på
      laget som alt følges velger det bort. Formgrafen ligger på Form-tallet. */
   .teamname{cursor:pointer}
   .teamname:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
-  /* Under 340 px brukes de korte lagnavnene fra kamplisten (shortTeam), så
-     alle tallkolonnene får plass uten sideveis scroll på de smaleste
-     skjermene. Over den grensen står navnene fullt ut. */
+  /* Under 760 px brukes de korte lagnavnene fra kamplisten (shortTeam,
+     LEAGUE.shortNames), så Gull og Styrke får plass sammen med de andre
+     tallkolonnene uten sideveis scroll. De lange navnene ("Sarpsborg 08",
+     "Kristiansund", "Bodø/Glimt") bestemte bredden på hele lagkolonnen. Lag
+     uten kortnavn står fullt ut; "Strømmen" og "Sandefjord" får plass med litt
+     mindre luft i kolonnene under 400 px (under): mindre polstring, og
+     prosentkolonnene blir ikke bredere enn innholdet (min-width 44 px ga Gull
+     og Nedr. 6-9 px luft hver). Målt 29.9.2026 på 360, 390 og 430 px i begge
+     ligaene, også med merke og plasspil på det lengste navnet. Over 760 px
+     står navnene fullt ut. */
   .teamname .sm{display:none}
-  @media (max-width:339px){.teamname .lg{display:none}.teamname .sm{display:inline}}
+  @media (max-width:760px){.teamname .lg{display:none}.teamname .sm{display:inline}}
+  @media (max-width:400px){
+    #tbl thead th:not(:first-child),#tbl td:not(.pos){padding-left:4px;padding-right:4px}
+    #tbl td.odds{min-width:0}
+  }
   .teamname:hover{text-decoration:underline}
 
   /* Form-kolonnen (task 3b): farget boks 0-10 */
@@ -891,7 +909,10 @@
   .match input.set{background:var(--strong-bg);color:var(--strong-fg);border-color:var(--strong-bg)}
   .match.followed input.set{background:var(--team-fill);border-color:var(--team-fill);color:var(--team-fill-text)}
   .match input.set.sim{background:var(--sim-bg);color:var(--ink);border-color:var(--sim-border);font-style:italic}
-  @media (max-width:760px){th.hide-m,td.hide-m,th.hide-diff,td.hide-diff{display:none}}
+  @media (max-width:760px){th.hide-diff,td.hide-diff{display:none}}
+  /* Gull (Opprykk) vises på telefon, men viker under 340 px: der ville
+     tabellen måttet rulles sidelengs (målt 29.9.2026: 12-15 px på 320 px). */
+  @media (max-width:339px){th.hide-xs,td.hide-xs{display:none}}
   .match .colon{text-align:center;color:var(--muted);font-weight:700}
   .match.played{background:var(--played-bg);color:var(--played-fg)}
   .match.played .score{width:40px;height:34px;display:flex;align-items:center;justify-content:center;font:700 19px/1 var(--cond);border-radius:6px;background:var(--played-score-bg);color:var(--played-score-fg)}
@@ -1065,7 +1086,7 @@
           <th class="hide-diff">Diff</th><th>P</th>
           <th class="sortable hh" id="formHeader" title="Styrke: modellens vurdering av hvor sterkt laget er, over hele sesongen. 5 er et gjennomsnittslag. Klikk for å sortere.">Styrke</th>
           <th class="sortable hide-s hh" id="form5Header" data-sort="form5" title="Formen nå: vanlige poeng i de fem siste seriekampene (3 for seier, 1 for uavgjort), regnet om til skalaen 0 til 10. Fem seirer gir 15 av 15 poeng, altså 10,0. Resultatene står til høyre, eldst først. Klikk for å sortere.">Form</th>
-          <th class="sortable hide-m hh" id="gullHeader" data-sort="gull" ></th>
+          <th class="sortable hide-xs hh" id="gullHeader" data-sort="gull" ></th>
           <th class="sortable hh" id="europaHeader" data-sort="europa" ></th>
           <th class="sortable hh" id="nedHeader" data-sort="ned" ></th>
         </tr></thead>
@@ -1386,7 +1407,7 @@ const LEAGUE = {
               3: 'Conference League: andre kvalifiseringsrunde', 4: 'Conference League: kvalifisering'},
   // Sannsynlighetskolonnene i tabellen og kortene under den.
   cols: [
-    {key: 'gull', head: 'Gull', card: 'Seriemester', cls: 'gull hide-m',
+    {key: 'gull', head: 'Gull', card: 'Seriemester', cls: 'gull',
      title: 'Sannsynlighet for å vinne serien. Klikk for å sortere.'},
     {key: 'europa', head: 'Topp 4', card: 'Topp 4', cls: 'p3',
      title: 'Sannsynlighet for 1. til 4. plass, altså Champions League- eller Conference League-kvalifisering. Europa kan også nås gjennom cupen, og det er ikke med i tallet. Klikk for å sortere.'},
@@ -1428,7 +1449,7 @@ const LEAGUE = {
   ],
   relegatedBadge: {cls: 'relegated', text: 'Rykket ned', note: 'Rykket ned: kan ikke berge plassen.'},
   shortNames: {
-    'Kristiansund': 'KBK', 'Sarpsborg 08': 'S08', 'Bodø/Glimt': 'Glimt',
+    'Kristiansund': 'KBK', 'Sarpsborg 08': 'S08', 'Bodø/Glimt': 'Glimt', 'Fredrikstad': 'FFK',
     'Rosenborg': 'RBK', 'Vålerenga': 'VIF', 'Lillestrøm': 'LSK', 'KFUM Oslo': 'KFUM',
   },
   // Hvor oddsen i verktøytipset på kampene kommer fra. Ligaene bruker ulike
@@ -6635,7 +6656,7 @@ function render(){
       tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="hide-s">${r.p}</td>
         <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
         <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts">${r.pts}</td>
-        <td class="formcol hh"></td><td class="hide-s">${femSisteHtml(somListe(r.results))}${form5Html(form5AvListe(somListe(r.results)), somListe(r.results))}</td><td class="odds gull hide-m hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
+        <td class="formcol hh"></td><td class="hide-s">${femSisteHtml(somListe(r.results))}${form5Html(form5AvListe(somListe(r.results)), somListe(r.results))}</td><td class="odds gull hide-xs hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
       tb.appendChild(tr);
       return;
     }
@@ -6652,7 +6673,7 @@ function render(){
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
       <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.pts} poeng nå. Maks mulig sluttsum: ${r.max}.">${r.pts}</td>
       <td class="formcol"><button type="button" class="formbox ${formCls}" data-team="${r.name}" title="${f1(r.form)} av 10. ${changeTxt} Trykk for styrkegrafen." aria-label="Styrke ${f1(r.form)} av 10 for ${r.name}. Vis styrkegrafen.">${f1(r.form)}</button></td>
-      <td class="hide-s">${femSisteHtml(r.femSiste)}${form5Html(r.form5, r.femSiste)}</td><td class="odds gull hide-m"></td><td class="odds p3"></td><td class="odds ned"></td>`;
+      <td class="hide-s">${femSisteHtml(r.femSiste)}${form5Html(r.form5, r.femSiste)}</td><td class="odds gull hide-xs"></td><td class="odds p3"></td><td class="odds ned"></td>`;
     tb.appendChild(tr);
   });
   applyBadgesToDom(); // viser cachen (tom første gang) med en gang, uten å vente
