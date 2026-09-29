@@ -257,6 +257,70 @@ async function main() {
   // kamper er spilt, alle spørsmålene svarer, et innfylt resultat regnes som
   // vanlig, og ingen JS-feil. Kjøres med resten av suiten, eller alene:
   //   node tests/regression.js --bare sesongstart
+  // ---- "Del scenario": én knapp ----
+  // På PC og Mac kopieres lenken, også når nettleseren har navigator.share. På
+  // berøringsskjerm (ingen hover, grov peker) åpnes systemets delingsmeny, og
+  // lenken kopieres når den ikke finnes, eller når menyen avviser delingen av
+  // en annen grunn enn at brukeren avbrøt. Del-knappen øverst gjør det samme og
+  // beholder ikonet. "Del …" (egen knapp for systemmenyen) finnes ikke lenger.
+  // navigator.share og utklippstavlen byttes ut med opptakere, så testen ser
+  // hva knappene gjør uten systemdialog. Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare del
+  const delKnapp = async () => {
+    setGroup('"Del scenario": én knapp, delingsmenyen bare på berøringsskjerm');
+    const {KnownDevices} = require('puppeteer-core');
+    const prov = async (side, {telefon = false, share = true, shareFeil = null} = {}) => {
+      const url = base.replace('/eliteserien/', `/${side}/`);
+      const pg = await browser.newPage();
+      const feil0 = errors.length;
+      pg.on('pageerror', e => errors.push(`${url} (del): ${e.message}`));
+      if (telefon) await pg.emulate(KnownDevices['iPhone 13']); else await pg.setViewport({width: 1280, height: 900});
+      await pg.goto(url, {waitUntil: 'networkidle0'});
+      await pg.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
+      await pg.evaluate(() => { matches.filter(x => x.hg == null).slice(0, 2).forEach(x => setMatch(x, 2, 1)); render(); });
+      await pg.waitForFunction('lastMCFinal===true && lastMCScenarioKey===qaScenarioKey()', {timeout: 120000});
+      const r = await pg.evaluate(async (share, shareFeil) => {
+        const delt = [], kopiert = [];
+        navigator.clipboard.writeText = async t => { kopiert.push(t); };
+        if (share) navigator.share = async d => { delt.push(d.url); if (shareFeil) { const e = new Error(shareFeil); e.name = shareFeil; throw e; } };
+        else { try { delete Navigator.prototype.share; } catch (_) {} try { delete navigator.share; } catch (_) {} }
+        const vent = () => new Promise(ok => setTimeout(ok, 300));
+        const knapper = [...document.querySelectorAll('.tools button.share')].filter(b => !b.hidden).map(b => b.textContent.trim());
+        document.getElementById('share').click(); await vent();
+        const bunn = {delt: delt.splice(0), kopiert: kopiert.splice(0), tekst: document.getElementById('share').textContent.trim()};
+        document.getElementById('headShare').click(); await vent();
+        const h = document.getElementById('headShare');
+        const topp = {delt: delt.splice(0), kopiert: kopiert.splice(0), tekst: h.textContent.trim(), ikon: !!h.querySelector('svg')};
+        return {knapper, finnesDelPrikker: !!document.getElementById('shareSystem'), beroring: matchMedia('(hover: none) and (pointer: coarse)').matches,
+                url: scenarioUrl(), adresse: location.href, bunn, topp};
+      }, share, shareFeil);
+      r.jsFeil = errors.slice(feil0);
+      errors.splice(feil0);
+      await pg.close();
+      return r;
+    };
+    for (const side of ['eliteserien', 'obos', 'elo-test']) {
+      const pc = await prov(side), tlf = await prov(side, {telefon: true});
+      check(`${side}: én delingsknapp nederst ("Del scenario"), og "Del …" finnes ikke`,
+        JSON.stringify(pc.knapper) === '["Del scenario"]' && !pc.finnesDelPrikker && JSON.stringify(tlf.knapper) === '["Del scenario"]', JSON.stringify([pc.knapper, tlf.knapper]));
+      check(`${side}: på PC kopierer "Del scenario" og Del øverst lenken, også når navigator.share finnes, og ikonet øverst står`,
+        !pc.beroring && pc.bunn.delt.length === 0 && JSON.stringify(pc.bunn.kopiert) === JSON.stringify([pc.url]) && pc.bunn.tekst === 'Lenke kopiert'
+          && pc.topp.delt.length === 0 && JSON.stringify(pc.topp.kopiert) === JSON.stringify([pc.url]) && pc.topp.tekst === 'Lenke kopiert' && pc.topp.ikon
+          && pc.adresse === pc.url && pc.jsFeil.length === 0, JSON.stringify(pc).slice(0, 500));
+      check(`${side}: på telefon åpner begge knappene delingsmenyen med lenken, og ingenting kopieres`,
+        tlf.beroring && JSON.stringify(tlf.bunn.delt) === JSON.stringify([tlf.url]) && tlf.bunn.kopiert.length === 0
+          && JSON.stringify(tlf.topp.delt) === JSON.stringify([tlf.url]) && tlf.topp.kopiert.length === 0 && tlf.jsFeil.length === 0, JSON.stringify(tlf).slice(0, 500));
+    }
+    const uten = await prov('eliteserien', {telefon: true, share: false});
+    check('telefon uten navigator.share: lenken kopieres', uten.bunn.delt.length === 0 && JSON.stringify(uten.bunn.kopiert) === JSON.stringify([uten.url])
+      && JSON.stringify(uten.topp.kopiert) === JSON.stringify([uten.url]), JSON.stringify(uten).slice(0, 400));
+    const avbrutt = await prov('eliteserien', {telefon: true, shareFeil: 'AbortError'});
+    check('telefon, brukeren avbryter delingsmenyen: ingenting kopieres', avbrutt.bunn.delt.length === 1 && avbrutt.bunn.kopiert.length === 0
+      && avbrutt.bunn.tekst === 'Del scenario', JSON.stringify(avbrutt).slice(0, 400));
+    const avvist = await prov('eliteserien', {telefon: true, shareFeil: 'NotAllowedError'});
+    check('telefon, delingsmenyen avviser av en annen grunn: lenken kopieres', avvist.bunn.delt.length === 1
+      && JSON.stringify(avvist.bunn.kopiert) === JSON.stringify([avvist.url]), JSON.stringify(avvist).slice(0, 400));
+  };
   const sesongstart = async () => {
     setGroup('Sesongstart: siden uten spilte kamper');
     if (live) { console.log('  (hoppes over med --live: trenger den lokale serveren)'); return; }
@@ -472,7 +536,8 @@ async function main() {
       if (BARE === 'treffsikkerhet') await treffsikkerhetTekst();
       else if (BARE === 'sesongstart') await sesongstart();
       else if (BARE === 'hvamaa') await hvaMaaTekst();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa)`);
+      else if (BARE === 'del') await delKnapp();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del)`);
     } else {
     // ---- 1. lasting ----
     setGroup('Lasting');
@@ -3825,6 +3890,7 @@ async function main() {
 
     await treffsikkerhetTekst();
     await sesongstart();
+    await delKnapp();
 
     setGroup('JS-feil');
     check('ingen feil i konsollen', errors.length === 0, errors.join('\n      '));

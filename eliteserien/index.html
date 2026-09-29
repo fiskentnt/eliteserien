@@ -1040,7 +1040,7 @@
               <span>Nullstill</span></button>
             <button type="button" id="headShare" class="head-reset" hidden
               aria-label="Del scenarioet"
-              title="Deler scenarioet: systemets delingsmeny der den finnes, ellers kopieres teksten">
+              title="Kopierer en lenke som gjenskaper dette scenariet">
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
               <span>Del</span></button>
@@ -1138,11 +1138,9 @@
         <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenariet">Del scenario</button>
         <!-- Skjult til kopieringen er bekreftet stabil i Chrome på PC. Koden
              bak er rettet (ingen prompt, og teksten beskriver brukerens egne
-             valg), men knappene står ute til det er prøvd i praksis.
-             "Del scenario" er upåvirket og virker som før. -->
+             valg), men knappene står ute til det er prøvd i praksis. -->
         <button class="share" id="shareText" hidden title="Kopierer en kort beskrivelse av scenarioet og lenken">Kopier tekst</button>
         <button class="share" id="shareBB" hidden title="Kopierer samme tekst med BB-kode, til forum">Kopier for forum</button>
-        <button class="share" id="shareSystem" hidden title="Deler scenarioet med appene på telefonen">Del …</button>
       </div>
       <label class="autofill" id="autoFillLabel" title="De andre kampene i samme runde simuleres, så alle lagene har spilt like mange og tabellen er sammenlignbar.">
         <input type="checkbox" id="autoFillToggle" checked> Fyll ut runden når jeg legger inn et resultat
@@ -6963,7 +6961,10 @@ function visKopifelt(tekst){
   return felt;
 }
 async function kopier(btn, tekst, ferdigTekst){
-  const opprinnelig = btn.dataset.label || btn.textContent;
+  // En knapp med ikon (Del øverst) har teksten i en <span>: bare den byttes,
+  // så ikonet står.
+  const mål = btn.querySelector('span') || btn;
+  const opprinnelig = btn.dataset.label || mål.textContent;
   btn.dataset.label = opprinnelig;
   let ok = false;
   try{ await navigator.clipboard.writeText(tekst); ok = true; }
@@ -6973,20 +6974,29 @@ async function kopier(btn, tekst, ferdigTekst){
     catch(_2){ ok = false; }
     if(!ok) visKopifelt(tekst);
   }
-  btn.textContent = ok ? ferdigTekst : 'Merk og kopier';
+  mål.textContent = ok ? ferdigTekst : 'Merk og kopier';
   btn.classList.add('done');
   clearTimeout(btn._t);
-  btn._t = setTimeout(()=>{ btn.textContent = opprinnelig; btn.classList.remove('done'); }, 2500);
+  btn._t = setTimeout(()=>{ mål.textContent = opprinnelig; btn.classList.remove('done'); }, 2500);
 }
 
-// UENDRET oppførsel: kopierer bare nettadressen.
-document.getElementById('share').addEventListener('click',async e=>{
-  e.stopPropagation();
-  const url=scenarioUrl();
-  history.replaceState(null,'',url);
-  const btn=document.getElementById('share');
+// "Del scenario", og Del-knappen øverst. På telefon og nettbrett
+// (berøringsskjerm: ingen hover, grov peker) åpner den systemets
+// delingsmeny, der navigator.share finnes. Ellers, og alltid på PC og Mac,
+// kopieres lenken, også i nettlesere som har navigator.share. Før var
+// systemmenyen en egen knapp ("Del …") ved siden av.
+const delMedSystemet = () => !!navigator.share && window.matchMedia('(hover: none) and (pointer: coarse)').matches;
+async function delScenario(btn){
+  const url=scenarioUrl(); history.replaceState(null,'',url);
+  if(delMedSystemet()){
+    try{ await navigator.share({title:document.title, text:deleTekst()||undefined, url}); return; }
+    catch(e){ if(e && e.name==='AbortError') return; }   // avbrutt av brukeren: ingen feilmelding
+    // Systemmenyen avviste delingen av en annen grunn: lenken kopieres.
+  }
   await kopier(btn, url, 'Lenke kopiert');
-});
+}
+document.getElementById('share').addEventListener('click', e=>{ e.stopPropagation(); delScenario(e.currentTarget); });
+document.getElementById('headShare').addEventListener('click', e=>{ e.stopPropagation(); delScenario(e.currentTarget); });
 document.getElementById('shareText').addEventListener('click',async e=>{
   e.stopPropagation();
   const url=scenarioUrl(); history.replaceState(null,'',url);
@@ -6997,26 +7007,6 @@ document.getElementById('shareBB').addEventListener('click',async e=>{
   const url=scenarioUrl(); history.replaceState(null,'',url);
   await kopier(e.currentTarget, deleBBKode(), 'BB-kode kopiert');
 });
-// Systemets egen delingsmeny, der den finnes. Den kommer I TILLEGG: knappene
-// for tekst og BB-kode står uansett.
-async function delViaSystem(btn){
-  const url=scenarioUrl(); history.replaceState(null,'',url);
-  const tekst=deleTekst();
-  if(navigator.share){
-    try{ await navigator.share({title:document.title, text:tekst||undefined, url}); return true; }
-    catch(_){ return false; }   // avbrutt av brukeren -- ingen feilmelding
-  }
-  if(btn) await kopier(btn, deleTekstMedLenke(), 'Tekst kopiert');
-  return false;
-}
-{
-  const sys=document.getElementById('shareSystem');
-  if(navigator.share) sys.hidden=false;
-  sys.addEventListener('click', e=>{ e.stopPropagation(); delViaSystem(e.currentTarget); });
-  document.getElementById('headShare').addEventListener('click', e=>{
-    e.stopPropagation(); delViaSystem(e.currentTarget);
-  });
-}
 
 // Finner om noen uspilt kamp allerede har startet (avspark <= nå) og, hvis
 // ikke, den nærmeste kommende avsparken — brukt til å velge mellom "Sist

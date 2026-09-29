@@ -373,11 +373,11 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # tekstene om 100 000 simuleringer, treffsikkerheten og sluttoddsen
 # (172b0c6, 1f304c6, aaf12ed, d5dc74f), vanlige anførselstegn (e8e9f81) og
 # banneret fra grunnlagsfilen (938d959), banneret med én kamp uten den døde
-# grenen i qaKeyBanner, siden uten spilte kamper (sesongstart) og
+# grenen i qaKeyBanner, siden uten spilte kamper (sesongstart),
 # innsiktssvarene fra én kjøring for alle lag og soner (innsiktsblokken i
-# grunnlagsfilen, ellers 10 000 sesonger), flettet inn med git merge-file. Der
-# testsiden har sin
-# egen tekst (ELO-Odds 90), er den beholdt, med samme ordlyd om 100 000 og
+# grunnlagsfilen, ellers 10 000 sesonger) og én delingsknapp ("Del scenario",
+# delingsmenyen bare på berøringsskjerm), flettet inn med git merge-file. Der
+# testsiden har sin egen tekst (ELO-Odds 90), er den beholdt, med samme ordlyd om 100 000 og
 # 10 000 simuleringer.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
@@ -394,7 +394,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "da9e1904ee8efb9da2f9d5fe8cebfb3de6259506e1a437550359e7c572cd4bba"
+BASE_SHA = "16735db3395826e79a0db6dc85bdb75601c695db39d68b3485c34b8e39bfb144"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
