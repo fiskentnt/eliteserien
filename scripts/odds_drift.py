@@ -29,6 +29,13 @@ Det som rapporteres:
 
   python3 scripts/odds_drift.py obos
   python3 scripts/odds_drift.py eliteserien
+
+--serier FIL skriver i tillegg HELE prisrekken for 1X2 per kamp, for alle
+bookmakerne i BOOKMAKERS som har den, med createdAt pa hver pris. Den brukes
+til studien av markedsvekten, der oddsen leses av ved faste tidspunkt for
+avspark (7 dager, 3 dager, 24 timer, naer avspark). Filen er tredjepartsdata
+og skal til det private lab-repoet, aldri til det offentlige repoet eller en
+offentlig artefakt (se odds-drift.yml).
 """
 import argparse
 import json
@@ -247,6 +254,8 @@ def main():
     ap.add_argument("--max", type=int, default=400)
     ap.add_argument("--refresh-fixtures", action="store_true")
     ap.add_argument("--dump", default="", help="skriv radene til en json-fil")
+    ap.add_argument("--serier", default="",
+                    help="skriv hele 1X2-prisrekken per kamp til en json-fil (til laben)")
     args = ap.parse_args()
 
     key = os.environ.get("ODDSPAPI_KEY", "").strip()
@@ -271,7 +280,14 @@ def main():
         print("fant ikke 1X2-markedet")
         return 1
 
-    data, mangler_vindu = [], 0
+    data, mangler_vindu, rekker = [], 0, []
+    # Utfallene i prisrekkene navngis etter markedets egen definisjon (1/X/2),
+    # ikke etter sorteringen av utfallsid-ene.
+    utfall_navn = {str(o.get("outcomeId")): {"1": "H", "X": "U", "2": "B"}.get(str(o.get("outcomeName")))
+                   for o in (mkt or {}).get("outcomes") or []}
+    if args.serier and sorted(v for v in utfall_navn.values() if v) != ["B", "H", "U"]:
+        print("fant ikke utfallene 1/X/2 i markedsdefinisjonen -- skriver ikke prisrekker")
+        return 1
     for i, (r, f) in enumerate(links[:args.max]):
         fid = f.get("fixtureId")
         ko_s = f.get("startTime") or ""
@@ -290,6 +306,12 @@ def main():
             time.sleep(COOLDOWN)
             continue
         ser = series(o or {}, mkt_id)
+        if args.serier:
+            rekker.append({"home": r["home"], "away": r["away"], "fixtureId": fid, "ko": ko.isoformat(),
+                           "hg": r["hg"], "ag": r["ag"],
+                           "serier": {b: {utfall_navn[str(oid)]: [[t, p] for t, p in rows]
+                                          for oid, rows in per.items()}
+                                      for b, per in ser.items()}})
         bm = next((b for b in BOOKMAKERS if b in ser), None)
         if bm:
             ord_t = siste_ordinaere(ko)
@@ -315,6 +337,9 @@ def main():
         Path(args.dump).write_text(json.dumps(
             [{**d, "ko": d["ko"].isoformat()} for d in data], ensure_ascii=False, indent=1),
             encoding="utf-8")
+    if args.serier:
+        Path(args.serier).write_text(json.dumps(rekker, ensure_ascii=False), encoding="utf-8")
+        print(f"Prisrekker for {len(rekker)} kamper skrevet til {args.serier}.")
     used, limit = oddspapi.usage()
     print(f"\nTellende kall brukt denne maneden: {used} av {limit}.")
     return 0

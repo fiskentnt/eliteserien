@@ -28,3 +28,5 @@ planlegger/.wrangler/
 
 # Lokalt virtuelt miljo (requirements.txt). Ikke del av repoet.
 .venv/
+# Prisrekker fra OddsPapi (odds_drift.py --serier): tredjepartsdata, bare til laben
+prisrekker_*.json

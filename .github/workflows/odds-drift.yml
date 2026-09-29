@@ -8,12 +8,25 @@ name: "Måling: hvor mye flytter oddsen seg før avspark?"
 # Kallbruk: terminlisten for OBOS ligger ferdig mellomlagret (0 tellende
 # kall). For Eliteserien hentes sesongens terminliste én gang og lagres, så
 # senere kjøringer også koster 0. Markedslisten leses fra mellomlageret.
+#
+# prisrekker=true: hele 1X2-prisrekken per kamp (odds_drift.py --serier), til
+# studien av markedsvekten. Rekkene er tredjepartsdata og går rett til det
+# PRIVATE lab-repoet (odds-prisrekker/). De lastes ikke opp som artefakt, og
+# radene for de fire avlesningspunktene skrives ikke i den kjøringen, så
+# ingenting havner offentlig.
 on:
   workflow_dispatch:
     inputs:
       ligaer:
         description: "Hvilke ligaer (mellomrom mellom)"
         default: "obos eliteserien"
+      prisrekker:
+        description: "Hent hele prisrekken til laben (ingen offentlig artefakt)"
+        type: boolean
+        default: false
+      maks:
+        description: "Høyst så mange kamper per liga (tomt = alle)"
+        default: ""
 
 permissions:
   contents: write
@@ -37,8 +50,18 @@ jobs:
         run: |
           for liga in ${{ inputs.ligaer || 'obos eliteserien' }}; do
             echo "########## $liga ##########"
-            python3 scripts/odds_drift.py "$liga" --dump "drift_$liga.json" || true
+            if [ "${{ inputs.prisrekker }}" = "true" ]; then
+              python3 scripts/odds_drift.py "$liga" --max "${{ inputs.maks || 400 }}" --serier "prisrekker_$liga.json" || true
+            else
+              python3 scripts/odds_drift.py "$liga" --dump "drift_$liga.json" || true
+            fi
           done
+
+      - name: Arkiver prisrekkene i laben (privat)
+        if: inputs.prisrekker
+        env:
+          LAB_DEPLOY_KEY: ${{ secrets.LAB_DEPLOY_KEY }}
+        run: bash scripts/arkiver_til_lab.sh prisrekker prisrekker_*.json
 
       - name: Ta vare på radene
         if: always()

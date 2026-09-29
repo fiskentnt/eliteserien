@@ -10,6 +10,9 @@
 #                 Diagnostikk: vi har aldri sett hvordan en paagaende kamp ser
 #                 ut i markupen, og arkivet gjor at vi slipper aa folge en kamp
 #                 live for aa finne det ut.
+#   prisrekker    tar filene som er gitt som argumenter (hele 1X2-prisrekken
+#                 fra odds_drift.py --serier) til odds-prisrekker/, med dato
+#                 foran navnet. Kalles bare fra odds-drift.yml.
 #
 # Idempotent: filnavnet er hentetidspunktet (fetched_at), så et snapshot som
 # alt finnes i laben hoppes over. To kall på rad gir dermed én fil.
@@ -58,6 +61,13 @@ if [ "$FASE" = "kildehtml" ]; then
   MAPPE="kilde-arkiv"
   python3 scripts/arkiver_kildehtml.py "$ARB/$MAPPE" "${LIGAER[@]}" || {
     echo "FEIL: arkivering av kilde-HTML feilet ($FASE)"; exit 1; }
+elif [ "$FASE" = "prisrekker" ]; then
+  MAPPE="odds-prisrekker"
+  mkdir -p "$ARB/$MAPPE"
+  for f in "${LIGAER[@]}"; do
+    [ -f "$f" ] || { echo "FEIL: fant ikke $f ($FASE)"; exit 1; }
+    cp "$f" "$ARB/$MAPPE/$(date -u +%Y-%m-%d)_$(basename "$f")"
+  done
 else
   MAPPE="odds-arkiv"
   python3 scripts/arkiver_odds_snapshot.py "$ARB/$MAPPE" "${LIGAER[@]}" || {
