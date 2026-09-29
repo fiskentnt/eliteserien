@@ -516,7 +516,10 @@ failsafe-tester grønne mot tabellkalkulator.no.
     `python3 scripts/dc_rho_studie.py --liga eliteserien --csv NOR.csv`
   - OBOS 2012–2025 (2800 kamper, historikken med odds): rho -0,02, og -0,04
     er like godt. Log loss 1,0134 → 0,9993, uavgjort 30,2 → 24,0 % (faktisk
-    22,6). `--liga obos --csv obos_historikk_2012-2025.csv`
+    22,6). `--liga obos` (filen ligger i `obos/data/historikk/`).
+  - Eliteserie-tallene er regnet med NOR.csv lastet ned 25.9.2026 01:39
+    (kamper til 20.9.2026, sha256 `151c7368…c67c9`, hele summen står i
+    `dc_rho_studie.py`). Filen oppdateres fortløpende hos football-data.co.uk.
   - Sluttplasseringene, parvis mot dagens modell, klustret på sesong:
     Eliteserien 2016–2025 og 2012–2025 uendret (alle forskjeller under 1,1
     SE); OBOS 2012–2025 topp 6 bedre (-0,0006 ± 0,0002, 2,6 SE), opprykk og

@@ -31,9 +31,19 @@ uavgjorte (18,7 % med ren Poisson). rho rettet uavgjortandelen, ikke
 Sluttplasseringene (gull, topp 4, nedrykk) måles i backtest_zones.py
 (--dc-rho-alt). Dagens tall på siden med hver variant: scripts/dc_rho_side.js.
 
-Bruk (CSV-ene ligger ikke i repoet):
+Data:
+  Eliteserien: NOR.csv fra football-data.co.uk (ligger ikke i repoet):
+    curl -s https://football-data.co.uk/new/NOR.csv -o NOR.csv
+  Filen oppdateres fortløpende. Tallene 29.9.2026 er regnet med den som ble
+  lastet ned 25.9.2026 01:39, med kamper til og med 20.9.2026 (3550 rader),
+  sha256 151c7368b4c5386912f6be952f4ee2fd4e5896d4ff1992228632e58fdc9c67c9.
+  Sesongene 2012–2025 i en nyere fil bør gi de samme tallene.
+  OBOS: obos/data/historikk/obos_historikk_2012-2025.csv (i repoet; satt
+  sammen, kan ikke lastes ned på nytt, se README.md der).
+
+Bruk:
   python3 scripts/dc_rho_studie.py --liga eliteserien --csv NOR.csv
-  python3 scripts/dc_rho_studie.py --liga obos --csv obos_historikk_2012-2025.csv
+  python3 scripts/dc_rho_studie.py --liga obos
 """
 import argparse
 import csv
@@ -170,11 +180,15 @@ def faktisk(hg, ag):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--liga", choices=["eliteserien", "obos"], required=True)
-    ap.add_argument("--csv", required=True, help="NOR.csv (Eliteserien) eller obos_historikk_2012-2025.csv")
+    ap.add_argument("--csv", help="NOR.csv (Eliteserien); OBOS: obos/data/historikk/obos_historikk_2012-2025.csv som standard")
     ap.add_argument("--sesonger", default="2012-2025")
     ap.add_argument("--ut", help="JSON med alle tallene")
     args = ap.parse_args()
 
+    if args.csv is None:
+        if args.liga != "obos":
+            ap.error("--csv er påkrevd for Eliteserien (NOR.csv)")
+        args.csv = str(Path(__file__).parent.parent / "obos" / "data" / "historikk" / "obos_historikk_2012-2025.csv")
     if args.liga == "eliteserien":
         kart = json.loads((Path(__file__).parent / "eliteserien_name_map.json").read_text(encoding="utf-8"))
         by = load_seasons(args.csv, "Eliteserien", kart)
