@@ -959,6 +959,9 @@
     min-height:calc(2 * 1.5 * 12.5px)}
   .nm-impact b{color:var(--ink);font-weight:700}
   .nm-impact[hidden]{display:none}
+  /* Venter på at tabellen er ferdig regnet (oppdaterNesteKampLinje): plassen
+     står, så kortet ikke hopper, men de gamle tallene vises ikke. */
+  .nm-impact.venter{visibility:hidden}
   .oddspop{position:absolute;z-index:60;width:max-content;max-width:min(280px,calc(100vw - 20px));
     padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
     color:var(--ink);box-shadow:0 6px 24px rgba(0,0,0,.18);font:400 12.5px/1.45 var(--body)}
@@ -3721,15 +3724,27 @@ async function oppdaterNesteKampLinje(m){
   if(!el) return;
   const lag = SELECTED_TEAM;
   const spiller = lag && (m.home===lag || m.away===lag);
-  if(!spiller || (m.hg!=null && m.ag!=null)){ el.hidden = true; nmImpactKey = null; return; }
+  if(!spiller || (m.hg!=null && m.ag!=null)){ el.hidden = true; el.classList.remove('venter'); nmImpactKey = null; return; }
+  // Tallene bygger på tabellen: sjansen nå (zone.pct) er utgangspunktet, og
+  // simuleringen gir bare endringen ved hvert utfall. Er tabellen for dette
+  // scenarioet ikke ferdig regnet, venter linja, som svarene i "Spør om
+  // tabellen" (qaReady). fillOdds() kaller hit igjen når den er ferdig. Før
+  // ble linja regnet med det forrige scenarioets tall som utgangspunkt, og
+  // nmImpactKey hindret en ny utregning når tabellen ble ferdig (29.9.2026,
+  // Vålerenga etter "Simuler runden": "0 %, 5 %, 13 %" i linja, "3 %, 10 %,
+  // 18 %" i svaret på "Hva betyr neste kamp?").
+  if(!qaReady()){ el.classList.add('venter'); nmImpactKey = null; return; }
   const zone = qaTargetZone(lag);
-  if(!zone || qaSettled(lag, zone)){ el.hidden = true; nmImpactKey = null; return; }
+  if(!zone || qaSettled(lag, zone)){ el.hidden = true; el.classList.remove('venter'); nmImpactKey = null; return; }
   const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
   const idx = openMatches.indexOf(openMatches.find(x=>x.id===m.id));
   if(idx<0){ el.hidden = true; return; }
   const key = `${lag}|${zone.key}|${m.id}|${scenarioKey}|${GRUNNLAG?'fil':''}`;
   if(key===nmImpactKey) return;          // alt vist for dette scenarioet
   nmImpactKey = key;
+  // Tallene som står, gjelder et annet lag, en annen kamp eller et annet
+  // scenario: skjul dem (plassen står) til de nye er regnet.
+  el.classList.add('venter');
   try{
     const data = await runMatchImpactAsync(lag, zone, [{idx, match:m, needsDraw:true}], scenarioKey,
       {P0,G0,F0,open,oddsOverride,N:2500,wantBaseline:true}, 'kort');
@@ -3746,13 +3761,14 @@ async function oppdaterNesteKampLinje(m){
     // "5 % med seier" kan bare leses som lagets egen seier.
     el.innerHTML = `${qaStor(qaSjanse(zone))} for ${lag}: `+
       `<b>${p(dW)}</b> med seier, <b>${p(dD)}</b> med uavgjort, <b>${p(dL)}</b> med tap.`;
-    el.hidden = false;
-  }catch(_){ el.hidden = true; nmImpactKey = null; }
+    el.hidden = false; el.classList.remove('venter');
+  }catch(_){ el.hidden = true; el.classList.remove('venter'); nmImpactKey = null; }
 }
 // Kortets H/U/B trekker resultatet her, i stedet for å sende klikket videre
-// til kampraden nede i lista: siden skal ikke flytte seg: resultatet vises i
-// kortet, med en lenke til runden for den som vil dit. Nytt trykk = nytt trekk,
-// akkurat som i kamplisten (samme drawQuick).
+// til kampraden nede i lista, så siden ikke flytter seg. Kampen som ble
+// trukket, står øverst i kortet ("Simulert: ..."), og kortet går videre til
+// neste kamp uten resultat (renderNextMatch). Samme trekning som i kamplisten
+// (drawQuick).
 document.getElementById('nmHub').addEventListener('click', async e=>{
   const b = e.target.closest('button'); if(!b) return;
   const m = matches.find(x=>x.id===document.getElementById('nextMatch').dataset.id);

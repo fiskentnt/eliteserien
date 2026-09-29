@@ -143,7 +143,7 @@ To sett, og begge må være grønne før noe publiseres:
   resultatkjeden, sluttoddsvinduet, at `obos/index.html` er bygget av dagens
   kilde, at xG-data aldri havner i repoet, og portene og oppsettet i
   workflowene.
-- **`tests/regression.js`** — 1034 tester i hodeløs Chrome via `puppeteer-core`.
+- **`tests/regression.js`** — 1047 tester i hodeløs Chrome via `puppeteer-core`.
   Sjekker tallene i tabellen og kortene mot simuleringen, alle svarene i «Spør
   om tabellen», deling, scenariolenker, og oppsettet på PC og mobil i lys og
   mørk modus. `--live` kjører dem mot den publiserte siden i stedet.

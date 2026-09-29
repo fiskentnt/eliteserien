@@ -378,8 +378,9 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # grunnlagsfilen, ellers 10 000 sesonger), én delingsknapp ("Del scenario",
 # delingsmenyen bare på berøringsskjerm), tabellen på telefon (Gull vises,
 # kortnavn under 760 px), "Forrige kamp" (linja og svaret med samme endring,
-# uten odds i linja) og "Simulert forrige kamp" / "Neste kamp" bare uten
-# resultat, flettet inn med git merge-file. Der
+# uten odds i linja), "Simulert forrige kamp" / "Neste kamp" bare uten
+# resultat og linja under "Neste kamp" regnet fra den ferdige tabellen
+# (qaReady), flettet inn med git merge-file. Der
 # testsiden har sin egen tekst (ELO-Odds 90), er den beholdt, med samme ordlyd om 100 000 og
 # 10 000 simuleringer.
 #
@@ -397,7 +398,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "c125e40911de56cafe7e7a63239be71ed8ddeca45b6a9f1db5f0f97349e67571"
+BASE_SHA = "02774c2f2e1674c326afc6703c6084befcb3da768e20ce67373373cfd4beeb22"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

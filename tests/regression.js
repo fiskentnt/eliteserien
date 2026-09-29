@@ -935,6 +935,100 @@ async function main() {
       await u.close();
     }
   };
+  // Linja under "Neste kamp" ("Nedrykksfaren for Vålerenga: 3 % med seier,
+  // 10 % med uavgjort, 18 % med tap.") skal ha nøyaktig tallene i svaret på
+  // "Hva betyr neste kamp?", også rett etter "Simuler runden". Før ble linja
+  // regnet før tabellen var ferdig med det nye scenarioet, med det gamle
+  // scenarioets tall som utgangspunkt, og ble ikke regnet om (29.9.2026,
+  // Vålerenga: 0/5/13 i linja, 3/10/18 i svaret). Uten scenario skal ingenting
+  // endre seg. Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare nestelinje
+  const nesteKampLinje = async () => {
+    setGroup('Neste kamp: linja og svaret fra samme ferdige tabell');
+    const linjeRe = /^(.+) for (.+): (\S+ %) med seier, (\S+ %) med uavgjort, (\S+ %) med tap\.$/;
+    // Venter til linja er regnet for tabellen slik den er nå (eller skjult
+    // fordi sonen er avgjort), og leser linja, kortet og svaret.
+    const les = async (pg, lag) => {
+      await pg.waitForFunction(t => {
+        const el = document.getElementById('nmImpact'), z = qaTargetZone(t);
+        if (z && qaSettled(t, z)) return true;
+        return !!el && !el.hidden && !el.classList.contains('venter') && el.textContent.trim().length > 10
+          && !!nmImpactKey && nmImpactKey.startsWith(`${t}|`) && nmImpactKey.split('|')[3] === qaScenarioKey();
+      }, {timeout: 60000}, lag).catch(() => {});
+      return pg.evaluate(async t => {
+        const el = document.getElementById('nmImpact'), nm = document.getElementById('nextMatch');
+        const m = matches.find(x => x.id === nm.dataset.id), z = qaTargetZone(t);
+        const v = matches.filter(x => x.hg == null && (x.home === t || x.away === t))
+          .sort((a, b) => a.date.localeCompare(b.date) || (a.time || '').localeCompare(b.time || ''))[0];
+        return {lag: t, linje: el.hidden ? null : el.textContent.trim(), svar: await qaNextMatch(t),
+          avgjort: !!(z && qaSettled(t, z)), kort: m && !nm.hidden ? `${m.home}-${m.away}` : null,
+          kortRunde: m ? m.round : null, ventet: v ? `${v.home}-${v.away}` : null};
+      }, lag);
+    };
+    // Tallene i svaret, der det har dem ("endrer lite" og "betyr lite" har
+    // ikke alle), mot tallene i linja.
+    const sammenlign = r => {
+      if (r.avgjort) return {f: r.linje ? [`sonen er avgjort, men linja vises: ${r.linje}`] : [], n: 0, avgjort: true};
+      const l = r.linje && r.linje.match(linjeRe);
+      if (!l) return {f: [`linja: "${r.linje}"`], n: 0};
+      const s = r.svar, seier = s.match(/^Seier mot .+? (?:endrer .+? lite \((\S+ %)\)|(?:øker|senker) .+? til (\S+ %) \()/) || [];
+      const svar = {seier: seier[1] || seier[2] || null, uavgjort: (s.match(/Uavgjort gir (\S+ %),/) || [])[1] || null,
+        tap: (s.match(/mens tap (?:senker|øker) den til (\S+ %)\./) || [])[1] || null};
+      const linje = {seier: l[3], uavgjort: l[4], tap: l[5]}, f = [];
+      let n = 0;
+      for (const k of ['seier', 'uavgjort', 'tap']) if (svar[k] !== null) { n++; if (svar[k] !== linje[k]) f.push(`${k}: linja ${linje[k]}, svaret ${svar[k]}`); }
+      if (l[2] !== r.lag) f.push(`linja gjelder ${l[2]}`);
+      if (!s.toLowerCase().includes(l[1].toLowerCase())) f.push(`sonen "${l[1]}" står ikke i svaret`);
+      return {f, n, linje: `${linje.seier}/${linje.uavgjort}/${linje.tap}`, svar: `${svar.seier}/${svar.uavgjort}/${svar.tap}`};
+    };
+    // Alle lagene, som valgt lag: feil, og hvor mange som hadde alle tre tall.
+    const alleLag = async pg => {
+      const lagene = await pg.evaluate(() => TEAMS.slice()), feil = [];
+      let tre = 0, sjekket = 0;
+      for (const t of lagene) {
+        await pg.select('#teamSelect', t);
+        await settle(pg);
+        const v = sammenlign(await les(pg, t));
+        if (v.f.length) feil.push(`${t}: ${v.f.join('; ')}`);
+        if (v.n === 3) tre++;
+        if (v.n > 0) sjekket++;
+      }
+      return {feil, tre, sjekket, n: lagene.length};
+    };
+    for (const [sti, lag, alle] of [['/eliteserien/', 'Vålerenga', true], ['/obos/', 'Moss', true], ['/elo-test/', 'Vålerenga', false]]) {
+      const liga = sti.slice(1, -1), url = base.replace('/eliteserien/', sti);
+      const pg = await open(1400, 1000, url + '#team=' + encodeURIComponent(lag));
+      await settle(pg);
+      // 1) Uten scenario.
+      const u = await les(pg, lag), vu = sammenlign(u);
+      check(`${liga}: uten scenario: kortet viser ${u.ventet}, og linja har svarets tall (${vu.linje || '-'})`,
+        u.kort === u.ventet && vu.f.length === 0 && vu.n >= 1, `${vu.f.join('; ')} | linja ${u.linje} | svaret ${u.svar}`);
+      if (alle) {
+        const a0 = await alleLag(pg);
+        check(`${liga}: uten scenario: linja har svarets tall for alle lagene (${a0.sjekket} sammenlignet, ${a0.tre} med alle tre tall)`,
+          a0.feil.length === 0 && a0.tre >= 3, a0.feil.slice(0, 3).join(' | '));
+        await pg.select('#teamSelect', lag);
+        await settle(pg);
+      }
+      // 2) Lagets neste runde simulert med sidens egen knapp, mens laget er
+      // valgt. Vent til tabellen er ferdig, så på linja.
+      const R = await pg.evaluate(t => matches.filter(x => x.hg == null && (x.home === t || x.away === t)).sort((a, b) => a.date.localeCompare(b.date))[0].round, lag);
+      await klikk(pg, `.round-sim[data-round="${R}"]`);
+      await pg.waitForFunction(r => matches.filter(m => m.round === r).every(m => m.hg != null), {timeout: 60000}, R);
+      await settle(pg);
+      const s = await les(pg, lag), vs = sammenlign(s);
+      check(`${liga}: runde ${R} simulert: "Neste kamp" har flyttet til ${s.ventet}`,
+        s.kort === s.ventet && s.kortRunde !== R, JSON.stringify({kort: s.kort, runde: s.kortRunde}));
+      check(`${liga}: runde ${R} simulert: seier, uavgjort og tap i linja er svarets tall (linja ${vs.linje || '-'}, svaret ${vs.svar || '-'})`,
+        vs.f.length === 0 && vs.n >= 1, `${vs.f.join('; ')} | linja ${s.linje} | svaret ${s.svar}`);
+      if (alle) {
+        const a1 = await alleLag(pg);
+        check(`${liga}: runde ${R} simulert: linja har svarets tall for alle lagene (${a1.sjekket} sammenlignet, ${a1.tre} med alle tre tall)`,
+          a1.feil.length === 0 && a1.tre >= 3, a1.feil.slice(0, 3).join(' | '));
+      }
+      await pg.close();
+    }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -947,7 +1041,8 @@ async function main() {
       else if (BARE === 'telefon') await telefonTabell();
       else if (BARE === 'forrige') await forrigeKampScenario();
       else if (BARE === 'neste') await nesteKampKort();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste)`);
+      else if (BARE === 'nestelinje') await nesteKampLinje();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje)`);
     } else {
     // ---- 1. lasting ----
     setGroup('Lasting');
@@ -1759,6 +1854,7 @@ async function main() {
     }
     await forrigeKampScenario();
     await nesteKampKort();
+    await nesteKampLinje();
     await page.bringToFront();
 
     // ---- 18. rulling til svaret på iPad-bredder ----
