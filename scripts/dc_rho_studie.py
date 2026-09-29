@@ -38,8 +38,11 @@ Data:
   lastet ned 25.9.2026 01:39, med kamper til og med 20.9.2026 (3550 rader),
   sha256 151c7368b4c5386912f6be952f4ee2fd4e5896d4ff1992228632e58fdc9c67c9.
   Sesongene 2012–2025 i en nyere fil bør gi de samme tallene.
-  OBOS: obos/data/historikk/obos_historikk_2012-2025.csv (i repoet; satt
-  sammen, kan ikke lastes ned på nytt, se README.md der).
+  OBOS: obos_historikk_2012-2025.csv i det private lab-repoet
+  (~/Documents/tabellkalkulator-lab/data/): tredjepartsdata (snittodds fra
+  oddsportal.com, kontrollert mot RSSSF), ligger ikke her fordi dette repoet
+  er offentlig. Opphav, rettelser og sha256: resultater/obos_odds_tilbakefyll.md
+  i lab.
 
 Bruk:
   python3 scripts/dc_rho_studie.py --liga eliteserien --csv NOR.csv
@@ -180,7 +183,7 @@ def faktisk(hg, ag):
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--liga", choices=["eliteserien", "obos"], required=True)
-    ap.add_argument("--csv", help="NOR.csv (Eliteserien); OBOS: obos/data/historikk/obos_historikk_2012-2025.csv som standard")
+    ap.add_argument("--csv", help="NOR.csv (Eliteserien); OBOS: lab-repoets data/obos_historikk_2012-2025.csv som standard")
     ap.add_argument("--sesonger", default="2012-2025")
     ap.add_argument("--ut", help="JSON med alle tallene")
     args = ap.parse_args()
@@ -188,7 +191,7 @@ def main():
     if args.csv is None:
         if args.liga != "obos":
             ap.error("--csv er påkrevd for Eliteserien (NOR.csv)")
-        args.csv = str(Path(__file__).parent.parent / "obos" / "data" / "historikk" / "obos_historikk_2012-2025.csv")
+        args.csv = str(Path.home() / "Documents" / "tabellkalkulator-lab" / "data" / "obos_historikk_2012-2025.csv")
     if args.liga == "eliteserien":
         kart = json.loads((Path(__file__).parent / "eliteserien_name_map.json").read_text(encoding="utf-8"))
         by = load_seasons(args.csv, "Eliteserien", kart)
