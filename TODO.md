@@ -491,12 +491,50 @@ failsafe-tester grønne mot tabellkalkulator.no.
     tester), og publisering fra en workflow i stedet for fra grenen (lønner
     seg først hvis vi vil ha delingsbilder med dagens tall).
 
-## Etter runden 9.–12. oktober 2026: Dixon-Coles-rho -0,04 (modellendring)
+## Etter runden 9.–12. oktober 2026: samlet modelloppdatering, så låst ut sesongen
 
-- **Foreløpig valgt 29.9.2026, ikke tatt i bruk:** én `DC_RHO` ≈ -0,04 overalt
+- **Besluttet 30.9.2026:** én samlet oppdatering etter runden, med samme modell
+  i begge ligaene. Deretter låses HELE modellen ut 2026-sesongen, også
+  markedsvekten (`ODDS_W` 0,7). Bare dataene oppdateres. Markedsstudien
+  (vekt etter oddsens alder, prisrekkene i lab under `odds-prisrekker/`)
+  fortsetter, men resultatene tas i bruk tidligst fra 2027.
+  1. **Dixon-Coles rho -0,04** overalt (detaljene under).
+  2. **Shin (1993) i stedet for normering** når marginen tas ut av oddsen,
+     overalt: sluttoddsen i tilpasningen og oddsen for kommende kamper.
+     Stedene som gjør om odds i dag: `oddslib.devig` og de egne i
+     `evaluate_model.py`, `fetch_odds_upcoming.py` (snitt over bookmakere),
+     `obos_upcoming_odds.py`, `elite_closing_odds.py`, `obos_build_data.py`,
+     `prekick_odds.py`, `fetch_odds_history.py`, `odds_compare.py`,
+     `odds_drift.py`, `dc_rho_studie.py`.
+  3. **Konsistent tilpasning:** `isolate_global=False` (mu og H får også
+     oddsgradienten), så tilpasningen går til optimum i stedet for å stoppe
+     etter rundt 8 steg. Alle kall med `isolate_global=True`: `fit_model.py`,
+     `obos_build_data.py`, `backtest_zones.py`, `evaluate_model.py`,
+     `dc_rho_studie.py`, `obos_odds_weight.py` (og standardverdien i
+     `fit_fast.py`).
+  4. **Prior med tyngre haler:** Student-t (nu = 4) i stedet for normal på
+     angrep, forsvar, ha og hc, med samme krumning i null som dagens l1/l2
+     16/48 (skala s^2 = (nu + 1) / (nu * l)). Ny valgmulighet i `fit_fast.py`.
+- **Tallene** (studien 29.-30.9.2026, rullerende ut av utvalg 2012-2025,
+  2800 kamper per liga, pakken mot siden i dag):
+  - Log loss per kamp: Eliteserien -0,0139 +/- 0,0027 (5,1 SE), OBOS
+    -0,0180 +/- 0,0035 (5,1 SE). Uavgjort spådd 31 -> 24 % (faktisk 24 og
+    23). Favoritten spådd 46 -> 50 % og 45 -> 49 % (faktisk 53 og 54).
+  - Sone-Brier: litt bedre overalt, innenfor støyen, bortsett fra OBOS
+    nedrykk (-0,0007 +/- 0,0003, 2,3 SE).
+  - Kontroll på 2026 (ikke brukt til å velge noe): Eliteserien -0,0195 +/-
+    0,0103 (1,9 SE, 139 kamper), OBOS -0,0212 +/- 0,0092 (2,3 SE, 154
+    kamper). Små utvalg, ligaene er ikke uavhengige replikasjoner, og
+    pakken er flere endringer samtidig: en uavhengig kontroll som støtter
+    endringen, ikke et bevis.
+  - Svakheter som står igjen og skal sies rett ut: favorittene er fortsatt
+    noe undervurdert, og markedet er fortsatt bedre enn modellen per kamp
+    (sluttoddsen 0,0153 og 0,0163 bedre i log loss, var 0,029 og 0,034).
+- **Endringsloggen** på siden: utkast i rapporten 30.9.2026. Tallene regnes
+  på nytt med den endelige koden, og teksten vises før commit.
+- **Rho-detaljene** (foreløpig valgt 29.9.2026): én `DC_RHO` ≈ -0,04 overalt
   (modellens sannsynligheter, oddstilpasningen i `fitRates()`, trekningen og
-  tabellsimuleringen), i stedet for -0,38. Tas i bruk etter runden, samtidig
-  med eller rett etter lagsidene. Endre ingenting før brukeren sier ja.
+  tabellsimuleringen), i stedet for -0,38.
 - **Hvorfor:** -0,38 ble valgt 20.9.2026 (commit 48e89a3) ved å justere
   uavgjortandelen i 1000 simulerte HELE sesonger (alle mot alle, dagens
   lagstyrker, formoppdatering med rekke-rampe) til 24 %. I de samme sesongene
