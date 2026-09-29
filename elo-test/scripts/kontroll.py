@@ -376,8 +376,10 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # grenen i qaKeyBanner, siden uten spilte kamper (sesongstart),
 # innsiktssvarene fra én kjøring for alle lag og soner (innsiktsblokken i
 # grunnlagsfilen, ellers 10 000 sesonger), én delingsknapp ("Del scenario",
-# delingsmenyen bare på berøringsskjerm) og tabellen på telefon (Gull vises,
-# kortnavn under 760 px), flettet inn med git merge-file. Der
+# delingsmenyen bare på berøringsskjerm), tabellen på telefon (Gull vises,
+# kortnavn under 760 px) og "Forrige kamp" (den siste kampen i scenarioet,
+# linja og svaret med samme endring, uten odds i linja), flettet inn med git
+# merge-file. Der
 # testsiden har sin egen tekst (ELO-Odds 90), er den beholdt, med samme ordlyd om 100 000 og
 # 10 000 simuleringer.
 #
@@ -395,7 +397,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "ff927645f40df98ab3857b95cd524e0060b10a5841845efd05a8600ea7a6da07"
+BASE_SHA = "d91cb231d901dee4b0eb767eef975247106944f1671d3e791c305729c492c547"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
@@ -1145,22 +1147,21 @@ console.log(JSON.stringify({saker, alt}));
     krev("qaLastMatchData merker det alternative resultatet (eloAlt)",
          "eloAlt:{home:m.home, away:m.away, hg, ag}" in _hv)
 
-# ---------- V: "... enn X ventet" i forrige kamp følger kilden
-# Forventningen kan være regnet fra en frosset prognose eller, som reserve, fra
-# sluttoddsen. Teksten sa alltid "modellen". Nå: "markedet" ved sluttodds.
-print("\nV   forrige kamp: \"enn markedet/modellen ventet\" følger kilden")
-_akt = "\n".join(l for l in _h.splitlines() if not l.strip().startswith("//"))
-krev("ingen fast \"enn modellen ventet\" igjen i aktiv kode", "enn modellen ventet" not in _akt,
-     f"{_akt.count('enn modellen ventet')} treff")
-# Regelen er produksjonens egen (ventetAv, bf623aa), tatt inn med patchen.
-krev("svaret og lagbokslinja bruker ventetAv (produksjonens)",
-     "enn ${ventetAv(data.preKick)} ventet" in _h and "enn ${ventetAv(preKickProbs(e.home, e.away))} ventet" in _h)
-_rv = subprocess.run(["node", "-e", _hent("ventetAv") + """
-console.log(JSON.stringify([ventetAv({kilde:'sluttoddsen'}), ventetAv({kilde:'odds og modell'}),
-                            ventetAv({kilde:'modellen'}), ventetAv(null)]));"""], capture_output=True, text=True)
-krev("ventetAv: sluttodds -> markedet, frosset prognose -> modellen",
-     _rv.returncode == 0 and json.loads(_rv.stdout) == ["markedet", "modellen", "modellen", "modellen"],
-     (_rv.stdout or _rv.stderr).strip()[:120])
+# ---------- V: forrige kamp -- kildeordet står i svaret, ikke i lagboksen
+# Sjansen for resultatet før kampen kan være en frosset prognose eller, som
+# reserve, sluttoddsen. Før sto "enn markedet/modellen ventet" både i svaret og
+# i linja i lagboksen (ventetAv, bf623aa). Fra 29.9.2026 sier linja bare
+# resultatet og endringen i lagets sjanse, og kilden står i svaret: "Sluttoddsen
+# ga ..." eller "Modellen ga ...". Produksjonens regel, tatt inn med patchen.
+print("\nV   forrige kamp: kildeordet i svaret, ingen kilde i lagboksen")
+krev("svaret sier \"Sluttoddsen ga\" ved sluttodds, ellers \"Modellen ga\" (produksjonens)",
+     "const kilde = pk && pk.kilde==='sluttoddsen' ? 'Sluttoddsen' : 'Modellen';" in _h
+     and "`${kilde} ga ${team} ${pctTxt(pRes)} sjanse ${hva}.`" in _h)
+_ml = _r2.search(r"\nfunction qaLastMatchLine\(.*?\n\}\n", _h, _r2.S)
+krev("lagbokslinja nevner ingen kilde og ingen forventning",
+     bool(_ml) and not any(o in _ml.group(0) for o in ("ventet", "markedet", "modellen", "odds", "preKickProbs")),
+     _ml.group(0)[:90] if _ml else "fant ikke qaLastMatchLine")
+krev("ingen rester av ventetAv", "ventetAv" not in _h, f"{_h.count('ventetAv')} treff")
 
 print("\nE   festede sha256")
 for rel, ventet in FESTET.items():

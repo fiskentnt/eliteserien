@@ -1419,24 +1419,24 @@ const LEAGUE = {
   //   decided  "For X er ___ som regel avgjort innen runde N" (ellers label)
   //   kampOm   "Y er også med i kampen om ___"
   zones: {
-    gull: {lo: 1, hi: 1, label: 'gull', decided: 'gullet', kampOm: 'gullet', chance: 'gullsjansen', reach: 'vinne serien',
+    gull: {lo: 1, hi: 1, label: 'gull', decided: 'gullet', kampOm: 'gullet', chance: 'gullsjansen', lagSone: 'gullsjanse', reach: 'vinne serien',
            safe: 'sikret gull', verb: 'vinner serien', strid: 'gullstriden',
            da: 'vinner {team} serien', past: 'og vant serien', pastNot: 'og vant ikke serien',
            boxLabel: 'Gull', boxRange: [0.01, 1.01]},
-    cl: {lo: 1, hi: 2, label: 'Champions League', kampOm: 'Champions League-plassene', chance: 'Champions League-sjansen',
+    cl: {lo: 1, hi: 2, label: 'Champions League', kampOm: 'Champions League-plassene', chance: 'Champions League-sjansen', lagSone: 'sjanse for Champions League',
          reach: 'nå Champions League-kvalifiseringen', safe: 'sikret Champions League-kvalifisering',
          verb: 'tar Champions League-plass', strid: 'kampen om Champions League',
          da: 'når {team} Champions League', past: 'og tok Champions League-plass',
          pastNot: 'og nådde ikke Champions League', boxLabel: 'Champions League', boxRange: [0.01, 0.99]},
-    europa: {lo: 1, hi: 4, label: 'topp 4', kampOm: 'topp 4-plassene', chance: 'topp 4-sjansen', reach: 'nå topp 4',
+    europa: {lo: 1, hi: 4, label: 'topp 4', kampOm: 'topp 4-plassene', chance: 'topp 4-sjansen', lagSone: 'sjanse for topp 4', reach: 'nå topp 4',
              safe: 'sikret topp 4', verb: 'ender i topp 4', strid: 'kampen om topp 4',
              da: 'når {team} topp 4', past: 'og endte i topp 4', pastNot: 'og nådde ikke topp 4',
              boxLabel: 'Topp 4', boxAlways: true},
-    kvalik: {lo: 14, hi: 14, boundary: 13, label: 'kvalik', kampOm: 'å unngå kvalik', chance: 'kvaliksjansen',
+    kvalik: {lo: 14, hi: 14, boundary: 13, label: 'kvalik', kampOm: 'å unngå kvalik', chance: 'kvaliksjansen', lagSone: 'kvalikfare',
              reach: 'unngå både nedrykk og kvalik', safe: 'sikret mot både nedrykk og kvalik',
              verb: 'unngår både nedrykk og kvalik', strid: 'kvalikstriden',
              da: 'unngår {team} både nedrykk og kvalik', boxLabel: 'Kvalik', boxAlways: true},
-    nedrykk: {lo: 15, hi: 16, boundary: 13, label: 'nedrykk', kampOm: 'å unngå nedrykk', chance: 'nedrykkssjansen',
+    nedrykk: {lo: 15, hi: 16, boundary: 13, label: 'nedrykk', kampOm: 'å unngå nedrykk', chance: 'nedrykkssjansen', lagSone: 'nedrykksfare',
               reach: 'unngå både nedrykk og kvalik', safe: 'sikret mot både nedrykk og kvalik',
               verb: 'unngår både nedrykk og kvalik', strid: 'nedrykksstriden',
               da: 'unngår {team} både nedrykk og kvalik', boxLabel: 'Nedrykk', boxAlways: true},
@@ -3391,7 +3391,7 @@ function fillOdds(){
   const showHist = ['europa','kvalik','nedrykk'].some(k=>zoneVal(k)>=0.05);
   // Forrige kamp: kort linje nederst i boksen, med lagets egen resultatside og
   // hva kampen betydde. Klikk åpner hele svaret i "Spør om tabellen".
-  const lm = qaLastMatchLine(lastMatchEntry(SELECTED_TEAM));
+  const lm = qaLastMatchLine(SELECTED_TEAM, lastMatchEntry(SELECTED_TEAM));
   // "Ditt scenario": når ALLE lagets gjenstående kamper er fylt inn selv,
   // ligger sluttsummen fast, og da er den verdt å si. Vises ikke når
   // resultatene kommer fra "Simuler runden"/"Simuler tomme kamper" (m.sim):
@@ -3421,6 +3421,7 @@ function fillOdds(){
     : '')
     + scenarioSum
     + (lm ? `<button class="lastmatch" title="Se hva kampen betydde">${lm.html}</button>` : '');
+  forrigeLinjeOppdater();
 }
 // Antall simulerte sesonger for Europa/Ned/lagboksen. 10 000 gir Monte Carlo-støy på
 // rundt 1 prosentpoeng (95 %-margin ved 50 %); målt ca. 0,4 s på en PC i Workeren
@@ -4584,17 +4585,29 @@ async function qaCheerFor(team, onPartial){
   return textFor(rows);
 }
 
-// ---- Hva betydde forrige kamp for laget? Tar lagets siste FAKTISK spilte
-// kamp (fra MATCHES, kampdataene -- ikke et resultat brukeren selv har fylt
-// inn), bytter resultatet med de to andre utfallene og simulerer resten av
-// sesongen fra dagens situasjon. Alt brukeren har fylt inn i senere kamper
-// står fortsatt fast: utgangsstillingen bygges av buildQaOpen (som låser alle
+// ---- Hva betydde forrige kamp for laget? Tar lagets siste kamp med
+// resultat (sisteKampFor): den siste faktisk spilte, eller en seinere kamp
+// brukeren har fylt inn eller simulert. Tabellen viser scenarioet, og svaret
+// skal handle om den kampen som ligger sist i det. Resultatet byttes med de
+// to andre utfallene, og resten av sesongen simuleres fra situasjonen i
+// scenarioet: utgangsstillingen bygges av buildQaOpen (som låser alle
 // utfylte resultater), og bare denne ene kampens bidrag byttes ut.
 //   Lagstyrkene (LIVE) holdes som i dag og tilpasses IKKE på nytt for det
 // alternative resultatet -- svaret sier det, så tallet leses som et anslag.
 // Samme workerbasseng og frø som de andre spørsmålene, og bare tre kjøringer,
 // så antallet simuleringer kan være høyere enn i "heie på".
 const QA_LAST_N = 6000;
+// Lagets siste kamp med resultat, også i scenarioet: en kamp brukeren har
+// fylt inn eller simulert (matches) teller når den er seinere enn den siste
+// faktisk spilte. Uten scenario er det den siste spilte (lastPlayedFor).
+function sisteKampFor(team){
+  let best = lastPlayedFor(team);
+  matches.forEach(m=>{
+    if(m.hg==null || m.ag==null || (m.home!==team && m.away!==team)) return;
+    if(!best || m.date>best.date) best = m;
+  });
+  return best;
+}
 // Lagets siste faktisk spilte kamp.
 function lastPlayedFor(team){
   let best = null;
@@ -4615,11 +4628,14 @@ const QA_OUT_LABEL = {win:'seier', draw:'uavgjort', loss:'tap'};
 // Tallene bak svaret. Delt ut av qaLastMatch() fordi BÅDE svaret og den korte
 // linja i lagboksen (qaLastMatchLine) skal bygges av samme ordlyd -- og fordi
 // scripts/snapshot_probs.js kaller denne for alle 16 lag og lagrer resultatet
-// i data/lastmatch.json, slik at linja vises med en gang.
-async function qaLastMatchData(team){
+// i data/lastmatch.json, slik at linja vises med en gang. gruppe: poolens
+// forkastingsgruppe ("forrige-linje" når linja i lagboksen regnes på siden,
+// se forrigeLinjeOppdater, så den og svaret aldri forkaster hverandres
+// oppgaver; samme frø, samme tall).
+async function qaLastMatchData(team, gruppe='forrige'){
   const zone = qaTargetZone(team);
   if(!zone) return null;
-  const m = lastPlayedFor(team);
+  const m = sisteKampFor(team);
   if(!m) return {noMatch:true};
   const isHome = m.home===team, opp = isHome ? m.away : m.home;
   const gf = isHome ? m.hg : m.ag, ga = isHome ? m.ag : m.hg;
@@ -4642,7 +4658,7 @@ async function qaLastMatchData(team){
     att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
     N:QA_LAST_N, ti:TI[team], zone, seed:hashStr(scenarioKey+'|impact')
-  }, tasks, null, 'forrige');
+  }, tasks, null, gruppe);
   // Tabellens tall er "det som faktisk skjedde"; alternativene legges oppå som
   // endring fra den samme kjøringen (samme frø), som i spørsmål 3 og 5.
   const tableP = zone.pct;
@@ -4682,16 +4698,18 @@ async function qaLastMatch(team){
   const data = await qaLastMatchData(team);
   if(!data) return 'Ingen data å regne på ennå.';
   if(data.noMatch) return `${team} har ingen spilte kamper ennå.`;
-  const {m, opp, actual, zone, tableP, shown, pp} = data;
+  const {m, opp, gf, ga, actual, zone, tableP, shown} = data;
   // "topp 6-sjansen", men "nedrykksfaren": ingen ønsker seg nedrykk.
   const navn = qaSjanse(zone);
   const clamp = v => Math.min(1, Math.max(0, v));
-  const head = actual==='win' ? `Seieren mot ${opp}` : actual==='loss' ? `Tapet mot ${opp}` : `Poengdelingen mot ${opp}`;
+  // Kampen nevnes med resultatet, og "i scenarioet" når den er fylt inn eller
+  // simulert, så det er klart hvilken kamp svaret gjelder.
+  const head = `${QA_FORRIGE_ORD[actual]} ${gf}-${ga} mot ${opp}${matches.includes(m) ? ' i scenarioet' : ''}`;
   const headLiten = head.charAt(0).toLowerCase()+head.slice(1);
   const anslag = ` Lagstyrkene holdes som i dag, så tallene er anslag.`;
   const others = ['win','draw','loss'].filter(o=>o!==actual);
   // Hvor sannsynlig selve resultatet var før avspark (prekick.json eller
-  // sluttoddsen). Kommer etter konklusjonen, som forklaring.
+  // sluttoddsen). Står i avsnittet etter endringen, som forklaring.
   // Si hva tallet er: "Modellen ga Kongsvinger 72 % sjanse til å vinne kampen."
   // Kommer tallet fra sluttoddsen (ingen lagret modellverdi), sies det.
   const pk = data.preKick;
@@ -4701,69 +4719,63 @@ async function qaLastMatch(team){
   // Ingen "bare" foran tallet: siden oppgir sannsynligheten, den vurderer den ikke.
   const overrask = pRes==null ? '' : `${kilde} ga ${team} ${pctTxt(pRes)} sjanse ${hva}.`;
   // Alternativene, i rekkefølgen seier, uavgjort, tap (det faktiske er utelatt).
+  // Under to prosentpoeng fra dagens tall er støy og vises ikke.
   const order = others.filter(o=>shown.some(x=>x.o===o));
   const val = o => pctTxt(clamp(tableP + shown.find(x=>x.o===o).d));
   const alt = !order.length ? ''
     : `Med ${QA_OUT_LABEL[order[0]]} ville ${navn} vært ${val(order[0])}`+
       (order.length>1 ? `, med ${QA_OUT_LABEL[order[1]]} ${val(order[1])}.` : '.');
-  if(!shown.length){
-    const ord = others.map(o=>QA_OUT_LABEL[o]);
-    return [`Resultatet betydde lite for ${navn}: verken ${ord[0]} eller ${ord[1]} ville endret den mer enn to prosentpoeng fra dagens ${pctTxt(tableP)}.`,
-            overrask, anslag.trim()].filter(Boolean).join('\n\n');
-  }
+  // Samme sone og samme endring som linja i lagboksen: forventningen
+  // workflowen lagret når den gjelder (lagretForrige), ellers den som er
+  // regnet her.
+  const lagret = lagretForrige(team, m, zone.key);
+  const e = forrigeEndring(zone, lagret ? lagret.expected : data.expected);
+  const hvem = lagSone(team, zone.key);
   // Uten sannsynligheter fra før kampen finnes ingen forventning å måle mot.
   // Da sies det, i stedet for å måle mot seier og overdrive tallet.
-  if(pp==null){
-    return [`Etter ${headLiten} er ${navn} ${pctTxt(tableP)}. ${alt}`.trim()+
-            ` Vi vet ikke hva som var ventet før kampen, så vi kan ikke si hvor mye resultatet flyttet sjansen.`,
-            anslag.trim()].filter(Boolean).join('\n\n');
+  if(!e){
+    return [`Etter ${headLiten} er ${hvem} nå ${pctTxt(tableP)}. Vi vet ikke hva den var før kampen, så vi kan ikke si hvor mye resultatet endret den.`,
+            alt, anslag.trim()].filter(Boolean).join('\n\n');
   }
-  // Konklusjon først: "Seieren løftet topp 6-sjansen 10 prosentpoeng mer enn
-  // ventet. Før kampen var den ventet å bli 63 %, nå er den 73 %."
-  // "Seieren mot Hødd løftet opprykkssjansen til 58 %. Før kampen tilsa de tre
-  // utfallene en forventet sjanse på 52 % etterpå, så seieren ga rundt 6
-  // prosentpoeng mer enn ventet." Forventningen er sjansen ETTER kampen, vektet
-  // med hvor sannsynlig hvert utfall var -- ikke sjansen før kampen.
-  const n = Math.abs(pp);
-  const front = zone.dir==='front';
-  const verb = front ? (pp>=0 ? 'løftet' : 'senket') : (pp>=0 ? 'økte' : 'reduserte');
-  const substantiv = front ? 'sjanse' : 'fare';
-  const resultat = actual==='win' ? 'seieren' : actual==='loss' ? 'tapet' : 'poengdelingen';
-  const first = `${head} ${verb} ${navn} til ${pctTxt(tableP)}.`;
-  // "Forventet", ikke "mest sannsynlige nivå": tallet er snittet av de tre
-  // utfallene vektet med sannsynlighet, og det nivået var ikke sannsynlig i
-  // seg selv. Samme form for fremre og bakre soner -- "høyere"/"lavere" sier
-  // hvilken vei selve sjansen gikk, ikke om det var bra for laget.
-  // "bedre"/"verre", ikke "høyere"/"lavere": ordet sier hva tallet betyr FOR
-  // LAGET, så leseren slipper å snu retningen selv for nedrykk. En seier som
-  // senker nedrykksfaren mer enn ventet er "bedre enn ventet", selv om tallet
-  // gikk ned.
-  const bra = zone.dir==='front' ? pp>0 : pp<0;
-  const tall = n===0
-    ? ` Det var omtrent det de tre utfallene tilsa før kampen.`
-    : ` Før kampen var ${pctTxt(data.expected)} ventet når alle mulige utfall ble tatt med. `+
-      `${qaStor(resultat)} var dermed ${n} prosentpoeng ${bra?'bedre':'verre'} enn ${ventetAv(data.preKick)} ventet.`;
-  // Tre avsnitt: hva som skjedde, hva som var ventet av markedet og hva de
-  // andre utfallene ville gitt, og forbeholdet. .qa-answer har pre-line.
+  // Endringen først, med tallet før kampen: "Seieren 2-1 mot Bodø/Glimt økte
+  // Branns sjanse for topp 4 med 6 prosentpoeng, til 10 %. Før kampen var den
+  // 4 %." Under to prosentpoeng: "endret lite på" -- tallet sier hvor mye
+  // resultatet flyttet sjansen, ikke hvor viktig kampen var (en favoritt som
+  // vinner som ventet, flytter lite). Odds og hva de andre utfallene ville
+  // gitt står i avsnittet etter. .qa-answer har pre-line.
+  const first = e.lite
+    ? `${head} endret lite på ${hvem}. `+(e.n===0
+        ? `Den er ${pctTxt(e.naa)}, det samme som før kampen.`
+        : `Den er ${pctTxt(e.naa)}, og før kampen var den ${pctTxt(e.foer)}.`)
+    : `${head} ${e.verb} ${hvem} med ${Math.abs(e.n)} prosentpoeng, til ${pctTxt(e.naa)}. Før kampen var den ${pctTxt(e.foer)}.`;
   const midt = [overrask, alt].filter(Boolean).join(' ');
-  return [`${first}${tall}`, midt, anslag.trim()].filter(Boolean).join('\n\n');
+  return [first, midt, anslag.trim()].filter(Boolean).join('\n\n');
 }
-// Den korte linja i lagboksen, bygget av det workflowen har lagret
-// (data/lastmatch.json). Betydde kampen under to prosentpoeng, står bare
-// resultatet. Fortegnet er endringen i selve sjansen, og fargen sier om det
-// var bra eller dårlig for laget -- ikke om tallet er pluss eller minus.
+// "Seieren", "Uavgjort", "Tapet": ordet boksen og svaret starter med.
+const QA_FORRIGE_ORD = {win:'Seieren', draw:'Uavgjort', loss:'Tapet'};
+// Det laget vil oppnå eller unngå, sett fra laget: "Branns sjanse for topp
+// 4", "KFUM Oslos nedrykksfare". "Sjanse" for det laget vil oppnå, "fare" for
+// det laget vil unngå (lagSone i LEAGUE.zones). Navn som slutter på s, x eller
+// z får apostrof: "Raufoss' nedrykksfare".
+const eieform = navn => /[sxz]$/i.test(navn) ? `${navn}'` : `${navn}s`;
+const lagSone = (team, key) => `${eieform(team)} ${LEAGUE.zones[key].lagSone}`;
+// Endringen boksen og svaret sier: sonens tall nå (det kortet over viser) minus
+// det den var før kampen. "Før kampen" er forventningen: sjansen etter hvert
+// mulig utfall, vektet med hvor sannsynlig utfallet var før avspark. Regnet av
+// de to tallene slik de vises (vistPp), så "økte med 6 prosentpoeng, til 10 %.
+// Før kampen var den 4 %" alltid går opp, og boksen aldri kan motsi kortet.
+// "økte"/"senket" følger fortegnet, ikke om kampen ble vunnet: uavgjort kan gå
+// begge veier. Under to prosentpoeng er "endret lite" (lite).
+function forrigeEndring(zone, expected){
+  if(!zone || expected==null) return null;
+  const n = vistPp(expected, zone.pct);
+  return {n, naa:zone.pct, foer:expected, lite:Math.abs(n)<2, verb:n>0 ? 'økte' : 'senket',
+    bra: zone.dir==='front' ? n>0 : n<0};
+}
 // Hva som var ventet FØR kampen, som {H,U,B} og hvor tallet kommer fra.
 // Rekkefølge: det siden selv viste før avspark (prekick.json, lagret mens
 // kampen var uspilt), ellers sluttoddsen med margin fjernet. Aldri regnet på
 // nytt nå: dagens lagstyrker har sett resultatet.
-// "... bedre enn X ventet" i "Hva betydde forrige kamp?" og i linja i
-// lagboksen: X følger kilden forventningen er regnet fra. En frosset prognose
-// fra før avspark (kilde "odds og modell" eller "modellen") er modellens; er
-// den regnet fra sluttoddsen (reserven over), er det markedet som ventet det.
-// Før sto det alltid "modellen", også om et rent markedstall.
-function ventetAv(pk){
-  return pk && pk.kilde === 'sluttoddsen' ? 'markedet' : 'modellen';
-}
 function preKickProbs(home, away){
   const k = `${LEAGUE.season}|${home}|${away}`;
   const p = PREKICK && PREKICK[k];
@@ -4772,75 +4784,85 @@ function preKickProbs(home, away){
   if(c) return {H:c.H, U:c.U, B:c.B, kilde:'sluttoddsen'};
   return null;
 }
-// "ventet i 62 % av tilfellene" eller "med bare 18 % sjanse": hvor overraskende
-// resultatet var, sett med øynene man hadde før avspark.
-function qaSurpriseTxt(e){
-  if(!e || !e.home || !e.away || e.hg==null) return null;
-  const p = preKickProbs(e.home, e.away);
-  if(!p) return null;
-  const utfall = e.hg>e.ag ? 'H' : (e.hg===e.ag ? 'U' : 'B');
-  const v = p[utfall];
-  if(v==null) return null;
-  const pct = v<0.005 ? '<1' : (v>0.995 ? '>99' : Math.round(v*100));
-  // Sett fra laget linja handler om, ikke fra hjemmelaget: "tap med bare 12 %
-  // sjanse" er det leseren kjenner igjen, ikke "borteseier".
-  const ord = e.gf==null || e.ga==null
-    ? {H:'hjemmeseier', U:'uavgjort', B:'borteseier'}[utfall]
-    : (e.gf>e.ga ? 'seier' : (e.gf===e.ga ? 'uavgjort' : 'tap'));
-  return v < 0.25
-    ? `${ord} med ${pct} % sjanse`
-    : `${ord} var ventet i ${pct} % av tilfellene`;
-}
-// "(74 % sjanse for seier)": hvor sannsynlig DET utfallet var før kampen,
-// sett fra laget linja handler om. Kortere enn qaSurpriseTxt, som fortsatt
-// brukes når vi ikke har en forventning å måle mot.
-function qaSjanseKort(e){
-  const p = preKickProbs(e.home, e.away);
-  if(!p) return '';
-  const utfall = e.hg>e.ag ? 'H' : (e.hg===e.ag ? 'U' : 'B');
-  const v = p[utfall];
-  if(v==null) return '';
-  const pct = v<0.005 ? '<1' : (v>0.995 ? '>99' : Math.round(v*100));
-  const ord = e.gf==null || e.ga==null
-    ? {H:'hjemmeseier', U:'uavgjort', B:'borteseier'}[utfall]
-    : (e.gf>e.ga ? 'seier' : (e.gf===e.ga ? 'uavgjort' : 'tap'));
-  return ` (${pct} % sjanse for ${ord})`;
-}
-function qaLastMatchLine(e){
+// Linja nederst i lagboksen: resultatet og hva det gjorde med lagets sjanse,
+// i samme sone og med samme endring som svaret (forrigeEndring). Ingen odds,
+// marked eller forventning her; det står i svaret. Fargen på tallet sier om
+// det var bra eller dårlig for laget.
+function qaLastMatchLine(team, e){
   if(!e) return null;
-  const res = `${e.gf}-${e.ga} mot ${e.opp}`;
-  const s = qaSurpriseTxt(e);
-  const hale = s ? ` <span class="muted">(${s})</span>` : '';
-  // pp er endringen MOT FORVENTNINGEN. Uten tall fra før kampen finnes ingen
-  // forventning, og da står bare resultatet -- aldri en sammenligning mot
-  // seier. basis-feltet skiller nye lastmatch.json-rader fra gamle, der pp
-  // betydde noe annet.
-  // basis må stå eksplisitt: en rad uten feltet er skrevet av en eldre
-  // workflow, der pp ble målt mot det beste alternative utfallet. Den skal
-  // ikke vises som om den var målt mot forventningen.
-  if(e.pp==null || e.pp===0 || e.basis!=='forventning') return {html:`Forrige kamp: ${res}${hale}`};
-  // Tallet differansen gjelder skal stå: "Gullsjansen ble 21 %, 3
-  // prosentpoeng bedre enn modellen ventet". Nivået regnes av de samme to
-  // lagrede tallene som differansen, altså round(expected)+pp, så de tre
-  // tallene i setningen alltid stemmer med hverandre -- et ferskt tall fra
-  // simuleringen kunne gitt 22 − 18 = 4 mot en lagret differanse på 3.
-  const naa = Math.max(0, Math.min(100, Math.round((e.expected||0)*100) + e.pp));
-  return {html:`Forrige kamp: ${QA_OUT_LABEL[e.actual]} ${res}. ${qaStor(e.chance)} ble ${naa} %, `+
-    `<b class="${e.good?'good':'bad'}">${Math.abs(e.pp)}</b> prosentpoeng `+
-    `${e.good?'bedre':'verre'} enn ${ventetAv(preKickProbs(e.home, e.away))} ventet${qaSjanseKort(e)}.`};
+  const res = `Forrige kamp${e.iScen ? ' i scenarioet' : ''}: ${e.gf}-${e.ga} mot ${e.opp}.`;
+  const r = e.zone ? forrigeEndring(qaZoneByKey(team, e.zone), e.expected) : null;
+  if(!r) return {html:res};
+  const hvem = lagSone(team, e.zone);
+  if(r.lite) return {html:`${res} Resultatet endret lite på ${hvem}.`};
+  return {html:`${res} ${QA_FORRIGE_ORD[e.actual]} ${r.verb} ${hvem} med `+
+    `<b class="${r.bra?'good':'bad'}">${Math.abs(r.n)}</b> prosentpoeng.`};
 }
-// Lagets forrige kamp til linja: bruker det workflowen har regnet ut for den
-// VIRKELIGE situasjonen. Er den lagret kampen ikke lagets siste faktisk spilte
-// lenger (workflowen har ikke rukket å oppdatere), vises bare resultatet --
-// aldri et prosentpoengtall som hører til en annen kamp.
-function lastMatchEntry(team){
-  const m = lastPlayedFor(team);
-  if(!m) return null;
+// Forventningen workflowen lagret (data/lastmatch.json), når den gjelder samme
+// kamp og samme sone som kortet viser nå, og ingen scenario er fylt inn. Både
+// linja og svaret bruker den da, så de sier samme tall selv om odds eller
+// kampdata har endret seg litt siden filen ble regnet.
+function lagretForrige(team, m, zoneKey){
+  if(!m || qaScenarioKey()) return null;
   const e = LASTMATCH && LASTMATCH.teams && LASTMATCH.teams[team];
-  if(e && e.date===m.date && e.home===m.home && e.away===m.away && e.hg===m.hg && e.ag===m.ag) return e;
+  return e && e.date===m.date && e.home===m.home && e.away===m.away && e.hg===m.hg && e.ag===m.ag
+    && e.zone===zoneKey && e.basis==='forventning' && e.expected!=null ? e : null;
+}
+// Lagets forrige kamp til linja. Uten scenario brukes det workflowen har
+// regnet ut (lagretForrige). Med et scenario, eller når filen ikke gjelder
+// (ny kamp spilt, eller en annen sone enn kortet viser), regnes linja av samme
+// utregning som svaret (forrigeLinjeOppdater), og til den er ferdig står bare
+// resultatet -- aldri et tall som hører til en annen kamp eller sone.
+function lastMatchEntry(team){
+  const m = sisteKampFor(team);
+  if(!m) return null;
+  const z = qaTargetZone(team);
+  const lagret = z && lagretForrige(team, m, z.key);
+  if(lagret) return lagret;
+  if(z && forrigeLinje && forrigeLinje.key===forrigeLinjeKey(team, qaScenarioKey(), z.key)) return forrigeLinje.e;
   const isHome = m.home===team;
-  return {gf:isHome?m.hg:m.ag, ga:isHome?m.ag:m.hg, opp:isHome?m.away:m.home, pp:null,
-          home:m.home, away:m.away, hg:m.hg, ag:m.ag};
+  return {gf:isHome?m.hg:m.ag, ga:isHome?m.ag:m.hg, opp:isHome?m.away:m.home,
+          home:m.home, away:m.away, hg:m.hg, ag:m.ag, iScen:matches.includes(m)};
+}
+// Raden linja bygges av (de samme feltene som i data/lastmatch.json), fra
+// tallene bak svaret. scripts/snapshot_probs.js lagrer den samme raden for
+// hvert lag, så feltene finnes ett sted.
+function forrigeKampRad(d){
+  return {
+    date: d.m.date, home: d.m.home, away: d.m.away, hg: d.m.hg, ag: d.m.ag,
+    opp: d.opp, gf: d.gf, ga: d.ga, actual: d.actual,
+    zone: d.zone.key, chance: QA_CHANCE[d.zone.key],
+    // pp er endringen mot FORVENTNINGEN før kampen. basis-feltet gjør at
+    // siden kan se forskjell på nye rader og gamle, der pp ble målt mot det
+    // beste alternative utfallet.
+    pp: d.pp, good: d.good, basis: 'forventning',
+    expected: d.expected==null ? null : +d.expected.toFixed(4)
+  };
+}
+// Linja regnet på siden: for laget, scenarioet og sonen når tabellen er
+// ferdig, og vist til noe endres. Nøkkelen tar med om tallene fra før avspark
+// er lastet (preKickProbs), ellers kunne en linje regnet uten forventning
+// blitt stående.
+let forrigeLinje = null, forrigeLinjeVenter = null;
+const forrigeLinjeKey = (team, scen, zoneKey) => `${team}|${scen}|${zoneKey}|${PREKICK||CLOSING ? 'p' : ''}`;
+function forrigeLinjeOppdater(){
+  const team = SELECTED_TEAM, scen = qaScenarioKey();
+  // Sonen og sjansen i linja skal være kortets: vent på den ferdige
+  // simuleringen av akkurat dette scenarioet.
+  if(!team || !lastMCFinal || lastMCScenarioKey!==scen) return;
+  const m = sisteKampFor(team), z = qaTargetZone(team);
+  if(!m || !z || lagretForrige(team, m, z.key)) return;   // den lagrede gjelder
+  const key = forrigeLinjeKey(team, scen, z.key);
+  if((forrigeLinje && forrigeLinje.key===key) || forrigeLinjeVenter===key) return;
+  forrigeLinjeVenter = key;
+  qaLastMatchData(team, 'forrige-linje').then(d=>{
+    if(forrigeLinjeVenter!==key) return;       // et annet lag eller scenario regnes nå
+    forrigeLinjeVenter = null;
+    if(!d || d.noMatch) return;
+    forrigeLinje = {key:forrigeLinjeKey(team, scen, d.zone.key), e:{...forrigeKampRad(d), iScen:matches.includes(d.m)}};
+    const el = document.querySelector('#odds .lastmatch'), l = qaLastMatchLine(team, forrigeLinje.e);
+    if(el && l && SELECTED_TEAM===team && qaScenarioKey()===scen) el.innerHTML = l.html;
+  }).catch(()=>{ if(forrigeLinjeVenter===key) forrigeLinjeVenter = null; });
 }
 
 // ---- Eksempelet i "Hvordan vet vi at modellen virker?": den kommende kampen

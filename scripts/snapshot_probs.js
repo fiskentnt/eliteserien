@@ -213,16 +213,9 @@ function chromePath() {
       for (const t of TEAMS) {
         const d = await qaLastMatchData(t);
         if (!d || d.noMatch) continue;
-        out[t] = {
-          date: d.m.date, home: d.m.home, away: d.m.away, hg: d.m.hg, ag: d.m.ag,
-          opp: d.opp, gf: d.gf, ga: d.ga, actual: d.actual,
-          zone: d.zone.key, chance: QA_CHANCE[d.zone.key],
-          // pp er endringen mot FORVENTNINGEN før kampen. basis-feltet gjør at
-          // siden kan se forskjell på nye rader og gamle, der pp ble målt mot
-          // det beste alternative utfallet.
-          pp: d.pp, good: d.good, basis: 'forventning',
-          expected: d.expected==null ? null : +d.expected.toFixed(4)
-        };
+        // Feltene bygges av siden (forrigeKampRad), som bruker den samme raden
+        // til linja i lagboksen når et scenario er fylt inn.
+        out[t] = forrigeKampRad(d);
       }
       return out;
     });

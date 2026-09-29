@@ -618,6 +618,161 @@ async function main() {
       await pg.close();
     }
   };
+  // "Forrige kamp" i lagboksen og svaret på "Hva betydde forrige kamp?" (29.9.2026).
+  // Boksen sier bare resultatet og hva det gjorde med lagets sjanse: "Forrige
+  // kamp: 2-1 mot Bodø/Glimt. Seieren økte Branns sjanse for topp 4 med 6
+  // prosentpoeng." Under 2 prosentpoeng: "Resultatet endret lite på ...". Er
+  // kampen fylt inn eller simulert: "Forrige kamp i scenarioet: ...". Svaret
+  // starter med samme kamp, sone og endring, med tallet nå og før kampen.
+  // Sonen er en av dem kortet over viser, tallet nå er kortets, og "økte" /
+  // "senket" følger fortegnet, ikke resultatet: uavgjort skal kunne gå begge
+  // veier. Meldt samme dag: med runde 23 simulert og Vålerenga 4-0 borte mot
+  // KFUM viste boksen og svaret fortsatt Fredrikstad-kampen og 6 %, mens
+  // tabellen viste 1 %. Alle tre sidene. Kjøres med resten av suiten, eller
+  // alene:
+  //   node tests/regression.js --bare forrige
+  const forrigeKampScenario = async () => {
+    setGroup('Forrige kamp: boksen, svaret og kortet');
+    const tall = x => x === '<1' ? 0 : x === '>99' ? 100 : +x;
+    const PC = '(<1|>99|\\d+)';
+    const boksRe = /^Forrige kamp( i scenarioet)?: (\d+-\d+) mot ([^.]+)\.(?: (Seieren|Uavgjort|Tapet) (økte|senket) (.+) med (\d+) prosentpoeng\.| Resultatet endret lite på (.+)\.)?$/;
+    const svarRe = new RegExp(`^(Seieren|Uavgjort|Tapet) (\\d+-\\d+) mot (.+?)( i scenarioet)? (?:(økte|senket) (.+) med (\\d+) prosentpoeng, til ${PC} %\\. Før kampen var den ${PC} %\\.|endret lite på (.+)\\. Den er ${PC} %(?:, det samme som før kampen|, og før kampen var den ${PC} %)\\.)$`);
+    // Leser boksen, første avsnitt i svaret og kortets tall for sonen.
+    const les = (pg, lag) => pg.evaluate(async t => {
+      const el = document.querySelector('#odds .lastmatch'), z = qaTargetZone(t);
+      const knapp = z && document.querySelector(`#odds .odds-jump[data-zone="${z.key}"] strong`);
+      return {boks: el ? el.textContent.trim() : '', svar: (await qaLastMatch(t)).split('\n\n')[0],
+        kort: knapp ? knapp.textContent.trim() : null, flat: !!document.querySelector('#odds .odds-row.flat'),
+        frase: z && typeof lagSone === 'function' ? lagSone(t, z.key) : null};
+    }, lag);
+    // Feilene for ett lag (tom liste = alt stemmer), og hva boksen sa.
+    const vurder = (r, iScen) => {
+      const b = r.boks.match(boksRe), s = r.svar.match(svarRe), f = [];
+      if (!b) return {f: [`boksen: "${r.boks}"`]};
+      if (!s) return {f: [`svaret: "${r.svar}"`]};
+      if (!!b[1] !== iScen || !!s[4] !== iScen) f.push(`"i scenarioet" skulle ${iScen ? '' : 'ikke '}stått`);
+      if (b[2] !== s[2] || b[3] !== s[3]) f.push(`ulik kamp: ${b[2]} mot ${b[3]} / ${s[2]} mot ${s[3]}`);
+      const naa = s[5] ? s[8] : s[11], foer = s[5] ? s[9] : (s[12] || s[11]);
+      const n = tall(naa) - tall(foer);
+      if (!r.flat && r.kort !== `${naa} %`) f.push(`kortet viser ${r.kort}, svaret ${naa} %`);
+      if (b[5]) {
+        const N = +b[7] * (b[5] === 'økte' ? 1 : -1);
+        if (!s[5]) f.push('boksen har en endring, svaret "endret lite"');
+        else if (b[4] !== s[1] || b[5] !== s[5] || b[6] !== s[6] || b[7] !== s[7]) f.push(`ulik endring: ${b[4]} ${b[5]} ${b[6]} ${b[7]} / ${s[1]} ${s[5]} ${s[6]} ${s[7]}`);
+        if (N !== n) f.push(`${b[5]} ${b[7]}, men ${naa} % nå og ${foer} % før`);
+        if (Math.abs(N) < 2) f.push(`endring ${N} under 2, skulle vært "endret lite"`);
+        if (b[6] !== r.frase) f.push(`sonen "${b[6]}", kortet og svaret bruker "${r.frase}"`);
+        if (!r.flat && (tall(naa) - N < 0 || tall(naa) - N > 100)) f.push(`motsier kortet: ${b[5]} ${b[7]} og ${r.kort}`);
+      } else if (b[8]) {
+        if (s[5]) f.push('boksen "endret lite", svaret har en endring');
+        if (Math.abs(n) >= 2) f.push(`"endret lite", men ${naa} % nå og ${foer} % før`);
+        if (b[8] !== r.frase || s[10] !== r.frase) f.push(`sonen "${b[8]}"/"${s[10]}", kortet "${r.frase}"`);
+      } else f.push('boksen har bare resultatet, svaret har tall');
+      return {f, ord: b[4], verb: b[5], n};
+    };
+    const velg = async (pg, lag) => {
+      await pg.select('#teamSelect', lag);
+      await settle(pg);
+      await pg.waitForFunction(() => { const el = document.querySelector('#odds .lastmatch');
+        return !!el && /prosentpoeng\.$|endret lite på .+\.$/.test(el.textContent.trim()); }, {timeout: 30000}).catch(() => {});
+    };
+    // Alle lagene, som valgt lag i boksen.
+    const alleLag = async (pg, iScen) => {
+      const lagene = await pg.evaluate(() => TEAMS.slice()), feil = [], uavgjort = {økte: [], senket: []};
+      for (const t of lagene) {
+        await velg(pg, t);
+        const v = vurder(await les(pg, t), iScen);
+        if (v.f.length) feil.push(`${t}: ${v.f.join('; ')}`);
+        if (v.ord === 'Uavgjort') uavgjort[v.verb].push(`${t} ${v.n > 0 ? '+' : ''}${v.n}`);
+      }
+      return {feil, uavgjort, n: lagene.length};
+    };
+    for (const [sti, lag, alle] of [['/eliteserien/', 'Vålerenga', true], ['/obos/', 'Moss', true], ['/elo-test/', 'Vålerenga', false]]) {
+      const liga = sti.slice(1, -1);
+      const pg = await open(1400, 900, base.replace('/eliteserien/', sti));
+      // 1) Uten scenario: lagets siste spilte kamp.
+      await velg(pg, lag);
+      const k = await pg.evaluate(t => {
+        const f = lastPlayedFor(t);
+        const m = matches.filter(x => x.hg == null && (x.home === t || x.away === t)).sort((a, b) => a.date.localeCompare(b.date))[0];
+        return {forrige: f.home === t ? f.away : f.home, opp: m.home === t ? m.away : m.home, runde: m.round};
+      }, lag);
+      const u = await les(pg, lag), vu = vurder(u, false);
+      check(`${liga}: uten scenario handler boksen og svaret om ${k.forrige}, med samme sone og endring som kortet`,
+        vu.f.length === 0 && u.boks.includes(`mot ${k.forrige}.`), `${u.boks} | ${u.svar} | kortet ${u.kort} | ${vu.f.join('; ')}`);
+      // 2) Runden simulert, laget vinner 4-0.
+      await pg.evaluate(t => {
+        const m = matches.filter(x => x.hg == null && (x.home === t || x.away === t)).sort((a, b) => a.date.localeCompare(b.date))[0];
+        const hjemme = m.home === t;
+        matches.filter(x => x.round === m.round && x.hg == null).forEach(x =>
+          x === m ? setMatch(x, hjemme ? 4 : 0, hjemme ? 0 : 4, true, true) : setMatch(x, 1, 1, true, true));
+        render();
+      }, lag);
+      await velg(pg, lag);
+      const m = await les(pg, lag), vm = vurder(m, true);
+      check(`${liga}: med runde ${k.runde} simulert: "Forrige kamp i scenarioet: 4-0 mot ${k.opp}", og svaret om samme kamp, sone og endring`,
+        vm.f.length === 0 && m.boks.startsWith(`Forrige kamp i scenarioet: 4-0 mot ${k.opp}.`) && !m.svar.includes(k.forrige),
+        `${m.boks} | ${m.svar} | kortet ${m.kort} | ${vm.f.join('; ')}`);
+      await pg.click('#odds .lastmatch');
+      await pg.waitForFunction(`(()=>{const a=document.getElementById('qaAnswer');return a&&!a.classList.contains('loading')&&a.textContent.length>20})()`, {timeout: 60000});
+      const klikk = await pg.evaluate(() => document.getElementById('qaAnswer').textContent);
+      check(`${liga}: trykk på boksen viser svaret om samme kamp`, klikk.startsWith(m.svar), klikk.slice(0, 120));
+      // 3) Et scenario uten lagets egne kamper: forrige kamp er fortsatt den
+      // spilte, men tallene er scenarioets.
+      await pg.evaluate(() => { matches.forEach(x => setMatch(x, null, null)); render(); });
+      await settle(pg);
+      await pg.evaluate(t => { const x = matches.find(y => y.hg == null && y.home !== t && y.away !== t); setMatch(x, 3, 0); render(); }, lag);
+      await velg(pg, lag);
+      const a = await les(pg, lag), va = vurder(a, false);
+      check(`${liga}: scenario uten lagets kamper: "Forrige kamp: ... mot ${k.forrige}", regnet for scenarioet`,
+        va.f.length === 0 && a.boks.includes(`mot ${k.forrige}.`), `${a.boks} | ${a.svar} | kortet ${a.kort} | ${va.f.join('; ')}`);
+      await pg.evaluate(() => { matches.forEach(x => setMatch(x, null, null)); render(); });
+      await velg(pg, lag);
+      // 4) Den lagrede forventningen brukes både i boksen og i svaret, også
+      // når siden ville regnet et annet tall (odds endret siden filen ble
+      // regnet). Og en lagret rad med en annen sone enn kortet brukes ikke:
+      // da regnes linja på siden, som svaret.
+      const lagret = await pg.evaluate(async t => {
+        const e = LASTMATCH.teams[t], gml = JSON.stringify(e), z = qaTargetZone(t);
+        const d = await qaLastMatchData(t);
+        const ny = Math.min(1, Math.max(0, (d.expected || 0) + (z.pct > 0.5 ? -0.07 : 0.07)));
+        LASTMATCH.teams[t] = {...e, expected: +ny.toFixed(4)};
+        forrigeLinje = null; fillOdds();
+        return {gml, ny: Math.round(ny * 100)};
+      }, lag);
+      const l1 = await les(pg, lag), vl1 = vurder(l1, false);
+      check(`${liga}: lagret forventning brukes både i boksen og i svaret (${lagret.ny} % før kampen)`,
+        vl1.f.length === 0 && (l1.svar.toLowerCase().includes(`før kampen var den ${lagret.ny} %`) || l1.svar.includes(`Den er ${lagret.ny} %, det samme`)),
+        `${l1.boks} | ${l1.svar} | ${vl1.f.join('; ')}`);
+      await pg.evaluate((t, gml) => {
+        const e = JSON.parse(gml), z = qaTargetZone(t);
+        LASTMATCH.teams[t] = {...e, zone: Object.keys(LEAGUE.zones).find(k => k !== z.key && LEAGUE.zones[k].lagSone), expected: 0.5};
+        forrigeLinje = null; fillOdds();
+      }, lag, lagret.gml);
+      await velg(pg, lag);
+      const l2 = await les(pg, lag), vl2 = vurder(l2, false);
+      check(`${liga}: lagret rad med en annen sone enn kortet brukes ikke; boksen regnes som svaret`,
+        vl2.f.length === 0, `${l2.boks} | ${l2.svar} | ${vl2.f.join('; ')}`);
+      await pg.evaluate((t, gml) => { LASTMATCH.teams[t] = JSON.parse(gml); forrigeLinje = null; fillOdds(); }, lag, lagret.gml);
+      // 5) Alle lagene, uten scenario og med neste runde simulert som 1-1 i
+      // alle kampene: boksen og svaret like, og uavgjort både øker og senker.
+      if (alle) {
+        const r0 = await alleLag(pg, false);
+        check(`${liga}: uten scenario stemmer boksen, svaret og kortet for alle ${r0.n} lagene`,
+          r0.feil.length === 0, r0.feil.slice(0, 3).join(' | '));
+        await pg.evaluate(() => { const R = Math.min(...matches.map(x => x.round));
+          matches.filter(x => x.round === R).forEach(x => setMatch(x, 1, 1, true, true)); render(); });
+        await settle(pg);
+        const r1 = await alleLag(pg, true);
+        check(`${liga}: runden simulert som 1-1: boksen, svaret og kortet stemmer for alle ${r1.n} lagene`,
+          r1.feil.length === 0, r1.feil.slice(0, 3).join(' | '));
+        check(`${liga}: uavgjort som øker (${r1.uavgjort.økte.join(', ') || 'ingen'}) og som senker (${r1.uavgjort.senket.join(', ') || 'ingen'}), ordet følger fortegnet`,
+          r1.uavgjort.økte.length > 0 && r1.uavgjort.senket.length > 0 && r1.feil.length === 0,
+          `økte ${r1.uavgjort.økte.length}, senket ${r1.uavgjort.senket.length}`);
+      }
+      await pg.close();
+    }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -628,7 +783,8 @@ async function main() {
       else if (BARE === 'hvamaa') await hvaMaaTekst();
       else if (BARE === 'del') await delKnapp();
       else if (BARE === 'telefon') await telefonTabell();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon)`);
+      else if (BARE === 'forrige') await forrigeKampScenario();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige)`);
     } else {
     // ---- 1. lasting ----
     setGroup('Lasting');
@@ -1376,7 +1532,7 @@ async function main() {
           if (!e) continue;
           const p = e.home ? preKickProbs(e.home, e.away) : null;
           if (p) kilder.add(p.kilde);
-          const l = qaLastMatchLine(e);
+          const l = qaLastMatchLine(t, e);
           if (l) linjer.push({team: t, html: l.html, harTall: !!p,
                               sum: p ? p.H + p.U + p.B : null});
         }
@@ -1390,17 +1546,17 @@ async function main() {
       check(`${liga}: sannsynlighetene summerer til 1`,
         medTall.every(l => Math.abs(l.sum - 1) < 1e-3),
         medTall.filter(l => Math.abs(l.sum - 1) >= 1e-3).map(l => `${l.team}: ${l.sum}`).join('; '));
-      // Der vi har tallet, skal linja si hvor overraskende resultatet var,
-      // fra lagets synsvinkel ("tap", ikke "borteseier").
-      // Linja sier hvor sannsynlig utfallet var, i én av to former: den korte
-      // "(74 % sjanse for seier)" når vi har en forventning å måle mot, ellers
-      // "ventet i 61 % av tilfellene" / "med 19 % sjanse".
-      const mangler = medTall.filter(l => !/(ventet i (<1|>99|\d+) % av tilfellene|med (<1|\d+) % sjanse|\((<1|>99|\d+) % sjanse for (seier|uavgjort|tap|hjemmeseier|borteseier)\))/.test(l.html));
-      check(`${liga}: linja sier hvor overraskende resultatet var`,
-        mangler.length === 0, mangler.slice(0, 3).map(l => `${l.team}: ${l.html}`).join(' | '));
-      const galtOrd = medTall.filter(l => /(hjemmeseier|borteseier) (som var ventet|med bare)/.test(l.html));
-      check(`${liga}: ordlyden er lagets egen (seier/tap/uavgjort)`,
-        galtOrd.length === 0, galtOrd.slice(0, 2).map(l => l.html).join(' | '));
+      // Linja i lagboksen sier bare resultatet og hva det gjorde med lagets
+      // sjanse (29.9.2026): ingen odds, marked eller hva som var ventet. Det
+      // står i svaret på "Hva betydde forrige kamp?". Store bokstaver teller:
+      // "Odds" er et lag i OBOS.
+      const kildeOrd = f.linjer.filter(l => /ventet|markedet|modellen|\bodds\b|sluttodds|av tilfellene|sjanse for (seier|uavgjort|tap)/.test(l.html));
+      check(`${liga}: linja nevner ikke odds, marked eller hva som var ventet`,
+        kildeOrd.length === 0, kildeOrd.slice(0, 3).map(l => `${l.team}: ${l.html}`).join(' | '));
+      // Samme form for alle lagene, også når resultatet endret lite.
+      const form = f.linjer.filter(l => !/^Forrige kamp: \d+-\d+ mot [^.]+\.( (Seieren|Uavgjort|Tapet) (økte|senket) .+ med <b class="(good|bad)">\d+<\/b> prosentpoeng\.| Resultatet endret lite på .+\.)?$/.test(l.html));
+      check(`${liga}: linja har samme form for alle lagene`,
+        form.length === 0 && f.linjer.length === 16, form.slice(0, 3).map(l => `${l.team}: ${l.html}`).join(' | ') || `${f.linjer.length} linjer`);
       // Og det skal faktisk finnes tall å bruke for minst ett lag.
       check(`${liga}: har lagrede tall å måle mot`,
         f.prekick + f.closing > 0, `prekick ${f.prekick}, sluttodds ${f.closing}`);
@@ -1438,6 +1594,7 @@ async function main() {
         regnestykke.filter(r => Math.abs(r.pSum - 1) >= 1e-3).map(r => `${r.team}: ${r.pSum}`).join('; '));
       await fk.close();
     }
+    await forrigeKampScenario();
     await page.bringToFront();
 
     // ---- 18. rulling til svaret på iPad-bredder ----
@@ -1912,20 +2069,23 @@ async function main() {
         for (const t of TEAMS) ut.push([t, await qaLastMatch(t)]);
         return ut;
       });
-      const medForventning = svar.filter(([, tx]) => /ventet når alle mulige utfall/.test(tx));
+      const medForventning = svar.filter(([, tx]) => /Før kampen var den|det samme som før kampen/.test(tx));
       check(`${liga}: svarene har en forventning å måle mot`,
         medForventning.length >= TEAMS_MIN, `${medForventning.length} av ${svar.length}`);
       const avsnitt = medForventning.filter(([, tx]) => tx.split('\n\n').length === 3);
       check(`${liga}: svaret står i tre avsnitt`,
         avsnitt.length === medForventning.length,
         `${avsnitt.length} av ${medForventning.length}`);
-      const ordlyd = medForventning.filter(([, tx]) =>
-        /Før kampen var .+ ventet når alle mulige utfall ble tatt med/.test(tx) &&
-        /\d+ prosentpoeng (bedre|verre) enn (markedet|modellen) ventet/.test(tx) &&   // ordet følger kilden, se «Forrige kamp: ordlyden følger kilden»
-        /Med \w+ ville .+ vært /.test(tx));
+      // Første avsnitt: endringen og tallet før kampen, som linja i
+      // lagboksen. Oddsen (kildeordet følger kilden, se «Forrige kamp:
+      // kildeordet følger kilden») står i avsnittet etter.
+      const pc = '(<1|>99|\\d+) %';
+      const forste = new RegExp(`^(Seieren|Uavgjort|Tapet) \\d+-\\d+ mot [^\\n]+?( (økte|senket) [^\\n]+ med \\d+ prosentpoeng, til ${pc}\\. Før kampen var den ${pc}\\.| endret lite på [^\\n]+\\. Den er ${pc}(, det samme som før kampen|, og før kampen var den ${pc})\\.)\\n\\n(Sluttoddsen|Modellen) ga `);
+      const ordlyd = medForventning.filter(([, tx]) => forste.test(tx));
       check(`${liga}: ny ordlyd i alle svarene`, ordlyd.length === medForventning.length,
-        (medForventning.find(([, tx]) => !ordlyd.some(([t2]) => t2 === tx)) || ['', ''])[1].slice(0, 120));
+        (medForventning.find(x => !ordlyd.includes(x)) || ['', ''])[1].slice(0, 160));
       const gamle = svar.filter(([, tx]) =>
+        /ventet når alle mulige utfall|prosentpoeng (bedre|verre) enn|betydde lite|Poengdelingen|løftet|reduserte/.test(tx) ||
         /når alle tre mulige utfall/.test(tx) ||
         /Før kampen var den forventede/.test(tx) ||
         /prosentpoeng (høyere|lavere|mer|mindre) enn forventet/.test(tx) ||
@@ -3916,42 +4076,44 @@ async function main() {
       await sp.close();
     }
 
-    // ---- Forrige kamp: "enn markedet/modellen ventet" følger kilden ----
-    // Forventningen før kampen er en frosset prognose eller, som reserve,
-    // sluttoddsen. Teksten sa alltid "modellen". Nå "markedet" ved sluttodds.
-    setGroup('Forrige kamp: ordlyden følger kilden');
+    // ---- Forrige kamp: kildeordet i svaret følger kilden ----
+    // Sjansen for resultatet før kampen er en frosset prognose eller, som
+    // reserve, sluttoddsen. Svaret sier hvilken: "Sluttoddsen ga ..." eller
+    // "Modellen ga ...", i avsnittet etter endringen. Linja i lagboksen nevner
+    // ingen kilde (29.9.2026; før sto "enn markedet/modellen ventet" begge
+    // steder).
+    setGroup('Forrige kamp: kildeordet følger kilden');
     for (const [url, liga] of [[base, 'Eliteserien'], [base.replace('/eliteserien/', '/obos/'), 'OBOS']]) {
       const sp = await open(1400, 900, url);
       const r = await sp.evaluate(async () => {
-        const ut = {marked: 0, modell: 0, feil: []};
-        const ordet = pk => pk && pk.kilde === 'sluttoddsen' ? 'markedet' : 'modellen';
+        const ut = {odds: 0, modell: 0, feil: []};
+        const ordet = pk => pk && pk.kilde === 'sluttoddsen' ? 'Sluttoddsen' : 'Modellen';
         const gml = PREKICK;
         for (const t of TEAMS.slice(0, 6)) {
           const d = await qaLastMatchData(t);
           if (!d || d.noMatch || !d.preKick) continue;
           // 1) Som dataene står (i dag: sluttoddsen).
           let txt = await qaLastMatch(t);
-          let m = txt.match(/enn (\S+) ventet\./);
-          if (m) { const f = ordet(d.preKick); if (m[1] !== f) ut.feil.push(`${t}: «${m[1]}» med kilde ${d.preKick.kilde}`); else ut[f === 'markedet' ? 'marked' : 'modell']++; }
+          let m = txt.split('\n\n')[1].match(/^(\S+) ga /);
+          const f = ordet(d.preKick);
+          if (!m || m[1] !== f) ut.feil.push(`${t}: «${m && m[1]}» med kilde ${d.preKick.kilde}`); else ut[f === 'Sluttoddsen' ? 'odds' : 'modell']++;
           // 2) Med en frosset prognose for kampen: da er det modellen.
           const k = `${LEAGUE.season}|${d.m.home}|${d.m.away}`;
           PREKICK = Object.assign({}, gml || {}, {[k]: {H: 0.2, U: 0.3, B: 0.5, kilde: 'odds+modell', frosset: true}});
           txt = await qaLastMatch(t);
-          m = txt.match(/enn (\S+) ventet\./);
-          if (m) { if (m[1] !== 'modellen') ut.feil.push(`${t} med frosset prognose: «${m[1]}»`); else ut.modell++; }
+          m = txt.split('\n\n')[1].match(/^(\S+) ga /);
+          if (!m || m[1] !== 'Modellen') ut.feil.push(`${t} med frosset prognose: «${m && m[1]}»`); else ut.modell++;
           PREKICK = gml;
         }
-        // Linja i lagboksen (lastmatch.json), for lagene som har tall der.
-        for (const [t, e] of Object.entries((LASTMATCH && LASTMATCH.teams) || {})) {
-          const l = qaLastMatchLine(e); const m = l && l.html.match(/enn (\S+) ventet/);
-          if (!m) continue;
-          const f = ordet(preKickProbs(e.home, e.away));
-          if (m[1] !== f) ut.feil.push(`lagboksen, ${t}: «${m[1]}», ventet «${f}»`); else ut[f === 'markedet' ? 'marked' : 'modell']++;
+        // Linja i lagboksen: ingen kilde, for alle lagene.
+        for (const t of TEAMS) {
+          const l = qaLastMatchLine(t, lastMatchEntry(t));
+          if (l && /ventet|markedet|modellen|Sluttoddsen|sluttodds/.test(l.html)) ut.feil.push(`lagboksen, ${t}: ${l.html}`);
         }
         return ut;
       });
-      check(`${liga}: sluttodds gir «markedet ventet», frosset prognose «modellen ventet» (${r.marked} marked, ${r.modell} modell)`,
-        r.feil.length === 0 && r.marked > 0 && r.modell > 0, r.feil.slice(0, 4).join('; ') || `marked ${r.marked}, modell ${r.modell}`);
+      check(`${liga}: sluttodds gir «Sluttoddsen ga», frosset prognose «Modellen ga», lagboksen ingen kilde (${r.odds} sluttodds, ${r.modell} modell)`,
+        r.feil.length === 0 && r.odds > 0 && r.modell > 0, r.feil.slice(0, 4).join('; ') || `sluttodds ${r.odds}, modell ${r.modell}`);
       await sp.close();
     }
     await page.bringToFront();
