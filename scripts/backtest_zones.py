@@ -239,6 +239,9 @@ def main():
     ap.add_argument("--seed", type=int, default=20260922)
     ap.add_argument("--variants", default="", help="komma-separert delmengde av variantene")
     ap.add_argument("--name-map", default=str(Path(__file__).parent / "eliteserien_name_map.json"))
+    ap.add_argument("--dc-rho-alt", type=float, default=None,
+                    help="legger til varianten 'full rho=X': som full, bare med en annen "
+                         "Dixon-Coles-rho, sammenlignet parvis med full (samme tilpasning og frø)")
     args = ap.parse_args()
 
     name_map = {}
@@ -275,8 +278,12 @@ def main():
                     "+odds": (ODDS_WEIGHT, L1_PLAIN, L2_PLAIN, 0.0, 0.0),
                     "+form": VARIANTS["+form"], "+dc": VARIANTS["+dc"],
                     "full": VARIANTS["full"], "+rampe": VARIANTS["+rampe"]}
+    ALT = None
+    if args.dc_rho_alt is not None:
+        ALT = f"rho {args.dc_rho_alt:g}"
+        VARIANTS[ALT] = VARIANTS["full"][:4] + (args.dc_rho_alt,)
     if args.variants:
-        keep = set(args.variants.split(",")) | {"basisrate"}
+        keep = set(args.variants.split(",")) | {"basisrate"} | ({ALT} if ALT else set())
         VARIANTS = {k: v for k, v in VARIANTS.items() if k in keep}
     models = ["basisrate"] + list(VARIANTS)
     # Per observasjon, ikke bare summen: da kan forskjellen mellom to modeller
@@ -412,6 +419,8 @@ def main():
     BASE_OF = {"tabell": "basisrate", "poisson": "tabell", "+odds": "poisson",
                "+form": "+odds" if "+odds" in E else "poisson",
                "+dc": "+form", "full": "+dc", "+rampe": "+form"}
+    if ALT:
+        BASE_OF[ALT] = "full"   # samme modell, bare en annen rho
     # Per kuttpunkt: hvor mye modellen slår tabellmodellen når det er mye igjen
     # å spille, mot når det nesten er over.
     if "tabell" in E and "full" in E:

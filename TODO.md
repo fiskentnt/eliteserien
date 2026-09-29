@@ -491,6 +491,52 @@ failsafe-tester grønne mot tabellkalkulator.no.
     tester), og publisering fra en workflow i stedet for fra grenen (lønner
     seg først hvis vi vil ha delingsbilder med dagens tall).
 
+## Etter runden 9.–12. oktober 2026: Dixon-Coles-rho -0,04 (modellendring)
+
+- **Foreløpig valgt 29.9.2026, ikke tatt i bruk:** én `DC_RHO` ≈ -0,04 overalt
+  (modellens sannsynligheter, oddstilpasningen i `fitRates()`, trekningen og
+  tabellsimuleringen), i stedet for -0,38. Tas i bruk etter runden, samtidig
+  med eller rett etter lagsidene. Endre ingenting før brukeren sier ja.
+- **Hvorfor:** -0,38 ble valgt 20.9.2026 (commit 48e89a3) ved å justere
+  uavgjortandelen i 1000 simulerte HELE sesonger (alle mot alle, dagens
+  lagstyrker, formoppdatering med rekke-rampe) til 24 %. I de samme sesongene
+  var snittet av lagenes målforskjell 24,3 mot 14,4 i virkeligheten:
+  spredningen var for stor, og det var den som ga for få uavgjorte. rho
+  rettet tallet, ikke årsaken. Tidligere samme dag ble rho tilpasset sammen
+  med modellen og forkastet på log loss (0,9335 mot 0,9324). På enkeltkamper
+  ut av utvalg gir -0,38 30,5 % uavgjort mot faktisk 24,0 %, og i kamper med
+  odds blåser den opp målene (3,60 mot 3,08 per kamp), fordi `fitRates()` må
+  bruke høye rater for å treffe oddsens uavgjortandel med så sterk tau.
+  Testsiden bruker allerede rho = 0 (se kommentaren ved `DC_RHO` der).
+- **Tallene** (regn dem på nytt før endringen, med dagens data):
+  - Enkeltkamper, Eliteserien 2012–2025 (2798 kamper ut av utvalg): rho
+    tilpasset hele resultatfordelingen er -0,04. Log loss 1,0079 → 0,9985,
+    Brier 0,6025 → 0,5961, treff 50,9 → 51,6 %, uavgjort 30,5 → 24,2 %
+    (faktisk 24,0), 1-0 4,3 → 8,8 % (faktisk 8,0).
+    `python3 scripts/dc_rho_studie.py --liga eliteserien --csv NOR.csv`
+  - OBOS 2012–2025 (2800 kamper, historikken med odds): rho -0,02, og -0,04
+    er like godt. Log loss 1,0134 → 0,9993, uavgjort 30,2 → 24,0 % (faktisk
+    22,6). `--liga obos --csv obos_historikk_2012-2025.csv`
+  - Sluttplasseringene, parvis mot dagens modell, klustret på sesong:
+    Eliteserien 2016–2025 og 2012–2025 uendret (alle forskjeller under 1,1
+    SE); OBOS 2012–2025 topp 6 bedre (-0,0006 ± 0,0002, 2,6 SE), opprykk og
+    nedrykk uendret. `python3 scripts/backtest_zones.py --csv NOR.csv
+    --seasons 2012-2025 --variants tabell,full --dc-rho-alt -0.04`
+    (OBOS: `--league-zones obos --csv obos/data/obos_2012-2026.csv`).
+  - Dagens sjanser flytter seg lite: Eliteserien høyst 1,7 pp (Start
+    nedrykk), gull 0,6; OBOS høyst 1,4 pp (Raufoss nedrykk).
+    `node scripts/dc_rho_side.js` og `--liga obos`.
+  - Målnivået kalibreres IKKE: tilbaketesten sier modellen ligger 4 % under
+    det faktiske, og dagens høye nivå (3,5 mål per kamp) er tidsvektingen
+    (august–september 2026: 3,54 mål per kamp).
+- **Når den tas i bruk:** `DC_RHO` og kommentaren over den i
+  `eliteserien/index.html` (OBOS bygges av den; testsiden har sin egen,
+  rho = 0), standardverdien `DC_RHO` i `backtest_zones.py` og `--dc-rho` i
+  `evaluate_model.py`, Brier-tabellen under "Hvordan vet vi at modellen
+  virker?" regnes på nytt (raden "4. + Dixon-Coles" og teksten ved den),
+  grunnlagsfilene regnes på nytt av seg selv. Sjekk testene som låser tall
+  fra dagens trekning.
+
 ## Etter sesongslutt 8. november 2026
 
 - **Kalibrer OBOS-parameterne på OBOS-tall, med tog- og testsett.**
