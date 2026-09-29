@@ -619,21 +619,29 @@ Tilstanden er slik den blir etter oktoberoppdateringen.
 
 **Modellen for én kamp**
 - P: Poisson-modell med angreps- og forsvarsstyrke per lag (Maher 1982).
-- P: hjemmefordel per lag (Clarke og Norman 1995), her som ha og hc.
+- P (prinsipp): hjemmefordelen varierer mellom lag (Clarke og Norman 1995).
+  R (implementasjon): ha og hc i Poisson-ratene, krympet med l2, er vår egen.
 - P: tidsvekting som avtar eksponentielt (Dixon og Coles 1997).
   U: halveringstiden 35 dager, valgt på et rutenett ut av utvalg (log loss,
   Poisson-NLL og RPS; se `fit_model.py`). Prosedyren er dokumentert, men ble
-  ikke skrevet ned før søket.
-- P: krymping mot snittet (normalfordelt prior / ridge, som i hierarkiske
-  modeller, Baio og Blangiardo 2010).
-  U: l1/l2 16/48, valgt ut av utvalg på log loss og Poisson-NLL. Valget så i
-  tillegg på målforskjellen i simulerte sesonger, som ikke er et rent
-  prediktivt kriterium. Fortsatt best i Eliteserien med konsistent
-  tilpasning (-0,08 +/- 0,30 x 10^-3 for beste alternativ); ikke i OBOS (se
-  OBOS-kalibreringen).
+  ikke skrevet ned før søket, og dataene overlapper med tilbaketesten.
+- P (prinsipp): regularisering av lagstyrkene mot et felles snitt
+  (hierarkisk regularisering, for eksempel Baio og Blangiardo 2010).
+  R (implementasjon): vår regularisering (ridge-straff med faste styrker) og
+  styrken l1/l2 16/48 er egen implementasjon. Styrken er valgt ut av utvalg
+  på log loss og Poisson-NLL, men valget så i tillegg på målforskjellen i
+  simulerte sesonger, og dataene (NOR.csv 2012-2026) overlapper med
+  tilbaketesten. Fortsatt best i Eliteserien med konsistent tilpasning
+  (-0,08 +/- 0,30 x 10^-3 for beste alternativ); ikke i OBOS.
 - P: Dixon og Colesʼ justering for kamper med få mål (1997).
-  U: rho -0,04, estimert på kampdata ut av utvalg (`dc_rho_studie.py`).
-  (Dagens -0,38 er R: stilt inn for å treffe en uavgjortandel.)
+  U: rho -0,04. Valgt ved et rutenettsøk (-0,45 til 0,10, steg 0,01) som
+  maksimerer sannsynligheten for det eksakte resultatet over ALLE kampene
+  2012-2025 fra runde 5, med modellens rater regnet ut av utvalg
+  (`dc_rho_studie.py`; Eliteserien -0,04, OBOS -0,02 med -0,04 like godt),
+  og evaluert på den SAMME perioden. Valget mellom variantene ble gjort
+  etter at resultatene var kjent. 2026 er den eneste testen der rho ikke
+  har sett dataene. (Dagens -0,38 er R: stilt inn med en test med feil
+  oppsett, se over.)
 - P: tilpasning av alle parametre i én målfunksjon, med gradient som
   samsvarer med målfunksjonen (fra oktober; dagens `isolate_global` er R).
 - R: ren Poisson i tilpasningen, Dixon-Coles bare i sannsynlighetene. Dixon
@@ -649,19 +657,24 @@ Tilstanden er slik den blir etter oktoberoppdateringen.
   oktober. Ingen parameter å velge.
 - R: oddsleddet i tilpasningen: kvadratavvik mellom modellens H/U/B og
   markedssannsynlighetene i spilte kamper, vekt 40. Formen er ikke
-  publisert (publisert alternativ: Egidi, Pauli og Torelli 2018). Vekten er
+  publisert. Publisert alternativ: Egidi, Pauli og Torelli (2018), der
+  ratene er en konveks kombinasjon av historikk og odds, med vekten
+  estimert i en bayesiansk modell. Vekten er
   valgt ut av utvalg, men kurven er flat fra 30. Nytte ut av utvalg: log
   loss per kamp 0,035 bedre enn bare mål i begge ligaene (13 og 10 SE);
   sone-Brier nedrykk -0,0055 +/- 0,0028 (2,0 SE), topp 4 -0,0086 +/- 0,0049.
-- P: lineær blanding av prognoser for kamper med odds (Stone 1961; Bates og
-  Granger 1969).
-  R: vekten 0,7, satt i første versjon og aldri målt. Ved sluttodds er beste
+- P (metode): lineær blanding av prognoser (Stone 1961; Bates og Granger
+  1969).
+  R (implementasjon): 0,7 * marked + 0,3 * modell for kamper med odds; 0,7
+  er satt i første versjon og aldri validert. Ved sluttodds er beste
   vekt 1,0 (bare marked 0,0043 +/- 0,0014 bedre enn 0,7, 11 av 12 sesonger,
   lab 4051a30). I sonene flytter blandingen for neste runde nesten ingenting
   (nedrykk -0,0004 +/- 0,0002, optimistisk). Markedsstudien, tidligst 2027.
-- P: sannsynligheter regnet om til målrater ved å løse Poisson-modellen
-  baklengs (som Egidi, Pauli og Torelli 2018), i `fitRates`. Søket treffer i
-  snitt innenfor 0,04 prosentpoeng.
+- R: `fitRates`, en praktisk numerisk inversjon av Poisson/Dixon-Coles-
+  modellen (rutenettsøk etter målratene som gir de blandede H og B). Relatert
+  metode: Egidi, Pauli og Torelli (2018) løser et ikke-lineært
+  ligningssystem for ren Poisson (Skellam) fra 1X2-sannsynlighetene. Søket
+  treffer i snitt innenfor 0,04 prosentpoeng.
 - R: datakildene: sluttodds = siste pris 60-15 minutter før avspark;
   Pinnacle i tilpasningen; snittet fra The Odds API for kommende
   Eliteserie-kamper; én bookmaker for OBOS.
