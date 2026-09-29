@@ -494,7 +494,7 @@ failsafe-tester grønne mot tabellkalkulator.no.
 ## Etter runden 9.–12. oktober 2026: samlet modelloppdatering, så låst ut sesongen
 
 - **Besluttet 30.9.2026:** én samlet oppdatering etter runden, med samme modell
-  i begge ligaene. Deretter låses HELE modellen ut 2026-sesongen, også
+  i begge ligaene, begrenset til tre endringer som alle er kjente metoder. Deretter låses HELE modellen ut 2026-sesongen, også
   markedsvekten (`ODDS_W` 0,7). Bare dataene oppdateres. Markedsstudien
   (vekt etter oddsens alder, prisrekkene i lab under `odds-prisrekker/`)
   fortsetter, men resultatene tas i bruk tidligst fra 2027.
@@ -506,30 +506,36 @@ failsafe-tester grønne mot tabellkalkulator.no.
      `obos_upcoming_odds.py`, `elite_closing_odds.py`, `obos_build_data.py`,
      `prekick_odds.py`, `fetch_odds_history.py`, `odds_compare.py`,
      `odds_drift.py`, `dc_rho_studie.py`.
-  3. **Konsistent tilpasning:** `isolate_global=False` (mu og H får også
-     oddsgradienten), så tilpasningen går til optimum i stedet for å stoppe
-     etter rundt 8 steg. Alle kall med `isolate_global=True`: `fit_model.py`,
+  3. **Konsistent tilpasning:** optimeringen brukte en gradient som ikke
+     samsvarte med målfunksjonen: oddsleddet var med i målfunksjonen, men
+     ikke i gradienten for mu og H (`isolate_global=True`). L-BFGS-B stoppet
+     derfor etter rundt 8 steg, ikke i et optimum. Rettes med
+     `isolate_global=False`, så gradienten er den eksakte gradienten til
+     målfunksjonen. Alle kall med `isolate_global=True`: `fit_model.py`,
      `obos_build_data.py`, `backtest_zones.py`, `evaluate_model.py`,
      `dc_rho_studie.py`, `obos_odds_weight.py` (og standardverdien i
      `fit_fast.py`).
-  4. **Prior med tyngre haler:** Student-t (nu = 4) i stedet for normal på
-     angrep, forsvar, ha og hc, med samme krumning i null som dagens l1/l2
-     16/48 (skala s^2 = (nu + 1) / (nu * l)). Ny valgmulighet i `fit_fast.py`.
+  Prioren med tyngre haler (Student-t) er tatt UT (besluttet 30.9.2026):
+  gevinsten var minst (-0,0003 og -0,0005 i log loss), og den er vanskeligst
+  å begrunne som kjent metode for fotballmodeller.
 - **Tallene** (studien 29.-30.9.2026, rullerende ut av utvalg 2012-2025,
   2800 kamper per liga, pakken mot siden i dag):
-  - Log loss per kamp: Eliteserien -0,0139 +/- 0,0027 (5,1 SE), OBOS
-    -0,0180 +/- 0,0035 (5,1 SE). Uavgjort spådd 31 -> 24 % (faktisk 24 og
+  - Log loss per kamp: Eliteserien -0,0136 +/- 0,0027 (5,0 SE), OBOS
+    -0,0175 +/- 0,0035 (4,9 SE). Uavgjort spådd 31 -> 24 % (faktisk 24 og
     23). Favoritten spådd 46 -> 50 % og 45 -> 49 % (faktisk 53 og 54).
-  - Sone-Brier: litt bedre overalt, innenfor støyen, bortsett fra OBOS
-    nedrykk (-0,0007 +/- 0,0003, 2,3 SE).
-  - Kontroll på 2026 (ikke brukt til å velge noe): Eliteserien -0,0195 +/-
-    0,0103 (1,9 SE, 139 kamper), OBOS -0,0212 +/- 0,0092 (2,3 SE, 154
+  - Sone-Brier: litt bedre overalt, innenfor støyen (OBOS nedrykk
+    -0,0006 +/- 0,0003, 1,9 SE).
+  - Kontroll på 2026 (ikke brukt til å velge noe): Eliteserien -0,0171 +/-
+    0,0101 (1,7 SE, 139 kamper), OBOS -0,0217 +/- 0,0090 (2,4 SE, 154
     kamper). Små utvalg, ligaene er ikke uavhengige replikasjoner, og
     pakken er flere endringer samtidig: en uavhengig kontroll som støtter
     endringen, ikke et bevis.
   - Svakheter som står igjen og skal sies rett ut: favorittene er fortsatt
     noe undervurdert, og markedet er fortsatt bedre enn modellen per kamp
-    (sluttoddsen 0,0153 og 0,0163 bedre i log loss, var 0,029 og 0,034).
+    (sluttoddsen 0,016 og 0,017 bedre i log loss, var 0,029 og 0,034).
+- **Endringsloggen og forklaringen på siden** oppgir kilden for hver metode
+  (forfatter og år) og kaller de praktiske valgene praktiske valg (se
+  "Etter sesongslutt: gjennomgang av delene uten publisert metode").
 - **Endringsloggen** på siden: utkast i rapporten 30.9.2026. Tallene regnes
   på nytt med den endelige koden, og teksten vises før commit.
 - **Rho-detaljene** (foreløpig valgt 29.9.2026): én `DC_RHO` ≈ -0,04 overalt
@@ -596,6 +602,98 @@ reglene i kildene før teksten skrives, og vis ny tekst før commit.
   stige: 5. mot 6., vinneren mot 4., vinneren mot 3., og bare den som vinner
   stigen, møter Eliteseriens nr. 14. Sjekk formatet mot NFFs reglement for
   2026 før teksten skrives. Etter endringen: `python3 scripts/build_league.py obos`.
+
+## Etter sesongslutt: inventar over modellen, og gjennomgang av de praktiske reglene
+
+Kartlagt 30. september 2026, ingen endringer før sesongslutt. Hver del er i
+én av tre kategorier:
+
+- **P** publisert metode (kilde oppgitt)
+- **U** parameter i en publisert metode, valgt ut av utvalg
+- **R** praktisk regel: verken fra en publisert modell eller valgt slik
+
+Etter sesongslutt tas R-delene som ikke viser målbar nytte ut av utvalg.
+Nytten av en R-del begrunnes bare med hva den ga i en test ut av utvalg.
+Tallene er fra tilbaketesten 2012-2025 (sone-Brier klustret på sesong).
+Tilstanden er slik den blir etter oktoberoppdateringen.
+
+**Modellen for én kamp**
+- P: Poisson-modell med angreps- og forsvarsstyrke per lag (Maher 1982).
+- P: hjemmefordel per lag (Clarke og Norman 1995), her som ha og hc.
+- P: tidsvekting som avtar eksponentielt (Dixon og Coles 1997).
+  U: halveringstiden 35 dager, valgt på et rutenett ut av utvalg (log loss,
+  Poisson-NLL og RPS; se `fit_model.py`). Prosedyren er dokumentert, men ble
+  ikke skrevet ned før søket.
+- P: krymping mot snittet (normalfordelt prior / ridge, som i hierarkiske
+  modeller, Baio og Blangiardo 2010).
+  U: l1/l2 16/48, valgt ut av utvalg på log loss og Poisson-NLL. Valget så i
+  tillegg på målforskjellen i simulerte sesonger, som ikke er et rent
+  prediktivt kriterium. Fortsatt best i Eliteserien med konsistent
+  tilpasning (-0,08 +/- 0,30 x 10^-3 for beste alternativ); ikke i OBOS (se
+  OBOS-kalibreringen).
+- P: Dixon og Colesʼ justering for kamper med få mål (1997).
+  U: rho -0,04, estimert på kampdata ut av utvalg (`dc_rho_studie.py`).
+  (Dagens -0,38 er R: stilt inn for å treffe en uavgjortandel.)
+- P: tilpasning av alle parametre i én målfunksjon, med gradient som
+  samsvarer med målfunksjonen (fra oktober; dagens `isolate_global` er R).
+- R: ren Poisson i tilpasningen, Dixon-Coles bare i sannsynlighetene. Dixon
+  og Coles estimerte rho sammen med resten. Forskjell i log loss 0,0003.
+- R: bare inneværende sesong; nyopprykkede lag starter på ligasnittet.
+  Dixon og Colesʼ alternativ (tidligere sesonger og begge divisjoner i én
+  tilpasning, én tidsvekt) ble verre i begge ligaene ut av utvalg.
+- R: OBOS bruker Eliteseriens innstillinger (halveringstid, l1/l2,
+  oddsvekt, formoppdatering).
+
+**Oddsen**
+- P: marginen tas ut med Shins metode (Shin 1993; Štrumbelj 2014), fra
+  oktober. Ingen parameter å velge.
+- R: oddsleddet i tilpasningen: kvadratavvik mellom modellens H/U/B og
+  markedssannsynlighetene i spilte kamper, vekt 40. Formen er ikke
+  publisert (publisert alternativ: Egidi, Pauli og Torelli 2018). Vekten er
+  valgt ut av utvalg, men kurven er flat fra 30. Nytte ut av utvalg: log
+  loss per kamp 0,035 bedre enn bare mål i begge ligaene (13 og 10 SE);
+  sone-Brier nedrykk -0,0055 +/- 0,0028 (2,0 SE), topp 4 -0,0086 +/- 0,0049.
+- P: lineær blanding av prognoser for kamper med odds (Stone 1961; Bates og
+  Granger 1969).
+  R: vekten 0,7, satt i første versjon og aldri målt. Ved sluttodds er beste
+  vekt 1,0 (bare marked 0,0043 +/- 0,0014 bedre enn 0,7, 11 av 12 sesonger,
+  lab 4051a30). I sonene flytter blandingen for neste runde nesten ingenting
+  (nedrykk -0,0004 +/- 0,0002, optimistisk). Markedsstudien, tidligst 2027.
+- P: sannsynligheter regnet om til målrater ved å løse Poisson-modellen
+  baklengs (som Egidi, Pauli og Torelli 2018), i `fitRates`. Søket treffer i
+  snitt innenfor 0,04 prosentpoeng.
+- R: datakildene: sluttodds = siste pris 60-15 minutter før avspark;
+  Pinnacle i tilpasningen; snittet fra The Odds API for kommende
+  Eliteserie-kamper; én bookmaker for OBOS.
+
+**Simuleringen av resten av sesongen**
+- P: Monte Carlo-simulering av de gjenstående kampene (for eksempel Lee
+  1997), med Dixon-Coles-trekning.
+- R: formoppdateringen (`FORM_K` 0,015). Etter hver simulert eller innfylt
+  kamp flyttes angrep, forsvar og hjemmefordel for begge lagene med
+  k * (mål - forventede mål). Ikke en del av Dixon-Coles eller Poisson-
+  modellen. Valgt ved én regresjon mot sluttodds (korrelasjon 0,067); en
+  rullerende test pekte på 0. Ut av utvalg: ingen målbar nytte i sonene
+  (+form mot uten: gull -0,0001 +/- 0,0003, topp 4 -0,0005 +/- 0,0004,
+  nedrykk 0,0000 +/- 0,0003). Den gjør de simulerte sesongene mindre jevne.
+- R: driftgrensene (0,5 og 0,35) og tilbaketrekkingen (2 % per kamp), som
+  begrenser formoppdateringen. Grensene satt på én ekstremverdi med den gamle
+  regulariseringen 2/6, tilbaketrekkingen etter skjønn. Ut av utvalg: uten
+  en av dem er alt nesten likt, nedrykk +0,0002 +/- 0,0001 (1,7-2,1 SE).
+- R: rangeringen følger reglementet, men uten innbyrdes oppgjør (under 0,1
+  prosentpoeng; står på siden).
+- R: tekniske sperrer: tak på målratene (6; binder aldri, høyst 4,64 av
+  151 200), GMAX 15.
+
+**Visning, ikke prognose**
+- R: filteret i "plausibelt scenario" (knappene som fyller inn kamper):
+  enkeltutfall under 10 % sjanse trekkes på nytt, og en sesong godtas bare
+  hvis antall overraskelser (utfall under 30 %) er innenfor ett
+  standardavvik (Z = 1) fra det forventede. Z ble stilt inn mens det også
+  fantes et krav per runde, som senere er fjernet; nå godtas over 99 % på
+  første eller andre forsøk. Det forventede antallet regnes med utfall som
+  trekningen forbyr. Påvirker ikke prosentene; kan ikke testes ut av utvalg.
+- R: Styrke (0-10) og Form (poeng i de fem siste kampene) er visninger.
 
 ## Etter sesongslutt 8. november 2026
 
