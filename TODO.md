@@ -430,6 +430,67 @@ failsafe-tester grønne mot tabellkalkulator.no.
   regningen på flere parallelle jobber (en matrise per bit av oppgavene),
   hvis filen ofte er utdatert på kampdager.
 
+## Etter runden 9.–12. oktober 2026: egne lagsider
+
+- **En egen adresse per lag, for eksempel `/eliteserien/valerenga/` og
+  `/obos/kongsvinger/`.** Laget er valgt fra start, og siden har egen
+  tittel, beskrivelse og delingsbilde for laget. Besluttet 29.9.2026: bygges
+  etter runden 9.–12. oktober, ikke før. Planen:
+  - **Fulle kopier**, bygget av `scripts/build_league.py` (som OBOS-siden i
+    dag) og committet: GitHub Pages publiserer fra grenen og har ingen
+    omskriving av adresser. En lagside er ligasiden med tre forskjeller:
+    `<head>` (tittel, beskrivelse, canonical, og:url, og:title,
+    og:description, og:image), laget som er valgt fra start, og datastien
+    (`data/...` blir `../data/`, også i `grunnlagFil()`). Ikke `<base>`: den
+    ville sendt ankrene (`#tabell` osv.) til ligasiden.
+  - **Faste adresser** i ligainnstillingene, ikke regnet ut av navnet hver
+    gang: `bodo-glimt`, `valerenga`, `sarpsborg-08`, `kfum-oslo` osv. Et lag
+    som rykker opp eller ned, får en liten side på den gamle adressen som
+    sender videre til laget i den nye ligaen (eller ligasiden), så delte
+    lenker ikke gir 404.
+  - **Lagvalget:** `#team=` i lenken vinner over lagsiden, som vinner over
+    det lagrede valget (`followTeam`). En lagside skriver ikke over det
+    lagrede valget. Bytter brukeren lag i nedtrekksmenyen, endres adressen
+    til det nye lagets side med `history.replaceState`, uten ny lasting.
+    `/eliteserien/#team=Vålerenga` virker som før.
+  - **Tittel og beskrivelse uten dagens tall**, så lagsidene ikke må bygges
+    på nytt ved hver dataoppdatering. Kort tittel med laget først (besluttet
+    29.9.2026): "Vålerenga i Eliteserien 2026: sjanse for gull, Europa og
+    nedrykk", og for OBOS "Kongsvinger i OBOS-ligaen 2026: sjanse for
+    opprykk og nedrykk". Overskriften er "Vålerenga i Eliteserien 2026", og
+    under den står én fast setning: "Her ser du Vålerengas sjanse for gull,
+    Europa og nedrykk, og hva de gjenstående kampene betyr for laget." For
+    OBOS: "Her ser du Kongsvingers sjanse for opprykk,
+    opprykkskvalifisering og nedrykk, og hva de gjenstående kampene betyr
+    for laget." Genitiv som i svarene (qaGen: "Vålerengas", men "Moss'").
+    Beskrivelse og delingstekst etter samme mønster (foreslått 29.9.2026):
+    "Tabellkalkulator for Vålerenga i Eliteserien: fyll inn resultater og se
+    Vålerengas sjanse for gull, Europa og nedrykk. Modellen oppdateres etter
+    hver kamp." og "Hvor ender Vålerenga i Eliteserien 2026?".
+  - **Faste delingsbilder per lag** (lagnavn, liga, klubbfarge), laget én
+    gang per sesong: 32 bilder à om lag 70 KB, 2,2 MB i git én gang. Ikke
+    bilder med dagens tall: de endres hver runde, og PNG pakkes dårlig i
+    git (om lag 65 MB per sesong for begge ligaene).
+  - **sitemap.xml** får de 32 adressene.
+  - **Kostnad**, målt 29.9.2026 med de 30 siste versjonene av
+    Eliteserien-siden og 16 lagkopier: packen vokser om lag 6 KB per
+    kodeendring og liga (i dag om lag 10 KB), altså om lag 1,2 MB i måneden
+    med dagens tempo; nettstedet blir 13,7 MB større. Lokalt blir det mange
+    løse objekter (om lag 0,7 MB per commit og liga) til git pakker dem.
+  - **Grunnlagsfilen og testsiden** endres ikke: lagsidene henter
+    `../data/grunnlag.json`, avtrykket er det samme, `lag_grunnlag.js`
+    regner bare ligasidene, og testsiden får ingen lagsider.
+  - **Tester:** failsafe sjekker at hver lagside bare skiller seg fra
+    ligasiden i de merkede delene, at adressene er unike og faste, at hvert
+    lag har en side, og at sitemap har alle. `regression.js` laster alle 32:
+    laget er valgt, tittel, beskrivelse, canonical og delingsbilde er
+    riktige, data kommer fra `../data` uten 404, grunnlagsfilen er i bruk,
+    `#team=` vinner, lagbytte endrer adressen, og det lagrede valget står.
+  - **Ikke nå:** programkoden i en felles fil (mindre sider og felles cache,
+    men en stor omlegging: versjon i adressen, porten, testsiden, mange
+    tester), og publisering fra en workflow i stedet for fra grenen (lønner
+    seg først hvis vi vil ha delingsbilder med dagens tall).
+
 ## Etter sesongslutt 8. november 2026
 
 - **Kalibrer OBOS-parameterne på OBOS-tall, med tog- og testsett.**
