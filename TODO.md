@@ -540,6 +540,25 @@ failsafe-tester grønne mot tabellkalkulator.no.
   grunnlagsfilene regnes på nytt av seg selv. Sjekk testene som låser tall
   fra dagens trekning.
 
+## Upresise tekster under tabellen (legendNote)
+
+Funnet i modellgjennomgangen 29. september 2026. Ikke rettet ennå. Sjekk
+reglene i kildene før teksten skrives, og vis ny tekst før commit.
+
+- **Eliteserien, Europa League-plassen.** I dag (`LEAGUE.legendNote` i
+  `eliteserien/index.html`): "Europa League-plassen går til cupvinneren, ikke
+  til en tabellplassering." Det stemmer bare når cupvinneren ikke alt har en
+  europaplass fra tabellen. Er cupvinneren blant de fire første, går plassen
+  videre nedover tabellen, og nr. 5 får da en europaplass. Hvilken plass som
+  flytter hvor, skal sjekkes mot UEFAs regler for 2027/28 og Norsk Toppfotball
+  før teksten skrives. Sonene på siden er ikke berørt: de regner ikke cupen.
+- **OBOS, opprykkskvalifiseringen.** I dag (`legendNote` i
+  `obos/page/league.js`): "Lagene på 3. til 6. plass spiller
+  opprykkskvalifisering mot et lag fra Eliteserien." Kvalifiseringen er en
+  stige: 5. mot 6., vinneren mot 4., vinneren mot 3., og bare den som vinner
+  stigen, møter Eliteseriens nr. 14. Sjekk formatet mot NFFs reglement for
+  2026 før teksten skrives. Etter endringen: `python3 scripts/build_league.py obos`.
+
 ## Etter sesongslutt 8. november 2026
 
 - **Kalibrer OBOS-parameterne på OBOS-tall, med tog- og testsett.**
@@ -553,20 +572,19 @@ failsafe-tester grønne mot tabellkalkulator.no.
   Eliteserien: del i tog- og testsett, søk på togsettet, og rapporter bare
   tallene fra testsettet.
 
-  Oddsvekten er alt målt på OBOS-tall (22. september 2026,
-  `scripts/obos_odds_weight.py`, 136 kamper ut av utvalg):
+  Oddsvekten er ikke målt på OBOS-tall ennå. Målingen 22. september 2026
+  (`scripts/obos_odds_weight.py`) regnet ratene med feil formel: hjemmelaget
+  fikk +hc for motstanderen i stedet for -hc, og bortelaget manglet både -ha
+  og +hc. I en kontroll med tilfeldige lagstyrker bommet H/U/B med opptil 42
+  prosentpoeng. Resultatene er derfor ugyldige og skal ikke brukes. Formelen
+  er rettet 29. september 2026 og gir nå samme H/U/B som tilpasningen
+  (`fit_fast`) og `evaluate_model.rate_pair`.
 
-  | vekt | log loss | treff | mot vekt 40 |
-  |---|---|---|---|
-  | 0 | 1,0143 | 51,5 % | −0,0001 ± 0,0195 (0,0 SE) |
-  | 20 | 1,0062 | 49,3 % | −0,0081 ± 0,0078 (1,0 SE) |
-  | 40 | 1,0143 | 49,3 % | utgangspunktet |
-  | 80 | 1,0033 | 52,9 % | −0,0111 ± 0,0057 (1,9 SE) |
-  | 160 | 1,0078 | 51,5 % | −0,0065 ± 0,0083 (0,8 SE) |
-
-  Vekt 80 målte best, men 1,9 standardfeil er innenfor støyen, og rekkefølgen
-  er ikke jevn (0 og 40 måler likt, 20 og 160 ligger mellom). Vekten står
-  derfor på 40. Kjør målingen på nytt med hele sesongen bak seg.
+- **Mål OBOS-oddsvekten på nytt, med det rettede skriptet.**
+  `python3 scripts/obos_odds_weight.py` på hele 2026-sesongen. Sett `RHO` i
+  skriptet til den verdien siden bruker da (-0,04 hvis Dixon-Coles-endringen
+  er tatt i bruk, ellers -0,38). Vekten velges ut av utvalg, parvis mot 40 med
+  standardfeil, som før. Bytt bare hvis forskjellen er utenfor støyen.
 
 ## Før 2027-sesongen
 

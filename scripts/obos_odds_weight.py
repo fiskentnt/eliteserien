@@ -31,10 +31,14 @@ RHO, GMAX = -0.38, 15
 
 
 def outcome_probs(res, i, j):
-    """Sannsynlighet for hjemmeseier, uavgjort og borteseier, som på siden."""
-    lh = min(math.exp(res["mu"] + res["H"] + res["att"][i] + res["con"][j]
-                      + res["ha"][i] + res["hc"][j]), 6.0)
-    la = min(math.exp(res["mu"] + res["att"][j] + res["con"][i]), 6.0)
+    """Sannsynlighet for hjemmeseier, uavgjort og borteseier, som på siden.
+    Ratene er de samme som i tilpasningen (fit_fast): hjemmelaget får +ha for
+    seg selv og -hc for motstanderen, bortelaget -ha for seg selv og +hc for
+    motstanderen."""
+    lh = min(math.exp(res["mu"] + res["H"] + res["att"][i] + res["ha"][i]
+                      + res["con"][j] - res["hc"][j]), 6.0)
+    la = min(math.exp(res["mu"] + res["att"][j] - res["ha"][j]
+                      + res["con"][i] + res["hc"][i]), 6.0)
     ph = [math.exp(-lh) * lh**k / math.factorial(k) for k in range(GMAX)]
     pa = [math.exp(-la) * la**k / math.factorial(k) for k in range(GMAX)]
     H = D = A = 0.0
