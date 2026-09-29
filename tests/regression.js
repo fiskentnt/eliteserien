@@ -3367,10 +3367,15 @@ async function main() {
         const pg = await browser.newPage();
         pg.on('pageerror', e => errors.push(`${url}: ${e.message}`));
         await pg.evaluateOnNewDocument(() => {
-          window.__poster = [];
-          const W = window.Worker;
-          window.Worker = function (u, o) { const w = new W(u, o), post = w.postMessage.bind(w);
-            w.postMessage = m => { window.__poster.push({mode: (m && m.mode) || 'tabell', N: m && m.N}); return post(m); }; return w; };
+          // Hver melding til og fra en Worker, med Workerens nummer og tidspunkt,
+          // og hvor mange Workere som er stoppet (avbrutt innsikt).
+          window.__poster = []; window.__svar = []; window.__avsluttet = 0;
+          const W = window.Worker; let nr = 0;
+          window.Worker = function (u, o) { const w = new W(u, o), id = ++nr, post = w.postMessage.bind(w), stopp = w.terminate.bind(w);
+            w.postMessage = m => { window.__poster.push({mode: (m && m.mode) || 'tabell', N: m && m.N, w: id, t: performance.now()}); return post(m); };
+            w.addEventListener('message', e => window.__svar.push({mode: e.data && e.data.mode, w: id, t: performance.now()}));
+            w.terminate = () => { window.__avsluttet++; return stopp(); };
+            return w; };
         });
         await pg.setViewport({width: 1400, height: 900});
         await pg.goto(url, {waitUntil: 'domcontentloaded'});
@@ -3522,17 +3527,58 @@ async function main() {
         // (qaWhyZoneOverride): også fra filen.
         const sc = await pg.evaluate(async lagKode => {
           const lag = eval(lagKode), vent = f => new Promise(r => { const i = setInterval(() => { if (f()) { clearInterval(i); r(); } }, 20); });
+          // Som vent, men gir opp etter ms (så en manglende forhåndsregning feiler i stedet for å henge).
+          const ventMaks = (f, ms) => new Promise(r => { const s = performance.now(), i = setInterval(() => { if (f() || performance.now() - s > ms) { clearInterval(i); r(!!f()); } }, 20); });
           const tell = modus => __poster.filter(p => p.mode === modus).length;
-          const m = matches.find(x => x.hg == null), t0 = tell('tabell'), z0 = tell('zoneTask');
+          const ferdigFor = () => lastMCFinal && lastMCScenarioKey !== '' && lastMCScenarioKey === qaScenarioKey();
+          // Med færre enn fire kjerner starter innsikten når tabellen er ferdig
+          // (INNSIKT_SAMTIDIG_KJERNER); antall kjerner settes her, så testen ikke
+          // avhenger av maskinen den kjører på.
+          const kjerner = k => Object.defineProperty(navigator, 'hardwareConcurrency', {get: () => k, configurable: true});
+          kjerner(2);
+          const m = matches.find(x => x.hg == null), t0 = tell('tabell'), z0 = tell('zoneTask'), i0 = tell('insightsAlle');
           m.hg = 2; m.ag = 0; mcStraks = true; render();
-          await vent(() => lastMCFinal && lastMCScenarioKey !== '' && lastMCScenarioKey === qaScenarioKey());
+          await vent(ferdigFor);
+          // Innsikten regnes i bakgrunnen uten at noen spør, når poolen er ledig
+          // etter tabellen (kortet "Neste kamp" regnes da), i sin egen Worker.
+          const startet = await ventMaks(() => tell('insightsAlle') > i0, 20000);
+          const forhand = __poster.filter(p => p.mode === 'insightsAlle').slice(-1)[0] || {};
+          const zoneFoer = __poster.filter(p => p.mode === 'zoneTask' && p.t < forhand.t).length,
+                zoneSvarFoer = __svar.filter(s => s.mode === 'zoneTask' && s.t <= forhand.t).length;
+          const innsiktW = new Set(__poster.filter(p => p.mode === 'insightsAlle').map(p => p.w));
+          const bareInnsikt = __poster.filter(p => innsiktW.has(p.w)).every(p => p.mode === 'insightsAlle');
           await qaCheerFor(lag);
           const med = {tabell: tell('tabell') - t0, zoneTask: tell('zoneTask') - z0, N: lastMCN, MC_N};
-          const i0 = tell('insightsAlle');
-          await qaHowTo(lag);
-          const iN = __poster.filter(p => p.mode === 'insightsAlle').map(p => p.N), i1 = tell('insightsAlle');
-          await qaWhy(TEAMS.find(t => t !== lag)); await qaRivals(lag); await qaWhenDecided(lag);
-          const innsikt = {forste: i1 - i0, N: iN[iN.length - 1], flere: tell('insightsAlle') - i1};
+          await qaHowTo(lag); await qaWhy(TEAMS.find(t => t !== lag)); await qaRivals(lag); await qaWhenDecided(lag);
+          const innsikt = {startet, N: forhand.N, antall: tell('insightsAlle') - i0, poolLedig: zoneFoer === zoneSvarFoer, zoneFoer, zoneSvarFoer, bareInnsikt};
+          // Et nytt resultat mens innsikten for det forrige regnes: den gamle
+          // regningen stoppes, og svaret gjelder det nye scenarioet.
+          const a0 = __avsluttet, j0 = tell('insightsAlle'), m2 = matches.find(x => x.hg == null);
+          m2.hg = 1; m2.ag = 1; mcStraks = true; render();
+          await vent(ferdigFor);
+          const startet2 = await ventMaks(() => tell('insightsAlle') > j0, 20000);
+          const m3 = matches.find(x => x.hg == null);
+          m3.hg = 0; m3.ag = 3; mcStraks = true; render();
+          const avbrutt = __avsluttet - a0;
+          await vent(ferdigFor);
+          await ventMaks(() => tell('insightsAlle') > j0 + 1, 20000);
+          const A = await innsiktData(), P0naa = Array.from(buildQaOpen().P0);
+          const j1 = tell('insightsAlle'); await qaHowTo(lag);
+          const avbrudd = {startet2, avbrutt, kjoringer: tell('insightsAlle') - j0, gjelderNye: JSON.stringify(A.P0) === JSON.stringify(P0naa), etterpa: tell('insightsAlle') - j1};
+          // Med fire kjerner starter innsikten samtidig med tabellen: rett etter
+          // at tabellen er sendt, før den er ferdig, én gang for scenarioet.
+          kjerner(4);
+          const k0 = __poster.length, m4 = matches.find(x => x.hg == null);
+          m4.hg = 3; m4.ag = 3; mcStraks = true; render();
+          await vent(ferdigFor);
+          const nye = __poster.slice(k0), tabP = nye.find(p => p.mode === 'tabell'), innP = nye.filter(p => p.mode === 'insightsAlle');
+          const tabSlutt = tabP ? __svar.filter(s => s.mode === 'prob' && s.t > tabP.t).slice(-1)[0] : null;
+          const j2 = tell('insightsAlle'); await qaHowTo(lag);
+          const fire = {kjerner: navigator.hardwareConcurrency, jobber: innP.length, N: innP[0] && innP[0].N,
+            etterTabellen: !!tabP && !!innP[0] && innP[0].t >= tabP.t, forTabellenErFerdig: !!innP[0] && !!tabSlutt && innP[0].t < tabSlutt.t,
+            gjenbruk: tell('insightsAlle') - j2 === 0};
+          delete navigator.hardwareConcurrency;
+          m2.hg = null; m2.ag = null; m3.hg = null; m3.ag = null; m4.hg = null; m4.ag = null;
           m.hg = null; m.ag = null; mcStraks = true; render();
           await vent(() => lastMCScenarioKey === '' && lastMCFinal);
           const t1 = tell('tabell'), g = GRUNNLAG.fil, n = TEAMS.length;
@@ -3551,13 +3597,20 @@ async function main() {
           const nesteAnnen = await qaNextMatch(lagA), hvorforAnnen = await qaWhy(lagA);
           qaWhyZoneOverride = null;
           const zN = tell('zoneTask') - z1, iA = tell('insightsAlle') - i2; await qaNextMatch(lagA);
-          return {med, innsikt, utenScenario, tilbake, nyTabell: tell('tabell') - t1, annenSone: zN, annenInnsikt: iA,
+          return {med, innsikt, avbrudd, fire, utenScenario, tilbake, nyTabell: tell('tabell') - t1, annenSone: zN, annenInnsikt: iA,
                   egenSone: tell('zoneTask') - z1 - zN, lagA, andre, pctAnnen: pctTxt(qaZoneByKey(lagA, andre).pct), hvorforAnnen, nesteAnnen};
         }, lagMedSone);
         check(`${liga}: med ett resultat fylt inn regner siden selv (tabellsimulering og oppgaver til poolen)`,
           sc.med.tabell >= 1 && sc.med.zoneTask > 0 && sc.med.N === sc.med.MC_N, JSON.stringify(sc.med));
-        check(`${liga}: med ett resultat fylt inn regnes innsikten én gang med MC_N sesonger, og de neste spørsmålene gjenbruker den`,
-          sc.innsikt.forste === 1 && sc.innsikt.N === sc.med.MC_N && sc.innsikt.flere === 0, JSON.stringify(sc.innsikt));
+        check(`${liga}: med to kjerner regnes innsikten i bakgrunnen (uten at noen spør) når tabellen er ferdig og poolen ledig, i sin egen Worker`,
+          sc.innsikt.startet && sc.innsikt.poolLedig && sc.innsikt.zoneFoer > 0 && sc.innsikt.bareInnsikt, JSON.stringify(sc.innsikt));
+        check(`${liga}: innsikten regnes én gang med MC_N sesonger, og spørsmålene etterpå gjenbruker den`,
+          sc.innsikt.N === sc.med.MC_N && sc.innsikt.antall === 1, JSON.stringify(sc.innsikt));
+        check(`${liga}: et nytt resultat mens innsikten regnes, stopper den gamle regningen, og svaret gjelder det nye scenarioet`,
+          sc.avbrudd.startet2 && sc.avbrudd.avbrutt >= 1 && sc.avbrudd.kjoringer === 2 && sc.avbrudd.gjelderNye && sc.avbrudd.etterpa === 0, JSON.stringify(sc.avbrudd));
+        check(`${liga}: med fire kjerner starter innsikten samtidig med tabellen (etter at tabellen er sendt, før den er ferdig), én gang, og svarene gjenbruker den`,
+          sc.fire.kjerner === 4 && sc.fire.jobber === 1 && sc.fire.N === sc.med.MC_N && sc.fire.etterTabellen && sc.fire.forTabellenErFerdig && sc.fire.gjenbruk,
+          JSON.stringify(sc.fire));
         check(`${liga}: tømmes scenarioet, gjelder filen igjen, uten ny simulering`, sc.tilbake && sc.nyTabell === 0 && sc.utenScenario === 0, JSON.stringify(sc));
         check(`${liga}: svar for en annen sone enn lagets egen (qaWhyZoneOverride) kommer fra filen, med den sonens sjanse (${sc.lagA}, ${sc.andre})`,
           !!sc.andre && sc.annenSone === 0 && sc.annenInnsikt === 0 && sc.egenSone === 0 && sc.hvorforAnnen.includes(` ${sc.pctAnnen} av dem`),

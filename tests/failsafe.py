@@ -772,13 +772,25 @@ def main():
               and "seed:hashStr(scenarioKey+'|impact'), zones:innsiktSoner(), checkpoints:buildCheckpoints(open)};" in t)
         check(f"{s_}/index.html: filen svarer også for en annen sone enn lagets egen (ingen qaWhyZoneOverride i grunnlagSvar)",
               "if(!GRUNNLAG || gruppe.startsWith('grunnlag') || payload.seed!==GRUNNLAG.seed || !grunnlagTomtScenario()) return null;" in t
-              and "if(GRUNNLAG && grunnlagTomtScenario()) return Promise.resolve(GRUNNLAG.innsikt);" in t)
+              and "if(GRUNNLAG && grunnlagTomtScenario()){" in t and "return Promise.resolve(GRUNNLAG.innsikt);" in t)
+        # Med egne resultater regnes innsikten i bakgrunnen når tabellen er
+        # ferdig (og poolen ledig), i sin egen Worker, og en regning for et
+        # scenario som ikke gjelder lenger, stoppes når et nytt starter.
+        check(f"{s_}/index.html: innsikten i egen Worker, startet når tabellen er ferdig, og stoppet ved nytt scenario",
+              "getInnsiktWorker().postMessage({...payload, mode:'insightsAlle', runId});" in t
+              and "const kart = data.mode==='typical' ? typicalResolvers : null;" in t
+              and "fillOdds();\n      if(lastMCFinal) innsiktForhand();" in t
+              and "if(scenarioKey===lastMCScenarioKey && lastMC) return;\n  innsiktAvbryt(scenarioKey);" in t
+              and "poolLedig(()=>{ if(qaScenarioKey()===scen && lastMCFinal && lastMCScenarioKey===scen) innsiktData(); });" in t)
         # Kvalikavsnittet i "Hva må ... gjøre?": fra 15 % direkte nedrykk, med
         # grensen for 14. plass fra en egen sone i blokken (14. plass eller bedre).
         check(f"{s_}/index.html: kvalikavsnittet fra 15 % direkte nedrykk, med egen sone for 14. plass i innsiktsblokken",
               "const QA_KVALIK_DIREKTE = 0.15;" in t and "if(direkte<QA_KVALIK_DIREKTE || minstKvalik<0.01) return '';" in t
               and "if(ned) soner.push({key:'direkte', lo:ned.lo, hi:ned.hi, boundary:ned.lo-1, dir:'back'});" in t
               and "if(T13!=null && T14!=null && T14>myPts && T13-T14>=2)" in t)
+        check(f"{s_}/index.html: med minst fire kjerner starter innsikten samtidig med tabellen, ellers etter",
+              "const INNSIKT_SAMTIDIG_KJERNER = 4;" in t
+              and "N\n  });\n  // Med minst INNSIKT_SAMTIDIG_KJERNER kjerner starter innsikten samtidig med\n  // tabellen, ellers når tabellen er ferdig (innsiktForhand).\n  if(scenarioKey!=='' && (navigator.hardwareConcurrency||0) >= INNSIKT_SAMTIDIG_KJERNER) innsiktData();\n}" in t)
         check(f"{s_}/index.html: sonene og rundekontrollpunktene i innsiktsblokken er med i fingeravtrykket",
               "innsikt:{soner:innsiktSoner(), kontrollpunkter:buildCheckpoints(q.open)}," in t)
     lg_ = (ROOT / "scripts" / "lag_grunnlag.js").read_text(encoding="utf-8")

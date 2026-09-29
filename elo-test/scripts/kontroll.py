@@ -394,7 +394,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "3f615af53f7487e06cbcd427c964fed3d976b05ece0ce5ff32c0052e3cf43b29"
+BASE_SHA = "da9e1904ee8efb9da2f9d5fe8cebfb3de6259506e1a437550359e7c572cd4bba"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

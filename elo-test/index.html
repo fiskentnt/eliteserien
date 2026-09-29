@@ -2996,13 +2996,10 @@ let lastTypicalDiagnostics = null; // for feilsøking/verifisering, se console
 // encodeScenario() ta en snarvei (kort frø i lenken i stedet for hvert
 // resultat) NÅR hele det nåværende grå settet kommer fra akkurat det kallet.
 let lastSimSeed = null, lastSimMatchIds = null;
-// "Spør om tabellen": samme resolver-mønster som typicalResolvers, ett kart
-// per mode siden runId-tellerne er uavhengige.
-const insightsResolvers = new Map();
-let insightsRunId = 0;
 // Tabellsimuleringen (runMCAsync) har sin EGEN Worker, som bare den bruker.
-// "Spør om tabellen" (insights) og "typisk sesong" (typical) går i
-// hjelpe-Workeren under, merkene i sin, og svarene med låste utfall (kortet
+// "Typisk sesong" (typical) går i hjelpe-Workeren under, innsikten i "Spør
+// om tabellen" (insightsAlle, se getInnsiktWorker) og merkene i hver sin, og
+// svarene med låste utfall (kortet
 // "Neste kamp", "Hva betyr neste kamp?", "Heie på", "Hvilke kamper betyr
 // mest?", "Rundens viktigste kamp") i bassenget. Før sto tabellens prosenter
 // i kø bak kortet "Neste kamp" (2500 × 4 sesonger), som sendes før
@@ -3030,6 +3027,7 @@ function getWorker(){
       if(runId!==mcRunId) return; // scenariet er endret siden denne kjøringen startet — forkast
       const outObj={}; TEAMS.forEach((t,i)=>outObj[t]=out[i]);
       lastMC=outObj; lastMCN = data.done; lastMCFinal = data.done>=data.total; fillOdds();
+      if(lastMCFinal) innsiktForhand();
     };
   }
   return mcWorker;
@@ -3040,8 +3038,7 @@ function getHjelpWorker(){
     hjelpWorker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'})));
     hjelpWorker.onmessage = e=>{
       const data=e.data;
-      const kart = data.mode==='typical' ? typicalResolvers : data.mode==='insightsAlle' ? insightsResolvers
-                 : null;
+      const kart = data.mode==='typical' ? typicalResolvers : null;
       if(!kart) return;
       const resolve=kart.get(data.runId);
       if(resolve){ resolve(data); kart.delete(data.runId); }
@@ -3153,6 +3150,7 @@ function runMCAsync(N){
   // ikke selv endrer noe resultat).
   const scenarioKey = scenarioParts.join('_');
   if(scenarioKey===lastMCScenarioKey && lastMC) return;
+  innsiktAvbryt(scenarioKey);
   // Dagens stilling uten scenario, og grunnlagsfilen er godkjent: tabellen
   // kommer fra filen, uten simulering (for eksempel etter Nullstill).
   if(scenarioKey==='' && GRUNNLAG){ grunnlagTilTabell(); return; }
@@ -3166,6 +3164,9 @@ function runMCAsync(N){
     att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride, N
   });
+  // Med minst INNSIKT_SAMTIDIG_KJERNER kjerner starter innsikten samtidig med
+  // tabellen, ellers når tabellen er ferdig (innsiktForhand).
+  if(scenarioKey!=='' && (navigator.hardwareConcurrency||0) >= INNSIKT_SAMTIDIG_KJERNER) innsiktData();
 }
 const pctTxt=x=> x===0?'0 %': x<0.005?'<1 %': x>0.995&&x<1?'>99 %': Math.round(x*100)+' %';
 function fillOdds(){
@@ -4301,7 +4302,12 @@ function qaNextRoundMatches(openMatches){
 // vises uansett ikke, se qaRequestSeq). Før delte de tre første gruppen
 // "svar": startet ett mens et annet hadde oppgaver i kø, ble det første
 // aldri ferdig.
-let poolWorkers = [], poolQueue = [], poolEpoker = {}, poolUrl = null;
+let poolWorkers = [], poolQueue = [], poolEpoker = {}, poolUrl = null, poolLedigVent = [];
+// cb() når poolen er ledig: ingen oppgaver i kø eller under regning. Det
+// sjekkes først etter det som alt er satt i gang (setTimeout), så oppgaver som
+// legges i poolen rett etter, også regnes før cb.
+const poolErLedig = () => !poolQueue.length && poolWorkers.every(w=>!w.job);
+function poolLedig(cb){ setTimeout(()=>{ if(poolErLedig()) cb(); else poolLedigVent.push(cb); }, 0); }
 const poolSize = () => Math.max(1, Math.min(8, navigator.hardwareConcurrency || 4));
 function pumpPool(){
   for(const w of poolWorkers){
@@ -4316,7 +4322,8 @@ function ensurePool(n){
   if(!poolUrl) poolUrl = URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'}));
   while(poolWorkers.length<n){
     const w = new Worker(poolUrl);
-    w.onmessage = e=>{ const job=w.job; w.job=null; if(job && job.epoch===poolEpoker[job.gruppe]) job.done(e.data); pumpPool(); };
+    w.onmessage = e=>{ const job=w.job; w.job=null; if(job && job.epoch===poolEpoker[job.gruppe]) job.done(e.data); pumpPool();
+      if(poolLedigVent.length && poolErLedig()) poolLedigVent.splice(0).forEach(cb=>setTimeout(cb, 0)); };
     poolWorkers.push(w);
   }
 }
@@ -5358,24 +5365,76 @@ function innsiktPayload(N){
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride, N,
     seed:hashStr(scenarioKey+'|impact'), zones:innsiktSoner(), checkpoints:buildCheckpoints(open)};
 }
-// Én kjøring i hjelpe-Workeren. Svaret er tellingene (se runInsightsAlle) med
-// sonene, rundene og stillingen (P0) de ble regnet for.
-function innsiktKjor(payload){
-  insightsRunId++;
-  const runId = insightsRunId;
+// Innsikten har sin EGEN Worker (samme kode). Regningen tar opptil noen
+// sekunder på en telefon tidlig i sesongen, og i hjelpe-Workeren ville
+// "typisk sesong" stått i kø bak den. Svaret på én kjøring er tellingene (se
+// runInsightsAlle) med sonene, rundene og stillingen (P0) de ble regnet for.
+// scen: scenarioet kjøringen gjelder (qaScenarioKey), se innsiktAvbryt.
+let innsiktWorker = null, innsiktRunId = 0, innsiktForeldet = [];
+const innsiktJobber = new Map();   // runId -> {scen, lag, loes}
+function getInnsiktWorker(){
+  if(!innsiktWorker){
+    innsiktWorker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'})));
+    innsiktWorker.onmessage = e=>{
+      const d = e.data, jobb = innsiktJobber.get(d.runId);
+      if(d.mode!=='insightsAlle' || !jobb) return;
+      innsiktJobber.delete(d.runId);
+      const svar = jobb.lag(d);
+      jobb.loes(svar);
+      // Kjøringer som ble avbrutt, får dette svaret: de hører til en tilstand
+      // som ikke gjelder lenger, og det de gir, vises ikke (runQaQuestion).
+      innsiktForeldet.splice(0).forEach(f=>f(svar));
+    };
+  }
+  return innsiktWorker;
+}
+function innsiktKjor(payload, scen = ''){
+  const runId = ++innsiktRunId;
   return new Promise(resolve=>{
-    insightsResolvers.set(runId, d=>resolve({N:d.N, PM:d.PM, soner:payload.zones.map(z=>z.key),
+    innsiktJobber.set(runId, {scen, loes:resolve, lag:d=>({N:d.N, PM:d.PM, soner:payload.zones.map(z=>z.key),
       runder:payload.checkpoints.map(c=>c.round), P0:payload.P0,
-      pts:d.pts, succ:d.succ, kteLag:d.kteLag, dec:d.dec, ahead:d.ahead, behind:d.behind}));
-    getHjelpWorker().postMessage({...payload, mode:'insightsAlle', runId});
+      pts:d.pts, succ:d.succ, kteLag:d.kteLag, dec:d.dec, ahead:d.ahead, behind:d.behind})});
+    getInnsiktWorker().postMessage({...payload, mode:'insightsAlle', runId});
   });
+}
+// Et nytt scenario (runMCAsync): kjøringer for et annet scenario gjelder ikke
+// lenger. Workeren stoppes, så de ikke tar CPU fra tabellen og regningen for
+// det nye; den lages på nytt ved neste kjøring.
+function innsiktAvbryt(scen){
+  if(![...innsiktJobber.values()].some(j=>j.scen!==scen)) return;
+  innsiktWorker.terminate(); innsiktWorker = null;
+  innsiktJobber.forEach(j=>innsiktForeldet.push(j.loes));
+  innsiktJobber.clear();
+  innsiktSiste = null;
 }
 let innsiktSiste = null;   // {nokkel, svar}: siste kjøring siden regnet selv
 function innsiktData(){
-  if(GRUNNLAG && grunnlagTomtScenario()) return Promise.resolve(GRUNNLAG.innsikt);
+  if(GRUNNLAG && grunnlagTomtScenario()){
+    innsiktForeldet.splice(0).forEach(f=>f(GRUNNLAG.innsikt));
+    return Promise.resolve(GRUNNLAG.innsikt);
+  }
   const payload = innsiktPayload(MC_N), nokkel = JSON.stringify(payload);
-  if(!innsiktSiste || innsiktSiste.nokkel!==nokkel) innsiktSiste = {nokkel, svar:innsiktKjor(payload)};
+  if(!innsiktSiste || innsiktSiste.nokkel!==nokkel) innsiktSiste = {nokkel, svar:innsiktKjor(payload, qaScenarioKey())};
   return innsiktSiste.svar;
+}
+// Med egne resultater fylt inn regnes innsikten i bakgrunnen, uten å vente
+// på at noen åpner "Spør om tabellen": tidlig i sesongen tar den noen sekunder
+// på en telefon. Tabellen er det brukeren ser først, og skal ikke bli tregere.
+// Med minst INNSIKT_SAMTIDIG_KJERNER kjerner (navigator.hardwareConcurrency)
+// starter innsikten samtidig med tabellen (runMCAsync); ellers når tabellen er
+// ferdig og poolen ledig, så kortet "Neste kamp" og svarene som regnes etter
+// tabellen, ikke får mindre CPU. Målt 29. september 2026 på etterlignet
+// telefon (fire ganger tregere per kjerne, Eliteserien etter runde 1 og 6):
+// med fire kjerner var tabellen like rask med innsikten samtidig (3,9 og 3,2
+// s), og innsikten var klar rundt tre sekunder tidligere; med to kjerner tok
+// tabellen ofte flere sekunder lenger (etter runde 6: 7,2 mot 3,2 s i
+// median). Uten scenario kommer innsikten fra grunnlagsfilen, eller regnes
+// først når noen spør.
+const INNSIKT_SAMTIDIG_KJERNER = 4;
+function innsiktForhand(){
+  const scen = qaScenarioKey();
+  if(scen==='' || !lastMCFinal || lastMCScenarioKey!==scen) return;
+  poolLedig(()=>{ if(qaScenarioKey()===scen && lastMCFinal && lastMCScenarioKey===scen) innsiktData(); });
 }
 // Tallene for ett lag og én sone, i den formen svarene bruker.
 function innsiktFor(A, team, zoneKey){
