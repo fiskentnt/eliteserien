@@ -1824,6 +1824,25 @@ Skript og JSON i lab (`walkforward/validering/`).
 - `backtest_walkforward.py`: parvise ablasjonsrader uten referansen i
   utvalget hoppes over (krasjet da bare tabell og full ble kjørt).
 
+**Pushet 30.9.2026 kl. 20:51 (5fc3673), etter Tronds klarsignal.** Rettelser
+før push: "slik siden bruker dem" i OBOS-innledningen, periodene (siden
+2016–2025 og 2012–2025, studien 2012–2025 i begge) i ENDRINGER.md, og datoen
+30. september (overskriften "30. september 2026 (kveld)", fordi morgenens
+oppdatering har samme dato; "Sist validert" og notisen). failsafe, kontroll.py
+og kontroll_paneler.py grønne etter rettelsene; hele regresjonen var grønn på
+commiten før dem (bare tekst endret).
+
+Kontroll etter push: CI regnet grunnlaget på nytt (OBOS 8914b34 kl. 20:54,
+Eliteserien e37961d kl. 20:57), og siden ble bygget etter begge. Den
+publiserte siden (headless Chrome, uten hurtigbuffer): GRUNNLAG_STATUS "i
+bruk" i begge ligaene (100 000 sesonger), model.json med 28 dager og 8/24,
+notisen og den tekniske teksten oppdatert. Gullsjansene på siden mot en
+uavhengig Python-simulering fra den publiserte model.json (odds 0,7,
+formoppdatering, Dixon–Coles, 100 000): Bodø/Glimt 78,0 mot 77,8, Viking
+22,0 mot 22,2 (før endringen 77,1 og 22,9); OBOS direkte opprykk Haugesund
+82,0 mot 82,3, Kongsvinger 58,0 mot 57,9, Strømsgodset 49,0 mot 48,8; største
+avvik 0,2 og 0,3 prosentpoeng. (`walkforward/gull_kontroll.py` i lab.)
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
