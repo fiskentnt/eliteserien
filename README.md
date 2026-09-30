@@ -26,14 +26,19 @@ tilpasser modellen; de skriver ferdige JSON-filer som siden leser.
 
 **Poisson med Dixon–Coles.** Forventede mål for hvert lag kommer fra et
 angreps- og forsvarstall per lag, pluss hjemmefordel. Dixon–Coles-korreksjonen
-(rho = −0,38) retter opp at uavhengig Poisson undervurderer uavgjorte resultater
-ved lave målsummer. Målrutenettet går til 15 mål per lag.
+justerer sannsynlighetene for 0-0, 1-0, 0-1 og 1-1 med rho = −0,04, valgt ved å
+maksimere sannsynligheten for de faktiske resultatene 2012–2025
+(`scripts/dc_rho_studie.py`; til 30. september 2026 var den −0,38). Målrutenettet
+går til 15 mål per lag.
 
 **Lagstyrkene tilpasses på mål OG sluttodds.** Oddsen er med i selve
 tilpasningen med vekt 40, sammen med halveringstid 35 dager på eldre kamper og
-regularisering (l1 = 16, l2 = 48). Vektene er målt ut av utvalg, ikke valgt
-etter smak: ablasjonstabellen på siden viser hvert ledd for seg, og
-`scripts/obos_odds_weight.py` måler oddsvekten på OBOS-tall.
+regularisering (l1 = 16, l2 = 48). Vektene er valgt i historiske rullerende
+tester: ablasjonstabellen på siden viser hvert ledd for seg, og
+`scripts/obos_odds_weight.py` måler oddsvekten på OBOS-tall. Alle parametrene
+tilpasses samlet med den eksakte gradienten til målfunksjonen
+(`scripts/fit_fast.py`). Marginen tas ut av oddsen med Shins metode
+(`scripts/oddslib.py`).
 
 **Markedsoddsen blandes inn per kommende kamp**, med vekt 0,7 mot modellens
 egen sannsynlighet. Sluttodds er definert som **siste observasjon mellom 60 og

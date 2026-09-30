@@ -81,12 +81,18 @@ def prep_matches(matches, TI, ref_date, half_life_goals, half_life_odds,
                 ag=np.array(AG,dtype=float), wg=np.array(W_G), wo=np.array(W_O), odds=ODDS)
 
 def fit_model_fast(matches, teams, TI, odds_weight=0.0, half_life_goals=70, half_life_odds=None,
-                    l1=2.0, l2=6.0, ref_date='2026-09-20', x0=None, isolate_global=True,
+                    l1=2.0, l2=6.0, ref_date='2026-09-20', x0=None, isolate_global=False,
                     skille=None, half_life_hist=None, senter_att=None, senter_con=None,
                     klokke=None):
-    """isolate_global: hvis True (anbefalt), påvirker oddsgradienten kun de
-    lagvise parametrene (att/con/ha/hc), ikke det generelle målnivået (mu)
-    eller hjemmefordelen (H) — de bestemmes utelukkende av faktiske mål."""
+    """isolate_global=False (standard fra 1. oktober 2026): gradienten er den
+    eksakte gradienten til målfunksjonen, også for mu og H, så L-BFGS-B går
+    til et optimum.
+
+    isolate_global=True er den gamle varianten, beholdt bare for
+    sammenligninger: oddsleddet er med i målfunksjonen, men ikke i gradienten
+    for mu og H. Gradienten samsvarer da ikke med målfunksjonen, og
+    optimeringen kan stoppe før et konsistent optimum er nådd (produksjonen
+    stoppet etter 8 steg i Eliteserien og 17 i OBOS-ligaen, september 2026)."""
     if half_life_odds is None:
         half_life_odds = half_life_goals
     n = len(teams)

@@ -141,7 +141,7 @@ def rolling_evaluate(by_season, seasons, l1, l2, odds_weight, half_life, cutoff_
             known = matches[:fit_n]
             res = fit_fast.fit_model_fast(known, teams, TI, odds_weight=odds_weight,
                                            half_life_goals=half_life, half_life_odds=half_life,
-                                           l1=l1, l2=l2, ref_date=known[-1]["date"], isolate_global=True)
+                                           l1=l1, l2=l2, ref_date=known[-1]["date"], isolate_global=False)
             mu, Hp, att, con, ha, hc = res["mu"], res["H"], res["att"], res["con"], res["ha"], res["hc"]
             zeros = [0.0] * len(teams)
             for m in matches[eval_start:eval_end]:
@@ -185,7 +185,7 @@ def main():
     p.add_argument("--l2-base", type=float, default=6.0)
     p.add_argument("--odds-weight", type=float, default=40.0)
     p.add_argument("--half-life", type=float, default=35.0)
-    p.add_argument("--dc-rho", type=float, default=-0.38, help="Dixon-Coles tau-parameter, 0 = av")
+    p.add_argument("--dc-rho", type=float, default=-0.04, help="Dixon-Coles tau-parameter, 0 = av (siden: -0,04)")
     p.add_argument("--cutoff-rounds", default="5,10,15,20,25",
                     help="rundekutt å tilpasse+evaluere ved gjennom hver sesong")
     p.add_argument("--name-map", help="valgfri JSON-fil {alt-stavemåte: kanonisk navn}, "

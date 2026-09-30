@@ -79,7 +79,7 @@ def main():
     res = fit_fast.fit_model_fast(
         matches, teams, TI, odds_weight=ODDS_WEIGHT,
         half_life_goals=HALF_LIFE_DAYS, half_life_odds=HALF_LIFE_DAYS,
-        l1=L1, l2=L2, ref_date=ref, isolate_global=True,
+        l1=L1, l2=L2, ref_date=ref, isolate_global=False,
     )
     log(f"Tilpasset mot {len(matches)} kamper ({n_odds} med odds). Konvergerte: {res['success']} "
         f"({res['nit']} iterasjoner).")

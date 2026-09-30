@@ -200,7 +200,7 @@ def main():
     ref = max(m["date"] for m in played) if played else date.today().isoformat()
     res = fit_fast.fit_model_fast(fit_matches, teams, TI, odds_weight=odds_weight,
                                   half_life_goals=HALF_LIFE, half_life_odds=HALF_LIFE,
-                                  l1=L1, l2=L2, ref_date=ref, isolate_global=True)
+                                  l1=L1, l2=L2, ref_date=ref, isolate_global=False)
     model = {
         "fitted_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "teams": teams, "mu": res["mu"], "H": res["H"],

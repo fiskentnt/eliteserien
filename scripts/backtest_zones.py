@@ -108,7 +108,7 @@ DRIFT_CAP_ATTCON, DRIFT_CAP_HAHC, DRIFT_REVERSION = 0.5, 0.35, 0.02
 # og innstillinger i studien av tilpasningen) gikk ingen over 6; den største
 # var 4,64. Taket binder altså ikke for tilpassede rater. Avklart.
 MAX_LAMBDA_LOG = np.log(6.0)
-DC_RHO = -0.38
+DC_RHO = -0.04   # fra 1. oktober 2026 (var -0,38), se DC_RHO i eliteserien/index.html
 # Rekke-rampen (bare i Form-visningen på siden, se STREAK_BONUS i index.html):
 # k vokser med lengden på en strak rekke seire eller tap.
 STREAK_BONUS, STREAK_CAP = 0.6, 5
@@ -414,7 +414,7 @@ def main():
                     if key not in fits:
                         fits[key] = fit_fast.fit_model_fast(
                             played, teams, TI, odds_weight=ow, half_life_goals=HALF_LIFE,
-                            half_life_odds=HALF_LIFE, l1=l1, l2=l2, ref_date=ref, isolate_global=True)
+                            half_life_odds=HALF_LIFE, l1=l1, l2=l2, ref_date=ref, isolate_global=False)
                     r = fits[key]
                     faste = neste_runde_med_odds(remaining, TI, n, r, dcr) if kjede else None
                     pos = simulate(remaining, TI, n, pts0, gd0, gf0, args.sims, rng,

@@ -253,12 +253,13 @@ async function main() {
         JSON.stringify(r.map(x => x.forklaring)));
       const slVentet = [
         'Sluttoddsen er den siste oddsen vi henter mellom 60 og 15 minutter før avspark. Da er som regel også laguttaket kjent.',
-        'Dette har faktisk betydning. I 351 kamper i Eliteserien og OBOS endret sannsynlighetene seg i snitt 2,9 prosentpoeng fra dagen før til rett før kamp. I 2–4 prosent av kampene skiftet også favoritten. Oddsen rett før kamp traff litt bedre enn oddsen fra dagen før.',
+        'Dette har faktisk betydning. I 351 kamper i Eliteserien og OBOS endret sannsynlighetene seg i snitt 2,9 prosentpoeng fra dagen før til rett før kamp. I 2–4 prosent av kampene skiftet også favoritten. I Eliteserien traff oddsen rett før kamp bedre enn oddsen fra dagen før; i OBOS var forskjellen innenfor støyen.',
         'Får vi ikke hentet odds i dette tidsrommet, står kampen uten sluttodds. Vi bruker aldri en eldre odds i stedet.'];
       check(`${side}: avsnittet om sluttoddsen, med log loss-tallet under "Vis detaljer"`,
         !!sl && JSON.stringify(sl.ps) === JSON.stringify(slVentet) && sl.d[0] === 'Vis detaljer'
-          && /0,0082 ± 0,0041 høyere log loss enn sluttoddsen, altså 2,0 standardfeil/.test(sl.d[1] || '')
-          && /0,0130 i Eliteserien \(2,3 standardfeil\) og 0,0024 i OBOS \(0,4 standardfeil/.test(sl.d[1] || ''),
+          && /0,0124 ± 0,0057 høyere log loss enn sluttoddsen i Eliteserien \(2,2 standardfeil\)/.test(sl.d[1] || '')
+          && /0,0020 ± 0,0062 i OBOS \(0,3 standardfeil/.test(sl.d[1] || '')
+          && /Med alle 351 kampene sammen er forskjellen 0,0070 ± 0,0042 \(1,6 standardfeil\)/.test(sl.d[1] || ''),
         JSON.stringify(sl));
       // Ingen « » i det brukeren ser: teksten på siden (også lukkede
       // seksjoner) og anførselstegnene banneret setter rundt spørsmålet.
@@ -3711,7 +3712,7 @@ async function main() {
           'closing = B.load_closing_odds()',
           'fm = [{"date": m["date"], "home": m["home"], "away": m["away"], "hg": m["hg"], "ag": m["ag"], "odds": closing.get((m["home"], m["away"]))} for m in spilte]',
           'n = sum(1 for m in fm if m["odds"])',
-          'res = fit_fast.fit_model_fast(fm, lag, TI, odds_weight=B.ODDS_WEIGHT if n else 0.0, half_life_goals=B.HALF_LIFE, half_life_odds=B.HALF_LIFE, l1=B.L1, l2=B.L2, ref_date=max(m["date"] for m in spilte), isolate_global=True)',
+          'res = fit_fast.fit_model_fast(fm, lag, TI, odds_weight=B.ODDS_WEIGHT if n else 0.0, half_life_goals=B.HALF_LIFE, half_life_odds=B.HALF_LIFE, l1=B.L1, l2=B.L2, ref_date=max(m["date"] for m in spilte), isolate_global=False)',
           'ny = dict(model, mu=res["mu"], H=res["H"], att=list(res["att"]), con=list(res["con"]), ha=list(res["ha"]), hc=list(res["hc"]))',
           'if "--skriv" in sys.argv: open(D + "model.json", "w", encoding="utf-8").write(json.dumps(ny, ensure_ascii=False, indent=1) + "\\n")',
           'print(json.dumps({k: ny[k] for k in ("mu", "H", "att", "con", "ha", "hc")}))'].join('\n');

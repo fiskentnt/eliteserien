@@ -384,7 +384,11 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # (lagstyrkene uten scenario i grunnlagUtenScenario), flettet inn med git
 # merge-file. Der
 # testsiden har sin egen tekst (ELO-Odds 90), er den beholdt, med samme ordlyd om 100 000 og
-# 10 000 simuleringer.
+# 10 000 simuleringer. Modelloppdateringen 30. september 2026 (rho -0,04, Shin,
+# konsistent tilpasning) er flettet inn bare der den er felles: tallene om
+# sluttoddsen (regnet med Shin). Testsiden beholder rho = 0 og sine egne
+# forklaringer (også den tekniske forklaringen i "Slik fungerer det"), og
+# endringsloggen for produksjonsmodellen er ikke med her.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -400,7 +404,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "5b64658028f8686331c1ff2204d90ff3972668f166551e7d8013bc290e66d18f"
+BASE_SHA = "12d9dc3f754dee7c4dcc7d7c3fb6806b72cc3288aa47cf6365986b55750a335c"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

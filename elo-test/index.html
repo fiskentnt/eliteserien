@@ -1187,11 +1187,11 @@
 
     <h3>Hvorfor oddsen hentes rett før avspark</h3>
     <p>Sluttoddsen er den siste oddsen vi henter mellom 60 og 15 minutter før avspark. Da er som regel også laguttaket kjent.</p>
-    <p>Dette har faktisk betydning. I 351 kamper i Eliteserien og OBOS endret sannsynlighetene seg i snitt 2,9 prosentpoeng fra dagen før til rett før kamp. I 2–4 prosent av kampene skiftet også favoritten. Oddsen rett før kamp traff litt bedre enn oddsen fra dagen før.</p>
+    <p>Dette har faktisk betydning. I 351 kamper i Eliteserien og OBOS endret sannsynlighetene seg i snitt 2,9 prosentpoeng fra dagen før til rett før kamp. I 2–4 prosent av kampene skiftet også favoritten. I Eliteserien traff oddsen rett før kamp bedre enn oddsen fra dagen før; i OBOS var forskjellen innenfor støyen.</p>
     <p>Får vi ikke hentet odds i dette tidsrommet, står kampen uten sluttodds. Vi bruker aldri en eldre odds i stedet.</p>
     <details class="details-tech">
       <summary>Vis detaljer</summary>
-      <p class="note">At oddsen rett før kamp traff litt bedre, er målt med log loss, som straffer sikre sannsynligheter som bommer; lavere er bedre. Oddsen fra dagen før hadde 0,0082 ± 0,0041 høyere log loss enn sluttoddsen, altså 2,0 standardfeil, med de to ligaene vektet sammen. Hver for seg var forskjellen 0,0130 i Eliteserien (2,3 standardfeil) og 0,0024 i OBOS (0,4 standardfeil, altså ingen sikker forskjell). Sannsynlighetene flyttet seg i snitt 2,75 prosentpoeng i Eliteserien og 3,02 i OBOS, og favoritten byttet i 4 av 167 og 8 av 184 kamper. Målt 22. september 2026 med <code>scripts/odds_drift.py</code>.</p>
+      <p class="note">Treffsikkerheten er målt med log loss, som straffer sikre sannsynligheter som bommer; lavere er bedre. Oddsen fra dagen før hadde 0,0124 ± 0,0057 høyere log loss enn sluttoddsen i Eliteserien (2,2 standardfeil) og 0,0020 ± 0,0062 i OBOS (0,3 standardfeil, altså ingen sikker forskjell). Med alle 351 kampene sammen er forskjellen 0,0070 ± 0,0042 (1,6 standardfeil). Sannsynlighetene flyttet seg i snitt 2,77 prosentpoeng i Eliteserien og 3,11 i OBOS, og favoritten byttet i 4 av 167 og 8 av 184 kamper. Oddsen er målt 22. september 2026 med <code>scripts/odds_drift.py</code> (Pinnacle), og marginen er tatt ut med Shins metode som ellers på siden.</p>
     </details>
   </div>
 </details>
@@ -1918,8 +1918,8 @@ function poisFyll(l, r){ let p=Math.exp(-l); r[0]=p; for(let i=1;i<=GMAX;i++){ p
 // reell forskjell for Eliteserien, ikke en feil (se undersøkelsen i
 // scratchpad/test_dixon_coles.js).
 const DC_RHO = 0;  // ELO-TEST: rho = 0, som i laben. Produksjonens Full
-// bruker -0,38, men aa arve den her ville laget en ELO90-variant laben ikke
-// har validert. Diagnostisk kontroll paa 2026-data: rho = 0 gir 2,772 maal
+// bruker -0,04 (fra 30. september 2026; var -0,38), men aa arve den her ville
+// laget en ELO90-variant laben ikke har validert. Diagnostisk kontroll paa 2026-data: rho = 0 gir 2,772 maal
 // per kamp mot faktisk 3,161, rho = -0,38 gir 4,154. Kontroll, ikke bevis.
 // Math.max(0,...): tau kan i prinsippet bli negativ ved høye lh/la (skjer
 // ikke i praksis under MAX_LAMBDA_LOG-taket for de tallene som faktisk

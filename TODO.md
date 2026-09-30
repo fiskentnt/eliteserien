@@ -491,10 +491,12 @@ failsafe-tester grønne mot tabellkalkulator.no.
     tester), og publisering fra en workflow i stedet for fra grenen (lønner
     seg først hvis vi vil ha delingsbilder med dagens tall).
 
-## Etter runden 9.–12. oktober 2026: samlet modelloppdatering, så låst ut sesongen
+## Samlet modelloppdatering 30. september 2026, så låst ut sesongen
 
-- **Besluttet 30.9.2026:** én samlet oppdatering etter runden, med samme modell
-  i begge ligaene, begrenset til tre endringer som alle er kjente metoder. Deretter låses HELE modellen ut 2026-sesongen, også
+- **Gjort 30.9.2026** (flyttet fram fra etter runden 9.–12. oktober, så runde 23
+  i Eliteserien og runde 24 i OBOS går på den nye modellen): én samlet
+  oppdatering med samme modell i begge ligaene, begrenset til tre endringer som
+  alle er kjente metoder. Fra nå er HELE modellen låst ut 2026-sesongen, også
   markedsvekten (`ODDS_W` 0,7). Bare dataene oppdateres. Markedsstudien
   (vekt etter oddsens alder, prisrekkene i lab under `odds-prisrekker/`)
   fortsetter, men resultatene tas i bruk tidligst fra 2027.
@@ -509,7 +511,8 @@ failsafe-tester grønne mot tabellkalkulator.no.
   3. **Konsistent tilpasning:** optimeringen brukte en gradient som ikke
      samsvarte med målfunksjonen: oddsleddet var med i målfunksjonen, men
      ikke i gradienten for mu og H (`isolate_global=True`). L-BFGS-B stoppet
-     derfor etter rundt 8 steg, ikke i et optimum. Rettes med
+     derfor før et optimum: etter 8 steg i Eliteserien (største absolutte
+     komponent i målfunksjonens gradient 31, for H) og 17 i OBOS (14, for mu). Rettes med
      `isolate_global=False`, så gradienten er den eksakte gradienten til
      målfunksjonen. Alle kall med `isolate_global=True`: `fit_model.py`,
      `obos_build_data.py`, `backtest_zones.py`, `evaluate_model.py`,
@@ -538,11 +541,17 @@ failsafe-tester grønne mot tabellkalkulator.no.
   "Etter sesongslutt: gjennomgang av delene uten publisert metode").
 - **Endringsloggen** på siden: utkast i rapporten 30.9.2026. Tallene regnes
   på nytt med den endelige koden, og teksten vises før commit.
-- **Tekstene til siden er ferdige** (30.9.2026, gjennomgått setning for
-  setning). Legges inn sammen med selve modelloppdateringen; tallene
-  kontrolleres mot den endelige koden, og teksten vises før commit. Se
-  "Tekstene til oktoberoppdateringen" rett under.
-- **Rho-detaljene** (foreløpig valgt 29.9.2026): én `DC_RHO` ≈ -0,04 overalt
+- **Tekstene er lagt inn på siden** 30.9.2026 (endringsloggen som egen seksjon,
+  "Endringer i modellen", og den tekniske forklaringen under "Slik fungerer
+  det"), med tallene regnet på nytt med produksjonskoden. Valideringen under
+  "Hvordan vet vi at modellen virker?" er regnet på nytt for begge ligaene.
+- **Etter OBOS-runden 2.-4. oktober, før runde 23 i Eliteserien:** sjekk at
+  grunnlagsfilene er regnet på nytt og i bruk (GRUNNLAG_STATUS "i bruk"), at
+  de frosne prognosene i `prekick.json` er laget med den nye modellen (stempel
+  etter oppdateringen; treffsikkerhetsloggen teller bare rader etter
+  `LOGG_START` i `scripts/accuracy_log.py`), og at uavgjort og sannsynlighetene
+  i kampene ser rimelige ut. Rapporter før runde 23.
+- **Rho-detaljene** (valgt 29.9.2026, tatt i bruk 30.9.2026): én `DC_RHO` ≈ -0,04 overalt
   (modellens sannsynligheter, oddstilpasningen i `fitRates()`, trekningen og
   tabellsimuleringen), i stedet for -0,38.
 - **Hvorfor:** -0,38 ble valgt 20.9.2026 (commit 48e89a3) ved å justere
@@ -580,7 +589,7 @@ failsafe-tester grønne mot tabellkalkulator.no.
   - Målnivået kalibreres IKKE: tilbaketesten sier modellen ligger 4 % under
     det faktiske, og dagens høye nivå (3,5 mål per kamp) er tidsvektingen
     (august–september 2026: 3,54 mål per kamp).
-- **Når den tas i bruk:** `DC_RHO` og kommentaren over den i
+- **Tatt i bruk 30.9.2026 (gjort):** `DC_RHO` og kommentaren over den i
   `eliteserien/index.html` (OBOS bygges av den; testsiden har sin egen,
   rho = 0), standardverdien `DC_RHO` i `backtest_zones.py` og `--dc-rho` i
   `evaluate_model.py`, Brier-tabellen under "Hvordan vet vi at modellen
@@ -663,7 +672,9 @@ modellen er bygget, også fagfolk):
 >
 > Alle parametrene estimeres samlet ved å minimere én målfunksjon som består av målene, oddsleddet og regulariseringen. Optimeringsmetoden bruker gradienten.
 >
-> Fram til oktober 2026 samsvarte ikke gradienten fullt med målfunksjonen: oddsleddet var med i målfunksjonen, men ikke i gradienten for det generelle målnivået og hjemmefordelen. Dette kunne få optimeringen til å stoppe før et konsistent optimum var nådd. Produksjonsmodellen for Eliteserien stoppet etter rundt åtte steg, med gradient opptil 3,7. Dette er rettet.
+> Fram til oktober 2026 samsvarte ikke gradienten fullt med målfunksjonen: oddsleddet var med i målfunksjonen, men ikke i gradienten for det generelle målnivået og hjemmefordelen. Dette kunne få optimeringen til å stoppe før et konsistent optimum var nådd. Produksjonsmodellen for Eliteserien stoppet etter åtte steg. Den største absolutte komponenten i målfunksjonens gradient var da 31, for hjemmefordelen. Dette er rettet.
+>
+> (OBOS-siden: "Produksjonsmodellen for OBOS-ligaen stoppet etter 17 steg. Den største absolutte komponenten i målfunksjonens gradient var da 14, for det generelle målnivået. Dette er rettet." Målt 30.9.2026 med den gamle tilpasningen på produksjonsdataene fra før oppdateringen; den gjenskaper begge de lagrede modellene eksakt.)
 >
 > **4. Praktiske regler**
 >

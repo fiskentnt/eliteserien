@@ -29,6 +29,12 @@ from pathlib import Path
 
 ROOT = Path(__file__).parent.parent
 KILDER = ("side", "modell", "odds")
+# Produksjonens logg starter ved modelloppdateringen 30. september 2026 (rho
+# -0,04, Shin, konsistent tilpasning). Bare rader som er regnet (stamp) etter
+# den teller, så en prognose fra den gamle modellen aldri kan komme med.
+# Loggen var tom da oppdateringen ble gjort, så ingen rader ble flyttet.
+# Gjelder ikke testsiden (--data), som har sin egen modell.
+LOGG_START = "2026-09-30T01:13:00Z"
 # Kalibrering: bredere bøtter enn i tilbaketesten, fordi loggen starter med
 # få kamper. 20 prosentpoeng gir nok i hver bøtte til at tallet betyr noe.
 BINS = [(0.0, 0.2), (0.2, 0.4), (0.4, 0.6), (0.6, 0.8), (0.8, 1.0)]
@@ -72,6 +78,8 @@ def main():
     for key, e in pre.items():
         if not e.get("frosset"):
             continue
+        if mappe is None and (e.get("stamp") or "") < LOGG_START:
+            continue   # bare produksjonens logg; testsiden har sin egen modell
         r = spilte.get((e.get("home"), e.get("away")))
         if r:
             rader.append((e, r))

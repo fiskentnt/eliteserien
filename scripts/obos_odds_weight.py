@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).parent))
 import fit_fast
 from obos_build_data import rows_for, load_closing_odds, HALF_LIFE, L1, L2
 
-RHO, GMAX = -0.38, 15
+RHO, GMAX = -0.04, 15   # som siden fra 1. oktober 2026
 
 
 def outcome_probs(res, i, j):
@@ -72,7 +72,7 @@ def evaluate(weight, rounds, order, teams, TI, odds, min_matches):
             res = fit_fast.fit_model_fast(
                 fm, teams, TI, odds_weight=weight, half_life_goals=HALF_LIFE,
                 half_life_odds=HALF_LIFE, l1=L1, l2=L2,
-                ref_date=seen[-1]["date"], isolate_global=True)
+                ref_date=seen[-1]["date"], isolate_global=False)
             for m in grp:
                 p = outcome_probs(res, TI[m["home"]], TI[m["away"]])
                 k = 0 if m["hg"] > m["ag"] else (1 if m["hg"] == m["ag"] else 2)
