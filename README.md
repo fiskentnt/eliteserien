@@ -40,6 +40,10 @@ tilpasses samlet med den eksakte gradienten til målfunksjonen
 (`scripts/fit_fast.py`). Marginen tas ut av oddsen med Shins metode
 (`scripts/oddslib.py`).
 
+Endringer i modellen, med tester og forbehold, står i
+[ENDRINGER.md](ENDRINGER.md). Siden har en kort notis nederst i "Hvordan vet
+vi at modellen virker?" som lenker dit.
+
 **Markedsoddsen blandes inn per kommende kamp**, med vekt 0,7 mot modellens
 egen sannsynlighet. Sluttodds er definert som **siste observasjon mellom 60 og
 15 minutter før avspark** (`scripts/oddswindow.py`). En kamp uten pris i det
