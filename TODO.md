@@ -1321,6 +1321,62 @@ favorittavvik og log loss på etablerte lag, nedrykkslag og opprykkslag, per
 periode (2012–2021 og 2022–2025) og per fase av sesongen. (2012 kan ikke
 klassifiseres uten 2011-lagene i dataene.)
 
+**Diagnosen (kjørt 30.9.2026, dagens modell 16/48, 35 dager, 40; kandidaten
+ved siden av).** Lagkategori fra lagene i begge ligaene sesongen før:
+etablert (samme liga året før), nedrykkslag (Eliteserien året før, nå OBOS),
+opprykkslag (ligaen under året før). NOR.csv sitt "Sandnes" er
+OBOS-historikkens "Sandnes Ulf"; ellers stemmer alle overgangene. 2013–2025.
+Skript og tall i lab (`walkforward/wf_diagnose.py`, `diagnose.json`).
+
+Kamper med minst ett nytt lag mot kamper mellom etablerte lag (helning H / B,
+favorittene modell/faktisk):
+
+| | Minst ett nytt lag | Begge etablerte |
+|---|---|---|
+| OBOS 2013–2021 | 1,04 / 1,21, 49,9 / 52,7 (1246 kamper) | 1,08 / 1,30, 47,6 / 50,5 (786) |
+| OBOS 2022–2025 | **1,72 / 1,67**, 49,7 / 55,0 (473) | 1,26 / 1,12, 47,0 / 52,1 (438) |
+| Eliteserien 2013–2021 | 1,16 / 1,05, 49,2 / 50,1 (571) | 1,11 / 1,26, 49,1 / 52,3 (1478) |
+| Eliteserien 2022–2025 | 1,10 / **1,59**, 50,5 / 53,9 (267) | 1,15 / 1,15, 51,4 / 53,8 (637) |
+
+Fra lagets side (sjansen for at laget vinner; helning, modellens snitt mot
+andel vunnet), 2022–2025:
+- OBOS: etablerte 1,15 (36,7 / 36,8), nedrykkslag **1,49** (47,7 / 51,8:
+  undervurdert med 4 prosentpoeng; som favoritter −7,6), opprykkslag
+  **1,36** (34,2 / 30,2: overvurdert med 4 prosentpoeng). I 2013–2021 var
+  det 1,12, 1,09 og 0,84.
+- Eliteserien: etablerte 1,05, opprykkslag **1,39** (33,5 / 32,6; som
+  favoritter −6,7, 108 rader). I 2013–2021: 1,13 og 0,90.
+- Per fase: størst i runde 16–30 for de nye lagene (OBOS nedrykkslag 1,58,
+  Eliteserien opprykkslag 1,69). Runde 1–4 har for få rader for nye lag (under
+  60) til å måles for seg.
+- Favorittene undervurderes også blant etablerte lag, særlig sent i
+  sesongen (runde 16–30: −3,0 til −6,9 prosentpoeng i alle ligaer og
+  perioder).
+- Log loss mot markedet: omtrent like stort gap for alle kategoriene i OBOS
+  2022–2025 (+0,024 til +0,026).
+- Oddsvekten: lav vekt (20) er bedre i runde 1–4 hos de etablerte lagene
+  (Eliteserien −0,0030 og −0,0026, OBOS −0,0016 og −0,0047); høy vekt (60)
+  er bedre sent i sesongen hos de nye lagene (OBOS nedrykkslag runde 16–30
+  −0,0016, Eliteserien opprykkslag −0,0022).
+- Kandidaten (8/24, 28 dager) senker helningene med 0,03–0,08 i alle
+  kategoriene, uten å endre mønsteret.
+
+**Konklusjon av diagnosen.** Den store forsiktigheten i OBOS 2022–2025 sitter
+først og fremst i kampene med nye lag (1,72 / 1,67 mot 1,26 / 1,12):
+nedrykkslagene er undervurdert og opprykkslagene overvurdert, som man venter
+når de starter på ligasnittet. I 2013–2021 var det ikke slik. At favorittene
+undervurderes (rundt 5 prosentpoeng i OBOS), gjelder derimot begge gruppene,
+og er størst sent i sesongen; det forklares ikke av de nye lagene alene.
+Bare diagnose; ingen løsning er testet.
+
+**Dagens stilling med kandidaten (sammenligning i scratchpad, 30.9.2026).**
+100 000 simuleringer, samme tall, som siden (kommende odds 70/30, form,
+Dixon–Coles); dagens modell her gjenskaper model.json eksakt og sidens tall
+innenfor 0,5 prosentpoeng. Bare én endring over to prosentpoeng: Rosenborg
+topp 4 53,5 → 57,3. Gull: Bodø/Glimt 77,1 → 78,0, Viking 22,9 → 22,0.
+Styrke: Bodø/Glimt 7,50 → 7,59, Viking 6,61 → 6,66. OBOS: alle endringer
+under 0,7 prosentpoeng. (`walkforward/stilling_i_dag.py` og `.txt` i lab.)
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
