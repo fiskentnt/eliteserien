@@ -944,6 +944,40 @@ Pinnacle, var forskjellen i OBOS 0,0009 ± 0,0035. Hvor mye som skyldes
 oddskilden og hvor mye modellen, kan ikke skilles med dataene vi har.
 Regelen endres ikke av dette.
 
+**Resultat (målt 30.9.2026 kl. 04:40:30 UTC, etter at regelen var pushet i
+539f28f kl. 04:40:23 UTC).** Skript og tall i lab (`walkforward/wf_vekt.py`,
+`vektkurve.json`). Log loss mot vekten med lavest log loss, SE klustret på
+sesong; konsistens = snitt av største endring i H, U eller B fra modellen
+alene, og andel kamper over 5 og 10 prosentpoeng.
+
+| Vekt | Eliteserien mot beste | treff | konsistens | OBOS mot beste | treff | konsistens |
+|---|---|---|---|---|---|---|
+| 0,0 | +0,0130 ± 0,0022 | 51,8 % | 0,0 pp / 0 % / 0 % | +0,0167 ± 0,0026 | 52,2 % | 0,0 pp / 0 % / 0 % |
+| 0,5 | +0,0046 ± 0,0011 | 52,4 % | 2,4 pp / 8 % / 0,3 % | +0,0062 ± 0,0012 | 53,1 % | 2,5 pp / 9 % / 0,5 % |
+| 0,6 | +0,0033 ± 0,0009 | 52,4 % | 2,9 pp / 14 % / 0,9 % | +0,0047 ± 0,0010 | 53,4 % | 2,9 pp / 15 % / 1,1 % |
+| 0,7 | +0,0023 ± 0,0006 | 52,4 % | 3,4 pp / 22 % / 1,5 % | +0,0033 ± 0,0007 | 53,6 % | 3,4 pp / 22 % / 2,3 % |
+| 0,8 | +0,0014 ± 0,0004 | 52,5 % | 3,8 pp / 28 % / 3,1 % | +0,0020 ± 0,0005 | 53,6 % | 3,9 pp / 28 % / 4,4 % |
+| 0,9 | +0,0006 ± 0,0002 | 52,6 % | 4,3 pp / 33 % / 5,9 % | +0,0009 ± 0,0002 | 53,4 % | 4,4 pp / 33 % / 6,5 % |
+| 1,0 | beste | 52,8 % | 4,8 pp / 39 % / 8,2 % | beste | 53,5 % | 4,9 pp / 38 % / 9,0 % |
+
+(Alle vektene 0,0–1,0 er målt; tabellen viser 0,0 og 0,5–1,0. Log loss faller
+jevnt med vekten i begge ligaene, så kurven har ikke noe minimum underveis:
+den beste er 1,0, oddsen alene gjennom fitRates, som er lik markedet alene
+(M) på fire desimaler.)
+
+- Laveste vekt innenfor 0,0025: Eliteserien 0,7, OBOS 0,8. **Regelen gir 0,8.**
+- 0,8 mot 0,7 på 2012–2025: Eliteserien −0,0009 ± 0,0002, OBOS −0,0013 ±
+  0,0002. Konsistensen: snittet av største endring øker fra 3,4 til 3,8–3,9
+  prosentpoeng, andelen kamper over 10 prosentpoeng fra 1,5 til 3,1 %
+  (Eliteserien) og fra 2,3 til 4,4 % (OBOS).
+- Kontroll på 2026 (ikke brukt til valget; sluttodds fra prisrekkene):
+  Eliteserien 0,8 mot 0,7 −0,0026 ± 0,0009 (154 kamper), OBOS −0,0004 ±
+  0,0012 (174 kamper, innenfor støyen). Retningen stemmer i begge; utvalget er
+  lite.
+- Det er OBOS som flytter valget fra 0,7 til 0,8, og OBOS-historikken er
+  oddsportal-snitt, ikke Pinnacle (se begrensningen over). Regelen endres ikke
+  av det. Beslutningen tas etter sesongen; ODDS_W står på 0,7 ut 2026.
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
