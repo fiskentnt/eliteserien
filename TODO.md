@@ -1135,6 +1135,72 @@ helningene i OBOS 1,29–1,37 på 2022–2025. Kandidaten er formelt godkjent,
 men forbedringen er ikke klar; beslutningen er Tronds. Neste trinn startes
 ikke før han har sett dette.
 
+**Beslutning etter trinn 1 (Trond, 30.9.2026).** 8/24 er kandidat, og
+gevinsten er kalibrering, ikke treffsikkerhet. 8/24 brukes som fast verdi i
+trinn 2 og 3, men ingen endring i modellen ennå. Når trinn 1–3 er ferdige,
+testes den samlede kandidaten mot dagens modell (16/48, 35 dager, oddsvekt
+40) på 2022–2025 og sonene, som én pakke, før Trond tar stilling.
+
+### Trinn 2: halveringstid, med 8/24 (kjørt 30.9.2026)
+
+Samme kamper og regler som trinn 1; "dagens" i dette trinnet er 35 dager
+med 8/24. 35 dager er kjøringen fra trinn 1 (samme innstilling).
+
+**Valg, 2012–2021** (log loss mot 35 dager):
+
+| Halveringstid | Eliteserien | OBOS | Samlet |
+|---|---|---|---|
+| 21 | +0,0000 ± 0,0003 | −0,0002 ± 0,0005 | −0,0001 ± 0,0003 |
+| 28 | −0,0001 ± 0,0001 | −0,0002 ± 0,0002 | −0,0001 ± 0,0001 |
+| 35 | 1,0095 | 1,0090 | 1,0093 |
+| 42 | +0,0001 ± 0,0001 | +0,0002 ± 0,0001 | +0,0001 ± 0,0001 |
+| 56 | +0,0002 ± 0,0002 | +0,0005 ± 0,0003 | +0,0004 ± 0,0002 |
+
+Lavest samlet: 28 dager, ikke på kanten. Flatt: alle forskjeller er
+0,0005 eller mindre.
+
+Helning og favoritter, 2012–2021 (beskrivende): Eliteserien H 1,12 / 1,09 /
+1,07 / 1,06 / 1,05 og B 1,18 / 1,16 / 1,14 / 1,13 / 1,12 for 21 / 28 / 35 /
+42 / 56 dager; OBOS H 0,98–0,99 og B 1,17–1,20 for alle; favorittene 49,4–
+49,6 mot faktisk 51,9 (Eliteserien) og 49,5–49,6 mot 52,1 (OBOS).
+
+**Kontroll, 2022–2025:**
+
+| Halveringstid | ES log loss mot 35 | ES helning H / B | ES fav. modell/faktisk | OBOS log loss mot 35 | OBOS helning H / B | OBOS fav. |
+|---|---|---|---|---|---|---|
+| 21 | −0,0009 ± 0,0008 | 1,11 / 1,22 | 51,4 / 53,9 | −0,0015 ± 0,0004 | 1,45 / 1,39 | 48,8 / 53,6 |
+| 28 | −0,0005 ± 0,0003 | 1,08 / 1,19 | 51,6 / 53,9 | −0,0007 ± 0,0002 | 1,44 / 1,37 | 48,8 / 53,6 |
+| 35 | (0,9808) | 1,06 / 1,17 | 51,6 / 53,9 | (1,0030) | 1,43 / 1,36 | 48,8 / 53,6 |
+| 42 | +0,0005 ± 0,0003 | 1,05 / 1,15 | 51,6 / 53,9 | +0,0006 ± 0,0001 | 1,43 / 1,35 | 48,7 / 53,6 |
+| 56 | +0,0012 ± 0,0007 | 1,04 / 1,14 | 51,6 / 53,9 | +0,0015 ± 0,0004 | 1,43 / 1,34 | 48,6 / 53,6 |
+
+28 mot grensene (2022–2025): lavere log loss i begge ligaene (−0,0005 og
+−0,0007); |helning − 1| øker med 0,016 og 0,020 (Eliteserien H og B) og
+0,006 og 0,011 (OBOS), under grensen 0,03; favorittavviket +0,06 og −0,05
+prosentpoeng.
+
+**Sonene, 28 mot 35 dager** (8/24, 20 000 simuleringer, samme tall):
+2022–2025: Eliteserien gull −0,0001, topp 4 −0,0004 ± 0,0001, nedrykk
+−0,0002; OBOS opprykk −0,0000, topp 6 −0,0002, nedrykk −0,0001. 2012–2021:
+alle innenfor ±0,0002. Ingen sone dårligere. **28 dager er kandidat.**
+
+2026 er ikke brukt i trinn 2; den holdes til testen av den samlede pakken.
+
+**Funn.** På kontrollsettet 2022–2025 er kortere halveringstid bedre hele
+veien ned til kanten (21 dager: −0,0009 og −0,0015 ± 0,0004), mens valget på
+2012–2021 er flatt og peker på 28. Det kan tyde på at nyere sesonger belønner
+kortere hukommelse, men valget følger den låste regelen (28), og det
+fortsettes ikke utover kanten. Kortere halveringstid gjør modellen litt mer
+forsiktig (helningene øker), altså motsatt vei av 8/24.
+
+**2D-test med regulariseringen?** Ikke kjørt. Planen sier bare ved konkret
+grunn. Mulig grunn: halveringstiden og krympingen påvirker begge hvor mye data
+hvert lagestimat bygger på, og de to trinnene flytter helningene i hver sin
+retning. Men log loss-flaten er flat i begge trinnene, og ingenting i
+resultatene viser at valget av det ene endrer seg med det andre (det er ikke
+målt). Trond avgjør om en liten 2D-test (8/24 og 16/48 × 28 og 35 dager)
+skal kjøres før trinn 3.
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
