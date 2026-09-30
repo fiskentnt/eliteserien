@@ -691,6 +691,183 @@ modellen er bygget, også fagfolk):
 > - **Rangering uten innbyrdes oppgjør.** Poeng, målforskjell, scorede mål. Innbyrdes oppgjør er ikke regnet inn.
 > - **Tekniske tak.** Forventede mål per lag er begrenset til 6, og det nås ikke i praksis. Resultater regnes med opptil 15 mål per lag. Omregningen fra odds søker mellom 0,15 og 4,5 forventede mål.
 
+## Studie av tilbaketestene: walk-forward mot faste kuttpunkter (30.9.2026)
+
+Ingen produksjonsendring, og valideringstallene på siden er ikke endret. Om
+de skal erstattes, og hvordan en ny valideringsmetode i så fall forklares,
+avgjøres ved sesongslutt. Skriptene og resultatfilene ligger i lab
+(`walkforward/`: `wf_kamper.py`, `wf_analyse.py`, `wf_soner.py`,
+`wf_soner_analyse.py`, `wf_2026.py`, og JSON med alle prediksjoner); legg
+skriptene i `scripts/` hvis metoden tas i bruk. Regnetid: 20 sekunder for
+enkeltkampene, 61 minutter for sonene (100 000 simuleringer, 6 kjerner).
+
+**Metode.** Samme låste modell og regler gjennom hele studien (oktober-
+oppdateringen: odds i tilpasningen med vekt 40 og Shin, halveringstid 35 dager,
+l1/l2 16/48, konsistent tilpasning, Dixon-Coles −0,04, formoppdatering i
+simuleringen). Ingen parametre er valgt ut fra resultatene.
+- *Walk-forward (WF):* før hver kampdato tilpasses modellen på kampene med
+  TIDLIGERE dato, og kampene den dagen predikeres (enkeltkamper), eller resten
+  av sesongen simuleres (soner). Faktisk dato, så utsatte kamper står der de
+  ble spilt, og ingen kamp samme dag er med i tilpasningen (kontrollert med
+  `assert` i skriptene).
+- *Faste kuttpunkter (FK), dagens validering:* enkeltkamper som
+  `evaluate_model.py` (tilpasset etter runde 5, 10, 15, 20, 25, kuttet på
+  antall kamper i datoorden, brukt på hele bolken); soner som
+  `backtest_zones.py` (40, 55, 70 og 85 % av kampene). FK kan ta med kamper
+  fra samme dato som den predikerte kampen i tilpasningen: 61 av 2800
+  enkeltkamper i Eliteserien, 77 av 2799 i OBOS.
+- *Varianter:* A modellen alene. B som siden nær avspark: neste kamp (soner:
+  første runde etter punktet) blandes 0,7 sluttodds + 0,3 modell og regnes
+  om med fitRates. Sluttoddsen er odds satt før kampen, tilsvarende oddsen i
+  sidens frosne prognose rett før avspark; sannsynlighetene brukeren ser
+  tidligere i uken bygger på oddsen som var tilgjengelig da, og kan avvike fra
+  sluttoddsen (se D). Referanser: M sluttoddsen alene, F alle lag like sterke,
+  tabellmodellen (soner).
+- *Parvise sammenligninger* på de samme kampene/punktene og lagene;
+  standardfeil klustret på sesong (2026: på kalenderuke). WF og FK har ikke de
+  samme sonepunktene, så metodeforskjellen for sonene regnes per sesong og
+  sammenlignes over de 14 sesongene.
+
+**Datadekning.**
+- Eliteserien: NOR.csv (football-data.co.uk), 2012–2025, 3360 seriekamper
+  (kvalikkampene holdt utenfor). Odds i tilpasningen som produksjonen: BFEC,
+  ellers AvgC, ellers PSC. Sluttodds i B: Pinnacle (PSC) i 2764 av 2800
+  sammenlignede kamper, snittet (AvgC) i 36.
+- OBOS: oddsportal-historikken i lab (snitt av sluttodds, avskrevet for hånd,
+  kontrollert mot RSSSF), 2012–2025, 3360 kamper, odds for 3359. Ligger ikke i
+  det offentlige repoet; OBOS-tallene kan ikke gjenskapes derfra.
+- C (tidligere markedsodds): **ikke mulig**. NOR.csv har bare
+  sluttoddskolonner (PSC, MaxC, AvgC, BFEC, B365C; C = closing ifølge
+  football-data sin notes.txt). Kolonnene uten C (PSH, AvgH, B365H), som i
+  hovedligaene er odds innhentet fredag/tirsdag ettermiddag, finnes ikke for
+  Norge. Dekning i NOR.csv: PSC alle sesonger (2025: 206 av 240), MaxC/AvgC
+  alle, BFEC 2024 (134) og 2025, B365C 2025 (101) og 2026. For OBOS finnes
+  bare sluttodds; ingen variant med tidligere odds er laget.
+- D (2026): prisrekkene i lab (Pinnacle via OddsPapi, 171 kamper i
+  Eliteserien, 186 i OBOS, til 29.9). Med resultat, alle fire avlesninger og
+  minst 10 kamper før: 154 i Eliteserien (6.4.–20.9.) og 174 i OBOS
+  (12.4.–20.9.). **Lite utvalg, én sesong.**
+
+**1. Enkeltkamper, 2012–2025** (samme kamper: fra runde 5, med sluttodds)
+
+| | Eliteserien (2800) | OBOS (2799) |
+|---|---|---|
+| FK-A log loss / treff | 1,0004 / 51,6 % | 1,0003 / 51,9 % |
+| WF-A | 0,9979 / 51,7 % | 0,9989 / 52,2 % |
+| WF-A mot FK-A | −0,0024 ± 0,0007 (3,4 SE), treff +0,1 ± 0,2 pp | −0,0014 ± 0,0008 (1,7 SE), treff +0,3 ± 0,3 pp |
+| WF-B (siden nær avspark) | 0,9873 / 52,4 % | 0,9855 / 53,6 % |
+| WF-B mot WF-A | −0,0107 ± 0,0015 (7,0 SE), treff +0,6 pp | −0,0133 ± 0,0019 (7,1 SE), treff +1,4 pp |
+| WF-B mot FK-B | −0,0003 ± 0,0002 (1,4 SE) | +0,0001 ± 0,0003 (0,2 SE) |
+| Sluttodds alene mot WF-B | −0,0023 ± 0,0006 (3,5 SE) | −0,0033 ± 0,0007 (4,7 SE) |
+| Kalibreringshelning H / B, WF-A | 1,12 ± 0,05 / 1,24 ± 0,08 | 1,18 ± 0,12 / 1,32 ± 0,09 |
+| WF-B | 1,09 ± 0,05 / 1,16 ± 0,06 | 1,13 ± 0,09 / 1,25 ± 0,07 |
+| Sluttodds alene | 1,04 ± 0,05 / 1,09 ± 0,06 | 1,06 ± 0,08 / 1,16 ± 0,06 |
+
+Sidens tall (evaluate_model, 2016–2025, kvalikkampene med): 1998 kamper,
+1,0046, 50,8 % -- gjenskapt eksakt. På de samme sesongene, uten kvalikkampene
+(2000 kamper): FK-A 1,0050 / 50,7 %, WF-A 1,0018 / 50,9 %, forskjell
+−0,0032 ± 0,0009 (3,7 SE), treff +0,1 pp.
+
+Retning og størrelse: walk-forward gir litt lavere log loss enn faste
+kuttpunkter for modellen alene (0,001–0,003), fordi modellen er ferskere; det
+gir ingen forskjell i treffprosent, og nesten ingen for B (oddsen dominerer).
+Dagens validering undervurderer altså treffsikkerheten for modellen alene
+litt, men tallet på siden (modellen alene) er uansett ikke det brukeren ser
+nær avspark: det er B, som er 0,011–0,013 bedre. Helningene over 1 betyr at
+sannsynlighetene er for forsiktige (favoritter og bortefavoritter vinner
+oftere enn modellen sier); det gjelder også B og, i mindre grad, sluttoddsen
+selv.
+
+Per fase (WF, alle kampene den dekker, 3183 / 3168): runde 1–4 er klart
+vanskeligst (Eliteserien A 1,037, B 1,008; OBOS A 1,074, B 1,062), og B
+hjelper mest der. Faste kuttpunkter måler ikke runde 1–4 i det hele tatt.
+
+**2. Sonene, 2012–2025, 100 000 simuleringer per punkt**
+
+Brier (lavere er bedre), standardfeil klustret på sesong. FK: 4 kuttpunkter
+× 14 sesonger × 16 lag = 896 lag-observasjoner. WF: 1003 punkter i
+Eliteserien (16 048 lag-observasjoner) og 767 i OBOS (12 272); WF 40–85 % er
+de av dem som ligger i samme vindu som kuttpunktene (8 736 og 6 240).
+
+| Eliteserien | Gull | Topp 4 | Nedrykk |
+|---|---|---|---|
+| FK, A | 0,0172 | 0,0587 | 0,0510 |
+| WF hele sesongen, A | 0,0211 | 0,0718 | 0,0591 |
+| WF 40–85 %, A | 0,0175 | 0,0605 | 0,0502 |
+| WF 40–85 % minus FK, A (per sesong) | +0,0006 ± 0,0006 | +0,0021 ± 0,0011 | −0,0018 ± 0,0010 |
+| A mot tabell, FK | −0,0030 ± 0,0032 | −0,0027 ± 0,0036 | −0,0057 ± 0,0021 |
+| A mot tabell, WF hele sesongen | −0,0062 ± 0,0034 | −0,0095 ± 0,0044 | −0,0070 ± 0,0025 |
+| B mot A, WF hele sesongen | −0,0001 ± 0,0000 | −0,0002 ± 0,0001 | −0,0002 ± 0,0000 |
+
+| OBOS | Opprykk | Topp 6 | Nedrykk |
+|---|---|---|---|
+| FK, A (med odds, som produksjonen) | 0,0333 | 0,0964 | 0,0476 |
+| FK, A0 (uten odds, modellen bak sidens tall) | 0,0408 | 0,1073 | 0,0491 |
+| WF hele sesongen, A | 0,0433 | 0,1109 | 0,0555 |
+| WF 40–85 %, A | 0,0345 | 0,1001 | 0,0464 |
+| WF 40–85 % minus FK, A (per sesong) | +0,0002 ± 0,0011 | −0,0002 ± 0,0020 | −0,0000 ± 0,0011 |
+| A mot tabell, FK | −0,0080 ± 0,0021 | −0,0110 ± 0,0027 | −0,0053 ± 0,0023 |
+| A mot tabell, WF hele sesongen | −0,0113 ± 0,0026 | −0,0156 ± 0,0032 | −0,0066 ± 0,0026 |
+| A0 mot A (odds i tilpasningen), FK | +0,0075 ± 0,0022 | +0,0110 ± 0,0021 | +0,0015 ± 0,0027 |
+| B mot A, WF hele sesongen | −0,0001 ± 0,0000 | −0,0002 ± 0,0001 | −0,0003 ± 0,0001 |
+
+Sidens OBOS-tall (FK uten odds, offentlig CSV, 100 000 simuleringer):
+0,0402 / 0,1072 / 0,0484; A0 her 0,0408 / 0,1073 / 0,0491 (samme kamper og
+resultater, men andre frø, og kamper samme dato i en annen rekkefølge, så
+kuttet kan falle på andre kamper).
+
+Per fase (WF, andel spilt), tabellmodell mot A: under 25 % er forskjellen
+størst (Eliteserien topp 4 0,1436 mot 0,1131, gull 0,0498 mot 0,0355; OBOS
+topp 6 0,1966 mot 0,1607, opprykk 0,0981 mot 0,0743). Over 85 % er A og
+tabellmodellen like (gull i Eliteserien 70–85 %: A 0,0132, tabell 0,0126;
+OBOS opprykk over 85 %: 0,0102 mot 0,0099).
+
+Retning og størrelse: i samme vindu (40–85 %) gir walk-forward og faste
+kuttpunkter samme Brier i begge ligaene (forskjeller høyst 0,002, innenfor
+rundt 2 SE). Kuttpunktene er altså et rimelig utvalg av det vinduet. Men de
+måler ikke den første delen av sesongen, der usikkerheten er størst og
+modellen tilfører mest: over hele sesongen er modellens fordel over
+tabellmodellen 1,2 til 3,5 ganger så stor som med kuttpunktene. Dagens
+validering undervurderer derfor hva lagstyrken betyr tidlig i sesongen, ikke
+treffsikkerheten i vinduet den måler. Oddsen for neste runde (B) betyr nesten
+ingenting for sluttplasseringen. For OBOS validerer siden modellen uten odds,
+mens produksjonen bruker odds: med odds er modellen klart bedre på opprykk og
+topp 6 (3,4 og 5,3 SE), så sidens OBOS-tall beskriver en svakere modell enn
+den som er i bruk.
+
+**3. D: 2026 med oddsen slik den var tilgjengelig**
+
+Samme kamper for alle variantene; negativ = bedre enn B med sluttodds;
+SE klustret på uke (18 og 22 uker).
+
+| | Eliteserien (154) | OBOS (174) |
+|---|---|---|
+| B sluttodds (60–15 min før) | 0,9198 / 57,1 % | 0,9672 / 58,0 % |
+| B ordinær (siste 08.13/16.13 UTC før avspark) | +0,0018 ± 0,0023 | +0,0036 ± 0,0034 |
+| B dagen før (≥ 24 t før) | +0,0106 ± 0,0035 | +0,0043 ± 0,0041 |
+| B avspark | +0,0004 ± 0,0009 | −0,0013 ± 0,0009 |
+| A modellen alene | +0,0243 ± 0,0068 | +0,0120 ± 0,0083 |
+| Sluttodds alene | −0,0074 ± 0,0028 | −0,0009 ± 0,0035 |
+
+Det siden viser i timene før kampen (ordinær henting), er i begge ligaene
+innenfor støyen fra det som fryses rett før avspark. Dagen før er
+Eliteserien-tallene tydelig dårligere (3 SE); i OBOS innenfor støyen. Modellen
+er walk-forward med den låste modellen (ikke det siden faktisk viste før 30.9,
+som var den gamle modellen), med produksjonens egne odds- og kampfiler.
+
+**Begrensninger.**
+- FK og WF for sonene måler ulike deler av sesongen: WF tar med den tidlige
+  delen (under 40 %), der usikkerheten er størst, så Brier-nivået er ikke
+  sammenlignbart uten å se på samme vindu (derfor også WF 40–85 %).
+- Observasjonene innen en sesong er sterkt avhengige (samme lag, nabodatoer),
+  så all usikkerhet er klustret på sesong; 14 klynger gir grove standardfeil.
+- OBOS-oddsen er snittodds, ikke Pinnacle som i produksjonen; B for OBOS er
+  derfor en tilnærming.
+- B bruker sluttodds: optimistisk for alt siden viser før prekick-vinduet.
+- D er én sesong og lite utvalg; kalibreringshelning er ikke regnet for D.
+- Modellens innstillinger er valgt på overlappende historikk (se
+  inventaret), så ingen av testene er helt uavhengige.
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
