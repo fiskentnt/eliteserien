@@ -3,6 +3,109 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Hvis Raufoss trekkes fra OBOS-ligaen (klar plan, ikke gjennomført, 1.10.2026)
+
+Raufoss kan bli slått konkurs og trekke laget. Reglene (sjekket av Trond):
+trekker et lag seg, annulleres alle kampene deres, poengene og målene i
+kamper mot dem fjernes fra tabellen, og laget regnes som sist og rykker ned
+(Kampreglementet). For de 15 andre: 1 og 2 opp, 3 til 6 opprykkskvalik, 14
+nedrykkskvalik og 15 direkte ned, altså bare ett lag til ned direkte. NFF kan
+etter § 5-12 fastsette et annet antall nedrykk. Trond bestemte 1.10: ikke bygg
+krysset "Uten Raufoss", og ikke gjennomfør planen før NFF har bestemt seg.
+
+**Sjansene med og uten Raufoss** (offline, 100 000 simuleringer, samme modell
+og samme tilfeldige tall: hver kamp sin egen strøm; uten Raufoss er de 23
+spilte kampene strøket, de 7 gjenstående tatt ut, lagstyrkene tilpasset på
+nytt på 161 kamper og bare nummer 15 rett ned; tilpasningen med Raufoss
+gjenskaper model.json eksakt, og sidens egen simulering i en prototype ga de
+samme tallene uten Raufoss). Skript og JSON i lab (`raufoss/`, 519d4da).
+Prosent, med → uten:
+
+| Lag | Poeng | Direkte opprykk | Topp 6 | Nedrykkskvalik | Direkte nedrykk |
+|---|---|---|---|---|---|
+| Haugesund | 52 → 46 | 82,1 → 79,5 | 100 → 100 | 0 → 0 | 0 → 0 |
+| Kongsvinger | 50 → 44 | 57,9 → 48,7 | 100 → 100 | 0 → 0 | 0 → 0 |
+| Strømsgodset | 48 → 42 | 49,0 → 40,3 | 100 → 100 | 0 → 0 | 0 → 0 |
+| Stabæk | 45 → 42 | 11,0 → 31,6 | 100 → 100 | 0 → 0 | 0 → 0 |
+| Odd | 36 → 33 | 0 → 0 | 84,3 → 85,8 | 0 → 0 | 0 → 0 |
+| Bryne | 35 → 35 | 0 → 0 | 74,6 → 86,4 | 0 → 0 | 0 → 0 |
+| Hødd | 34 → 33 | 0 → 0 | 21,1 → 21,1 | 0 → 0 | 0 → 0 |
+| Egersund | 29 → 26 | 0 → 0 | 11,3 → 4,1 | 0,6 → 0,4 | 0,1 → 0,0 |
+| Lyn | 28 → 25 | 0 → 0 | 2,7 → 0,5 | 3,0 → 3,9 | 0,5 → 0,1 |
+| Ranheim | 28 → 25 | 0 → 0 | 5,6 → 1,5 | 1,6 → 1,2 | 0,3 → 0,0 |
+| Moss | 25 → 25 | 0 → 0 | 0,3 → 0,4 | 11,4 → 2,9 | 4,9 → 0,1 |
+| Strømmen | 25 → 22 | 0 → 0 | 0,1 → 0,1 | 20,5 → 16,6 | 8,6 → 1,8 |
+| Sandnes Ulf | 24 → 18 | 0 → 0 | 0,1 → 0,0 | 25,5 → 55,5 | 12,6 → 13,1 |
+| Sogndal | 23 → 23 | 0 → 0 | 0,1 → 0,2 | 17,1 → 7,1 | 9,7 → 0,4 |
+| Åsane | 20 → 14 | 0 → 0 | 0 → 0 | 10,6 → 12,4 | 80,9 → 84,5 |
+| Raufoss | 19 → – | 0 → 0 | 0 → 0 | 9,7 → – | 82,4 → 100 (sist) |
+
+Det som flytter mest, er poengene mot Raufoss: Stabæk tok 3, de tre over 6
+hver (Stabæk opprykk 11 → 32 %); Bryne 0 (topp 6 +12); Sandnes Ulf mister 6
+(nedrykkskvalik 26 → 56 %); Moss, Sogndal og Strømmen blir nesten trygge.
+Tallene må regnes på nytt med dagens data når NFF bestemmer seg
+(`raufoss/raufoss_sjanser.py`).
+
+**Planen hvis Raufoss trekkes (anslag 13–16 timer, rundt to arbeidsdager, med
+tester og kontroll etter push):**
+1. Kilder og resultatkjeden (4–5 t). "Ventet 16" stopper begge:
+   `scripts/obos_results.py:365-367` (validate) og
+   `scripts/obos_build_data.py:176-178`. `scripts/ligaer.py:51-55` har
+   Raufoss i OBOS-lista, som også er hvitelista i `ntf_source.py:127` og
+   `nff_source.py:162` (fjernes laget mens kildene viser det, feiler de; blir
+   det stående, flyter radene inn). `reconcile_ny.py:105-113` legger
+   CSV-kampene tilbake. `obos_results.py:378-386` stopper når et publisert
+   resultat forsvinner (`publish` starter fra `prev`). Wikipedia-parseren
+   (`obos_results.py:316-336`) krever 16 lag. `ANTALL_LAG`=16 og 240/30 er
+   globale (`ligaer.py:60-63`, `sesong.py`, `ntf_source.py:296-335`
+   `sesongen_ferdigspilt`, som ved sesongslutt krever 240 resultater).
+   `daglig_revisjon.py:128-129` gjør en kamp hos fotball.no som vi ikke har,
+   til kritisk avvik (uavklart om fotball.no beholder annullerte kamper).
+   Tiltak: en eksplisitt liste over trukne lag per sesong i `ligaer.py` som
+   alle leddene filtrerer på, antall lag og kamper per liga og sesong, og et
+   unntak for de annullerte resultatene.
+2. Terminliste, CSV og odds (1 t). `obos/data/obos_2012-2026.csv` har 30
+   Raufoss-rader i 2026 og leses av `obos_results.py:84`,
+   `obos_build_data.py:65` og `obos_closing_odds.py:109-139`: filtrer i
+   leserne (eller i fila). Rydd de 7 gjenstående Raufoss-radene i
+   `odds_upcoming.json` og `prekick.json` (ellers hentes odds videre, og
+   sesongen fryses aldri: `frys_sesong.py:87-92`, `should_fetch.py`).
+   `odds_closing.json` og `name_map.json` kan stå.
+3. Modellen (0,5 t): antall lag i `obos_build_data.py`; tilpasningen er
+   ellers generell.
+4. Felles sidekode (2 t). Merket "Rykket ned" har to nedrykk hardkodet
+   (`kanUnder<2` i `finalBadge`, `atmost [2]`/`count<2` i
+   `computeOneBadge`): med ett nedrykk ville et lag låst til 14. og 15. plass
+   feilaktig fått "Rykket ned". Avled det av nedrykkssonen og antall lag.
+   Fordelingsstripen har 16 kolonner fast (`.hist`). Gamle delingslenker
+   brekker stille: scenariokoden bruker lagindekser, Raufoss er nummer 9, så
+   Sandnes Ulf til Åsane flyttes ett hakk (gi lenkene en versjon eller bygg på
+   lagnavn).
+5. Soner og tekster (0,5–1 t), `obos/page/league.js`: nedrykk 15–16 → 15
+   (bands og zones), "Nedrykk (15)", kolonnetittelen "15. eller 16. plass",
+   FAQ-en "De to siste plassene rykker rett ned", `om.html` ("de to nederste
+   rykker ned"). Kuttene [2, 6, 13], kvalik 14 og "Sikret plass" (above 13) er
+   riktige som de er. Bygg `obos/index.html` på nytt.
+6. Grunnlagsfilen, lastmatch og historikk (1 t): lages av CI ut fra lagene;
+   `history.json` får et brudd (og `lag_innlegg.js` vil melde annulleringen
+   som største endring); treffsikkerhetsloggen stryker Raufoss-kampene selv.
+7. Tester (3–4 t): regresjonen forutsetter 16 lag (426, 819, 1686,
+   1697-1700, 1839, 2147), `tests/kilder/test_kilder.py` og
+   `test_sesongskifte.py` bruker de globale tallene og lagsettet;
+   `failsafe.py:62` og 94-100. Nye tester for annulleringen, ett nedrykk og
+   merket "Rykket ned".
+8. Kjøring og kontroll (1,5 t): hele testpakken, CI og de publiserte sidene.
+
+**Forslaget "Uten Raufoss" (ikke bygget, 8–11 timer):** et kryss i en linje
+rett over tabellen (gul når det er på), en linje over kortene og merkelappen
+"Uten Raufoss" i svarene; CI lager `obos/data/uten-raufoss/` (kamper,
+terminliste, modell tilpasset på nytt, odds) og en egen grunnlagsfil; siden
+laster den med `#uten=raufoss` i lenken og bruker sonene for 15 lag; den
+kopierte teksten starter med "Scenario uten Raufoss, ikke dagens tall.
+Forutsetter at Raufoss trekkes fra ligaen og kampene deres strykes." Rettelsen
+av "Rykket ned" og fordelingsstripen i punkt 4 trengs også her. Skjermbildene
+av prototypen: `raufoss/` i lab.
+
 ## "Spør om tabellen": Kopier tekst og Kopier lenke (1.10.2026)
 
 Fra Trond, etter to utkast (knapper også i lagboksen og ved kortene, med
@@ -32,11 +135,12 @@ svar, i begge ligaene, og ingen andre kopiknapper.
   tallene er like (største avvik 1e-16, regresjonen sjekker det). De andre
   svarene tar nå-tallet fra tabellen (zone.pct/lastMC) og legger endringer
   oppå. Uten scenario var alt likt fra før (samme grunnlagsfil).
-- "Lagstyrkene holdes som i dag, så tallene er anslag." står fortsatt i
-  svaret "Hva betydde forrige kamp for ...?" i Eliteserien og OBOS (på
-  testsiden "Ratingen er regnet om ..."). Tallet nå er tabellens;
-  alternativene (hva sjansen ville vært med et annet resultat) er regnet med
-  dagens lagstyrker. Ikke endret; lagt fram for Trond.
+- "Hva betydde forrige kamp for ...?": tallet nå er tabellens; hva de andre
+  utfallene ville gitt, er regnet med dagens lagstyrker. Trond valgte å
+  beholde det (a), med ny setning: "Hva de andre resultatene ville gitt, er et
+  anslag." (før: "Lagstyrkene holdes som i dag, så tallene er anslag."), i
+  Eliteserien og OBOS. Testsidens egen variant ("Ratingen er regnet om ...")
+  er ikke rørt. Regresjonen sjekker setningen.
 - Knappene har hvert sitt ikon og ord, er dempet, viser "Kopiert" i 2,5
   sekunder (kopier(), som "Del scenario" bruker), er vanlige <button> (Enter
   og mellomrom) og har større treffflate på berøringsskjerm. Den skjulte
