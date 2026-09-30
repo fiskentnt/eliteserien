@@ -1218,6 +1218,28 @@ etter trinn 3.
   dagens modell. De andre er testet trinnvis, og den samlede pakken testes
   mot dagens modell etter trinn 3.
 
+**Resultat (kjørt 30.9.2026, etter 5ca3911).** Log loss mot dagens modell
+(16/48, 35 dager):
+
+| l1/l2, dager | Valg 2012–2021, samlet | ES 2022–2025 | OBOS 2022–2025 | ES helning H / B | OBOS helning H / B |
+|---|---|---|---|---|---|
+| 16/48, 35 (dagens) | 1,0093 | (0,9812) | (1,0034) | 1,14 / 1,26 | 1,53 / 1,45 |
+| 16/48, 28 | +0,0001 ± 0,0001 | −0,0001 ± 0,0003 | −0,0004 ± 0,0002 | 1,16 / 1,29 | 1,55 / 1,48 |
+| 8/24, 35 | −0,0000 ± 0,0003 | −0,0005 ± 0,0004 | −0,0004 ± 0,0008 | 1,06 / 1,17 | 1,43 / 1,36 |
+| 8/24, 28 | −0,0001 ± 0,0003 | −0,0010 ± 0,0003 | −0,0012 ± 0,0007 | 1,08 / 1,19 | 1,44 / 1,37 |
+
+(Helningene er for 2022–2025.) Vinner på 2012–2021: 8/24 med 28 dager,
+samme som trinnvis. Mot dagens modell på 2022–2025: lavere log loss i begge
+ligaene; |helning − 1| minker med 0,06–0,09; favorittavviket minker med 0,45
+og 0,43 prosentpoeng. Sonene er ikke kjørt (den nye kombinasjonen vant ikke);
+den samlede pakken testes mot dagens modell etter trinn 3.
+
+Samspillet er lite: 28 dager mot 35 hjelper litt mer med 8/24 enn med 16/48
+(2022–2025: Eliteserien −0,0005 mot −0,0001, OBOS −0,0008 mot −0,0004), og med
+16/48 gjør 28 dager helningene enda større. Rekkefølgen i trinnene har altså
+ikke gitt et annet valg enn 2D-testen. **8/24 med 28 dager er fast verdi i
+trinn 3.**
+
 **Diagnose før trinn 5 (Trond, 30.9.2026; bare diagnose, ingen løsning).**
 OBOS er godt kalibrert på 2012–2021 (helning H 0,98, B 1,18) men for
 forsiktig på 2022–2025 (rundt 1,43 og 1,36), uansett innstilling. Undersøk om
