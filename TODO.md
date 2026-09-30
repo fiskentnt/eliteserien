@@ -1644,6 +1644,49 @@ gjort):** l1/l2 8/24, halveringstid 28 dager, oddsvekt i tilpasningen 40
 (uendret), FORM_K 0,015 (uendret), markedsvekt for neste runde 0,8 etter den
 låste regelen (i dag 0,7). Startnivå for nye lag: ingen endring.
 
+### Sluttkontroll av pakken (opplegg låst før kjøringen, 30.9.2026)
+
+Sluttkontroll, ikke ny utvelgelse: ingen parametre endres etter
+resultatet. Beregningene kjøres med 10 arbeidere, aldri mens
+nettlesertestene går. Ingen endring i modellen eller på siden.
+
+**Tre varianter:**
+- Dagens: 16/48, 35 dager, oddsvekt 40, FORM_K 0,015, markedsvekt 0,7,
+  startnivå ligasnittet.
+- Kandidat 0,7: 8/24, 28 dager, oddsvekt 40, FORM_K 0,015, markedsvekt 0,7,
+  startnivå ligasnittet.
+- Kandidat 0,8: som kandidat 0,7, men markedsvekt 0,8.
+Kandidat 0,7 skiller virkningen av modellendringen fra virkningen av
+markedsvekten; den brukes ikke til å velge markedsvekt på nytt (den låste
+testen i trinn 7 valgte 0,8).
+
+**2012–2025, uten markedsblanding.** Sluttoddsen alene er ikke nok til å
+gjenskape hvilke odds siden hadde for neste runde på hvert punkt, og det
+lages ingen kunstig regel. Modellpakken kontrolleres derfor uten
+markedsblanding: dagens (16/48, 35 dager) mot kandidaten (8/24, 28 dager),
+begge med FORM_K 0,015 og oddsvekt 40 i tilpasningen. Sonene walk-forward,
+20 000 simuleringer, samme tilfeldige tall, 2012–2021 og 2022–2025 hver for
+seg; Eliteserien gull, topp 4, nedrykk og OBOS opprykk, topp 6, nedrykk,
+pluss snittet av de tre sonene. Dette er nøyaktig samme spesifikasjon og
+samme frø som pakketesten over; tallene hentes fra den kjøringen
+(`walkforward/pakke/`), med snittet av sonene lagt til. Trinn 7 står som den
+separate testen av markedsvekten.
+
+**2026, med oddsen slik den var.** Prisrekkene i lab (Pinnacle, med
+tidsstempel) brukes til å gjenskape oddsen for neste runde slik den var ved
+siste ordinære henting (08.13 eller 16.13 UTC) før hvert punkt. Metoden
+vises for Trond før den kjøres. Forbehold: siden brukte i Eliteserien The
+Odds API (snitt av rundt 13 bookmakere), i OBOS Pinnacle; Pinnacle er derfor
+en tilnærming for Eliteserien. Sonene i 2026 kan bare scores mot fasit når
+sesongen er ferdig (sluttplasseringen er ukjent før siste runde); utvalget
+er én sesong.
+
+**Dagens stilling.** Alle tre variantene med de faktiske oddsene i dag
+(odds_upcoming.json), 100 000 simuleringer, samme tilfeldige tall; alle lag
+i sonene, og gullsjansen for Bodø/Glimt og Viking nå og betinget på at
+Bodø/Glimt vinner, spiller uavgjort eller taper mot Kristiansund (fra de
+samme simuleringene, betinget på utfallet i den kampen).
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
