@@ -2,7 +2,7 @@
 
 ## 30. september 2026
 
-Etter runde 22 i Eliteserien og runde 23 i OBOS-ligaen har modellen fått én samlet oppdatering med tre endringer. I Eliteserien er runde 12 utsatt til 24. og 25. oktober. Eliteserien og OBOS-ligaen bruker samme modell med samme innstillinger. Modellen står deretter uendret ut 2026-sesongen, også vekten oddsen får for neste runde.
+Etter runde 22 i Eliteserien og runde 23 i OBOS-ligaen har modellen fått én samlet oppdatering med tre endringer. I Eliteserien er runde 12 utsatt til 24. og 25. oktober. Eliteserien og OBOS-ligaen bruker samme modell med samme innstillinger.
 
 Ikke alle deler av modellen kommer fra forskningslitteraturen. Der vi bruker egne praktiske eller empiriske valg, merker vi dem som det.
 
@@ -36,5 +36,3 @@ Kampene fra 15. april i Eliteserien og fra 1. mai i OBOS-ligaen til 20. septembe
 - Oddsen for neste runde blandes inn med 70 prosent vekt. Å blande prognoser lineært er en etablert metode, men vekten 0,7 er ikke målt.
 - Etter hvert simulert eller innfylt resultat justeres lagstyrkene litt. Det er en praktisk regel. I tilbaketesten for Eliteserien ga den ingen målbar forbedring.
 - Knappene som fyller inn kamper, velger et plausibelt forløp med et filter. Det påvirker ikke prosentene.
-
-Disse står uendret ut sesongen og blir gjennomgått etter sesongslutt. Hvor mye oddsen bør veie, undersøker vi videre. Endringer derfra tas i bruk tidligst fra 2027.

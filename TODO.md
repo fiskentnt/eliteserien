@@ -491,15 +491,14 @@ failsafe-tester grønne mot tabellkalkulator.no.
     tester), og publisering fra en workflow i stedet for fra grenen (lønner
     seg først hvis vi vil ha delingsbilder med dagens tall).
 
-## Samlet modelloppdatering 30. september 2026, så låst ut sesongen
+## Samlet modelloppdatering 30. september 2026
 
 - **Gjort 30.9.2026** (flyttet fram fra etter runden 9.–12. oktober, så runde 23
   i Eliteserien og runde 24 i OBOS går på den nye modellen): én samlet
   oppdatering med samme modell i begge ligaene, begrenset til tre endringer som
-  alle er kjente metoder. Fra nå er HELE modellen låst ut 2026-sesongen, også
-  markedsvekten (`ODDS_W` 0,7). Bare dataene oppdateres. Markedsstudien
-  (vekt etter oddsens alder, prisrekkene i lab under `odds-prisrekker/`)
-  fortsetter, men resultatene tas i bruk tidligst fra 2027.
+  alle er kjente metoder. Modellen er fortsatt under faglig gjennomgang (se
+  "Modellarbeid høsten 2026"). Markedsstudien (vekt etter oddsens alder,
+  prisrekkene i lab under `odds-prisrekker/`) fortsetter.
   1. **Dixon-Coles rho -0,04** overalt (detaljene under).
   2. **Shin (1993) i stedet for normering** når marginen tas ut av oddsen,
      overalt: sluttoddsen i tilpasningen og oddsen for kommende kamper.
@@ -605,7 +604,7 @@ failsafe-tester grønne mot tabellkalkulator.no.
 
 > **Endringer i modellen, oktober 2026**
 >
-> Etter runde 23 har modellen fått én samlet oppdatering med tre endringer. Eliteserien og OBOS-ligaen bruker samme modell med samme innstillinger. Modellen står deretter uendret ut 2026-sesongen, også vekten oddsen får for neste runde.
+> Etter runde 23 har modellen fått én samlet oppdatering med tre endringer. Eliteserien og OBOS-ligaen bruker samme modell med samme innstillinger.
 >
 > Ikke alle deler av modellen kommer fra forskningslitteraturen. Der vi bruker egne praktiske eller empiriske valg, merker vi dem som det.
 >
@@ -638,7 +637,7 @@ failsafe-tester grønne mot tabellkalkulator.no.
 > - Etter hvert simulert eller innfylt resultat justeres lagstyrkene litt. Det er en praktisk regel. I tilbaketesten for Eliteserien ga den ingen målbar forbedring.
 > - Knappene som fyller inn kamper, velger et plausibelt forløp med et filter. Det påvirker ikke prosentene.
 >
-> Disse står uendret ut sesongen og blir gjennomgått etter sesongslutt. Hvor mye oddsen bør veie, undersøker vi videre. Endringer derfra tas i bruk tidligst fra 2027.
+> (Setningene om at modellen står uendret ut sesongen er fjernet 30.9.2026 i ENDRINGER.md og på siden.)
 
 **Den tekniske forklaringen** (for lesere som vil vite nøyaktig hvordan
 modellen er bygget, også fagfolk):
@@ -701,7 +700,7 @@ avgjøres ved sesongslutt. Skriptene og resultatfilene ligger i lab
 skriptene i `scripts/` hvis metoden tas i bruk. Regnetid: 20 sekunder for
 enkeltkampene, 61 minutter for sonene (100 000 simuleringer, 6 kjerner).
 
-**Metode.** Samme låste modell og regler gjennom hele studien (oktober-
+**Metode.** Samme modell og regler gjennom hele studien (oktober-
 oppdateringen: odds i tilpasningen med vekt 40 og Shin, halveringstid 35 dager,
 l1/l2 16/48, konsistent tilpasning, Dixon-Coles −0,04, formoppdatering i
 simuleringen). Ingen parametre er valgt ut fra resultatene.
@@ -852,7 +851,7 @@ SE klustret på uke (18 og 22 uker).
 Det siden viser i timene før kampen (ordinær henting), er i begge ligaene
 innenfor støyen fra det som fryses rett før avspark. Dagen før er
 Eliteserien-tallene tydelig dårligere (3 SE); i OBOS innenfor støyen. Modellen
-er walk-forward med den låste modellen (ikke det siden faktisk viste før 30.9,
+er walk-forward med modellen fra oktoberoppdateringen (ikke det siden viste før 30.9,
 som var den gamle modellen), med produksjonens egne odds- og kampfiler.
 
 **Begrensninger.**
@@ -870,8 +869,8 @@ som var den gamle modellen), med produksjonens egne odds- og kampfiler.
 
 ### Markedsvekten (ODDS_W): beslutningsregel låst 30.9.2026, før vektkurven måles
 
-Grunnlag for beslutningen etter sesongen. Ingen endring i modellen eller på
-siden: ODDS_W står på 0,7 ut 2026, og en ny vekt tas i bruk tidligst fra 2027.
+Grunnlag for beslutningen om markedsvekten (punkt 7 i "Modellarbeid høsten
+2026"). Ingen endring i modellen eller på siden før den er tatt; ODDS_W er 0,7.
 
 **Hva vekten er, og hva den ikke er.** ODDS_W = 0,7 blander oddsen for
 KOMMENDE kamper inn i sannsynlighetene: 0,7 odds + 0,3 modell på hjemme og
@@ -976,7 +975,102 @@ den beste er 1,0, oddsen alene gjennom fitRates, som er lik markedet alene
   lite.
 - Det er OBOS som flytter valget fra 0,7 til 0,8, og OBOS-historikken er
   oddsportal-snitt, ikke Pinnacle (se begrensningen over). Regelen endres ikke
-  av det. Beslutningen tas etter sesongen; ODDS_W står på 0,7 ut 2026.
+  av det. Beslutningen tas i punkt 7 i "Modellarbeid høsten 2026"; til da er
+  ODDS_W 0,7.
+
+## Modellarbeid høsten 2026
+
+Plan fra Trond 30.9.2026. Grensene og valgreglene under er låst før første
+variant kjøres (denne teksten er committet før noe er målt).
+
+**Status.** Dette er en ny side, og modellen er fortsatt under faglig
+gjennomgang. Dokumenterer testene en klar forbedring etter kriteriene under,
+kan den tas i bruk i 2026. Ingen endring gjøres automatisk som følge av
+studien: funnet rapporteres først, og Trond bestemmer før eventuell
+implementering og push. Tas en endring i bruk: én kort linje i notisen på
+siden (for eksempel "Modellen ble justert 3. oktober etter ny
+tilbaketesting") og detaljene i ENDRINGER.md; ingen tekst om framtidige
+endringer. Aldri push mens oddsen fryses før avspark.
+
+**Hovedspørsmål.** Er modellen for forsiktig fordi lagstyrkene krympes for
+mye mot snittet, og kan dette forbedres ut av utvalg uten at kalibrering eller
+sluttplassering blir dårligere?
+
+**Oppsett for alle testene.**
+- Walk-forward som i studien av tilbaketestene: før hver kampdato
+  tilpasses modellen på kampene med tidligere dato (faktisk dato), og
+  kampene den dagen predikeres. Eliteserien: NOR.csv, seriekampene
+  (kvalikkampene holdt utenfor); OBOS: oddsportal-historikken i lab.
+- Kampene som telles: alle kamper walk-forward dekker (minst 10 spilte kamper
+  før kampdatoen) og som har sluttodds (trengs for favorittene).
+  Fasene (runde 1–4 og 5 og utover) rapporteres også, men beslutningen bygger
+  på alle kampene.
+- Valg på 2012–2021, kontroll på 2022–2025, siste kontroll på 2026
+  (produksjonens kamp- og oddsfiler, alle kamper med minst 10 spilte før).
+- Hovedmål: log loss for modellen alene (Dixon–Coles −0,04 fra de tilpassede
+  målratene, uten blanding med oddsen for kampen).
+- Dagens modell: l1/l2 16/48, halveringstid 35 dager, oddsvekt i
+  tilpasningen 40 (Shin), konsistent tilpasning, Dixon–Coles −0,04; i sonene
+  også FORM_K 0,015 med dagens tak og tilbaketrekking. Én ting endres om
+  gangen; resten står som i dagens modell (eller som besluttet i et tidligere
+  trinn, hvis Trond har tatt en endring i bruk).
+
+**Valgregel.** I hvert trinn velges verdien med lavest log loss på
+2012–2021, med begge ligaene samlet (hver kamp teller likt). Den er kandidat
+til å erstatte dagens verdi bare hvis den også har lavere log loss enn dagens
+modell på 2022–2025 i BEGGE ligaene (estimert forskjell under null), og ikke
+bryter noen av grensene under. Ligger beste verdi på kanten av de faste
+verdiene (trinn 1, 2 og 3), dokumenteres det som et funn; det fortsettes ikke
+automatisk utover kanten. Et utvidet intervall er en ny test, og verdiene
+bestemmes før den kjøres. Ikke noe stort felles parameterrutenett: hver test
+svarer på en konkret hypotese.
+
+**Grensene (sekundære kontroller som kan stoppe en endring), målt på
+kontrollsettet 2022–2025, i hver liga, kandidat mot dagens modell:**
+- Kalibreringshelning (logistisk regresjon av utfallet på logit av
+  sannsynligheten, for H og for B): avstanden til 1 kan ikke øke med mer enn
+  0,03 for H eller B.
+- Favorittene: favoritten i en kamp er laget (hjemme eller borte) med høyest
+  sannsynlighet i sluttoddsen (Shin). Avviket er |modellens snitt for
+  favorittens seier − andelen kamper favoritten vant|, i prosentpoeng. Det
+  kan ikke øke med mer enn 0,5 prosentpoeng.
+- Sonene: Brier (walk-forward over hele sesongen, som i studien) kan ikke bli
+  mer enn 0,001 dårligere i noen sone (Eliteserien gull, topp 4, nedrykk;
+  OBOS opprykk, topp 6, nedrykk).
+- Egne OBOS-innstillinger (trinn 4): minst 0,002 bedre log loss enn felles
+  innstillinger.
+
+**2026 som siste kontroll.** Brukes 2026 som del av beslutningsgrunnlaget for
+en endring, dokumenteres det her, og den delen av 2026 kan senere ikke
+omtales som et urørt kontrollsett for den endringen.
+
+**Gjennomføring.** Enkeltkampene kjøres for alle variantene i hvert trinn.
+Sonene kjøres bare for dagens modell og varianten som vinner på
+enkeltkampene (hvis den ikke er dagens), med 20 000 simuleringer og de samme
+tilfeldige tallene. Resultatet fra hvert trinn dokumenteres her før neste
+startes. Lange beregninger med caffeinate, aldri samtidig med regression.js.
+Rapport til Trond etter trinn 1 før det går videre. Ingen modellendring,
+endring på siden eller push av en modellendring før Trond har sett resultatet
+og tatt stilling til det.
+
+**Rekkefølgen, én ting om gangen med resten låst:**
+1. Regularisering: dagens 16/48 mot 4/12, 8/24, 24/72 og 32/96. Tester
+   hovedhypotesen direkte.
+2. Halveringstid: dagens 35 dager mot 21, 28, 42 og 56. Bare en liten 2D-test
+   sammen med regulariseringen hvis resultatene gir konkret grunn til å tro at
+   de to har et viktig samspill.
+3. Oddsvekten 40 i tilpasningen av lagstyrkene: 20, 30, 40, 50 og 60. Holdes
+   helt adskilt fra markedsvekten for neste runde.
+4. Felles innstillinger mot egne for OBOS, først når det er kjent hvilke
+   parametre som faktisk betyr noe.
+5. Tidlig sesong som diagnose: runde 1–4 undersøkes separat for etablerte lag
+   og opprykkslag før noen løsning testes.
+6. Formoppdateringen: FORM_K 0,015 mot 0, nøytralt. Dagens verdi har ingen
+   bevismessig fordel: den kom fra én regresjon, den rullerende testen pekte
+   mot 0, og ablasjonen av sonene viste ingen målbar forbedring.
+7. Markedsvekten for neste runde, separat, etter den låste regelen med
+   toleranse 0,0025 (se "Markedsvekten (ODDS_W)" under studien av
+   tilbaketestene).
 
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
