@@ -1240,6 +1240,78 @@ Samspillet er lite: 28 dager mot 35 hjelper litt mer med 8/24 enn med 16/48
 ikke gitt et annet valg enn 2D-testen. **8/24 med 28 dager er fast verdi i
 trinn 3.**
 
+### Trinn 3: oddsvekten i tilpasningen, med 8/24 og 28 dager (kjørt 30.9.2026)
+
+Samme kamper og regler; "dagens" i dette trinnet er vekt 40 med 8/24 og 28
+dager (kjøringen fra 2D-testen). Markedsvekten for neste runde er ikke
+berørt.
+
+**Valg, 2012–2021** (log loss mot vekt 40):
+
+| Oddsvekt | Eliteserien | OBOS | Samlet |
+|---|---|---|---|
+| 20 | +0,0008 ± 0,0003 | +0,0010 ± 0,0003 | +0,0009 ± 0,0002 |
+| 30 | +0,0002 ± 0,0001 | +0,0003 ± 0,0001 | +0,0002 ± 0,0001 |
+| 40 | 1,0094 | 1,0089 | 1,0091 |
+| 50 | −0,0001 ± 0,0001 | −0,0001 ± 0,0001 | −0,0001 ± 0,0001 |
+| 60 | −0,0001 ± 0,0002 | −0,0002 ± 0,0002 | −0,0001 ± 0,0001 |
+
+Lavest samlet: 60, **på kanten** av de testede verdiene (funn; ikke
+fortsatt utover kanten). Flatt fra 40 til 60.
+
+**Kontroll, 2022–2025:**
+
+| Oddsvekt | ES log loss mot 40 | ES helning H / B | ES fav. modell/faktisk | OBOS log loss mot 40 | OBOS helning H / B | OBOS fav. |
+|---|---|---|---|---|---|---|
+| 20 | +0,0006 ± 0,0003 | 1,15 / 1,27 | 51,1 / 53,9 | +0,0007 ± 0,0004 | 1,48 / 1,44 | 48,6 / 53,6 |
+| 30 | +0,0001 ± 0,0002 | 1,10 / 1,22 | 51,4 / 53,9 | +0,0002 ± 0,0002 | 1,45 / 1,39 | 48,7 / 53,6 |
+| 40 | (0,9803) | 1,08 / 1,19 | 51,6 / 53,9 | (1,0022) | 1,44 / 1,37 | 48,8 / 53,6 |
+| 50 | +0,0000 ± 0,0001 | 1,06 / 1,17 | 51,7 / 53,9 | −0,0001 ± 0,0002 | 1,42 / 1,35 | 48,9 / 53,6 |
+| 60 | +0,0001 ± 0,0003 | 1,04 / 1,15 | 51,7 / 53,9 | −0,0001 ± 0,0003 | 1,41 / 1,33 | 48,9 / 53,6 |
+
+**60 er ikke kandidat:** log loss er ikke lavere enn 40 på 2022–2025 i
+Eliteserien (+0,0001). Oddsvekten blir stående på 40. Sonene er ikke kjørt.
+
+**Funn.** Høyere oddsvekt gjør modellen litt mindre forsiktig (helningene
+nærmere 1), uten gevinst i log loss. Fasene trekker hver sin vei: i runde
+1–4 er lav vekt bedre (vekt 20: −0,0017 i begge ligaene, 2012–2025), fra
+runde 5 er høy vekt bedre (vekt 60: −0,0001 og −0,0003). Tas med i
+diagnosen av tidlig sesong (trinn 5).
+
+**Den samlede kandidaten etter trinn 1–3:** l1/l2 8/24, halveringstid 28
+dager, oddsvekt 40 (dagens).
+
+### Pakketesten: 8/24, 28 dager, oddsvekt 40 mot dagens modell (30.9.2026)
+
+**Enkeltkamper, 2022–2025** (fra 2D-testen): Eliteserien −0,0010 ± 0,0003
+(3,3 SE), OBOS −0,0012 ± 0,0007. Helningene H / B går fra 1,14 / 1,26 til
+1,08 / 1,19 (Eliteserien) og fra 1,53 / 1,45 til 1,44 / 1,37 (OBOS);
+favorittavviket minker med 0,45 og 0,43 prosentpoeng. Rundt en tidel av
+gevinsten fra oktoberoppdateringen.
+
+**Sonene** (walk-forward, 20 000 simuleringer, samme tall):
+
+| | 2012–2021 | 2022–2025 (grensen 0,001) |
+|---|---|---|
+| Eliteserien gull | −0,0004 ± 0,0001 | +0,0007 ± 0,0006 |
+| Eliteserien topp 4 | −0,0002 ± 0,0002 | +0,0003 ± 0,0004 |
+| Eliteserien nedrykk | −0,0002 ± 0,0002 | −0,0004 ± 0,0003 |
+| OBOS opprykk | −0,0002 ± 0,0001 | −0,0003 ± 0,0003 |
+| OBOS topp 6 | −0,0000 ± 0,0002 | +0,0002 ± 0,0005 |
+| OBOS nedrykk | −0,0002 ± 0,0002 | −0,0004 ± 0,0002 |
+
+Ingen sone mer enn 0,001 dårligere. **Pakken oppfyller de låste kriteriene.**
+
+**2026, siste kontroll** (produksjonens filer, 155 og 174 kamper):
+Eliteserien −0,0002 ± 0,0023, OBOS +0,0009 ± 0,0015, begge innenfor støyen.
+Helningene nærmere 1 (Eliteserien H 1,43 → 1,33, B 1,01 → 0,93; OBOS H 1,15
+→ 1,08, B 1,12 → 1,03), favorittavviket 3,9 → 3,3 og 9,0 → 8,6 prosentpoeng.
+2026 er nå sett for denne pakken (og for 8/24 alene i trinn 1).
+
+Ingen endring i modellen: Trond tar stilling etter diagnosen av
+kalibreringen (under), og en eventuell løsning for nedrykks- og opprykkslag
+tas i så fall i samme endring på siden.
+
 **Diagnose før trinn 5 (Trond, 30.9.2026; bare diagnose, ingen løsning).**
 OBOS er godt kalibrert på 2012–2021 (helning H 0,98, B 1,18) men for
 forsiktig på 2022–2025 (rundt 1,43 og 1,36), uansett innstilling. Undersøk om
