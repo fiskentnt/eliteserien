@@ -869,6 +869,18 @@
   /* break-word, ikke anywhere: anywhere delte ord midt inni, så
      "Kristiansund-seier" kunne brekke etter "Kristian". break-word deler
      bare et ord som ikke får plass i det hele tatt. */
+  /* "Kopier tekst" og "Kopier lenke" nederst i svaret: små og dempede, med
+     hvert sitt ikon og ord. "Kopiert" en kort stund etter trykket (kopier()).
+     Større treffflate på berøringsskjerm. */
+  .qa-merke{white-space:normal;margin:0 0 6px}
+  .qa-merke span{display:inline-block;font:700 11px/1 var(--body);letter-spacing:.02em;text-transform:uppercase;color:var(--q-text,var(--ink));background:var(--q-soft,var(--line-soft));border-radius:999px;padding:4px 8px}
+  .qa-kopi{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px 6px;margin:6px -6px -6px 0;white-space:normal}
+  .kopi{display:inline-flex;align-items:center;gap:5px;border:none;background:transparent;color:var(--muted);padding:4px 6px;border-radius:6px;cursor:pointer;font:600 12px/1 var(--body)}
+  .kopi svg{width:15px;height:15px;display:block;flex:none}
+  .kopi:hover{color:var(--ink);background:var(--line-soft)}
+  .kopi:focus-visible{outline:2px solid var(--team-text);outline-offset:1px}
+  .kopi.done{color:var(--eu-text)}
+  @media (pointer:coarse){.kopi{padding:8px 10px}}
   .qa-answer{scroll-margin-bottom:16px;margin:0 0 12px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-line;overflow-wrap:break-word}
   .qa-more{display:flex;align-items:center;gap:9px;margin-top:8px;color:var(--muted)}
   .qa-answer.loading{color:var(--muted);display:flex;align-items:center;gap:9px}
@@ -3362,8 +3374,13 @@ function runMCAsync(N){
   mcRunId++;
   mcScenarioFor.set(mcRunId, scenarioKey);
   mcPagar++;
+  // Samme frø som svarene i "Spør om tabellen" (innsiktPayload og runZoneTasks
+  // bruker scenarioKey+'|impact'), og samme antall sesonger som innsikten
+  // (MC_N): da er tabellen og svarene regnet på de samme sesongene, og et svar
+  // viser samme tall som tabellen, også med et scenario. Uten scenario kommer
+  // begge fra grunnlagsfilen, som bruker det samme frøet.
   getWorker().postMessage({
-    runId:mcRunId, seed:hashStr(scenarioKey), mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+    runId:mcRunId, seed:hashStr(scenarioKey+'|impact'), mu:MODEL.mu, H:MODEL.H, k:FORM_K,
     att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride, N
   });
@@ -6437,6 +6454,9 @@ const QA_QUESTIONS = [
 ];
 const QA_TOP_N = 3;
 let qaActiveId = null, qaRequestSeq = 0, qaExtraOpen = false;
+// Spørsmålet og svaret "Kopier tekst" kopierer (settes i runQaQuestion).
+let qaKopi = null;
+const QA_FEIL = 'Klarte ikke regne ut svaret akkurat nå.';
 // Svaret hører til en tilstand: valgt lag + de låste resultatene (samme nøkkel
 // som runMCAsync/buildQaOpen). Endres noe av det, er svaret utdatert og regnes
 // om for den nye tilstanden (se renderQaButtons), aldri stående igjen.
@@ -6488,7 +6508,11 @@ function renderQaButtons(){
     if(qaReady()) setTimeout(()=>{
       if(qaActiveId && qaAnswerKey!==qaStateKey() && qaReady()) runQaQuestion(qaActiveId, qaAnswerTeam===SELECTED_TEAM, true);
     }, 0);
-  } else if(now && keep){ now.className = keep.cls; now.innerHTML = keep.html; }
+  } else if(now && keep){
+    now.className = keep.cls; now.innerHTML = keep.html;
+    // Kopiknappene kommer tilbake i vanlig tilstand, ikke fast på "Kopiert".
+    now.querySelectorAll('.kopi').forEach(b=>{ b.classList.remove('done'); if(b.dataset.label) b.querySelector('span').textContent = b.dataset.label; });
+  }
 }
 // Det mest aktuelle spørsmålet for valgt lag, som en klikkbar linje ved
 // lagvelgeren -- i stedet for en generisk lenke til seksjonen. Samme
@@ -6574,7 +6598,7 @@ async function runQaQuestion(id, keepZoneOverride, noScroll){
     });
   }catch(err){
     console.error('Spør om tabellen', err);
-    text = 'Klarte ikke regne ut svaret akkurat nå.';
+    text = QA_FEIL;
   }
   if(myRequestId !== qaRequestSeq) return; // et nytt spørsmål er stilt i mellomtiden
   if(qaAnswerKey !== qaStateKey()) return; // lag eller resultater er endret mens det regnet: svaret regnes om (renderQaButtons)
@@ -6584,6 +6608,14 @@ async function runQaQuestion(id, keepZoneOverride, noScroll){
   if(!doneEl) return;
   doneEl.className = 'qa-answer';
   doneEl.textContent = text;
+  // To små knapper nederst i svaret: "Kopier tekst" og "Kopier lenke" (se
+  // kopiTekstSvar og kopiLenke). Et feilsvar får ingen knapper.
+  qaKopi = text===QA_FEIL ? null : {sporsmal: q.label(SELECTED_TEAM), svar: text};
+  if(qaKopi) doneEl.insertAdjacentHTML('beforeend', QA_KOPI_KNAPPER);
+  // Bygger svaret på et scenario (resultater lagt inn eller simulert), står
+  // merkelappen "Simulert" øverst.
+  if(qaKopi && kopiScenario()) doneEl.insertAdjacentHTML('afterbegin',
+    '<div class="qa-merke"><span title="Svaret bygger på resultater som er lagt inn eller simulert på siden, ikke på dagens tall.">Simulert</span></div>');
   // Spørsmålet skal stå ØVERST, rett under menylinja, med svaret under. Før
   // ble svaret rullet inn med block:'nearest', og på iPad havnet det da
   // nederst på skjermen. Er svaret høyere enn skjermen, står spørsmålet
@@ -6593,6 +6625,8 @@ async function runQaQuestion(id, keepZoneOverride, noScroll){
 }
 document.getElementById('qaButtons').addEventListener('click', e=>{
   const btn = e.target.closest('button'); if(!btn) return;
+  if(btn.dataset.kopi==='tekst'){ const t = kopiTekstSvar(); if(t) kopier(btn, t, 'Kopiert'); return; }
+  if(btn.dataset.kopi==='lenke'){ kopier(btn, kopiLenke(), 'Kopiert'); return; }
   runQaQuestion(btn.dataset.id);
 });
 // Klikk på et tall i lagboksen (Gull/Europa/Kvalik/Nedrykk) eller på
@@ -7164,6 +7198,50 @@ async function kopier(btn, tekst, ferdigTekst){
   btn.classList.add('done');
   clearTimeout(btn._t);
   btn._t = setTimeout(()=>{ mål.textContent = opprinnelig; btn.classList.remove('done'); }, 2500);
+}
+
+// ---- "Spør om tabellen": "Kopier tekst" og "Kopier lenke" nederst i svaret ----
+// "Kopier tekst" gir spørsmålet, svaret og kildelinja "Tabellkalkulator.no,
+// per <dato>" som ren tekst, uten lenke. Står det et scenario (resultater lagt
+// inn eller simulert på siden), starter teksten med "Scenario, ikke dagens
+// tall. Forutsetter: ..." med resultatene (høyst fem), og kildelinja er
+// "Scenario laget på tabellkalkulator.no, per <dato>". "Kopier lenke" gir bare
+// lenken: ligasiden, eller scenariolenken (scenarioUrl, samme som "Del
+// scenario"). Begge går gjennom kopier(), som viser "Kopiert" en kort stund.
+const QA_KOPI_KNAPPER = '<div class="qa-kopi">'
+  + '<button type="button" class="kopi" data-kopi="tekst"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6A1.5 1.5 0 0 0 14 4.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></svg><span aria-live="polite">Kopier tekst</span></button>'
+  + '<button type="button" class="kopi" data-kopi="lenke"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1.5 1.5"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1.5-1.5"/></svg><span aria-live="polite">Kopier lenke</span></button>'
+  + '</div>';
+// Datoen tallene gjelder: når grunnlagsfilen tallene bygger på ble laget
+// (GRUNNLAG.fil.laget), i norsk tid. Er filen ikke i bruk, regnes tallene fra
+// model.json, og da gjelder tidspunktet modellen ble tilpasset. status.json
+// brukes ikke: den oppdateres ved hver sjekk, også når tallene er de samme.
+function kopiDato(){
+  const kilde = (GRUNNLAG && GRUNNLAG.fil && GRUNNLAG.fil.laget) || (MODEL && MODEL.fitted_at);
+  const t = kilde ? new Date(kilde) : new Date();
+  const p = osloParts(isNaN(t) ? new Date() : t);
+  return `${p.day}. ${NO_MONTH[p.month-1]}`;
+}
+const kopiScenario = () => qaScenarioKey()!=='';
+// "Scenario, ikke dagens tall. Forutsetter: Brann-Viking 2-1, ... og 3 andre
+// resultater." Resultatene lagt inn først, så de simulerte, i kamplistens
+// rekkefølge; høyst fem står med navn.
+function kopiScenarioLinje(){
+  const fylte = matches.filter(m=>m.hg!=null && m.ag!=null);
+  const rekke = [...fylte.filter(m=>!m.sim), ...fylte.filter(m=>m.sim)].map(m=>`${m.home}-${m.away} ${m.hg}-${m.ag}`);
+  const vist = rekke.slice(0, 5), resten = rekke.length - vist.length;
+  const liste = resten ? `${vist.join(', ')} og ${resten} ${resten===1 ? 'annet resultat' : 'andre resultater'}`
+    : vist.length>1 ? `${vist.slice(0, -1).join(', ')} og ${vist[vist.length-1]}` : vist[0];
+  return `Scenario, ikke dagens tall. Forutsetter: ${liste}.`;
+}
+function kopiTekstSvar(){
+  if(!qaKopi) return null;
+  const scen = kopiScenario();
+  return [...(scen ? [kopiScenarioLinje()] : []), qaKopi.sporsmal, qaKopi.svar,
+    `${scen ? 'Scenario laget på tabellkalkulator.no' : 'Tabellkalkulator.no'}, per ${kopiDato()}`].join('\n');
+}
+function kopiLenke(){
+  return kopiScenario() ? scenarioUrl() : 'https://tabellkalkulator.no' + LEAGUE.path;
 }
 
 // "Del scenario", og Del-knappen øverst. På telefon og nettbrett

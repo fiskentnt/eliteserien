@@ -914,6 +914,11 @@ async function main() {
     for (const [sti, lag, alle] of [['/eliteserien/', 'Vålerenga', true], ['/obos/', 'Moss', true], ['/elo-test/', 'Vålerenga', false]]) {
       const liga = sti.slice(1, -1);
       const pg = await open(1400, 900, base.replace('/eliteserien/', sti));
+      // Grunnlagsfilen behandles etter at siden har regnet selv. Tallene (og
+      // dermed sonen for et lag nær en grense) kan skifte når den tas i bruk,
+      // så gruppen venter på den.
+      await pg.waitForFunction('GRUNNLAG_STATUS!=="venter"', {timeout: 60000});
+      await settle(pg);
       // 1) Uten scenario: lagets siste spilte kamp.
       await velg(pg, lag);
       const k = await pg.evaluate(t => {
@@ -939,7 +944,8 @@ async function main() {
         `${m.boks} | ${m.svar} | kortet ${m.kort} | ${vm.f.join('; ')}`);
       await pg.click('#odds .lastmatch');
       await pg.waitForFunction(`(()=>{const a=document.getElementById('qaAnswer');return a&&!a.classList.contains('loading')&&a.textContent.length>20})()`, {timeout: 60000});
-      const klikk = await pg.evaluate(() => document.getElementById('qaAnswer').textContent);
+      // Selve svarteksten, uten merkelappen "Simulert" og kopiknappene.
+      const klikk = await pg.evaluate(() => [...document.getElementById('qaAnswer').childNodes].filter(n => n.nodeType === 3).map(n => n.nodeValue).join(''));
       check(`${liga}: trykk på boksen viser svaret om samme kamp`, klikk.startsWith(m.svar), klikk.slice(0, 120));
       // 3) Et scenario uten lagets egne kamper: forrige kamp er fortsatt den
       // spilte, men tallene er scenarioets.
@@ -960,7 +966,11 @@ async function main() {
         const e = LASTMATCH.teams[t], gml = JSON.stringify(e), z = qaTargetZone(t);
         const d = await qaLastMatchData(t);
         const ny = Math.min(1, Math.max(0, (d.expected || 0) + (z.pct > 0.5 ? -0.07 : 0.07)));
-        LASTMATCH.teams[t] = {...e, expected: +ny.toFixed(4)};
+        // Raden gjelder sonen kortet viser nå. Uten grunnlagsfilen (som
+        // testserveren bare leverer når en gruppe ber om den) regner siden
+        // tabellen selv, og for et lag nær en grense (Moss, nedrykk rundt 5 %)
+        // kan sonen da være en annen enn den workflowen lagret.
+        LASTMATCH.teams[t] = {...e, zone: z.key, expected: +ny.toFixed(4)};
         forrigeLinje = null; fillOdds();
         return {gml, ny: Math.round(ny * 100)};
       }, lag);
@@ -2380,6 +2390,142 @@ async function main() {
         (svar.match(new RegExp(PCTL, 'g')) || []).length === 4,
         (svar.match(new RegExp(PCTL, 'g')) || []).join(', '));
       await kp.close();
+    }
+    await page.bringToFront();
+
+    // ---- 22a. "Spør om tabellen": "Kopier tekst" og "Kopier lenke" ----
+    // To små knapper nederst i hvert svar, og ingen andre kopiknapper på
+    // siden. "Kopier tekst" gir spørsmålet, svaret og kildelinja
+    // "Tabellkalkulator.no, per <dato>" som ren tekst, uten lenke. Med et
+    // scenario starter teksten med "Scenario, ikke dagens tall. Forutsetter:"
+    // og resultatene (høyst fem, ellers "og N andre resultater"), kildelinja er
+    // "Scenario laget på tabellkalkulator.no, per <dato>", og svaret på siden
+    // har merkelappen "Simulert". "Kopier lenke" gir bare lenken: ligasiden,
+    // eller scenariolenken. Datoen regnes her fra filene: når grunnlagsfilen
+    // tallene bygger på ble laget ("laget"), eller når model.json ble tilpasset
+    // hvis filen ikke er i bruk, i norsk tid. Utklippstavlen byttes ut med en
+    // opptaker.
+    setGroup('Spør om tabellen: Kopier tekst og Kopier lenke');
+    const MND = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
+    const kopiDatoVentet = (mappe, grunnlagIBruk) => {
+      const les = f => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, mappe, 'data', f), 'utf8')); } catch (_) { return {}; } };
+      const t = new Date(grunnlagIBruk ? les('grunnlag.json').laget : les('model.json').fitted_at);
+      const d = Object.fromEntries(new Intl.DateTimeFormat('en-US', {timeZone: 'Europe/Oslo', day: 'numeric', month: 'numeric'})
+        .formatToParts(t).map(x => [x.type, x.value]));
+      return `${+d.day}. ${MND[+d.month - 1]}`;
+    };
+    const kopiOpptaker = pg => pg.evaluate(() => { window.__kopi = []; navigator.clipboard.writeText = async t => { window.__kopi.push(t); }; });
+    const kopiSvar = async (pg, lagNavn, qid) => {
+      await pg.evaluate(l => { const sel = document.getElementById('teamSelect'); sel.value = l; sel.dispatchEvent(new Event('change')); }, lagNavn);
+      await settle(pg);
+      await pg.evaluate(q => runQaQuestion(q, false, true), qid);
+      await pg.waitForSelector('#qaAnswer .qa-kopi [data-kopi="tekst"]', {timeout: 60000});
+      return pg.evaluate(() => { const a = document.getElementById('qaAnswer');
+        return {sporsmal: document.querySelector('.qa-item.active > button').textContent,
+          svar: [...a.childNodes].filter(n => n.nodeType === 3).map(n => n.nodeValue).join(''),
+          knapper: [...a.querySelectorAll('.qa-kopi > button')].map(b => ({hva: b.dataset.kopi, tekst: b.textContent.trim(), type: b.type,
+            ikon: (b.querySelector('svg path') || {}).outerHTML || ''})),
+          andre: [...document.querySelectorAll('.kopi, [data-kopi]')].filter(b => !b.closest('#qaAnswer')).length}; });
+    };
+    for (const [url, liga, mappe, lag, qid, lag2, qid2] of [[base, 'Eliteserien', 'eliteserien', 'Bodø/Glimt', 'nextmatch', '', 'keyround'],
+                                                         [obosUrl, 'OBOS', 'obos', 'Kongsvinger', 'howto', '', 'luck']]) {
+      const kp = await open(1400, 900, url);
+      await kp.waitForFunction('GRUNNLAG_STATUS!=="venter"', {timeout: 60000});
+      await settle(kp);
+      await kopiOpptaker(kp);
+      const iBruk = await kp.evaluate(() => GRUNNLAG_STATUS === 'i bruk');
+      const dato = kopiDatoVentet(mappe, iBruk), kilde = `Tabellkalkulator.no, per ${dato}`, side = `https://tabellkalkulator.no/${mappe}/`;
+      check(`${liga}: datoen i kildelinja er fra ${iBruk ? 'grunnlagsfilen' : 'model.json'} (${dato})`, /^\d{1,2}\. [a-zæøå]+$/.test(dato), dato);
+      for (const [l, q] of [[lag, qid], [lag2, qid2]]) {
+        const r = await kopiSvar(kp, l, q);
+        const n0 = await kp.evaluate(() => window.__kopi.length);
+        // "Kopier tekst" med Enter, "Kopier lenke" med mellomromstasten.
+        await kp.focus('#qaAnswer [data-kopi="tekst"]'); await kp.keyboard.press('Enter');
+        await kp.waitForFunction(n => window.__kopi.length === n + 1, {timeout: 5000}, n0);
+        const etter = await kp.$eval('#qaAnswer [data-kopi="tekst"]', b => b.textContent.trim());
+        await kp.focus('#qaAnswer [data-kopi="lenke"]'); await kp.keyboard.press('Space');
+        await kp.waitForFunction(n => window.__kopi.length === n + 2, {timeout: 5000}, n0);
+        const [tekst, lenke] = await kp.evaluate(n => window.__kopi.slice(n), n0);
+        const hva = `${q}${l ? ' for ' + l : ''}`;
+        if (q === qid) {
+          check(`${liga}: to knapper nederst i svaret, "Kopier tekst" og "Kopier lenke" med hvert sitt ikon, og ingen andre kopiknapper`,
+            r.knapper.length === 2 && r.knapper[0].hva === 'tekst' && r.knapper[0].tekst === 'Kopier tekst' && r.knapper[1].hva === 'lenke'
+              && r.knapper[1].tekst === 'Kopier lenke' && r.knapper.every(b => b.type === 'button' && b.ikon) && r.knapper[0].ikon !== r.knapper[1].ikon && r.andre === 0,
+            JSON.stringify({knapper: r.knapper.map(b => [b.hva, b.tekst, b.type]), andre: r.andre}));
+          check(`${liga}: knappen viser "Kopiert" etter trykket`, etter === 'Kopiert', etter);
+          check(`${liga}: uten scenario har svaret ikke merkelappen "Simulert"`, !(await kp.$('#qaAnswer .qa-merke')));
+        }
+        check(`${liga} (${hva}): "Kopier tekst" gir spørsmålet, svaret og "${kilde}", uten lenke`,
+          r.svar.length > 20 && tekst === `${r.sporsmal}\n${r.svar}\n${kilde}` && !/https?:|tabellkalkulator\.no\//i.test(tekst), JSON.stringify(tekst));
+        check(`${liga} (${hva}): "Kopier lenke" gir bare lenken til ligasiden`, lenke === side, lenke);
+      }
+      await new Promise(r => setTimeout(r, 2700));
+      check(`${liga}: knappene går tilbake til "Kopier tekst" og "Kopier lenke"`,
+        JSON.stringify(await kp.$$eval('#qaAnswer .qa-kopi > button', bs => bs.map(b => b.textContent.trim()))) === JSON.stringify(['Kopier tekst', 'Kopier lenke']));
+      // Et scenario. Forutsetningen skrives her fra kamplisten (resultatene
+      // lagt inn først, så de simulerte; høyst fem med navn), ikke av sidens
+      // kode. Lenken er scenariolenken (samme som "Del scenario").
+      const forutsetter = async () => { const fylte = await kp.evaluate(() => matches.filter(m => m.hg != null && m.ag != null)
+          .map(m => ({t: `${m.home}-${m.away} ${m.hg}-${m.ag}`, sim: !!m.sim})));
+        const rekke = [...fylte.filter(x => !x.sim), ...fylte.filter(x => x.sim)].map(x => x.t);
+        const vist = rekke.slice(0, 5), resten = rekke.length - 5;
+        const liste = resten > 0 ? `${vist.join(', ')} og ${resten} ${resten === 1 ? 'annet resultat' : 'andre resultater'}`
+          : vist.length > 1 ? `${vist.slice(0, -1).join(', ')} og ${vist[vist.length - 1]}` : vist[0];
+        return `Scenario, ikke dagens tall. Forutsetter: ${liste}.`; };
+      const scenKilde = `Scenario laget på tabellkalkulator.no, per ${dato}`;
+      for (const [antall, beskr] of [[1, 'ett resultat'], [7, 'sju resultater']]) {
+        await kp.evaluate(n => { const fylt = matches.filter(x => x.hg != null).length;
+          matches.filter(x => x.hg == null).slice(0, n - fylt).forEach(m => setMatch(m, 2, 1)); render(); }, antall);
+        await settle(kp);
+        const r2 = await kopiSvar(kp, lag, qid);
+        const n2 = await kp.evaluate(() => window.__kopi.length);
+        // Klikket gjøres i siden: med et scenario blir tall ferdige i
+        // bakgrunnen og svarlista tegnes på nytt, så en knapp puppeteer har
+        // funnet kan være byttet ut før musen trykker. (Tastatur og trykk på
+        // mobil testes over, uten scenario.)
+        await kp.evaluate(() => { document.querySelector('#qaAnswer [data-kopi="tekst"]').click(); document.querySelector('#qaAnswer [data-kopi="lenke"]').click(); });
+        await kp.waitForFunction(n => window.__kopi.length === n + 2, {timeout: 5000}, n2);
+        const [tekst2, lenke2] = await kp.evaluate(n => window.__kopi.slice(n), n2);
+        const scen = await kp.evaluate(() => scenarioUrl()), linje = await forutsetter();
+        check(`${liga}, scenario med ${beskr}: teksten starter med "${linje.slice(0, 60)}...", kildelinja sier "Scenario laget på"`,
+          tekst2 === `${linje}\n${r2.sporsmal}\n${r2.svar}\n${scenKilde}` && (antall < 6 || /og 2 andre resultater\.$/.test(linje)),
+          JSON.stringify(tekst2));
+        check(`${liga}, scenario med ${beskr}: "Kopier lenke" gir scenariolenken`, lenke2 === scen && /#s=\d/.test(lenke2), JSON.stringify({lenke2, scen}));
+        check(`${liga}, scenario med ${beskr}: svaret har merkelappen "Simulert"`,
+          await kp.evaluate(() => { const m = document.querySelector('#qaAnswer .qa-merke'); return !!m && m.textContent.trim() === 'Simulert'
+            && m.compareDocumentPosition(document.querySelector('#qaAnswer .qa-kopi')) & Node.DOCUMENT_POSITION_FOLLOWING; }));
+        // Tabellen og svarene er regnet på de samme sesongene: tallene
+        // svarene som bygger på innsikten viser, er nøyaktig tabellens.
+        const avvik = await kp.evaluate(async () => { const A = await innsiktData(); let m = 0;
+          TEAMS.forEach(t => ['gull', 'cl', 'europa'].filter(k => LEAGUE.zones[k] && A.soner.includes(k)).forEach(k => {
+            m = Math.max(m, Math.abs(sonesjanse(lastMC[t], k) - innsiktFor(A, t, k).successCount / A.N)); }));
+          return {m, N: [lastMCN, A.N]}; });
+        check(`${liga}, scenario med ${beskr}: svarene viser de samme tallene som tabellen (samme sesonger)`,
+          avvik.m < 1e-9 && avvik.N[0] === avvik.N[1], JSON.stringify(avvik));
+      }
+      check(`${liga}: den skjulte delingen under "Del scenario" er urørt`,
+        await kp.evaluate(() => document.getElementById('shareText').hidden && document.getElementById('shareBB').hidden));
+      await kp.close();
+      // Mobil: trykk på skjermen.
+      const mp = await browser.newPage();
+      mp.on('pageerror', e => errors.push(`${url} (mobil): ${e.message}`));
+      await mp.setViewport({width: 390, height: 844, isMobile: true, hasTouch: true});
+      await mp.goto(url, {waitUntil: 'networkidle0'});
+      await mp.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC && GRUNNLAG_STATUS!=="venter"', {timeout: 120000});
+      await settle(mp);
+      await kopiOpptaker(mp);
+      const rm = await kopiSvar(mp, lag, qid);
+      // "Spør om tabellen" er lukket på mobil til man åpner den (runQaQuestion
+      // åpner den ikke selv), og knappene skal stå midt på skjermen, ikke
+      // under den faste menyen nederst.
+      await mp.evaluate(() => { document.getElementById('qaPanel').open = true;
+        document.querySelector('#qaAnswer .qa-kopi').scrollIntoView({block: 'center'}); });
+      await mp.tap('#qaAnswer [data-kopi="tekst"]'); await mp.tap('#qaAnswer [data-kopi="lenke"]');
+      await mp.waitForFunction('window.__kopi.length===2', {timeout: 5000});
+      const [tm, lm] = await mp.evaluate(() => window.__kopi);
+      check(`${liga} mobil: trykk på "Kopier tekst" og "Kopier lenke" kopierer det samme`,
+        tm === `${rm.sporsmal}\n${rm.svar}\n${kilde}` && lm === side, JSON.stringify({tm, lm}));
+      await mp.close();
     }
     await page.bringToFront();
 
@@ -4573,7 +4719,9 @@ async function main() {
           const sel = document.getElementById('teamSelect'); sel.value = lag; sel.dispatchEvent(new Event('change'));
           runQaQuestion('cheer', false, true);
           const vent = f => new Promise(r => { const i = setInterval(() => { if (f()) { clearInterval(i); r(); } }, 20); });
-          const svarTekst = () => { const el = document.getElementById('qaAnswer'); return el && !el.className.includes('loading') ? el.textContent : null; };
+          // Selve svarteksten, uten kopiknappene (og merkelappen "Simulert").
+          const svarTekst = () => { const el = document.getElementById('qaAnswer'); return el && !el.className.includes('loading')
+            ? [...el.childNodes].filter(n => !(n.nodeType === 1 && n.matches('.qa-kopi, .qa-merke'))).map(n => n.textContent).join('') : null; };
           await vent(() => svarTekst());
           const svarFoer = svarTekst();
           await vent(() => GRUNNLAG_STATUS !== 'venter');

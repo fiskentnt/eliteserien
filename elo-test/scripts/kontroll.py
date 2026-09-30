@@ -403,7 +403,10 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # setning med tabellene under "Vis detaljer" når siden har #accuracyTall) er
 # flettet inn der det er felles: CSS-en og renderAccuracy. Testsidens egen
 # tekst i feltene er beholdt; uten #accuracyTall står tabellene i loggen som
-# før, nå med den korte setningen foran antallet kamper.
+# før, nå med den korte setningen foran antallet kamper. "Kopier tekst" og
+# "Kopier lenke" nederst i svarene i "Spør om tabellen" (1. oktober 2026), med
+# scenarioteksten, merkelappen "Simulert" og tabellens frø i et scenario (samme
+# som svarene), er flettet inn uendret (git merge-file uten konflikter).
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -419,7 +422,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "b692afc1001274806d0ded714248e9b41cb9a6429a71eb2a3e7521ed2a872e9c"
+BASE_SHA = "8af27743c212b8f924c06d4a556c299a09aa2ba6f3b6080adff6dc8a503c2f0f"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

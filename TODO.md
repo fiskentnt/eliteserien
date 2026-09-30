@@ -3,6 +3,60 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## "Spør om tabellen": Kopier tekst og Kopier lenke (1.10.2026)
+
+Fra Trond, etter to utkast (knapper også i lagboksen og ved kortene, med
+lenken i teksten; begge forkastet før push): to små knapper nederst i hvert
+svar, i begge ligaene, og ingen andre kopiknapper.
+- "Kopier tekst": spørsmålet, svaret og "Tabellkalkulator.no, per <dato>",
+  som ren tekst, uten lenke. Med et scenario (resultater lagt inn eller
+  simulert på siden) starter teksten med "Scenario, ikke dagens tall.
+  Forutsetter: ..." med resultatene (de lagt inn først, høyst fem, ellers "og
+  N andre resultater"), og kildelinja er "Scenario laget på
+  tabellkalkulator.no, per <dato>". Svaret på siden har da merkelappen
+  "Simulert".
+- "Kopier lenke": bare lenken, ligasiden (kanonisk adresse) eller
+  scenariolenken (scenarioUrl, samme som "Del scenario").
+- Datoen er når grunnlagsfilen tallene bygger på ble laget ("laget"), i
+  norsk tid; er filen ikke i bruk, når model.json ble tilpasset. Ikke
+  status.json, som oppdateres ved hver sjekk uten at tallene endres.
+- Tabellen og svarene med et scenario: tabellen brukte frøet
+  hashStr(scenarioKey), svarene som bygger på innsikten ("Hvorfor har ...?",
+  "Hva må ... gjøre?", "Når kan det være avgjort?", "Hvem kjemper ... mot?")
+  hashStr(scenarioKey+'|impact'), begge 10 000 sesonger, så svarene kunne vise
+  opptil rundt to prosentpoeng annet enn tabellen (målt 1.10 med Brann-Viking
+  2-0: Molde topp 4 52 i tabellen mot 54 i svaret, Tromsø 58 mot 57,
+  Lillestrøm 15 mot 14; OBOS med Moss-Kongsvinger 0-2: Haugesund opprykk 79
+  mot 80, Strømsgodset 44 mot 43, Odd topp 6 84 mot 85). Tabellen bruker nå samme frø som
+  svarene i et scenario (grunnlagsfilen gjør det samme uten scenario), og
+  tallene er like (største avvik 1e-16, regresjonen sjekker det). De andre
+  svarene tar nå-tallet fra tabellen (zone.pct/lastMC) og legger endringer
+  oppå. Uten scenario var alt likt fra før (samme grunnlagsfil).
+- "Lagstyrkene holdes som i dag, så tallene er anslag." står fortsatt i
+  svaret "Hva betydde forrige kamp for ...?" i Eliteserien og OBOS (på
+  testsiden "Ratingen er regnet om ..."). Tallet nå er tabellens;
+  alternativene (hva sjansen ville vært med et annet resultat) er regnet med
+  dagens lagstyrker. Ikke endret; lagt fram for Trond.
+- Knappene har hvert sitt ikon og ord, er dempet, viser "Kopiert" i 2,5
+  sekunder (kopier(), som "Del scenario" bruker), er vanlige <button> (Enter
+  og mellomrom) og har større treffflate på berøringsskjerm. Den skjulte
+  delingen under "Del scenario" er ikke rørt.
+- Testsiden har fått det samme (git merge-file uten konflikter); BASE_SHA
+  oppdatert.
+- Regresjonen, "Spør om tabellen: Kopier tekst og Kopier lenke": to spørsmål
+  per liga (med og uten lag), tastatur (Enter og mellomrom), "Kopiert" og
+  tilbake, scenario (teksten og scenariolenken), trykk på mobil, ingen andre
+  kopiknapper og den skjulte delingen urørt. Datoen i testen regnes fra
+  datafilene, ikke av sidens kode. Scenarioteksten med ett og sju resultater,
+  merkelappen "Simulert", og at svarene viser tabellens tall med scenario.
+- Testene som leste svaret med textContent ("trykk på boksen viser svaret",
+  "kommer filen sent ...") leser nå bare svarteksten, uten merkelappen og
+  knappene. "Lagret forventning" (OBOS, Moss) setter den lagrede raden til
+  sonen kortet viser: testserveren leverer grunnlagsfilen bare når en gruppe
+  ber om den, og med siden sin egen simulering ligger Moss rett rundt 5 %
+  nedrykk, så sonen kan skifte med frøet (med grunnlagsfilen er den
+  "kvalik", som den lagrede raden).
+
 ## Nederst på sidene: tre felt under hverandre, og to nivåer (30.9.2026 kveld)
 
 Fra Trond: "Slik fungerer det", "Hvordan vet vi at modellen virker?" og "Ofte
