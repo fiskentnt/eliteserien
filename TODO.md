@@ -1377,6 +1377,105 @@ topp 4 53,5 → 57,3. Gull: Bodø/Glimt 77,1 → 78,0, Viking 22,9 → 22,0.
 Styrke: Bodø/Glimt 7,50 → 7,59, Viking 6,61 → 6,66. OBOS: alle endringer
 under 0,7 prosentpoeng. (`walkforward/stilling_i_dag.py` og `.txt` i lab.)
 
+### Startnivå for nye lag: data og forslag (utviklingsperioden 2012–2021, 30.9.2026)
+
+**Beslutning etter diagnosen (Trond, 30.9.2026).** Produksjonsmodellen endres
+ikke ennå; pakken 8/24, 28 dager, oddsvekt 40 beholdes som kandidat. To
+problemer holdes adskilt: (1) OBOS 2022–2025 har et særskilt problem i
+kamper med nye lag (nedrykkslag undervurderes, opprykkslag overvurderes);
+(2) favoritter undervurderes også mellom etablerte lag. Det andre tas
+senere, og de to løses ikke med samme justering. Før egne startpunkter for
+nye lag bygges, testes hvor mye forrige sesong sier om styrken i ny
+divisjon. Bare 2012–2021 brukes til utvikling; kontrollperioden 2022–2025
+brukes ikke til å velge mellom definisjoner eller parameterverdier.
+Hovedmålet er log loss ut av utvalg; kalibreringen viser hvor modellen
+feiler og skal ikke presses mot 1,00.
+
+**Observerbare mål** (ikke tilpassede lagstyrker, som alt er trukket mot
+snittet): for lag *i* i liga *ℓ*, sesong *s*, med *n* seriekamper, mål for
+*GF* og mot *GA*, og ligaens snitt ḡ = ΣGF / Σn mål per lag og kamp:
+
+- a(i,s) = ln( GF/n ÷ ḡ ),  d(i,s) = ln( GA/n ÷ ḡ )
+
+samme skala som modellens angrep (att) og forsvar (con).
+
+**Antall lagoverganger** (ny sesong):
+
+| Retning | 2013–2021 (utvikling) | 2022–2025 (bare telt) |
+|---|---|---|
+| Eliteserien → OBOS (nedrykk) | 21 | 10 |
+| OBOS → Eliteserien (opprykk) | 21 | 10 |
+| 2. divisjon → OBOS (opprykk) | 32 | 9 |
+
+2012 kan ikke klassifiseres (2011 mangler). Navn: NOR.csv sitt "Sandnes" er
+"Sandnes Ulf" i OBOS-historikken; ellers stemmer alle overgangene.
+
+**Sammenheng, siste sesong i gammel divisjon mot første i ny** (2013–2021;
+r med 95 % KI):
+
+| Mål | ES → OBOS (21): gammel → ny, r | OBOS → ES (21): gammel → ny, r |
+|---|---|---|
+| Poeng per kamp | 0,84 → 1,82, −0,05 [−0,47, +0,39] | 2,04 → 1,13, −0,51 [−0,77, −0,09] |
+| Målforskjell per kamp | −0,75 → +0,62, 0,16 [−0,29, +0,55] | +0,88 → −0,40, −0,35 [−0,68, +0,10] |
+| Mål for per kamp | 1,14 → 1,87, −0,03 | 1,97 → 1,29, −0,17 |
+| Mål mot per kamp | 1,89 → 1,24, 0,26 | 1,08 → 1,69, −0,21 |
+| a | −0,27 → +0,19, −0,01 | +0,24 → −0,16, −0,24 |
+| d | +0,24 → −0,23, 0,25 | −0,36 → +0,10, −0,16 |
+
+Til sammenligning, lag som blir i samme liga (samme periode): Eliteserien
+r 0,62 (poeng), 0,69 (målforskjell), 0,56 (a), 0,57 (d), 123 par; OBOS 0,32,
+0,39, 0,21, 0,27, 91 par. Sesongen før sier altså nesten ingenting om
+styrken i ny divisjon utover hvilken gruppe laget tilhører (en del av det
+er at gruppene er smale: nedrykkslagene lå alle nederst). Nivåene per
+gruppe er derimot tydelige.
+
+**A (dagens regel).** Senteret for alle lag er ligasnittet:
+c_att(i) = c_con(i) = 0.
+
+**B (felles historisk startnivå per overgangstype).** For et nytt lag i
+gruppe g ∈ {N: ES → OBOS, P: OBOS → ES, P2: 2. divisjon → OBOS}:
+c_att(i) = ā_g, c_con(i) = d̄_g, snittet av a og d i FØRSTE sesong i ny liga
+over overgangene i gruppen, 2013–2021. Etablerte lag: 0. Verdiene:
+
+| Gruppe | n | ā_g (sd) | d̄_g (sd) | poeng per kamp mot ligasnittet |
+|---|---|---|---|---|
+| N: ES → OBOS | 21 | +0,186 (0,166) | −0,230 (0,222) | +0,44 |
+| P: OBOS → ES | 21 | −0,155 (0,186) | +0,099 (0,222) | −0,24 |
+| P2: 2. div → OBOS | 32 | −0,052 (0,184) | +0,081 (0,173) | −0,21 |
+
+I walk-forward på utviklingsperioden regnes ā_g og d̄_g uten sesongen som
+predikeres (utelat én sesong), så en sesong aldri får sine egne sluttall
+som startpunkt. For kontrollperioden brukes tallene fra hele 2013–2021.
+
+**C (overført individuell styrke, bare N og P).**
+c_att(i) = ā_g + w · ( a(i, s−1) − ā_g^gammel ),
+c_con(i) = d̄_g + w · ( d(i, s−1) − d̄_g^gammel ),
+der ā_g^gammel og d̄_g^gammel er gruppens snitt i gammel divisjon (siste
+sesong). Nivåforskjellen mellom ligaene er ā_g − ā_g^gammel og
+d̄_g − d̄_g^gammel (N: +0,453 og −0,468; P: −0,393 og +0,461), fra
+gruppesnittene, ikke en egen parameter. Den eneste frie parameteren er w, én
+fast overføringsgrad for begge retninger og for både a og d: 0 er B, 1 er
+full overføring av lagets avvik fra gruppesnittet. P2 bruker B.
+
+w anslått på 2013–2021 som felles helning av avviket fra gruppesnittet (84
+par): **w = −0,06 ± 0,13**, altså ingen påvisbar overføring. Etter regelen
+(ingen tilpasning av en fleksibel funksjon, parametre fra
+utviklingsperioden) blir w = 0, og C er da identisk med B.
+
+**Tilbaketrekkingen.** To lag: (1) i C trekkes lagets individuelle avvik
+mot gruppens nivå B med den faste faktoren w (her 0); (2) i tilpasningen er
+senteret forventningen i ridge-straffen ½·l1·Σ[(att − c_att)² + (con −
+c_con)²] (fit_fast, `senter_att` og `senter_con`), med samme l1 som for de
+andre lagene. Senteret dominerer når laget har spilt få kamper, og betyr
+mindre etter hvert som kampene i sesongen veier mer; det er ingen egen
+nedtrapping. Hjemmefordelen (ha, hc) trekkes fortsatt mot 0.
+
+**Forslag til walk-forward (ikke kjørt).** A mot B på kandidatpakken
+(8/24, 28 dager, oddsvekt 40), enkeltkamper, modellen alene; valg på
+2013–2021 (B utelatt-én-sesong); kontroll 2022–2025 med B fra hele
+2013–2021; delt på nye og etablerte lag og på fase. C kjøres ikke, siden
+w = 0 gjør den lik B.
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
