@@ -1687,6 +1687,56 @@ i sonene, og gullsjansen for Bodø/Glimt og Viking nå og betinget på at
 Bodø/Glimt vinner, spiller uavgjort eller taper mot Kristiansund (fra de
 samme simuleringene, betinget på utfallet i den kampen).
 
+**Resultat av sluttkontrollen (30.9.2026 kl. 16:09 UTC, etter 3cd4ff6).**
+
+*2012–2025 uten markedsblanding* (Brier, kandidat mot dagens; negativ =
+kandidaten bedre; fra pakketestens kjøring):
+
+| | 2012–2021 | 2022–2025 |
+|---|---|---|
+| Eliteserien gull / topp 4 / nedrykk | −0,0004 / −0,0002 / −0,0002 | +0,0007 / +0,0003 / −0,0004 |
+| Eliteserien, snitt av sonene | −0,0003 ± 0,0001 | +0,0002 ± 0,0002 |
+| OBOS opprykk / topp 6 / nedrykk | −0,0002 / −0,0000 / −0,0002 | −0,0003 / +0,0002 / −0,0004 |
+| OBOS, snitt av sonene | −0,0002 ± 0,0001 | −0,0002 ± 0,0002 |
+
+*Dagens stilling* (100 000 simuleringer, samme tall). Oddsen for kommende
+kamper er de faktiske i dag: i Eliteserien fra 24.9 kl. 12:40 UTC (seks dager
+gammel, se under), i OBOS fra 30.9. Eneste endring over to prosentpoeng:
+Rosenborg topp 4 53,5 (dagens) → 57,3 (kandidat 0,7) / 57,4 (kandidat 0,8).
+Gull:
+
+| | Nå: Glimt / Viking | Glimt vinner mot Kristiansund | Uavgjort | Glimt taper |
+|---|---|---|---|---|
+| Dagens | 77,1 / 22,9 | 78,7 / 21,3 | 64,4 / 35,6 | 53,6 / 46,4 |
+| Kandidat 0,7 | 78,0 / 22,0 | 79,6 / 20,4 | 64,1 / 35,9 | 53,8 / 46,2 |
+| Kandidat 0,8 | 77,8 / 22,2 | 79,4 / 20,6 | 63,7 / 36,3 | 55,9 / 44,1 |
+
+(Andelen av simuleringene med hvert utfall: seier rundt 91 %, uavgjort 6–7
+%, tap 2,5–2,8 %.) OBOS: alle endringer under 0,7 prosentpoeng.
+
+*2026 med oddsen slik den var* (metoden, ikke kjørt som sonetest): 52 punkter
+i Eliteserien og 49 i OBOS; ved siste ordinære henting før punktet hadde 98 og
+99 % av kampene i neste runde en Pinnacle-pris i prisrekkene. Pinnacle mot
+The Odds API-snittet siden bruker i Eliteserien (odds_sources.json, 8
+kommende kamper): største avvik i H/U/B i snitt 0,9 prosentpoeng (median
+0,6, maks 2,6). Sonene i 2026 kan først scores mot fasit når sesongen er
+ferdig (8. november); én sesong.
+
+Skript og tall i lab (`walkforward/sluttkontroll/`, `stilling_tre.py`,
+`sluttkontroll_soner.py`, `gjenskap_2026.py`).
+
+**Oddsen for kommende kamper i Eliteserien er fra 24.9 (undersøkt 30.9, ikke
+endret).** "Oppdater odds for kommende kamper" kjører og lykkes hvert tiende
+minutt, men porten i `scripts/should_fetch_odds.py` stopper hentingen: "ingen
+uspilte kamper de neste 7 dagene -- sparer kreditter" (neste kamp er 9.10;
+landskampspause). Kvoten er ikke årsaken (485 kreditter igjen, budsjettvakten
+krever 104), og det er ingen feil. Hentingene 24.9 kl. 12:27–12:40 var
+manuelle kjøringer (FORCE_FETCH=true) under testen av arkiveringen. Porten
+åpner 2.10 fra 00:05 UTC (Brann–Viking 9.10 kommer innen 7 dager), så første
+nye henting blir morgenen 2.10. Siden viser derfor sannsynligheter for runde
+23 med odds som er opptil åtte dager gamle i pausen. Om horisonten skal være
+lengre, er et valg for Trond.
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
