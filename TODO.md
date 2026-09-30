@@ -1201,6 +1201,32 @@ resultatene viser at valget av det ene endrer seg med det andre (det er ikke
 målt). Trond avgjør om en liten 2D-test (8/24 og 16/48 × 28 og 35 dager)
 skal kjøres før trinn 3.
 
+**Beslutning etter trinn 2 (Trond, 30.9.2026).** Den lille 2D-testen kjøres,
+fordi begge påvirker hvor mye data hvert lagestimat bygger på, og de flytter
+helningene hver sin vei. Vinneren brukes som fast verdi i trinn 3. Rapport
+etter trinn 3.
+
+### 2D-test: regularisering × halveringstid (regler låst før kjøringen)
+
+- Kombinasjonene: 8/24 og 16/48 × 28 og 35 dager (fire; tre er kjørt i trinn
+  1 og 2, den nye er 16/48 med 28 dager).
+- Samme regler: valget er kombinasjonen med lavest log loss på 2012–2021,
+  begge ligaene samlet. Den er kandidat bare hvis den har lavere log loss
+  enn dagens modell (16/48, 35 dager) på 2022–2025 i begge ligaene og ikke
+  bryter grensene (helning, favoritter) mot dagens modell.
+- Sonene kjøres bare hvis den nye kombinasjonen (16/48, 28 dager) vinner, mot
+  dagens modell. De andre er testet trinnvis, og den samlede pakken testes
+  mot dagens modell etter trinn 3.
+
+**Diagnose før trinn 5 (Trond, 30.9.2026; bare diagnose, ingen løsning).**
+OBOS er godt kalibrert på 2012–2021 (helning H 0,98, B 1,18) men for
+forsiktig på 2022–2025 (rundt 1,43 og 1,36), uansett innstilling. Undersøk om
+det skyldes lag som startet på ligasnittet: nedrykkslag fra Eliteserien til
+OBOS, og opprykkslag til begge ligaene. Bryt ned kalibreringshelning,
+favorittavvik og log loss på etablerte lag, nedrykkslag og opprykkslag, per
+periode (2012–2021 og 2022–2025) og per fase av sesongen. (2012 kan ikke
+klassifiseres uten 2011-lagene i dataene.)
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
