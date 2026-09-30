@@ -929,6 +929,10 @@ async function main() {
       const u = await les(pg, lag), vu = vurder(u, false);
       check(`${liga}: uten scenario handler boksen og svaret om ${k.forrige}, med samme sone og endring som kortet`,
         vu.f.length === 0 && u.boks.includes(`mot ${k.forrige}.`), `${u.boks} | ${u.svar} | kortet ${u.kort} | ${vu.f.join('; ')}`);
+      // Eliteserien og OBOS: svaret slutter med at alternativene er et anslag.
+      // Testsiden har sin egen setning ("Ratingen er regnet om ...").
+      if (liga !== 'elo-test') check(`${liga}: svaret sier "Hva de andre resultatene ville gitt, er et anslag."`,
+        u.helt.trim().endsWith('Hva de andre resultatene ville gitt, er et anslag.') && !u.helt.includes('Lagstyrkene holdes'), u.helt.slice(-160));
       // 2) Runden simulert, laget vinner 4-0.
       await pg.evaluate(t => {
         const m = matches.filter(x => x.hg == null && (x.home === t || x.away === t)).sort((a, b) => a.date.localeCompare(b.date))[0];

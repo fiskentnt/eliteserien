@@ -4753,7 +4753,9 @@ async function qaLastMatch(team){
   // hvilken kamp svaret gjelder.
   const head = `${(matches.includes(m) ? QA_SIMULERT_ORD : QA_FORRIGE_ORD)[actual]} ${gf}-${ga} mot ${opp}`;
   const headLiten = head.charAt(0).toLowerCase()+head.slice(1);
-  const anslag = ` Lagstyrkene holdes som i dag, så tallene er anslag.`;
+  // Tallet nå er tabellens; hva de andre utfallene ville gitt, er regnet med
+  // dagens lagstyrker, og det sier setningen.
+  const anslag = ` Hva de andre resultatene ville gitt, er et anslag.`;
   const others = ['win','draw','loss'].filter(o=>o!==actual);
   // Hvor sannsynlig selve resultatet var før avspark (prekick.json eller
   // sluttoddsen). Står i avsnittet etter endringen, som forklaring.

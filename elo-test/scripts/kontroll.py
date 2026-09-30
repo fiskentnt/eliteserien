@@ -407,6 +407,10 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # "Kopier lenke" nederst i svarene i "Spør om tabellen" (1. oktober 2026), med
 # scenarioteksten, merkelappen "Simulert" og tabellens frø i et scenario (samme
 # som svarene), er flettet inn uendret (git merge-file uten konflikter).
+# Setningen i "Hva betydde forrige kamp for ...?" ("Hva de andre resultatene
+# ville gitt, er et anslag.", 1. oktober 2026) er byttet bare i produksjonen:
+# testsiden har sin egen variant ("Ratingen er regnet om ..."), som ikke er
+# rørt.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -422,7 +426,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "8af27743c212b8f924c06d4a556c299a09aa2ba6f3b6080adff6dc8a503c2f0f"
+BASE_SHA = "d6d788f9e112d84d8833cab1542a67615e7c140f24ae2627f49c8ed85608bd53"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
