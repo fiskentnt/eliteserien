@@ -1502,6 +1502,75 @@ startet).**
   en misvisende forskyvning). Sentreringen endres ikke etter
   kontrollperioden.
 
+**Resultat A mot B (kjørt 30.9.2026 kl. 15:27 UTC, etter at reglene var
+pushet i e967d66 kl. 15:26:57).** Kandidatpakken, walk-forward, modellen
+alene; B mot A (negativ = B bedre), SE klustret på sesong; helning H og B og
+favorittavvik (prosentpoeng) A → B.
+
+Utvikling 2013–2021 (B med én sesong utelatt):
+
+| | Eliteserien | OBOS |
+|---|---|---|
+| Alle | −0,0004 ± 0,0006 (2049) | −0,0007 ± 0,0006 (2032) |
+| Mellom etablerte lag | −0,0001 ± 0,0001 | −0,0001 ± 0,0007 |
+| Minst ett nytt lag | −0,0011 ± 0,0020 (571) | −0,0012 ± 0,0008 (1246) |
+| Med nedrykkslag til OBOS | – | −0,0030 ± 0,0014 (563) |
+| Med opprykkslag til Eliteserien | −0,0011 ± 0,0020 (571) | – |
+| Med opprykkslag fra 2. divisjon | – | −0,0000 ± 0,0012 (821) |
+| Runde 1–4 / 5–15 / 16–30 | −0,0022 / −0,0005 / +0,0000 | −0,0061 / +0,0001 / −0,0005 |
+| Helning H, B (alle) | 1,06 → 1,06, 1,13 → 1,12 | 0,99 → 0,97, 1,17 → 1,13 |
+| Favorittavvik (alle) | 2,2 → 2,1 | 2,5 → 2,3 |
+
+**Valget: B mot A −0,0006 ± 0,0004, begge ligaene samlet. B velges.**
+
+Kontroll 2022–2025 (B frosset fra hele 2013–2021):
+
+| | Eliteserien | OBOS |
+|---|---|---|
+| Alle | **+0,0008 ± 0,0005** (904) | −0,0002 ± 0,0013 (911) |
+| Mellom etablerte lag | +0,0005 ± 0,0004 | −0,0002 ± 0,0002 |
+| Minst ett nytt lag | +0,0016 ± 0,0017 (267) | −0,0001 ± 0,0023 (473) |
+| Med nedrykkslag til OBOS | – | −0,0005 ± 0,0034 (270) |
+| Med opprykkslag til Eliteserien | +0,0016 ± 0,0017 | – |
+| Med opprykkslag fra 2. divisjon | – | +0,0029 ± 0,0031 (246) |
+| Runde 1–4 / 5–15 / 16–30 | +0,0087 / +0,0001 / +0,0002 | +0,0086 / −0,0019 / −0,0003 |
+| Helning H, B (alle) | 1,07 → 1,06, 1,19 → 1,17 | 1,44 → 1,38, 1,37 → 1,32 |
+| Favorittavvik (alle) | 2,3 → 2,2 | 4,8 → 4,5 |
+
+**B er ikke kandidat:** log loss er høyere enn A i Eliteserien på
+kontrollperioden (+0,0008). Sonene og 2026 er derfor ikke kjørt.
+
+**Forskyvningen.** B flytter snittet av att og con over alle lag med
+−0,02 / +0,01 til +0,02 i Eliteserien og +0,01 til +0,02 / −0,01 til −0,02
+i OBOS, og mu med høyst 0,01 (representative tilpasninger 2016, 2019, 2023 og
+2025 etter 16, 64, 120 og 200 kamper). Etablerte lag flyttes tilsvarende litt
+(rundt 0,01–0,02 på angrep og forsvar). Det er virkningen av sentrene selv,
+ikke en misvisende forskyvning; sentreringen er ikke endret.
+
+**Tolkning.** Hypotesen får støtte i utviklingsperioden, mest for
+nedrykkslag i OBOS (−0,0030) og tidlig i sesongen, men gevinsten holder ikke
+på kontrollperioden: i Eliteserien ga det historiske startnivået dårligere
+prediksjoner for kampene med opprykkslag i 2022–2025, og B er dårligere i
+runde 1–4 (+0,0087). Testen viser at det historiske nivået traff dårligere,
+ikke hvorfor. B påvirker også den felles tilpasningen: selv mellom
+etablerte lag i Eliteserien er B 0,0005 dårligere på kontrollperioden. Det
+er ventet når mu og lagstyrkene estimeres samtidig, men viser at endringen
+ikke er isolert til kampene med nye lag. Helningene og favorittavviket blir
+litt bedre med B i begge perioder, men log loss er hovedmålet. Skript og
+tall i lab (`walkforward/wf_start.py`, `wf_start_analyse.py`, `start/`).
+
+**Konklusjon.** Problemet med nye lag, særlig i OBOS 2022–2025, står
+fortsatt. C fikk ingen støtte i utviklingsdataene. B vant svakt i
+utviklingsperioden, men feilet kontrollkravet. Ingen av dem innføres, og det
+lages ikke nye varianter av startnivået (en svakere variant for å rette
+runde 1–4 ville vært å trene modellen på kontrollperioden). Sonene og 2026
+kjøres ikke for B. Kandidatpakken 8/24, 28 dager, oddsvekt 40 står alene.
+
+**Parkert hypotese, ikke testet.** Klubbstørrelse kan skille nedrykkslag som
+dominerer OBOS fra dem som ikke gjør det. Den er formulert etter at
+kontrollperioden 2022–2025 er sett, og kan derfor bare testes på 2026 og
+senere.
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
