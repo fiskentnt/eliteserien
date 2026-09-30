@@ -389,7 +389,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # sluttoddsen (regnet med Shin). Testsiden beholder rho = 0 og sine egne
 # forklaringer (også den tekniske forklaringen i "Slik fungerer det"), og
 # notisen om endringene i produksjonsmodellen (nederst i "Hvordan vet vi at
-# modellen virker?", med lenke til ENDRINGER.md) er ikke med her.
+# modellen virker?"; hele teksten står i ENDRINGER.md) er ikke med her.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -405,7 +405,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "fa2bf7844583e66661690c7e2a685071b572a62dbb9110d8b013046ee95e7e27"
+BASE_SHA = "e60c207ae75bdbc5afac3cc7ac3ada9d799c1a3212523077d75d005786ecc3af"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

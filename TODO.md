@@ -544,8 +544,8 @@ failsafe-tester grønne mot tabellkalkulator.no.
 - **Tekstene er lagt inn på siden** 30.9.2026 (endringsloggen som egen seksjon,
   "Endringer i modellen", og den tekniske forklaringen under "Slik fungerer
   det"; samme dag ble endringsloggen flyttet ordrett til ENDRINGER.md i
-  roten, og siden har bare en kort notis med lenke nederst i "Hvordan vet vi
-  at modellen virker?"), med tallene regnet på nytt med produksjonskoden. Valideringen under
+  roten, og siden har bare en kort notis uten lenke nederst i "Hvordan vet
+  vi at modellen virker?"), med tallene regnet på nytt med produksjonskoden. Valideringen under
   "Hvordan vet vi at modellen virker?" er regnet på nytt for begge ligaene.
 - **Etter OBOS-runden 2.-4. oktober, før runde 23 i Eliteserien:** sjekk at
   grunnlagsfilene er regnet på nytt og i bruk (GRUNNLAG_STATUS "i bruk"), at
