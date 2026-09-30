@@ -390,6 +390,9 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # forklaringer (også den tekniske forklaringen i "Slik fungerer det"), og
 # notisen om endringene i produksjonsmodellen (nederst i "Hvordan vet vi at
 # modellen virker?"; hele teksten står i ENDRINGER.md) er ikke med her.
+# Svaret "Hva må ... gjøre?" i ny form (30. september 2026: den laveste
+# oppnåelige summen med minst 50 %, betinget sjanse, "kan ikke sikre ...
+# med egne resultater alene") er flettet inn uendret.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -405,7 +408,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "e60c207ae75bdbc5afac3cc7ac3ada9d799c1a3212523077d75d005786ecc3af"
+BASE_SHA = "364ce8db1db24c6b42ac64dfd674f91e9dfea3fc74ccf4d166ce9dae0006ee8f"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

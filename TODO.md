@@ -691,6 +691,18 @@ modellen er bygget, også fagfolk):
 > - **Rangering uten innbyrdes oppgjør.** Poeng, målforskjell, scorede mål. Innbyrdes oppgjør er ikke regnet inn.
 > - **Tekniske tak.** Forventede mål per lag er begrenset til 6, og det nås ikke i praksis. Resultater regnes med opptil 15 mål per lag. Omregningen fra odds søker mellom 0,15 og 4,5 forventede mål.
 
+## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
+
+Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
+`tastatur` med `sent = true`) tidsavbrøt i 2 av 6 fulle kjøringer 30.9.2026:
+`waitForFunction` på `m.hg === 2 && m.ag === 1` gikk ut etter 20 sekunder, og
+testen kom ikke videre (ingen kontroll feilet). Den gikk gjennom ved ny
+kjøring begge gangene, og den skjedde også før endringen i "Hva må ... gjøre?".
+Mistanke, ikke kontrollert: siden tegnes om eller flytter seg mens testen
+klikker i målfeltet (grunnlagsfilen holdes tilbake), så tastetrykkene havner
+utenfor feltet. Undersøk om det også kan ramme en bruker som skriver et
+resultat mens siden laster, før testen gjøres robust.
+
 ## Upresise tekster under tabellen (legendNote)
 
 Funnet i modellgjennomgangen 29. september 2026. Ikke rettet ennå. Sjekk

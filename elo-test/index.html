@@ -5700,7 +5700,9 @@ const qaGen = n => /[sxz]$/i.test(n) ? `${n}'` : `${n}s`;
 // Ubestemt form, til "Kongsvingers opprykkssjanse": "opprykkssjansen" ->
 // "opprykkssjanse", "nedrykksfaren" -> "nedrykksfare".
 const qaSjanseUbest = zone => qaSjanse(zone).replace(/n$/, '');
-function poengTxt(n){ n = Math.round(n); return `${n>=0 && n<10 ? QA_POENG_ORD[n] : n} poeng`; }
+function poengTxt(n){ return `${qaAntall(n)} poeng`; }
+// Tallet alene, med ord under ti ("fem", "14"), til "14 mer enn de har nå".
+function qaAntall(n){ n = Math.round(n); return `${n>=0 && n<10 ? QA_POENG_ORD[n] : n}`; }
 function qaUtfallTxt(zone){
   const z = LEAGUE.zones[zone.key] || zone;
   if(zone.key==='gull') return z.verb;                       // vinner serien / rykker direkte opp
@@ -5882,29 +5884,20 @@ function qaGlattKurve(data){
   return kurve;
 }
 const qaKurveVed = (kurve, p) => { const x = kurve.find(k=>k[0]===p); return x ? x[1] : null; };
-// Grensen for "trenger trolig rundt": 50 %-punktet (qaPoenggrense). Rundes den
-// ned til poengene laget alt har, uten at de holder, er den neste poengsum,
-// ikke "null poeng til".
-function qaGrense(kurve, myPts){
-  let T = qaPoenggrense(kurve, 0.5);
-  if(T!=null && T<=myPts && !(qaKurveVed(kurve, myPts)>=0.5)) T = myPts+1;
-  return T;
-}
-// Poenggrensen for et nivå (0,5: "trenger trolig rundt", 0,95: "holder med god
-// margin"): punktet der den glattede kurven passerer nivået, mellom de to
-// nærmeste poengsummene, rundet av. Punktet flytter seg jevnt med tallene, så
-// grensen ikke vipper mellom to poengsummer når sjansen ved den ene ligger rett
-// ved nivået (Bodø/Glimt: 50,1 % ved 67 poeng). Når laget nivået alt med færrest
-// mulige poeng, er grensen den poengsummen; når kurven aldri dit, null.
-function qaPoenggrense(kurve, nivaa){
-  if(!kurve.length) return null;
-  if(kurve[0][1]>=nivaa) return kurve[0][0];
-  for(let i=1;i<kurve.length;i++){
-    const [p0,s0] = kurve[i-1], [p1,s1] = kurve[i];
-    if(s0<nivaa && s1>=nivaa) return Math.round(p0 + (p1-p0)*(nivaa-s0)/(s1-s0));
-  }
+// Grensen for et nivå (0,5: "må ta ... for å komme opp på", 0,95: god margin
+// i "nesten sikkert"): den LAVESTE sluttsummen laget faktisk kan ende på, med
+// minst QA_MIN_AT_PTS simulerte sesonger bak seg, der den betingede sjansen
+// (den glattede kurven) er minst nivået. Ingen interpolering: sent i
+// sesongen er ikke alle summer mulige (med én kamp igjen bare +0, +1 og +3),
+// og en interpolert grense kunne havne på en sum laget ikke kan ende på, med
+// under 50 % (Kongsvinger 30.9.2026: 40,2 % ved 60 og 67,9 % ved 61, grensen
+// er 61). Null når ingen slik sum finnes. Kurven har bare summer fra dagens
+// poeng og oppover, så "har allerede" er grensen lik dagens poeng.
+function qaPoenggrense(kurve, nivaa, data){
+  for(const [p, s] of kurve) if(s>=nivaa && data.totalAtPts[p]>=QA_MIN_AT_PTS) return p;
   return null;
 }
+const qaGrense = (kurve, data) => qaPoenggrense(kurve, 0.5, data);
 // Hvorfor grensen ligger der: laget når målet omtrent når det ender foran det
 // b-te beste av de ANDRE lagene, med b = sonegrensen (siste plass i sonen, eller
 // 13. plass for kvalik og nedrykk). Er det samme laget det i minst QA_DOMINANS
@@ -5930,10 +5923,42 @@ function qaHvorfor(A, data, zone){
   const b = zone.dir==='front' ? zone.hi : zone.boundary;
   return {plass: QA_PLASS_ORD[b] || `${b}. plass`};
 }
-// ---- Spørsmål 2: hva må laget gjøre for å nå målet? Poenggrensen og sjansen
-// én seier over den fra den glattede kurven, og hvorfor grensen ligger der.
+// ---- Spørsmål 2: hva må laget gjøre for å nå målet? Alle variantene av
+// svaret har samme kjerne (30.9.2026), betinget og konkret: hvor mange av de
+// gjenstående poengene laget må ta for å komme opp på en poengsum, og sjansen
+// HVIS laget ender der, fra den glattede kurven -- ikke lagets sjanse nå:
+//   "Brann må ta 21 av de 27 poengene som er igjen for å komme opp på 50.
+//    Ender de på 50 poeng, er sjansen for topp 4 omtrent 51 %. Med 53 poeng
+//    er den 89 %."
+// Hvorfor grensen ligger der sies bare når et bestemt lag avgjør den
+// (qaHvorfor); at den er "det som vanligvis kreves for fjerdeplass", sier ikke
+// noe tallet ikke alt sier. Når ingen oppnåelig sum når 50 %, kan laget ikke
+// sikre målet med egne resultater alene, og svaret sier det (egenHaand).
 // "Suksess" er som i runInsightsAlle: i sonen for gull/Europa, trygg for
 // kvalik/nedrykk.
+//
+// "rundt" og "omtrent" står høyst én gang hver i et svar (kvalikavsnittet
+// medregnet): første prosenttall får "rundt", neste "omtrent", resten står
+// uten. Over 99 % og under 1 % sies alltid slik, uten ord foran.
+function qaProsentOrd(){
+  const ord = ['rundt ', 'omtrent '];
+  const bar = x => x>=0.995 ? 'over 99 %' : x<0.005 ? 'under 1 %' : pctTxt(x);
+  return {q: x => (x>=0.995 || x<0.005) ? bar(x) : (ord.shift() || '') + pctTxt(x), bar};
+}
+// Én seier over en poengsum: tas med når det er nok sesonger bak den og
+// sjansen der er minst fem prosentpoeng høyere slik den vises. Under det
+// tilfører tallet lite (samme grense som restprogrammet i "Hvorfor har ...?").
+const QA_HOYERE_PP = 5;
+function qaHoyere(kurve, data, p, v, bar){
+  const o = p+3, vo = qaKurveVed(kurve, o);
+  return vo!=null && data.totalAtPts[o]>=QA_MIN_AT_PTS && vistPp(v, vo)>=QA_HOYERE_PP
+    ? ` Med ${poengTxt(o)} er den ${bar(vo)}.` : '';
+}
+// "må ta 21 av de 27 poengene som er igjen" / "må ta alle de 6 poengene ..."
+function qaTaAv(x, maxPts){
+  return x>=maxPts ? `alle de ${qaAntall(maxPts)} poengene som er igjen`
+    : `${qaAntall(x)} av de ${qaAntall(maxPts)} poengene som er igjen`;
+}
 async function qaHowTo(team){
   const zone = qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
@@ -5944,95 +5969,120 @@ async function qaHowTo(team){
   if(data.successCount===0){
     return `Ingen av de ${data.N.toLocaleString('nb-NO')} simulerte sesongene endte med at ${team} klarte å ${QA_REACH_PHRASE[zone.key]}.`;
   }
-  // Snitt av lagets faktiske poeng (seier 3, uavgjort 1) i de gjenstående
-  // kampene, i sesongene der laget når målet.
-  const avgPts = Math.round(data.successPtsSumT/data.successCount);
   const maxPts = 3 * buildQaOpen().open.filter(o=>o[0]===TI[team]||o[1]===TI[team]).length;
   const kurve = qaGlattKurve(data);
   const myPts = compute().rows.find(r=>r.name===team).pts;
-  const threshold = qaGrense(kurve, myPts);
-  // Sjansen som NEVNES, er tabellens (lastMC), som i alle de andre svarene --
-  // ellers står samme sjanse med to verdier på siden (Egersund: 10 % her, 12 %
-  // i tabellen). Simuleringen over brukes bare til poengtallene. Målet er å
-  // nå sonen (foran) eller å sikre plassen direkte (bak: grenseplassen eller
-  // bedre), så det er det som summeres.
+  const threshold = qaGrense(kurve, data);
+  const {q, bar} = qaProsentOrd();
+  const reach = QA_REACH_PHRASE[zone.key];
+  // "sjansen for topp 4", "sjansen for direkte opprykk"; bak er målet å
+  // unngå sonen: "sjansen for å unngå både nedrykk og kvalik".
+  const sjansen = zone.dir==='front' ? `sjansen for ${LEAGUE.zones[zone.key].label}` : `sjansen for å ${reach}`;
+  // Sjansen som NEVNES som lagets samlede, er tabellens (lastMC), som i alle de
+  // andre svarene -- ellers står samme sjanse med to verdier på siden
+  // (Egersund: 10 % her, 12 % i tabellen). Simuleringen over brukes bare til
+  // poengtallene og sjansen ved dem. Målet er å nå sonen (foran) eller å sikre
+  // plassen direkte (bak: grenseplassen eller bedre), så det er det som summeres.
+  // Svarene regnes først når tabellen er ferdig for gjeldende scenario
+  // (qaReady), så tabellen og kurven kommer fra samme stilling.
   const dist = lastMC && lastMC[team];
   const successShare = !dist ? data.successCount/data.N
     : zone.dir==='front' ? zone.pct
     : dist.slice(0, zone.boundary).reduce((a,b)=>a+b, 0);
   if(successShare>0.95){
     // Nesten alltid i mål: "klarer å ..." i "100 %" av sesongene leses rart, så
-    // svaret sies rett ut. Marginen er poengene laget trenger utover dagens for
-    // å lykkes i 95 % av simuleringene, på den samme glattede kurven.
-    const safe = qaPoenggrense(kurve, 0.95);
+    // svaret sies rett ut. Poengsummen er der den glattede kurven passerer
+    // 95 %: god margin.
+    const safe = qaPoenggrense(kurve, 0.95, data);
     // "havner i topp 6", "vinner serien"; for kvalik/nedrykk er målet å
     // sikre plassen, og da brukes sonens eget verb.
     const verb = zone.dir==='front' ? qaUtfallTxt(zone) : LEAGUE.zones[zone.key].verb;
-    const fails = zone.dir==='front' ? 'det glipper' : 'det ryker';
     const all = Math.round(successShare*100)>=100 ? 'alle' : 'nesten alle';
-    const need = safe==null ? null : Math.max(0, safe-myPts);
-    const marginTxt = need==null ? '' : need===0
-      ? ` ${team} har allerede poengene som skal til med god margin.`
-      : ` Det skal mye til for at ${fails}, men rundt ${need} av ${maxPts} mulige poeng holder med god margin.`;
-    return `${team} ${verb} i ${all} simuleringene.${marginTxt}`;
+    const lead = `${team} ${verb} i ${all} simuleringene.`;
+    if(safe==null) return lead;
+    if(safe<=myPts){
+      const v = qaKurveVed(kurve, myPts);
+      return `${lead} Tar de ikke flere poeng, er sjansen allerede ${v!=null && v>=0.95 ? q(v) : 'over 95 %'}.`;
+    }
+    return `${lead} Tar de ${qaTaAv(safe-myPts, maxPts)}, er sjansen ${q(qaKurveVed(kurve, safe))}.`;
   }
-  const reach = QA_REACH_PHRASE[zone.key];
   const hv = qaHvorfor(A, data, zone);
-  const fordi = hv.lag ? `, fordi ${hv.lag} vanligvis ender rundt ${poengTxt(hv.poeng)}` : '';
-  const plassTxt = hv.plass ? ` Det er omtrent det som vanligvis kreves for ${hv.plass}.` : '';
-  // Sjansen ved grensen: "omtrent halvparten" når den er det (40 til 60 %),
-  // ellers tallet. Grensen er rundet av, og mellom to poengsummer kan sjansen
-  // hoppe fra under 40 til over 60 %.
+  const hvorfor = hv.lag ? ` Det er fordi ${hv.lag} vanligvis ender på ${poengTxt(hv.poeng)}.` : '';
   const ved = threshold==null ? null : qaKurveVed(kurve, threshold);
-  const halv = ved!=null && Math.round(ved*100)>=40 && Math.round(ved*100)<=60;
   // I nedrykksstriden kan et avsnitt om kvalikplassen følge (qaKvalikAvsnitt).
   // tryggNevnt: første avsnitt oppgir alt sjansen for å bli helt trygg.
-  const medKvalik = (tekst, tryggNevnt) => tekst + qaKvalikAvsnitt(A, team, zone, tryggNevnt, threshold, myPts);
+  const medKvalik = (tekst, tryggNevnt) => tekst + qaKvalikAvsnitt(A, team, zone, tryggNevnt, threshold, myPts, q, bar);
+  // Kjernen: hvor mange poeng til grensen, og sjansen hvis laget ender der.
+  // hvem: lagets navn, eller "De" når første setning alt har nevnt laget OG
+  // sonen ("Det skal mye til: Brann ender i topp 4 ..."); da står det bare
+  // "er sjansen", så sonens uttrykk ikke gjentas.
+  const kjerne = hvem => `${hvem} må ta ${qaTaAv(threshold-myPts, maxPts)} for å komme opp på ${qaAntall(threshold)}. `
+    + `Ender de på ${poengTxt(threshold)}, er ${hvem==='De' ? 'sjansen' : sjansen} ${q(ved)}.`
+    + `${qaHoyere(kurve, data, threshold, ved, bar)}${hvorfor}`;
+  // Ingen oppnåelig sum når 50 % (qaGrense er null): laget kan ikke sikre
+  // målet med egne resultater alene. Det kan fortsatt klare det, men ikke uten
+  // hjelp. Sjansen ved summen laget får ved å ta alle poengene som er
+  // igjen, når det er nok sesonger bak den ("bare" foran når den er under
+  // 25 %), og laget det avhenger av, når ett lag avgjør (qaHvorfor). Er det for
+  // sjeldent i simuleringene å ta alle poengene, står det uten tall. Snittet i
+  // vellykkede sesonger brukes ikke: det er ikke noe laget må nå.
+  const maalet = zone.dir==='back' ? 'trygg plass'
+    : zone.key==='gull' && LEAGUE.zones.gull.label==='gull' ? 'gullet'
+    : zone.key==='cl' ? 'Champions League-plassen' : LEAGUE.zones[zone.key].label;
+  const egenHaand = hvem => {
+    const maks = myPts + maxPts, v = data.totalAtPts[maks]>=QA_MIN_AT_PTS ? qaKurveVed(kurve, maks) : null;
+    const start = `${hvem} kan ikke sikre ${maalet} med egne resultater alene.`;
+    if(v==null) return `${start} De er avhengige av at ${hv.lag || 'lagene foran'} taper poeng.`;
+    // "gullsjansen", "topp 4-sjansen"; etter "Det skal mye til: ..." og bak: "sjansen".
+    const sj = hvem==='De' || zone.dir==='back' ? 'sjansen' : (LEAGUE.zones[zone.key].chance || 'sjansen');
+    const pst = v<0.005 ? 'under 1 %' : `${v<0.25 ? 'bare ' : ''}${q(v)}`;
+    return `${start} Selv om de tar alle poengene som er igjen og ender på ${qaAntall(maks)}, er ${sj} ${pst}.`
+      + `${hv.lag ? ` Det avhenger også av at ${hv.lag} taper poeng.` : ''}`;
+  };
+  const utenGrense = threshold==null;
   // Lang sjanse: si det først, så ingen leser grensen som noe laget ofte når.
   if(successShare<0.25){
     // QA_VERB er presens ("ender i topp 4", "vinner serien"); reach er
     // infinitiv ("nå topp 4") og ville gitt "Brann nå topp 4".
-    const start = `Det skal mye til: ${team} ${QA_VERB[zone.key]} i rundt ${pctTxt(successShare)} av simuleringene.`;
-    if(threshold==null || threshold<=myPts || ved==null) return medKvalik(`${start} I dem tar laget i snitt ${avgPts} av ${maxPts} mulige poeng.`, true);
-    return medKvalik(`${start} Rundt ${poengTxt(threshold)} gir dem ${halv ? 'omtrent halvparten' : `en sjanse på rundt ${pctTxt(ved)}`}${fordi}.${plassTxt}`, true);
+    const start = `Det skal mye til: ${team} ${QA_VERB[zone.key]} i ${q(successShare)} av simuleringene.`;
+    if(utenGrense) return medKvalik(`${start} ${egenHaand('De')}`, true);
+    if(threshold!=null && threshold>myPts && ved!=null) return medKvalik(`${start} ${kjerne('De')}`, true);
   }
-  if(threshold==null || ved==null){
-    return medKvalik(`I simuleringene der ${team} klarer å ${reach}, tar laget i snitt ${avgPts} av ${maxPts} mulige poeng.`, false);
-  }
+  if(utenGrense) return medKvalik(egenHaand(team), successShare<0.25);
   if(threshold<=myPts){
-    return medKvalik(`${team} har allerede ${poengTxt(myPts)}, og med det klarer laget å ${reach} i mer enn halvparten av simuleringene.`, false);
+    // Poengene laget alt har, holder i minst halvparten av simuleringene.
+    const v = qaKurveVed(kurve, myPts);
+    return medKvalik(`${team} har allerede ${poengTxt(myPts)}. Tar de ikke flere poeng, er ${sjansen} ${q(v)}.`
+      + `${qaHoyere(kurve, data, myPts, v, bar)}`, successShare<0.25);
   }
-  // Én seier over grensen: hvor sikkert det da er. Bare med nok sesonger bak.
-  const over = threshold+3, vedOver = qaKurveVed(kurve, over);
-  const overTxt = vedOver!=null && data.totalAtPts[over]>=QA_MIN_AT_PTS ? ` Med ${poengTxt(over)} er sjansen rundt ${qaPctCap(vedOver)}.` : '';
-  const andre = hv.lag
-    ? ` Det holder i ${halv ? 'omtrent halvparten' : `rundt ${pctTxt(ved)}`} av simuleringene${fordi}.`
-    : plassTxt;
-  // Uten poeng (før første kamp) ville "altså 61 poeng til" bare gjenta tallet.
-  const til = myPts>0 ? `, altså ${poengTxt(threshold-myPts)} til` : '';
-  return medKvalik(`${team} trenger trolig rundt ${poengTxt(threshold)} for å ${reach}${til}.${andre}${overTxt}`, false);
+  return medKvalik(kjerne(team), false);
 }
 // Kvalikavsnittet til "Hva må ... gjøre?" i nedrykksstriden. Er direkte nedrykk
 // (15. eller 16. plass) en reell risiko, minst QA_KVALIK_DIREKTE i tabellen, er
 // kvalikplassen et mål i seg selv. Avsnittet sier sjansen for minst kvalikplass
 // (14. plass eller bedre), og sjansen for å bli helt trygg når første avsnitt
 // ikke alt har sagt den (tryggNevnt). Poenggrensen for 14. plass (samme
-// beregning som for 13. plass, på sonen 'direkte' i innsiktsblokken) tas med
-// bare når den er minst to poeng lavere enn grensen for å bli helt trygg (T13);
-// ellers sier den lite nytt. Tomt når regelen ikke gjelder, eller laget i
+// beregning som for 13. plass, på sonen 'direkte' i innsiktsblokken) tas med,
+// med samme betingede form som første avsnitt ("Ender HamKam på 28 poeng, er
+// sjansen for minst kvalikplass 49 %."), bare når den er minst to poeng lavere enn grensen for å
+// bli helt trygg (T13); ellers sier den lite nytt. q/bar: ordtelleren fra
+// qaHowTo (qaProsentOrd), så "rundt" og "omtrent" ikke gjentas i svaret. Tomt når regelen ikke gjelder, eller laget i
 // praksis ikke kan nå 14. plass (under 1 %).
 const QA_KVALIK_DIREKTE = 0.15;
-function qaKvalikAvsnitt(A, team, zone, tryggNevnt, T13, myPts){
+function qaKvalikAvsnitt(A, team, zone, tryggNevnt, T13, myPts, q, bar){
   const ned = LEAGUE.zones.nedrykk, d = lastMC && lastMC[team];
   if(zone.dir!=='back' || !ned || !d || !A.soner.includes('direkte')) return '';
   const sum = (fra, til) => d.slice(fra, til).reduce((a,b)=>a+b, 0);
   const direkte = sum(ned.lo-1, ned.hi), minstKvalik = sum(0, ned.lo-1), trygg = sum(0, zone.boundary);
   if(direkte<QA_KVALIK_DIREKTE || minstKvalik<0.01) return '';
-  let tekst = `${team} når minst kvalikplass i rundt ${pctTxt(minstKvalik)} av simuleringene`
-    + (tryggNevnt ? '.' : `, men blir helt trygg i ${pctTxt(trygg)}.`);
-  const T14 = qaGrense(qaGlattKurve(innsiktFor(A, team, 'direkte')), myPts);
+  let tekst = `${team} når minst kvalikplass i ${q(minstKvalik)} av simuleringene`
+    + (tryggNevnt ? '.' : `, men blir helt trygg i ${bar(trygg)}.`);
+  const k14 = qaGlattKurve(innsiktFor(A, team, 'direkte'));
+  const maxPts = 3 * buildQaOpen().open.filter(o=>o[0]===TI[team]||o[1]===TI[team]).length;
+  const d14 = innsiktFor(A, team, 'direkte'), T14 = qaGrense(k14, d14), v14 = T14==null ? null : qaKurveVed(k14, T14);
   if(T13!=null && T14!=null && T14>myPts && T13-T14>=2)
-    tekst += ` For minst kvalikplass holder trolig rundt ${poengTxt(T14)}, ${poengTxt(T13-T14)} færre enn for å bli helt trygg.`;
+    tekst += ` De må ta ${qaTaAv(T14-myPts, maxPts)} for å komme opp på ${qaAntall(T14)}. `
+      + `Ender de på ${poengTxt(T14)}, er sjansen for minst kvalikplass ${q(v14)}.`;
   return `\n\n${tekst}`;
 }
 

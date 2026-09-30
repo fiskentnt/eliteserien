@@ -431,17 +431,22 @@ async function main() {
     } finally { SESONGSTART = false; }
   };
 
-  // ---- "Hva må ... gjøre?": grensen fra den glattede kurven, og tekstmodellen ----
-  // Deterministisk: tellingene er laget her (innsiktData byttes ut), og
-  // sonen og sjansen settes direkte, så testen ikke avhenger av dagens
-  // tabell. Grensen er punktet der den glattede kurven passerer 50 %, rundet
-  // av (den gamle regelen, første poengsum over 50 %, ga ett poeng mer i
-  // tilfellet under). Neste setning sier laget som nesten alltid er det b-te
-  // beste av de andre (minst QA_DOMINANS = 75 % av sesongene), ellers plassen.
+  // ---- "Hva må ... gjøre?": grensen, den betingede kjernen og variantene ----
+  // Første del er deterministisk: tellingene er laget her (innsiktData byttes
+  // ut), og sonen og sjansen settes direkte, så den ikke avhenger av dagens
+  // tabell. Grensen er den LAVESTE sluttsummen laget kan ende på, med minst
+  // QA_MIN_AT_PTS sesonger bak seg, der den glattede kurven er minst 50 %
+  // (ingen interpolering). Kjernen i alle variantene: "må ta X av de Y
+  // poengene som er igjen for å komme opp på T. Ender de på T poeng, er
+  // sjansen for ... P." Andre del kjører svaret for alle lag og alle soner på
+  // ekte tall, med dagens tabell og etter fem simulerte runder, og krever at
+  // tallene i hvert svar henger sammen med kurven, tabellen og poengene som er
+  // igjen. Den venter som siden (qaReady: lastMCFinal og riktig
+  // lastMCScenarioKey), så tabellen og kurven er fra samme stilling.
   // Kjøres med resten av suiten, eller alene:
   //   node tests/regression.js --bare hvamaa
   const hvaMaaTekst = async () => {
-    setGroup('"Hva må ... gjøre?": grensen fra den glattede kurven, og lagnavn eller plass');
+    setGroup('"Hva må ... gjøre?": grensen, den betingede kjernen og alle variantene');
     for (const [url, liga] of [[base, 'Eliteserien'], [base.replace('/eliteserien/', '/obos/'), 'OBOS']]) {
       const sp = await open(1400, 900, url);
       const r = await sp.evaluate(async () => {
@@ -470,37 +475,64 @@ async function main() {
           try { return await qaHowTo(t); } finally { innsiktData = orig.innsiktData; qaTargetZone = orig.qaTargetZone; qaSettled = orig.qaSettled; }
         };
         const T = m + 17, ut = {t, R, m, T, maxPts};
-        // Den gamle regelen ga T + 1 her: 49,9 % ved T, 70 % ved T + 1.
-        const kurve = {[T - 1]: [10000, 4000], [T]: [10000, 4990], [T + 1]: [10000, 7000], [T + 2]: [10000, 7500], [T + 3]: [10000, 8200], [T + 4]: [10000, 9000]};
-        ut.gull = await svar('gull', 0.79, lagA('gull', kurve, {[R]: 0.9}, T));
+        const k = (...par) => Object.fromEntries(par.map(([p, a, b]) => [p, [a, b]]));
+        const lagR = {[R]: 0.9}, plass = {[R]: 0.5};
+        // Grensen: 49,9 % ved T holder ikke; T + 1 (70 %) er den laveste med minst 50 %.
+        const kurve = k([T - 1, 1e4, 4000], [T, 1e4, 4990], [T + 1, 1e4, 7000], [T + 2, 1e4, 7500], [T + 3, 1e4, 8200], [T + 4, 1e4, 9000]);
+        ut.gull = await svar('gull', 0.79, lagA('gull', kurve, lagR, T));
         ut.gull75 = await svar('gull', 0.79, lagA('gull', kurve, {[R]: 0.75}, T));
         ut.gull7499 = await svar('gull', 0.79, lagA('gull', kurve, {[R]: 0.7499}, T));
-        ut.lang = await svar('gull', 0.2, lagA('gull', kurve, {[R]: 0.9}, T));
-        ut.langPlass = await svar('gull', 0.2, lagA('gull', kurve, {[R]: 0.5}, T));
-        // Sjansen ved grensen er 38 %: tallet sies, ikke "omtrent halvparten".
-        const k38 = {[T - 1]: [10000, 2000], [T]: [10000, 3800], [T + 1]: [10000, 6500], [T + 3]: [10000, 9000]};
-        ut.ikkeHalv = await svar('gull', 0.79, lagA('gull', k38, {[R]: 0.9}, T));
-        ut.ikkeHalvLang = await svar('gull', 0.2, lagA('gull', k38, {[R]: 0.9}, T));
-        // Rå tall som faller (48 % ved T, 35 % ved T + 1): glattet til samme sjanse.
-        const kGlatt = qaGlattKurve({totalAtPts: Object.assign(new Array(PM).fill(0), {[T]: 1000, [T + 1]: 1000}),
-          successAtPts: Object.assign(new Array(PM).fill(0), {[T]: 480, [T + 1]: 350})});
-        ut.glatt = kGlatt.map(([p, s]) => [p - T, +s.toFixed(4)]);
-        // Nesten sikkert (97 %): marginen er der kurven passerer 95 %, rundet
-        // av (94,9 % ved m + 4, 99 % ved m + 5: m + 4; den gamle regelen: m + 5).
-        ut.sikker = await svar('gull', 0.97, lagA('gull', {[m + 3]: [10000, 8000], [m + 4]: [10000, 9490], [m + 5]: [10000, 9900]}, {[R]: 0.9}, T));
-        // Kryssingen rundes ned til poengene laget alt har (45 % der): da er
-        // grensen neste poengsum. Holder de alt (60 %): "har allerede".
-        ut.kant = await svar('gull', 0.5, lagA('gull', {[m]: [10000, 4500], [m + 1]: [10000, 9000], [m + 4]: [10000, 9900]}, {[R]: 0.9}, T));
-        ut.allerede = await svar('gull', 0.5, lagA('gull', {[m]: [10000, 6000], [m + 1]: [10000, 9000]}, {[R]: 0.9}, T));
-        // Plassen for hver sone, uten et lag som dominerer (også 'direkte', 14. plass).
-        ut.plass = innsiktSoner().map(z => { const A = lagA(z.key, kurve, {[R]: 0.5}, T);
+        ut.lang = await svar('gull', 0.2, lagA('gull', kurve, lagR, T));
+        ut.langPlass = await svar('gull', 0.2, lagA('gull', kurve, plass, T));
+        // Hopp over 50 % med en sum laget ikke kan ende på (Kongsvinger 30.9.2026):
+        // 40,2 % ved m + 2, 67,9 % ved m + 3, ingen sesonger ved m + 5.
+        const hopp = k([m, 1e4, 460], [m + 1, 1e4, 1740], [m + 2, 1e4, 4020], [m + 3, 1e4, 6790], [m + 4, 1e4, 6900], [m + 6, 1e4, 1e4]);
+        const Ah = lagA('gull', hopp, plass, T), dh = innsiktFor(Ah, t, 'gull'), kh = qaGlattKurve(dh);
+        ut.hopp = {tekst: await svar('gull', 0.5, Ah), T: qaGrense(kh, dh), paaKurven: kh.map(([p]) => p), ved: qaKurveVed(kh, qaGrense(kh, dh))};
+        // Tynne data: 67 % ved m + 2, men bare 30 sesonger -- grensen er m + 3.
+        const Atynn = lagA('gull', k([m + 1, 1e4, 3000], [m + 2, 30, 20], [m + 3, 1e4, 8000]), plass, T);
+        ut.tynn = {tekst: await svar('gull', 0.5, Atynn), T: qaGrense(qaGlattKurve(innsiktFor(Atynn, t, 'gull')), innsiktFor(Atynn, t, 'gull'))};
+        // Glattet: 55 % ved T og 45 % ved T + 1 blir 50 % begge, og grensen er T.
+        ut.glatt = await svar('gull', 0.79, lagA('gull', k([T - 1, 1e4, 3000], [T, 1e4, 5500], [T + 1, 1e4, 4500], [T + 3, 1e4, 8500]), lagR, T));
+        // Én seier over: tas med fra fem prosentpoeng (60 og 64 %: nei, 60 og 65 %: ja).
+        ut.tett4 = await svar('gull', 0.79, lagA('gull', k([T - 1, 1e4, 3000], [T, 1e4, 6000], [T + 3, 1e4, 6400]), lagR, T));
+        ut.tett5 = await svar('gull', 0.79, lagA('gull', k([T - 1, 1e4, 3000], [T, 1e4, 6000], [T + 3, 1e4, 6500]), lagR, T));
+        // Høy sjanse alt ved grensen: 90 og 99 %; over 99 % alene; 90 % og over 99 %.
+        ut.hoy = await svar('gull', 0.5, lagA('gull', k([m, 1e4, 4500], [m + 1, 1e4, 9000], [m + 4, 1e4, 9900]), lagR, T));
+        ut.hoy99 = await svar('gull', 0.5, lagA('gull', k([m, 1e4, 4500], [m + 1, 1e4, 9960], [m + 4, 1e4, 9990]), lagR, T));
+        ut.over99 = await svar('gull', 0.5, lagA('gull', k([m, 1e4, 4500], [m + 1, 1e4, 9000], [m + 4, 1e4, 9960]), lagR, T));
+        // Under 40 sesonger bak summen én seier over: den tas ikke med.
+        ut.faa = await svar('gull', 0.79, lagA('gull', k([T - 1, 1e4, 4000], [T, 1e4, 6000], [T + 3, 30, 29]), lagR, T));
+        // Har allerede nok (60 % uten flere poeng), med og uten tallet over.
+        ut.allerede = await svar('gull', 0.5, lagA('gull', k([m, 1e4, 6000], [m + 1, 1e4, 9000]), lagR, T));
+        ut.allerede2 = await svar('gull', 0.5, lagA('gull', k([m, 1e4, 6000], [m + 1, 1e4, 9000], [m + 3, 1e4, 9500]), lagR, T));
+        // Nesten sikkert: 95 %-summen er den laveste med minst 95 % (m + 5, ikke
+        // m + 4 med 94,9 %); og når poengene laget har, alt holder.
+        ut.sikker = await svar('gull', 0.97, lagA('gull', k([m + 3, 1e4, 8000], [m + 4, 1e4, 9490], [m + 5, 1e4, 9900]), lagR, T));
+        ut.sikkerAlt = await svar('gull', 0.97, lagA('gull', k([m, 1e4, 9700], [m + 1, 1e4, 9900]), lagR, T));
+        // Ingen sum når 50 %: laget kan ikke sikre målet med egne resultater
+        // alene. Med nok sesonger bak maks poeng: sjansen der ("bare" under
+        // 25 %); uten: uten tall.
+        const utenMaks = k([m + 10, 1e4, 1000], [m + 16, 1e4, 3000], [m + maxPts - 1, 1e4, 4000]);
+        ut.egen = await svar('gull', 0.4, lagA('gull', utenMaks, lagR, T));
+        ut.egenPlass = await svar('gull', 0.4, lagA('gull', utenMaks, plass, T));
+        ut.egenLang = await svar('gull', 0.1, lagA('gull', utenMaks, lagR, T));
+        const medMaks = x => k([m + 10, 1e4, 1000], [m + maxPts, 1e4, x]);
+        ut.egenAlle = await svar('gull', 0.4, lagA('gull', medMaks(4000), lagR, T));
+        ut.egenAllePlass = await svar('gull', 0.4, lagA('gull', medMaks(4000), plass, T));
+        ut.egenAlleLav = await svar('gull', 0.4, lagA('gull', medMaks(2000), lagR, T));
+        ut.egenAlle50 = await svar('gull', 0.4, lagA('gull', medMaks(4990), lagR, T));
+        ut.egenAlleLang = await svar('gull', 0.1, lagA('gull', medMaks(4000), lagR, T));
+        ut.sjansenGull = `sjansen for ${LEAGUE.zones.gull.label}`;
+        ut.maaletGull = LEAGUE.zones.gull.label === 'gull' ? 'gullet' : LEAGUE.zones.gull.label;
+        ut.chanceGull = LEAGUE.zones.gull.chance;
+        ut.plass = innsiktSoner().map(z => { const A = lagA(z.key, kurve, plass, T);
           return [z.key, z.dir === 'front' ? z.hi : z.boundary, qaHvorfor(A, innsiktFor(A, t, z.key), z).plass]; });
         ut.reach = QA_REACH_PHRASE.gull; ut.verb = QA_VERB.gull;
         // Kvalikavsnittet i nedrykksstriden: tabellens sjanser for laget settes
         // direkte (trygg 1.-13., kvalik 14., direkte nedrykk 15.-16.), og
         // tellingene har grensen for 13. plass ved T13 og for 14. plass ved T14
-        // (20 % poengsummen før, 60 % ved grensen: kurven passerer 50 % ved
-        // grensen minus 0,25). Ingen dominerer, så første avsnitt sier plassen.
+        // (20 % poengsummen før, 60 % ved grensen). Ingen dominerer.
         const kvalik = async (trygg, kval, direkte, T13, T14) => {
           const N = 72000, A = {N, PM, soner, runder: [], P0: new Array(n).fill(0), pts: new Float64Array(n * PM), succ: new Float64Array(n * Z * PM),
             kteLag: new Float64Array(n * Z * n), dec: new Float64Array(n * Z), ahead: new Float64Array(n * n), behind: new Float64Array(n * n)};
@@ -526,46 +558,169 @@ async function main() {
         ut.reachNed = QA_REACH_PHRASE.nedrykk; ut.verbNed = QA_VERB.nedrykk;
         return ut;
       });
-      await sp.close();
-      const {t, R, T, m, maxPts} = r, ord = {1: 'førsteplass', 2: 'andreplass', 4: 'fjerdeplass', 6: 'sjetteplass', 13: '13. plass', 14: '14. plass'};
-      const pt = x => `${x >= 0 && x < 10 ? ['null', 'ett', 'to', 'tre', 'fire', 'fem', 'seks', 'sju', 'åtte', 'ni'][x] : x} poeng`;
-      const forste = `${t} trenger trolig rundt ${pt(T)} for å ${r.reach}, altså ${pt(T - m)} til.`;
-      check(`${liga}: grensen er der den glattede kurven passerer 50 %, rundet av (${T}, ikke ${T + 1} som den gamle regelen), og laget som dominerer nevnes`,
-        r.gull === `${forste} Det holder i omtrent halvparten av simuleringene, fordi ${R} vanligvis ender rundt ${T} poeng. Med ${T + 3} poeng er sjansen rundt 82 %.`, r.gull);
-      check(`${liga}: laget nevnes fra 75 % av sesongene, under det sies plassen uten eget tall`,
-        r.gull75 === r.gull && r.gull7499 === `${forste} Det er omtrent det som vanligvis kreves for ${ord[r.plass[0][1]]}. Med ${T + 3} poeng er sjansen rundt 82 %.`,
-        JSON.stringify([r.gull75, r.gull7499]));
-      check(`${liga}: lang sjanse: sjansen først, så grensen og hvorfor`,
-        r.lang === `Det skal mye til: ${t} ${r.verb} i rundt 20 % av simuleringene. Rundt ${T} poeng gir dem omtrent halvparten, fordi ${R} vanligvis ender rundt ${T} poeng.`
-          && r.langPlass === `Det skal mye til: ${t} ${r.verb} i rundt 20 % av simuleringene. Rundt ${T} poeng gir dem omtrent halvparten. Det er omtrent det som vanligvis kreves for ${ord[r.plass[0][1]]}.`,
+      const {t, R, T, m, maxPts: M} = r;
+      const ant = x => `${x >= 0 && x < 10 ? ['null', 'ett', 'to', 'tre', 'fire', 'fem', 'seks', 'sju', 'åtte', 'ni'][x] : x}`;
+      const pt = x => `${ant(x)} poeng`;
+      const taAv = x => x >= M ? `alle de ${ant(M)} poengene som er igjen` : `${ant(x)} av de ${ant(M)} poengene som er igjen`;
+      const SG = r.sjansenGull, hvorfor = ` Det er fordi ${R} vanligvis ender på ${pt(T)}.`;
+      // Etter "Det skal mye til: ..." (hvem = "De") står det bare "er sjansen".
+      const kjerne = (hvem, x, G, ord, P) => `${hvem} må ta ${taAv(x)} for å komme opp på ${ant(G)}. Ender de på ${pt(G)}, er ${hvem === 'De' ? 'sjansen' : SG} ${ord}${P}.`;
+      const k18 = kjerne(t, 18, T + 1, 'rundt ', '70 %') + ` Med ${pt(T + 4)} er den 90 %.`;
+      check(`${liga}: grensen er den laveste summen med minst 50 % (${T + 1} med 70 %, ikke ${T} med 49,9 %), og laget som avgjør nevnes`,
+        r.gull === k18 + hvorfor, r.gull);
+      check(`${liga}: laget nevnes fra 75 % av sesongene, under det ingen forklaring ("vanligvis kreves" er borte)`,
+        r.gull75 === r.gull && r.gull7499 === k18, JSON.stringify([r.gull75, r.gull7499]));
+      check(`${liga}: lang sjanse: lagets sjanse først, så kjernen med "De" og bare "er sjansen", "omtrent" etter "rundt"`,
+        r.lang === `Det skal mye til: ${t} ${r.verb} i rundt 20 % av simuleringene. ${kjerne('De', 18, T + 1, 'omtrent ', '70 %')} Med ${pt(T + 4)} er den 90 %.${hvorfor}`
+          && r.langPlass === `Det skal mye til: ${t} ${r.verb} i rundt 20 % av simuleringene. ${kjerne('De', 18, T + 1, 'omtrent ', '70 %')} Med ${pt(T + 4)} er den 90 %.`,
         JSON.stringify([r.lang, r.langPlass]));
-      check(`${liga}: er sjansen ved grensen utenfor 40 til 60 %, sies tallet (38 %)`,
-        r.ikkeHalv === `${forste} Det holder i rundt 38 % av simuleringene, fordi ${R} vanligvis ender rundt ${T} poeng. Med ${T + 3} poeng er sjansen rundt 90 %.`
-          && r.ikkeHalvLang.endsWith(`Rundt ${T} poeng gir dem en sjanse på rundt 38 %, fordi ${R} vanligvis ender rundt ${T} poeng.`),
-        JSON.stringify([r.ikkeHalv, r.ikkeHalvLang]));
-      check(`${liga}: kurven glattes (48 % og 35 % blir 41,5 % begge)`, JSON.stringify(r.glatt) === JSON.stringify([[0, 0.415], [1, 0.415]]), JSON.stringify(r.glatt));
-      check(`${liga}: "nesten sikkert"-marginen er der den samme kurven passerer 95 %, rundet av`,
-        r.sikker === `${t} ${r.verb} i nesten alle simuleringene. Det skal mye til for at det glipper, men rundt 4 av ${maxPts} mulige poeng holder med god margin.`, r.sikker);
-      check(`${liga}: rundes grensen ned til poengene laget alt har uten at de holder, er den neste poengsum; holder de, "har allerede"`,
-        r.kant.startsWith(`${t} trenger trolig rundt ${pt(m + 1)} for å ${r.reach}, altså ett poeng til.`)
-          && r.allerede === `${t} har allerede ${pt(m)}, og med det klarer laget å ${r.reach} i mer enn halvparten av simuleringene.`,
-        JSON.stringify([r.kant, r.allerede]));
+      check(`${liga}: hopp over 50 % (40,2 % ved ${m + 2}, 67,9 % ved ${m + 3}): grensen er ${m + 3}, en sum laget kan ende på, med minst 50 %`,
+        r.hopp.T === m + 3 && r.hopp.paaKurven.includes(r.hopp.T) && r.hopp.ved >= 0.5
+          && r.hopp.tekst === `${kjerne(t, 3, m + 3, 'rundt ', '68 %')} Med ${pt(m + 6)} er den over 99 %.`, JSON.stringify(r.hopp));
+      check(`${liga}: en sum med under 40 sesonger teller ikke som grense (67 % ved ${m + 2} med 30 sesonger; grensen er ${m + 3})`,
+        r.tynn.T === m + 3 && r.tynn.tekst === kjerne(t, 3, m + 3, 'rundt ', '80 %'), JSON.stringify(r.tynn));
+      check(`${liga}: sjansen ved grensen er den glattede kurven (50 %, ikke de rå 55 %)`,
+        r.glatt === `${kjerne(t, 17, T, 'rundt ', '50 %')} Med ${pt(T + 3)} er den 85 %.${hvorfor}`, r.glatt);
+      check(`${liga}: tallet én seier over tas med fra fem prosentpoeng (60 og 64 %: nei; 60 og 65 %: ja)`,
+        r.tett4 === `${kjerne(t, 17, T, 'rundt ', '60 %')}${hvorfor}` && r.tett5 === `${kjerne(t, 17, T, 'rundt ', '60 %')} Med ${pt(T + 3)} er den 65 %.${hvorfor}`,
+        JSON.stringify([r.tett4, r.tett5]));
+      check(`${liga}: høy sjanse alt ved grensen: 90 og 99 %; over 99 % alene (uten "rundt"); 90 % og over 99 %`,
+        r.hoy === `${kjerne(t, 1, m + 1, 'rundt ', '90 %')} Med ${pt(m + 4)} er den 99 %.${hvorfor}`
+          && r.hoy99 === `${kjerne(t, 1, m + 1, '', 'over 99 %')}${hvorfor}`
+          && r.over99 === `${kjerne(t, 1, m + 1, 'rundt ', '90 %')} Med ${pt(m + 4)} er den over 99 %.${hvorfor}`,
+        JSON.stringify([r.hoy, r.hoy99, r.over99]));
+      check(`${liga}: under 40 sesonger bak summen én seier over: den tas ikke med`,
+        r.faa === `${kjerne(t, 17, T, 'rundt ', '60 %')}${hvorfor}`, r.faa);
+      check(`${liga}: har allerede nok: "Tar de ikke flere poeng, er sjansen ...", med og uten tallet over`,
+        r.allerede === `${t} har allerede ${pt(m)}. Tar de ikke flere poeng, er ${SG} rundt 60 %.`
+          && r.allerede2 === `${t} har allerede ${pt(m)}. Tar de ikke flere poeng, er ${SG} rundt 60 %. Med ${pt(m + 3)} er den 95 %.`,
+        JSON.stringify([r.allerede, r.allerede2]));
+      check(`${liga}: nesten sikkert, i én setning: summen er den laveste med minst 95 % (${m + 5}, ikke ${m + 4} med 94,9 %); har laget den alt, står det`,
+        r.sikker === `${t} ${r.verb} i nesten alle simuleringene. Tar de ${taAv(5)}, er sjansen rundt 99 %.`
+          && r.sikkerAlt === `${t} ${r.verb} i nesten alle simuleringene. Tar de ikke flere poeng, er sjansen allerede rundt 97 %.`,
+        JSON.stringify([r.sikker, r.sikkerAlt]));
+      const hender = `kan ikke sikre ${r.maaletGull} med egne resultater alene.`, uten = '';
+      const alle = (sj, pst) => ` Selv om de tar alle poengene som er igjen og ender på ${ant(m + M)}, er ${sj} ${pst}.`;
+      check(`${liga}: ingen sum når 50 %: "kan ikke sikre ${r.maaletGull} med egne resultater alene", uten tall når det er for få sesonger bak maks poeng, med laget det avhenger av eller "lagene foran"`,
+        r.egen === `${t} ${hender}${uten} De er avhengige av at ${R} taper poeng.`
+          && r.egenPlass === `${t} ${hender}${uten} De er avhengige av at lagene foran taper poeng.`
+          && r.egenLang === `Det skal mye til: ${t} ${r.verb} i rundt 10 % av simuleringene. De ${hender}${uten} De er avhengige av at ${R} taper poeng.`,
+        JSON.stringify([r.egen, r.egenPlass, r.egenLang]));
+      check(`${liga}: ingen sum når 50 %, nok sesonger bak maks poeng: sjansen der, "bare" bare under 25 %, "rundt 50 %" er ingen motsigelse`,
+        r.egenAlle === `${t} ${hender}${alle(r.chanceGull, 'rundt 40 %')} Det avhenger også av at ${R} taper poeng.`
+          && r.egenAllePlass === `${t} ${hender}${alle(r.chanceGull, 'rundt 40 %')}`
+          && r.egenAlleLav === `${t} ${hender}${alle(r.chanceGull, 'bare rundt 20 %')} Det avhenger også av at ${R} taper poeng.`
+          && r.egenAlle50 === `${t} ${hender}${alle(r.chanceGull, 'rundt 50 %')} Det avhenger også av at ${R} taper poeng.`
+          && r.egenAlleLang === `Det skal mye til: ${t} ${r.verb} i rundt 10 % av simuleringene. De ${hender}${alle('sjansen', 'omtrent 40 %')} Det avhenger også av at ${R} taper poeng.`,
+        JSON.stringify([r.egenAlle, r.egenAllePlass, r.egenAlleLav, r.egenAlle50, r.egenAlleLang]));
+      const ord = {1: 'førsteplass', 2: 'andreplass', 4: 'fjerdeplass', 6: 'sjetteplass', 13: '13. plass', 14: '14. plass'};
       check(`${liga}: plassen er sonegrensen for hver sone (${r.plass.map(x => `${x[0]} ${x[2]}`).join(', ')})`,
         r.plass.every(([, b, p]) => p === ord[b]), JSON.stringify(r.plass));
       // Kvalikavsnittet
-      const kv = r.kv, forsteNed = `${t} trenger trolig rundt ${pt(m + 7)} for å ${r.reachNed}, altså ${pt(7)} til. Det er omtrent det som vanligvis kreves for 13. plass.`;
-      check(`${liga}: kvalikavsnittet med minst 15 % direkte nedrykk: sjansen for minst kvalikplass, for å bli helt trygg, og grensen for 14. plass når den er to poeng lavere`,
-        kv.vanlig.startsWith(forsteNed) && kv.vanlig.endsWith(`\n\n${t} når minst kvalikplass i rundt 81 % av simuleringene, men blir helt trygg i 63 %. `
-          + `For minst kvalikplass holder trolig rundt ${pt(m + 5)}, to poeng færre enn for å bli helt trygg.`), kv.vanlig);
+      const kv = r.kv, SN = `sjansen for å ${r.reachNed}`;
+      const forsteNed = `${t} må ta ${taAv(7)} for å komme opp på ${ant(m + 7)}. Ender de på ${pt(m + 7)}, er ${SN} rundt 60 %. Med ${pt(m + 10)} er den 90 %.`;
+      const k14 = (x, G, ordet) => `De må ta ${taAv(x)} for å komme opp på ${ant(G)}. Ender de på ${pt(G)}, er sjansen for minst kvalikplass ${ordet}60 %.`;
+      check(`${liga}: kvalikavsnittet med minst 15 % direkte nedrykk: sjansen for minst kvalikplass, for å bli helt trygg, og grensen for 14. plass i samme betingede form`,
+        kv.vanlig === `${forsteNed}\n\n${t} når minst kvalikplass i omtrent 81 % av simuleringene, men blir helt trygg i 63 %. ${k14(5, m + 5, '')}`, kv.vanlig);
       check(`${liga}: grensen for 14. plass bare ett poeng lavere: den tas ikke med`,
-        kv.ettPoeng.endsWith(`\n\n${t} når minst kvalikplass i rundt 81 % av simuleringene, men blir helt trygg i 63 %.`), kv.ettPoeng);
+        kv.ettPoeng === `${forsteNed}\n\n${t} når minst kvalikplass i omtrent 81 % av simuleringene, men blir helt trygg i 63 %.`, kv.ettPoeng);
       check(`${liga}: under 15 % direkte nedrykk ikke noe kvalikavsnitt, fra 15 % avsnittet`,
-        !kv.under15.includes('kvalikplass') && kv.akkurat15.includes(`\n\n${t} når minst kvalikplass i rundt 85 % av simuleringene, men blir helt trygg i 70 %.`),
+        !kv.under15.includes('kvalikplass')
+          && kv.akkurat15 === `${forsteNed}\n\n${t} når minst kvalikplass i omtrent 85 % av simuleringene, men blir helt trygg i 70 %. ${k14(5, m + 5, '')}`,
         JSON.stringify([kv.under15, kv.akkurat15]));
-      check(`${liga}: står sjansen for å bli helt trygg alt i første avsnitt (lang sjanse), gjentas den ikke; forskjellen i poeng er den faktiske (tre)`,
-        kv.lang.startsWith(`Det skal mye til: ${t} ${r.verbNed} i rundt 16 % av simuleringene.`)
-          && kv.lang.endsWith(`\n\n${t} når minst kvalikplass i rundt 29 % av simuleringene. For minst kvalikplass holder trolig rundt ${pt(m + 11)}, tre poeng færre enn for å bli helt trygg.`)
-          && (kv.lang.match(/16 %/g) || []).length === 1, kv.lang);
+      check(`${liga}: står sjansen for å bli helt trygg alt i første avsnitt (lang sjanse), gjentas den ikke; kvalikavsnittet har sin egen grense`,
+        kv.lang === `Det skal mye til: ${t} ${r.verbNed} i rundt 16 % av simuleringene. De må ta ${taAv(14)} for å komme opp på ${ant(m + 14)}. `
+          + `Ender de på ${pt(m + 14)}, er sjansen omtrent 60 %. Med ${pt(m + 17)} er den 90 %.\n\n${t} når minst kvalikplass i 29 % av simuleringene. ${k14(11, m + 11, '')}`, kv.lang);
+
+      // Ekte tall: alle lag og alle soner, med dagens tabell og etter fem
+      // simulerte runder. Hvert svar skal henge sammen: grensen er den laveste
+      // summen med nok sesonger og minst 50 %, poengene som er igjen stemmer,
+      // sjansene er kurvens ved summene, lagets sjanse er tabellens, "kan ikke
+      // klare det på egen hånd" står bare når ingen sum når 50 %, og "rundt" og
+      // "omtrent" står høyst én gang hver.
+      const ekte = await open(1400, 900, url);
+      const sjekk = () => ekte.evaluate(async () => {
+        const A = await innsiktData(), feil = [], typer = {};
+        const ordTall = {null: 0, ett: 1, to: 2, tre: 3, fire: 4, fem: 5, seks: 6, sju: 7, 'åtte': 8, ni: 9};
+        const tall = x => x in ordTall ? ordTall[x] : +x;
+        const vis = x => x >= 0.995 ? 'over 99 %' : x < 0.005 ? 'under 1 %' : `${Math.round(x * 100)} %`;
+        const PST = '(\\d+ %|over 99 %|under 1 %)', TA = '(?:alle de (\\S+)|(\\S+) av de (\\S+)) poengene som er igjen';
+        const taOk = (mm, i, x, M) => mm[i] ? tall(mm[i]) === M && x >= M : tall(mm[i + 1]) === x && tall(mm[i + 2]) === M;
+        const o = qaTargetZone;
+        for (const lag of TEAMS) for (const z0 of innsiktSoner()) {
+          const z = qaZoneByKey(lag, z0.key); if (!z) continue;
+          qaTargetZone = () => z; let tekst;
+          try { tekst = await qaHowTo(lag); } finally { qaTargetZone = o; }
+          const [f1, f2] = tekst.split('\n\n');
+          const data = innsiktFor(A, lag, z.key), k = qaGlattKurve(data), my = compute().rows.find(x => x.name === lag).pts;
+          const M = 3 * buildQaOpen().open.filter(x => x[0] === TI[lag] || x[1] === TI[lag]).length;
+          const G = qaGrense(k, data), v = p => qaKurveVed(k, p), nok = p => data.totalAtPts[p] >= QA_MIN_AT_PTS;
+          const galt = hva => feil.push(`${lag} [${z.key}] ${hva}: ${tekst.replace(/\n\n/g, ' ¶ ')}`);
+          const tell = (x, n) => { typer[x] = (typer[x] || 0) + (n ? 1 : 0); };
+          if ((tekst.match(/rundt /g) || []).length > 1 || (tekst.match(/omtrent /g) || []).length > 1) galt('gjentatt "rundt" eller "omtrent"');
+          if (/mer enn de har nå|i snitt|vanligvis kreves/.test(tekst)) galt('gammel form');
+          if (G != null && (!nok(G) || !(v(G) >= 0.5) || G > my + M || k.some(([p, s]) => p < G && nok(p) && s >= 0.5))) galt(`grensen ${G}`);
+          let mm;
+          if ((mm = f1.match(new RegExp(`må ta ${TA} for å komme opp på (\\S+)\\. Ender de på (\\S+) poeng, er sjansen(?: for .*?)? (?:rundt |omtrent )?${PST}\\.(?: Med (\\S+) poeng er den ${PST}\\.)?`)))) {
+            tell('kjerne', 1);
+            if (G == null || tall(mm[4]) !== G || tall(mm[5]) !== G) galt('grensen i teksten');
+            else {
+              if (!taOk(mm, 1, G - my, M)) galt('poengene som er igjen');
+              if (mm[6] !== vis(v(G))) galt('sjansen ved grensen');
+              if (mm[7]) { tell('medOver', 1); const o3 = G + 3;
+                if (tall(mm[7]) !== o3 || mm[8] !== vis(v(o3)) || !nok(o3) || vistPp(v(G), v(o3)) < 5) galt('tallet én seier over'); }
+            }
+          } else if (/kan ikke sikre .* med egne resultater alene\./.test(f1)) {
+            tell('egneResultater', 1);
+            if (G != null) galt('"med egne resultater alene" selv om en sum når 50 %');
+            const maalet = z.dir === 'back' ? 'trygg plass' : z.key === 'gull' && LEAGUE.zones.gull.label === 'gull' ? 'gullet'
+              : z.key === 'cl' ? 'Champions League-plassen' : LEAGUE.zones[z.key].label;
+            if (!f1.includes(`kan ikke sikre ${maalet} med egne resultater alene.`)) galt('målet i "kan ikke sikre"');
+            const hvl = qaHvorfor(A, data, z).lag, avh = f1.match(/(?:Det avhenger også av at|De er avhengige av at) (.+?) taper poeng\.$/);
+            if (hvl ? !(avh && avh[1] === hvl) : (avh && avh[1] !== 'lagene foran')) galt('laget det avhenger av');
+            const maks = my + M, e = f1.match(/og ender på (\S+), er .*?sjansen (bare )?(?:rundt |omtrent )?(\d+ %|under 1 %)\./);
+            if (e) { const p = tall(e[1]);
+              if (p !== maks || !nok(p) || !(v(p) < 0.5) || e[3] !== vis(v(p)) || !!e[2] !== (v(p) < 0.25 && v(p) >= 0.005)) galt('sjansen ved maks poeng'); }
+            else if (!/De er avhengige av at .* taper poeng\.$/.test(f1) || nok(maks)) galt('"med egne resultater alene" uten tall');
+          } else if ((mm = f1.match(new RegExp(`har allerede (\\S+) poeng\\. Tar de ikke flere poeng, er sjansen for .*? (?:rundt |omtrent )?${PST}\\.`)))) {
+            tell('harAllerede', 1);
+            if (tall(mm[1]) !== my || G !== my || mm[2] !== vis(v(my))) galt('har allerede');
+          } else if (/i (nesten )?alle simuleringene/.test(f1)) {
+            tell('nestenSikkert', 1);
+            const S = qaPoenggrense(k, 0.95, data);
+            const s1 = f1.match(new RegExp(`Tar de ${TA}, er sjansen (?:rundt |omtrent )?${PST}\\.`));
+            if (s1 && (!taOk(s1, 1, S - my, M) || s1[4] !== vis(v(S)))) galt('nesten sikkert');
+          } else if (/må ta|Ender de/.test(f1)) galt('ukjent form');
+          if (G == null && /må ta .* for å komme opp på/.test(f1)) galt('kjerne uten grense');
+          const l = f1.match(/^Det skal mye til: .*? i rundt (\d+ %|under 1 %) av simuleringene\./);
+          if (l) { const andel = z.dir === 'front' ? z.pct : lastMC[lag].slice(0, z.boundary).reduce((a, b) => a + b, 0);
+            if (l[1] !== vis(andel)) galt('lagets sjanse'); }
+          if (f2) {
+            tell('kvalikavsnitt', 1);
+            const kd = innsiktFor(A, lag, 'direkte'), kk = qaGlattKurve(kd), T14 = qaGrense(kk, kd);
+            const mk = f2.match(new RegExp(`De må ta ${TA} for å komme opp på (\\S+)\\. Ender de på (\\S+) poeng, er sjansen for minst kvalikplass (?:rundt |omtrent )?${PST}\\.`));
+            if (mk && (tall(mk[4]) !== T14 || tall(mk[5]) !== T14 || !taOk(mk, 1, T14 - my, M) || mk[6] !== vis(qaKurveVed(kk, T14)))) galt('kvalikavsnittet');
+          }
+        }
+        return {feil, typer};
+      });
+      await ekte.waitForFunction('lastMCFinal===true && lastMCScenarioKey===qaScenarioKey()', {timeout: 120000});
+      const e0 = await sjekk();
+      for (let i = 0; i < 5; i++) {
+        const rr = await ekte.evaluate(() => { const u = matches.filter(m => m.hg == null && m.round).sort((a, b) => a.date.localeCompare(b.date)); return u.length ? u[0].round : null; });
+        if (rr == null) break;
+        await klikk(ekte, `.round-sim[data-round="${rr}"]`);
+        await ekte.waitForFunction(x => matches.filter(m => m.round === x).every(m => m.hg != null), {timeout: 60000}, rr);
+        await ekte.waitForFunction('lastMCFinal===true && lastMCScenarioKey===qaScenarioKey()', {timeout: 120000});
+      }
+      const e5 = await sjekk();
+      await ekte.close();
+      const typerTxt = x => Object.entries(x.typer).map(([a, b]) => `${a} ${b}`).join(', ');
+      check(`${liga}: ekte tall, dagens tabell: tallene i hvert svar henger sammen (${typerTxt(e0)})`,
+        e0.feil.length === 0 && e0.typer.kjerne > 0, JSON.stringify(e0.feil.slice(0, 3)));
+      check(`${liga}: ekte tall, fem runder simulert: tallene i hvert svar henger sammen (${typerTxt(e5)})`,
+        e5.feil.length === 0 && (e5.typer.kjerne || 0) + (e5.typer.harAllerede || 0) + (e5.typer.egneResultater || 0) > 0,
+        JSON.stringify(e5.feil.slice(0, 3)));
     }
   };
   // Tabellen på telefon. Under 760 px står kortnavnene fra LEAGUE.shortNames
