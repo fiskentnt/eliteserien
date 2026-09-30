@@ -2,22 +2,21 @@
 <details class="howitworks modelcheck">
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 20v-7M12 20V6M18 20v-11"/></svg></span>Hvordan vet vi at modellen virker?</summary>
   <div class="in">
-    <p class="plain-lead">Modellen er prøvd på OBOS-sesongene 2012 til 2025: før hver kampdag gjennom hele sesongen lar vi den spå resten av sesongen med bare kampene som var spilt til da, og sammenligner med det som faktisk skjedde.</p>
-    <p>Med odds, slik siden bruker dem, er modellen klart bedre enn å lese tabellen: Brier 0,0116, 0,0156 og 0,0069 lavere for opprykk, topp 6 og nedrykk (4,2, 4,7 og 2,6 standardfeil). Fordelen er størst tidlig i sesongen og borte når over 85 prosent av kampene er spilt. Den testen bygger på en privat oddshistorikk (snittodds fra oddsportal.com) og kan ikke gjenskapes fra repoet. Testen under er uten odds og kan gjenskapes. Der er modellen ikke målbart bedre enn å lese tabellen.</p>
-    <p>Lagstyrken beregnes ut fra både resultatene og oddsen på kampene som er spilt. Dermed får modellen indirekte med seg ting som skader, suspensjoner og lagoppstillinger. På kommende kamper brukes markedsoddsen også direkte når den er tilgjengelig.</p>
+    <p class="plain-lead">Vi har testet modellen på OBOS-sesongene 2012–2025. Før hver kampdag lot vi den spå resten av sesongen med bare kampene som var spilt til da, og sammenlignet med hvordan det faktisk gikk. Testene viser at prosentene stort sett holder godt over tid.</p>
+    <p>Med odds, slik siden bruker dem, treffer modellen klart bedre enn tabellen alene, særlig tidlig i sesongen. Mot slutten sier tabellen det meste selv.</p>
 
     <h3>Treffsikkerhet denne sesongen</h3>
-    <p>Tallene under er hentet fra sannsynlighetene som ble lagret FØR avspark, holdt opp mot resultatet. Ingenting er regnet på nytt i etterkant, så tallene kan ikke bli bedre av etterpåklokskap.</p>
+    <p>Prognosene lagres før avspark og holdes opp mot resultatet etterpå. Ingenting regnes på nytt, så tallene kan ikke bli bedre av etterpåklokskap.</p>
     <div id="accuracyLog"></div>
 
-    <h3>Hvorfor oddsen hentes rett før avspark</h3>
-    <p>Sluttoddsen er den siste oddsen vi henter mellom 60 og 15 minutter før avspark. Da er som regel også laguttaket kjent.</p>
-    <p>Dette har faktisk betydning. I 351 kamper i Eliteserien og OBOS endret sannsynlighetene seg i snitt 2,9 prosentpoeng fra dagen før til rett før kamp. I 2–4 prosent av kampene skiftet også favoritten. I Eliteserien traff oddsen rett før kamp bedre enn oddsen fra dagen før; i OBOS var forskjellen innenfor støyen.</p>
-    <p>Får vi ikke hentet odds i dette tidsrommet, står kampen uten sluttodds. Vi bruker aldri en eldre odds i stedet.</p>
     <details class="details-tech">
       <summary>Vis detaljer</summary>
-      <p class="note">Treffsikkerheten er målt med log loss, som straffer sikre sannsynligheter som bommer; lavere er bedre. Oddsen fra dagen før hadde 0,0124 ± 0,0057 høyere log loss enn sluttoddsen i Eliteserien (2,2 standardfeil) og 0,0020 ± 0,0062 i OBOS (0,3 standardfeil, altså ingen sikker forskjell). Med alle 351 kampene sammen er forskjellen 0,0070 ± 0,0042 (1,6 standardfeil). Sannsynlighetene flyttet seg i snitt 2,77 prosentpoeng i Eliteserien og 3,11 i OBOS, og favoritten byttet i 4 av 167 og 8 av 184 kamper. Oddsen er målt 22. september 2026 med <code>scripts/odds_drift.py</code> (Pinnacle), og marginen er tatt ut med Shins metode som ellers på siden.</p>
-    </details>
+      <div id="accuracyTall" hidden></div>
+      <h3>Hvordan testen er gjort</h3>
+      <p>Modellen testes på framtiden, ikke på kampene den allerede har sett. Før hver kampdag i hver sesong tilpasses modellen bare på kampene som var spilt før den dagen, slik siden gjør. Deretter simuleres resten av sesongen, og sannsynlighetene sammenlignes med det som faktisk skjedde. Dette kalles walk-forward.</p>
+      <p>Fram til oktober 2026 ble modellen testet ved fire faste kuttpunkter i hver sesong, etter 40, 55, 70 og 85 prosent av kampene. Metoden er endret fordi walk-forward måler modellen slik siden faktisk brukes, gjennom hele sesongen. Kuttpunktene hoppet over den første delen av sesongen, der lagstyrken betyr mest. Tallene med kuttpunktene står lenger ned som kontroll.</p>
+      <h3>Med odds og uten odds</h3>
+    <p>Med odds, slik siden bruker dem, er modellen klart bedre enn å lese tabellen: Brier 0,0116, 0,0156 og 0,0069 lavere for opprykk, topp 6 og nedrykk (4,2, 4,7 og 2,6 standardfeil). Fordelen er størst tidlig i sesongen og borte når over 85 prosent av kampene er spilt. Den testen bygger på en privat oddshistorikk (snittodds fra oddsportal.com) og kan ikke gjenskapes fra repoet. Testen under er uten odds og kan gjenskapes. Der er modellen ikke målbart bedre enn å lese tabellen.</p>
 
     <h3>Modell uten odds, mot enklere alternativer</h3>
     <p>Tilbaketesten her er kjørt <strong>uten odds</strong>, på resultatene i <code>obos/data/obos_2012-2026.csv</code> i det offentlige repoet, så den kan gjenskapes derfra. Modellen som brukes på denne siden i 2026, bruker i tillegg odds, så testen er ikke helt den samme modellen som du ser tallene fra. Tallene for OBOS-ligaen i endringsloggen bygger derimot på snittodds fra oddsportal.com for 2012–2025. Den oddshistorikken ligger i et privat arkiv og ikke i det offentlige repoet, så de tallene kan ikke gjenskapes fra repoet alene. Brier-score, lavere er bedre:</p>
@@ -30,10 +29,8 @@
         <tr><td>Modell uten odds (som i testen)</td><td>0,0561</td><td>0,1297</td><td>0,0609</td></tr>
       </tbody>
     </table></div>
-    <p class="note">Mot tabellmodellen, over hele sesongen (positivt tall betyr dårligere enn tabellmodellen): <strong>opprykk</strong> +0,0014 ± 0,0018 (0,8 standardfeil), <strong>topp 6</strong> +0,0031 ± 0,0022 (1,4) og <strong>nedrykk</strong> −0,0012 ± 0,0012 (1,0). Ingen av forskjellene er utenfor støyen. Uten odds bygger lagstyrken bare på målene. Tidlig i sesongen er det for lite til å slå tabellen, mens resultatene er bedre sent i sesongen (se tabellen per fase under "Vis detaljer").</p>
+    <p class="note">Mot tabellmodellen, over hele sesongen (positivt tall betyr dårligere enn tabellmodellen): <strong>opprykk</strong> +0,0014 ± 0,0018 (0,8 standardfeil), <strong>topp 6</strong> +0,0031 ± 0,0022 (1,4) og <strong>nedrykk</strong> −0,0012 ± 0,0012 (1,0). Ingen av forskjellene er utenfor støyen. Uten odds bygger lagstyrken bare på målene. Tidlig i sesongen er det for lite til å slå tabellen, mens resultatene er bedre sent i sesongen (se tabellen per fase under).</p>
 
-    <details class="details-tech">
-      <summary>Vis detaljer</summary>
       <p class="note">Sist validert: 30. september 2026, med modellen fra 30. september 2026 (l1/l2 8/24, halveringstid 28 dager), mot obos/data/obos_2012-2026.csv (uten odds), sesongene 2012–2025. Før hver kampdag med minst 10 spilte kamper tilpasses modellen bare på kampene med tidligere dato, og resten av sesongen simuleres 100 000 ganger. Det gir 767 tidspunkter og 12 272 lag-observasjoner. Standardfeilene er klustret på sesong: lagene i en sesong er ikke uavhengige forsøk, og den samme sesongen måles før hver kampdag. Alle modellene får de samme tilfeldige tallene på hvert tidspunkt. Kjøringen ligger i <code>scripts/backtest_walkforward.py</code>, kjørt med <code>--league-zones obos</code>, og kontrollen med faste kuttpunkter i <code>scripts/backtest_zones.py</code>.</p>
       <h4>Kontroll: faste kuttpunkter</h4>
       <p>Den samme modellen testet slik siden gjorde fram til oktober 2026: ved fire faste kuttpunkter i hver sesong, etter 40, 55, 70 og 85 prosent av kampene, med 100&nbsp;000 simuleringer og 896 lag-observasjoner.</p>
@@ -79,12 +76,17 @@
         </tbody>
       </table></div>
       <p class="note">Tidlig i sesongen er modellen uten odds dårligere enn tabellmodellen på opprykk og topp 6, men innenfor støyen (under 25 prosent spilt: 1,8 og 0,9 standardfeil). Sent i sesongen er den bedre, tydeligst på topp 6 ved 70–85 prosent spilt (2,5 standardfeil). Nedrykk er innenfor støyen i alle fasene. Fasene er ikke uavhengige tester: det er de samme sesongene. Antall lag-observasjoner per fase: 2&nbsp;496, 1&nbsp;952, 2&nbsp;000, 2&nbsp;176, 2&nbsp;048 og 1&nbsp;600.</p>
-      <h3>Hvordan testen er gjort</h3>
-      <p>Modellen testes på framtiden, ikke på kampene den allerede har sett. Før hver kampdag i hver sesong tilpasses modellen bare på kampene som var spilt før den dagen, slik siden gjør. Deretter simuleres resten av sesongen, og sannsynlighetene sammenlignes med det som faktisk skjedde. Dette kalles walk-forward.</p>
-      <p>Fram til oktober 2026 ble modellen testet ved fire faste kuttpunkter i hver sesong, etter 40, 55, 70 og 85 prosent av kampene. Metoden er endret fordi walk-forward måler modellen slik siden faktisk brukes, gjennom hele sesongen. Kuttpunktene hoppet over den første delen av sesongen, der lagstyrken betyr mest. Tallene med kuttpunktene står over som kontroll.</p>
+
+    <h3>Hvorfor oddsen hentes rett før avspark</h3>
+    <p>Lagstyrken beregnes ut fra både resultatene og oddsen på kampene som er spilt. Dermed får modellen indirekte med seg ting som skader, suspensjoner og lagoppstillinger. På kommende kamper brukes markedsoddsen også direkte når den er tilgjengelig.</p>
+    <p>Sluttoddsen er den siste oddsen vi henter mellom 60 og 15 minutter før avspark. Da er som regel også laguttaket kjent.</p>
+    <p>Dette har faktisk betydning. I 351 kamper i Eliteserien og OBOS endret sannsynlighetene seg i snitt 2,9 prosentpoeng fra dagen før til rett før kamp. I 2–4 prosent av kampene skiftet også favoritten. I Eliteserien traff oddsen rett før kamp bedre enn oddsen fra dagen før; i OBOS var forskjellen innenfor støyen.</p>
+    <p>Får vi ikke hentet odds i dette tidsrommet, står kampen uten sluttodds. Vi bruker aldri en eldre odds i stedet.</p>
+    <p class="note">Treffsikkerheten er målt med log loss, som straffer sikre sannsynligheter som bommer; lavere er bedre. Oddsen fra dagen før hadde 0,0124 ± 0,0057 høyere log loss enn sluttoddsen i Eliteserien (2,2 standardfeil) og 0,0020 ± 0,0062 i OBOS (0,3 standardfeil, altså ingen sikker forskjell). Med alle 351 kampene sammen er forskjellen 0,0070 ± 0,0042 (1,6 standardfeil). Sannsynlighetene flyttet seg i snitt 2,77 prosentpoeng i Eliteserien og 3,11 i OBOS, og favoritten byttet i 4 av 167 og 8 av 184 kamper. Oddsen er målt 22. september 2026 med <code>scripts/odds_drift.py</code> (Pinnacle), og marginen er tatt ut med Shins metode som ellers på siden.</p>
+
       <h3>Begrensninger</h3>
       <p>Innbyrdes oppgjør er ikke regnet inn som fjerde rangeringskriterium. Opprykksspillet mellom 3. og 6. plass er ikke modellert: siden sier hvor sannsynlig det er å komme dit, ikke hvor sannsynlig det er å rykke opp gjennom det. Kvalikkampen for 14. plass er heller ikke modellert. Med 100&nbsp;000 simuleringer er usikkerheten høyst omtrent ±0,3 prosentpoeng, og ±1 prosentpoeng med de 10&nbsp;000 nettleseren regner når du fyller inn resultater selv.</p>
     </details>
-    <p class="note">Siden ble lansert mellom runde 23 og 24, og samtidig ble modellen justert for å gi riktigere sannsynlighet for uavgjort og behandle marginen i oddsen bedre. En feil i beregningen av lagstyrkene ble også rettet. Modellen ble justert 30. september etter ny tilbaketesting.</p>
+    <p class="note">Siden ble lansert mellom runde 23 og 24, og samtidig ble modellen justert for å gi riktigere sannsynlighet for uavgjort og behandle marginen i oddsen bedre. En feil i beregningen av lagstyrkene ble også rettet. Modellen ble justert igjen 30. september etter ny tilbaketesting.</p>
   </div>
 </details>

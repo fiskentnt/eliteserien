@@ -211,14 +211,18 @@ async function main() {
   const treffsikkerhetTekst = async () => {
     setGroup('Treffsikkerhet og sluttoddsen: teksten i modellsjekken');
     const lite = 'og sier lite før det er flere.';
+    // Med kamper står én kort setning synlig (andelen der utfallet siden ga
+    // størst sjanse, skjedde), og tabellene under "Vis detaljer" (#accuracyTall).
+    // Testsiden har ingen #accuracyTall: der står tabellene i loggen som før.
+    const kort = 'Utfallet siden ga størst sjanse, skjedde i 50 % av kampene. ';
     const tilfeller = [
       {navn: 'ingen kamper', n: 0, fra: null, til: null,
        ventet: 'Treffsikkerheten vises her etter hvert som kampene spilles. De første tallene kommer etter neste runde.'},
-      {navn: '1 kamp', n: 1, fra: '2026-10-02', til: '2026-10-02', ventet: `Tallene bygger på 1 kamp, ${lite} Kampen ble spilt 2. oktober.`},
-      {navn: '3 kamper samme dag', n: 3, fra: '2026-10-02', til: '2026-10-02', ventet: `Tallene bygger på 3 kamper, ${lite} Kampene ble spilt 2. oktober.`},
-      {navn: '3 kamper over to dager', n: 3, fra: '2026-10-02', til: '2026-10-03', ventet: `Tallene bygger på 3 kamper, ${lite} Kampene ble spilt mellom 2. og 3. oktober.`},
-      {navn: 'kamper over månedsskiftet', n: 3, fra: '2026-09-30', til: '2026-10-02', ventet: `Tallene bygger på 3 kamper, ${lite} Kampene ble spilt mellom 30. september og 2. oktober.`},
-      {navn: '50 kamper', n: 50, fra: '2026-10-02', til: '2026-11-08', ventet: 'Tallene bygger på 50 kamper. Kampene ble spilt mellom 2. oktober og 8. november.'},
+      {navn: '1 kamp', n: 1, fra: '2026-10-02', til: '2026-10-02', ventet: `${kort}Tallene bygger på 1 kamp, ${lite} Kampen ble spilt 2. oktober.`},
+      {navn: '3 kamper samme dag', n: 3, fra: '2026-10-02', til: '2026-10-02', ventet: `${kort}Tallene bygger på 3 kamper, ${lite} Kampene ble spilt 2. oktober.`},
+      {navn: '3 kamper over to dager', n: 3, fra: '2026-10-02', til: '2026-10-03', ventet: `${kort}Tallene bygger på 3 kamper, ${lite} Kampene ble spilt mellom 2. og 3. oktober.`},
+      {navn: 'kamper over månedsskiftet', n: 3, fra: '2026-09-30', til: '2026-10-02', ventet: `${kort}Tallene bygger på 3 kamper, ${lite} Kampene ble spilt mellom 30. september og 2. oktober.`},
+      {navn: '50 kamper', n: 50, fra: '2026-10-02', til: '2026-11-08', ventet: `${kort}Tallene bygger på 50 kamper. Kampene ble spilt mellom 2. oktober og 8. november.`},
     ];
     for (const sti of ['/eliteserien/', '/obos/', '/elo-test/']) {
       const feil0 = errors.length;
@@ -226,27 +230,33 @@ async function main() {
       const r = await pg.evaluate(t => t.map(c => {
         const kilde = {n: c.n, treff: 0.5, logloss: 1.01};
         renderAccuracy({n: c.n, fra: c.fra, til: c.til, kilder: c.n ? {side: kilde, modell: kilde, odds: kilde} : {}, kalibrering: []});
-        const el = document.getElementById('accuracyLog'), ps = [...el.querySelectorAll('p.note')];
+        const el = document.getElementById('accuracyLog'), tall = document.getElementById('accuracyTall') || el;
+        const ps = [...el.querySelectorAll(':scope > p.note')], pt = [...tall.querySelectorAll('p.note')];
         return {tekst: ps.length ? ps[ps.length - 1].textContent.trim() : '',
-                forklaring: ps.length > 1 ? ps[0].textContent.trim() : '',
-                kamper: [...el.querySelectorAll('tbody tr td:nth-child(2)')].map(x => x.textContent)};
+                forklaring: pt.length && pt[0] !== ps[ps.length - 1] ? pt[0].textContent.trim() : '',
+                kamper: [...tall.querySelectorAll('tbody tr td:nth-child(2)')].map(x => x.textContent),
+                // Tabellene under "Vis detaljer": egen boks, skjult uten kamper.
+                egen: tall !== el, underDetaljer: tall !== el && !!tall.closest('details.details-tech'), skjult: tall.hidden,
+                synligeTabeller: el.querySelectorAll('table').length};
       }), tilfeller);
       // Avsnittet om sluttoddsen i "Hvordan vet vi at modellen virker?", med
       // log loss-tallet under "Vis detaljer".
       const sl = await pg.evaluate(() => {
         const h = [...document.querySelectorAll('.modelcheck h3')].find(x => x.textContent === 'Hvorfor oddsen hentes rett før avspark');
         if (!h) return null;
-        const ps = [], d = [];
+        const ps = [], notater = [], d = [];
         for (let e = h.nextElementSibling; e && e.tagName !== 'H3'; e = e.nextElementSibling) {
-          if (e.tagName === 'P') ps.push(e.textContent.trim());
+          if (e.tagName === 'P') (e.classList.contains('note') ? notater : ps).push(e.textContent.trim());
           if (e.tagName === 'DETAILS') d.push(e.querySelector('summary').textContent.trim(), e.querySelector('p').textContent.trim());
         }
-        return {ps, d};
+        return {ps, notater, d, underDetaljer: !!h.closest('details.details-tech')};
       });
       await pg.close();
       const side = sti.replace(/\//g, '');
+      const nyForm = sti !== '/elo-test/';
       tilfeller.forEach((c, i) => check(`${side}: ${c.navn}: "${c.ventet}"`,
-        r[i].tekst === c.ventet && (c.n === 0 ? r[i].kamper.length === 0 : r[i].kamper.length === 3 && r[i].kamper.every(k => k === String(c.n))),
+        r[i].tekst === c.ventet && (c.n === 0 ? r[i].kamper.length === 0 : r[i].kamper.length === 3 && r[i].kamper.every(k => k === String(c.n)))
+          && (!nyForm || (r[i].egen && r[i].underDetaljer && r[i].synligeTabeller === 0 && r[i].skjult === (c.n === 0))),
         JSON.stringify(r[i])));
       check(`${side}: forklaringen til tabellen har "Traff utfallet" med vanlige anførselstegn`,
         r.filter((x, i) => tilfeller[i].n > 0).every(x => x.forklaring.startsWith('"Traff utfallet" er hvor ofte')) && !r.some(x => x.forklaring.includes('«')),
@@ -255,11 +265,18 @@ async function main() {
         'Sluttoddsen er den siste oddsen vi henter mellom 60 og 15 minutter før avspark. Da er som regel også laguttaket kjent.',
         'Dette har faktisk betydning. I 351 kamper i Eliteserien og OBOS endret sannsynlighetene seg i snitt 2,9 prosentpoeng fra dagen før til rett før kamp. I 2–4 prosent av kampene skiftet også favoritten. I Eliteserien traff oddsen rett før kamp bedre enn oddsen fra dagen før; i OBOS var forskjellen innenfor støyen.',
         'Får vi ikke hentet odds i dette tidsrommet, står kampen uten sluttodds. Vi bruker aldri en eldre odds i stedet.'];
+      // Eliteserien og OBOS: hele avsnittet står under "Vis detaljer", med
+      // avsnittet om lagstyrken og oddsen først og log loss-tallet som notat.
+      // Testsiden har det som før: synlig, med log loss-tallet under "Vis detaljer".
+      const lagstyrke = 'Lagstyrken beregnes ut fra både resultatene og oddsen på kampene som er spilt. Dermed får modellen indirekte med seg ting som skader, suspensjoner og lagoppstillinger. På kommende kamper brukes markedsoddsen også direkte når den er tilgjengelig.';
+      const logloss = nyForm ? (sl && sl.notater[0]) || '' : (sl && sl.d[1]) || '';
       check(`${side}: avsnittet om sluttoddsen, med log loss-tallet under "Vis detaljer"`,
-        !!sl && JSON.stringify(sl.ps) === JSON.stringify(slVentet) && sl.d[0] === 'Vis detaljer'
-          && /0,0124 ± 0,0057 høyere log loss enn sluttoddsen i Eliteserien \(2,2 standardfeil\)/.test(sl.d[1] || '')
-          && /0,0020 ± 0,0062 i OBOS \(0,3 standardfeil/.test(sl.d[1] || '')
-          && /Med alle 351 kampene sammen er forskjellen 0,0070 ± 0,0042 \(1,6 standardfeil\)/.test(sl.d[1] || ''),
+        !!sl && (nyForm
+          ? sl.underDetaljer && JSON.stringify(sl.ps) === JSON.stringify([lagstyrke, ...slVentet]) && !sl.d.length
+          : !sl.underDetaljer && JSON.stringify(sl.ps) === JSON.stringify(slVentet) && sl.d[0] === 'Vis detaljer')
+          && /0,0124 ± 0,0057 høyere log loss enn sluttoddsen i Eliteserien \(2,2 standardfeil\)/.test(logloss)
+          && /0,0020 ± 0,0062 i OBOS \(0,3 standardfeil/.test(logloss)
+          && /Med alle 351 kampene sammen er forskjellen 0,0070 ± 0,0042 \(1,6 standardfeil\)/.test(logloss),
         JSON.stringify(sl));
       // Ingen « » i det brukeren ser: teksten på siden (også lukkede
       // seksjoner) og anførselstegnene banneret setter rundt spørsmålet.
@@ -2363,6 +2380,64 @@ async function main() {
         (svar.match(new RegExp(PCTL, 'g')) || []).length === 4,
         (svar.match(new RegExp(PCTL, 'g')) || []).join(', '));
       await kp.close();
+    }
+    await page.bringToFront();
+
+    // ---- 22b. Nederst på siden: tre felt under hverandre, og to nivåer ----
+    // "Slik fungerer det", "Hvordan vet vi at modellen virker?" og "Ofte spurt"
+    // står under hverandre over hele bredden, og brødteksten er høyst rundt 80
+    // tegn per linje. Det synlige nivået er kort og folkelig: fagstoffet
+    // (Brier, standardfeil, kalibrering, ablasjon, kuttpunkter, log loss,
+    // oddshentingen og regnestykket for form) står under "Vis detaljer".
+    setGroup('Nederst på siden: tre felt og to nivåer');
+    for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
+      const bp = await open(1400, 900, url);
+      await settle(bp);
+      await bp.waitForFunction('!document.getElementById("faq").hidden', {timeout: 30000});
+      const r = await bp.evaluate(() => {
+        const felt = [...document.querySelectorAll('#omModellen > details.howitworks, #omModellen > #faq')];
+        felt.forEach(d => { if (d.tagName === 'DETAILS') d.open = true; });
+        const boks = felt.map(d => { const b = d.getBoundingClientRect();
+          return {x: Math.round(b.left), w: Math.round(b.width), y: Math.round(b.top), h: Math.round(b.height)}; });
+        const bredde = Math.round(document.getElementById('omModellen').getBoundingClientRect().width);
+        // Det synlige nivået: alt i feltene utenom "Vis detaljer".
+        const synlig = felt.map(d => { const c = d.cloneNode(true);
+          c.querySelectorAll('details.details-tech').forEach(x => x.remove()); return c.textContent.replace(/\s+/g, ' '); }).join(' ');
+        // Linjelengden: bredden på hvert synlige avsnitt, målt i tegn ("0" i avsnittets egen skrift).
+        const ctx = document.createElement('canvas').getContext('2d');
+        const tegn = [...document.querySelectorAll('#omModellen p, #omModellen li')]
+          .filter(x => x.offsetParent && !x.closest('table') && x.textContent.trim()).map(x => {
+            const cs = getComputedStyle(x); ctx.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`;
+            return x.getBoundingClientRect().width / ctx.measureText('0').width; });
+        const iDetaljer = t => [...document.querySelectorAll('#omModellen details.details-tech')].some(d => d.textContent.includes(t));
+        const ex = document.getElementById('modelExample');
+        return {boks, bredde, synlig, maksTegn: Math.max(...tegn), antallAvsnitt: tegn.length,
+                eksempel: ex ? !ex.hidden && ex.textContent.trim().length > 0 && !ex.closest('details.details-tech') : null,
+                form: iDetaljer('delt på de 15 som var mulige'), privat: iDetaljer('privat oddshistorikk'),
+                oddshenting: iDetaljer('Sluttoddsen er den siste oddsen vi henter'), brier: iDetaljer('Brier-score')};
+      });
+      await bp.close();
+      const [a, b, c] = r.boks;
+      check(`${liga}: de tre feltene står under hverandre over hele bredden`,
+        r.boks.length === 3 && r.boks.every(x => Math.abs(x.x - a.x) <= 1 && Math.abs(x.w - a.w) <= 1)
+          && a.w >= r.bredde - 60 && a.y + a.h <= b.y && b.y + b.h <= c.y,
+        JSON.stringify(r.boks) + ' beholder ' + r.bredde);
+      check(`${liga}: brødteksten er høyst rundt 80 tegn per linje`, r.antallAvsnitt > 5 && r.maksTegn <= 82,
+        `${r.antallAvsnitt} avsnitt, lengst ${r.maksTegn.toFixed(1)} tegn`);
+      const fag = r.synlig.match(/Brier|standardfeil|kalibrering|ablasjon|kuttpunkt|log loss|walk-forward|l1\/l2|halveringstid|Pinnacle|OddsPapi|60 og 15 minutter|delt på de 15|privat oddshistorikk/gi);
+      check(`${liga}: ingen fagord i det synlige nivået (de står under "Vis detaljer")`, !fag, (fag || []).join(', '));
+      check(`${liga}: synlig: testen forklart enkelt, med konklusjonen`,
+        r.synlig.includes('Før hver kampdag lot vi den spå resten av sesongen med bare kampene som var spilt til da')
+          && r.synlig.includes('Testene viser at prosentene stort sett holder godt over tid.'), r.synlig.slice(0, 500));
+      check(`${liga}: synlig: treffsikkerhet denne sesongen, og at prognosene lagres før avspark`,
+        r.synlig.includes('Treffsikkerhet denne sesongen') && r.synlig.includes('Prognosene lagres før avspark'), r.synlig.slice(0, 700));
+      if (liga === 'Eliteserien') check(`${liga}: synlig: eksempelet med tabellen mot modellen`, r.eksempel === true, String(r.eksempel));
+      if (liga === 'OBOS') check(`${liga}: synlig: modellen med odds mot tabellen`,
+        r.synlig.includes('Med odds, slik siden bruker dem, treffer modellen klart bedre enn tabellen alene, særlig tidlig i sesongen. Mot slutten sier tabellen det meste selv.'),
+        r.synlig.slice(0, 700));
+      check(`${liga}: under "Vis detaljer": regnestykket for form, oddshentingen og Brier-tallene${liga === 'OBOS' ? ', og testen med privat oddshistorikk' : ''}`,
+        r.form && r.oddshenting && r.brier && (liga !== 'OBOS' || r.privat),
+        JSON.stringify({form: r.form, oddshenting: r.oddshenting, brier: r.brier, privat: r.privat}));
     }
     await page.bringToFront();
 

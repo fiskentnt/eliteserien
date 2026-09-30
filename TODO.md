@@ -3,6 +3,35 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Nederst på sidene: tre felt under hverandre, og to nivåer (30.9.2026 kveld)
+
+Fra Trond: "Slik fungerer det", "Hvordan vet vi at modellen virker?" og "Ofte
+spurt" står under hverandre over hele bredden (Eliteserien og OBOS);
+brødteksten høyst rundt 72–75 tegn per linje (max-width i ch), tabellene over
+hele bredden. Det synlige nivået er kort og folkelig; fagstoffet er flyttet,
+ikke slettet, til én "Vis detaljer" per felt:
+- Synlig i modellsjekken: den enkle forklaringen av testen med "Testene viser
+  at prosentene stort sett holder godt over tid.", tabellen mot modellen med
+  eksempelet (i dag Brann–Viking), "Treffsikkerhet denne sesongen" kort (at
+  prognosene lagres før avspark, og én setning når kampene er logget), og
+  notisen. OBOS: "Med odds, slik siden bruker dem, treffer modellen klart
+  bedre enn tabellen alene, særlig tidlig i sesongen. Mot slutten sier
+  tabellen det meste selv."
+- Under "Vis detaljer": hvordan testen er gjort, kalibreringstallene, Brier
+  og kuttpunktene, ablasjonen, fasene, enkeltkampene, oddshentingen (med
+  avsnittet om lagstyrken og oddsen), begrensningene og kildene; i OBOS også
+  forskjellen på testen med privat oddshistorikk og den som kan gjenskapes.
+  Treffsikkerhetstabellene (log loss, kalibrering) står i #accuracyTall der.
+- "Slik fungerer det": regnestykket for form er flyttet under "Vis detaljer"
+  (etter avsnittet om at styrketallet flytter seg lite).
+- Testsiden (elo-test) har fått det som er felles (CSS-en og renderAccuracy);
+  dens egen tekst er beholdt. BASE_SHA oppdatert.
+- Testene: regresjonen "Treffsikkerhet og sluttoddsen" følger den nye
+  plasseringen, og en ny gruppe "Nederst på siden: tre felt og to nivåer"
+  sjekker oppsettet (under hverandre, full bredde), linjelengden (høyst 82
+  tegn), at fagordene ikke står i det synlige nivået, at de påkrevde tekstene
+  er synlige og at det flyttede står under "Vis detaljer".
+
 ## Planleggerens hemmeligheter: hvor de trekkes tilbake
 
 Tokenet har INGEN utløpsdato, så det finnes ingen fornyingsfrist. Til

@@ -399,8 +399,11 @@
   .round{scroll-margin-top:calc(var(--nav-h) + 12px)}
   .round.flash{animation:roundflash 1.4s ease}
   @keyframes roundflash{0%,60%{background:var(--team-soft)}100%{background:transparent}}
-  /* De to sammenleggbare feltene nederst, side om side */
-  .bottomdetails{max-width:1380px;margin:0 auto;padding:0 24px 16px;display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:20px;align-items:start}
+  /* De tre feltene nederst ("Slik fungerer det", "Hvordan vet vi at modellen
+     virker?" og "Ofte spurt") står under hverandre over hele bredden.
+     Brødteksten holdes til rundt 72-75 tegn per linje (max-width i ch under),
+     mens tabellene kan bruke hele bredden. */
+  .bottomdetails{max-width:1380px;margin:0 auto;padding:0 24px 16px;display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
   .bottomdetails details.howitworks{max-width:none;margin:0;padding:0}
   .bottomdetails details.howitworks summary{display:flex;align-items:center;gap:10px;font-size:18px}
   .bottomdetails .sum-ic svg{width:20px;height:20px;display:block;color:var(--muted)}
@@ -727,7 +730,7 @@
   .clegend .ctopkey{background:var(--eu-text);opacity:.55;border:1.3px solid var(--eu-text)}
   .clegend .cnedkey{background:var(--accent-text);opacity:.5;border:1.3px solid var(--accent-text)}
   .clegend .cnote{flex-basis:100%}
-  ul.baselines{margin:0 0 12px;padding-left:20px;color:var(--muted);font-size:13.5px;line-height:1.5}
+  ul.baselines{margin:0 0 12px;padding-left:20px;color:var(--muted);font-size:13.5px;line-height:1.5;max-width:75ch}
   ul.baselines li{margin:0 0 5px}
   ul.baselines strong{color:var(--ink)}
   details.details-tech{margin:10px 0 0;border-top:1px solid var(--line);padding-top:10px}
@@ -889,9 +892,9 @@
   .tools button[hidden], .share[hidden]{display:none}
   .faq-panel{padding:14px 16px 16px}
   .faq-panel h2{margin:0 0 10px;font:700 22px/1 var(--cond)}
-  .faq-list h3{margin:12px 0 3px;font:700 15px/1.35 var(--cond);color:var(--ink)}
+  .faq-list h3{margin:12px 0 3px;font:700 15px/1.35 var(--cond);color:var(--ink);max-width:75ch}
   .faq-list h3:first-child{margin-top:0}
-  .faq-list p{margin:0;font-size:13.5px;line-height:1.55;color:var(--muted)}
+  .faq-list p{margin:0;font-size:13.5px;line-height:1.55;color:var(--muted);max-width:75ch}
   .kopiboks{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:80;
     width:min(560px,calc(100vw - 24px));padding:12px 14px;border-radius:10px;
     border:1px solid var(--line);background:var(--panel);color:var(--ink);
@@ -6482,6 +6485,8 @@ function renderAccuracy(data){
   const box = document.getElementById('accuracyLog');
   if(!box) return;
   const n = data && data.n || 0;
+  const tall0 = document.getElementById('accuracyTall');
+  if(tall0){ tall0.innerHTML = ''; tall0.hidden = true; }
   if(!n){
     box.innerHTML = `<p class="note">Treffsikkerheten vises her etter hvert som kampene spilles. `
       + `De første tallene kommer etter neste runde.</p>`;
@@ -6507,7 +6512,11 @@ function renderAccuracy(data){
       : data.fra.slice(0,7)===data.til.slice(0,7)
         ? `mellom ${+data.fra.slice(8,10)}. og ${dateNoLong(data.til)}.`
         : `mellom ${dateNoLong(data.fra)} og ${dateNoLong(data.til)}.`);
-  box.innerHTML =
+  // Synlig: én kort setning. Tabellene (log loss og kalibrering) står under
+  // "Vis detaljer" i #accuracyTall. Mangler den (testsiden), står de her.
+  const side = data.kilder.side;
+  const kort = side && side.n ? `Utfallet siden ga størst sjanse, skjedde i ${pct(side.treff)} av kampene. ` : '';
+  const tabeller =
     `<div class="tblscroll"><table class="mt">`
     + `<thead><tr><th>Kilde</th><th>Kamper</th><th>Traff utfallet</th><th>Log loss</th></tr></thead>`
     + `<tbody>${rows}</tbody></table></div>`
@@ -6516,8 +6525,15 @@ function renderAccuracy(data){
     + (kal ? `<h4>Kalibrering denne sesongen</h4>`
       + `<div class="tblscroll"><table class="mt calib">`
       + `<thead><tr><th>Modellen sa</th><th>Tilfeller</th><th>Snitt</th><th>Skjedde</th></tr></thead>`
-      + `<tbody>${kal}</tbody></table></div>` : '')
-    + `<p class="note">${usikker}${spilt}</p>`;
+      + `<tbody>${kal}</tbody></table></div>` : '');
+  const tall = document.getElementById('accuracyTall');
+  if(tall){
+    box.innerHTML = `<p class="note">${kort}${usikker}${spilt}</p>`;
+    tall.innerHTML = `<h3>Treffsikkerhet denne sesongen, tall</h3>` + tabeller;
+    tall.hidden = false;
+  } else {
+    box.innerHTML = tabeller + `<p class="note">${kort}${usikker}${spilt}</p>`;
+  }
 }
 function qaJumpToSection(){
   qaSetOpen(true); // spørsmålslinjen i banneret åpner seksjonen selv om den er lukket
