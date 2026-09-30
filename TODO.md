@@ -1072,6 +1072,69 @@ og tatt stilling til det.
    toleranse 0,0025 (se "Markedsvekten (ODDS_W)" under studien av
    tilbaketestene).
 
+### Trinn 1: regularisering (kjørt 30.9.2026, etter at planen var pushet i 9a60f9f)
+
+Walk-forward, modellen alene, 3183 kamper i Eliteserien og 3168 i OBOS
+(2012–2025, alle med sluttodds). Skript og tall i lab (`walkforward/`:
+`wf_modell.py`, `wf_modell_analyse.py`, `wf_modell_soner.py`,
+`wf_modell_kontroll.py`, `trinn1/`). Negativ forskjell = bedre enn dagens.
+
+**Valg, 2012–2021** (log loss, forskjell mot 16/48, SE klustret på sesong):
+
+| l1/l2 | Eliteserien | OBOS | Samlet |
+|---|---|---|---|
+| 4/12 | +0,0005 ± 0,0006 | +0,0006 ± 0,0010 | +0,0006 ± 0,0006 |
+| 8/24 | −0,0000 ± 0,0003 | +0,0000 ± 0,0006 | −0,0000 ± 0,0003 |
+| 16/48 (dagens) | 1,0095 | 1,0090 | 1,0093 |
+| 24/72 | +0,0006 ± 0,0002 | +0,0004 ± 0,0004 | +0,0005 ± 0,0002 |
+| 32/96 | +0,0013 ± 0,0004 | +0,0009 ± 0,0007 | +0,0011 ± 0,0004 |
+
+Lavest samlet: 8/24, ikke på kanten, men lik 16/48 på fire desimaler.
+
+**Kontroll, 2022–2025** (904 og 911 kamper):
+
+| l1/l2 | ES log loss mot dagens | ES helning H / B | ES favoritter modell/faktisk | OBOS log loss mot dagens | OBOS helning H / B | OBOS favoritter |
+|---|---|---|---|---|---|---|
+| 4/12 | −0,0001 ± 0,0007 | 1,01 / 1,11 | 51,9 / 53,9 | +0,0002 ± 0,0016 | 1,37 / 1,29 | 49,0 / 53,6 |
+| 8/24 | −0,0005 ± 0,0004 | 1,06 / 1,17 | 51,6 / 53,9 | −0,0004 ± 0,0008 | 1,43 / 1,36 | 48,8 / 53,6 |
+| 16/48 | (0,9812) | 1,14 / 1,26 | 51,1 / 53,9 | (1,0034) | 1,53 / 1,45 | 48,4 / 53,6 |
+| 24/72 | +0,0010 ± 0,0003 | 1,20 / 1,33 | 50,7 / 53,9 | +0,0010 ± 0,0005 | 1,61 / 1,53 | 48,1 / 53,6 |
+| 32/96 | +0,0021 ± 0,0005 | 1,26 / 1,39 | 50,3 / 53,9 | +0,0021 ± 0,0009 | 1,68 / 1,60 | 47,8 / 53,6 |
+
+8/24 mot grensene (2022–2025): lavere log loss i begge ligaene (−0,0005 og
+−0,0004); |helning − 1| minker med 0,08–0,10 for H og B i begge; favoritt-
+avviket minker med 0,5 og 0,4 prosentpoeng.
+
+**Sonene, 8/24 mot 16/48** (walk-forward, 20 000 simuleringer, samme tall):
+
+| | 2012–2021 | 2022–2025 (grensen 0,001) |
+|---|---|---|
+| Eliteserien gull | −0,0005 ± 0,0002 | +0,0008 ± 0,0008 |
+| Eliteserien topp 4 | −0,0001 ± 0,0003 | +0,0007 ± 0,0005 |
+| Eliteserien nedrykk | −0,0003 ± 0,0002 | −0,0002 ± 0,0003 |
+| OBOS opprykk | −0,0005 ± 0,0002 | −0,0003 ± 0,0003 |
+| OBOS topp 6 | −0,0000 ± 0,0002 | +0,0004 ± 0,0006 |
+| OBOS nedrykk | −0,0001 ± 0,0002 | −0,0003 ± 0,0003 |
+
+Ingen sone er mer enn 0,001 dårligere. **8/24 oppfyller dermed de låste
+kriteriene og er kandidat.**
+
+**Siste kontroll, 2026** (produksjonens filer, 155 og 174 kamper): 8/24 mot
+16/48 −0,0011 ± 0,0026 i Eliteserien og +0,0012 ± 0,0016 i OBOS, begge
+innenfor støyen. Helningene nærmere 1 også her (Eliteserien H 1,43 → 1,32;
+OBOS H 1,15 → 1,09, B 1,12 → 1,03), favorittavviket litt mindre. **2026 er
+dermed sett for denne kandidaten**: disse kampene kan ikke senere omtales som
+et urørt kontrollsett for en endring til 8/24.
+
+**Vurdering.** Hovedhypotesen får delvis støtte: mindre krymping gjør
+modellen mindre forsiktig (helningene nærmere 1, favorittene nærmere
+faktisk andel), men log loss endres knapt (høyst 0,0005, innenfor støyen), og
+for lite krymping (4/12) er dårligere på 2012–2021. Krympingen forklarer
+altså bare en liten del av at modellen er for forsiktig: selv med 4/12 er
+helningene i OBOS 1,29–1,37 på 2022–2025. Kandidaten er formelt godkjent,
+men forbedringen er ikke klar; beslutningen er Tronds. Neste trinn startes
+ikke før han har sett dette.
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
