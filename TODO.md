@@ -1476,6 +1476,32 @@ nedtrapping. Hjemmefordelen (ha, hc) trekkes fortsatt mot 0.
 2013–2021; delt på nye og etablerte lag og på fase. C kjøres ikke, siden
 w = 0 gjør den lik B.
 
+**Valg og regler for testen A mot B (Trond, 30.9.2026; skrevet før testen
+startet).**
+- Kandidatpakken er grunnlaget: 8/24, 28 dager, oddsvekt 40. A er pakken
+  med senter 0 for alle lag.
+- Etablerte lag beholder senter 0 i B. Sentrene sentreres ikke for å tvinge
+  snittet til 0: B skal isolert teste hypotesen om at nye lag bør trekkes
+  mot et historisk nivå for overgangstypen i stedet for mot ligasnittet.
+  Flyttes alle sentrene samtidig, testes også en annen endring.
+- Utvikling 2013–2021: B regnes med én sesong utelatt (ā_g og d̄_g uten
+  sesongen som predikeres), så ingen sesong bidrar til sitt eget startpunkt.
+  Valget mellom A og B gjøres bare her: B velges hvis log loss for modellen
+  alene er lavere enn A, begge ligaene samlet (hver kamp teller likt).
+- Kontroll 2022–2025: B frosset fra hele 2013–2021 før perioden åpnes. Ingen
+  verdier eller metodevalg justeres etter kontrollresultatet. B er kandidat
+  bare med lavere log loss enn A i begge ligaene og innenfor de låste
+  grensene (helning, favoritter; sonene med samme tilfeldige tall hvis B
+  vinner på enkeltkampene). Deretter 2026 som siste kontroll, uten å endre
+  noe.
+- Rapporteres: log loss samlet og for kamper mellom etablerte lag, kamper
+  med minst ett nytt lag, kamper med nedrykkslag til OBOS, opprykkslag til
+  Eliteserien og opprykkslag fra 2. divisjon til OBOS, og per fase;
+  helning og favorittavvik som diagnose; mu og snittet av att og con for A
+  og B på representative tilpasninger (for å se at sentre ulik 0 ikke gir
+  en misvisende forskyvning). Sentreringen endres ikke etter
+  kontrollperioden.
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
