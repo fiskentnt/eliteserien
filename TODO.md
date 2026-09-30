@@ -1571,6 +1571,36 @@ dominerer OBOS fra dem som ikke gjør det. Den er formulert etter at
 kontrollperioden 2022–2025 er sett, og kan derfor bare testes på 2026 og
 senere.
 
+### Trinn 6 og 7 med kandidatpakken (regler låst før kjøringen, 30.9.2026)
+
+Grunnlaget i begge trinnene er pakken 8/24, 28 dager, oddsvekt 40.
+Beregningene kjøres med 10 arbeidere, aldri mens nettlesertestene går.
+
+**Trinn 6: formoppdateringen, FORM_K 0,015 mot 0, nøytralt.**
+- Nøytralt: ingen forhåndsfordel for dagens 0,015, som ikke har noen
+  bevismessig fordel (én regresjon, den rullerende testen pekte mot 0,
+  ablasjonen viste ingen målbar forbedring).
+- FORM_K virker bare i simuleringen (lagstyrkene justeres etter hvert
+  simulert resultat), ikke på sannsynligheten for neste kamp. Målet er derfor
+  sonene: walk-forward over hele sesongen som i studien, 20 000 simuleringer,
+  samme tilpasning og samme tilfeldige tall for begge verdiene på hvert
+  punkt. Eliteserien gull, topp 4, nedrykk; OBOS opprykk, topp 6, nedrykk.
+- Mål: Brier-snittet av de tre sonene (hver sone teller likt), per liga.
+- Valg på 2012–2021: verdien med lavest Brier-snitt, begge ligaene samlet
+  (hver lag-observasjon teller likt).
+- Kontroll på 2022–2025: velges 0, er det kandidat bare hvis Brier-snittet
+  er lavere enn med 0,015 i begge ligaene og ingen sone er mer enn 0,001
+  dårligere. Velges 0,015, blir den stående. Kontrollen brukes ikke til å
+  velge.
+
+**Trinn 7: markedsvekten for neste runde på nytt, etter den låste regelen**
+(539f28f), med pakkens prognoser i stedet for dagens modell: de samme
+kampene (2012–2025 fra runde 5, med sluttodds, 2800 og 2799), vektene
+0,0–1,0 gjennom fitRates og Dixon–Coles, laveste vekt med log loss høyst
+0,0025 dårligere enn den beste i begge ligaene, konsistensmålet per vekt, og
+kontroll på 2026 (pakken walk-forward på produksjonens filer, sluttodds fra
+prisrekkene) uten at 2026 brukes til å velge.
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
