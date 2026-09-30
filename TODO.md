@@ -868,6 +868,82 @@ som var den gamle modellen), med produksjonens egne odds- og kampfiler.
 - Modellens innstillinger er valgt på overlappende historikk (se
   inventaret), så ingen av testene er helt uavhengige.
 
+### Markedsvekten (ODDS_W): beslutningsregel låst 30.9.2026, før vektkurven måles
+
+Grunnlag for beslutningen etter sesongen. Ingen endring i modellen eller på
+siden: ODDS_W står på 0,7 ut 2026, og en ny vekt tas i bruk tidligst fra 2027.
+
+**Hva vekten er, og hva den ikke er.** ODDS_W = 0,7 blander oddsen for
+KOMMENDE kamper inn i sannsynlighetene: 0,7 odds + 0,3 modell på hjemme og
+borte, regnet om til målrater med fitRates. 70 % var opprinnelig et praktisk
+valg, ikke en optimalisert parameter; vekten er aldri målt (se inventaret).
+Det er noe annet enn oddsleddet i TILPASNINGEN av lagstyrkene (vekt 40, med
+sluttoddsen for kamper som ALT er spilt), som er valgt i historiske
+rullerende tester og ikke berøres her.
+
+**1. Kontrollsettet: 2026.** Med prisrekkene i lab (del D over, sluttodds
+60–15 minutter før avspark) var markedet alene bedre enn 70/30-blandingen i
+log loss med 0,0074 ± 0,0028 i Eliteserien (154 kamper) og 0,0009 ± 0,0035 i
+OBOS (174 kamper, innenfor støyen). 2026 holdes adskilt fra historikken som
+brukes til å velge vekt, og brukes bare til å kontrollere den valgte vekten.
+
+**2. Beslutningsregelen (låst nå, før resten av vektkurven måles).**
+- Vektene som testes: 0,0, 0,1, ..., 1,0.
+- Datasett for valget: 2012–2025, walk-forward som i studien, på de samme
+  kampene (fra runde 5, med sluttodds): 2800 i Eliteserien (Pinnacle, PSC,
+  ellers snittet, AvgC) og 2799 i OBOS (oddsportal-snittet). Hver vekt regnes
+  gjennom sidens egen vei: blanding på hjemme og borte, fitRates,
+  Dixon-Coles -0,04. Vekt 1,0 er derfor oddsen gjennom fitRates, ikke
+  nøyaktig "markedet alene" (M) i tabellene over; M rapporteres ved siden av.
+- Regel: velg den LAVESTE vekten der log loss er høyst 0,0025 dårligere enn
+  vekten med lavest log loss på samme datasett, i begge ligaene (altså den
+  høyeste av de to ligaenes laveste vekt som oppfyller kravet).
+- Terskelen gjelder den estimerte forskjellen, ikke statistisk signifikans.
+- Den valgte vekten kontrolleres deretter på 2026 (sluttodds fra
+  prisrekkene, som i del D, med alle 2026-kampene som da har prisrekker), uten
+  at 2026 brukes til å velge den.
+
+**3. Konsistensmålet, rapporteres for hver vekt.** Gjennomsnittlig største
+absolutte endring i H, U eller B mellom modellen alene og blandingen, i
+prosentpoeng, og andelen kamper med endring over 5 og over 10 prosentpoeng.
+Det viser avveiningen mellom treffsikkerhet for neste kamp og sammenheng
+mellom neste runde og resten av sesongen (der modellen alene gjelder), men
+flytter ikke grensen etter at resultatene er sett.
+
+**Hvorfor 0,0025.** Hele forbedringen fra modellen alene til markedet i
+2012–2025 er 0,0129 i log loss i Eliteserien og 0,0166 i OBOS (walk-forward,
+samme kamper). 0,0025 er 19 og 15 % av det, altså under en femtedel. Regelen
+krever dermed at blandingen beholder minst omtrent fire femtedeler av
+markedets forbedring, men tillater et lite tap i treffsikkerhet for å bevare
+mer sammenheng mellom neste runde og resten av sesongen.
+
+**Terskelen er ikke valgt i blinde.** Da den ble bestemt, var resultatene for
+vekt 0 (modellen alene), 0,7 (siden i dag) og markedet alene (M) kjent:
+
+| Log loss, 2012–2025 | Eliteserien | OBOS |
+|---|---|---|
+| Vekt 0 (modellen alene, A, uten fitRates) | 0,9979 | 0,9989 |
+| Vekt 0,7 (B, gjennom fitRates som på siden) | 0,9873 | 0,9855 |
+| Markedet alene (M) | 0,9850 | 0,9822 |
+| 0,7 mot M | +0,0023 | +0,0033 |
+
+Vi visste derfor at en toleranse på 0,0025 sannsynligvis ville gi en vekt i
+nærheten av dagens 70 % i Eliteserien. I OBOS var 0,7 allerede 0,0033
+dårligere enn M, altså over terskelen; der kan regelen gi en høyere vekt,
+avhengig av hvor kurven har sitt minimum og av at vekt 1,0 går gjennom
+fitRates. Terskelen skal ikke framstilles som et forhåndsregistrert kriterium
+fra før studien startet. Poenget med å låse den nå er at de ukjente
+mellomliggende vektene (0,1–0,6 og 0,8–0,9, og 1,0 gjennom fitRates) ikke skal
+brukes til å flytte kriteriet etter at hele kurven er sett.
+
+**Begrensning: oddsen i OBOS-historikken.** OBOS-historikken er snittodds fra
+oddsportal, skrevet av for hånd og med større margin (median overround
+1,071), mens produksjonen bruker Pinnacle. Det kan forklare noe av at 70/30
+ligger 0,0033 bak markedet i OBOS mot 0,0023 i Eliteserien. I 2026, med
+Pinnacle, var forskjellen i OBOS 0,0009 ± 0,0035. Hvor mye som skyldes
+oddskilden og hvor mye modellen, kan ikke skilles med dataene vi har.
+Regelen endres ikke av dette.
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
