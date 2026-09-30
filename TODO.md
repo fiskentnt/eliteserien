@@ -1601,6 +1601,49 @@ kampene (2012–2025 fra runde 5, med sluttodds, 2800 og 2799), vektene
 kontroll på 2026 (pakken walk-forward på produksjonens filer, sluttodds fra
 prisrekkene) uten at 2026 brukes til å velge.
 
+**Resultat trinn 6 (kjørt 30.9.2026 kl. 15:43 UTC, etter 4495a42).** Sonene,
+walk-forward over hele sesongen, 20 000 simuleringer, samme tall; Brier,
+0 mot 0,015 (negativ = 0 bedre):
+
+| | Valg 2012–2021 | Kontroll 2022–2025 |
+|---|---|---|
+| Eliteserien, snittet av sonene | −0,00007 ± 0,00036 | +0,00043 ± 0,00038 |
+| gull / topp 4 / nedrykk | −0,0004 / +0,0001 / +0,0001 | +0,0006 / +0,0010 / −0,0003 |
+| OBOS, snittet av sonene | +0,00009 ± 0,00029 | +0,00024 ± 0,00037 |
+| opprykk / topp 6 / nedrykk | −0,0005 / +0,0007 / +0,0001 | −0,0003 / **+0,0012 ± 0,0004** / −0,0002 |
+
+**Valget, begge ligaene samlet: 0 mot 0,015 +0,0000007 ± 0,00024, altså
+likt; 0 er ikke lavere, så FORM_K 0,015 blir stående.** Kontrollen hadde
+også stoppet 0 (høyere i begge ligaene, OBOS topp 6 +0,0012, over grensen
+0,001). Per fase: forskjellene er størst ved 25–55 % spilt (+0,0002 og
++0,0003), ellers nær null. FORM_K har dermed heller ingen påvisbar ulempe;
+den er et praktisk valg uten målbar virkning i begge retninger.
+
+**Resultat trinn 7 (samme kveld).** Pakkens prognoser, de samme 2800 og 2799
+kampene; log loss mot beste vekt og konsistensmålet:
+
+| Vekt | ES mot beste | OBOS mot beste | Konsistens: snitt / > 5 pp / > 10 pp (ES; OBOS) |
+|---|---|---|---|
+| 0,0 | +0,0126 | +0,0161 | 0 |
+| 0,6 | +0,0033 | +0,0045 | 2,8 / 13,5 % / 0,7 %; 2,9 / 14,4 % / 0,9 % |
+| 0,7 | +0,0022 | +0,0032 | 3,3 / 19,8 % / 1,5 %; 3,4 / 20,3 % / 2,1 % |
+| 0,8 | +0,0014 | +0,0020 | 3,7 / 26,4 % / 2,9 %; 3,8 / 26,5 % / 4,0 % |
+| 0,9 | +0,0006 | +0,0009 | 4,2 / 31,6 % / 4,9 %; 4,3 / 32,0 % / 5,7 % |
+| 1,0 | beste | beste | 4,7 / 37,4 % / 7,5 %; 4,8 / 37,0 % / 8,1 % |
+
+Laveste vekt innenfor 0,0025: Eliteserien 0,7, OBOS 0,8. **Regelen gir 0,8**,
+som med dagens modell; 0,7 er 0,0032 bak i OBOS, like over terskelen. 0,8
+mot 0,7 på 2012–2025: −0,0008 ± 0,0002 og −0,0012 ± 0,0002. Kontroll 2026
+(pakken, sluttodds fra prisrekkene, 154 og 174 kamper): 0,8 mot 0,7
+−0,0029 ± 0,0009 (Eliteserien) og −0,0007 ± 0,0011 (OBOS, innenfor støyen).
+Skript og tall i lab (`walkforward/wf_form.py`, `wf_vekt2.py`, `trinn6/`,
+`trinn7/`).
+
+**Samlet etter trinn 1–7 (grunnlag for Tronds beslutning; ingen endring
+gjort):** l1/l2 8/24, halveringstid 28 dager, oddsvekt i tilpasningen 40
+(uendret), FORM_K 0,015 (uendret), markedsvekt for neste runde 0,8 etter den
+låste regelen (i dag 0,7). Startnivå for nye lag: ingen endring.
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet
