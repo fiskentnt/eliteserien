@@ -2,7 +2,9 @@
 """Tilbaketest av SLUTTPLASS-sannsynlighetene (Brier-score), ikke av
 enkeltkamper -- det er scripts/evaluate_model.py sin jobb.
 
-Metoden, samme som siden beskriver under "Hvordan testen er gjort": for hver
+Faste kuttpunkter. Siden viser disse tallene som kontroll ved siden av
+walk-forward-testen (scripts/backtest_walkforward.py), som tilpasser modellen
+før hver kampdato gjennom hele sesongen. Her: for hver
 sesong og hvert kuttpunkt tilpasses modellen KUN på kampene som var spilt til
 da, resten av sesongen simuleres, og sannsynligheten for seriemester, topp 4 og
 nedrykk sammenlignes med det som faktisk skjedde. Brier-score er snittet av
@@ -36,7 +38,7 @@ Modellene som sammenlignes:
               og uten Dixon-Coles.
   full        modellen fra model.json slik siden simulerer med den: mål +
               sluttodds i tilpasningen, formoppdatering underveis i hver
-              simulerte sesong, Dixon-Coles og l1/l2 = 16/48. Siden blander i
+              simulerte sesong, Dixon-Coles og l1/l2 = 8/24. Siden blander i
               tillegg inn oddsen for neste runde (ODDS_W); det gjør ikke full.
   kjede       som full, men første runde etter kuttet får målrater fra
               sluttoddsen blandet 70/30 med modellen og regnet om med fitRates,
@@ -99,7 +101,7 @@ def load_obos_csv(path):
 
 GMAX = 15
 # Samme verdier som eliteserien/index.html og scripts/fit_model.py.
-ODDS_WEIGHT, HALF_LIFE, L1_FULL, L2_FULL = 40.0, 35.0, 16.0, 48.0
+ODDS_WEIGHT, HALF_LIFE, L1_FULL, L2_FULL = 40.0, 28.0, 8.0, 24.0
 L1_PLAIN, L2_PLAIN = 2.0, 6.0
 FORM_K = 0.015
 DRIFT_CAP_ATTCON, DRIFT_CAP_HAHC, DRIFT_REVERSION = 0.5, 0.35, 0.02

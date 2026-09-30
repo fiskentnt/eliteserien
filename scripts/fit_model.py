@@ -3,15 +3,17 @@
 Kjøres av workflowen etter hver oppdatering av kamper eller odds. index.html
 leser kun parameterne herfra — ingen tilpasning skjer lenger i nettleseren.
 
-Vekt og halveringstid er valgt via rullerende out-of-sample-evaluering
-(log loss på utfall, Poisson-NLL på mål, RPS på målforskjell): vekt 40,
-halveringstid 35 dager for både mål og odds. Se undersøkelsen i samtalen
-som førte fram til disse tallene.
+Vekt 40 for oddsleddet, halveringstid 28 dager for både mål og odds og
+l1/l2 8/24 (ridge-straff på henholdsvis att/con og ha/hc). Halveringstiden og
+l1/l2 er fra 30. september 2026: valgt med walk-forward på kampene 2012-2021 (log
+loss per kamp, én ting om gangen) og kontrollert på 2022-2025, også på
+sonene. Tallene og reglene står i ENDRINGER.md og TODO.md ("Modellarbeid
+høsten 2026"). Før det var halveringstiden 35 dager og l1/l2 16/48.
 
-l1/l2 (ridge-straff på henholdsvis att/con og ha/hc) ble satt til 16/48
-(8x de opprinnelige 2/6) etter en egen undersøkelse av at simulerte
-sesonger fikk urealistisk stor målforskjell (opptil ±1400, mot ekte
-sesongers ±60-70) sammenlignet med NOR.csv 2012-2026. Testet 1x-20x på
+Historikk: l1/l2 ble først satt til 16/48 (8x de opprinnelige 2/6) etter
+en egen undersøkelse av at simulerte sesonger fikk urealistisk stor
+målforskjell (opptil ±1400, mot ekte sesongers ±60-70) sammenlignet med
+NOR.csv 2012-2026. Testet 1x-20x på
 rullerende log loss/Poisson-NLL for enkeltkamper OG på målforskjell-
 fordelingen i simulerte sesonger: begge pekte uavhengig av hverandre på
 rundt 8x som optimum -- svakere gir dårligere enkeltkamp-treffsikkerhet
@@ -32,8 +34,8 @@ import fit_fast
 ROOT = Path(__file__).parent.parent
 LEAGUE = ROOT / "eliteserien"  # ligamappen (data/ ligger under den, så flere ligaer kan komme ved siden av)
 ODDS_WEIGHT = 40.0
-HALF_LIFE_DAYS = 35.0
-L1, L2 = 16.0, 48.0
+HALF_LIFE_DAYS = 28.0
+L1, L2 = 8.0, 24.0
 
 WATCH_TEAMS = ["Brann", "Bodø/Glimt"]  # logges før/etter hver tilpasning, til overvåking av kjøringene
 

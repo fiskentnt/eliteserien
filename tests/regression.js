@@ -2322,14 +2322,26 @@ async function main() {
     for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
       const kp = await open(1400, 900, url);
       await settle(kp);
-      const svar = await kp.evaluate(async () => {
+      // Dataene bak svaret hentes i samme kjøring (samme frø, samme tall), så
+      // testen vet hvilke avsnitt som skal stå der.
+      const {svar, andre, tett} = await kp.evaluate(async () => {
         const q = QA_QUESTIONS.find(x => x.id === 'keyround');
-        return await q.run('');
+        const d = await qaKeyRoundData();
+        return {svar: await q.run(''), andre: d.best.teams.length - 1, tett: d.close.length};
       });
-      // Leses som AVSNITT, ikke linjeindekser: svaret står nå i fire avsnitt,
-      // og en indeks ville brutt neste gang ordlyden deles opp.
+      // Leses som AVSNITT, ikke linjeindekser: kampen, laget kampen betyr mest
+      // for, de andre lagene (bare når andre lag flyttes minst to
+      // prosentpoeng) og de like viktige kampene (bare når det finnes slike).
+      // Antallet følger altså dataene: med modellen fra 30. september 2026 har
+      // OBOS ingen like viktig kamp i runden, og svaret har tre avsnitt.
       const avsnitt = svar.split('\n\n');
-      check(`${liga}: fire avsnitt`, avsnitt.length === 4, `${avsnitt.length}`);
+      const ventet = 2 + (andre > 0 ? 1 : 0) + (tett > 0 ? 1 : 0);
+      check(`${liga}: avsnittene følger dataene (${andre} andre lag, ${tett} like viktige kamper)`,
+        avsnitt.length === ventet, `${avsnitt.length} avsnitt, ventet ${ventet}`);
+      if (andre > 0) check(`${liga}: tredje avsnitt gjelder de andre lagene`,
+        / påvirkes også\. /.test(avsnitt[2] || ''), avsnitt[2]);
+      if (tett > 0) check(`${liga}: siste avsnitt gjelder de like viktige kampene`,
+        /omtrent like viktige?: /.test(avsnitt[avsnitt.length - 1] || ''), avsnitt[avsnitt.length - 1]);
       check(`${liga}: første avsnitt sier kamp og strid`,
         /^Rundens viktigste kamp er .+ mot .+ \S+ \d+\. \w+\. Den påvirker .+ mest\.$/.test(avsnitt[0]),
         avsnitt[0]);

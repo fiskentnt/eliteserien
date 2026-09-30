@@ -184,7 +184,7 @@ def main():
     p.add_argument("--l1-base", type=float, default=2.0)
     p.add_argument("--l2-base", type=float, default=6.0)
     p.add_argument("--odds-weight", type=float, default=40.0)
-    p.add_argument("--half-life", type=float, default=35.0)
+    p.add_argument("--half-life", type=float, default=28.0)
     p.add_argument("--dc-rho", type=float, default=-0.04, help="Dixon-Coles tau-parameter, 0 = av (siden: -0,04)")
     p.add_argument("--cutoff-rounds", default="5,10,15,20,25",
                     help="rundekutt å tilpasse+evaluere ved gjennom hver sesong")

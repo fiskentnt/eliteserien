@@ -32,9 +32,10 @@ maksimere sannsynligheten for de faktiske resultatene 2012–2025
 går til 15 mål per lag.
 
 **Lagstyrkene tilpasses på mål OG sluttodds.** Oddsen er med i selve
-tilpasningen med vekt 40, sammen med halveringstid 35 dager på eldre kamper og
-regularisering (l1 = 16, l2 = 48). Vektene er valgt i historiske rullerende
-tester: ablasjonstabellen på siden viser hvert ledd for seg, og
+tilpasningen med vekt 40, sammen med halveringstid 28 dager på eldre kamper og
+regularisering (l1 = 8, l2 = 24; fra 30. september 2026, før 35 dager og 16/48).
+Vektene er valgt i historiske tester: ablasjonstabellen på siden viser hvert
+ledd for seg, og
 `scripts/obos_odds_weight.py` måler oddsvekten på OBOS-tall. Alle parametrene
 tilpasses samlet med den eksakte gradienten til målfunksjonen
 (`scripts/fit_fast.py`). Marginen tas ut av oddsen med Shins metode
@@ -55,11 +56,15 @@ tegnes på nytt.
 
 ## Hvordan den er validert
 
-- **Tilbaketest 2016–2025.** Modellen tilpasses ved fire kuttpunkter i hver
-  sesong (etter 40, 55, 70 og 85 prosent av kampene), resten simuleres, og
-  tallene snittes over 640 lag-observasjoner. Kalibreringen holder omtrent
-  vann: der modellen ga rundt 20 prosent, skjedde det i 18 prosent av
-  tilfellene. Kjøringen ligger i `scripts/backtest_zones.py`.
+- **Tilbaketest 2016–2025, walk-forward.** Før hver kampdag tilpasses
+  modellen bare på kampene med tidligere dato, og resten av sesongen
+  simuleres 100 000 ganger: 690 tidspunkter og 11 040 lag-observasjoner
+  (OBOS 2012–2025 uten odds: 767 og 12 272). Kalibreringen holder omtrent
+  vann: der modellen ga mellom 20 og 30 prosent, i snitt 25, skjedde det i 23
+  prosent av tilfellene. Kjøringen ligger i `scripts/backtest_walkforward.py`.
+  Fram til oktober 2026 ble modellen testet ved fire faste kuttpunkter (etter
+  40, 55, 70 og 85 prosent av kampene, `scripts/backtest_zones.py`); de
+  tallene står på siden som kontroll.
 - **Ablasjonstest.** Hvert ledd i modellen er slått av og på for seg, og bare
   de som målbart forbedret sluttplassprediksjonen er i bruk. Rekke-rampen ble
   testet og forkastet; xG ble testet på fem sesonger og ga ingen målbar gevinst.

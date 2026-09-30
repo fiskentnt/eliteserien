@@ -393,7 +393,11 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # ikke når setningen om at modellen står uendret ut sesongen ble fjernet.
 # Svaret "Hva må ... gjøre?" i ny form (30. september 2026: den laveste
 # oppnåelige summen med minst 50 %, betinget sjanse, "kan ikke sikre ...
-# med egne resultater alene") er flettet inn uendret.
+# med egne resultater alene") er flettet inn uendret. Modelljusteringen 30.
+# september 2026 (l1/l2 8/24, halveringstid 28 dager, tallene i "Hvordan vet vi
+# at modellen virker?" regnet med walk-forward) endrer bare produksjonens egen
+# tekst, der testsiden har sin egen (git merge-file gir konflikt i alle tre
+# områdene og ingen felles endring), så ingenting er flettet inn.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -409,7 +413,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "a6e571ab45d9ec217527c3e8fc99e13b5c46cf99591bcb47d452e99f8a1f03a4"
+BASE_SHA = "1a1e9ad56a0d57042999d564e627f2a9d9e02ec0495b49ba048d52b71f23653c"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

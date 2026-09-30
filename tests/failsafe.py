@@ -945,6 +945,33 @@ def main():
     check("arkiver-kildehtml.yml: hvert 20. minutt kl 12-23 norsk tid, både sommer og vinter",
           not _dekker("arkiver-kildehtml.yml", 0, range(12, 24)), str(_dekker("arkiver-kildehtml.yml", 0, range(12, 24))))
 
+    # 25. Modellinnstillingene: l1/l2 8/24 og halveringstid 28 dager, tatt i
+    # bruk 30. september 2026 etter tilbaketesten (ENDRINGER.md). Skriptene som
+    # tilpasser modellen, tilbaketestene som validerer den og model.json i
+    # begge ligaene skal ha de samme verdiene, og den tekniske teksten på
+    # sidene skal si det samme. Et skript som står igjen med 16/48 og 35
+    # dager, gir en annen modell enn den som er validert.
+    import fit_model as _FM, obos_build_data as _OB, backtest_zones as _BZ
+    _ventet = (28.0, 8.0, 24.0)
+    for _navn, _v in (("scripts/fit_model.py", (_FM.HALF_LIFE_DAYS, _FM.L1, _FM.L2)),
+                      ("scripts/obos_build_data.py", (_OB.HALF_LIFE, _OB.L1, _OB.L2)),
+                      ("scripts/backtest_zones.py (og backtest_walkforward.py, som bruker den)",
+                       (_BZ.HALF_LIFE, _BZ.L1_FULL, _BZ.L2_FULL))):
+        check(f"{_navn}: halveringstid 28 dager og l1/l2 8/24", tuple(float(x) for x in _v) == _ventet, str(_v))
+    check("scripts/evaluate_model.py: standard halveringstid 28 dager",
+          'add_argument("--half-life", type=float, default=28.0)' in (ROOT / "scripts" / "evaluate_model.py").read_text(encoding="utf-8"))
+    for liga in ("eliteserien", "obos"):
+        _m = json.loads((ROOT / liga / "data" / "model.json").read_text(encoding="utf-8")).get("meta") or {}
+        _v = (_m.get("half_life_days"), _m.get("l1"), _m.get("l2"))
+        check(f"{liga}/data/model.json er tilpasset med halveringstid 28 dager og l1/l2 8/24", _v == _ventet, str(_v))
+    # Den forrige modellen (16/48, 35 dager) kan nevnes som sammenligning,
+    # men ikke der teksten beskriver modellen som er i bruk.
+    for f, rad in (("eliteserien/index.html", "Full modell (l1/l2=8/24)"), ("obos/index.html", "Modell uten odds (l1/l2=8/24)")):
+        _t = (ROOT / f).read_text(encoding="utf-8")
+        check(f"{f}: den tekniske teksten og ablasjonen sier 28 dager og l1/l2 8/24",
+              "<strong>Halveringstiden på fire uker</strong> (28 dager)" in _t and "<strong>Styrken på regulariseringen</strong> (l1/l2 8/24)" in _t
+              and rad in _t and "(35 dager) for tidsvektingen" not in _t and "(l1/l2 16/48)" not in _t and "(l1/l2=16/48)" not in _t)
+
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare
     # kall som aldri skjedde, av selve testene.

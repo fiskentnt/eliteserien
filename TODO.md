@@ -1737,6 +1737,93 @@ nye henting blir morgenen 2.10. Siden viser derfor sannsynligheter for runde
 23 med odds som er opptil åtte dager gamle i pausen. Om horisonten skal være
 lengre, er et valg for Trond.
 
+### Beslutning: kandidaten tas i bruk (Trond, 30.9.2026)
+
+l1/l2 8/24, halveringstid 28 dager, oddsvekt i tilpasningen 40, FORM_K 0,015,
+startnivå ligasnittet, markedsvekt for neste runde 0,7 (uendret).
+
+Den låste regelen for markedsvekten ga 0,8. 0,7 beholdes likevel: forskjellen
+i treffsikkerhet er liten (log loss 0,0008 og 0,0012 dårligere enn 0,8 i
+Eliteserien og OBOS), mens 0,8 øker andelen kamper der markedsoddsen flytter
+sannsynligheten mer enn 10 prosentpoeng fra 1,5 til 2,9 % (Eliteserien) og
+fra 2,1 til 4,0 % (OBOS). 0,7 tar med rundt 83 og 80 % av forbedringen
+markedet gir. Resultatet av regelen og begrunnelsen står i ENDRINGER.md.
+
+**Produksjonsendringen (én commit, ikke pushet før Trond har sett diffen,
+valideringstallene, ENDRINGER.md og hele testpakken):**
+- Konstantene i `scripts/fit_model.py`, `scripts/obos_build_data.py`,
+  `scripts/backtest_zones.py` og standarden i `scripts/evaluate_model.py`.
+- model.json i begge ligaene tilpasset på nytt på de samme filene (med de
+  gamle verdiene gjenskapes forrige model.json eksakt, så endringen kommer
+  bare av verdiene); prekick.json og lastmatch.json regnet på nytt.
+- Den tekniske teksten (halveringstid, regularisering, markedsvekten og
+  formoppdateringen), README og notisen på siden.
+- "Hvordan vet vi at modellen virker?" regnet på nytt med walk-forward
+  (`scripts/backtest_walkforward.py`, 100 000 simuleringer, hele sesongen,
+  begge ligaene), med faste kuttpunkter (`scripts/backtest_zones.py`) ved
+  siden av som kontroll.
+- failsafe, del 25: skriptene, model.json og teksten på sidene har de samme
+  verdiene.
+- `LOGG_START` i `scripts/accuracy_log.py` er ikke endret (ingen kamper er
+  logget ennå; første runde 9.–12. oktober).
+
+**Valideringstallene for siden (kjørt 30.9.2026 kl. 18:42–19:56, 10 jobber,
+etter at 907d6cf var pushet).** Walk-forward over hele sesongen, 100 000
+simuleringer, samme tilfeldige tall for alle modellene på hvert tidspunkt.
+Skript og JSON i lab (`walkforward/validering/`).
+- Eliteserien 2016–2025 (NOR.csv, med odds): 690 tidspunkter, 11 040
+  lag-observasjoner. Brier gull / topp 4 / nedrykk: tabell 0,0261 / 0,0812 /
+  0,0649, full 0,0191 / 0,0744 / 0,0573. Full mot tabell: −0,0070 ± 0,0051,
+  −0,0068 ± 0,0057, −0,0076 ± 0,0033 (2,3 SE). Under 25 % spilt: gull
+  −0,0180 ± 0,0063 (2,8 SE), topp 4 −0,0252 ± 0,0094 (2,7 SE). Intervallet
+  20–30 % (alle sonene): snitt 24,6 %, faktisk 23,4 %. Enkeltkamper (2268):
+  log loss 1,0036 mot 1,0618 for like sterke lag, traff 51,2 mot 46,3 %.
+- Kontroll, faste kuttpunkter (640): full 0,0157 / 0,0605 / 0,0485 (forrige
+  modell 0,0156 / 0,0606 / 0,0486); nedrykk mot tabell −0,0058 ± 0,0026.
+- OBOS 2012–2025 (offentlig CSV, uten odds): 767 tidspunkter, 12 272
+  lag-observasjoner. Opprykk / topp 6 / nedrykk: tabell 0,0546 / 0,1265 /
+  0,0621, modell uten odds 0,0561 / 0,1297 / 0,0609. Mot tabell: +0,0014 ±
+  0,0018, +0,0031 ± 0,0022, −0,0012 ± 0,0012; tidlig i sesongen dårligere
+  (under 25 %: opprykk +0,0069 ± 0,0039), sent bedre (70–85 %: topp 6
+  −0,0083 ± 0,0033). Kuttpunktene (896): 0,0407 / 0,1086 / 0,0478 (forrige
+  0,0402 / 0,1072 / 0,0484).
+- **Funn: uten odds er 8/24 og 28 dager dårligere enn 16/48 og 35 dager i
+  OBOS** (samme tall, parvis): opprykk +0,0015 ± 0,0005, topp 6 +0,0028 ±
+  0,0004, nedrykk +0,0008 ± 0,0003, nesten bare før 55 % spilt. Med odds
+  (pakketesten, oddsportal) ble ingen sone dårligere. Produksjonen har odds i
+  alle OBOS-kampene i 2026, men faller tilbake til bare mål uten sluttodds
+  (obos_build_data.py), og da med de samme verdiene. Står på OBOS-siden og i
+  ENDRINGER.md; lagt fram for Trond før push.
+
+**Etter Tronds tre punkter før push (30.9.2026 kveld).**
+1. OBOS med odds (oddsportal-historikken i lab, `walkforward/validering/
+   obos_medodds.py`), nye innstillinger, walk-forward, 100 000 simuleringer:
+   tabell 0,0546 / 0,1265 / 0,0621, modellen 0,0431 / 0,1110 / 0,0552; mot
+   tabell −0,0116 ± 0,0027 (4,2 SE), −0,0156 ± 0,0033 (4,7), −0,0069 ±
+   0,0027 (2,6). Per fase: under 25 % −0,0248 / −0,0360 / −0,0109, over 85 %
+   +0,0004 / +0,0009 / +0,0001. Tabellmodellen er lik den offentlige testen
+   (samme resultater). OBOS-innledningen skiller nå modellen med odds (privat
+   oddshistorikk) fra testen uten odds (kan gjenskapes).
+2. Formoppdateringen: ablasjonen i OBOS legger den til en modell uten odds
+   (oddsvekt 0, 2/6), trinn 6 til pakken med odds (vekt 40). Den tekniske
+   teksten sier nå: ingen målbar forskjell med odds, som siden bruker; uten
+   odds hjelper den, fordi lagstyrken da bare bygger på målene.
+3. prekick.json og lastmatch.json regnet med de gamle verdiene (model.json
+   fra 907d6cf) i en egen arbeidskopi: prekick i begge ligaene og lastmatch i
+   Eliteserien gjenskapes eksakt, bortsett fra tidsstemplene (stamp,
+   updated). OBOS lastmatch gjenskapes eksakt med grunnlagsfilen slik den var
+   da CI skrev lastmatch (c9636d5 kl. 09:03; grunnlaget for de nye
+   resultatene kom først kl. 09:07 i 708bf5c). Med den nye model.json
+   stemmer ikke fingeravtrykket i grunnlagsfilen, så de nye tallene er
+   simulert med den nye modellen; CI regner grunnlaget på nytt etter push.
+- Regresjonstesten "Rundens viktigste kamp: fire avsnitt" krevde alltid fire
+  avsnitt, men avsnittene om de andre lagene og de like viktige kampene står
+  bare når dataene har dem. Med den nye modellen har OBOS ingen like viktig
+  kamp (svaret har tre avsnitt, riktig). Testen følger nå dataene
+  (qaKeyRoundData i samme kjøring).
+- `backtest_walkforward.py`: parvise ablasjonsrader uten referansen i
+  utvalget hoppes over (krasjet da bare tabell og full ble kjørt).
+
 ## Ustabil test: resultat skrevet med tastaturet mens grunnlagsfilen holdes tilbake
 
 Nullstill-testen i `tests/regression.js` (`nullstillGrunnlag`, scenarioet

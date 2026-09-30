@@ -7,7 +7,7 @@
   obos/data/status.json    når filene sist ble bygget
 
 Samme format som eliteserien/data/, så sidekoden er felles. Modellen tilpasses
-med de samme parameterne som Eliteserien (l1/l2 = 16/48, halveringstid 35
+med de samme parameterne som Eliteserien (l1/l2 = 8/24, halveringstid 28
 dager). Oddsleddet er med når obos/data/odds_closing.json har sluttodds, og
 ellers faller den tilbake til bare mål. --no-odds slår oddsleddet av.
 
@@ -31,7 +31,7 @@ ROOT = Path(__file__).parent.parent
 DATA = ROOT / "obos" / "data"
 CSV_PATH = DATA / "obos_2012-2026.csv"
 SEASON = "2026"
-HALF_LIFE, L1, L2 = 35.0, 16.0, 48.0
+HALF_LIFE, L1, L2 = 28.0, 8.0, 24.0
 # Samme vekt som Eliteserien. Målingen på OBOS-tall 22. september 2026
 # (scripts/obos_odds_weight.py) er ugyldig: skriptet regnet ratene med feil
 # formel, rettet 29. september 2026. Vekten er derfor ikke målt på OBOS-tall
