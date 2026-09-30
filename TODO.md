@@ -31,6 +31,18 @@ ikke slettet, til én "Vis detaljer" per felt:
   sjekker oppsettet (under hverandre, full bredde), linjelengden (høyst 82
   tegn), at fagordene ikke står i det synlige nivået, at de påkrevde tekstene
   er synlige og at det flyttede står under "Vis detaljer".
+- Etter Tronds gjennomlesning: "Modellen tar også hensyn til hvor sterke
+  lagene har vært", ny setning om oddsen (skader og laguttak) i Eliteserien,
+  og notisen "Modellen ble justert igjen 30. september etter ny
+  tilbaketesting." i begge ligaene. Pushet 30.9.2026 kl. 23:15 (61bf175) etter
+  hele testpakken (failsafe 214, regresjonen 1096, kontroll.py og
+  kontroll_paneler.py grønne; failsafe og kontrollene også etter rebase på
+  datakjøringen 7c4c37a). Kontroll av de publiserte sidene etter CI
+  (grunnlaget regnet på nytt for alle tre sidene): stor skjerm og mobil i
+  begge ligaene, feltene åpnes og lukkes med klikk, "Vis detaljer" viser
+  tabellene, regnestykket for form ligger under detaljene, treffsikkerheten
+  viser teksten uten kamper og tabellboksen er skjult, grunnlaget "i bruk",
+  16 rader i tabellen, ingen JS-feil.
 
 ## Planleggerens hemmeligheter: hvor de trekkes tilbake
 
