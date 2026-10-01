@@ -38,6 +38,39 @@ const MIME = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.j
 //   {innhold: {<liga>: tekst}}  dette innholdet i stedet
 //   {forsinkelse: ms}           svaret kommer så mye senere
 let GRUNNLAG_MODUS = null;
+// Frosne data (tests/data/README.md): lokalt svarer testserveren datafilene
+// sidene henter (/<liga>/data/*.json og /elo-test/emodell/*.json) fra
+// øyeblikksbildet i tests/data/<DATA_DAG>/, ikke fra dagens filer, så testene
+// som er skrevet mot en bestemt tabellstilling, gir samme svar i morgen.
+// Filer som ikke er med i bildet, svarer 404. null: dagens filer (gruppen
+// «Dagens data», og alltid med --live).
+let DATA_DAG = '2026-10-01';
+const DATA_RE = /^\/(?:(?:eliteserien|obos)\/data|elo-test\/emodell)\/[^/]+\.json$/;
+// Stien til en datafil slik siden får den: i bildet, eller i repoet uten bilde.
+function dataFil(...deler) {
+  return DATA_DAG ? path.join(ROOT, 'tests', 'data', DATA_DAG, ...deler) : path.join(ROOT, ...deler);
+}
+// En kopi av arbeidstreet til en midlertidig mappe (for skriptene testene
+// kjører der), med bildet lagt over dataene.
+function kopierRepo(TMP) {
+  const {execFileSync} = require('child_process');
+  for (const f of execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], {cwd: ROOT}).toString().split('\0').filter(Boolean)) {
+    const fra = path.join(ROOT, f);
+    if (!fs.existsSync(fra) || fs.statSync(fra).isDirectory()) continue;
+    fs.mkdirSync(path.dirname(path.join(TMP, f)), {recursive: true});
+    fs.copyFileSync(fra, path.join(TMP, f));
+  }
+  if (!DATA_DAG) return;
+  const bilde = path.join(ROOT, 'tests', 'data', DATA_DAG);
+  const legg = d => {
+    for (const e of fs.readdirSync(path.join(bilde, d), {withFileTypes: true})) {
+      const rel = path.join(d, e.name);
+      if (e.isDirectory()) legg(rel);
+      else { fs.mkdirSync(path.join(TMP, d), {recursive: true}); fs.copyFileSync(path.join(bilde, rel), path.join(TMP, rel)); }
+    }
+  };
+  legg('');
+}
 // Sesongstart: med SESONGSTART = true svarer serveren som før første
 // serierunde: matches.json er tom, og alle de spilte kampene står som uspilte i
 // terminlisten (fixtures.json), i sin egen runde. Gjelder alle sidene
@@ -45,8 +78,9 @@ let GRUNNLAG_MODUS = null;
 let SESONGSTART = false;
 function sesongstartData(rot, liga, fil) {
   if (fil === 'matches') return '[]';
-  const M = JSON.parse(fs.readFileSync(path.join(rot, liga, 'data', 'matches.json'), 'utf8'));
-  const F = JSON.parse(fs.readFileSync(path.join(rot, liga, 'data', 'fixtures.json'), 'utf8'));
+  const fil_ = f => rot === ROOT ? dataFil(liga, 'data', f) : path.join(rot, liga, 'data', f);
+  const M = JSON.parse(fs.readFileSync(fil_('matches.json'), 'utf8'));
+  const F = JSON.parse(fs.readFileSync(fil_('fixtures.json'), 'utf8'));
   for (const m of M) {
     let r = F.find(x => x.round === m.round);
     if (!r) { r = {round: m.round, when: '', matches: []}; F.push(r); }
@@ -59,7 +93,7 @@ function serve(rot = ROOT) {
   const server = http.createServer((req, res) => {
     let p = decodeURIComponent(req.url.split('?')[0]);
     if (p.endsWith('/')) p += 'index.html';
-    const f = path.join(rot, p);
+    const f = rot === ROOT && DATA_DAG && DATA_RE.test(p) ? path.join(ROOT, 'tests', 'data', DATA_DAG, p) : path.join(rot, p);
     const sm = SESONGSTART && /^\/([^/]+)\/data\/(matches|fixtures)\.json$/.exec(p);
     if (sm) { res.writeHead(200, {'Content-Type': 'application/json'}); res.end(sesongstartData(rot, sm[1], sm[2])); return; }
     const gm = /^\/([^/]+)\/(?:data|emodell)\/grunnlag\.json$/.exec(p);
@@ -140,6 +174,7 @@ async function main() {
   //   node tests/regression.js --live https://tabellkalkulator.no
   const liveArg = process.argv.indexOf('--live');
   const live = liveArg >= 0;
+  if (live) DATA_DAG = null;
   const origin = live ? (process.argv[liveArg + 1] || '').replace(/^-.*/, '') || 'https://tabellkalkulator.no' : null;
   const server = live ? null : await serve();
   const base = live ? `${origin.replace(/\/$/, '')}/eliteserien/`
@@ -152,6 +187,42 @@ async function main() {
   const open = async (w = 1400, h = 900, url = base) => {
     const page = await browser.newPage();
     page.on('pageerror', e => errors.push(`${url}: ${e.message}`));
+    await page.setViewport({width: w, height: h});
+    await page.goto(url, {waitUntil: 'networkidle0'});
+    await page.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
+    return page;
+  };
+  // Siden med kampdataene slik de var en bestemt dag, ikke dagens: matches.json
+  // og fixtures.json bygges av fasiten som er lagret sammen med testdataene
+  // (tests/kilder/testdata/fasit_<liga>_<dag>.json), og justeringer.json er
+  // listen fotball.no viste samme dag (justeringer_<liga>_<dag>.json). Tester som sammenligner
+  // med en lagret kopi (fotball.no-siden fra samme dag) eller med en bestemt
+  // tabellstilling, skal bruke denne, så de ikke feiler eller blir tomme når
+  // nye resultater kommer eller en kamp flyttes. Svarene byttes i nettleseren
+  // (forespørselsavskjæring), så det virker også med --live. Grunnlagsfilen
+  // svarer 404: den er regnet av dagens kamper.
+  const dataFraDag = (liga, dag) => {
+    const f = JSON.parse(fs.readFileSync(path.join(ROOT, 'tests', 'kilder', 'testdata', `fasit_${liga}_${dag}.json`), 'utf8')).kamper;
+    const matches = f.filter(m => m.hg != null).map(m => ({date: m.date, time: m.time, round: m.round, home: m.home, away: m.away, hg: m.hg, ag: m.ag}));
+    const runder = {};
+    f.filter(m => m.hg == null).forEach(m => (runder[m.round] = runder[m.round] || []).push({home: m.home, away: m.away, date: m.date, time: m.time, played: false, hg: null, ag: null}));
+    const fixtures = Object.keys(runder).map(Number).sort((a, b) => a - b).map(r => ({round: r, when: '', matches: runder[r]}));
+    // Poengjusteringene slik fotball.no viste dem samme dag, ikke dagens fil.
+    const jf = path.join(ROOT, 'tests', 'kilder', 'testdata', `justeringer_${liga}_${dag}.json`);
+    const justeringer = fs.existsSync(jf) ? fs.readFileSync(jf, 'utf8') : JSON.stringify({justeringer: []});
+    return {matches: JSON.stringify(matches), fixtures: JSON.stringify(fixtures), justeringer};
+  };
+  const openMedDag = async (w, h, url, liga, dag) => {
+    const data = dataFraDag(liga, dag);
+    const page = await browser.newPage();
+    page.on('pageerror', e => errors.push(`${url} (data ${dag}): ${e.message}`));
+    await page.setRequestInterception(true);
+    page.on('request', req => {
+      const m = /\/(?:eliteserien|obos)\/data\/(matches|fixtures|justeringer|grunnlag)\.json(?:\?|$)/.exec(req.url());
+      if (!m) return req.continue();
+      if (m[1] === 'grunnlag') return req.respond({status: 404, body: ''});
+      req.respond({status: 200, contentType: 'application/json', body: data[m[1]]});
+    });
     await page.setViewport({width: w, height: h});
     await page.goto(url, {waitUntil: 'networkidle0'});
     await page.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
@@ -175,15 +246,10 @@ async function main() {
       st = await pr.evaluate(() => GRUNNLAG_STATUS);
       await pr.close();
     } finally { GRUNNLAG_MODUS = forrige; }
-    if (st === 'i bruk') return (grunnlagFilMinne[liga] = fs.readFileSync(path.join(ROOT, utMappe, 'grunnlag.json'), 'utf8'));
+    if (st === 'i bruk') return (grunnlagFilMinne[liga] = fs.readFileSync(dataFil(utMappe, 'grunnlag.json'), 'utf8'));
     const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'grunnlag-side-'));
     try {
-      for (const f of execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], {cwd: ROOT}).toString().split('\0').filter(Boolean)) {
-        const fra = path.join(ROOT, f);
-        if (!fs.existsSync(fra) || fs.statSync(fra).isDirectory()) continue;
-        fs.mkdirSync(path.dirname(path.join(TMP, f)), {recursive: true});
-        fs.copyFileSync(fra, path.join(TMP, f));
-      }
+      kopierRepo(TMP);
       const pp = require.resolve('puppeteer-core');
       const r = spawnSync(process.execPath, [path.join(TMP, 'scripts', 'lag_grunnlag.js'), liga, '--ut', utMappe], {cwd: TMP, encoding: 'utf8', timeout: 900000,
         env: {...process.env, NODE_PATH: [pp.slice(0, pp.lastIndexOf(`${path.sep}puppeteer-core${path.sep}`)), process.env.NODE_PATH].filter(Boolean).join(path.delimiter)}});
@@ -1370,19 +1436,22 @@ async function main() {
   //   node tests/regression.js --bare justering
   const poengjusteringer = async () => {
     setGroup('Poengjusteringer: Åsane trukket et poeng');
-    // Den offisielle tabellen: fra fotball.no-cachen når den daglige
-    // hentingen har lagret den, ellers fra den lagrede siden i testdata.
+    // Den offisielle tabellen og justeringene fra fotball.no-siden lagret
+    // 25.9.2026 (tests/kilder/testdata), lest med den samme parseren som den
+    // daglige kontrollen. Sammenlignes med siden når den får kampene fra
+    // samme dag (openMedDag), ikke dagens: da gjelder sammenligningen like
+    // godt etter neste runde. Den daglige kontrollen tar dagens tabell.
     const {execFileSync} = require('child_process');
     const offisiell = JSON.parse(execFileSync('python3', ['-c', `
 import json, sys
 sys.path.insert(0, 'scripts')
 import nff_source as n
-t, j, f = n.offisiell_tabell('obos')
-kilde = 'fotball.no-cachen'
-if t is None:
-    side = open('tests/kilder/testdata/nff_obos_2026-09-25.html', encoding='utf-8').read()
-    t, j, kilde = n.parse_tabell(side, 'obos'), n.parse_justeringer(side, 'obos'), 'testdata 25.9.2026'
-print(json.dumps({'tabell': t, 'justeringer': j, 'kilde': kilde}))`], {cwd: ROOT}).toString());
+side = open('tests/kilder/testdata/nff_obos_2026-09-25.html', encoding='utf-8').read()
+print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse_justeringer(side, 'obos')}))`], {cwd: ROOT}).toString());
+    const dag = await openMedDag(1400, 900, base.replace('/eliteserien/', '/obos/'), 'obos', '2026-09-25');
+    const rd = await dag.evaluate(() => [...document.querySelectorAll('#tbl tbody tr')].map(tr => ({lag: tr.dataset.team,
+      plass: +tr.querySelector('.pos').textContent, k: +tr.children[2].textContent, p: tr.querySelector('.pts').textContent.trim()})));
+    await dag.close();
     const ob = await open(1400, 900, base.replace('/eliteserien/', '/obos/'));
     const r = await ob.evaluate(async () => {
       const rader = [...document.querySelectorAll('#tbl tbody tr')].map(tr => ({lag: tr.dataset.team,
@@ -1413,27 +1482,30 @@ print(json.dumps({'tabell': t, 'justeringer': j, 'kilde': kilde}))`], {cwd: ROOT
         ned: {med: {Åsane: ned(med, 'Åsane'), Raufoss: ned(med, 'Raufoss')}, uten: {Åsane: ned(uten, 'Åsane'), Raufoss: ned(uten, 'Raufoss')}},
         sum: [med[aa].reduce((a, b) => a + b, 0), uten[aa].reduce((a, b) => a + b, 0)],
         jnote: [...document.querySelectorAll('#legend .jnote')].map(e => ({tekst: e.textContent, href: e.querySelector('a') ? e.querySelector('a').href : null})),
-        jnoteForLnote: (() => { const j = document.querySelector('#legend .jnote'), l = document.querySelector('#legend .lnote');
+        // Avsnittet om opprykkskvalifiseringen under fargeforklaringen er
+      // fjernet (1.10.2026); at opprykksspillet ikke er modellert, står under
+      // "Begrensninger" i modellsjekken.
+      lnoteOBOS: document.querySelectorAll('#legend .lnote').length,
+      begrensning: /Opprykksspillet mellom 3\. og 6\. plass er ikke modellert/.test(document.body.textContent),
+      jnoteForLnote: (() => { const j = document.querySelector('#legend .jnote'), l = document.querySelector('#legend .lnote');
           return !!j && (!l || !!(j.compareDocumentPosition(l) & Node.DOCUMENT_POSITION_FOLLOWING)); })()};
     });
     const aa = r.rader.find(x => x.lag === 'Åsane'), kp = r.kamp['Åsane'].poeng;
-    check('Åsane: poengsummen i tabellen er kampenes poeng minus 1, med stjerne', aa.p === `${kp - 1}*`, JSON.stringify(aa));
+    check('Åsane: poengsummen i tabellen er kampenes poeng minus 1, med stjerne foran ("*19")', aa.p === `*${kp - 1}`, JSON.stringify(aa));
     check('og forklaringen i title sier trekk på et poeng fra NFF',
       aa.tittel.startsWith(`${kp - 1} poeng, etter trekk på et poeng fra NFF.`), aa.tittel);
     const andre = r.rader.filter(x => x.lag !== 'Åsane');
     check('de andre lagene: kampenes poeng, uten stjerne', andre.every(x => x.p === String(r.kamp[x.lag].poeng)),
       JSON.stringify(andre.filter(x => x.p !== String(r.kamp[x.lag].poeng))));
-    // Mot den offisielle tabellen, lag for lag der antall kamper er likt.
+    // Mot den offisielle tabellen fra samme dag, alle 16 lag.
     const off = Object.fromEntries(offisiell.tabell.map(x => [x.lag, x]));
-    const like = r.rader.filter(x => off[x.lag] && off[x.lag].k === r.kamp[x.lag].k);
-    const ulike = like.filter(x => x.p.replace('*', '') !== String(off[x.lag].poeng) || x.plass !== off[x.lag].plass
-      || x.p.endsWith('*') !== off[x.lag].merket);
-    check(`poeng, plass og stjerne som den offisielle tabellen (${offisiell.kilde}), lag for lag`,
-      like.length > 0 && ulike.length === 0, `${like.length} lag med likt antall kamper; ulike: ${JSON.stringify(ulike.map(x => [x, off[x.lag]]))}`);
-    if (r.kamp['Åsane'].k === 23)
-      check('per 30. september (23 kamper): Åsane 19 poeng på 15. plass, Raufoss 19 på 16.',
-        aa.p === '19*' && aa.plass === 15 && JSON.stringify(r.rader.find(x => x.lag === 'Raufoss')) === JSON.stringify({...r.rader.find(x => x.lag === 'Raufoss'), plass: 16, p: '19'}),
-        JSON.stringify(r.rader.slice(-3)));
+    const ulike = rd.filter(x => !off[x.lag] || x.k !== off[x.lag].k || x.p.replace('*', '') !== String(off[x.lag].poeng)
+      || x.plass !== off[x.lag].plass || x.p.startsWith('*') !== off[x.lag].merket);
+    check('med kampene fra 25.9: kamper, poeng, plass og stjerne som fotball.no samme dag, alle 16 lag',
+      rd.length === 16 && ulike.length === 0, JSON.stringify(ulike.map(x => [x, off[x.lag]])));
+    const dA = rd.find(x => x.lag === 'Åsane'), dR = rd.find(x => x.lag === 'Raufoss');
+    check('med kampene fra 25.9: Åsane *19 på 15. plass, Raufoss 19 på 16.',
+      dA.p === '*19' && dA.plass === 15 && dR.p === '19' && dR.plass === 16, JSON.stringify([dA, dR]));
     check('justeringene på siden er de samme som fotball.no sine', JSON.stringify(offisiell.justeringer.map(j => [j.dato, j.lag, j.poeng, j.maal]))
       === JSON.stringify(r.just) && r.just.length === 1, `${JSON.stringify(offisiell.justeringer)} mot ${JSON.stringify(r.just)}`);
     check('rangeringen før scenarioet (basePos) bruker trekket', r.basePos === aa.plass, `${r.basePos} mot ${aa.plass}`);
@@ -1448,10 +1520,38 @@ print(json.dumps({'tabell': t, 'justeringer': j, 'kilde': kilde}))`], {cwd: ROOT
     check('med trekket: høyere nedrykkssjanse for Åsane og lavere for Raufoss enn uten',
       r.ned.med.Åsane > r.ned.uten.Åsane + 0.01 && r.ned.med.Raufoss < r.ned.uten.Raufoss, JSON.stringify(r.ned));
     check('fordelingen summerer til 1 med og uten', r.sum.every(x => Math.abs(x - 1) < 1e-9), JSON.stringify(r.sum));
-    check('under tabellen: "* Åsane trukket et poeng." med lenke til vedtaket, foran merknaden om sonene',
+    check('under tabellen: "* Åsane trukket et poeng." med lenke til vedtaket',
       r.jnote.length === 1 && r.jnote[0].tekst === '* Åsane trukket et poeng.'
       && r.jnote[0].href === 'https://www.fotball.no/lov-og-reglement/beslutninger-fra-utvalg/2026/poengtrekk-for-asane/' && r.jnoteForLnote,
       JSON.stringify(r.jnote));
+    // Stjernen står foran tallet, utenfor til venstre i cellen: tallet står på
+    // linje med poengene til de andre lagene, i tabellen og rundetabellen, på
+    // stor skjerm og mobil.
+    const linje = () => ob.evaluate(() => {
+      const rader = [...document.querySelectorAll('#tbl tbody tr')].map(tr => {
+        const td = tr.querySelector('td.pts'), r = document.createRange();
+        const tall = [...td.querySelectorAll('*'), td].flatMap(e => [...e.childNodes]).find(n => n.nodeType === 3 && /\d/.test(n.textContent));
+        r.selectNodeContents(tall);
+        const t = r.getBoundingClientRect(), c = td.getBoundingClientRect(), st = td.querySelector('.just');
+        return {lag: tr.dataset.team, tekst: td.textContent, hoyre: Math.round(t.right * 10) / 10, tallV: t.left, celle: [c.left, c.right],
+          stjerne: st ? [st.getBoundingClientRect().left, st.getBoundingClientRect().right] : null};
+      });
+      return {kanter: [...new Set(rader.map(x => x.hoyre))], aa: rader.find(x => x.lag === 'Åsane'), stjerner: rader.filter(x => x.stjerne).length};
+    });
+    for (const [w, h] of [[1400, 900], [390, 800]]) {
+      await ob.setViewport({width: w, height: h});
+      await sleep(400);
+      for (const visning of ['tabellen', 'rundetabellen']) {
+        if (visning === 'rundetabellen') { await ob.$eval('#roundPrev', e => e.click()); await sleep(500); }
+        const l = await linje();
+        check(`${w} px, ${visning}: "*" foran tallet, utenfor til venstre i cellen, og alle poengtall står på linje`,
+          l.kanter.length === 1 && l.stjerner === 1 && l.aa.tekst.startsWith('*') && l.aa.stjerne[1] <= l.aa.tallV + 0.5
+          && l.aa.stjerne[0] >= l.aa.celle[0], JSON.stringify(l));
+        if (visning === 'rundetabellen') { await ob.$eval('#roundNext', e => e.click()); await sleep(500); }
+      }
+    }
+    check('OBOS: ingen merknad om opprykkskvalifiseringen under fargeforklaringen, men setningen under "Begrensninger" står',
+      r.lnoteOBOS === 0 && r.begrensning, JSON.stringify({lnote: r.lnoteOBOS, begrensning: r.begrensning}));
     console.log(`    (nedrykk med trekket: Åsane ${(100 * r.ned.med.Åsane).toFixed(1)} %, Raufoss ${(100 * r.ned.med.Raufoss).toFixed(1)} %;`
       + ` uten: ${(100 * r.ned.uten.Åsane).toFixed(1)} %, ${(100 * r.ned.uten.Raufoss).toFixed(1)} %)`);
     await ob.close();
@@ -1480,6 +1580,31 @@ print(json.dumps({'tabell': t, 'justeringer': j, 'kilde': kilde}))`], {cwd: ROOT
       else if (BARE === 'justering') await poengjusteringer();
       else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, justering)`);
     } else {
+    // ---- 0. dagens data ----
+    // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
+    // tre sidene med dagens filer fra repoet, så en endring i dataformatet fra
+    // CI, eller data koden ikke tåler, fortsatt oppdages. Bare det som gjelder
+    // uansett tabellstilling, sjekkes.
+    if (!live) {
+      setGroup(`Dagens data (resten av testene bruker bildet fra ${DATA_DAG})`);
+      const bilde = DATA_DAG;
+      DATA_DAG = null;
+      try {
+        for (const side of ['eliteserien', 'obos', 'elo-test']) {
+          const feil0 = errors.length;
+          const pg = await open(1400, 900, base.replace('/eliteserien/', `/${side}/`));
+          const d = await pg.evaluate(() => ({rader: document.querySelectorAll('#tbl tbody tr').length, lag: TEAMS.length,
+            sum: TEAMS.map(t => lastMC[t].reduce((a, b) => a + b, 0)),
+            poeng: compute().rows.every(r => r.pts === r.w * 3 + r.d + poengJust(r.name)),
+            kamper: MATCHES.length + matches.length}));
+          check(`${side}: dagens filer laster, ${d.lag} lag i tabellen, fordelingen summerer til 1, poengene stemmer med kampene og justeringene`,
+            d.rader === 16 && d.lag === 16 && d.sum.every(x => Math.abs(x - 1) < 1e-9) && d.poeng && d.kamper === 240, JSON.stringify({...d, sum: undefined}));
+          check(`${side}: ingen JS-feil med dagens filer`, errors.length === feil0, errors.slice(feil0).join('; '));
+          await pg.close();
+        }
+      } finally { DATA_DAG = bilde; }
+    }
+
     // ---- 1. lasting ----
     setGroup('Lasting');
     let page = await open();
@@ -2516,7 +2641,7 @@ print(json.dumps({'tabell': t, 'justeringer': j, 'kilde': kilde}))`], {cwd: ROOT
     setGroup('Spør om tabellen: Kopier tekst og Kopier lenke');
     const MND = ['januar', 'februar', 'mars', 'april', 'mai', 'juni', 'juli', 'august', 'september', 'oktober', 'november', 'desember'];
     const kopiDatoVentet = (mappe, grunnlagIBruk) => {
-      const les = f => { try { return JSON.parse(fs.readFileSync(path.join(ROOT, mappe, 'data', f), 'utf8')); } catch (_) { return {}; } };
+      const les = f => { try { return JSON.parse(fs.readFileSync(dataFil(mappe, 'data', f), 'utf8')); } catch (_) { return {}; } };
       const t = new Date(grunnlagIBruk ? les('grunnlag.json').laget : les('model.json').fitted_at);
       const d = Object.fromEntries(new Intl.DateTimeFormat('en-US', {timeZone: 'Europe/Oslo', day: 'numeric', month: 'numeric'})
         .formatToParts(t).map(x => [x.type, x.value]));
@@ -4033,7 +4158,7 @@ print(json.dumps({'tabell': t, 'justeringer': j, 'kilde': kilde}))`], {cwd: ROOT
         feilTid.map(([d, tt, v]) => `${d} ${tt}: ${new Date(F.avsparkUtcMs(d, tt)).toISOString()} mot ${new Date(v).toISOString()}`).join('; '));
 
       for (const liga of ['eliteserien', 'obos']) {
-        const fx = JSON.parse(fs.readFileSync(path.join(ROOT, liga, 'data', 'fixtures.json'), 'utf8'));
+        const fx = JSON.parse(fs.readFileSync(dataFil(liga, 'data', 'fixtures.json'), 'utf8'));
         const avspark = F.avsparkFraTerminliste(fx);
         const kamper = fx.flatMap(r => r.matches);
         check(`${liga}: hver kamp i terminlisten får et avspark`,
@@ -4181,13 +4306,7 @@ print(json.dumps({'tabell': t, 'justeringer': j, 'kilde': kilde}))`], {cwd: ROOT
       const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'prekick-'));
       let tmpServer = null;
       try {
-        const filer = execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], {cwd: ROOT}).toString().split('\0').filter(Boolean);
-        for (const f of filer) {
-          const fra = path.join(ROOT, f);
-          if (!fs.existsSync(fra) || fs.statSync(fra).isDirectory()) continue;
-          fs.mkdirSync(path.dirname(path.join(TMP, f)), {recursive: true});
-          fs.copyFileSync(fra, path.join(TMP, f));
-        }
+        kopierRepo(TMP);
         const D = path.join(TMP, 'obos', 'data');
         const tekst = f => fs.existsSync(path.join(D, f)) ? fs.readFileSync(path.join(D, f), 'utf8') : null;
         const les = f => JSON.parse(tekst(f));
@@ -4464,12 +4583,7 @@ print(json.dumps({'tabell': t, 'justeringer': j, 'kilde': kilde}))`], {cwd: ROOT
       const TMP = fs.mkdtempSync(path.join(os.tmpdir(), 'grunnlag-'));
       let tmpServer = null;
       try {
-        for (const f of execFileSync('git', ['ls-files', '-co', '--exclude-standard', '-z'], {cwd: ROOT}).toString().split('\0').filter(Boolean)) {
-          const fra = path.join(ROOT, f);
-          if (!fs.existsSync(fra) || fs.statSync(fra).isDirectory()) continue;
-          fs.mkdirSync(path.dirname(path.join(TMP, f)), {recursive: true});
-          fs.copyFileSync(fra, path.join(TMP, f));
-        }
+        kopierRepo(TMP);
         const pp = require.resolve('puppeteer-core');
         const nodePath = [pp.slice(0, pp.lastIndexOf(`${path.sep}puppeteer-core${path.sep}`)), process.env.NODE_PATH].filter(Boolean).join(path.delimiter);
         const kjor = (...a) => spawnSync(process.execPath, [path.join(TMP, 'scripts', 'lag_grunnlag.js'), ...a],

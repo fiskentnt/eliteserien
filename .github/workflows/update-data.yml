@@ -25,6 +25,7 @@ on:
 
 permissions:
   contents: write
+  issues: write   # varsel om nytt poengtrekk (scripts/tabellkontroll.py varsle)
 
 concurrency:
   group: update-data
@@ -91,9 +92,17 @@ jobs:
           python3 scripts/make_og.py --league
           python3 scripts/make_sitemap.py
 
-      # Den daglige revisjonen mot fotball.no er tatt ut (1.10.2026).
-      # fotball.no hentes bare automatisk som reserve naar ligasiden ikke
-      # svarer, aldri ellers (se nff_source.py).
+      - name: Daglig revisjon av terminlisten mot kalenderfeeden
+        id: revisjon
+        # Runde, dato og avspark i terminlisten (skrapt fra /terminliste) mot
+        # NTFs kalenderfeed (/terminliste/subscribe), som er laget for
+        # automatisk bruk. De 22 feilene vi rettet 25. september var nettopp
+        # saann data. Et kritisk avvik gjor stempelet rodt til en ny revisjon
+        # bekrefter at det er borte. fotball.no er ikke med (regelen fra
+        # 1.10.2026): den hentes bare automatisk som reserve naar ligasiden
+        # ikke svarer, aldri ellers (se nff_source.py).
+        if: steps.gate.outputs.should_fetch == 'true'
+        run: python3 scripts/daglig_revisjon.py eliteserien
 
       - name: Se etter neste sesongs terminliste (eliteserien)
         id: oppdag_sesong
@@ -174,10 +183,14 @@ jobs:
           [ -f data/oddspapi_usage.json ] && git add data/oddspapi_usage.json
           # Katalogen finnes bare naar et tellende kall er gjort i dag.
           [ -d data/oddspapi-bruk ] && git add data/oddspapi-bruk
-          # fotball.no-cachen: hoyst ett forsok per liga per dogn ligger her.
+          # fotball.no-cachen: forsoket som reserve (hoyst ett per liga per
+          # dogn) ligger her.
           [ -d data/nff-cache ] && git add data/nff-cache
           [ -d data/hentelogg ] && git add data/hentelogg
           [ -f eliteserien/data/audit_fixtures.json ] && git add eliteserien/data/audit_fixtures.json
+          # Tabellkontrollen: resultatet, og poengtrekk den har lagt inn.
+          [ -f eliteserien/data/audit_tabell.json ] && git add eliteserien/data/audit_tabell.json
+          [ -f eliteserien/data/justeringer.json ] && git add eliteserien/data/justeringer.json
           [ -f eliteserien/data/ffk_cache.json ] && git add eliteserien/data/ffk_cache.json
           [ -f eliteserien/data/audit_state.json ] && git add eliteserien/data/audit_state.json
           [ -f eliteserien/data/history.json ] && git add eliteserien/data/history.json
@@ -191,6 +204,16 @@ jobs:
             git commit -m "Oppdater kampdata $(date -u +%Y-%m-%dT%H:%MZ)"
             bash scripts/push_med_rebase.sh
           fi
+
+      - name: Varsle om nytt poengtrekk
+        # tabellkontroll.py la inn en ny justering i justeringer.json i DENNE
+        # kjoringen: advarsel i Actions, en linje i oppsummeringen og en
+        # GitHub-issue, saa det synes at et trekk er lagt inn automatisk.
+        # Etter lagringen, saa trekket er pushet naar varselet kommer.
+        if: always() && steps.gate.outputs.should_fetch == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/tabellkontroll.py varsle eliteserien
 
       - name: Gjør kjøringen rød hvis sesongskiftet varslet
         # Steget over har continue-on-error, saa resten av kjeden -- inkludert

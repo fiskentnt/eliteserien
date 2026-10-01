@@ -83,10 +83,22 @@ def rows_for(season=SEASON, log=print):
     try:
         ntf = ntf_source.fetch_all("obos", log=log)
     except Exception as e:
-        log(f"ADVARSEL: ligasiden feilet ({e}) -- bruker CSV-terminlisten "
-            f"denne kjøringen. En kamp som er flyttet i dag blir da ikke fanget opp.")
-        fra_csv.sort(key=lambda m: (m["date"], m["time"], m["home"]))
-        return fra_csv
+        ntf = []
+        # RESERVE (regelen fra 1.10.2026, se nff_source.py): BARE naar
+        # ligasiden ikke svarer, proeves fotball.no -- hoeyst ett forsok per
+        # dogn, ellers det som ligger i cachen. Deretter CSV-terminlisten.
+        if isinstance(e, ntf_source.SvarerIkke):
+            log(f"ADVARSEL: ligasiden svarte ikke ({e}) -- prøver fotball.no som reserve.")
+            try:
+                import nff_source
+                ntf = nff_source.fetch_all("obos", log=log)
+            except Exception as e2:
+                log(f"ADVARSEL: fotball.no (reserve) feilet ({e2}).")
+        if not ntf:
+            log(f"ADVARSEL: ligasiden feilet ({e}) -- bruker CSV-terminlisten "
+                f"denne kjøringen. En kamp som er flyttet i dag blir da ikke fanget opp.")
+            fra_csv.sort(key=lambda m: (m["date"], m["time"], m["home"]))
+            return fra_csv
 
     # SESONGGRENSEN, og den ligger UTENFOR except-blokken over med vilje.
     # "Kilden er nede" kan forsvares med CSV-reserven; "kilden viser en annen
@@ -95,10 +107,9 @@ def rows_for(season=SEASON, log=print):
     # datasett som ser riktig ut. FeilSesong faar derfor gaa videre ut av
     # rows_for(), som kalles for foerste write_json i main().
     ntf, _fordeling = bare_aktiv_sesong(ntf, _aktiv, log=log)
-    # fotball.no er ikke med: robots.txt der sier Disallow: / for alle andre
-    # enn sokemotorene, og denne funksjonen kjorer i hver resultatkjoring.
-    # Den uavhengige kontrollen mot fotball.no skjer i det daglige
-    # vedlikeholdet i stedet, hoyst en gang i dognet.
+    # fotball.no er ikke med (regelen fra 1.10.2026, se nff_source.py): bare
+    # som reserve over, naar ligasiden ikke svarer. Den loepende kontrollen
+    # er kalenderfeeden (daglig_revisjon.py) og tabellen (tabellkontroll.py).
     offisiell = reconcile(ntf, [], reserver=[("csv", fra_csv)], log=log)
     # En dato utenfor sesongvinduet er alltid feil hos kilden. CSV-en er
     # fasiten vi faller tilbake paa: den er handkurert og staar stille.
@@ -181,10 +192,22 @@ def main():
     DATA.mkdir(parents=True, exist_ok=True)
     # Formen på begge filene, og reglene for hvilke runder som blir med, er
     # felles med Eliteserien -- se scripts/leaguedata.py.
-    leaguedata.write_json(DATA / "matches.json", leaguedata.build_matches(rows), indent=1)
+    matches_ut = leaguedata.build_matches(rows)
+    leaguedata.write_json(DATA / "matches.json", matches_ut, indent=1)
     fixtures = leaguedata.build_fixtures(rows)
     leaguedata.write_json(DATA / "fixtures.json", fixtures, indent=1)
     print(f"  {len(fixtures)} runder med kamper igjen")
+
+    # Tabellkontrollen mot tabellen paa obos-ligaen.no, fra samme henting
+    # (scripts/tabellkontroll.py). Et nytt poengtrekk legges inn i
+    # justeringer.json her; avvik i kamper, maal eller V/U/T gir rodt stempel
+    # og exit 1 nederst, etter at alt annet er skrevet.
+    import ntf_source
+    import tabellkontroll
+    _t = ntf_source.siste_tabell("obos")
+    _tk = tabellkontroll.kontroller(
+        "obos", _a0 or SEASON, matches_ut, _t.get("tabell") if _t and "tabell" in _t else _t,
+        kilde_url=_t.get("kilde") if _t else None, kjoring=_ses.kjoring_id())
 
     # Modellen: samme tilpasning som Eliteserien. Oddsleddet er med når vi har
     # sluttodds (obos/data/odds_closing.json, Pinnacle via OddsPapi), ellers
@@ -230,6 +253,7 @@ def main():
         _avvik = daglig_revisjon.dagens_avvik("obos", _naa)
     except Exception:
         pass
+    _avvik += tabellkontroll.avvik("obos")
     _status = {
         "built_at": _naa.isoformat(timespec="seconds"),
         "source": "obos/data/obos_2012-2026.csv", "played": len(played),
@@ -238,8 +262,8 @@ def main():
     }
     if _avvik:
         _status["revisjon_avvik"] = _avvik
-        _status["error"] = (f"{_avvik} kritisk(e) avvik mellom terminlisten eller tabellen "
-                            f"og fotball.no, se obos/data/audit_fixtures.json")
+        _status["error"] = (f"{_avvik} kritisk(e) avvik mellom terminlisten eller tabellen og "
+                            f"obos-ligaen.no, se obos/data/audit_fixtures.json og audit_tabell.json")
     (DATA / "status.json").write_text(
         json.dumps(_status, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
@@ -250,6 +274,10 @@ def main():
     print("  skrev matches.json, fixtures.json, model.json, status.json")
     if DATOVAKT_FEIL:
         print("\nFEIL: " + DATOVAKT_BESKJED[DATOVAKT_FEIL], file=sys.stderr)
+        return 1
+    if _tk["errors"]:
+        print(f"\nFEIL: {_tk['errors']} kritisk(e) avvik mellom tabellen vår og tabellen på "
+              f"obos-ligaen.no: {_tk['avvik'][0]}", file=sys.stderr)
         return 1
     return 0
 

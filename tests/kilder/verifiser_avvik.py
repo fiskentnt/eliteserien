@@ -1,14 +1,20 @@
 """Avgjør uenighet mellom eliteserien.no og produksjonen med ESPN som dommer.
 
-Kjør: python3 verifiser_avvik.py   -> skriver testdata/verifisert_avvik.json
+Kjør (fra repo-roten): python3 tests/kilder/verifiser_avvik.py
+  -> skriver testdata/verifisert_avvik.json
 
 ESPN er uavhengig av begge de to andre kildene og oppgir eksakt UTC-tidspunkt
 per kamp, som regnes om til norsk lokaltid. Filen er fasiten testene bruker
 der produksjonen og eliteserien.no er uenige, slik at testen ikke låser seg
 til en verdi produksjonen har arvet feil fra ffksupporter.net.
+
+Produksjonen er den fra SAMME DAG som testdataene (25.9.2026), FØR de 22
+rettelsene: hentet fra git (606534e^), ikke dagens filer. Med dagens filer
+ville skriptet funnet andre kamper hver gang en kamp ble flyttet, og de 22
+er dessuten rettet der. Gir 22 kamper, de samme som i filen.
 """
-import importlib.util
 import json
+import subprocess
 import sys
 import time
 import urllib.request
@@ -16,23 +22,24 @@ from datetime import datetime
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
-sys.path.insert(0, str(Path(__file__).parent))
-import es_source
+ROT = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(ROT / "scripts"))
+import espn_source
+import ntf_source
 
 OSLO = ZoneInfo("Europe/Oslo")
-PROD = Path("/Users/trond/Documents/eliteserien/eliteserien/data")
+# Produksjonen 25.9.2026, foer de 22 rettelsene i 606534e.
+FOER_RETTELSEN = "606534e^"
 UT = Path(__file__).parent / "testdata" / "verifisert_avvik.json"
-
-spec = importlib.util.spec_from_file_location(
-    "espn_source", "/Users/trond/Documents/eliteserien/scripts/espn_source.py")
-espn_source = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(espn_source)
 TIL_ID = {v: k for k, v in espn_source.TEAM_ID_TO_NAME.items()}
 
 
 def prod_kamper():
-    ut = {(r["home"], r["away"]): r for r in json.loads((PROD / "matches.json").read_text("utf-8"))}
-    for runde in json.loads((PROD / "fixtures.json").read_text("utf-8")):
+    les = lambda f: json.loads(subprocess.run(
+        ["git", "-C", str(ROT), "show", f"{FOER_RETTELSEN}:eliteserien/data/{f}"],
+        capture_output=True, text=True, check=True).stdout)
+    ut = {(r["home"], r["away"]): r for r in les("matches.json")}
+    for runde in les("fixtures.json"):
         for k in runde["matches"]:
             ut[(k["home"], k["away"])] = {**k, "round": runde["round"]}
     return ut
@@ -41,7 +48,7 @@ def prod_kamper():
 def espn_for_dato(dato):
     url = ("https://site.api.espn.com/apis/site/v2/sports/soccer/nor.1/scoreboard"
            f"?dates={dato.replace('-', '')}")
-    req = urllib.request.Request(url, headers={"User-Agent": es_source.USER_AGENT})
+    req = urllib.request.Request(url, headers={"User-Agent": ntf_source.USER_AGENT})
     with urllib.request.urlopen(req, timeout=20) as resp:
         data = json.load(resp)
     ut = {}
@@ -58,8 +65,10 @@ def espn_for_dato(dato):
 
 def main():
     td = Path(__file__).parent / "testdata"
-    rader = (es_source.parse_side((td / "resultater_2026-09-25.html").read_text("utf-8"), "resultater")
-             + es_source.parse_side((td / "terminliste_2026-09-25.html").read_text("utf-8"), "terminliste"))
+    rader = (ntf_source.parse_side((td / "ntf_eliteserien_resultater_2026-09-25.html").read_text("utf-8"),
+                                   "resultater", "eliteserien")
+             + ntf_source.parse_side((td / "ntf_eliteserien_terminliste_2026-09-25.html").read_text("utf-8"),
+                                     "terminliste", "eliteserien"))
     prod = prod_kamper()
 
     uenige = [r for r in rader

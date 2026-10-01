@@ -1,0 +1,2696 @@
+{
+ "version": 1,
+ "source": "OddsPapi /v4/historical-odds",
+ "note": "Sluttodds er siste observasjon 60 til 15 minutter før avspark. Kamper uten observasjon i vinduet står med bookmaker null -- de har INGEN sluttodds, og faller tilbake på football-data.co.uk i merge_odds.py. Utfallene er hjemme, uavgjort, borte.",
+ "definisjon": "siste observasjon 60 til 15 minutter før avspark",
+ "market": 101,
+ "bookmakers": [
+  "pinnacle",
+  "bet365",
+  "unibet"
+ ],
+ "matches": {
+  "2026|Sarpsborg 08|Bodø/Glimt": {
+   "fixtureId": "id1000002070269072",
+   "start": "2026-04-15T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.98,
+    "U": 5.38,
+    "B": 1.473
+   },
+   "priced_at": "2026-04-15T16:30:12.325Z",
+   "result": "1-1",
+   "H": 0.158,
+   "U": 0.1764,
+   "B": 0.6656,
+   "minutter_for": 29.8
+  },
+  "2026|HamKam|Viking": {
+   "fixtureId": "id1000002067015050",
+   "start": "2026-03-14T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.04,
+    "U": 4.04,
+    "B": 1.709
+   },
+   "priced_at": "2026-03-14T14:40:28.102Z",
+   "result": "2-1",
+   "H": 0.1892,
+   "U": 0.2379,
+   "B": 0.5729,
+   "minutter_for": 19.5
+  },
+  "2026|Molde|Rosenborg": {
+   "fixtureId": "id1000002067015052",
+   "start": "2026-03-14T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.862,
+    "U": 3.94,
+    "B": 4.18
+   },
+   "priced_at": "2026-03-14T16:34:11.594Z",
+   "result": "2-0",
+   "H": 0.5256,
+   "U": 0.2444,
+   "B": 0.23,
+   "minutter_for": 25.8
+  },
+  "2026|Kristiansund|Brann": {
+   "fixtureId": "id1000002067015054",
+   "start": "2026-03-15T13:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.76,
+    "U": 4.43,
+    "B": 1.581
+   },
+   "priced_at": "2026-03-15T13:10:26.469Z",
+   "result": "3-2",
+   "H": 0.1643,
+   "U": 0.216,
+   "B": 0.6196,
+   "minutter_for": 19.6
+  },
+  "2026|KFUM Oslo|Start": {
+   "fixtureId": "id1000002067015056",
+   "start": "2026-03-15T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.97,
+    "U": 3.42,
+    "B": 4.34
+   },
+   "priced_at": "2026-03-15T15:41:24.917Z",
+   "result": "2-0",
+   "H": 0.4962,
+   "U": 0.2826,
+   "B": 0.2211,
+   "minutter_for": 18.6
+  },
+  "2026|Vålerenga|Sandefjord": {
+   "fixtureId": "id1000002067015060",
+   "start": "2026-03-15T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.943,
+    "U": 4.08,
+    "B": 3.72
+   },
+   "priced_at": "2026-03-15T15:42:12.883Z",
+   "result": "1-0",
+   "H": 0.5039,
+   "U": 0.2363,
+   "B": 0.2598,
+   "minutter_for": 17.8
+  },
+  "2026|Aalesund|Lillestrøm": {
+   "fixtureId": "id1000002067015062",
+   "start": "2026-03-15T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.15,
+    "U": 3.88,
+    "B": 2.21
+   },
+   "priced_at": "2026-03-15T15:35:28.065Z",
+   "result": "1-3",
+   "H": 0.3084,
+   "U": 0.2491,
+   "B": 0.4425,
+   "minutter_for": 24.5
+  },
+  "2026|Tromsø|Fredrikstad": {
+   "fixtureId": "id1000002067015064",
+   "start": "2026-03-15T18:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.68,
+    "U": 3.82,
+    "B": 5.77
+   },
+   "priced_at": "2026-03-15T17:58:09.686Z",
+   "result": "4-0",
+   "H": 0.5832,
+   "U": 0.2523,
+   "B": 0.1645,
+   "minutter_for": 16.8
+  },
+  "2026|Start|Aalesund": {
+   "fixtureId": "id1000002067015066",
+   "start": "2026-03-21T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.33,
+    "U": 3.51,
+    "B": 3.19
+   },
+   "priced_at": "2026-03-21T14:38:19.663Z",
+   "result": "1-1",
+   "H": 0.4194,
+   "U": 0.2761,
+   "B": 0.3045,
+   "minutter_for": 21.7
+  },
+  "2026|Viking|Molde": {
+   "fixtureId": "id1000002067015068",
+   "start": "2026-03-21T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.689,
+    "U": 4.07,
+    "B": 5.18
+   },
+   "priced_at": "2026-03-21T16:43:32.907Z",
+   "result": "4-1",
+   "H": 0.5799,
+   "U": 0.2362,
+   "B": 0.1839,
+   "minutter_for": 16.5
+  },
+  "2026|Rosenborg|Vålerenga": {
+   "fixtureId": "id1000002067015070",
+   "start": "2026-03-22T13:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.24,
+    "U": 3.76,
+    "B": 3.17
+   },
+   "priced_at": "2026-03-22T13:14:46.189Z",
+   "result": "0-2",
+   "H": 0.4364,
+   "U": 0.2572,
+   "B": 0.3064,
+   "minutter_for": 15.2
+  },
+  "2026|Brann|Tromsø": {
+   "fixtureId": "id1000002067015072",
+   "start": "2026-03-22T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.961,
+    "U": 3.68,
+    "B": 4.05
+   },
+   "priced_at": "2026-03-22T15:31:42.402Z",
+   "result": "1-2",
+   "H": 0.4992,
+   "U": 0.2627,
+   "B": 0.2381,
+   "minutter_for": 28.3
+  },
+  "2026|Fredrikstad|KFUM Oslo": {
+   "fixtureId": "id1000002067015074",
+   "start": "2026-03-22T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.36,
+    "U": 3.35,
+    "B": 3.28
+   },
+   "priced_at": "2026-03-22T15:40:23.670Z",
+   "result": "3-1",
+   "H": 0.4141,
+   "U": 0.2898,
+   "B": 0.2961,
+   "minutter_for": 19.6
+  },
+  "2026|Sandefjord|Sarpsborg 08": {
+   "fixtureId": "id1000002067015078",
+   "start": "2026-03-22T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.16,
+    "U": 3.98,
+    "B": 3.19
+   },
+   "priced_at": "2026-03-22T15:42:20.727Z",
+   "result": "0-2",
+   "H": 0.4529,
+   "U": 0.2427,
+   "B": 0.3044,
+   "minutter_for": 17.7
+  },
+  "2026|Vålerenga|Viking": {
+   "fixtureId": "id1000002067015082",
+   "start": "2026-04-06T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.99,
+    "U": 4.0,
+    "B": 2.25
+   },
+   "priced_at": "2026-04-06T12:10:10.980Z",
+   "result": "0-1",
+   "H": 0.3249,
+   "U": 0.241,
+   "B": 0.4341,
+   "minutter_for": 19.8
+  },
+  "2026|HamKam|Brann": {
+   "fixtureId": "id1000002067015084",
+   "start": "2026-04-06T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.21,
+    "U": 4.04,
+    "B": 1.84
+   },
+   "priced_at": "2026-04-06T14:44:10.762Z",
+   "result": "1-5",
+   "H": 0.2288,
+   "U": 0.2387,
+   "B": 0.5326,
+   "minutter_for": 15.8
+  },
+  "2026|Kristiansund|Bodø/Glimt": {
+   "fixtureId": "id1000002067015086",
+   "start": "2026-04-06T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 11.53,
+    "U": 7.95,
+    "B": 1.213
+   },
+   "priced_at": "2026-04-06T14:35:34.158Z",
+   "result": "0-3",
+   "H": 0.0768,
+   "U": 0.1154,
+   "B": 0.8078,
+   "minutter_for": 24.4
+  },
+  "2026|Molde|Lillestrøm": {
+   "fixtureId": "id1000002067015088",
+   "start": "2026-04-06T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.2,
+    "U": 3.96,
+    "B": 3.12
+   },
+   "priced_at": "2026-04-06T14:43:36.341Z",
+   "result": "0-1",
+   "H": 0.4446,
+   "U": 0.2439,
+   "B": 0.3115,
+   "minutter_for": 16.4
+  },
+  "2026|Sarpsborg 08|Start": {
+   "fixtureId": "id1000002067015090",
+   "start": "2026-04-06T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.819,
+    "U": 4.01,
+    "B": 4.33
+   },
+   "priced_at": "2026-04-06T14:42:20.737Z",
+   "result": "1-1",
+   "H": 0.5382,
+   "U": 0.24,
+   "B": 0.2218,
+   "minutter_for": 17.7
+  },
+  "2026|Tromsø|Rosenborg": {
+   "fixtureId": "id1000002067015092",
+   "start": "2026-04-06T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.632,
+    "U": 4.01,
+    "B": 5.89
+   },
+   "priced_at": "2026-04-06T16:58:45.251Z",
+   "result": "2-0",
+   "H": 0.6,
+   "U": 0.2395,
+   "B": 0.1605,
+   "minutter_for": 16.2
+  },
+  "2026|Aalesund|Fredrikstad": {
+   "fixtureId": "id1000002067015094",
+   "start": "2026-04-07T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.48,
+    "U": 3.7,
+    "B": 2.82
+   },
+   "priced_at": "2026-04-07T16:24:05.831Z",
+   "result": "2-3",
+   "H": 0.3934,
+   "U": 0.2614,
+   "B": 0.3452,
+   "minutter_for": 35.9
+  },
+  "2026|KFUM Oslo|Sandefjord": {
+   "fixtureId": "id1000002067015096",
+   "start": "2026-04-07T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.28,
+    "U": 3.62,
+    "B": 3.19
+   },
+   "priced_at": "2026-04-07T16:43:57.764Z",
+   "result": "1-2",
+   "H": 0.4285,
+   "U": 0.2673,
+   "B": 0.3042,
+   "minutter_for": 16.0
+  },
+  "2026|Lillestrøm|Start": {
+   "fixtureId": "id1000002067015098",
+   "start": "2026-04-11T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.448,
+    "U": 5.24,
+    "B": 6.64
+   },
+   "priced_at": "2026-04-11T11:15:29.700Z",
+   "result": "3-1",
+   "H": 0.6772,
+   "U": 0.1813,
+   "B": 0.1415,
+   "minutter_for": 44.5
+  },
+  "2026|Tromsø|Kristiansund": {
+   "fixtureId": "id1000002067015100",
+   "start": "2026-04-11T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.273,
+    "U": 6.25,
+    "B": 10.8
+   },
+   "priced_at": "2026-04-11T13:41:56.310Z",
+   "result": "2-0",
+   "H": 0.7687,
+   "U": 0.1489,
+   "B": 0.0823,
+   "minutter_for": 18.1
+  },
+  "2026|Viking|Bodø/Glimt": {
+   "fixtureId": "id1000002067015102",
+   "start": "2026-04-11T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.01,
+    "U": 4.22,
+    "B": 2.18
+   },
+   "priced_at": "2026-04-11T15:40:24.475Z",
+   "result": "5-0",
+   "H": 0.323,
+   "U": 0.2284,
+   "B": 0.4486,
+   "minutter_for": 19.6
+  },
+  "2026|Rosenborg|Sarpsborg 08": {
+   "fixtureId": "id1000002067015104",
+   "start": "2026-04-12T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.29,
+    "U": 3.72,
+    "B": 3.11
+   },
+   "priced_at": "2026-04-12T12:09:01.876Z",
+   "result": "2-1",
+   "H": 0.427,
+   "U": 0.2603,
+   "B": 0.3127,
+   "minutter_for": 21.0
+  },
+  "2026|Fredrikstad|Vålerenga": {
+   "fixtureId": "id1000002067015106",
+   "start": "2026-04-12T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.74,
+    "U": 3.7,
+    "B": 2.55
+   },
+   "priced_at": "2026-04-12T14:36:36.792Z",
+   "result": "1-1",
+   "H": 0.3557,
+   "U": 0.2616,
+   "B": 0.3827,
+   "minutter_for": 23.4
+  },
+  "2026|Molde|HamKam": {
+   "fixtureId": "id1000002067015108",
+   "start": "2026-04-12T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.5,
+    "U": 4.82,
+    "B": 6.33
+   },
+   "priced_at": "2026-04-12T14:43:24.607Z",
+   "result": "4-1",
+   "H": 0.6534,
+   "U": 0.1978,
+   "B": 0.1488,
+   "minutter_for": 16.6
+  },
+  "2026|Aalesund|KFUM Oslo": {
+   "fixtureId": "id1000002067015110",
+   "start": "2026-04-12T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.69,
+    "U": 3.62,
+    "B": 2.64
+   },
+   "priced_at": "2026-04-12T14:43:50.666Z",
+   "result": "2-2",
+   "H": 0.3626,
+   "U": 0.2678,
+   "B": 0.3696,
+   "minutter_for": 16.2
+  },
+  "2026|Brann|Sandefjord": {
+   "fixtureId": "id1000002067015112",
+   "start": "2026-04-12T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.564,
+    "U": 4.61,
+    "B": 5.7
+   },
+   "priced_at": "2026-04-12T16:55:11.091Z",
+   "result": "0-1",
+   "H": 0.6265,
+   "U": 0.2073,
+   "B": 0.1662,
+   "minutter_for": 19.8
+  },
+  "2026|Tromsø|Lillestrøm": {
+   "fixtureId": "id1000002067015274",
+   "start": "2026-04-15T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.909,
+    "U": 3.87,
+    "B": 4.03
+   },
+   "priced_at": "2026-04-15T16:44:15.499Z",
+   "result": "0-0",
+   "H": 0.5124,
+   "U": 0.2489,
+   "B": 0.2387,
+   "minutter_for": 15.7
+  },
+  "2026|Bodø/Glimt|Aalesund": {
+   "fixtureId": "id1000002067015114",
+   "start": "2026-04-18T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.117,
+    "U": 10.52,
+    "B": 16.52
+   },
+   "priced_at": "2026-04-18T11:34:45.963Z",
+   "result": "3-0",
+   "H": 0.8716,
+   "U": 0.081,
+   "B": 0.0474,
+   "minutter_for": 25.2
+  },
+  "2026|Sandefjord|Rosenborg": {
+   "fixtureId": "id1000002067015116",
+   "start": "2026-04-18T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.1,
+    "U": 3.72,
+    "B": 3.53
+   },
+   "priced_at": "2026-04-18T13:40:26.760Z",
+   "result": "0-0",
+   "H": 0.4658,
+   "U": 0.2599,
+   "B": 0.2743,
+   "minutter_for": 19.6
+  },
+  "2026|Viking|Brann": {
+   "fixtureId": "id1000002067015118",
+   "start": "2026-04-18T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.775,
+    "U": 4.41,
+    "B": 4.16
+   },
+   "priced_at": "2026-04-18T15:40:26.539Z",
+   "result": "3-2",
+   "H": 0.5516,
+   "U": 0.2175,
+   "B": 0.231,
+   "minutter_for": 19.6
+  },
+  "2026|Vålerenga|Lillestrøm": {
+   "fixtureId": "id1000002067015120",
+   "start": "2026-04-19T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.61,
+    "U": 3.79,
+    "B": 2.63
+   },
+   "priced_at": "2026-04-19T12:02:08.057Z",
+   "result": "0-2",
+   "H": 0.3738,
+   "U": 0.2553,
+   "B": 0.3709,
+   "minutter_for": 27.9
+  },
+  "2026|HamKam|KFUM Oslo": {
+   "fixtureId": "id1000002067015122",
+   "start": "2026-04-19T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.9,
+    "U": 3.56,
+    "B": 2.49
+   },
+   "priced_at": "2026-04-19T14:32:50.506Z",
+   "result": "4-0",
+   "H": 0.3357,
+   "U": 0.2722,
+   "B": 0.3921,
+   "minutter_for": 27.2
+  },
+  "2026|Kristiansund|Fredrikstad": {
+   "fixtureId": "id1000002067015124",
+   "start": "2026-04-19T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.11,
+    "U": 3.71,
+    "B": 2.29
+   },
+   "priced_at": "2026-04-19T14:40:42.387Z",
+   "result": "2-0",
+   "H": 0.3124,
+   "U": 0.2608,
+   "B": 0.4268,
+   "minutter_for": 19.3
+  },
+  "2026|Sarpsborg 08|Tromsø": {
+   "fixtureId": "id1000002067015126",
+   "start": "2026-04-19T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.24,
+    "U": 3.61,
+    "B": 2.26
+   },
+   "priced_at": "2026-04-19T14:40:26.881Z",
+   "result": "0-1",
+   "H": 0.2995,
+   "U": 0.2681,
+   "B": 0.4324,
+   "minutter_for": 19.6
+  },
+  "2026|Start|Molde": {
+   "fixtureId": "id1000002067015128",
+   "start": "2026-04-19T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.76,
+    "U": 3.77,
+    "B": 2.009
+   },
+   "priced_at": "2026-04-19T16:59:50.016Z",
+   "result": "1-1",
+   "H": 0.2569,
+   "U": 0.2562,
+   "B": 0.487,
+   "minutter_for": 15.2
+  },
+  "2026|Fredrikstad|Viking": {
+   "fixtureId": "id1000002067015130",
+   "start": "2026-04-25T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.17,
+    "U": 4.43,
+    "B": 1.632
+   },
+   "priced_at": "2026-04-25T13:33:44.481Z",
+   "result": "1-2",
+   "H": 0.184,
+   "U": 0.216,
+   "B": 0.6,
+   "minutter_for": 26.3
+  },
+  "2026|Rosenborg|Brann": {
+   "fixtureId": "id1000002067015132",
+   "start": "2026-04-25T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.56,
+    "U": 3.83,
+    "B": 2.66
+   },
+   "priced_at": "2026-04-25T15:32:20.729Z",
+   "result": "1-1",
+   "H": 0.3811,
+   "U": 0.2524,
+   "B": 0.3665,
+   "minutter_for": 27.7
+  },
+  "2026|Molde|Vålerenga": {
+   "fixtureId": "id1000002067015134",
+   "start": "2026-04-26T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.08,
+    "U": 3.82,
+    "B": 3.5
+   },
+   "priced_at": "2026-04-26T12:14:51.071Z",
+   "result": "5-1",
+   "H": 0.4704,
+   "U": 0.2529,
+   "B": 0.2767,
+   "minutter_for": 15.1
+  },
+  "2026|HamKam|Start": {
+   "fixtureId": "id1000002067015136",
+   "start": "2026-04-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.99,
+    "U": 3.75,
+    "B": 3.85
+   },
+   "priced_at": "2026-04-26T14:40:27.047Z",
+   "result": "2-1",
+   "H": 0.4917,
+   "U": 0.2576,
+   "B": 0.2507,
+   "minutter_for": 19.5
+  },
+  "2026|KFUM Oslo|Sarpsborg 08": {
+   "fixtureId": "id1000002067015138",
+   "start": "2026-04-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.32,
+    "U": 3.74,
+    "B": 3.04
+   },
+   "priced_at": "2026-04-26T14:44:44.732Z",
+   "result": "1-0",
+   "H": 0.4213,
+   "U": 0.2588,
+   "B": 0.3199,
+   "minutter_for": 15.3
+  },
+  "2026|Tromsø|Sandefjord": {
+   "fixtureId": "id1000002067015140",
+   "start": "2026-04-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.621,
+    "U": 4.19,
+    "B": 5.71
+   },
+   "priced_at": "2026-04-26T14:39:43.745Z",
+   "result": "3-1",
+   "H": 0.6046,
+   "U": 0.2292,
+   "B": 0.1662,
+   "minutter_for": 20.3
+  },
+  "2026|Aalesund|Kristiansund": {
+   "fixtureId": "id1000002067015142",
+   "start": "2026-04-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.826,
+    "U": 4.31,
+    "B": 4.0
+   },
+   "priced_at": "2026-04-26T14:40:27.518Z",
+   "result": "1-1",
+   "H": 0.5363,
+   "U": 0.2229,
+   "B": 0.2408,
+   "minutter_for": 19.5
+  },
+  "2026|Lillestrøm|Bodø/Glimt": {
+   "fixtureId": "id1000002067015144",
+   "start": "2026-04-26T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.52,
+    "U": 4.48,
+    "B": 1.917
+   },
+   "priced_at": "2026-04-26T16:59:58.983Z",
+   "result": "0-2",
+   "H": 0.2749,
+   "U": 0.2144,
+   "B": 0.5107,
+   "minutter_for": 15.0
+  },
+  "2026|Tromsø|Brann": {
+   "fixtureId": "id1000002067015306",
+   "start": "2026-04-29T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.029,
+    "U": 3.73,
+    "B": 3.74
+   },
+   "priced_at": "2026-04-29T16:44:23.085Z",
+   "result": "0-5",
+   "H": 0.4824,
+   "U": 0.2592,
+   "B": 0.2585,
+   "minutter_for": 15.6
+  },
+  "2026|Bodø/Glimt|Start": {
+   "fixtureId": "id1000002067015322",
+   "start": "2026-04-30T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.112,
+    "U": 10.7,
+    "B": 19.55
+   },
+   "priced_at": "2026-04-30T16:40:25.896Z",
+   "result": "5-0",
+   "H": 0.8787,
+   "U": 0.0813,
+   "B": 0.04,
+   "minutter_for": 19.6
+  },
+  "2026|Viking|Rosenborg": {
+   "fixtureId": "id1000002067015146",
+   "start": "2026-05-01T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.416,
+    "U": 5.23,
+    "B": 7.4
+   },
+   "priced_at": "2026-05-01T15:41:38.767Z",
+   "result": "3-0",
+   "H": 0.6925,
+   "U": 0.1815,
+   "B": 0.126,
+   "minutter_for": 18.4
+  },
+  "2026|Brann|Fredrikstad": {
+   "fixtureId": "id1000002067015148",
+   "start": "2026-05-02T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.458,
+    "U": 4.97,
+    "B": 6.9
+   },
+   "priced_at": "2026-05-02T15:41:52.439Z",
+   "result": "3-1",
+   "H": 0.6725,
+   "U": 0.1916,
+   "B": 0.1359,
+   "minutter_for": 18.1
+  },
+  "2026|Lillestrøm|Sarpsborg 08": {
+   "fixtureId": "id1000002067015150",
+   "start": "2026-05-03T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.819,
+    "U": 4.39,
+    "B": 3.95
+   },
+   "priced_at": "2026-05-03T12:00:36.986Z",
+   "result": "4-0",
+   "H": 0.538,
+   "U": 0.2184,
+   "B": 0.2436,
+   "minutter_for": 29.4
+  },
+  "2026|Sandefjord|Aalesund": {
+   "fixtureId": "id1000002067015154",
+   "start": "2026-05-03T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.892,
+    "U": 4.059,
+    "B": 3.94
+   },
+   "priced_at": "2026-05-03T14:40:26.111Z",
+   "result": "1-0",
+   "H": 0.5177,
+   "U": 0.2375,
+   "B": 0.2449,
+   "minutter_for": 19.6
+  },
+  "2026|Start|Tromsø": {
+   "fixtureId": "id1000002067015156",
+   "start": "2026-05-03T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.63,
+    "U": 3.84,
+    "B": 1.806
+   },
+   "priced_at": "2026-05-03T14:43:56.759Z",
+   "result": "1-1",
+   "H": 0.2069,
+   "U": 0.251,
+   "B": 0.5421,
+   "minutter_for": 16.1
+  },
+  "2026|Kristiansund|HamKam": {
+   "fixtureId": "id1000002067997588",
+   "start": "2026-05-03T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.61,
+    "U": 3.64,
+    "B": 2.71
+   },
+   "priced_at": "2026-05-03T14:40:45.921Z",
+   "result": "1-1",
+   "H": 0.3739,
+   "U": 0.2662,
+   "B": 0.3599,
+   "minutter_for": 19.2
+  },
+  "2026|Vålerenga|KFUM Oslo": {
+   "fixtureId": "id1000002067015158",
+   "start": "2026-05-03T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.06,
+    "U": 3.81,
+    "B": 3.56
+   },
+   "priced_at": "2026-05-03T16:59:47.564Z",
+   "result": "2-2",
+   "H": 0.4748,
+   "U": 0.2534,
+   "B": 0.2717,
+   "minutter_for": 15.2
+  },
+  "2026|Bodø/Glimt|Molde": {
+   "fixtureId": "id1000002067015160",
+   "start": "2026-05-04T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.35,
+    "U": 6.47,
+    "B": 7.3
+   },
+   "priced_at": "2026-05-04T16:40:34.421Z",
+   "result": "0-1",
+   "H": 0.7268,
+   "U": 0.1453,
+   "B": 0.1279,
+   "minutter_for": 19.4
+  },
+  "2026|HamKam|Vålerenga": {
+   "fixtureId": "id1000002067015162",
+   "start": "2026-05-08T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.21,
+    "U": 3.68,
+    "B": 2.25
+   },
+   "priced_at": "2026-05-08T16:41:32.253Z",
+   "result": "1-0",
+   "H": 0.3025,
+   "U": 0.263,
+   "B": 0.4345,
+   "minutter_for": 18.5
+  },
+  "2026|Sarpsborg 08|Fredrikstad": {
+   "fixtureId": "id1000002067015164",
+   "start": "2026-05-09T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.97,
+    "U": 3.83,
+    "B": 3.82
+   },
+   "priced_at": "2026-05-09T11:42:15.767Z",
+   "result": "2-1",
+   "H": 0.4962,
+   "U": 0.2516,
+   "B": 0.2522,
+   "minutter_for": 17.7
+  },
+  "2026|Rosenborg|Lillestrøm": {
+   "fixtureId": "id1000002067015166",
+   "start": "2026-05-10T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.68,
+    "U": 3.59,
+    "B": 2.66
+   },
+   "priced_at": "2026-05-10T12:01:04.368Z",
+   "result": "2-0",
+   "H": 0.3637,
+   "U": 0.2698,
+   "B": 0.3665,
+   "minutter_for": 28.9
+  },
+  "2026|KFUM Oslo|Viking": {
+   "fixtureId": "id1000002067015168",
+   "start": "2026-05-10T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.43,
+    "U": 4.31,
+    "B": 1.746
+   },
+   "priced_at": "2026-05-10T14:42:20.957Z",
+   "result": "0-2",
+   "H": 0.2165,
+   "U": 0.2227,
+   "B": 0.5609,
+   "minutter_for": 17.7
+  },
+  "2026|Sandefjord|Kristiansund": {
+   "fixtureId": "id1000002067015170",
+   "start": "2026-05-10T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.657,
+    "U": 4.42,
+    "B": 4.98
+   },
+   "priced_at": "2026-05-10T14:43:18.215Z",
+   "result": "2-0",
+   "H": 0.5914,
+   "U": 0.2169,
+   "B": 0.1917,
+   "minutter_for": 16.7
+  },
+  "2026|Tromsø|Molde": {
+   "fixtureId": "id1000002067015174",
+   "start": "2026-05-10T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.952,
+    "U": 3.69,
+    "B": 4.07
+   },
+   "priced_at": "2026-05-10T14:39:42.428Z",
+   "result": "2-0",
+   "H": 0.5014,
+   "U": 0.2618,
+   "B": 0.2367,
+   "minutter_for": 20.3
+  },
+  "2026|Brann|KFUM Oslo": {
+   "fixtureId": "id1000002067015178",
+   "start": "2026-05-16T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.621,
+    "U": 4.49,
+    "B": 5.22
+   },
+   "priced_at": "2026-05-16T11:35:30.447Z",
+   "result": "2-1",
+   "H": 0.6044,
+   "U": 0.2132,
+   "B": 0.1824,
+   "minutter_for": 24.5
+  },
+  "2026|Fredrikstad|HamKam": {
+   "fixtureId": "id1000002067015180",
+   "start": "2026-05-16T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.0,
+    "U": 3.56,
+    "B": 4.01
+   },
+   "priced_at": "2026-05-16T13:44:17.028Z",
+   "result": "2-1",
+   "H": 0.4887,
+   "U": 0.2713,
+   "B": 0.24,
+   "minutter_for": 15.7
+  },
+  "2026|Lillestrøm|Sandefjord": {
+   "fixtureId": "id1000002067015182",
+   "start": "2026-05-16T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.854,
+    "U": 3.73,
+    "B": 4.47
+   },
+   "priced_at": "2026-05-16T13:43:45.902Z",
+   "result": "3-1",
+   "H": 0.5275,
+   "U": 0.2583,
+   "B": 0.2142,
+   "minutter_for": 16.2
+  },
+  "2026|Molde|Kristiansund": {
+   "fixtureId": "id1000002067015184",
+   "start": "2026-05-16T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.418,
+    "U": 5.37,
+    "B": 7.11
+   },
+   "priced_at": "2026-05-16T13:40:26.018Z",
+   "result": "1-0",
+   "H": 0.6917,
+   "U": 0.1767,
+   "B": 0.1316,
+   "minutter_for": 19.6
+  },
+  "2026|Rosenborg|Aalesund": {
+   "fixtureId": "id1000002067015186",
+   "start": "2026-05-16T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.617,
+    "U": 4.49,
+    "B": 5.28
+   },
+   "priced_at": "2026-05-16T13:40:10.863Z",
+   "result": "2-3",
+   "H": 0.6062,
+   "U": 0.2134,
+   "B": 0.1804,
+   "minutter_for": 19.8
+  },
+  "2026|Viking|Start": {
+   "fixtureId": "id1000002067015188",
+   "start": "2026-05-16T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.186,
+    "U": 8.05,
+    "B": 14.46
+   },
+   "priced_at": "2026-05-16T13:34:11.421Z",
+   "result": "6-3",
+   "H": 0.8265,
+   "U": 0.1139,
+   "B": 0.0596,
+   "minutter_for": 25.8
+  },
+  "2026|Bodø/Glimt|Tromsø": {
+   "fixtureId": "id1000002067015190",
+   "start": "2026-05-16T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.38,
+    "U": 5.59,
+    "B": 7.77
+   },
+   "priced_at": "2026-05-16T15:42:52.373Z",
+   "result": "5-0",
+   "H": 0.7109,
+   "U": 0.1694,
+   "B": 0.1197,
+   "minutter_for": 17.1
+  },
+  "2026|Vålerenga|Sarpsborg 08": {
+   "fixtureId": "id1000002067015192",
+   "start": "2026-05-16T18:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.909,
+    "U": 4.19,
+    "B": 3.76
+   },
+   "priced_at": "2026-05-16T17:44:56.525Z",
+   "result": "3-2",
+   "H": 0.5131,
+   "U": 0.2299,
+   "B": 0.257,
+   "minutter_for": 15.1
+  },
+  "2026|Start|Bodø/Glimt": {
+   "fixtureId": "id1000002071183230",
+   "start": "2026-05-20T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 8.86,
+    "U": 6.44,
+    "B": 1.298
+   },
+   "priced_at": "2026-05-20T15:32:13.379Z",
+   "result": "1-4",
+   "H": 0.1023,
+   "U": 0.1442,
+   "B": 0.7536,
+   "minutter_for": 27.8
+  },
+  "2026|Lillestrøm|Kristiansund": {
+   "fixtureId": "id1000002070302534",
+   "start": "2026-05-20T17:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.406,
+    "U": 4.75,
+    "B": 7.72
+   },
+   "priced_at": "2026-05-20T17:10:06.468Z",
+   "result": "1-2",
+   "H": 0.6896,
+   "U": 0.1951,
+   "B": 0.1153,
+   "minutter_for": 19.9
+  },
+  "2026|Aalesund|Brann": {
+   "fixtureId": "id1000002071197546",
+   "start": "2026-05-20T18:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.48,
+    "U": 3.98,
+    "B": 2.04
+   },
+   "priced_at": "2026-05-20T17:42:42.955Z",
+   "result": "2-1",
+   "H": 0.2781,
+   "U": 0.2423,
+   "B": 0.4795,
+   "minutter_for": 17.3
+  },
+  "2026|Bodø/Glimt|Brann": {
+   "fixtureId": "id1000002067015194",
+   "start": "2026-05-24T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.286,
+    "U": 7.07,
+    "B": 8.36
+   },
+   "priced_at": "2026-05-24T13:40:50.258Z",
+   "result": "3-1",
+   "H": 0.7606,
+   "U": 0.1305,
+   "B": 0.1089,
+   "minutter_for": 19.2
+  },
+  "2026|Kristiansund|Viking": {
+   "fixtureId": "id1000002067015200",
+   "start": "2026-05-24T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.61,
+    "U": 4.76,
+    "B": 1.555
+   },
+   "priced_at": "2026-05-24T15:44:57.070Z",
+   "result": "1-2",
+   "H": 0.1691,
+   "U": 0.2006,
+   "B": 0.6303,
+   "minutter_for": 15.0
+  },
+  "2026|Start|Vålerenga": {
+   "fixtureId": "id1000002067015206",
+   "start": "2026-05-25T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.12,
+    "U": 3.9,
+    "B": 2.22
+   },
+   "priced_at": "2026-05-25T12:14:20.812Z",
+   "result": "2-0",
+   "H": 0.3115,
+   "U": 0.2479,
+   "B": 0.4406,
+   "minutter_for": 15.7
+  },
+  "2026|HamKam|Lillestrøm": {
+   "fixtureId": "id1000002067015196",
+   "start": "2026-05-25T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.47,
+    "U": 3.84,
+    "B": 2.08
+   },
+   "priced_at": "2026-05-25T14:43:36.365Z",
+   "result": "2-0",
+   "H": 0.2788,
+   "U": 0.2512,
+   "B": 0.47,
+   "minutter_for": 16.4
+  },
+  "2026|KFUM Oslo|Rosenborg": {
+   "fixtureId": "id1000002067015198",
+   "start": "2026-05-25T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.26,
+    "U": 3.66,
+    "B": 3.21
+   },
+   "priced_at": "2026-05-25T14:32:12.594Z",
+   "result": "2-0",
+   "H": 0.4327,
+   "U": 0.2646,
+   "B": 0.3027,
+   "minutter_for": 27.8
+  },
+  "2026|Sarpsborg 08|Molde": {
+   "fixtureId": "id1000002067015204",
+   "start": "2026-05-25T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.64,
+    "U": 3.87,
+    "B": 2.56
+   },
+   "priced_at": "2026-05-25T14:44:33.801Z",
+   "result": "2-1",
+   "H": 0.3693,
+   "U": 0.2497,
+   "B": 0.381,
+   "minutter_for": 15.4
+  },
+  "2026|Tromsø|Aalesund": {
+   "fixtureId": "id1000002067015208",
+   "start": "2026-05-25T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.495,
+    "U": 4.72,
+    "B": 6.63
+   },
+   "priced_at": "2026-05-25T14:44:56.383Z",
+   "result": "1-1",
+   "H": 0.6558,
+   "U": 0.2023,
+   "B": 0.1418,
+   "minutter_for": 15.1
+  },
+  "2026|Sandefjord|Fredrikstad": {
+   "fixtureId": "id1000002067015202",
+   "start": "2026-05-25T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.21,
+    "U": 3.72,
+    "B": 3.27
+   },
+   "priced_at": "2026-05-25T16:54:09.507Z",
+   "result": "1-1",
+   "H": 0.4427,
+   "U": 0.2603,
+   "B": 0.297,
+   "minutter_for": 20.8
+  },
+  "2026|Brann|Sarpsborg 08": {
+   "fixtureId": "id1000002071183234",
+   "start": "2026-05-31T17:15",
+   "bookmaker": null,
+   "odds": null,
+   "priced_at": null,
+   "result": "1-2",
+   "uten_sluttodds": true
+  },
+  "2026|Fredrikstad|Start": {
+   "fixtureId": "id1000002067015212",
+   "start": "2026-05-29T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.917,
+    "U": 3.92,
+    "B": 3.95
+   },
+   "priced_at": "2026-05-29T16:44:33.249Z",
+   "result": "2-1",
+   "H": 0.5104,
+   "U": 0.2458,
+   "B": 0.2439,
+   "minutter_for": 15.4
+  },
+  "2026|KFUM Oslo|Tromsø": {
+   "fixtureId": "id1000002067015214",
+   "start": "2026-05-29T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.97,
+    "U": 3.31,
+    "B": 2.57
+   },
+   "priced_at": "2026-05-29T16:43:03.356Z",
+   "result": "0-0",
+   "H": 0.3274,
+   "U": 0.2931,
+   "B": 0.3795,
+   "minutter_for": 16.9
+  },
+  "2026|Rosenborg|Bodø/Glimt": {
+   "fixtureId": "id1000002067015220",
+   "start": "2026-05-29T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.05,
+    "U": 4.73,
+    "B": 1.606
+   },
+   "priced_at": "2026-05-29T16:44:44.552Z",
+   "result": "2-2",
+   "H": 0.1885,
+   "U": 0.2018,
+   "B": 0.6098,
+   "minutter_for": 15.3
+  },
+  "2026|Vålerenga|Kristiansund": {
+   "fixtureId": "id1000002067015222",
+   "start": "2026-05-29T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.595,
+    "U": 4.6,
+    "B": 5.33
+   },
+   "priced_at": "2026-05-29T16:40:11.333Z",
+   "result": "3-1",
+   "H": 0.6141,
+   "U": 0.2077,
+   "B": 0.1782,
+   "minutter_for": 19.8
+  },
+  "2026|Aalesund|HamKam": {
+   "fixtureId": "id1000002067015224",
+   "start": "2026-05-29T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.1,
+    "U": 3.84,
+    "B": 3.43
+   },
+   "priced_at": "2026-05-29T16:43:47.334Z",
+   "result": "2-2",
+   "H": 0.4659,
+   "U": 0.2516,
+   "B": 0.2825,
+   "minutter_for": 16.2
+  },
+  "2026|Lillestrøm|Viking": {
+   "fixtureId": "id1000002071680720",
+   "start": "2026-07-22T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.48,
+    "U": 3.97,
+    "B": 2.04
+   },
+   "priced_at": "2026-07-22T16:44:30.697Z",
+   "result": "1-2",
+   "H": 0.2779,
+   "U": 0.2427,
+   "B": 0.4793,
+   "minutter_for": 15.5
+  },
+  "2026|Molde|Sandefjord": {
+   "fixtureId": "id1000002067015218",
+   "start": "2026-05-30T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.645,
+    "U": 4.42,
+    "B": 5.09
+   },
+   "priced_at": "2026-05-30T13:38:53.781Z",
+   "result": "2-1",
+   "H": 0.5957,
+   "U": 0.2169,
+   "B": 0.1874,
+   "minutter_for": 21.1
+  },
+  "2026|Fredrikstad|Lillestrøm": {
+   "fixtureId": "id1000002067015244",
+   "start": "2026-07-11T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.18,
+    "U": 3.68,
+    "B": 2.26
+   },
+   "priced_at": "2026-07-11T11:41:16.169Z",
+   "result": "0-2",
+   "H": 0.3051,
+   "U": 0.2627,
+   "B": 0.4322,
+   "minutter_for": 18.7
+  },
+  "2026|Aalesund|Molde": {
+   "fixtureId": "id1000002067015256",
+   "start": "2026-07-11T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.44,
+    "U": 3.95,
+    "B": 2.06
+   },
+   "priced_at": "2026-07-11T13:31:25.918Z",
+   "result": "2-2",
+   "H": 0.2813,
+   "U": 0.2441,
+   "B": 0.4746,
+   "minutter_for": 28.6
+  },
+  "2026|Tromsø|Vålerenga": {
+   "fixtureId": "id1000002067015254",
+   "start": "2026-07-11T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.763,
+    "U": 3.86,
+    "B": 4.92
+   },
+   "priced_at": "2026-07-11T15:37:18.373Z",
+   "result": "4-0",
+   "H": 0.5557,
+   "U": 0.2498,
+   "B": 0.1944,
+   "minutter_for": 22.7
+  },
+  "2026|KFUM Oslo|Bodø/Glimt": {
+   "fixtureId": "id1000002067015246",
+   "start": "2026-07-12T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.7,
+    "U": 4.76,
+    "B": 1.546
+   },
+   "priced_at": "2026-07-12T12:14:03.947Z",
+   "result": "0-2",
+   "H": 0.166,
+   "U": 0.2004,
+   "B": 0.6336,
+   "minutter_for": 15.9
+  },
+  "2026|Brann|Start": {
+   "fixtureId": "id1000002067015242",
+   "start": "2026-07-12T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.429,
+    "U": 5.12,
+    "B": 7.3
+   },
+   "priced_at": "2026-07-12T14:42:17.582Z",
+   "result": "2-1",
+   "H": 0.6863,
+   "U": 0.1858,
+   "B": 0.128,
+   "minutter_for": 17.7
+  },
+  "2026|Rosenborg|Kristiansund": {
+   "fixtureId": "id1000002067015248",
+   "start": "2026-07-12T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.595,
+    "U": 4.46,
+    "B": 5.57
+   },
+   "priced_at": "2026-07-12T14:43:20.101Z",
+   "result": "3-0",
+   "H": 0.6146,
+   "U": 0.2149,
+   "B": 0.1705,
+   "minutter_for": 16.7
+  },
+  "2026|Sandefjord|HamKam": {
+   "fixtureId": "id1000002067015250",
+   "start": "2026-07-12T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.04,
+    "U": 3.74,
+    "B": 3.7
+   },
+   "priced_at": "2026-07-12T14:44:12.248Z",
+   "result": "2-2",
+   "H": 0.4799,
+   "U": 0.2586,
+   "B": 0.2615,
+   "minutter_for": 15.8
+  },
+  "2026|Sarpsborg 08|Viking": {
+   "fixtureId": "id1000002067015252",
+   "start": "2026-07-12T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.97,
+    "U": 4.8,
+    "B": 1.609
+   },
+   "priced_at": "2026-07-12T16:57:57.816Z",
+   "result": "1-0",
+   "H": 0.1919,
+   "U": 0.199,
+   "B": 0.609,
+   "minutter_for": 17.0
+  },
+  "2026|Vålerenga|Aalesund": {
+   "fixtureId": "id1000002067015272",
+   "start": "2026-07-16T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.666,
+    "U": 4.61,
+    "B": 4.67
+   },
+   "priced_at": "2026-07-16T16:43:54.106Z",
+   "result": "6-1",
+   "H": 0.5878,
+   "U": 0.2075,
+   "B": 0.2047,
+   "minutter_for": 16.1
+  },
+  "2026|Bodø/Glimt|Fredrikstad": {
+   "fixtureId": "id1000002067015258",
+   "start": "2026-07-17T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.125,
+    "U": 10.03,
+    "B": 17.75
+   },
+   "priced_at": "2026-07-17T16:53:55.701Z",
+   "result": "1-0",
+   "H": 0.868,
+   "U": 0.0872,
+   "B": 0.0448,
+   "minutter_for": 21.1
+  },
+  "2026|HamKam|Tromsø": {
+   "fixtureId": "id1000002067015260",
+   "start": "2026-07-18T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.28,
+    "U": 3.48,
+    "B": 1.97
+   },
+   "priced_at": "2026-07-18T11:43:26.366Z",
+   "result": "1-4",
+   "H": 0.2249,
+   "U": 0.2782,
+   "B": 0.4969,
+   "minutter_for": 16.6
+  },
+  "2026|Kristiansund|Sarpsborg 08": {
+   "fixtureId": "id1000002067015262",
+   "start": "2026-07-18T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.01,
+    "U": 3.8,
+    "B": 2.31
+   },
+   "priced_at": "2026-07-18T13:42:05.441Z",
+   "result": "0-0",
+   "H": 0.3229,
+   "U": 0.2543,
+   "B": 0.4228,
+   "minutter_for": 17.9
+  },
+  "2026|Lillestrøm|KFUM Oslo": {
+   "fixtureId": "id1000002067015264",
+   "start": "2026-07-18T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.625,
+    "U": 4.33,
+    "B": 5.24
+   },
+   "priced_at": "2026-07-18T13:43:58.485Z",
+   "result": "2-1",
+   "H": 0.6005,
+   "U": 0.2196,
+   "B": 0.1799,
+   "minutter_for": 16.0
+  },
+  "2026|Start|Rosenborg": {
+   "fixtureId": "id1000002067015268",
+   "start": "2026-07-18T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.24,
+    "U": 3.53,
+    "B": 2.3
+   },
+   "priced_at": "2026-07-18T13:31:57.883Z",
+   "result": "0-3",
+   "H": 0.3,
+   "U": 0.2748,
+   "B": 0.4253,
+   "minutter_for": 28.0
+  },
+  "2026|Molde|Brann": {
+   "fixtureId": "id1000002067015266",
+   "start": "2026-07-18T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.19,
+    "U": 4.16,
+    "B": 3.02
+   },
+   "priced_at": "2026-07-18T15:40:26.615Z",
+   "result": "1-2",
+   "H": 0.4465,
+   "U": 0.2317,
+   "B": 0.3218,
+   "minutter_for": 19.6
+  },
+  "2026|Viking|Sandefjord": {
+   "fixtureId": "id1000002067015270",
+   "start": "2026-07-18T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.292,
+    "U": 6.26,
+    "B": 9.56
+   },
+   "priced_at": "2026-07-18T15:37:08.654Z",
+   "result": "2-1",
+   "H": 0.7572,
+   "U": 0.1486,
+   "B": 0.0942,
+   "minutter_for": 22.9
+  },
+  "2026|Bodø/Glimt|HamKam": {
+   "fixtureId": "id1000002071183292",
+   "start": "2026-07-22T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.089,
+    "U": 12.46,
+    "B": 20.55
+   },
+   "priced_at": "2026-07-22T16:41:59.537Z",
+   "result": "3-0",
+   "H": 0.896,
+   "U": 0.0673,
+   "B": 0.0367,
+   "minutter_for": 18.0
+  },
+  "2026|Kristiansund|Start": {
+   "fixtureId": "id1000002067015280",
+   "start": "2026-07-25T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.28,
+    "U": 3.65,
+    "B": 3.16
+   },
+   "priced_at": "2026-07-25T13:40:26.044Z",
+   "result": "1-2",
+   "H": 0.4282,
+   "U": 0.2648,
+   "B": 0.307,
+   "minutter_for": 19.6
+  },
+  "2026|Brann|Vålerenga": {
+   "fixtureId": "id1000002067015276",
+   "start": "2026-07-26T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.689,
+    "U": 4.55,
+    "B": 4.57
+   },
+   "priced_at": "2026-07-26T12:10:40.853Z",
+   "result": "2-3",
+   "H": 0.58,
+   "U": 0.2105,
+   "B": 0.2095,
+   "minutter_for": 19.3
+  },
+  "2026|KFUM Oslo|Molde": {
+   "fixtureId": "id1000002067015278",
+   "start": "2026-07-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.22,
+    "U": 3.87,
+    "B": 2.18
+   },
+   "priced_at": "2026-07-26T14:40:26.481Z",
+   "result": "2-4",
+   "H": 0.3016,
+   "U": 0.2498,
+   "B": 0.4487,
+   "minutter_for": 19.6
+  },
+  "2026|Sandefjord|Bodø/Glimt": {
+   "fixtureId": "id1000002067015284",
+   "start": "2026-07-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 8.01,
+    "U": 6.04,
+    "B": 1.348
+   },
+   "priced_at": "2026-07-26T14:36:22.941Z",
+   "result": "0-3",
+   "H": 0.1159,
+   "U": 0.1562,
+   "B": 0.7279,
+   "minutter_for": 23.6
+  },
+  "2026|Sarpsborg 08|HamKam": {
+   "fixtureId": "id1000002067015286",
+   "start": "2026-07-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.699,
+    "U": 4.24,
+    "B": 4.84
+   },
+   "priced_at": "2026-07-26T14:40:24.250Z",
+   "result": "1-0",
+   "H": 0.5764,
+   "U": 0.2263,
+   "B": 0.1973,
+   "minutter_for": 19.6
+  },
+  "2026|Aalesund|Viking": {
+   "fixtureId": "id1000002067015288",
+   "start": "2026-07-26T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.32,
+    "U": 4.89,
+    "B": 1.564
+   },
+   "priced_at": "2026-07-26T16:59:01.238Z",
+   "result": "1-1",
+   "H": 0.1786,
+   "U": 0.195,
+   "B": 0.6265,
+   "minutter_for": 16.0
+  },
+  "2026|Rosenborg|Fredrikstad": {
+   "fixtureId": "id1000002067015282",
+   "start": "2026-07-27T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.549,
+    "U": 4.48,
+    "B": 6.13
+   },
+   "priced_at": "2026-07-27T16:43:55.857Z",
+   "result": "4-0",
+   "H": 0.6326,
+   "U": 0.2135,
+   "B": 0.1539,
+   "minutter_for": 16.1
+  },
+  "2026|Vålerenga|HamKam": {
+   "fixtureId": "id1000002067015302",
+   "start": "2026-07-31T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.602,
+    "U": 4.46,
+    "B": 5.48
+   },
+   "priced_at": "2026-07-31T16:42:01.834Z",
+   "result": "0-3",
+   "H": 0.6118,
+   "U": 0.2148,
+   "B": 0.1734,
+   "minutter_for": 18.0
+  },
+  "2026|Bodø/Glimt|Lillestrøm": {
+   "fixtureId": "id1000002067015290",
+   "start": "2026-07-31T19:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.211,
+    "U": 7.69,
+    "B": 12.29
+   },
+   "priced_at": "2026-07-31T18:40:24.327Z",
+   "result": "4-0",
+   "H": 0.809,
+   "U": 0.1195,
+   "B": 0.0715,
+   "minutter_for": 19.6
+  },
+  "2026|Fredrikstad|Sandefjord": {
+   "fixtureId": "id1000002067015294",
+   "start": "2026-08-01T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.37,
+    "U": 3.53,
+    "B": 3.11
+   },
+   "priced_at": "2026-08-01T13:44:44.776Z",
+   "result": "1-0",
+   "H": 0.4125,
+   "U": 0.2748,
+   "B": 0.3128,
+   "minutter_for": 15.3
+  },
+  "2026|Start|Viking": {
+   "fixtureId": "id1000002067015300",
+   "start": "2026-08-01T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.76,
+    "U": 4.86,
+    "B": 1.531
+   },
+   "priced_at": "2026-08-01T15:44:50.443Z",
+   "result": "0-3",
+   "H": 0.1641,
+   "U": 0.196,
+   "B": 0.6398,
+   "minutter_for": 15.2
+  },
+  "2026|KFUM Oslo|Kristiansund": {
+   "fixtureId": "id1000002067015296",
+   "start": "2026-08-02T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.8,
+    "U": 3.93,
+    "B": 4.54
+   },
+   "priced_at": "2026-08-02T14:41:25.751Z",
+   "result": "2-1",
+   "H": 0.5439,
+   "U": 0.245,
+   "B": 0.2111,
+   "minutter_for": 18.6
+  },
+  "2026|Molde|Sarpsborg 08": {
+   "fixtureId": "id1000002067015298",
+   "start": "2026-08-02T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.621,
+    "U": 4.36,
+    "B": 5.4
+   },
+   "priced_at": "2026-08-02T14:42:04.667Z",
+   "result": "3-3",
+   "H": 0.6043,
+   "U": 0.2198,
+   "B": 0.1759,
+   "minutter_for": 17.9
+  },
+  "2026|Aalesund|Tromsø": {
+   "fixtureId": "id1000002067015304",
+   "start": "2026-08-02T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.78,
+    "U": 3.93,
+    "B": 1.961
+   },
+   "priced_at": "2026-08-02T14:44:02.114Z",
+   "result": "2-6",
+   "H": 0.2555,
+   "U": 0.2454,
+   "B": 0.4991,
+   "minutter_for": 16.0
+  },
+  "2026|Brann|Rosenborg": {
+   "fixtureId": "id1000002067015292",
+   "start": "2026-08-02T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.05,
+    "U": 3.9,
+    "B": 3.52
+   },
+   "priced_at": "2026-08-02T16:58:37.432Z",
+   "result": "3-2",
+   "H": 0.4774,
+   "U": 0.2476,
+   "B": 0.2751,
+   "minutter_for": 16.4
+  },
+  "2026|Sandefjord|KFUM Oslo": {
+   "fixtureId": "id1000002067015314",
+   "start": "2026-08-07T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.28,
+    "U": 3.7,
+    "B": 3.14
+   },
+   "priced_at": "2026-08-07T16:42:56.363Z",
+   "result": "0-1",
+   "H": 0.4288,
+   "U": 0.2616,
+   "B": 0.3095,
+   "minutter_for": 17.1
+  },
+  "2026|Vålerenga|Bodø/Glimt": {
+   "fixtureId": "id1000002067015320",
+   "start": "2026-08-08T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.76,
+    "U": 5.21,
+    "B": 1.5
+   },
+   "priced_at": "2026-08-08T11:43:56.455Z",
+   "result": "1-2",
+   "H": 0.1642,
+   "U": 0.1824,
+   "B": 0.6534,
+   "minutter_for": 16.1
+  },
+  "2026|Viking|Sarpsborg 08": {
+   "fixtureId": "id1000002067015318",
+   "start": "2026-08-08T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.389,
+    "U": 5.77,
+    "B": 7.21
+   },
+   "priced_at": "2026-08-08T13:43:57.132Z",
+   "result": "2-1",
+   "H": 0.7063,
+   "U": 0.164,
+   "B": 0.1297,
+   "minutter_for": 16.0
+  },
+  "2026|Start|Fredrikstad": {
+   "fixtureId": "id1000002067015316",
+   "start": "2026-08-08T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.04,
+    "U": 3.61,
+    "B": 3.83
+   },
+   "priced_at": "2026-08-08T15:40:27.290Z",
+   "result": "0-1",
+   "H": 0.4797,
+   "U": 0.268,
+   "B": 0.2522,
+   "minutter_for": 19.5
+  },
+  "2026|Lillestrøm|Rosenborg": {
+   "fixtureId": "id1000002067015312",
+   "start": "2026-08-09T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.57,
+    "U": 3.73,
+    "B": 2.7
+   },
+   "priced_at": "2026-08-09T12:03:59.081Z",
+   "result": "0-2",
+   "H": 0.3796,
+   "U": 0.2594,
+   "B": 0.361,
+   "minutter_for": 26.0
+  },
+  "2026|HamKam|Aalesund": {
+   "fixtureId": "id1000002067015308",
+   "start": "2026-08-09T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.11,
+    "U": 4.0,
+    "B": 3.29
+   },
+   "priced_at": "2026-08-09T14:30:11.475Z",
+   "result": "1-1",
+   "H": 0.4637,
+   "U": 0.2413,
+   "B": 0.2949,
+   "minutter_for": 29.8
+  },
+  "2026|Kristiansund|Molde": {
+   "fixtureId": "id1000002067015310",
+   "start": "2026-08-09T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.04,
+    "U": 4.21,
+    "B": 1.68
+   },
+   "priced_at": "2026-08-09T16:59:34.106Z",
+   "result": "2-1",
+   "H": 0.1891,
+   "U": 0.2279,
+   "B": 0.5829,
+   "minutter_for": 15.4
+  },
+  "2026|Rosenborg|Viking": {
+   "fixtureId": "id1000002067015332",
+   "start": "2026-08-14T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.16,
+    "U": 3.87,
+    "B": 3.26
+   },
+   "priced_at": "2026-08-14T16:44:53.048Z",
+   "result": "2-1",
+   "H": 0.4528,
+   "U": 0.2496,
+   "B": 0.2976,
+   "minutter_for": 15.1
+  },
+  "2026|KFUM Oslo|Lillestrøm": {
+   "fixtureId": "id1000002067015328",
+   "start": "2026-08-15T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.57,
+    "U": 3.95,
+    "B": 2.02
+   },
+   "priced_at": "2026-08-15T13:42:44.760Z",
+   "result": "1-1",
+   "H": 0.2711,
+   "U": 0.2444,
+   "B": 0.4845,
+   "minutter_for": 17.3
+  },
+  "2026|Aalesund|Vålerenga": {
+   "fixtureId": "id1000002067015336",
+   "start": "2026-08-16T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.64,
+    "U": 4.01,
+    "B": 2.5
+   },
+   "priced_at": "2026-08-16T12:14:30.986Z",
+   "result": "5-5",
+   "H": 0.3691,
+   "U": 0.2406,
+   "B": 0.3902,
+   "minutter_for": 15.5
+  },
+  "2026|Brann|HamKam": {
+   "fixtureId": "id1000002067015324",
+   "start": "2026-08-16T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.543,
+    "U": 4.68,
+    "B": 5.87
+   },
+   "priced_at": "2026-08-16T14:38:10.347Z",
+   "result": "3-0",
+   "H": 0.635,
+   "U": 0.204,
+   "B": 0.161,
+   "minutter_for": 21.8
+  },
+  "2026|Molde|Tromsø": {
+   "fixtureId": "id1000002067015330",
+   "start": "2026-08-16T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.892,
+    "U": 4.21,
+    "B": 3.78
+   },
+   "priced_at": "2026-08-16T14:42:43.383Z",
+   "result": "3-2",
+   "H": 0.5169,
+   "U": 0.2281,
+   "B": 0.2549,
+   "minutter_for": 17.3
+  },
+  "2026|Sarpsborg 08|Sandefjord": {
+   "fixtureId": "id1000002067015334",
+   "start": "2026-08-16T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.793,
+    "U": 4.24,
+    "B": 4.22
+   },
+   "priced_at": "2026-08-16T14:39:17.179Z",
+   "result": "1-2",
+   "H": 0.5459,
+   "U": 0.2265,
+   "B": 0.2276,
+   "minutter_for": 20.7
+  },
+  "2026|Fredrikstad|Kristiansund": {
+   "fixtureId": "id1000002067015326",
+   "start": "2026-08-16T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.781,
+    "U": 3.98,
+    "B": 4.61
+   },
+   "priced_at": "2026-08-16T16:59:10.827Z",
+   "result": "1-0",
+   "H": 0.55,
+   "U": 0.242,
+   "B": 0.208,
+   "minutter_for": 15.8
+  },
+  "2026|Bodø/Glimt|Rosenborg": {
+   "fixtureId": "id1000002067015338",
+   "start": "2026-08-30T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.319,
+    "U": 6.45,
+    "B": 8.4
+   },
+   "priced_at": "2026-08-30T12:14:40.078Z",
+   "result": "4-2",
+   "H": 0.7441,
+   "U": 0.1458,
+   "B": 0.1101,
+   "minutter_for": 15.3
+  },
+  "2026|HamKam|Kristiansund": {
+   "fixtureId": "id1000002067015340",
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.877,
+    "U": 3.77,
+    "B": 4.32
+   },
+   "priced_at": "2026-08-30T14:30:12.344Z",
+   "result": "2-2",
+   "H": 0.5216,
+   "U": 0.256,
+   "B": 0.2225,
+   "minutter_for": 29.8
+  },
+  "2026|Sandefjord|Brann": {
+   "fixtureId": "id1000002067015344",
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.84,
+    "U": 4.28,
+    "B": 1.869
+   },
+   "priced_at": "2026-08-30T14:41:32.509Z",
+   "result": "0-0",
+   "H": 0.2513,
+   "U": 0.2247,
+   "B": 0.524,
+   "minutter_for": 18.5
+  },
+  "2026|Start|KFUM Oslo": {
+   "fixtureId": "id1000002067015346",
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.833,
+    "U": 3.88,
+    "B": 4.42
+   },
+   "priced_at": "2026-08-30T14:40:25.936Z",
+   "result": "4-1",
+   "H": 0.5342,
+   "U": 0.2485,
+   "B": 0.2173,
+   "minutter_for": 19.6
+  },
+  "2026|Tromsø|Sarpsborg 08": {
+   "fixtureId": "id1000002067015348",
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.84,
+    "U": 3.83,
+    "B": 4.45
+   },
+   "priced_at": "2026-08-30T14:40:12.097Z",
+   "result": "0-0",
+   "H": 0.5323,
+   "U": 0.2519,
+   "B": 0.2158,
+   "minutter_for": 19.8
+  },
+  "2026|Viking|Aalesund": {
+   "fixtureId": "id1000002067015350",
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.311,
+    "U": 6.41,
+    "B": 7.93
+   },
+   "priced_at": "2026-08-30T14:34:03.259Z",
+   "result": "2-1",
+   "H": 0.7433,
+   "U": 0.1431,
+   "B": 0.1136,
+   "minutter_for": 25.9
+  },
+  "2026|Vålerenga|Molde": {
+   "fixtureId": "id1000002067015352",
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.89,
+    "U": 4.2,
+    "B": 2.25
+   },
+   "priced_at": "2026-08-30T14:39:35.098Z",
+   "result": "3-4",
+   "H": 0.3365,
+   "U": 0.2293,
+   "B": 0.4342,
+   "minutter_for": 20.4
+  },
+  "2026|Lillestrøm|Fredrikstad": {
+   "fixtureId": "id1000002067015342",
+   "start": "2026-08-30T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.751,
+    "U": 3.91,
+    "B": 4.9
+   },
+   "priced_at": "2026-08-30T16:58:23.432Z",
+   "result": "1-4",
+   "H": 0.5591,
+   "U": 0.2461,
+   "B": 0.1948,
+   "minutter_for": 16.6
+  },
+  "2026|Fredrikstad|Bodø/Glimt": {
+   "fixtureId": "id1000002067015356",
+   "start": "2026-09-04T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 8.65,
+    "U": 5.74,
+    "B": 1.324
+   },
+   "priced_at": "2026-09-04T16:42:38.638Z",
+   "result": "1-2",
+   "H": 0.1032,
+   "U": 0.161,
+   "B": 0.7358,
+   "minutter_for": 17.4
+  },
+  "2026|Aalesund|Start": {
+   "fixtureId": "id1000002067015368",
+   "start": "2026-09-04T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.15,
+    "U": 3.93,
+    "B": 3.25
+   },
+   "priced_at": "2026-09-04T16:33:20.925Z",
+   "result": "2-0",
+   "H": 0.4552,
+   "U": 0.246,
+   "B": 0.2988,
+   "minutter_for": 26.7
+  },
+  "2026|Sandefjord|Viking": {
+   "fixtureId": "id1000002067015364",
+   "start": "2026-09-04T19:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.87,
+    "U": 4.16,
+    "B": 1.884
+   },
+   "priced_at": "2026-09-04T18:37:50.345Z",
+   "result": "1-1",
+   "H": 0.2492,
+   "U": 0.2313,
+   "B": 0.5196,
+   "minutter_for": 22.2
+  },
+  "2026|Rosenborg|HamKam": {
+   "fixtureId": "id1000002067015362",
+   "start": "2026-09-05T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.34,
+    "U": 5.62,
+    "B": 9.28
+   },
+   "priced_at": "2026-09-05T13:41:30.878Z",
+   "result": "4-0",
+   "H": 0.7325,
+   "U": 0.1685,
+   "B": 0.099,
+   "minutter_for": 18.5
+  },
+  "2026|Brann|Lillestrøm": {
+   "fixtureId": "id1000002067015354",
+   "start": "2026-09-05T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.862,
+    "U": 4.28,
+    "B": 3.86
+   },
+   "priced_at": "2026-09-05T15:44:23.229Z",
+   "result": "1-2",
+   "H": 0.5257,
+   "U": 0.2245,
+   "B": 0.2498,
+   "minutter_for": 15.6
+  },
+  "2026|Molde|KFUM Oslo": {
+   "fixtureId": "id1000002067015360",
+   "start": "2026-09-06T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.305,
+    "U": 5.92,
+    "B": 9.13
+   },
+   "priced_at": "2026-09-06T14:42:03.155Z",
+   "result": "2-0",
+   "H": 0.7468,
+   "U": 0.1559,
+   "B": 0.0973,
+   "minutter_for": 17.9
+  },
+  "2026|Sarpsborg 08|Vålerenga": {
+   "fixtureId": "id1000002067015366",
+   "start": "2026-09-06T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.925,
+    "U": 4.3,
+    "B": 3.62
+   },
+   "priced_at": "2026-09-06T14:30:11.949Z",
+   "result": "2-2",
+   "H": 0.5088,
+   "U": 0.2239,
+   "B": 0.2673,
+   "minutter_for": 29.8
+  },
+  "2026|Kristiansund|Tromsø": {
+   "fixtureId": "id1000002067015358",
+   "start": "2026-09-06T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.69,
+    "U": 3.73,
+    "B": 2.04
+   },
+   "priced_at": "2026-09-06T16:58:32.673Z",
+   "result": "2-0",
+   "H": 0.2618,
+   "U": 0.2589,
+   "B": 0.4794,
+   "minutter_for": 16.5
+  },
+  "2026|Lillestrøm|Vålerenga": {
+   "fixtureId": "id1000002067015378",
+   "start": "2026-09-12T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.909,
+    "U": 4.27,
+    "B": 3.68
+   },
+   "priced_at": "2026-09-12T13:33:14.930Z",
+   "result": "2-0",
+   "H": 0.5126,
+   "U": 0.2251,
+   "B": 0.2623,
+   "minutter_for": 26.8
+  },
+  "2026|Rosenborg|Tromsø": {
+   "fixtureId": "id1000002067015380",
+   "start": "2026-09-12T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.68,
+    "U": 4.14,
+    "B": 5.17
+   },
+   "priced_at": "2026-09-12T15:40:11.170Z",
+   "result": "5-3",
+   "H": 0.5833,
+   "U": 0.2322,
+   "B": 0.1845,
+   "minutter_for": 19.8
+  },
+  "2026|Viking|Kristiansund": {
+   "fixtureId": "id1000002067015384",
+   "start": "2026-09-13T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.201,
+    "U": 7.87,
+    "B": 11.96
+   },
+   "priced_at": "2026-09-13T12:10:32.336Z",
+   "result": "8-1",
+   "H": 0.8131,
+   "U": 0.1148,
+   "B": 0.0721,
+   "minutter_for": 19.5
+  },
+  "2026|HamKam|Molde": {
+   "fixtureId": "id1000002067015374",
+   "start": "2026-09-13T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.64,
+    "U": 4.53,
+    "B": 1.68
+   },
+   "priced_at": "2026-09-13T14:40:25.977Z",
+   "result": "1-5",
+   "H": 0.206,
+   "U": 0.2112,
+   "B": 0.5828,
+   "minutter_for": 19.6
+  },
+  "2026|KFUM Oslo|Aalesund": {
+   "fixtureId": "id1000002067015376",
+   "start": "2026-09-13T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.47,
+    "U": 3.95,
+    "B": 2.7
+   },
+   "priced_at": "2026-09-13T14:40:12.177Z",
+   "result": "2-1",
+   "H": 0.395,
+   "U": 0.2443,
+   "B": 0.3607,
+   "minutter_for": 19.8
+  },
+  "2026|Start|Brann": {
+   "fixtureId": "id1000002067015382",
+   "start": "2026-09-13T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.9,
+    "U": 4.38,
+    "B": 1.833
+   },
+   "priced_at": "2026-09-13T14:41:52.695Z",
+   "result": "2-0",
+   "H": 0.247,
+   "U": 0.2191,
+   "B": 0.534,
+   "minutter_for": 18.1
+  },
+  "2026|Fredrikstad|Sarpsborg 08": {
+   "fixtureId": "id1000002067015372",
+   "start": "2026-09-13T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.6,
+    "U": 3.68,
+    "B": 2.69
+   },
+   "priced_at": "2026-09-13T16:45:39.849Z",
+   "result": "1-1",
+   "H": 0.375,
+   "U": 0.2629,
+   "B": 0.3622,
+   "minutter_for": 29.3
+  },
+  "2026|Bodø/Glimt|Sandefjord": {
+   "fixtureId": "id1000002067015370",
+   "start": "2026-09-14T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.121,
+    "U": 11.58,
+    "B": 16.49
+   },
+   "priced_at": "2026-09-14T16:44:00.852Z",
+   "result": "3-2",
+   "H": 0.8738,
+   "U": 0.0757,
+   "B": 0.0505,
+   "minutter_for": 16.0
+  },
+  "2026|Sarpsborg 08|KFUM Oslo": {
+   "fixtureId": "id1000002067015394",
+   "start": "2026-09-18T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.609,
+    "U": 4.13,
+    "B": 5.97
+   },
+   "priced_at": "2026-09-18T16:40:27.711Z",
+   "result": "1-3",
+   "H": 0.609,
+   "U": 0.2325,
+   "B": 0.1585,
+   "minutter_for": 19.5
+  },
+  "2026|Kristiansund|Rosenborg": {
+   "fixtureId": "id1000002067015388",
+   "start": "2026-09-19T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.14,
+    "U": 4.7,
+    "B": 1.602
+   },
+   "priced_at": "2026-09-19T13:43:46.262Z",
+   "result": "1-3",
+   "H": 0.1852,
+   "U": 0.2033,
+   "B": 0.6115,
+   "minutter_for": 16.2
+  },
+  "2026|Molde|Aalesund": {
+   "fixtureId": "id1000002067015390",
+   "start": "2026-09-19T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.342,
+    "U": 5.84,
+    "B": 7.78
+   },
+   "priced_at": "2026-09-19T15:40:22.895Z",
+   "result": "1-2",
+   "H": 0.7258,
+   "U": 0.1581,
+   "B": 0.116,
+   "minutter_for": 19.6
+  },
+  "2026|Vålerenga|Fredrikstad": {
+   "fixtureId": "id1000002067015400",
+   "start": "2026-09-20T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.934,
+    "U": 4.16,
+    "B": 3.68
+   },
+   "priced_at": "2026-09-20T12:11:10.844Z",
+   "result": "1-1",
+   "H": 0.5061,
+   "U": 0.2314,
+   "B": 0.2625,
+   "minutter_for": 18.8
+  },
+  "2026|Sandefjord|Start": {
+   "fixtureId": "id1000002067015392",
+   "start": "2026-09-20T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.25,
+    "U": 3.58,
+    "B": 3.29
+   },
+   "priced_at": "2026-09-20T14:44:40.260Z",
+   "result": "3-0",
+   "H": 0.4345,
+   "U": 0.2705,
+   "B": 0.295,
+   "minutter_for": 15.3
+  },
+  "2026|Tromsø|HamKam": {
+   "fixtureId": "id1000002067015396",
+   "start": "2026-09-20T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.465,
+    "U": 4.83,
+    "B": 7.06
+   },
+   "priced_at": "2026-09-20T14:34:16.452Z",
+   "result": "3-2",
+   "H": 0.6696,
+   "U": 0.1976,
+   "B": 0.1328,
+   "minutter_for": 25.7
+  },
+  "2026|Viking|Lillestrøm": {
+   "fixtureId": "id1000002067015398",
+   "start": "2026-09-20T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.315,
+    "U": 6.44,
+    "B": 8.59
+   },
+   "priced_at": "2026-09-20T14:40:23.006Z",
+   "result": "3-0",
+   "H": 0.7465,
+   "U": 0.146,
+   "B": 0.1075,
+   "minutter_for": 19.6
+  },
+  "2026|Brann|Bodø/Glimt": {
+   "fixtureId": "id1000002067015386",
+   "start": "2026-09-20T17:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.05,
+    "U": 5.03,
+    "B": 1.574
+   },
+   "priced_at": "2026-09-20T16:57:03.897Z",
+   "result": "2-1",
+   "H": 0.1885,
+   "U": 0.1892,
+   "B": 0.6223,
+   "minutter_for": 17.9
+  }
+ },
+ "updated": "2026-09-23T02:53:15+00:00"
+}

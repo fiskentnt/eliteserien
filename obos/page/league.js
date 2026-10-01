@@ -17,9 +17,6 @@ const LEAGUE = {
     {cls: 'ned', lo: 15, hi: 16, legend: 'Nedrykk (15 og 16)'},
   ],
   cuts: [2, 6, 13],
-  legendNote: 'Lagene på 3. til 6. plass spiller opprykkskvalifisering mot et lag fra Eliteserien. ' +
-    'Det er ikke det samme som opprykk: de kampene er ikke regnet inn her, så tallene sier ' +
-    'hvor sannsynlig det er å komme dit, ikke hvor sannsynlig det er å rykke opp gjennom dem.',
   // Ofte spurt, nederst på siden: for folk som kommer rett fra Google.
   faq: [
     {q: 'Hvem rykker opp fra OBOS-ligaen 2026?',

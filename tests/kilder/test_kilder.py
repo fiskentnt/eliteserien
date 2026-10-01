@@ -278,9 +278,15 @@ def dikt_terminliste(år, lag, endre=None):
     return rader
 
 
-LAG_2027 = sorted(LIGAER["eliteserien"]["lag"] - {"Start"} | {"Bryne"})
+# Lagene i Eliteserien 2026, faste her: testen er et oppdiktet skifte
+# 2026 -> 2027 (Start ut, Bryne inn) og skal ikke avhenge av hvilke lag
+# ligaer.py har når den kjøres.
+LAG_ES_2026 = ["Bodø/Glimt", "Brann", "Fredrikstad", "HamKam", "KFUM Oslo", "Kristiansund", "Lillestrøm",
+               "Molde", "Rosenborg", "Sandefjord", "Sarpsborg 08", "Start", "Tromsø", "Viking",
+               "Vålerenga", "Aalesund"]
+LAG_2027 = sorted(set(LAG_ES_2026) - {"Start"} | {"Bryne"})
 god = dikt_terminliste(2027, LAG_2027)
-ok, funn = sesong.valider(god, "2027", sorted(LIGAER["eliteserien"]["lag"]))
+ok, funn = sesong.valider(god, "2027", sorted(LAG_ES_2026))
 sjekk("gyldig terminliste validerer", ok, str(funn))
 sjekk("lagendringen rapporteres uten å blokkere",
       any(a == "merk" and "inn ['Bryne']" in t and "ut ['Start']" in t for a, t in funn),
@@ -847,11 +853,8 @@ _n0 = _dt(2026, 10, 2, 8, 0, tzinfo=_tz.utc)
 _r1 = _nff.fetch_all("eliteserien", naa=_n0, log=lambda _s: None)
 sjekk("workflow 1 henter og fyller cachen", len(_hentet) == 1 and len(_r1) == 240)
 _c1 = _json.loads((_nff_dir / "eliteserien.json").read_text("utf-8"))
-sjekk("samme henting lagrer den offisielle tabellen og justeringene i cachen",
-      len(_c1.get("tabell") or []) == 16 and _c1.get("justeringer") == [] and "tabell_feil" not in _c1,
-      str({k: (len(v) if isinstance(v, list) else v) for k, v in _c1.items()}))
-sjekk("og offisiell_tabell leser dem derfra, uten ny henting",
-      len(_nff.offisiell_tabell("eliteserien")[0]) == 16 and len(_hentet) == 1)
+sjekk("hentingen (som reserve) lagrer bare kampene, ikke tabellen fra fotball.no",
+      len(_c1.get("rader") or []) == 240 and "tabell" not in _c1 and "justeringer" not in _c1, str(list(_c1)))
 _r2 = _nff.fetch_all("eliteserien", naa=_n0 + _td2(minutes=10), log=lambda _s: None)
 sjekk("workflow 2 samme dag henter IKKE, men får samme data",
       len(_hentet) == 1 and _r2 == _r1, f"{len(_hentet)} hentinger")
@@ -973,9 +976,13 @@ _dr2.skriv_stempel("test", [], _naa5)
 _st5 = _json.loads((_sd / "data" / "status.json").read_text(encoding="utf-8"))
 sjekk("og ok=True naar avviket er borte",
       _st5["ok"] is True and "revisjon_avvik" not in _st5, str(_st5))
-_dr2.skriv_stempel("test", ["Tabell, Åsane: 20 poeng hos oss, 19 hos fotball.no"], _naa5)
+_dr2.skriv_stempel("test", ["Ranheim-Egersund: dato 2026-10-03 hos oss, 2026-10-02 i kalenderfeeden"], _naa5)
 _st5 = _json.loads((_sd / "data" / "status.json").read_text(encoding="utf-8"))
-sjekk("et tabellavvik gjør stempelet rødt og sier at det er tabellen",
+sjekk("et avvik i terminlisten gjør stempelet rødt og sier at det er mot kalenderfeeden",
+      _st5["ok"] is False and "avvik mellom terminlisten og kalenderfeeden: Ranheim-Egersund" in _st5["error"], str(_st5))
+_dr2.skriv_stempel("test", ["Tabell, Åsane: 20 poeng hos oss, 19 hos fotball.no"], _naa5, kilde="fotball.no")
+_st5 = _json.loads((_sd / "data" / "status.json").read_text(encoding="utf-8"))
+sjekk("ved reparasjon for hånd (fotball.no): et tabellavvik sier at det er tabellen",
       _st5["ok"] is False and "avvik mellom tabellen og fotball.no: Tabell, Åsane" in _st5["error"], str(_st5))
 _dr2.skriv_stempel("test", [], _naa5)
 _dr2.ROT = _ekte_rot2
@@ -1014,24 +1021,20 @@ _f4, _a4 = _dr.revider(_v_annet, _nff_rett, ferskt=False, bekreftet=_bekreftet)
 sjekk("men en NY, annen verdi arver ikke bekreftelsen",
       not _f4 and len(_a4) == 1, f"{_f4} {_a4}")
 
-print("\n=== Tabellen og poengjusteringene mot fotball.no ===")
-# Aasane ble trukket ett poeng (NFF, vedtak 3.3.2026, registrert 4.3). Siden
-# viste 20 poeng, fotball.no 19. Den daglige revisjonen skal se det.
+print("\n=== fotball.no-tabellen: bare reparasjon for hånd ===")
+# Regelen fra 1.10.2026: fotball.no hentes bare automatisk som reserve når
+# ligasiden ikke svarer. Tabellen og justeringene der leses bare ved
+# reparasjon av en frossen sesong for hånd (daglig_revisjon.revider_sesong).
 _html_o = les_nff("obos")
 _tab = nff_source.parse_tabell(_html_o, "obos")
 _jn = nff_source.parse_justeringer(_html_o, "obos")
 _aa = next(r for r in _tab if r["lag"] == "Åsane")
-sjekk("tabellen leses: 16 lag, plass 1 til 16", [r["plass"] for r in _tab] == list(range(1, 17)), str(_tab[:2]))
-sjekk("Åsane står med 19 poeng og stjerne (\"15 *\") hos fotball.no",
-      (_aa["plass"], _aa["merket"], _aa["poeng"]) == (15, True, 19), str(_aa))
-sjekk("og kampene gir 20: trekket er det eneste som skiller", 3 * _aa["v"] + _aa["u"] == 20, str(_aa))
-sjekk("negativ målforskjell med minustegn (U+2212) leses som tall",
-      _aa["diff"] == _aa["mf"] - _aa["mm"] == -18, str(_aa))
-sjekk("justeringene leses: Åsane −1 poeng, 0 mål, 4. mars",
-      [(j["dato"], j["lag"], j["poeng"], j["maal"]) for j in _jn] == [("2026-03-04", "Åsane", -1, 0)], str(_jn))
-sjekk("med årsaken uten \"Årsak:\"", _jn[0]["aarsak"].startswith("Oversittelse av rapporteringsfrist"), _jn[0]["aarsak"])
-sjekk("Eliteserien har ingen justeringsliste: tom liste",
-      nff_source.parse_justeringer(les_nff("eliteserien"), "eliteserien") == [])
+sjekk("fotball.no-tabellen leses: 16 lag, Åsane 19 poeng med stjerne (\"15 *\"), 5-5-13",
+      [r["plass"] for r in _tab] == list(range(1, 17)) and (_aa["plass"], _aa["merket"], _aa["poeng"], _aa["v"], _aa["u"]) == (15, True, 19, 5, 5), str(_aa))
+sjekk("negativ målforskjell med minustegn (U+2212) leses som tall", _aa["diff"] == _aa["mf"] - _aa["mm"] == -18, str(_aa))
+sjekk("justeringene leses: Åsane −1 poeng, 0 mål, 4. mars, med årsaken",
+      [(j["dato"], j["lag"], j["poeng"], j["maal"]) for j in _jn] == [("2026-03-04", "Åsane", -1, 0)]
+      and _jn[0]["aarsak"].startswith("Oversittelse av rapporteringsfrist"), str(_jn))
 for _navn, _omlagt in (("en kolonne har nytt navn", _html_o.replace(">Poeng</th>", ">Pts</th>")),
                        ("tabellen mangler", _html_o.replace("customTableSorter", "nyKlasse"))):
     try:
@@ -1039,58 +1042,211 @@ for _navn, _omlagt in (("en kolonne har nytt navn", _html_o.replace(">Poeng</th>
         _kast = False
     except nff_source.NffDataError:
         _kast = True
-    sjekk(f"omlagt markup ({_navn}) gir NffDataError, ikke en stille feil", _kast)
-_cd = Path(_tf2.mkdtemp())
-(_cd / "nff_obos.html").write_text(_html_o, encoding="utf-8")
-_ot = nff_source.offisiell_tabell("obos", cache_dir=_cd)
-sjekk("offisiell_tabell fra lokal fil (testinngangen)", len(_ot[0]) == 16 and len(_ot[1]) == 1 and _ot[2] is None)
+    sjekk(f"fotball.no: omlagt markup ({_navn}) gir NffDataError, ikke en stille feil", _kast)
 
-import daglig_revisjon as _drt
-# Var tabell slik siden regner den, laget av fotball.no-tabellen selv: alt likt.
-_vt = {r["lag"]: {k: r[k] for k in ("k", "v", "u", "t", "mf", "mm", "poeng", "plass")} for r in _tab}
-_vj = [{"dato": "2026-03-04", "lag": "Åsane", "poeng": -1, "maal": 0}]
-sjekk("lik tabell og like justeringer: ingen avvik", _drt.revider_tabell(_vt, _tab, _vj, _jn) == ([], []))
-_uten = {**_vt, "Åsane": {**_vt["Åsane"], "poeng": 20}}
-_f, _a = _drt.revider_tabell(_uten, _tab, [], _jn)
-sjekk("uten trekket (20 poeng hos oss): kritisk avvik i tabellen",
-      any(f == "Tabell, Åsane: 20 poeng hos oss, 19 hos fotball.no" for f in _f), str(_f))
-sjekk("og justeringen som mangler i justeringer.json er kritisk",
-      any(f.startswith("Justering, Åsane:") and "mangler i justeringer.json" in f for f in _f), str(_f))
-sjekk("bare de to, ingen advarsler", len(_f) == 2 and not _a, f"{_f} {_a}")
-_f, _a = _drt.revider_tabell(_vt, _tab, _vj + [{"dato": "2026-05-01", "lag": "Moss", "poeng": -2, "maal": 0}], _jn)
-sjekk("en justering hos oss som fotball.no ikke har, er kritisk",
-      len(_f) == 1 and "Moss" in _f[0] and "finnes ikke hos fotball.no" in _f[0], str(_f))
-_f, _a = _drt.revider_tabell(_vt, _tab, _vj, _jn + [{"dato": "2026-06-01", "lag": "Lyn", "poeng": 0, "maal": -3, "aarsak": ""}])
-sjekk("en måljustering hos fotball.no sier at siden ikke støtter den",
-      len(_f) == 1 and "måljusteringer støttes ikke" in _f[0], str(_f))
-_en_til = {**_uten, "Åsane": {**_uten["Åsane"], "k": 24, "v": 6, "poeng": 23}}
-_f, _a = _drt.revider_tabell(_en_til, _tab, _vj, _jn)
-sjekk("ulikt antall kamper: advarsel (ulike tidspunkt), ikke kritisk",
-      not _f and len(_a) == 1 and "24 kamper hos oss, 23 hos fotball.no" in _a[0], f"{_f} {_a}")
-_f, _a = _drt.revider_tabell(_uten, _tab, [], _jn, ferskt=False)
-sjekk("fra cachen: avvikene blir advarsler",
-      not _f and len(_a) == 2 and all("fra cachen" in a for a in _a), f"{_f} {_a}")
-_bek = {_drt._nokkel(f): _drt._verdi(_drt._nokkel(f), {}, _uten, []) for f in _drt.revider_tabell(_uten, _tab, [], _jn)[0]}
-_f, _a = _drt.revider_tabell(_uten, _tab, [], _jn, ferskt=False, bekreftet=_bek)
-sjekk("men bekreftet av en fersk revisjon og uendret hos oss: fortsatt kritisk",
-      len(_f) == 2 and all("bekreftet av fersk revisjon" in f for f in _f), f"{_f} {_a}")
+print("\n=== Tabellkontrollen mot tabellen på ligasiden ===")
+# Tabellen står på resultatsiden vi alt henter (ingen ekstra forespørsel), og
+# viser poengene etter trekk, uten markering. Testdataene og fasiten er fra
+# samme dag, 25.9.2026.
+import tabellkontroll as _tk
+_ntf_o = les_ntf("obos", "resultater")
+_nt = ntf_source.parse_tabell(_ntf_o, "obos")
+_na = next(r for r in _nt if r["lag"] == "Åsane")
+sjekk("NTF-tabellen leses fra resultatsiden: 16 lag, plass 1 til 16, Åsane 19 poeng (23 kamper, 5-5-13, 34-52)",
+      [r["plass"] for r in _nt] == list(range(1, 17))
+      and (_na["k"], _na["v"], _na["u"], _na["t"], _na["mf"], _na["mm"], _na["poeng"]) == (23, 5, 5, 13, 34, 52, 19), str(_na))
+_nte = ntf_source.parse_tabell(les_ntf("eliteserien", "resultater"), "eliteserien")
+sjekk("Eliteserien: 16 lag, navnene oversatt (KFUM Oslo, Sandefjord)",
+      len(_nte) == 16 and {"KFUM Oslo", "Sandefjord"} <= {r["lag"] for r in _nte}, str([r["lag"] for r in _nte]))
+for _navn, _omlagt in (("en kolonne har nytt navn", _ntf_o.replace(">Poeng<", ">Pts<", 1)),
+                       ("tabellen mangler", _ntf_o.replace("league-table--full", "nyKlasse"))):
+    try:
+        ntf_source.parse_tabell(_omlagt, "obos")
+        _kast = False
+    except ntf_source.EsDataError:
+        _kast = True
+    sjekk(f"NTF: omlagt tabell ({_navn}) gir EsDataError, ikke en stille feil", _kast)
+_fk = {l: [m for m in json.loads((TESTDATA / f"fasit_{l}_2026-09-25.json").read_text("utf-8"))["kamper"] if m["hg"] is not None]
+       for l in ("eliteserien", "obos")}
+_lag_o = sorted(LIGAER["obos"]["lag"])
+_vt = _tk.vaar_tabell(_fk["obos"], _lag_o, {"Åsane": -1})
+_f, _a, _n, _like = _tk.sammenlign(_vt, _nt, "obos-ligaen.no")
+sjekk("kampene fra 25.9 med Åsanes trekk mot NTF-tabellen samme dag: alle 16 lag like, også plassene",
+      (_f, _a, _n, _like) == ([], [], [], True), f"{_f} {_a} {_n}")
+_f, _a, _n, _like = _tk.sammenlign(_tk.vaar_tabell(_fk["eliteserien"], sorted(LIGAER["eliteserien"]["lag"])), _nte, "eliteserien.no")
+sjekk("Eliteserien 25.9: alle like uten justeringer", (_f, _a, _n, _like) == ([], [], [], True), f"{_f} {_a} {_n}")
+_vt0 = _tk.vaar_tabell(_fk["obos"], _lag_o)
+_f, _a, _n, _like = _tk.sammenlign(_vt0, _nt, "obos-ligaen.no")
+sjekk("uten trekket: ingen feil, men et nytt poengtrekk for Åsane (−1), og ikke alle like ennå",
+      not _f and not _a and _n == [("Åsane", -1)] and not _like, f"{_f} {_a} {_n}")
+_feil_vut = {**_vt, "Moss": {**_vt["Moss"], "v": _vt["Moss"]["v"] + 1, "t": _vt["Moss"]["t"] - 1, "poeng": _vt["Moss"]["poeng"] + 3}}
+_f, _a, _n, _like = _tk.sammenlign(_feil_vut, _nt, "obos-ligaen.no")
+sjekk("likt antall kamper, men V/U/T avviker: kritisk avvik, ikke et poengtrekk",
+      len(_f) == 1 and _f[0].startswith("Tabell, Moss:") and "vunnet" in _f[0] and "tap" in _f[0] and not _n, f"{_f} {_n}")
+_feil_maal = {**_vt, "Lyn": {**_vt["Lyn"], "mf": _vt["Lyn"]["mf"] + 1}}
+_f, _a, _n, _like = _tk.sammenlign(_feil_maal, _nt, "obos-ligaen.no")
+sjekk("likt antall kamper, men målene avviker: kritisk avvik",
+      len(_f) == 1 and "mål for hos oss" in _f[0] and not _like, str(_f))
+_en_kamp_til = {**_vt0, "Åsane": {**_vt0["Åsane"], "k": 24, "v": 6, "poeng": 23}}
+_f, _a, _n, _like = _tk.sammenlign(_en_kamp_til, _nt, "obos-ligaen.no")
+sjekk("ulikt antall kamper: advarsel (hentet på ulike tidspunkt), ikke avvik og ikke et poengtrekk",
+      not _f and not _n and len(_a) == 1 and "24 kamper hos oss, 23 hos obos-ligaen.no" in _a[0] and not _like, f"{_f} {_a} {_n}")
 _byttet = {**_vt, "Åsane": {**_vt["Åsane"], "plass": 16}, "Raufoss": {**_vt["Raufoss"], "plass": 15}}
-_f, _a = _drt.revider_tabell(_byttet, _tab, _vj, _jn)
+_f, _a, _n, _like = _tk.sammenlign(_byttet, _nt, "obos-ligaen.no")
 sjekk("lik poengsum, ulik rangering: advarsel", not _f and len(_a) == 2 and "ulik rangering" in _a[0], f"{_f} {_a}")
-_f, _a = _drt.revider_tabell(_vt, None, _vj, None, nff_feil="fant ingen tabell")
-sjekk("uten tabell fra fotball.no: advarsel om at den ikke er sammenlignet",
-      not _f and len(_a) == 1 and "ikke sammenlignet" in _a[0] and "fant ingen tabell" in _a[0], f"{_f} {_a}")
-# Produksjonsdataene: var tabell er kampene pluss justeringer.json.
-_pt, _pj = _drt.vaar_tabell("obos")
-sjekk("vaar_tabell (produksjonen): Åsane = 3V + U − 1",
-      _pt["Åsane"]["poeng"] == 3 * _pt["Åsane"]["v"] + _pt["Åsane"]["u"] - 1, str(_pt["Åsane"]))
-sjekk("vaar_tabell (produksjonen): justeringen fra justeringer.json",
-      [(j["dato"], j["lag"], j["poeng"]) for j in _pj] == [("2026-03-04", "Åsane", -1)], str(_pj))
-_f, _a = _drt.revider_tabell(_pt, _tab, _pj, _jn)
-sjekk("produksjonen mot fotball.no-siden i testdata: ingen kritiske avvik", not _f, str(_f))
-_pt2, _ = _drt.vaar_tabell("eliteserien")
-sjekk("Eliteserien: ingen justeringer, poeng = 3V + U for alle",
-      all(r["poeng"] == 3 * r["v"] + r["u"] for r in _pt2.values()) and _drt.vaar_tabell("eliteserien")[1] == [])
+
+# kontroller(): skriver audit_tabell.json, og legger et nytt trekk inn i
+# justeringer.json AUTOMATISK, med datoen det ble oppdaget og kilden.
+_kd = Path(_tf2.mkdtemp())
+(_kd / "justeringer.json").write_text(json.dumps({"note": "x", "justeringer": []}), encoding="utf-8")
+_naa_k = _dt(2026, 10, 1, 9, 0, tzinfo=_tz.utc)
+_r1 = _tk.kontroller("obos", 2026, _fk["obos"], _nt, naa=_naa_k, data_dir=_kd,
+                     kilde_url="https://www.obos-ligaen.no/resultater", kjoring="k1", log=lambda _s: None)
+_j1 = json.loads((_kd / "justeringer.json").read_text("utf-8"))["justeringer"]
+sjekk("kontroller: Åsanes trekk oppdages og legges inn i justeringer.json, med dato, oppdaget, kilde, årsak og automatisk",
+      [(j["sesong"], j["lag"], j["poeng"], j["dato"], j["oppdaget"], j["kilde"], j["automatisk"]) for j in _j1]
+      == [(2026, "Åsane", -1, "2026-10-01", "2026-10-01T09:00:00+00:00", "https://www.obos-ligaen.no/resultater", True)]
+      and "19 poeng, mot 20 fra kampene" in _j1[0]["årsak"] and "lenke" not in _j1[0], str(_j1))
+_a1 = json.loads((_kd / "audit_tabell.json").read_text("utf-8"))
+sjekk("og audit_tabell.json: sammenlignet, ingen avvik, alle like etter trekket, det nye trekket og kjøringen",
+      (_a1["sammenlignet"], _a1["errors"], _a1["alle_like"], len(_a1["nye"]), _a1["kjoring"]) == (True, 0, True, 1, "k1"), str(_a1))
+_r2 = _tk.kontroller("obos", 2026, _fk["obos"], _nt, naa=_naa_k, data_dir=_kd, kjoring="k2", log=lambda _s: None)
+sjekk("neste kjøring legger ikke inn trekket på nytt",
+      len(json.loads((_kd / "justeringer.json").read_text("utf-8"))["justeringer"]) == 1 and _r2["nye"] == [] and _r2["alle_like"], str(_r2))
+sjekk("varsle: bare trekk som ble lagt inn i DENNE kjøringen (k2 la ikke inn noe)",
+      _tk.varsle("obos", data_dir=_kd, kjoring="k2", log=lambda _s: None) == 0)
+_kd2 = Path(_tf2.mkdtemp())
+(_kd2 / "justeringer.json").write_text(json.dumps({"justeringer": []}), encoding="utf-8")
+_tk.kontroller("obos", 2026, _fk["obos"], _nt, naa=_naa_k, data_dir=_kd2, kjoring="k3", log=lambda _s: None)
+_varsel = []
+with _vern.miljo(GH_TOKEN="", GITHUB_TOKEN="", GITHUB_STEP_SUMMARY=str(_kd2 / "oppsummering.md")):
+    _antall = _tk.varsle("obos", data_dir=_kd2, kjoring="k3", log=_varsel.append)
+sjekk("varsle i kjøringen som la inn trekket: advarsel i Actions og en linje i oppsummeringen (ingen issue uten token)",
+      _antall == 1 and any(v.startswith("::warning title=Nytt poengtrekk i OBOS-ligaen: Åsane trukket et poeng::") for v in _varsel)
+      and "Nytt poengtrekk i OBOS-ligaen: Åsane trukket et poeng" in (_kd2 / "oppsummering.md").read_text("utf-8")
+      and not any(v.startswith("  issue:") for v in _varsel), str(_varsel))
+_kd3 = Path(_tf2.mkdtemp())
+(_kd3 / "justeringer.json").write_text(json.dumps({"justeringer": [
+    {"sesong": 2026, "lag": "Åsane", "poeng": -1, "dato": "2026-03-04", "kilde": "test", "årsak": "test"}]}), encoding="utf-8")
+_feil_kamper = [dict(m) for m in _fk["obos"]]
+_mi = next(i for i, m in enumerate(_feil_kamper) if m["home"] == "Moss" and m["hg"] < m["ag"])
+_feil_kamper[_mi]["hg"], _feil_kamper[_mi]["ag"] = _feil_kamper[_mi]["ag"], _feil_kamper[_mi]["hg"]
+_r4 = _tk.kontroller("obos", 2026, _feil_kamper, _nt, naa=_naa_k, data_dir=_kd3, kjoring="k5", log=lambda _s: None)
+sjekk("et feil resultat hos oss gir kritiske avvik for begge lagene i audit_tabell.json (rødt stempel), og ikke et poengtrekk",
+      _r4["errors"] == 2 and {f.split(":")[0] for f in _r4["avvik"]} == {"Tabell, Moss", "Tabell, " + (_feil_kamper[_mi]["away"])}
+      and not _r4["alle_like"] and _r4["nye"] == [] and _tk.avvik("obos", data_dir=_kd3) == 2
+      and len(json.loads((_kd3 / "justeringer.json").read_text("utf-8"))["justeringer"]) == 1, str(_r4))
+_r5 = _tk.kontroller("obos", 2026, _fk["obos"], {"feil": "fant ingen tabell"}, naa=_naa_k, data_dir=_kd3, kjoring="k6", log=lambda _s: None)
+sjekk("uten tabell fra ligasiden: advarsel om at den ikke er sammenlignet, ingen avvik og ikke alle like",
+      (_r5["sammenlignet"], _r5["errors"], _r5["alle_like"]) == (False, 0, False) and "fant ingen tabell" in _r5["advarsler"][0], str(_r5))
+
+print("\n=== Kalenderfeeden: den løpende kontrollen av runde, dato og avspark ===")
+_kal_o = (TESTDATA / "ntf_obos_kalender_2026-10-01.ics").read_text("utf-8")
+_ko = ntf_source.parse_kalender(_kal_o, "obos")
+_ke = ntf_source.parse_kalender((TESTDATA / "ntf_eliteserien_kalender_2026-10-01.ics").read_text("utf-8"), "eliteserien")
+sjekk("OBOS-feeden: 58 oppføringer, de to identiske dublettene slått sammen til 56 kamper",
+      _kal_o.count("BEGIN:VEVENT") == 58 and len(_ko) == 56, f"{_kal_o.count('BEGIN:VEVENT')} {len(_ko)}")
+sjekk("Eliteserien-feeden: 72 kamper", len(_ke) == 72, str(len(_ke)))
+_rd = next(m for m in _ko if (m["home"], m["away"]) == ("Ranheim", "Egersund"))
+sjekk("Ranheim TF - Egersund: runde 24, 2.10. kl. 19.00, Ranheim TF oversatt",
+      (_rd["round"], _rd["date"], _rd["time"]) == (24, "2026-10-02", "19:00"), str(_rd))
+_brettet = _kal_o.replace("DESCRIPTION: OBOS-ligaen (runde 24)", "DESCRIPTION: OBOS-ligaen (ru\r\n nde 24)", 1)
+sjekk("brettede linjer (linjeskift + mellomrom) leses som én", ntf_source.parse_kalender(_brettet, "obos") == _ko)
+_tz_tekst = _kal_o.replace("BEGIN:VEVENT", "BEGIN:VTIMEZONE\nDTSTART:20160301T020000\nEND:VTIMEZONE\nBEGIN:VEVENT", 1)
+sjekk("DTSTART i tidssonedefinisjonen (VTIMEZONE) leses ikke som en kamp", ntf_source.parse_kalender(_tz_tekst, "obos") == _ko)
+_konflikt = _kal_o.replace("END:VCALENDAR", "BEGIN:VEVENT\nSUMMARY:Ranheim TF - Egersund\nDESCRIPTION: OBOS-ligaen (runde 24)\n"
+                           "DTSTART;TZID=Europe/Oslo:20261002T181500\nEND:VEVENT\nEND:VCALENDAR")
+try:
+    ntf_source.parse_kalender(_konflikt, "obos")
+    _kast = None
+except ntf_source.EsDataError as e:
+    _kast = str(e)
+sjekk("samme kamp to ganger med ulik tid: tydelig feil", _kast is not None and "to ganger" in _kast, str(_kast))
+import daglig_revisjon as _drk
+_fasit_alle = {l: {(m["home"], m["away"]): m for m in json.loads((ROT / "tests" / "data" / "2026-10-01" / l / "data" / "matches.json").read_text("utf-8"))}
+               for l in ("eliteserien", "obos")}
+for _l in ("eliteserien", "obos"):
+    for _r in json.loads((ROT / "tests" / "data" / "2026-10-01" / _l / "data" / "fixtures.json").read_text("utf-8")):
+        for _m in _r["matches"]:
+            _fasit_alle[_l][(_m["home"], _m["away"])] = {**_m, "round": _r["round"]}
+_f, _a = _drk.revider_kalender(_fasit_alle["obos"], _ko, sesong="2026")
+sjekk("terminlisten fra samme dag (1.10) mot feeden: ingen avvik, ingen advarsler (OBOS)", (_f, _a) == ([], []), f"{_f} {_a}")
+_f, _a = _drk.revider_kalender(_fasit_alle["eliteserien"], _ke, sesong="2026")
+sjekk("og Eliteserien", (_f, _a) == ([], []), f"{_f} {_a}")
+_v = {**_fasit_alle["obos"], ("Ranheim", "Egersund"): {**_fasit_alle["obos"][("Ranheim", "Egersund")], "round": 25}}
+_f, _a = _drk.revider_kalender(_v, _ko, sesong="2026")
+sjekk("ulik RUNDE er kritisk", _f == ["Ranheim-Egersund: runde 25 hos oss, 24 i kalenderfeeden"], str(_f))
+_v = {**_fasit_alle["obos"], ("Ranheim", "Egersund"): {**_fasit_alle["obos"][("Ranheim", "Egersund")], "date": "2026-10-03"}}
+_f, _a = _drk.revider_kalender(_v, _ko, sesong="2026")
+sjekk("ulik DATO er kritisk", _f == ["Ranheim-Egersund: dato 2026-10-03 hos oss, 2026-10-02 i kalenderfeeden"], str(_f))
+_v = {**_fasit_alle["obos"], ("Ranheim", "Egersund"): {**_fasit_alle["obos"][("Ranheim", "Egersund")], "time": "18:00"}}
+_f, _a = _drk.revider_kalender(_v, _ko, sesong="2026")
+sjekk("ulikt AVSPARK er en advarsel", not _f and _a == ["Ranheim-Egersund: avspark 18:00 hos oss, 19:00 i kalenderfeeden"], f"{_f} {_a}")
+_v = {k: m for k, m in _fasit_alle["obos"].items() if k != ("Ranheim", "Egersund")}
+_f, _a = _drk.revider_kalender(_v, _ko, sesong="2026")
+sjekk("en kamp i feeden som vi ikke har, er kritisk", _f == ["Ranheim-Egersund: står i kalenderfeeden, men ikke hos oss"], str(_f))
+_f, _a = _drk.revider_kalender(_fasit_alle["obos"], [m for m in _ko if (m["home"], m["away"]) != ("Ranheim", "Egersund")], sesong="2026")
+sjekk("en uspilt kamp hos oss som feeden ikke har, er en advarsel", not _f and _a == ["Ranheim-Egersund: uspilt hos oss, men står ikke i kalenderfeeden"], f"{_f} {_a}")
+_v = {**_fasit_alle["obos"], ("Ranheim", "Egersund"): {**_fasit_alle["obos"][("Ranheim", "Egersund")], "hg": 2, "ag": 1}}
+_f, _a = _drk.revider_kalender(_v, _ko, sesong="2026")
+sjekk("en kamp som nettopp er spilt, men fortsatt står i feeden, sammenlignes og er ikke et avvik", (_f, _a) == ([], []), f"{_f} {_a}")
+
+print("\n=== fotball.no bare som reserve når ligasiden ikke svarer ===")
+import urllib.error as _ue
+import hentelogg as _hlr
+import nff_source as _nffr
+_ekte_hl_kat = _hlr.KATALOG
+_hlr.KATALOG = Path(_tf2.mkdtemp()) / "hentelogg"
+import obos_build_data as _obd
+import obos_results as _obr
+_ekte_ntf_hent, _ekte_ntf_fa, _ekte_nff_fa = ntf_source.hent, ntf_source.fetch_all, _nffr.fetch_all
+_nff_kall = []
+_nffr.fetch_all = lambda liga, **k: (_nff_kall.append(liga), [{"date": "2026-10-02", "time": "19:00", "round": 24, "home": "Ranheim",
+                                                             "away": "Egersund", "hg": None, "ag": None, "ferdig": False}])[1]
+try:
+    ntf_source.hent = lambda url: (_ for _ in ()).throw(_ue.URLError("Name or service not known"))
+    try:
+        ntf_source.fetch_all("obos", log=lambda _s: None)
+        _kast = None
+    except ntf_source.SvarerIkke as e:
+        _kast = e
+    sjekk("ligasiden svarer ikke (nettverksfeil): fetch_all kaster SvarerIkke", _kast is not None, repr(_kast))
+    ntf_source.hent = lambda url: (_ for _ in ()).throw(ntf_source.RateLimited(403))
+    try:
+        ntf_source.fetch_all("obos", log=lambda _s: None)
+        _kast = None
+    except ntf_source.SvarerIkke as e:
+        _kast = e
+    sjekk("og blokkering (403) er også SvarerIkke", _kast is not None, repr(_kast))
+    ntf_source.fetch_all = lambda *a, **k: (_ for _ in ()).throw(ntf_source.SvarerIkke("ingen svar"))
+    _rader = _obd.rows_for(log=lambda _s: None)
+    _res = _obr.offisielle_resultater()
+    sjekk("OBOS: ligasiden svarer ikke -> fotball.no som reserve, både i byggingen og i resultatkjeden",
+          _nff_kall == ["obos", "obos"] and any((m["home"], m["away"]) == ("Ranheim", "Egersund") for m in _rader) and _res == {},
+          f"{_nff_kall} {len(_rader)} {_res}")
+    import update_data as _ud
+    _nff_kall.clear()
+    _r = _ud.ligasiden_eller_reserve(None, lambda _s: None)
+    sjekk("Eliteserien: ligasiden svarer ikke -> fotball.no som reserve", _nff_kall == ["eliteserien"] and len(_r) == 1, str(_nff_kall))
+    _nff_kall.clear()
+    ntf_source.fetch_all = lambda *a, **k: (_ for _ in ()).throw(ntf_source.EsDataError("lagt om"))
+    try:
+        _ud.ligasiden_eller_reserve(None, lambda _s: None)
+        _kast = None
+    except ntf_source.EsDataError as e:
+        _kast = e
+    _obd.rows_for(log=lambda _s: None)
+    _obr.offisielle_resultater()
+    sjekk("ligasiden svarer, men kan ikke leses: ingen reserve fra fotball.no (feilen skal ikke skjules)",
+          _nff_kall == [] and _kast is not None, f"{_nff_kall} {_kast!r}")
+    ntf_source.fetch_all = lambda liga, **k: [{"date": "2026-10-02", "time": "19:00", "round": 24, "home": "Ranheim",
+                                               "away": "Egersund", "hg": None, "ag": None, "ferdig": False}]
+    _obr.offisielle_resultater()
+    _ud.ligasiden_eller_reserve(None, lambda _s: None)
+    sjekk("ligasiden svarer: fotball.no hentes aldri", _nff_kall == [], str(_nff_kall))
+finally:
+    ntf_source.hent, ntf_source.fetch_all, _nffr.fetch_all = _ekte_ntf_hent, _ekte_ntf_fa, _ekte_nff_fa
+    _hlr.KATALOG = _ekte_hl_kat
 
 print("\n=== Datovakten bruker den AKTIVE sesongen, ikke dataene ===")
 from reconcile_ny import rimelige_datoer as _rd

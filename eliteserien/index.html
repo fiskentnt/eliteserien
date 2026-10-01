@@ -651,7 +651,10 @@
   .legend .lnote{flex-basis:100%;line-height:1.45}
   .legend .jnote{flex-basis:100%;display:block;line-height:1.45}
   .legend .jnote a{color:inherit}
-  td.pts .just{font:700 13px/1 var(--cond);vertical-align:super;margin-left:1px}
+  /* Stjernen foran tallet ("*19"), utenfor til venstre: tallet står på linje
+     med poengene til de andre lagene, og kolonnen blir ikke bredere. */
+  td.pts .pjust{position:relative}
+  td.pts .just{position:absolute;right:100%;top:-1px;margin-right:1px;font:700 13px/1 var(--cond)}
   .legend .q i{background:var(--q)}
   .legend .n i{background:repeating-linear-gradient(135deg,var(--ned) 0 2px,transparent 2px 4px);border:1px solid var(--ned)}
   .note{padding:10px 16px 14px;color:var(--muted);font-size:13px}
@@ -1709,7 +1712,8 @@ function checkIsStale(lastCheckDate){
 // og data/odds_upcoming.json (fylles av boot()) ----
 let TEAMS = [], BASE = [], MATCHES = [], TI = {}, MTI = {}, STATS = {}, MODEL = null, basePos = {};
 // Poengjusteringer fra NFF denne sesongen (data/justeringer.json): trekk eller
-// tillegg i poeng for et lag, med datoen fotball.no registrerte dem. De
+// tillegg i poeng for et lag, med datoen de gjelder fra. Tabellkontrollen
+// (scripts/tabellkontroll.py) legger et nytt trekk inn automatisk. De
 // gjelder tabellen fra den datoen og alt som bygger på tabellen: rangeringen,
 // simuleringen (P0), svarene, "Hva må ... gjøre?" og grunnlagsfilen. Heldig og
 // uheldig (qaLuck) regner poeng fra kampene og tar dem ikke med.
@@ -1722,11 +1726,15 @@ function poengJust(lag, dato){
   return s;
 }
 function poengOrd(n){ n=Math.abs(n); return n===1?'et poeng':n===2?'to poeng':`${n} poeng`; }
-// Stjernen ved poengsummen (som på fotball.no) og forklaringen i title.
-function justMerke(just){ return just ? '<span class="just" aria-hidden="true">*</span>' : ''; }
+// Poengsummen med stjerne foran ("*19", som på fotball.no) når laget har en
+// justering, og forklaringen i title.
+function poengMedMerke(pts, just){
+  return just ? `<span class="pjust"><span class="just" aria-hidden="true">*</span>${pts}</span>` : `${pts}`;
+}
 function justTittel(pts, just){ return `${pts} poeng, ${just<0?'etter trekk på':'med tillegg på'} ${poengOrd(just)} fra NFF.`; }
 // Forklaringen på stjernen, i tegnforklaringen under tabellen (foran
-// LEAGUE.legendNote): "* Åsane trukket et poeng.", med lenke til vedtaket.
+// LEAGUE.legendNote): "* Åsane trukket et poeng.", med lenke til vedtaket når
+// det er lagt inn (lenke i justeringer.json).
 function visJusteringer(){
   const lg = document.getElementById('legend'); if(!lg) return;
   lg.querySelectorAll('.jnote').forEach(e=>e.remove());
@@ -1734,7 +1742,9 @@ function visJusteringer(){
   JUSTERINGER.forEach(j=>{
     const el = document.createElement('span'); el.className = 'jnote';
     const tekst = `${j.poeng<0?'trukket':'gitt'} ${poengOrd(j.poeng)}`;
-    el.innerHTML = `* ${j.lag} ${j.kilde?`<a href="${j.kilde}" target="_blank" rel="noopener" title="NFFs vedtak">${tekst}</a>`:tekst}.`;
+    // Lenke bare til vedtaket (lenke). Et trekk tabellkontrollen har lagt inn
+    // automatisk, har ingen lenke før vedtaket er lagt inn for hånd.
+    el.innerHTML = `* ${j.lag} ${/^https:\/\//.test(j.lenke||'')?`<a href="${j.lenke}" target="_blank" rel="noopener" title="NFFs vedtak">${tekst}</a>`:tekst}.`;
     lg.insertBefore(el, foran);
   });
 }
@@ -6891,7 +6901,7 @@ function render(){
       tr.className=[bandClass(pos),r.name===SELECTED_TEAM?'followed':'',LEAGUE.cuts.includes(pos)?'cut':''].join(' ').trim();
       tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="hide-s">${r.p}</td>
         <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
-        <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts"${r.just?` title="${justTittel(r.pts, r.just)}"`:''}>${r.pts}${justMerke(r.just)}</td>
+        <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts"${r.just?` title="${justTittel(r.pts, r.just)}"`:''}>${poengMedMerke(r.pts, r.just)}</td>
         <td class="formcol hh"></td><td class="hide-s">${femSisteHtml(somListe(r.results))}${form5Html(form5AvListe(somListe(r.results)), somListe(r.results))}</td><td class="odds gull hide-xs hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
       tb.appendChild(tr);
       return;
@@ -6907,7 +6917,7 @@ function render(){
       : 'Uendret siden forrige modelloppdatering.';
     tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span>${diff}</td><td class="hide-s">${r.p}</td>
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
-      <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.just?justTittel(r.pts, r.just):`${r.pts} poeng nå.`} Maks mulig sluttsum: ${r.max}.">${r.pts}${justMerke(r.just)}</td>
+      <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.just?justTittel(r.pts, r.just):`${r.pts} poeng nå.`} Maks mulig sluttsum: ${r.max}.">${poengMedMerke(r.pts, r.just)}</td>
       <td class="formcol"><button type="button" class="formbox ${formCls}" data-team="${r.name}" title="${f1(r.form)} av 10. ${changeTxt} Trykk for styrkegrafen." aria-label="Styrke ${f1(r.form)} av 10 for ${r.name}. Vis styrkegrafen.">${f1(r.form)}</button></td>
       <td class="hide-s">${femSisteHtml(r.femSiste)}${form5Html(r.form5, r.femSiste)}</td><td class="odds gull hide-xs"></td><td class="odds p3"></td><td class="odds ned"></td>`;
     tb.appendChild(tr);

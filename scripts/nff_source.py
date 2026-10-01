@@ -5,9 +5,8 @@ Toppfotball sine ligasider. Den dekker begge ligaer i nøyaktig samme
 tabellformat, og gir runde, dato, avspark, lag og resultat i én forespørsel
 per liga -- både spilte og kommende kamper i samme tabell.
 
-Rollen her er kontroll og reserve, ikke hovedkilde. Poenget er at
-terminlisten endelig får en annenmening: fram til nå har runde og dato hatt
-nøyaktig én kilde, uten noe som kunne si fra når den tok feil.
+Rollen her er BARE reserve naar ligasiden ikke svarer (se REGELEN under),
+og reparasjon av en frossen sesong for haand.
 
 Tabellen heter customSorterAtomicMatches og har kolonnene
     Runde | Dato | Dag | Tid | Hjemmelag | Resultat | Bortelag | Bane | Kampnr.
@@ -38,19 +37,24 @@ OSLO = ZoneInfo("Europe/Oslo")
 # denne grensen gjelder bare kontrollkilden.
 FERDIG_ETTER_MIN = 150
 
-# HVOR OFTE VI HENTER FRA fotball.no -- og hvorfor det er sjelden.
+# REGELEN FOR fotball.no (Trond, 1.10.2026): fotball.no hentes BARE
+# automatisk som reserve naar ligasiden (eliteserien.no eller obos-ligaen.no)
+# ikke svarer, aldri ellers. Ingen daglig revisjon, ingen tabellkontroll og
+# ikke noe krav ved frysing. Den loepende kontrollen gaar mot ligasidens egne
+# kanaler: tabellen paa resultatsiden (tabellkontroll.py) og kalenderfeeden
+# (daglig_revisjon.py). Reparasjon av en frossen sesong for haand
+# (daglig_revisjon.revider_sesong, frys_sesong.py --frys-paa-nytt) er ikke
+# automatisk og er unntaket.
 #
-# robots.txt paa fotball.no navngir Googlebot, Bing og noen til, og avslutter
-# med "User-agent: *" og "Disallow: /". Vaar User-Agent sier aerlig at vi er
-# en robot, saa vi er omfattet. robots.txt er ikke lov, men det er forbundets
-# uttrykte oenske, og aa hente derfra i hver kjoring er aa gaa imot det.
+# Hvorfor: robots.txt paa fotball.no navngir Googlebot, Bing og noen til, og
+# avslutter med "User-agent: *" og "Disallow: /". Vaar User-Agent sier aerlig
+# at vi er en robot, saa vi er omfattet. robots.txt er ikke lov, men det er
+# forbundets uttrykte oenske.
 #
-# Derfor: hoeyst ETT forsok per liga per doegn, uansett hvor mange workflows
-# som spoer. Alle andre leser det som ligger i cachen. Et forsok som FEILER
-# teller ogsaa -- ellers ville en nede-periode gitt nytt forsok hver time.
-#
-# Grensen ligger her, i kilden, ikke i hver kaller. Da kan den ikke omgaas
-# ved at noen glemmer den.
+# Ogsaa som reserve: hoeyst ETT forsok per liga per doegn, uansett hvor mange
+# workflows som spoer. Alle andre leser det som ligger i cachen. Et forsok som
+# FEILER teller ogsaa -- ellers ville en nede-periode gitt nytt forsok hver
+# time. Grensen ligger her, i kilden, ikke i hver kaller.
 HENT_INTERVALL_TIMER = 20
 # NFF_CACHE_KATALOG finnes for testene, av samme grunn som
 # HENTELOGG_KATALOG og ODDSPAPI_BRUK_KATALOG: failsafe-suiten kjorer de
@@ -213,9 +217,10 @@ def parse_side(html_tekst, liga, naa=None, log=lambda s: None):
     return ut
 
 
-# TABELLEN OG JUSTERINGENE ligger paa samme ligaside som kampene, saa de
-# koster ingen ekstra forespoersel. Siden har to tabelltabeller (enkel og
-# utvidet, customTableSorter); den foerste er den enkle med kolonnene under.
+# TABELLEN OG JUSTERINGENE paa fotball.no. Brukes BARE ved reparasjon av en
+# frossen sesong for haand (daglig_revisjon.revider_sesong), aldri i den
+# daglige kjeden. Siden har to tabelltabeller (enkel og utvidet,
+# customTableSorter); den foerste er den enkle med kolonnene under.
 # Plass kan ha en stjerne ("15 *") naar laget har en poengjustering. Maal
 # staar som "72 - 39", og negative tall med minustegn (U+2212).
 STILLING_RE = re.compile(r"<table[^>]*customTableSorter[^>]*>.*?</table>", re.S)
@@ -301,23 +306,6 @@ def parse_justeringer(html_tekst, liga):
     return ut
 
 
-def offisiell_tabell(liga, cache_dir=None):
-    """(tabell, justeringer, feil) fra fotball.no: det fetch_all lagret i
-    cachen sist hentingen lyktes, eller None/None/feilmelding. cache_dir er
-    testinngangen, som i fetch_all."""
-    sti = cache_dir and (Path(cache_dir) / f"nff_{liga}.html")
-    if sti and sti.exists():
-        tekst = sti.read_text(encoding="utf-8")
-        try:
-            return parse_tabell(tekst, liga), parse_justeringer(tekst, liga), None
-        except NffDataError as e:
-            return None, None, str(e)
-    d = les_cache(liga)
-    if "tabell" not in d:
-        return None, None, "tabellen er ikke hentet fra fotball.no ennå"
-    return d.get("tabell"), d.get("justeringer"), d.get("tabell_feil")
-
-
 def hent(url):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
@@ -369,17 +357,6 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
         t = finn_turnering(tekst)
         if t:
             d["turnering"] = t
-        # Tabellen og justeringene fra samme side, til den daglige
-        # sammenligningen (daglig_revisjon.py). Kan de ikke leses, er det
-        # en advarsel der, ikke en feil i kamphentingen.
-        try:
-            d["tabell"] = parse_tabell(tekst, liga)
-            d["justeringer"] = parse_justeringer(tekst, liga)
-            d.pop("tabell_feil", None)
-        except NffDataError as e:
-            d["tabell"], d["justeringer"] = None, None
-            d["tabell_feil"] = str(e)[:200]
-            log(f"[nff {liga}] ADVARSEL: {e}")
     except Exception as e:
         d["siste_feil"] = f"{type(e).__name__}: {e}"[:200]
         _skriv_cache(liga, d)

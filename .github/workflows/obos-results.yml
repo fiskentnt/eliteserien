@@ -25,6 +25,7 @@ on:
 
 permissions:
   contents: write
+  issues: write   # varsel om nytt poengtrekk (scripts/tabellkontroll.py varsle)
 
 concurrency:
   group: obos-results
@@ -172,9 +173,18 @@ jobs:
         continue-on-error: true  # skal aldri stoppe resultatene
         run: python3 scripts/accuracy_log.py obos
 
-      # Den daglige revisjonen mot fotball.no er tatt ut (1.10.2026).
-      # fotball.no hentes bare automatisk som reserve naar ligasiden ikke
-      # svarer, aldri ellers (se nff_source.py).
+      - name: Daglig revisjon av terminlisten mot kalenderfeeden
+        id: revisjon
+        # Runde, dato og avspark i terminlisten (skrapt fra /terminliste) mot
+        # NTFs kalenderfeed (/terminliste/subscribe), som er laget for
+        # automatisk bruk. De 22 feilene vi rettet 25. september var nettopp
+        # saann data. Et kritisk avvik gjor stempelet rodt til en ny revisjon
+        # bekrefter at det er borte. fotball.no er ikke med (regelen fra
+        # 1.10.2026): den hentes bare automatisk som reserve naar ligasiden
+        # ikke svarer, aldri ellers (se nff_source.py).
+        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
+          && steps.bygg.outcome == 'success'
+        run: python3 scripts/daglig_revisjon.py obos
 
       - name: Merk daglig vedlikehold som utført
         # SISTE steg for lagring, og bare naar DET DAGLIGE ARBEIDET faktisk
@@ -190,6 +200,7 @@ jobs:
           && steps.odds.outcome == 'success'
           && steps.bygg.outcome == 'success'
           && steps.logg.outcome == 'success'
+          && steps.revisjon.outcome == 'success'
         run: python3 scripts/merk_daglig.py obos
 
       - name: Se etter neste sesongs terminliste (obos)
@@ -273,7 +284,7 @@ jobs:
           # mangler, og da ble ingenting lagret -- heller ikke nye resultater.
           # (Skjedde 22. september: oddshentingen feilet, én fil ble ikke laget,
           # og det nye banneret ble aldri lagret.)
-          for f in data/hentelogg obos/data/audit_fixtures.json data/nff-cache obos/data/daglig_state.json data/oddspapi_usage.json data/oddspapi-bruk obos/data/matches.json obos/data/fixtures.json obos/data/model.json \
+          for f in data/hentelogg obos/data/audit_fixtures.json obos/data/audit_tabell.json obos/data/justeringer.json data/nff-cache obos/data/daglig_state.json data/oddspapi_usage.json data/oddspapi-bruk obos/data/matches.json obos/data/fixtures.json obos/data/model.json \
                    obos/data/status.json obos/data/results_state.json \
                    obos/data/oddspapi_fixtures_2026.json obos/data/oddspapi_markets.json obos/og.png \
                    obos/data/odds_upcoming.json \
@@ -290,6 +301,16 @@ jobs:
             git pull --rebase --autostash origin main || true
             bash scripts/push_med_rebase.sh
           fi
+
+      - name: Varsle om nytt poengtrekk
+        # tabellkontroll.py la inn en ny justering i justeringer.json i DENNE
+        # kjoringen: advarsel i Actions, en linje i oppsummeringen og en
+        # GitHub-issue, saa det synes at et trekk er lagt inn automatisk.
+        # Etter lagringen, saa trekket er pushet naar varselet kommer.
+        if: always() && !inputs.dry_run
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: python3 scripts/tabellkontroll.py varsle obos
 
       - name: Gjør kjøringen rød hvis sesongskiftet varslet
         # Steget over har continue-on-error, saa resten av kjeden -- inkludert

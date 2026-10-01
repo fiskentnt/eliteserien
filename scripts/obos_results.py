@@ -180,10 +180,9 @@ LIGASIDEN alene kan publisere. Den er den offisielle kilden, og et
     med, ville et ferskt resultat blitt staaende i 24 timer bare fordi ingen
     hadde rukket aa redigere siden.
 
-    fotball.no er ikke med i denne avgjorelsen lenger (robots.txt: Disallow:
-    / for alle andre enn sokemotorene). Den uavhengige kontrollen mot
-    fotball.no skjer i det daglige vedlikeholdet, og fanger dermed en feil i
-    etterkant framfor aa hindre publisering i oyeblikket.
+    fotball.no er ikke med i denne avgjorelsen (regelen fra 1.10.2026, se
+    nff_source.py): den brukes bare som reserve naar ligasiden ikke svarer.
+    Den loepende kontrollen er tabellen og kalenderfeeden fra ligasiden.
 
     For de andre kildene gjelder den gamle regelen, der to kilder trengs:
 
@@ -237,9 +236,9 @@ def offisielle_resultater():
     /v4/scores unodvendig i normal drift: et tellende kall skal ikke brukes
     paa et resultat vi allerede har gratis fra to offisielle kilder.
 
-    fotball.no er IKKE med her: robots.txt der sier Disallow: / for alle
-    andre enn sokemotorene, og denne funksjonen kjorer i hver resultatkjoring.
-    Den brukes bare i det daglige vedlikeholdet, hoyst en gang i dognet.
+    fotball.no er bare med som RESERVE naar ligasiden ikke svarer (regelen
+    fra 1.10.2026, se nff_source.py), hoyst ett forsok per dogn, aldri
+    ellers.
 
     Ligasiden gir bare resultat for rader som er eksplisitt merket
     ferdigspilt OG der det har gaatt lang nok tid siden avspark (se
@@ -253,7 +252,21 @@ def offisielle_resultater():
         ntf = ntf_source.fetch_all("obos", log=lambda _s: None)
     except Exception as e:
         log(f"  ligasiden feilet ({e})")
-        return {}
+        # RESERVE (regelen fra 1.10.2026, se nff_source.py): BARE naar
+        # ligasiden ikke svarer, brukes fotball.no -- hoeyst ett forsok per
+        # dogn, ellers det som ligger i cachen. fotball.no har samme vern
+        # mot en kamp underveis (nff_source.FERDIG_ETTER_MIN).
+        if not isinstance(e, ntf_source.SvarerIkke):
+            return {}
+        try:
+            import nff_source
+            ntf = nff_source.fetch_all("obos", log=lambda m: log(f"  {m}"))
+        except Exception as e2:
+            log(f"  fotball.no (reserve) feilet ({e2})")
+            return {}
+        if not ntf:
+            return {}
+        log("  bruker fotball.no som reserve for ligasiden")
 
     # SESONGGRENSEN. Uten den var dette den verste veien inn: nokkelen er
     # (hjemme, borte), og radene kommer fra ligasiden uansett sesong. Etter

@@ -39,7 +39,7 @@ import re
 import sys
 import urllib.error
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -101,6 +101,13 @@ class TomSide(EsDataError):
     Egen type fordi de to feilmaatene er ulike: en tolkningsfeil er ALLTID
     galt, mens en tom TERMINLISTE er riktig naar sesongen er ferdigspilt.
     Uten dette skillet maatte fetch_all gjette paa feilmeldingens ordlyd."""
+
+
+class SvarerIkke(Exception):
+    """Ligasiden svarte ikke: nettverksfeil, tidsavbrudd, HTTP-feil eller
+    blokkering (403/429). Det er BARE da fotball.no kan hentes automatisk,
+    som reserve (se nff_source.py). En side som svarer, men som vi ikke
+    forstaar, er en feil hos oss og gir ingen reserve."""
 
 
 class RateLimited(Exception):
@@ -282,6 +289,126 @@ def slå_sammen(rader, log=lambda s: None):
     return list(ut.values())
 
 
+# TABELLEN staar paa resultatsiden vi alt henter (div league-table--full),
+# saa tabellkontrollen (scripts/tabellkontroll.py) koster ingen ekstra
+# forespoersel. Kolonnene: plass, lag, Spilt, Vunnet, Uavgjort, Tap, +, -,
+# +/-, Poeng og Form. Tabellen viser poengene ETTER trekk fra NFF (Aasane 19
+# i 2026), uten noen markering av trekket.
+TABELL_RE = re.compile(r'<div class="league-table league-table--full">.*?</table>', re.S)
+TABELL_KOLONNER = ["", "Spilt", "Vunnet", "Uavgjort", "Tap", "+", "-", "+/-", "Poeng", "Form"]
+TH_RE = re.compile(r"<th[^>]*>(.*?)</th>", re.S)
+TABELLRAD_RE = re.compile(r'<tr class="table__row[^"]*"[^>]*>(.*?)</tr>', re.S)
+TD_RE = re.compile(r"<td[^>]*>(.*?)</td>", re.S)
+FULL_RE = re.compile(r'<span class="table__typo--full">(.*?)</span>', re.S)
+TALL_RE = re.compile(r"^[-+\u2212]?\d+$")
+
+
+def _ren(celle):
+    full = FULL_RE.search(celle)
+    return re.sub(r"\s+", " ", html.unescape(re.sub(r"<[^>]+>", " ", full.group(1) if full else celle))).strip()
+
+
+def parse_tabell(html_tekst, liga):
+    """Tabellen paa resultatsiden: [{plass, lag, k, v, u, t, mf, mm, diff, poeng}].
+
+    EsDataError hvis tabellen mangler, har andre kolonner eller feil antall
+    lag -- da har siden lagt om, og kontrollen ville vaert verdiloes."""
+    cfg = oppsett(liga)
+    m = TABELL_RE.search(html_tekst)
+    if not m:
+        raise EsDataError(f"fant ingen tabell paa resultatsiden for {liga}")
+    tab = m.group(0)
+    kol = [_ren(x) for x in TH_RE.findall(tab)]
+    if kol != TABELL_KOLONNER:
+        raise EsDataError(f"uventede kolonner i tabellen for {liga}: {kol}")
+    tall = lambda x: int(x.replace("\u2212", "-"))
+    ut = []
+    for rad in TABELLRAD_RE.findall(tab):
+        c = [_ren(x) for x in TD_RE.findall(rad)]
+        if len(c) != 11 or not all(TALL_RE.match(x) for x in [c[0]] + c[2:10]):
+            raise EsDataError(f"uventet tabellrad for {liga}: {c}")
+        ut.append({"plass": int(c[0]), "lag": _navn(c[1], cfg), "k": tall(c[2]), "v": tall(c[3]),
+                   "u": tall(c[4]), "t": tall(c[5]), "mf": tall(c[6]), "mm": tall(c[7]),
+                   "diff": tall(c[8]), "poeng": tall(c[9])})
+    if len(ut) != len(cfg["lag"]) or len({r["lag"] for r in ut}) != len(ut):
+        raise EsDataError(f"tabellen for {liga} har {len(ut)} rader, ventet {len(cfg['lag'])} lag")
+    return ut
+
+
+# Tabellen fra siste vellykkede henting i DENNE prosessen, per liga:
+# {"tabell": [...], "hentet": ISO-tid, "kilde": URL} eller {"feil": tekst}.
+# Fylles av fetch_all, leses av tabellkontrollen i samme kjoring.
+SISTE_TABELL = {}
+
+
+def siste_tabell(liga):
+    return SISTE_TABELL.get(liga)
+
+
+# KALENDERFEEDEN (/terminliste/subscribe) er laget av NTF for automatisk
+# bruk, og er den loepende kontrollen av runde, dato og avspark
+# (daglig_revisjon.py). Hver kamp er en VEVENT med "Hjemme - Borte" i
+# SUMMARY, "(runde N)" i DESCRIPTION og avspark i norsk tid i DTSTART.
+# Feeden har bare kommende kamper og ingen resultater. Les BARE mellom
+# BEGIN:VEVENT og END:VEVENT: tidssonedefinisjonen (VTIMEZONE) har egne
+# DTSTART-linjer. OBOS-feeden hadde to identiske dubletter i 2026; de slaas
+# sammen, mens to oppfoeringer av samme kamp med ulik runde, dato eller tid
+# er en feil -- da vet vi ikke hvilken som gjelder.
+KAL_RUNDE_RE = re.compile(r"\(runde (\d+)\)")
+KAL_START_RE = re.compile(r"^DTSTART(?:;TZID=Europe/Oslo)?(?:;VALUE=DATE)?:(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})\d{2})?$")
+
+
+def hent_kalender(liga, log=lambda s: None):
+    """Kalenderfeeden for ligaen som tekst. SvarerIkke hvis siden ikke svarer."""
+    url = f"{oppsett(liga)['ntf_base']}/terminliste/subscribe"
+    log(f"[ntf {liga}] henter kalenderfeeden ...")
+    try:
+        return hent(url)
+    except Exception as e:
+        hentelogg.logg(liga, "ntf-kalender", "feil", melding=f"{type(e).__name__}: {e}")
+        if isinstance(e, (RateLimited, OSError)):
+            raise SvarerIkke(f"{url}: {type(e).__name__}: {e}") from e
+        raise
+
+
+def parse_kalender(tekst, liga):
+    """[{round, date, time, home, away}] fra kalenderfeeden. EsDataError hvis
+    den ikke kan leses, eller samme kamp staar med ulik runde, dato eller tid."""
+    cfg = oppsett(liga)
+    # Lange linjer er brettet: linjeskift fulgt av mellomrom eller tab.
+    linjer = re.sub(r"\r?\n[ \t]", "", tekst).splitlines()
+    hendelser, cur = [], None
+    for l in linjer:
+        if l == "BEGIN:VEVENT":
+            cur = {}
+        elif l == "END:VEVENT":
+            if cur is not None:
+                hendelser.append(cur)
+            cur = None
+        elif cur is not None and ":" in l:
+            navn = l.split(":", 1)[0].split(";", 1)[0]
+            if navn in ("SUMMARY", "DESCRIPTION", "DTSTART"):
+                cur[navn] = l if navn == "DTSTART" else l.split(":", 1)[1]
+    ut = {}
+    for h in hendelser:
+        lag = (h.get("SUMMARY") or "").split(" - ")
+        r = KAL_RUNDE_RE.search(h.get("DESCRIPTION") or "")
+        d = KAL_START_RE.match(h.get("DTSTART") or "")
+        if len(lag) != 2 or not r or not d:
+            raise EsDataError(f"uventet oppføring i kalenderfeeden for {liga}: {h}")
+        rad = {"round": int(r.group(1)), "date": f"{d.group(1)}-{d.group(2)}-{d.group(3)}",
+               "time": f"{d.group(4)}:{d.group(5)}" if d.group(4) else None,
+               "home": _navn(lag[0].replace("\\,", ","), cfg), "away": _navn(lag[1].replace("\\,", ","), cfg)}
+        k = (rad["home"], rad["away"])
+        if k in ut and ut[k] != rad:
+            raise EsDataError(f"{k[0]}-{k[1]} står to ganger i kalenderfeeden for {liga} med ulik "
+                              f"runde, dato eller tid: {ut[k]} og {rad}")
+        ut[k] = rad
+    if not ut:
+        raise EsDataError(f"kalenderfeeden for {liga} hadde ingen kamper")
+    return sorted(ut.values(), key=lambda m: (m["date"], m["time"] or "", m["home"]))
+
+
 def hent(url):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
@@ -385,8 +512,12 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
                 tekst = hent(f"{cfg['ntf_base']}/{navn}")
             except Exception as e:
                 # Logges FOR den kastes videre. Kalleren bestemmer om det er
-                # kritisk; loggen skal ha linjen uansett.
+                # kritisk; loggen skal ha linjen uansett. Svarte ikke siden
+                # (nett, tidsavbrudd, HTTP-feil, blokkering), kastes
+                # SvarerIkke: bare da kan kalleren bruke fotball.no som reserve.
                 hentelogg.logg(liga, f"ntf-{navn}", "feil", melding=f"{type(e).__name__}: {e}")
+                if isinstance(e, (urllib.error.URLError, RateLimited, TimeoutError, ConnectionError, OSError)):
+                    raise SvarerIkke(f"{cfg['ntf_base']}/{navn}: {type(e).__name__}: {e}") from e
                 raise
             if sti:
                 sti.parent.mkdir(parents=True, exist_ok=True)
@@ -422,6 +553,17 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
                        melding=(f"hoppet over rad med ugyldig dato (har resultat): "
                                 f"{', '.join(hoppet)}") if hoppet else "")
         rader.extend(nye)
+        if navn == "resultater":
+            # Tabellen paa samme side, til tabellkontrollen. Kan den ikke
+            # leses, er det en feil i kontrollen, ikke i resultatene.
+            try:
+                SISTE_TABELL[liga] = {"tabell": parse_tabell(tekst, liga), "kilde": f"{cfg['ntf_base']}/resultater",
+                                      "hentet": naa.astimezone(timezone.utc).isoformat(timespec="seconds")}
+                hentelogg.logg(liga, "ntf-tabell", "ok", kamper=len(SISTE_TABELL[liga]["tabell"]))
+            except EsDataError as e:
+                SISTE_TABELL[liga] = {"feil": str(e)[:300]}
+                hentelogg.logg(liga, "ntf-tabell", "feil", melding=str(e)[:200])
+                log(f"[ntf {liga}] ADVARSEL: tabellen kunne ikke leses: {e}")
 
     return slå_sammen(rader, log=log)
 

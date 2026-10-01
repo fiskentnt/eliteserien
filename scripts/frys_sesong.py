@@ -61,17 +61,23 @@ def ikke_ferdig(rot, liga, sesong, naa=None, sesongmappe=False):
 
     "Ferdig" er tre ting, ikke bare at kampene er spilt:
 
-      1. alle kamper har resultat
+      1. alle kampene i serien er spilt: antall lag ganger antall lag minus
+         en, regnet fra lagene som faktisk er med (trekkes et lag og kampene
+         strykes, er det faerre), og ingen gjenstaar i terminlisten
       2. det har gaatt minst 14 dager siden siste kamp
-      3. en revisjon mot fotball.no som er FERSK, utfort i SAMME KJORING,
-         etter siste kamp, og uten apne kritiske avvik
+      3. tabellkontrollen fra SAMME KJORING (tabellkontroll.py, mot tabellen
+         paa ligasiden, eller mot fotball.no ved reparasjon for haand), etter
+         siste kamp, der alle lag stemmer, ogsaa poengene
+
+    fotball.no er ikke et krav (regelen fra 1.10.2026, se nff_source.py).
 
     naa kan settes for aa prove et forlop paa en simulert kalender.
 
-    Karenstiden og revisjonen er der fordi resultater kan endres i etterkant
-    -- en kamp som domme 3-0 etter protest, en rettet feilregistrering. En
-    frysing som skjer for tidlig laser inn feilen for godt, og det er nettopp
-    det frysingen skal hindre.
+    Karenstiden og kontrollen er der fordi resultater kan endres i etterkant
+    -- en kamp som domme 3-0 etter protest, et poengtrekk. En frysing som
+    skjer for tidlig laser inn feilen for godt, og det er nettopp det
+    frysingen skal hindre. En frossen sesong kan aapnes igjen (tin) hvis NFF
+    vedtar noe etterpaa.
     """
     import json as _json
     from datetime import datetime, timedelta, timezone
@@ -85,7 +91,8 @@ def ikke_ferdig(rot, liga, sesong, naa=None, sesongmappe=False):
     naa = naa or datetime.now(timezone.utc)
     ut = []
 
-    # 1) alle kamper spilt
+    # 1) alle kamper spilt: ingen igjen i terminlisten, og n*(n-1) kamper
+    # med resultat for de n lagene som faktisk er med
     try:
         fx = _json.loads((data / "fixtures.json").read_text(encoding="utf-8"))
         uspilt = [m for r in fx for m in r["matches"] if not m.get("played")]
@@ -93,6 +100,15 @@ def ikke_ferdig(rot, liga, sesong, naa=None, sesongmappe=False):
             ut.append(f"{len(uspilt)} kamp(er) mangler fortsatt resultat")
     except Exception as e:
         ut.append(f"kunne ikke lese fixtures.json ({type(e).__name__})")
+    try:
+        _sp = _json.loads((data / "matches.json").read_text(encoding="utf-8"))
+        _lag = {x["home"] for x in _sp} | {x["away"] for x in _sp}
+        _spilt = sum(1 for x in _sp if x.get("hg") is not None)
+        if _spilt != len(_lag) * (len(_lag) - 1):
+            ut.append(f"{_spilt} kamper har resultat, men {len(_lag)} lag gir "
+                      f"{len(_lag) * (len(_lag) - 1)} kamper")
+    except Exception as e:
+        ut.append(f"kunne ikke telle kampene i matches.json ({type(e).__name__})")
 
     # 2) karenstid etter siste kamp
     siste = None
@@ -115,43 +131,34 @@ def ikke_ferdig(rot, liga, sesong, naa=None, sesongmappe=False):
     except Exception as e:
         ut.append(f"kunne ikke lese matches.json ({type(e).__name__})")
 
-    # 3) fersk revisjon uten apne kritiske avvik
-    rev = data / "audit_fixtures.json"
+    # 3) tabellkontrollen fra samme kjoring: alle lag stemmer
+    rev = data / "audit_tabell.json"
     if not rev.exists():
-        ut.append("ingen terminlisterevisjon er kjørt")
+        ut.append("ingen tabellkontroll er kjørt")
     else:
         try:
             d = _json.loads(rev.read_text(encoding="utf-8"))
-            if int(d.get("errors") or 0):
-                ut.append(f"{d['errors']} åpne kritiske avvik i revisjonen")
-            elif d.get("bekreftet"):
-                ut.append(f"{len(d['bekreftet'])} bekreftede avvik står uløst")
-            # FERSK betyr at fotball.no-dataene ble hentet i den kjoringen
-            # revisjonen gikk -- ikke bare at filen er ny. En revisjon mot
-            # cachet data nedgraderer nye avvik til advarsler, og kan derfor
-            # ha errors=0 uten aa ha kontrollert noe.
-            if not d.get("ferskt"):
-                ut.append("siste revisjon gikk mot cachet fotball.no-data, "
-                          "ikke mot data hentet i samme kjøring")
-            # SAMME KJORING. En gronn revisjon fra i gaar sier ingenting om
-            # at dagens henting gikk bra -- den kan ha feilet, eller
-            # revisjonssteget kan ha krasjet, uten at filen ble roert.
+            if not d.get("sammenlignet"):
+                ut.append("tabellkontrollen fikk ingen tabell å sammenligne med")
+            elif int(d.get("errors") or 0):
+                ut.append(f"{d['errors']} åpne kritiske avvik i tabellkontrollen")
+            elif not d.get("alle_like"):
+                ut.append("tabellkontrollen fant ikke at alle lag stemmer")
+            # SAMME KJORING. En gronn kontroll fra i gaar sier ingenting om
+            # at dagens henting gikk bra.
             import sesong as _s2
             naa_id = _s2.kjoring_id()
             if d.get("kjoring") != naa_id:
-                ut.append(f"revisjonen er fra en annen kjøring "
+                ut.append(f"tabellkontrollen er fra en annen kjøring "
                           f"({d.get('kjoring')}, nå {naa_id})")
             sett = datetime.fromisoformat(d["checked_at"])
-            alder = (naa - sett).total_seconds() / 3600
-            if alder > 24:
-                ut.append(f"revisjonen er {alder:.0f} timer gammel, ikke fersk")
-            # Revisjonen maa vaere utfort ETTER siste kamp. En ren revisjon
+            # Kontrollen maa vaere utfort ETTER siste kamp. En ren kontroll
             # fra midtsesongen sier ingenting om sluttresultatene.
             if siste and sett < siste:
-                ut.append(f"revisjonen er fra {sett:%Y-%m-%d}, før siste kamp "
+                ut.append(f"tabellkontrollen er fra {sett:%Y-%m-%d}, før siste kamp "
                           f"{siste:%Y-%m-%d}")
         except Exception as e:
-            ut.append(f"kunne ikke lese revisjonen ({type(e).__name__})")
+            ut.append(f"kunne ikke lese tabellkontrollen ({type(e).__name__})")
     return ut
 
 
@@ -220,7 +227,10 @@ def frys_paa_nytt(rot, liga, sesong, log=print, naa=None):
     HVORFOR DEN TRENGS: kommer en rettelse etter at neste sesong er aktiv,
     kjorer ingen daglig kjede for den gamle sesongen lenger. Den blir
     staaende tint. Og frysingen krever at revisjonen skjedde i SAMME
-    kjoring, saa to separate kommandoer ville aldri matchet.
+    kjoring, saa to separate kommandoer ville aldri matchet. Revisjonen
+    sammenligner ogsaa tabellen paa samme fotball.no-side (tabellkontroll.py),
+    legger et nytt trekk inn i sesongens justeringer.json og skriver
+    audit_tabell.json, som frysingen krever.
 
     SESONGEN OPPGIS EKSPLISITT. Kommandoen bruker aldri aktiv sesong: etter
     byttet er 2027 aktiv, mens det er 2026 som skal repareres.
@@ -232,7 +242,9 @@ def frys_paa_nytt(rot, liga, sesong, log=print, naa=None):
     fotball.no viser den aktive sesongen, saa 2026 hentes med sin egen
     turnerings-id (se nff_source.turnering_url). Hentingen gaar direkte,
     ikke gjennom den daglige 20-timersgrensen -- en manuell reparasjon skal
-    ikke stoppes av at kjeden hentet tidligere samme dag.
+    ikke stoppes av at kjeden hentet tidligere samme dag. Dette er
+    reparasjon for haand, ikke automatisk henting, og derfor unntaket i
+    regelen for fotball.no (se nff_source.py).
 
     FRAMGANGSMAATE ved en rettelse etter byttet:
 
@@ -255,7 +267,7 @@ def frys_paa_nytt(rot, liga, sesong, log=print, naa=None):
     kode = daglig_revisjon.revider_sesong(liga, sesong, naa=naa, log=log)
     if kode != 0:
         log(f"   revisjonen fant kritiske avvik -- fryser ikke. "
-            f"Rett dem forst, se {liga}/{sesong}/data/audit_fixtures.json.")
+            f"Rett dem forst, se {liga}/{sesong}/data/audit_fixtures.json og audit_tabell.json.")
         return 1
 
     log(f"2. Fryser {liga}/{sesong} paa nytt ...")
@@ -317,8 +329,9 @@ def main():
     #
     # Tidligere ventet vi paa at neste sesongs terminliste skulle dukke opp,
     # som en ERSTATNING for aa vite om sesongen var over. Den er fjernet:
-    # ikke_ferdig() svarer paa sporsmaalet direkte -- alle kamper spilt, 72
-    # timer siden siste kamp, og en fersk revisjon uten apne avvik.
+    # ikke_ferdig() svarer paa sporsmaalet direkte -- alle kamper spilt,
+    # karenstiden etter siste kamp, og en tabellkontroll fra samme kjoring
+    # der alle lag stemmer.
     #
     # Erstatningen var dessuten skadelig. Den utsatte frysingen til ETTER at
     # NTF publiserte neste sesong, altsaa til kildene hadde begynt aa vise

@@ -96,12 +96,13 @@ def bor_se_etter(rot, liga, naa, log=print):
     return True, neste, f"ser etter terminlisten for {neste}"
 
 
-def main(argv):
+def main(argv, naa=None):
     if not argv or argv[0] not in LIGAER:
         print(__doc__.strip(), file=sys.stderr)
         return 2
     liga = argv[0]
-    naa = datetime.now(timezone.utc)
+    # naa kan settes av testene, saa de ikke avhenger av klokka.
+    naa = naa or datetime.now(timezone.utc)
 
     se, neste, hvorfor = bor_se_etter(ROT, liga, naa)
     print(f"{oppsett(liga)['visningsnavn']}: {hvorfor}")

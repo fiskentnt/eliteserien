@@ -1,0 +1,15 @@
+{
+ "note": "Justeringene slik fotball.no viste dem 25.9.2026 (nff_obos_2026-09-25.html: Åsane -1, registrert 4.3.2026), i formatet til obos/data/justeringer.json. Brukes sammen med fasit_obos_2026-09-25.json når en test regner tabellen for samme dag (test_kilder.py, og openMedDag i tests/regression.js).",
+ "justeringer": [
+  {
+   "sesong": 2026,
+   "lag": "Åsane",
+   "poeng": -1,
+   "dato": "2026-03-04",
+   "vedtak": "2026-03-03",
+   "årsak": "Oversittelse av rapporteringsfrist for økonomisk rapportering",
+   "kilde": "fotball.no, Justeringer (registrert 4.3.2026)",
+   "lenke": "https://www.fotball.no/lov-og-reglement/beslutninger-fra-utvalg/2026/poengtrekk-for-asane/"
+  }
+ ]
+}

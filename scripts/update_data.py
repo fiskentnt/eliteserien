@@ -132,6 +132,22 @@ def dagens_revisjonsavvik(now):
     return int(st.get("errors") or 0)
 
 
+def ligasiden_eller_reserve(cache_dir=None, log=lambda s: None):
+    """Kampene fra ligasiden. RESERVE (regelen fra 1.10.2026, se
+    nff_source.py): BARE naar ligasiden ikke svarer, hentes fotball.no --
+    hoeyst ett forsok per dogn, ellers det som ligger i cachen. Svarer
+    ligasiden, men vi ikke forstaar den, er det en feil hos oss, og den skal
+    ikke skjules bak en annen kilde."""
+    try:
+        return ntf_source.fetch_all(LIGA, cache_dir=cache_dir, log=log)
+    except ntf_source.SvarerIkke as e:
+        log(f"ADVARSEL: ligasiden svarte ikke ({e}) -- bruker fotball.no som reserve.")
+        rader = nff_source.fetch_all(LIGA, log=log)
+        if not rader:
+            raise
+        return rader
+
+
 def write_status(ok, now, error=None):
     """data/status.json -- leses av index.html sitt stempel. Skrives KUN her,
     dvs. bare når update_data.py faktisk har kjørt (ikke når should_fetch.py
@@ -149,6 +165,13 @@ def write_status(ok, now, error=None):
     try:
         import daglig_revisjon
         avvik += daglig_revisjon.dagens_avvik(LIGA, now)
+    except Exception:
+        pass
+    # Tabellkontrollen (tabellkontroll.py) likedan: et rodt stempel fra den
+    # skal ikke overskrives av neste kjoring.
+    try:
+        import tabellkontroll
+        avvik += tabellkontroll.avvik(LIGA)
     except Exception:
         pass
     if ok and avvik:
@@ -353,7 +376,7 @@ def main(cache_dir=None):
             espn_rows = []
 
         # Hovedkilde: ligasiden. Uten den kan vi ikke bygge terminlisten.
-        ntf_rows = ntf_source.fetch_all(LIGA, cache_dir=cache_dir, log=log)
+        ntf_rows = ligasiden_eller_reserve(cache_dir, log)
 
         # SESONGGRENSEN, eksplisitt og for avstemmingen. Ligasiden viser
         # bade fjoraaret og neste sesong i vinduet for frysingen, med de
@@ -362,9 +385,9 @@ def main(cache_dir=None):
         # staar urort.
         ntf_rows, _fordeling = bare_aktiv_sesong(ntf_rows, _aktiv0, log=log)
 
-        # fotball.no hentes IKKE her (1.10.2026): bare automatisk som reserve
-        # naar ligasiden ikke svarer, aldri i den daglige kjeden. Den daglige
-        # kontrollen under gaar mot ffksupporter.
+        # fotball.no er ikke med i den daglige kjeden (1.10.2026): bare som
+        # reserve over, naar ligasiden ikke svarer. Den daglige kontrollen
+        # under gaar mot ffksupporter.
         nff_rows = []
 
         # Reserve. Feiler den, er det ikke lenger kritisk.
@@ -416,6 +439,18 @@ def main(cache_dir=None):
         data_dir.mkdir(exist_ok=True)
         write_json(data_dir / "matches.json", matches_out)
         write_json(data_dir / "fixtures.json", fixtures_out)
+
+        # Tabellkontrollen mot tabellen paa ligasiden, fra samme henting
+        # (scripts/tabellkontroll.py). Et nytt poengtrekk legges inn i
+        # justeringer.json her, foer modellen og grunnlaget. Avvik i kamper,
+        # maal eller V/U/T feiler kjoringen nederst, etter at alt annet er
+        # skrevet.
+        import tabellkontroll
+        _t = ntf_source.siste_tabell(LIGA)
+        _tk = tabellkontroll.kontroller(
+            LIGA, _aktiv or now.astimezone(timezone.utc).year, matches_out,
+            _t.get("tabell") if _t and "tabell" in _t else _t, naa=now,
+            kilde_url=_t.get("kilde") if _t else None, kjoring=_ses.kjoring_id(), log=log)
 
         # Etter skriving: filene er riktige så langt kildene rekker, men en
         # kamp som mangler resultat lenge etter avspark skal stoppe kjøringen.
@@ -477,6 +512,9 @@ def main(cache_dir=None):
         if gjorde_daglig:
             should_fetch.merk_ok(LIGA, now)
             log("Daglig vedlikehold utfort -- 20-timersklokka nullstilt.")
+        if _tk["errors"]:
+            raise DataAuditError(f"{_tk['errors']} kritisk(e) avvik mellom tabellen vår og tabellen "
+                                 f"på ligasiden: {_tk['avvik'][0]}")
     except Exception as e:
         write_status(ok=False, now=now, error=e)
         raise

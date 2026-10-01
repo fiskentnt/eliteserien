@@ -514,7 +514,9 @@ def main():
             check(f"NTF: ugyldig dato {navn} stopper fortsatt hentingen", "manglende dato" in str(e), str(e))
         except TypeError as e:
             check(f"NTF: ugyldig dato {navn} stopper fortsatt hentingen", False, f"TypeError: {e}")
-    # Hele fetch_all, med sidene fra en lokal mappe og matches.json fra repoet.
+    # Hele fetch_all, med sidene fra en lokal mappe og en egen matches.json der
+    # Kongsvinger - Hødd har resultat (ikke repoets, som endres hele sesongen
+    # og er tom ved neste sesongstart).
     # Hentelogget får en egen, tom katalog her. Test 2 (obos_results.py
     # --break-wikipedia) logger også obos/ntf-resultater, i sin egen fil og
     # ofte i samme sekund som hentingen under. Tidsstempelet har hele sekunder,
@@ -523,8 +525,14 @@ def main():
     import tempfile as _tf
     import hentelogg as HL2
     gml_katalog = HL2.KATALOG
+    gml_rot19 = NTF.ROT
     with _tf.TemporaryDirectory() as d:
         HL2.KATALOG = Path(d) / "hentelogg"
+        NTF.ROT = Path(d)
+        Path(d, "obos", "data").mkdir(parents=True)
+        Path(d, "obos", "data", "matches.json").write_text(json.dumps(
+            [{"date": "2026-09-20", "time": "15:00", "round": 21, "home": "Kongsvinger", "away": "Hødd", "hg": 5, "ag": 1}]),
+            encoding="utf-8")
         Path(d, "obos_resultater.html").write_text(side, encoding="utf-8")
         Path(d, "obos_terminliste.html").write_text(
             ntf_rad("Ranheim", "Egersund", '02.10.<span class="schedule__match__item--date__year">2026</span>',
@@ -549,6 +557,7 @@ def main():
         except NTF.EsDataError as e:
             check("NTF: ugyldig dato på terminlisten stopper fortsatt fetch_all", "manglende dato" in str(e), str(e))
     HL2.KATALOG = gml_katalog
+    NTF.ROT = gml_rot19
 
     # 20. Tidsporten for The Odds API (update-odds.yml via planleggeren hvert
     # tiende minutt). Porten avgjør, uten filer: én vellykket henting per
@@ -683,6 +692,10 @@ def main():
     import tempfile as _tf
     sys.path.insert(0, str(ROOT / "scripts"))
     import grunnlag_port as _gp
+    # Datafilene fra det frosne bildet (tests/data/README.md), ikke dagens:
+    # testene endrer første odds og første gjenstående kamp, og dagens filer
+    # er tomme når det ikke er odds ute, ved sesongslutt og ved sesongstart.
+    BILDE22 = ROOT / "tests" / "data" / "2026-10-01"
     with _tf.TemporaryDirectory() as _t:
         rot = Path(_t)
         (rot / "scripts").mkdir()
@@ -690,7 +703,7 @@ def main():
         (rot / "eliteserien" / "data").mkdir(parents=True)
         _sh.copy(ROOT / "eliteserien" / "index.html", rot / "eliteserien")
         for f in ("model.json", "matches.json", "fixtures.json", "odds_upcoming.json"):
-            _sh.copy(ROOT / "eliteserien" / "data" / f, rot / "eliteserien" / "data")
+            _sh.copy(BILDE22 / "eliteserien" / "data" / f, rot / "eliteserien" / "data")
         d = rot / "eliteserien" / "data"
         les = lambda f: json.loads((d / f).read_text(encoding="utf-8"))
         skriv = lambda f, x: (d / f).write_text(json.dumps(x, ensure_ascii=False, indent=1), encoding="utf-8")
@@ -717,7 +730,7 @@ def main():
         prov("en oddspris endret", "odds_upcoming.json", lambda o: o["matches"][0].update(H=o["matches"][0]["H"] + 0.0001), True)
         prov("et resultat i matches.json endret", "matches.json", lambda m: m[0].update(hg=m[0]["hg"] + 1), True)
         prov("terminlisten endret", "fixtures.json", lambda f: f[0]["matches"][0].update(time="23:59"), True)
-        _sh.copy(ROOT / "eliteserien" / "data" / "justeringer.json", d)
+        _sh.copy(BILDE22 / "eliteserien" / "data" / "justeringer.json", d)
         (d / "grunnlag.json").write_text(json.dumps({"inndata": v()[1]}), encoding="utf-8")
         prov("en poengjustering lagt til i justeringer.json", "justeringer.json",
              lambda j: j["justeringer"].append({"sesong": 2026, "lag": "Brann", "poeng": -1, "dato": "2026-03-04"}), True)
@@ -739,9 +752,9 @@ def main():
         (rot / "elo-test" / "emodell").mkdir(parents=True)
         (rot / "eliteserien" / "data").mkdir(parents=True)
         _sh.copy(ROOT / "elo-test" / "index.html", rot / "elo-test")
-        _sh.copy(ROOT / "elo-test" / "emodell" / "model.json", rot / "elo-test" / "emodell")
+        _sh.copy(BILDE22 / "elo-test" / "emodell" / "model.json", rot / "elo-test" / "emodell")
         for f in ("matches.json", "fixtures.json", "odds_upcoming.json"):
-            _sh.copy(ROOT / "eliteserien" / "data" / f, rot / "eliteserien" / "data")
+            _sh.copy(BILDE22 / "eliteserien" / "data" / f, rot / "eliteserien" / "data")
         v = lambda: _gp.vurder("elo-test", root=rot)
         (rot / "elo-test" / "emodell" / "grunnlag.json").write_text(json.dumps({"inndata": v()[1]}), encoding="utf-8")
         check("grunnlag-port, testsiden: filen i elo-test/emodell er regnet av dagens inndata -> hopp over", v()[0] is False)
@@ -998,15 +1011,21 @@ def main():
             check(f"justering {hvem}: sesong (heltall), lag i ligaen, poeng (heltall ulik 0)",
                   isinstance(j.get("sesong"), int) and j.get("lag") in _opp26(liga)["lag"]
                   and isinstance(j.get("poeng"), int) and not isinstance(j.get("poeng"), bool) and j.get("poeng") != 0, str(j))
-            check(f"justering {hvem}: dato og vedtak som ÅÅÅÅ-MM-DD, vedtak ikke etter dato",
-                  bool(_dato26.match(str(j.get("dato")))) and bool(_dato26.match(str(j.get("vedtak"))))
-                  and j["vedtak"] <= j["dato"], str(j))
-            check(f"justering {hvem}: kilde hos fotball.no og årsak",
-                  str(j.get("kilde", "")).startswith("https://www.fotball.no/") and bool(j.get("årsak")), str(j))
+            # vedtak og lenke legges inn for hånd; et trekk tabellkontrollen
+            # har lagt inn automatisk, har dem ikke ennå.
+            check(f"justering {hvem}: dato som ÅÅÅÅ-MM-DD, og vedtak (om det er lagt inn) ikke etter dato",
+                  bool(_dato26.match(str(j.get("dato"))))
+                  and (j.get("vedtak") is None or (bool(_dato26.match(str(j["vedtak"]))) and j["vedtak"] <= j["dato"])), str(j))
+            check(f"justering {hvem}: kilde og årsak, lenke (om den er lagt inn) til en https-side, automatisk som sann/usann",
+                  bool(str(j.get("kilde", "")).strip()) and bool(j.get("årsak"))
+                  and (j.get("lenke") is None or str(j["lenke"]).startswith("https://"))
+                  and isinstance(j.get("automatisk", False), bool)
+                  and (not j.get("automatisk") or bool(_dato26.match(str(j.get("oppdaget", ""))[:10]))), str(j))
     _o26 = json.loads((ROOT / "obos" / "data" / "justeringer.json").read_text(encoding="utf-8"))["justeringer"]
-    check("obos: Åsane -1 poeng i 2026, registrert 4. mars (vedtak 3. mars)",
-          [(j["sesong"], j["lag"], j["poeng"], j["dato"], j["vedtak"]) for j in _o26 if j["lag"] == "Åsane"]
-          == [(2026, "Åsane", -1, "2026-03-04", "2026-03-03")], str(_o26))
+    check("obos: Åsane -1 poeng i 2026, registrert 4. mars (vedtak 3. mars), med lenke til vedtaket",
+          [(j["sesong"], j["lag"], j["poeng"], j["dato"], j["vedtak"], j.get("lenke")) for j in _o26 if j["lag"] == "Åsane"]
+          == [(2026, "Åsane", -1, "2026-03-04", "2026-03-03",
+               "https://www.fotball.no/lov-og-reglement/beslutninger-fra-utvalg/2026/poengtrekk-for-asane/")], str(_o26))
     _e26 = json.loads((ROOT / "eliteserien" / "data" / "justeringer.json").read_text(encoding="utf-8"))["justeringer"]
     check("eliteserien: ingen justeringer i 2026 (fotball.no har ingen liste)", [j for j in _e26 if j["sesong"] == 2026] == [], str(_e26))
     # Siden henter filen, og poengJust brukes overalt der poeng regnes.
@@ -1020,6 +1039,43 @@ def main():
               and _re26.search(r"pts: ?r\.w\*3\+r\.d[,}]", _t26) is None)
     # Frysingen tar filen med, og grunnlagsporten ser den.
     check("frys_sesong.py fryser justeringer.json", '"justeringer.json"' in (ROOT / "scripts" / "frys_sesong.py").read_text(encoding="utf-8"))
+
+    # 27. Regelen for fotball.no (1.10.2026): den hentes BARE automatisk som
+    # reserve når ligasiden ikke svarer, aldri ellers. Ingen daglig revisjon,
+    # ingen tabellkontroll og ikke noe krav ved frysing. Hvert kall til
+    # nff_source.fetch_all i skriptene skal stå i en reserveblokk for
+    # SvarerIkke, og ingen workflow skal kjøre noe som henter derfra.
+    import re as _re27
+    _kall27 = []
+    for _f27 in sorted((ROOT / "scripts").glob("*.py")):
+        if _f27.name == "nff_source.py":
+            continue
+        _l27 = _f27.read_text(encoding="utf-8").splitlines()
+        for _i27, _x27 in enumerate(_l27):
+            if "nff_source.fetch_all(" in _x27 and not _x27.strip().startswith("#"):
+                _kall27.append((_f27.name, _i27 + 1, any("SvarerIkke" in y for y in _l27[max(0, _i27 - 14):_i27])))
+    check("fotball.no hentes bare som reserve: hvert nff_source.fetch_all-kall står etter en SvarerIkke fra ligasiden",
+          len(_kall27) >= 3 and all(r for _, _, r in _kall27), str(_kall27))
+    check("fotball.no: reserven finnes for begge ligaer (update_data, obos_build_data, obos_results)",
+          {f for f, _, _ in _kall27} >= {"update_data.py", "obos_build_data.py", "obos_results.py"}, str(_kall27))
+    _dr27 = (ROOT / "scripts" / "daglig_revisjon.py").read_text(encoding="utf-8")
+    _main27 = _dr27[_dr27.index("def main("):]
+    check("den daglige revisjonen bruker kalenderfeeden, ikke fotball.no",
+          "hent_kalender" in _main27 and "nff_source.fetch_all" not in _main27 and "nff_source.hent(" not in _main27)
+    _fr27 = (ROOT / "scripts" / "frys_sesong.py").read_text(encoding="utf-8")
+    _if27 = _fr27[_fr27.index("def ikke_ferdig("):_fr27.index("def tin(")]
+    check("frysingen krever tabellkontrollen fra samme kjøring, ikke fotball.no",
+          "audit_tabell.json" in _if27 and "audit_fixtures.json" not in _if27 and "len(_lag) * (len(_lag) - 1)" in _if27)
+    for _wf27 in ("update-data.yml", "obos-results.yml"):
+        _t27 = (ROOT / ".github" / "workflows" / _wf27).read_text(encoding="utf-8")
+        _liga27 = "eliteserien" if _wf27 == "update-data.yml" else "obos"
+        check(f"{_wf27}: ingen henting fra fotball.no, revisjonen mot kalenderfeeden, varsel om nytt poengtrekk med issues: write, og tabellkontrollens filer i commit-listen",
+              "www.fotball.no" not in _t27
+              and not any("nff_source" in l for l in _t27.splitlines() if not l.strip().startswith("#"))
+              and f"python3 scripts/daglig_revisjon.py {_liga27}" in _t27 and "mot kalenderfeeden" in _t27
+              and f"python3 scripts/tabellkontroll.py varsle {_liga27}" in _t27 and "GH_TOKEN: ${{ github.token }}" in _t27
+              and _re27.search(r"permissions:\n  contents: write\n  issues: write", _t27) is not None
+              and f"{_liga27}/data/audit_tabell.json" in _t27 and f"{_liga27}/data/justeringer.json" in _t27)
 
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare

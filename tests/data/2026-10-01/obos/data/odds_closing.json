@@ -1,0 +1,2591 @@
+{
+ "version": 2,
+ "source": "OddsPapi /v4/historical-odds",
+ "note": "Sluttodds er siste observasjon 60 til 15 minutter før avspark. Kamper uten observasjon i vinduet står med bookmaker null og odds null -- de har INGEN sluttodds, og skal ikke erstattes med en eldre pris. Utfallene er hjemme, uavgjort, borte.",
+ "definisjon": "siste observasjon 60 til 15 minutter før avspark",
+ "market": 101,
+ "bookmakers": [
+  "pinnacle",
+  "bet365",
+  "unibet"
+ ],
+ "matches": {
+  "2026|Strømsgodset|Stabæk": {
+   "fixtureId": "id1000002267017826",
+   "round": 1,
+   "start": "2026-04-05T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.699,
+    "U": 4.65,
+    "B": 4.08
+   },
+   "priced_at": "2026-04-05T13:44:53.364Z",
+   "result": "2-1",
+   "minutter_for": 15.1
+  },
+  "2026|Egersund|Raufoss": {
+   "fixtureId": "id1000002267017828",
+   "round": 1,
+   "start": "2026-04-06T12:30",
+   "bookmaker": "unibet",
+   "odds": {
+    "H": 1.58,
+    "U": 4.0,
+    "B": 4.9
+   },
+   "priced_at": "2026-04-06T11:54:46.819Z",
+   "result": "2-1",
+   "minutter_for": 35.2
+  },
+  "2026|Lyn|Haugesund": {
+   "fixtureId": "id1000002267017832",
+   "round": 1,
+   "start": "2026-04-06T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.29,
+    "U": 3.76,
+    "B": 2.92
+   },
+   "priced_at": "2026-04-06T12:11:11.870Z",
+   "result": "2-4",
+   "minutter_for": 18.8
+  },
+  "2026|Odd|Sogndal": {
+   "fixtureId": "id1000002267017834",
+   "round": 1,
+   "start": "2026-04-06T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.71,
+    "U": 3.71,
+    "B": 2.46
+   },
+   "priced_at": "2026-04-06T12:04:17.076Z",
+   "result": "4-0",
+   "minutter_for": 25.7
+  },
+  "2026|Ranheim|Strømmen": {
+   "fixtureId": "id1000002270505670",
+   "round": 1,
+   "start": "2026-06-07T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.46,
+    "U": 5.0,
+    "B": 6.03
+   },
+   "priced_at": "2026-06-07T14:40:25.779Z",
+   "result": "2-2",
+   "minutter_for": 19.6
+  },
+  "2026|Åsane|Moss": {
+   "fixtureId": "id1000002267017838",
+   "round": 1,
+   "start": "2026-04-06T12:30",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.61,
+    "U": 3.3,
+    "B": 2.8
+   },
+   "priced_at": "2026-04-06T12:05:29.637Z",
+   "result": "2-3",
+   "minutter_for": 24.5
+  },
+  "2026|Kongsvinger|Bryne": {
+   "fixtureId": "id1000002267017830",
+   "round": 1,
+   "start": "2026-04-07T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.99,
+    "U": 3.63,
+    "B": 3.75
+   },
+   "priced_at": "2026-04-07T16:42:02.162Z",
+   "result": "3-0",
+   "minutter_for": 18.0
+  },
+  "2026|Hødd|Sandnes Ulf": {
+   "fixtureId": "id1000002267017840",
+   "round": 1,
+   "start": "2026-04-07T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.69,
+    "U": 3.32,
+    "B": 2.69
+   },
+   "priced_at": "2026-04-07T16:41:56.269Z",
+   "result": "2-1",
+   "minutter_for": 18.1
+  },
+  "2026|Haugesund|Strømsgodset": {
+   "fixtureId": "id1000002267017842",
+   "round": 2,
+   "start": "2026-04-11T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.59,
+    "U": 3.79,
+    "B": 2.53
+   },
+   "priced_at": "2026-04-11T11:30:14.661Z",
+   "result": "4-2",
+   "minutter_for": 29.8
+  },
+  "2026|Sandnes Ulf|Odd": {
+   "fixtureId": "id1000002267017844",
+   "round": 2,
+   "start": "2026-04-11T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.62,
+    "U": 3.96,
+    "B": 2.43
+   },
+   "priced_at": "2026-04-11T11:31:18.075Z",
+   "result": "1-3",
+   "minutter_for": 28.7
+  },
+  "2026|Sogndal|Lyn": {
+   "fixtureId": "id1000002267017846",
+   "round": 2,
+   "start": "2026-04-11T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.11,
+    "U": 3.63,
+    "B": 3.39
+   },
+   "priced_at": "2026-04-11T11:30:16.609Z",
+   "result": "0-3",
+   "minutter_for": 29.7
+  },
+  "2026|Strømmen|Egersund": {
+   "fixtureId": "id1000002267017848",
+   "round": 2,
+   "start": "2026-04-11T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.0,
+    "U": 4.019,
+    "B": 2.16
+   },
+   "priced_at": "2026-04-11T11:40:28.212Z",
+   "result": "0-3",
+   "minutter_for": 19.5
+  },
+  "2026|Bryne|Ranheim": {
+   "fixtureId": "id1000002267017850",
+   "round": 2,
+   "start": "2026-04-12T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.819,
+    "U": 3.67,
+    "B": 4.44
+   },
+   "priced_at": "2026-04-12T14:40:26.883Z",
+   "result": "2-3",
+   "minutter_for": 19.6
+  },
+  "2026|Moss|Hødd": {
+   "fixtureId": "id1000002267017852",
+   "round": 2,
+   "start": "2026-04-12T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.862,
+    "U": 3.75,
+    "B": 4.11
+   },
+   "priced_at": "2026-04-12T14:33:37.569Z",
+   "result": "1-0",
+   "minutter_for": 26.4
+  },
+  "2026|Stabæk|Åsane": {
+   "fixtureId": "id1000002267017854",
+   "round": 2,
+   "start": "2026-04-12T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.54,
+    "U": 4.55,
+    "B": 5.52
+   },
+   "priced_at": "2026-04-12T14:34:35.242Z",
+   "result": "4-0",
+   "minutter_for": 25.4
+  },
+  "2026|Raufoss|Kongsvinger": {
+   "fixtureId": "id1000002267017856",
+   "round": 2,
+   "start": "2026-04-13T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.1,
+    "U": 4.34,
+    "B": 1.746
+   },
+   "priced_at": "2026-04-13T16:40:25.807Z",
+   "result": "1-3",
+   "minutter_for": 19.6
+  },
+  "2026|Ranheim|Raufoss": {
+   "fixtureId": "id1000002267017858",
+   "round": 3,
+   "start": "2026-04-17T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.826,
+    "U": 3.81,
+    "B": 4.22
+   },
+   "priced_at": "2026-04-17T16:40:26.741Z",
+   "result": "5-1",
+   "minutter_for": 19.6
+  },
+  "2026|Strømsgodset|Sogndal": {
+   "fixtureId": "id1000002267017860",
+   "round": 3,
+   "start": "2026-04-18T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.571,
+    "U": 4.54,
+    "B": 5.18
+   },
+   "priced_at": "2026-04-18T11:44:52.263Z",
+   "result": "3-0",
+   "minutter_for": 15.1
+  },
+  "2026|Hødd|Haugesund": {
+   "fixtureId": "id1000002267017862",
+   "round": 3,
+   "start": "2026-04-18T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.54,
+    "U": 3.89,
+    "B": 1.97
+   },
+   "priced_at": "2026-04-18T11:40:59.521Z",
+   "result": "0-2",
+   "minutter_for": 19.0
+  },
+  "2026|Kongsvinger|Moss": {
+   "fixtureId": "id1000002267017864",
+   "round": 3,
+   "start": "2026-04-18T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.49,
+    "U": 4.66,
+    "B": 6.06
+   },
+   "priced_at": "2026-04-18T11:32:18.892Z",
+   "result": "2-1",
+   "minutter_for": 27.7
+  },
+  "2026|Egersund|Bryne": {
+   "fixtureId": "id1000002267017866",
+   "round": 3,
+   "start": "2026-04-19T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.17,
+    "U": 3.61,
+    "B": 3.25
+   },
+   "priced_at": "2026-04-19T14:41:31.101Z",
+   "result": "1-0",
+   "minutter_for": 18.5
+  },
+  "2026|Odd|Stabæk": {
+   "fixtureId": "id1000002267017868",
+   "round": 3,
+   "start": "2026-04-19T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.21,
+    "U": 4.05,
+    "B": 2.89
+   },
+   "priced_at": "2026-04-19T14:43:53.640Z",
+   "result": "2-2",
+   "minutter_for": 16.1
+  },
+  "2026|Åsane|Strømmen": {
+   "fixtureId": "id1000002267017870",
+   "round": 3,
+   "start": "2026-04-19T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.73,
+    "U": 3.8,
+    "B": 2.41
+   },
+   "priced_at": "2026-04-19T14:40:29.229Z",
+   "result": "4-5",
+   "minutter_for": 19.5
+  },
+  "2026|Lyn|Sandnes Ulf": {
+   "fixtureId": "id1000002267017872",
+   "round": 3,
+   "start": "2026-04-20T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.636,
+    "U": 4.4,
+    "B": 4.75
+   },
+   "priced_at": "2026-04-20T16:35:29.242Z",
+   "result": "0-2",
+   "minutter_for": 24.5
+  },
+  "2026|Sogndal|Åsane": {
+   "fixtureId": "id1000002267017876",
+   "round": 4,
+   "start": "2026-04-25T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.552,
+    "U": 4.55,
+    "B": 5.39
+   },
+   "priced_at": "2026-04-25T13:42:53.552Z",
+   "result": "2-0",
+   "minutter_for": 17.1
+  },
+  "2026|Strømmen|Kongsvinger": {
+   "fixtureId": "id1000002267017874",
+   "round": 4,
+   "start": "2026-04-25T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.92,
+    "U": 3.97,
+    "B": 1.847
+   },
+   "priced_at": "2026-04-25T15:40:11.110Z",
+   "result": "2-2",
+   "minutter_for": 19.8
+  },
+  "2026|Bryne|Odd": {
+   "fixtureId": "id1000002267017878",
+   "round": 4,
+   "start": "2026-04-25T18:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.28,
+    "U": 3.6,
+    "B": 3.05
+   },
+   "priced_at": "2026-04-25T17:41:17.552Z",
+   "result": "1-2",
+   "minutter_for": 18.7
+  },
+  "2026|Moss|Lyn": {
+   "fixtureId": "id1000002267017880",
+   "round": 4,
+   "start": "2026-04-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.86,
+    "U": 3.76,
+    "B": 2.34
+   },
+   "priced_at": "2026-04-26T14:30:26.459Z",
+   "result": "2-1",
+   "minutter_for": 29.6
+  },
+  "2026|Raufoss|Hødd": {
+   "fixtureId": "id1000002267017882",
+   "round": 4,
+   "start": "2026-04-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.21,
+    "U": 3.22,
+    "B": 3.55
+   },
+   "priced_at": "2026-04-26T14:42:14.921Z",
+   "result": "1-1",
+   "minutter_for": 17.8
+  },
+  "2026|Sandnes Ulf|Strømsgodset": {
+   "fixtureId": "id1000002267017884",
+   "round": 4,
+   "start": "2026-04-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.65,
+    "U": 4.38,
+    "B": 1.833
+   },
+   "priced_at": "2026-04-26T14:44:27.427Z",
+   "result": "1-1",
+   "minutter_for": 15.5
+  },
+  "2026|Stabæk|Haugesund": {
+   "fixtureId": "id1000002267017886",
+   "round": 4,
+   "start": "2026-04-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.21,
+    "U": 4.019,
+    "B": 2.91
+   },
+   "priced_at": "2026-04-26T14:42:02.099Z",
+   "result": "3-2",
+   "minutter_for": 18.0
+  },
+  "2026|Egersund|Ranheim": {
+   "fixtureId": "id1000002267017888",
+   "round": 4,
+   "start": "2026-04-27T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.98,
+    "U": 3.86,
+    "B": 3.55
+   },
+   "priced_at": "2026-04-27T16:41:48.946Z",
+   "result": "3-0",
+   "minutter_for": 18.2
+  },
+  "2026|Bryne|Sogndal": {
+   "fixtureId": "id1000002267017890",
+   "round": 5,
+   "start": "2026-05-01T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.18,
+    "U": 3.61,
+    "B": 3.24
+   },
+   "priced_at": "2026-05-01T13:44:08.474Z",
+   "result": "3-3",
+   "minutter_for": 15.9
+  },
+  "2026|Haugesund|Sandnes Ulf": {
+   "fixtureId": "id1000002267017892",
+   "round": 5,
+   "start": "2026-05-01T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.699,
+    "U": 4.47,
+    "B": 4.22
+   },
+   "priced_at": "2026-05-01T13:38:00.791Z",
+   "result": "2-0",
+   "minutter_for": 22.0
+  },
+  "2026|Hødd|Åsane": {
+   "fixtureId": "id1000002267017894",
+   "round": 5,
+   "start": "2026-05-01T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.1,
+    "U": 3.29,
+    "B": 3.78
+   },
+   "priced_at": "2026-05-01T13:43:55.974Z",
+   "result": "1-0",
+   "minutter_for": 16.1
+  },
+  "2026|Kongsvinger|Egersund": {
+   "fixtureId": "id1000002267017896",
+   "round": 5,
+   "start": "2026-05-01T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.14,
+    "U": 3.91,
+    "B": 3.11
+   },
+   "priced_at": "2026-05-01T13:30:11.835Z",
+   "result": "2-1",
+   "minutter_for": 29.8
+  },
+  "2026|Lyn|Stabæk": {
+   "fixtureId": "id1000002267017898",
+   "round": 5,
+   "start": "2026-05-01T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.25,
+    "U": 3.93,
+    "B": 2.07
+   },
+   "priced_at": "2026-05-01T13:43:32.456Z",
+   "result": "0-4",
+   "minutter_for": 16.5
+  },
+  "2026|Odd|Raufoss": {
+   "fixtureId": "id1000002267017900",
+   "round": 5,
+   "start": "2026-05-01T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.574,
+    "U": 4.23,
+    "B": 5.59
+   },
+   "priced_at": "2026-05-01T13:42:17.764Z",
+   "result": "1-0",
+   "minutter_for": 17.7
+  },
+  "2026|Strømsgodset|Strømmen": {
+   "fixtureId": "id1000002267017902",
+   "round": 5,
+   "start": "2026-05-01T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.467,
+    "U": 4.85,
+    "B": 6.15
+   },
+   "priced_at": "2026-05-01T13:44:00.861Z",
+   "result": "3-0",
+   "minutter_for": 16.0
+  },
+  "2026|Ranheim|Moss": {
+   "fixtureId": "id1000002267017904",
+   "round": 5,
+   "start": "2026-05-01T18:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.819,
+    "U": 4.059,
+    "B": 3.98
+   },
+   "priced_at": "2026-05-01T17:32:51.759Z",
+   "result": "4-0",
+   "minutter_for": 27.1
+  },
+  "2026|Ranheim|Kongsvinger": {
+   "fixtureId": "id1000002267017906",
+   "round": 6,
+   "start": "2026-05-08T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.57,
+    "U": 3.89,
+    "B": 2.51
+   },
+   "priced_at": "2026-05-08T16:42:43.414Z",
+   "result": "1-1",
+   "minutter_for": 17.3
+  },
+  "2026|Moss|Bryne": {
+   "fixtureId": "id1000002267017908",
+   "round": 6,
+   "start": "2026-05-10T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.36,
+    "U": 3.55,
+    "B": 2.94
+   },
+   "priced_at": "2026-05-10T14:40:29.790Z",
+   "result": "2-3",
+   "minutter_for": 19.5
+  },
+  "2026|Raufoss|Lyn": {
+   "fixtureId": "id1000002267017910",
+   "round": 6,
+   "start": "2026-05-10T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.38,
+    "U": 3.52,
+    "B": 2.15
+   },
+   "priced_at": "2026-05-10T14:38:04.509Z",
+   "result": "0-1",
+   "minutter_for": 21.9
+  },
+  "2026|Sandnes Ulf|Stabæk": {
+   "fixtureId": "id1000002267017912",
+   "round": 6,
+   "start": "2026-05-10T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.39,
+    "U": 4.07,
+    "B": 1.98
+   },
+   "priced_at": "2026-05-10T14:30:15.260Z",
+   "result": "0-1",
+   "minutter_for": 29.7
+  },
+  "2026|Sogndal|Haugesund": {
+   "fixtureId": "id1000002267017914",
+   "round": 6,
+   "start": "2026-05-10T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.75,
+    "U": 3.81,
+    "B": 2.39
+   },
+   "priced_at": "2026-05-10T14:32:50.401Z",
+   "result": "5-1",
+   "minutter_for": 27.2
+  },
+  "2026|Strømmen|Hødd": {
+   "fixtureId": "id1000002267017916",
+   "round": 6,
+   "start": "2026-05-10T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.952,
+    "U": 3.61,
+    "B": 3.89
+   },
+   "priced_at": "2026-05-10T14:43:58.508Z",
+   "result": "1-2",
+   "minutter_for": 16.0
+  },
+  "2026|Åsane|Strømsgodset": {
+   "fixtureId": "id1000002267017918",
+   "round": 6,
+   "start": "2026-05-10T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 7.47,
+    "U": 5.23,
+    "B": 1.377
+   },
+   "priced_at": "2026-05-10T14:37:06.306Z",
+   "result": "0-3",
+   "minutter_for": 22.9
+  },
+  "2026|Egersund|Odd": {
+   "fixtureId": "id1000002267017920",
+   "round": 6,
+   "start": "2026-05-11T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.4,
+    "U": 3.37,
+    "B": 3.02
+   },
+   "priced_at": "2026-05-11T16:43:27.399Z",
+   "result": "0-1",
+   "minutter_for": 16.5
+  },
+  "2026|Sandnes Ulf|Egersund": {
+   "fixtureId": "id1000002267017922",
+   "round": 7,
+   "start": "2026-05-15T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.99,
+    "U": 3.68,
+    "B": 2.28
+   },
+   "priced_at": "2026-05-15T15:30:43.478Z",
+   "result": "4-2",
+   "minutter_for": 29.3
+  },
+  "2026|Bryne|Strømmen": {
+   "fixtureId": "id1000002267017924",
+   "round": 7,
+   "start": "2026-05-16T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.751,
+    "U": 3.94,
+    "B": 4.48
+   },
+   "priced_at": "2026-05-16T13:41:30.799Z",
+   "result": "4-2",
+   "minutter_for": 18.5
+  },
+  "2026|Haugesund|Åsane": {
+   "fixtureId": "id1000002267017926",
+   "round": 7,
+   "start": "2026-05-16T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.349,
+    "U": 5.77,
+    "B": 7.3
+   },
+   "priced_at": "2026-05-16T13:30:12.177Z",
+   "result": "1-1",
+   "minutter_for": 29.8
+  },
+  "2026|Hødd|Sogndal": {
+   "fixtureId": "id1000002267017928",
+   "round": 7,
+   "start": "2026-05-16T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.13,
+    "U": 3.36,
+    "B": 2.34
+   },
+   "priced_at": "2026-05-16T13:40:11.629Z",
+   "result": "2-2",
+   "minutter_for": 19.8
+  },
+  "2026|Lyn|Kongsvinger": {
+   "fixtureId": "id1000002267017930",
+   "round": 7,
+   "start": "2026-05-16T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.83,
+    "U": 3.69,
+    "B": 2.38
+   },
+   "priced_at": "2026-05-16T13:40:07.133Z",
+   "result": "0-3",
+   "minutter_for": 19.9
+  },
+  "2026|Odd|Moss": {
+   "fixtureId": "id1000002267017932",
+   "round": 7,
+   "start": "2026-05-16T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.578,
+    "U": 4.44,
+    "B": 5.24
+   },
+   "priced_at": "2026-05-16T13:41:01.030Z",
+   "result": "2-3",
+   "minutter_for": 19.0
+  },
+  "2026|Stabæk|Raufoss": {
+   "fixtureId": "id1000002267017934",
+   "round": 7,
+   "start": "2026-05-16T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.438,
+    "U": 4.84,
+    "B": 6.69
+   },
+   "priced_at": "2026-05-16T13:40:12.298Z",
+   "result": "1-2",
+   "minutter_for": 19.8
+  },
+  "2026|Strømsgodset|Ranheim": {
+   "fixtureId": "id1000002267017936",
+   "round": 7,
+   "start": "2026-05-16T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.641,
+    "U": 4.53,
+    "B": 4.55
+   },
+   "priced_at": "2026-05-16T13:43:44.580Z",
+   "result": "5-4",
+   "minutter_for": 16.3
+  },
+  "2026|Egersund|Lyn": {
+   "fixtureId": "id1000002267017938",
+   "round": 8,
+   "start": "2026-05-20T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.787,
+    "U": 3.72,
+    "B": 4.57
+   },
+   "priced_at": "2026-05-20T16:40:26.048Z",
+   "result": "0-0",
+   "minutter_for": 19.6
+  },
+  "2026|Kongsvinger|Odd": {
+   "fixtureId": "id1000002267017940",
+   "round": 8,
+   "start": "2026-05-20T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.925,
+    "U": 4.019,
+    "B": 3.59
+   },
+   "priced_at": "2026-05-20T16:40:29.092Z",
+   "result": "4-2",
+   "minutter_for": 19.5
+  },
+  "2026|Moss|Strømsgodset": {
+   "fixtureId": "id1000002267017942",
+   "round": 8,
+   "start": "2026-05-20T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.41,
+    "U": 4.42,
+    "B": 1.9
+   },
+   "priced_at": "2026-05-20T16:40:25.947Z",
+   "result": "1-1",
+   "minutter_for": 19.6
+  },
+  "2026|Ranheim|Hødd": {
+   "fixtureId": "id1000002267017944",
+   "round": 8,
+   "start": "2026-05-20T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.757,
+    "U": 3.94,
+    "B": 4.45
+   },
+   "priced_at": "2026-05-20T16:40:26.348Z",
+   "result": "3-2",
+   "minutter_for": 19.6
+  },
+  "2026|Raufoss|Bryne": {
+   "fixtureId": "id1000002267017946",
+   "round": 8,
+   "start": "2026-05-20T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.13,
+    "U": 3.68,
+    "B": 2.2
+   },
+   "priced_at": "2026-05-20T16:30:15.684Z",
+   "result": "3-0",
+   "minutter_for": 29.7
+  },
+  "2026|Sogndal|Stabæk": {
+   "fixtureId": "id1000002267017948",
+   "round": 8,
+   "start": "2026-05-20T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.66,
+    "U": 3.94,
+    "B": 2.42
+   },
+   "priced_at": "2026-05-20T16:30:44.086Z",
+   "result": "2-2",
+   "minutter_for": 29.3
+  },
+  "2026|Strømmen|Haugesund": {
+   "fixtureId": "id1000002267017950",
+   "round": 8,
+   "start": "2026-05-20T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.2,
+    "U": 3.97,
+    "B": 2.08
+   },
+   "priced_at": "2026-05-20T16:30:46.238Z",
+   "result": "0-7",
+   "minutter_for": 29.2
+  },
+  "2026|Åsane|Sandnes Ulf": {
+   "fixtureId": "id1000002267017952",
+   "round": 8,
+   "start": "2026-05-20T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.55,
+    "U": 3.77,
+    "B": 2.009
+   },
+   "priced_at": "2026-05-20T16:41:12.933Z",
+   "result": "2-0",
+   "minutter_for": 18.8
+  },
+  "2026|Haugesund|Moss": {
+   "fixtureId": "id1000002267017954",
+   "round": 9,
+   "start": "2026-05-25T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.746,
+    "U": 4.4,
+    "B": 4.03
+   },
+   "priced_at": "2026-05-25T14:30:02.106Z",
+   "result": "3-1",
+   "minutter_for": 30.0
+  },
+  "2026|Hødd|Egersund": {
+   "fixtureId": "id1000002267017956",
+   "round": 9,
+   "start": "2026-05-25T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.48,
+    "U": 3.73,
+    "B": 2.04
+   },
+   "priced_at": "2026-05-25T14:44:13.450Z",
+   "result": "3-1",
+   "minutter_for": 15.8
+  },
+  "2026|Lyn|Strømmen": {
+   "fixtureId": "id1000002267017958",
+   "round": 9,
+   "start": "2026-05-25T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.787,
+    "U": 4.56,
+    "B": 3.72
+   },
+   "priced_at": "2026-05-25T14:31:14.645Z",
+   "result": "1-0",
+   "minutter_for": 28.8
+  },
+  "2026|Odd|Ranheim": {
+   "fixtureId": "id1000002267017960",
+   "round": 9,
+   "start": "2026-05-25T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.18,
+    "U": 4.04,
+    "B": 2.94
+   },
+   "priced_at": "2026-05-25T14:32:53.988Z",
+   "result": "3-1",
+   "minutter_for": 27.1
+  },
+  "2026|Sandnes Ulf|Sogndal": {
+   "fixtureId": "id1000002267017962",
+   "round": 9,
+   "start": "2026-05-25T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.23,
+    "U": 3.97,
+    "B": 2.9
+   },
+   "priced_at": "2026-05-25T14:43:43.367Z",
+   "result": "2-0",
+   "minutter_for": 16.3
+  },
+  "2026|Stabæk|Kongsvinger": {
+   "fixtureId": "id1000002267017964",
+   "round": 9,
+   "start": "2026-05-25T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.33,
+    "U": 4.44,
+    "B": 2.55
+   },
+   "priced_at": "2026-05-25T14:40:01.425Z",
+   "result": "2-0",
+   "minutter_for": 20.0
+  },
+  "2026|Strømsgodset|Bryne": {
+   "fixtureId": "id1000002267017966",
+   "round": 9,
+   "start": "2026-05-25T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.454,
+    "U": 5.02,
+    "B": 6.12
+   },
+   "priced_at": "2026-05-25T14:35:51.044Z",
+   "result": "1-0",
+   "minutter_for": 24.1
+  },
+  "2026|Åsane|Raufoss": {
+   "fixtureId": "id1000002267017968",
+   "round": 9,
+   "start": "2026-05-25T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.55,
+    "U": 3.71,
+    "B": 2.62
+   },
+   "priced_at": "2026-05-25T14:41:24.260Z",
+   "result": "3-0",
+   "minutter_for": 18.6
+  },
+  "2026|Moss|Stabæk": {
+   "fixtureId": "id1000002267017976",
+   "round": 10,
+   "start": "2026-05-30T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.08,
+    "U": 4.12,
+    "B": 2.09
+   },
+   "priced_at": "2026-05-30T13:32:30.328Z",
+   "result": "2-2",
+   "minutter_for": 27.5
+  },
+  "2026|Odd|Lyn": {
+   "fixtureId": "id1000002267017978",
+   "round": 10,
+   "start": "2026-05-30T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.684,
+    "U": 4.15,
+    "B": 4.66
+   },
+   "priced_at": "2026-05-30T13:44:43.468Z",
+   "result": "3-0",
+   "minutter_for": 15.3
+  },
+  "2026|Bryne|Hødd": {
+   "fixtureId": "id1000002267017970",
+   "round": 10,
+   "start": "2026-05-31T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.68,
+    "U": 3.92,
+    "B": 5.02
+   },
+   "priced_at": "2026-05-31T14:44:57.901Z",
+   "result": "1-0",
+   "minutter_for": 15.0
+  },
+  "2026|Egersund|Strømsgodset": {
+   "fixtureId": "id1000002267017972",
+   "round": 10,
+   "start": "2026-05-31T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.04,
+    "U": 3.94,
+    "B": 2.16
+   },
+   "priced_at": "2026-05-31T14:42:36.475Z",
+   "result": "0-5",
+   "minutter_for": 17.4
+  },
+  "2026|Kongsvinger|Åsane": {
+   "fixtureId": "id1000002267017974",
+   "round": 10,
+   "start": "2026-05-31T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.309,
+    "U": 5.67,
+    "B": 8.51
+   },
+   "priced_at": "2026-05-31T14:40:53.139Z",
+   "result": "3-1",
+   "minutter_for": 19.1
+  },
+  "2026|Ranheim|Sandnes Ulf": {
+   "fixtureId": "id1000002267017980",
+   "round": 10,
+   "start": "2026-05-31T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.925,
+    "U": 4.15,
+    "B": 3.49
+   },
+   "priced_at": "2026-05-31T14:40:12.131Z",
+   "result": "5-1",
+   "minutter_for": 19.8
+  },
+  "2026|Raufoss|Haugesund": {
+   "fixtureId": "id1000002267017982",
+   "round": 10,
+   "start": "2026-05-31T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.95,
+    "U": 4.07,
+    "B": 1.826
+   },
+   "priced_at": "2026-05-31T14:30:12.075Z",
+   "result": "3-4",
+   "minutter_for": 29.8
+  },
+  "2026|Strømmen|Sogndal": {
+   "fixtureId": "id1000002267017984",
+   "round": 10,
+   "start": "2026-05-31T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.57,
+    "U": 3.89,
+    "B": 2.51
+   },
+   "priced_at": "2026-05-31T14:38:56.405Z",
+   "result": "2-3",
+   "minutter_for": 21.1
+  },
+  "2026|Haugesund|Ranheim": {
+   "fixtureId": "id1000002267017986",
+   "round": 11,
+   "start": "2026-06-14T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.684,
+    "U": 4.68,
+    "B": 4.15
+   },
+   "priced_at": "2026-06-14T13:33:22.744Z",
+   "result": "4-1",
+   "minutter_for": 26.6
+  },
+  "2026|Hødd|Kongsvinger": {
+   "fixtureId": "id1000002267017988",
+   "round": 11,
+   "start": "2026-06-14T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.43,
+    "U": 4.09,
+    "B": 1.729
+   },
+   "priced_at": "2026-06-14T13:42:10.905Z",
+   "result": "1-2",
+   "minutter_for": 17.8
+  },
+  "2026|Lyn|Bryne": {
+   "fixtureId": "id1000002267017990",
+   "round": 11,
+   "start": "2026-06-14T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.85,
+    "U": 3.42,
+    "B": 2.5
+   },
+   "priced_at": "2026-06-14T13:40:57.696Z",
+   "result": "0-3",
+   "minutter_for": 19.0
+  },
+  "2026|Sandnes Ulf|Strømmen": {
+   "fixtureId": "id1000002267017992",
+   "round": 11,
+   "start": "2026-06-14T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.02,
+    "U": 3.95,
+    "B": 3.35
+   },
+   "priced_at": "2026-06-14T13:42:47.296Z",
+   "result": "2-0",
+   "minutter_for": 17.2
+  },
+  "2026|Sogndal|Moss": {
+   "fixtureId": "id1000002267017994",
+   "round": 11,
+   "start": "2026-06-14T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.009,
+    "U": 3.9,
+    "B": 3.42
+   },
+   "priced_at": "2026-06-14T13:44:00.002Z",
+   "result": "2-4",
+   "minutter_for": 16.0
+  },
+  "2026|Stabæk|Egersund": {
+   "fixtureId": "id1000002267017996",
+   "round": 11,
+   "start": "2026-06-14T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.68,
+    "U": 4.29,
+    "B": 4.53
+   },
+   "priced_at": "2026-06-14T13:41:30.373Z",
+   "result": "3-1",
+   "minutter_for": 18.5
+  },
+  "2026|Strømsgodset|Raufoss": {
+   "fixtureId": "id1000002267017998",
+   "round": 11,
+   "start": "2026-06-14T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.22,
+    "U": 6.76,
+    "B": 11.27
+   },
+   "priced_at": "2026-06-14T13:34:06.707Z",
+   "result": "6-1",
+   "minutter_for": 25.9
+  },
+  "2026|Åsane|Odd": {
+   "fixtureId": "id1000002267018000",
+   "round": 11,
+   "start": "2026-06-14T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.65,
+    "U": 4.47,
+    "B": 1.636
+   },
+   "priced_at": "2026-06-14T13:43:08.518Z",
+   "result": "2-1",
+   "minutter_for": 16.9
+  },
+  "2026|Ranheim|Lyn": {
+   "fixtureId": "id1000002267018012",
+   "round": 12,
+   "start": "2026-06-19T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.719,
+    "U": 4.29,
+    "B": 4.26
+   },
+   "priced_at": "2026-06-19T16:41:15.457Z",
+   "result": "3-2",
+   "minutter_for": 18.7
+  },
+  "2026|Bryne|Åsane": {
+   "fixtureId": "id1000002267018002",
+   "round": 12,
+   "start": "2026-06-21T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.367,
+    "U": 5.26,
+    "B": 7.73
+   },
+   "priced_at": "2026-06-21T13:43:33.706Z",
+   "result": "1-0",
+   "minutter_for": 16.4
+  },
+  "2026|Egersund|Haugesund": {
+   "fixtureId": "id1000002267018004",
+   "round": 12,
+   "start": "2026-06-21T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.31,
+    "U": 4.059,
+    "B": 2.009
+   },
+   "priced_at": "2026-06-21T13:41:40.837Z",
+   "result": "5-2",
+   "minutter_for": 18.3
+  },
+  "2026|Kongsvinger|Strømsgodset": {
+   "fixtureId": "id1000002267018006",
+   "round": 12,
+   "start": "2026-06-21T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.84,
+    "U": 4.2,
+    "B": 2.2
+   },
+   "priced_at": "2026-06-21T13:42:25.026Z",
+   "result": "4-4",
+   "minutter_for": 17.6
+  },
+  "2026|Moss|Sandnes Ulf": {
+   "fixtureId": "id1000002267018008",
+   "round": 12,
+   "start": "2026-06-21T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.05,
+    "U": 3.81,
+    "B": 3.38
+   },
+   "priced_at": "2026-06-21T13:31:26.159Z",
+   "result": "1-4",
+   "minutter_for": 28.6
+  },
+  "2026|Odd|Hødd": {
+   "fixtureId": "id1000002267018010",
+   "round": 12,
+   "start": "2026-06-21T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.452,
+    "U": 4.4,
+    "B": 7.42
+   },
+   "priced_at": "2026-06-21T13:44:03.481Z",
+   "result": "0-0",
+   "minutter_for": 15.9
+  },
+  "2026|Raufoss|Sogndal": {
+   "fixtureId": "id1000002267018014",
+   "round": 12,
+   "start": "2026-06-21T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.77,
+    "U": 4.04,
+    "B": 2.29
+   },
+   "priced_at": "2026-06-21T13:34:53.428Z",
+   "result": "3-1",
+   "minutter_for": 25.1
+  },
+  "2026|Strømmen|Stabæk": {
+   "fixtureId": "id1000002267018016",
+   "round": 12,
+   "start": "2026-06-21T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.35,
+    "U": 4.33,
+    "B": 1.699
+   },
+   "priced_at": "2026-06-21T13:42:55.306Z",
+   "result": "1-0",
+   "minutter_for": 17.1
+  },
+  "2026|Haugesund|Kongsvinger": {
+   "fixtureId": "id1000002267018018",
+   "round": 13,
+   "start": "2026-06-27T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.07,
+    "U": 4.41,
+    "B": 2.97
+   },
+   "priced_at": "2026-06-27T13:41:40.400Z",
+   "result": "4-2",
+   "minutter_for": 18.3
+  },
+  "2026|Lyn|Hødd": {
+   "fixtureId": "id1000002267018020",
+   "round": 13,
+   "start": "2026-06-27T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.14,
+    "U": 3.44,
+    "B": 3.48
+   },
+   "priced_at": "2026-06-27T13:35:33.526Z",
+   "result": "1-4",
+   "minutter_for": 24.4
+  },
+  "2026|Sandnes Ulf|Raufoss": {
+   "fixtureId": "id1000002267018022",
+   "round": 13,
+   "start": "2026-06-27T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.621,
+    "U": 4.37,
+    "B": 4.92
+   },
+   "priced_at": "2026-06-27T13:43:47.196Z",
+   "result": "3-0",
+   "minutter_for": 16.2
+  },
+  "2026|Stabæk|Bryne": {
+   "fixtureId": "id1000002267018026",
+   "round": 13,
+   "start": "2026-06-27T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.847,
+    "U": 3.98,
+    "B": 3.93
+   },
+   "priced_at": "2026-06-27T13:32:34.360Z",
+   "result": "2-0",
+   "minutter_for": 27.4
+  },
+  "2026|Strømmen|Moss": {
+   "fixtureId": "id1000002267018028",
+   "round": 13,
+   "start": "2026-06-27T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.44,
+    "U": 4.13,
+    "B": 2.54
+   },
+   "priced_at": "2026-06-27T13:40:12.537Z",
+   "result": "3-2",
+   "minutter_for": 19.8
+  },
+  "2026|Åsane|Ranheim": {
+   "fixtureId": "id1000002267018032",
+   "round": 13,
+   "start": "2026-06-27T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.2,
+    "U": 4.73,
+    "B": 1.666
+   },
+   "priced_at": "2026-06-27T13:42:14.379Z",
+   "result": "3-0",
+   "minutter_for": 17.8
+  },
+  "2026|Strømsgodset|Odd": {
+   "fixtureId": "id1000002267018030",
+   "round": 13,
+   "start": "2026-06-27T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.555,
+    "U": 4.85,
+    "B": 4.98
+   },
+   "priced_at": "2026-06-27T15:36:52.150Z",
+   "result": "2-2",
+   "minutter_for": 23.1
+  },
+  "2026|Sogndal|Egersund": {
+   "fixtureId": "id1000002267018024",
+   "round": 13,
+   "start": "2026-06-27T18:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.23,
+    "U": 3.85,
+    "B": 2.97
+   },
+   "priced_at": "2026-06-27T17:41:25.894Z",
+   "result": "4-2",
+   "minutter_for": 18.6
+  },
+  "2026|Lyn|Åsane": {
+   "fixtureId": "id1000002267018042",
+   "round": 14,
+   "start": "2026-07-02T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.68,
+    "U": 4.33,
+    "B": 4.48
+   },
+   "priced_at": "2026-07-02T15:43:56.362Z",
+   "result": "6-2",
+   "minutter_for": 16.1
+  },
+  "2026|Kongsvinger|Sogndal": {
+   "fixtureId": "id1000002267018040",
+   "round": 14,
+   "start": "2026-07-03T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.469,
+    "U": 5.19,
+    "B": 5.63
+   },
+   "priced_at": "2026-07-03T15:43:44.222Z",
+   "result": "5-1",
+   "minutter_for": 16.3
+  },
+  "2026|Raufoss|Strømmen": {
+   "fixtureId": "id1000002267018048",
+   "round": 14,
+   "start": "2026-07-03T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.73,
+    "U": 3.61,
+    "B": 2.49
+   },
+   "priced_at": "2026-07-03T15:41:59.668Z",
+   "result": "1-0",
+   "minutter_for": 18.0
+  },
+  "2026|Odd|Haugesund": {
+   "fixtureId": "id1000002270672330",
+   "round": 14,
+   "start": "2026-07-05T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.58,
+    "U": 3.89,
+    "B": 2.5
+   },
+   "priced_at": "2026-07-05T13:43:31.366Z",
+   "result": "1-3",
+   "minutter_for": 16.5
+  },
+  "2026|Ranheim|Stabæk": {
+   "fixtureId": "id1000002267018046",
+   "round": 14,
+   "start": "2026-07-03T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.59,
+    "U": 3.89,
+    "B": 2.49
+   },
+   "priced_at": "2026-07-03T16:31:08.593Z",
+   "result": "2-5",
+   "minutter_for": 28.9
+  },
+  "2026|Egersund|Moss": {
+   "fixtureId": "id1000002267018036",
+   "round": 14,
+   "start": "2026-07-04T12:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.934,
+    "U": 4.12,
+    "B": 3.49
+   },
+   "priced_at": "2026-07-04T11:30:47.948Z",
+   "result": "3-0",
+   "minutter_for": 29.2
+  },
+  "2026|Hødd|Strømsgodset": {
+   "fixtureId": "id1000002267018038",
+   "round": 14,
+   "start": "2026-07-04T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.18,
+    "U": 4.92,
+    "B": 1.529
+   },
+   "priced_at": "2026-07-04T13:44:59.479Z",
+   "result": "4-3",
+   "minutter_for": 15.0
+  },
+  "2026|Bryne|Sandnes Ulf": {
+   "fixtureId": "id1000002267018034",
+   "round": 14,
+   "start": "2026-07-04T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.97,
+    "U": 3.59,
+    "B": 3.84
+   },
+   "priced_at": "2026-07-04T15:32:51.163Z",
+   "result": "1-1",
+   "minutter_for": 27.1
+  },
+  "2026|Strømsgodset|Lyn": {
+   "fixtureId": "id1000002267018062",
+   "round": 15,
+   "start": "2026-07-25T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.289,
+    "U": 6.35,
+    "B": 8.08
+   },
+   "priced_at": "2026-07-25T15:43:48.373Z",
+   "result": "1-1",
+   "minutter_for": 16.2
+  },
+  "2026|Haugesund|Bryne": {
+   "fixtureId": "id1000002267018050",
+   "round": 15,
+   "start": "2026-07-25T18:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.671,
+    "U": 4.37,
+    "B": 4.5
+   },
+   "priced_at": "2026-07-25T17:41:32.710Z",
+   "result": "1-2",
+   "minutter_for": 18.5
+  },
+  "2026|Moss|Raufoss": {
+   "fixtureId": "id1000002267018052",
+   "round": 15,
+   "start": "2026-07-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.775,
+    "U": 3.81,
+    "B": 4.51
+   },
+   "priced_at": "2026-07-26T14:43:53.536Z",
+   "result": "1-2",
+   "minutter_for": 16.1
+  },
+  "2026|Sandnes Ulf|Kongsvinger": {
+   "fixtureId": "id1000002267018054",
+   "round": 15,
+   "start": "2026-07-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.08,
+    "U": 4.13,
+    "B": 2.09
+   },
+   "priced_at": "2026-07-26T14:33:03.243Z",
+   "result": "1-6",
+   "minutter_for": 26.9
+  },
+  "2026|Sogndal|Ranheim": {
+   "fixtureId": "id1000002267018056",
+   "round": 15,
+   "start": "2026-07-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.06,
+    "U": 4.32,
+    "B": 3.03
+   },
+   "priced_at": "2026-07-26T14:40:26.030Z",
+   "result": "3-2",
+   "minutter_for": 19.6
+  },
+  "2026|Strømmen|Odd": {
+   "fixtureId": "id1000002267018060",
+   "round": 15,
+   "start": "2026-07-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.35,
+    "U": 3.55,
+    "B": 2.15
+   },
+   "priced_at": "2026-07-26T14:30:14.623Z",
+   "result": "0-0",
+   "minutter_for": 29.8
+  },
+  "2026|Åsane|Egersund": {
+   "fixtureId": "id1000002267018064",
+   "round": 15,
+   "start": "2026-07-26T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.83,
+    "U": 4.05,
+    "B": 1.854
+   },
+   "priced_at": "2026-07-26T14:41:49.010Z",
+   "result": "3-3",
+   "minutter_for": 18.2
+  },
+  "2026|Stabæk|Hødd": {
+   "fixtureId": "id1000002267018058",
+   "round": 15,
+   "start": "2026-07-27T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.386,
+    "U": 5.11,
+    "B": 7.46
+   },
+   "priced_at": "2026-07-27T16:40:58.158Z",
+   "result": "6-0",
+   "minutter_for": 19.0
+  },
+  "2026|Bryne|Strømsgodset": {
+   "fixtureId": "id1000002267018066",
+   "round": 16,
+   "start": "2026-08-01T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.01,
+    "U": 3.87,
+    "B": 2.2
+   },
+   "priced_at": "2026-08-01T14:41:26.564Z",
+   "result": "0-2",
+   "minutter_for": 18.6
+  },
+  "2026|Egersund|Sandnes Ulf": {
+   "fixtureId": "id1000002267018068",
+   "round": 16,
+   "start": "2026-08-02T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.657,
+    "U": 4.01,
+    "B": 5.11
+   },
+   "priced_at": "2026-08-02T14:42:18.554Z",
+   "result": "2-0",
+   "minutter_for": 17.7
+  },
+  "2026|Hødd|Moss": {
+   "fixtureId": "id1000002267018070",
+   "round": 16,
+   "start": "2026-08-02T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.4,
+    "U": 3.69,
+    "B": 2.8
+   },
+   "priced_at": "2026-08-02T14:36:11.370Z",
+   "result": "2-1",
+   "minutter_for": 23.8
+  },
+  "2026|Kongsvinger|Strømmen": {
+   "fixtureId": "id1000002267018072",
+   "round": 16,
+   "start": "2026-08-02T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.299,
+    "U": 5.81,
+    "B": 8.67
+   },
+   "priced_at": "2026-08-02T14:40:26.420Z",
+   "result": "1-3",
+   "minutter_for": 19.6
+  },
+  "2026|Lyn|Sogndal": {
+   "fixtureId": "id1000002267018074",
+   "round": 16,
+   "start": "2026-08-02T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.28,
+    "U": 3.82,
+    "B": 2.9
+   },
+   "priced_at": "2026-08-02T14:30:13.123Z",
+   "result": "3-2",
+   "minutter_for": 29.8
+  },
+  "2026|Odd|Åsane": {
+   "fixtureId": "id1000002267018076",
+   "round": 16,
+   "start": "2026-08-02T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.312,
+    "U": 5.97,
+    "B": 7.83
+   },
+   "priced_at": "2026-08-02T14:33:26.902Z",
+   "result": "4-1",
+   "minutter_for": 26.6
+  },
+  "2026|Raufoss|Stabæk": {
+   "fixtureId": "id1000002267018080",
+   "round": 16,
+   "start": "2026-08-02T15:15",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.81,
+    "U": 4.48,
+    "B": 1.617
+   },
+   "priced_at": "2026-08-02T14:54:26.317Z",
+   "result": "0-2",
+   "minutter_for": 20.6
+  },
+  "2026|Ranheim|Haugesund": {
+   "fixtureId": "id1000002267018078",
+   "round": 16,
+   "start": "2026-08-03T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.65,
+    "U": 4.55,
+    "B": 1.806
+   },
+   "priced_at": "2026-08-03T16:41:41.667Z",
+   "result": "3-4",
+   "minutter_for": 18.3
+  },
+  "2026|Stabæk|Lyn": {
+   "fixtureId": "id1000002267018090",
+   "round": 17,
+   "start": "2026-08-08T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.529,
+    "U": 4.61,
+    "B": 5.59
+   },
+   "priced_at": "2026-08-08T13:40:57.176Z",
+   "result": "4-3",
+   "minutter_for": 19.0
+  },
+  "2026|Haugesund|Raufoss": {
+   "fixtureId": "id1000002267018082",
+   "round": 17,
+   "start": "2026-08-09T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.302,
+    "U": 5.97,
+    "B": 8.21
+   },
+   "priced_at": "2026-08-09T14:40:16.098Z",
+   "result": "7-2",
+   "minutter_for": 19.7
+  },
+  "2026|Sandnes Ulf|Hødd": {
+   "fixtureId": "id1000002267018086",
+   "round": 17,
+   "start": "2026-08-09T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.833,
+    "U": 3.93,
+    "B": 4.05
+   },
+   "priced_at": "2026-08-09T14:37:53.870Z",
+   "result": "3-4",
+   "minutter_for": 22.1
+  },
+  "2026|Sogndal|Bryne": {
+   "fixtureId": "id1000002267018088",
+   "round": 17,
+   "start": "2026-08-09T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.19,
+    "U": 3.54,
+    "B": 2.23
+   },
+   "priced_at": "2026-08-09T14:30:12.177Z",
+   "result": "0-2",
+   "minutter_for": 29.8
+  },
+  "2026|Strømmen|Ranheim": {
+   "fixtureId": "id1000002267018092",
+   "round": 17,
+   "start": "2026-08-09T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.11,
+    "U": 4.09,
+    "B": 3.05
+   },
+   "priced_at": "2026-08-09T14:42:16.917Z",
+   "result": "1-4",
+   "minutter_for": 17.7
+  },
+  "2026|Strømsgodset|Egersund": {
+   "fixtureId": "id1000002267018094",
+   "round": 17,
+   "start": "2026-08-09T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.458,
+    "U": 4.97,
+    "B": 6.12
+   },
+   "priced_at": "2026-08-09T14:30:03.911Z",
+   "result": "0-2",
+   "minutter_for": 29.9
+  },
+  "2026|Åsane|Kongsvinger": {
+   "fixtureId": "id1000002267018096",
+   "round": 17,
+   "start": "2026-08-09T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.57,
+    "U": 5.26,
+    "B": 1.467
+   },
+   "priced_at": "2026-08-09T14:40:25.909Z",
+   "result": "1-2",
+   "minutter_for": 19.6
+  },
+  "2026|Moss|Odd": {
+   "fixtureId": "id1000002267018084",
+   "round": 17,
+   "start": "2026-08-10T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.43,
+    "U": 3.86,
+    "B": 2.02
+   },
+   "priced_at": "2026-08-10T16:41:02.069Z",
+   "result": "3-3",
+   "minutter_for": 19.0
+  },
+  "2026|Bryne|Moss": {
+   "fixtureId": "id1000002267018098",
+   "round": 18,
+   "start": "2026-08-15T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.666,
+    "U": 4.01,
+    "B": 5.02
+   },
+   "priced_at": "2026-08-15T13:40:15.861Z",
+   "result": "2-1",
+   "minutter_for": 19.7
+  },
+  "2026|Lyn|Odd": {
+   "fixtureId": "id1000002267018106",
+   "round": 18,
+   "start": "2026-08-15T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.06,
+    "U": 3.78,
+    "B": 2.2
+   },
+   "priced_at": "2026-08-15T13:43:59.865Z",
+   "result": "5-1",
+   "minutter_for": 16.0
+  },
+  "2026|Ranheim|Strømsgodset": {
+   "fixtureId": "id1000002267018108",
+   "round": 18,
+   "start": "2026-08-15T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.47,
+    "U": 4.96,
+    "B": 1.793
+   },
+   "priced_at": "2026-08-15T13:44:40.159Z",
+   "result": "1-3",
+   "minutter_for": 15.3
+  },
+  "2026|Egersund|Stabæk": {
+   "fixtureId": "id1000002267018100",
+   "round": 18,
+   "start": "2026-08-16T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.88,
+    "U": 3.73,
+    "B": 2.33
+   },
+   "priced_at": "2026-08-16T14:40:25.811Z",
+   "result": "0-4",
+   "minutter_for": 19.6
+  },
+  "2026|Hødd|Strømmen": {
+   "fixtureId": "id1000002267018102",
+   "round": 18,
+   "start": "2026-08-16T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.32,
+    "U": 3.45,
+    "B": 3.1
+   },
+   "priced_at": "2026-08-16T14:42:47.268Z",
+   "result": "4-3",
+   "minutter_for": 17.2
+  },
+  "2026|Kongsvinger|Haugesund": {
+   "fixtureId": "id1000002267018104",
+   "round": 18,
+   "start": "2026-08-16T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.892,
+    "U": 4.56,
+    "B": 3.33
+   },
+   "priced_at": "2026-08-16T14:30:40.887Z",
+   "result": "3-2",
+   "minutter_for": 29.3
+  },
+  "2026|Raufoss|Åsane": {
+   "fixtureId": "id1000002267018110",
+   "round": 18,
+   "start": "2026-08-16T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.787,
+    "U": 4.0,
+    "B": 4.19
+   },
+   "priced_at": "2026-08-16T14:40:13.981Z",
+   "result": "1-2",
+   "minutter_for": 19.8
+  },
+  "2026|Sogndal|Sandnes Ulf": {
+   "fixtureId": "id1000002267018112",
+   "round": 18,
+   "start": "2026-08-16T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.917,
+    "U": 4.11,
+    "B": 3.54
+   },
+   "priced_at": "2026-08-16T14:33:52.071Z",
+   "result": "2-0",
+   "minutter_for": 26.1
+  },
+  "2026|Sandnes Ulf|Bryne": {
+   "fixtureId": "id1000002267018120",
+   "round": 19,
+   "start": "2026-08-22T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.81,
+    "U": 3.71,
+    "B": 1.943
+   },
+   "priced_at": "2026-08-22T13:35:23.274Z",
+   "result": "0-1",
+   "minutter_for": 24.6
+  },
+  "2026|Strømmen|Raufoss": {
+   "fixtureId": "id1000002267018124",
+   "round": 19,
+   "start": "2026-08-26T16:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.892,
+    "U": 3.74,
+    "B": 3.98
+   },
+   "priced_at": "2026-08-26T15:30:11.740Z",
+   "result": "3-1",
+   "minutter_for": 29.8
+  },
+  "2026|Haugesund|Egersund": {
+   "fixtureId": "id1000002267018114",
+   "round": 19,
+   "start": "2026-08-26T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.555,
+    "U": 4.75,
+    "B": 5.1
+   },
+   "priced_at": "2026-08-26T16:40:54.860Z",
+   "result": "3-0",
+   "minutter_for": 19.1
+  },
+  "2026|Moss|Sogndal": {
+   "fixtureId": "id1000002267018116",
+   "round": 19,
+   "start": "2026-08-26T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.11,
+    "U": 4.059,
+    "B": 3.07
+   },
+   "priced_at": "2026-08-26T16:42:02.103Z",
+   "result": "2-2",
+   "minutter_for": 18.0
+  },
+  "2026|Odd|Kongsvinger": {
+   "fixtureId": "id1000002267018118",
+   "round": 19,
+   "start": "2026-08-26T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.89,
+    "U": 3.99,
+    "B": 2.23
+   },
+   "priced_at": "2026-08-26T16:37:00.078Z",
+   "result": "0-1",
+   "minutter_for": 23.0
+  },
+  "2026|Stabæk|Ranheim": {
+   "fixtureId": "id1000002267018122",
+   "round": 19,
+   "start": "2026-08-26T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.375,
+    "U": 5.91,
+    "B": 6.46
+   },
+   "priced_at": "2026-08-26T16:39:14.665Z",
+   "result": "4-2",
+   "minutter_for": 20.8
+  },
+  "2026|Strømsgodset|Hødd": {
+   "fixtureId": "id1000002267018126",
+   "round": 19,
+   "start": "2026-08-26T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.225,
+    "U": 6.73,
+    "B": 10.98
+   },
+   "priced_at": "2026-08-26T16:41:48.991Z",
+   "result": "3-1",
+   "minutter_for": 18.2
+  },
+  "2026|Åsane|Lyn": {
+   "fixtureId": "id1000002267018128",
+   "round": 19,
+   "start": "2026-08-26T17:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.8,
+    "U": 4.46,
+    "B": 1.781
+   },
+   "priced_at": "2026-08-26T16:40:31.634Z",
+   "result": "1-2",
+   "minutter_for": 19.5
+  },
+  "2026|Bryne|Haugesund": {
+   "fixtureId": "id1000002267018130",
+   "round": 20,
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.9,
+    "U": 3.98,
+    "B": 2.23
+   },
+   "priced_at": "2026-08-30T14:31:35.721Z",
+   "result": "0-2",
+   "minutter_for": 28.4
+  },
+  "2026|Egersund|Åsane": {
+   "fixtureId": "id1000002267018132",
+   "round": 20,
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.505,
+    "U": 4.52,
+    "B": 6.07
+   },
+   "priced_at": "2026-08-30T14:30:13.013Z",
+   "result": "2-2",
+   "minutter_for": 29.8
+  },
+  "2026|Hødd|Stabæk": {
+   "fixtureId": "id1000002267018134",
+   "round": 20,
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.07,
+    "U": 4.76,
+    "B": 1.555
+   },
+   "priced_at": "2026-08-30T14:40:26.267Z",
+   "result": "2-1",
+   "minutter_for": 19.6
+  },
+  "2026|Kongsvinger|Lyn": {
+   "fixtureId": "id1000002267018136",
+   "round": 20,
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.602,
+    "U": 4.78,
+    "B": 4.62
+   },
+   "priced_at": "2026-08-30T14:44:24.736Z",
+   "result": "4-4",
+   "minutter_for": 15.6
+  },
+  "2026|Moss|Strømmen": {
+   "fixtureId": "id1000002267018138",
+   "round": 20,
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.961,
+    "U": 3.98,
+    "B": 3.51
+   },
+   "priced_at": "2026-08-30T14:40:26.889Z",
+   "result": "1-2",
+   "minutter_for": 19.6
+  },
+  "2026|Ranheim|Odd": {
+   "fixtureId": "id1000002267018140",
+   "round": 20,
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.18,
+    "U": 4.26,
+    "B": 2.84
+   },
+   "priced_at": "2026-08-30T14:41:05.376Z",
+   "result": "3-5",
+   "minutter_for": 18.9
+  },
+  "2026|Raufoss|Sandnes Ulf": {
+   "fixtureId": "id1000002267018142",
+   "round": 20,
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.94,
+    "U": 3.67,
+    "B": 2.31
+   },
+   "priced_at": "2026-08-30T14:31:06.455Z",
+   "result": "0-3",
+   "minutter_for": 28.9
+  },
+  "2026|Sogndal|Strømsgodset": {
+   "fixtureId": "id1000002267018144",
+   "round": 20,
+   "start": "2026-08-30T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.42,
+    "U": 5.17,
+    "B": 1.588
+   },
+   "priced_at": "2026-08-30T14:40:38.865Z",
+   "result": "2-3",
+   "minutter_for": 19.4
+  },
+  "2026|Haugesund|Sogndal": {
+   "fixtureId": "id1000002267018146",
+   "round": 21,
+   "start": "2026-09-05T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.294,
+    "U": 6.4,
+    "B": 7.76
+   },
+   "priced_at": "2026-09-05T13:40:27.231Z",
+   "result": "2-0",
+   "minutter_for": 19.5
+  },
+  "2026|Kongsvinger|Raufoss": {
+   "fixtureId": "id1000002267018148",
+   "round": 21,
+   "start": "2026-09-05T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.238,
+    "U": 6.42,
+    "B": 10.7
+   },
+   "priced_at": "2026-09-05T13:32:48.965Z",
+   "result": "9-1",
+   "minutter_for": 27.2
+  },
+  "2026|Odd|Strømsgodset": {
+   "fixtureId": "id1000002267018152",
+   "round": 21,
+   "start": "2026-09-05T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.36,
+    "U": 4.3,
+    "B": 1.934
+   },
+   "priced_at": "2026-09-05T13:31:26.481Z",
+   "result": "1-1",
+   "minutter_for": 28.6
+  },
+  "2026|Sandnes Ulf|Ranheim": {
+   "fixtureId": "id1000002267018154",
+   "round": 21,
+   "start": "2026-09-05T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.0,
+    "U": 4.28,
+    "B": 3.19
+   },
+   "priced_at": "2026-09-05T13:40:28.847Z",
+   "result": "1-1",
+   "minutter_for": 19.5
+  },
+  "2026|Strømmen|Bryne": {
+   "fixtureId": "id1000002267018158",
+   "round": 21,
+   "start": "2026-09-05T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.5,
+    "U": 3.64,
+    "B": 2.06
+   },
+   "priced_at": "2026-09-05T13:42:38.752Z",
+   "result": "2-0",
+   "minutter_for": 17.4
+  },
+  "2026|Åsane|Hødd": {
+   "fixtureId": "id1000002267018160",
+   "round": 21,
+   "start": "2026-09-05T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.51,
+    "U": 3.72,
+    "B": 2.65
+   },
+   "priced_at": "2026-09-05T13:34:49.019Z",
+   "result": "2-2",
+   "minutter_for": 25.2
+  },
+  "2026|Stabæk|Moss": {
+   "fixtureId": "id1000002267018156",
+   "round": 21,
+   "start": "2026-09-05T18:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.338,
+    "U": 5.97,
+    "B": 7.3
+   },
+   "priced_at": "2026-09-05T17:30:11.281Z",
+   "result": "2-3",
+   "minutter_for": 29.8
+  },
+  "2026|Lyn|Egersund": {
+   "fixtureId": "id1000002267018150",
+   "round": 21,
+   "start": "2026-09-06T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.98,
+    "U": 3.89,
+    "B": 3.53
+   },
+   "priced_at": "2026-09-06T14:40:28.066Z",
+   "result": "1-1",
+   "minutter_for": 19.5
+  },
+  "2026|Bryne|Stabæk": {
+   "fixtureId": "id1000002267018162",
+   "round": 22,
+   "start": "2026-09-12T18:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.52,
+    "U": 3.97,
+    "B": 1.961
+   },
+   "priced_at": "2026-09-12T17:40:26.540Z",
+   "result": "2-0",
+   "minutter_for": 19.6
+  },
+  "2026|Egersund|Kongsvinger": {
+   "fixtureId": "id1000002267018164",
+   "round": 22,
+   "start": "2026-09-13T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.89,
+    "U": 4.21,
+    "B": 1.806
+   },
+   "priced_at": "2026-09-13T14:34:12.668Z",
+   "result": "1-1",
+   "minutter_for": 25.8
+  },
+  "2026|Hødd|Lyn": {
+   "fixtureId": "id1000002267018166",
+   "round": 22,
+   "start": "2026-09-13T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.64,
+    "U": 3.85,
+    "B": 2.46
+   },
+   "priced_at": "2026-09-13T14:44:28.910Z",
+   "result": "0-2",
+   "minutter_for": 15.5
+  },
+  "2026|Moss|Haugesund": {
+   "fixtureId": "id1000002267018168",
+   "round": 22,
+   "start": "2026-09-13T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 4.15,
+    "U": 5.05,
+    "B": 1.636
+   },
+   "priced_at": "2026-09-13T14:41:44.383Z",
+   "result": "1-4",
+   "minutter_for": 18.3
+  },
+  "2026|Ranheim|Åsane": {
+   "fixtureId": "id1000002267018170",
+   "round": 22,
+   "start": "2026-09-13T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.598,
+    "U": 4.89,
+    "B": 4.55
+   },
+   "priced_at": "2026-09-13T14:30:56.886Z",
+   "result": "2-2",
+   "minutter_for": 29.1
+  },
+  "2026|Raufoss|Odd": {
+   "fixtureId": "id1000002267018172",
+   "round": 22,
+   "start": "2026-09-13T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 5.89,
+    "U": 4.8,
+    "B": 1.487
+   },
+   "priced_at": "2026-09-13T14:35:53.691Z",
+   "result": "2-1",
+   "minutter_for": 24.1
+  },
+  "2026|Sogndal|Strømmen": {
+   "fixtureId": "id1000002267018174",
+   "round": 22,
+   "start": "2026-09-13T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.909,
+    "U": 4.22,
+    "B": 3.51
+   },
+   "priced_at": "2026-09-13T14:41:26.447Z",
+   "result": "1-1",
+   "minutter_for": 18.6
+  },
+  "2026|Strømsgodset|Sandnes Ulf": {
+   "fixtureId": "id1000002267018176",
+   "round": 22,
+   "start": "2026-09-13T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.266,
+    "U": 6.56,
+    "B": 8.71
+   },
+   "priced_at": "2026-09-13T14:30:23.734Z",
+   "result": "4-1",
+   "minutter_for": 29.6
+  },
+  "2026|Åsane|Bryne": {
+   "fixtureId": "id1000002267018192",
+   "round": 23,
+   "start": "2026-09-19T14:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 3.96,
+    "U": 3.73,
+    "B": 1.9
+   },
+   "priced_at": "2026-09-19T13:43:46.262Z",
+   "result": "0-4",
+   "minutter_for": 16.2
+  },
+  "2026|Haugesund|Strømmen": {
+   "fixtureId": "id1000002267018178",
+   "round": 23,
+   "start": "2026-09-20T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.319,
+    "U": 5.84,
+    "B": 7.78
+   },
+   "priced_at": "2026-09-20T14:41:59.292Z",
+   "result": "4-2",
+   "minutter_for": 18.0
+  },
+  "2026|Kongsvinger|Hødd": {
+   "fixtureId": "id1000002267018180",
+   "round": 23,
+   "start": "2026-09-20T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.294,
+    "U": 5.65,
+    "B": 9.28
+   },
+   "priced_at": "2026-09-20T14:32:04.690Z",
+   "result": "5-1",
+   "minutter_for": 27.9
+  },
+  "2026|Lyn|Ranheim": {
+   "fixtureId": "id1000002267018182",
+   "round": 23,
+   "start": "2026-09-20T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.892,
+    "U": 4.22,
+    "B": 3.55
+   },
+   "priced_at": "2026-09-20T14:41:34.062Z",
+   "result": "1-4",
+   "minutter_for": 18.4
+  },
+  "2026|Odd|Egersund": {
+   "fixtureId": "id1000002267018184",
+   "round": 23,
+   "start": "2026-09-20T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.781,
+    "U": 4.01,
+    "B": 4.23
+   },
+   "priced_at": "2026-09-20T14:44:44.982Z",
+   "result": "5-1",
+   "minutter_for": 15.3
+  },
+  "2026|Raufoss|Strømsgodset": {
+   "fixtureId": "id1000002267018186",
+   "round": 23,
+   "start": "2026-09-20T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 9.28,
+    "U": 6.96,
+    "B": 1.242
+   },
+   "priced_at": "2026-09-20T14:33:55.652Z",
+   "result": "0-2",
+   "minutter_for": 26.1
+  },
+  "2026|Sandnes Ulf|Moss": {
+   "fixtureId": "id1000002267018188",
+   "round": 23,
+   "start": "2026-09-20T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 2.26,
+    "U": 3.49,
+    "B": 3.17
+   },
+   "priced_at": "2026-09-20T14:31:12.680Z",
+   "result": "1-2",
+   "minutter_for": 28.8
+  },
+  "2026|Stabæk|Sogndal": {
+   "fixtureId": "id1000002267018190",
+   "round": 23,
+   "start": "2026-09-20T15:00",
+   "bookmaker": "pinnacle",
+   "odds": {
+    "H": 1.366,
+    "U": 5.52,
+    "B": 7.26
+   },
+   "priced_at": "2026-09-20T14:40:27.206Z",
+   "result": "2-1",
+   "minutter_for": 19.5
+  }
+ },
+ "updated": "2026-09-28T14:46:25+00:00"
+}
