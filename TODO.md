@@ -206,8 +206,16 @@ Henteloggen fra 05 norsk tid: ingen henting fra fotball.no, ntf-tabell og
 ntf-kalender ok. Eliteserien hadde ikke kjørt det daglige vedlikeholdet
 (porten: siste_ok 30.9 20.10 UTC, åpner etter 20 timer, rundt 16.10 UTC).
 
-Gjenstår: se at de første datakjøringene med den nye koden (Eliteserien om
-kvelden 1.10) skriver `audit_tabell.json` uten avvik og
+Sjekket 1.10 kl. 22: Eliteseriens daglige vedlikehold 16.18 UTC (84dccc0)
+er også i orden: audit_tabell.json sammenlignet mot eliteserien.no, 0 avvik,
+0 advarsler, alle like, siste_like lagret; audit_fixtures.json med kilde
+"kalenderfeeden", fersk, 0 avvik; status ok; ingen justeringer. Henteloggen
+for hele dagen (fra 05 norsk tid): ingen henting fra fotball.no; ntf-tabell
+og ntf-kalender ok for begge ligaer. (`data/nff-cache/oppdag_eliteserien.json`
+er oppdagelsen av neste sesong, som henter fra eliteserien.no; bare fila
+ligger i den mappa.)
+
+Gjenstår (gjort for begge ligaer, se over): se at de første datakjøringene med den nye koden skriver `audit_tabell.json` uten avvik og
 `audit_fixtures.json` med kilde "kalenderfeeden", og at ingen henter fra
 fotball.no (henteloggen). Etter OBOS-runden 2.–5.10: at prognosene før
 avspark ble fryst med den nye modellen, at grunnlagsfilen er i bruk etterpå,
