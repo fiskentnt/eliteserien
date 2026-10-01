@@ -6816,7 +6816,10 @@ function render(){
   const followed = SELECTED_TEAM ? rows.find(r=>r.name===SELECTED_TEAM) : null;
   const verdictEl = document.getElementById('verdict');
   if(!followed){
+    // Tømmes også, så ingenting fra forrige lag (som kopiknappen) blir
+    // liggende i den skjulte boksen.
     verdictEl.hidden = true;
+    verdictEl.innerHTML = '';
   } else {
     verdictEl.hidden = false;
     // Verste fall ut fra det som er lagt inn (tomme kamper: laget taper, alle andre vinner sine)
