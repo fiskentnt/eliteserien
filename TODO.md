@@ -337,6 +337,12 @@ lagboksen") sjekker plass 1, 8 og 16 i begge ligaene mot det boksen og svaret
 viser, regelen for soner under 1 %, scenario, tastatur og trykk på mobil.
 Skjermbilder og eksempler vist Trond før push. Det som står under, er
 historikken fra før endringen.
+**2.10 (Trond: "bør ikke en fungerende link til siden stå på slutten?"):**
+kildelinja i den kopierte teksten, i svarene og i lagboksen, slutter nå med
+en lenke som virker: "Tabellkalkulator.no, per <dato>:
+https://tabellkalkulator.no/<liga>/", og med et scenario "Scenario laget på
+tabellkalkulator.no, per <dato>: <scenariolenken>" (samme som "Del
+scenario"). Forumene gjør adressen til en lenke.
 
 Fra Trond, etter to utkast (knapper også i lagboksen og ved kortene, med
 lenken i teksten; begge forkastet før push): to små knapper nederst i hvert
