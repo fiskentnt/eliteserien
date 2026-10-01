@@ -198,8 +198,16 @@ oppgaveformen): rettet til nøyaktig når siden regner selv, innenfor 3
 prosentpoeng mot grunnlagsfilen (20/20 lokalt og publisert). Forumbildene er
 laget på nytt med stjernen foran tallet (900×695 og 900×711).
 
+Sjekket 1.10 kl. 13.30: OBOS sitt daglige vedlikehold 09.03 UTC (e31b791)
+med den nye koden er i orden: audit_tabell.json sammenlignet, 0 avvik, 0
+advarsler, alle like, siste_like lagret; audit_fixtures.json med kilde
+"kalenderfeeden", fersk, 0 avvik; status ok; ingen nye justeringer.
+Henteloggen fra 05 norsk tid: ingen henting fra fotball.no, ntf-tabell og
+ntf-kalender ok. Eliteserien hadde ikke kjørt det daglige vedlikeholdet
+(porten: siste_ok 30.9 20.10 UTC, åpner etter 20 timer, rundt 16.10 UTC).
+
 Gjenstår: se at de første datakjøringene med den nye koden (Eliteserien om
-morgenen 1.10, OBOS kl. 07.17) skriver `audit_tabell.json` uten avvik og
+kvelden 1.10) skriver `audit_tabell.json` uten avvik og
 `audit_fixtures.json` med kilde "kalenderfeeden", og at ingen henter fra
 fotball.no (henteloggen). Etter OBOS-runden 2.–5.10: at prognosene før
 avspark ble fryst med den nye modellen, at grunnlagsfilen er i bruk etterpå,
