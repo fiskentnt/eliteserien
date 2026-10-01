@@ -165,13 +165,21 @@ Gjort:
    før (tin, rett, `--frys-paa-nytt`); reparasjonen sammenligner også
    tabellen på fotball.no-siden og legger et nytt trekk inn i sesongens egen
    `justeringer.json`.
-   **Avklares:** Trond skrev 72 timer, men karenstiden har vært 14 døgn
-   siden bcf452f (25.9: "en protest kan ta uker", fem forsøk før 1. januar
-   godtatt samme dag). "72 timer" kom fra en feil i planen min. Den står
-   fortsatt på 14 døgn til Trond bekrefter.
-   **Risiko:** viser ligasiden 2027-tabellen før 2026 er frosset (siste kamp
-   13.12 + 14 døgn = 27.12), kan frysingen ikke skje automatisk; kontrollen
-   sier da "en annen sesong?". Frys da for hånd.
+   **Karenstiden** står på 14 døgn (Trond bekreftet 1.10; "72 timer" i
+   planen var en feil).
+   **Nyttår** (Trond, 1.10): viser ligasiden 2027-tabellen før 2026 er
+   frosset (siste kamp 13.12 + 14 døgn = 27.12), godtar frysingen den siste
+   vellykkede tabellkontrollen etter siste kamp, der alle lag stemte, så
+   lenge resultatene og justeringene er uendret siden. Kontrollen lagres i
+   `audit_tabell.json` (`siste_like`: tidspunkt, kjøring, kilde og avtrykk av
+   resultatene og justeringene). En kontroll som ikke kunne sammenligne,
+   beholder den; en kontroll som sammenlignet uten at alle lag stemte,
+   sletter den, så et nyere avvik ikke overstyres av en eldre grønn kontroll.
+   Testet på simulert kalender (test_sesongskifte, "Nyttår"): grønn D+1,
+   ligasiden viser 2027 fra D+6, bare karenstiden sperrer D+10, frysing D+15;
+   ingen frysing når et resultat eller en justering er endret etterpå, når
+   den grønne kontrollen er fra før siste kamp, eller når en nyere kontroll
+   fant avvik.
 6. **OBOS-siden:** avsnittet under fargeforklaringen ("Lagene på 3. til 6.
    plass spiller opprykkskvalifisering ...") er fjernet; setningen om at
    opprykksspillet ikke er modellert står under "Begrensninger".
@@ -191,10 +199,12 @@ prosentpoeng mot grunnlagsfilen (20/20 lokalt og publisert). Forumbildene er
 laget på nytt med stjernen foran tallet (900×695 og 900×711).
 
 Gjenstår: se at de første datakjøringene med den nye koden (Eliteserien om
-natten eller morgenen, OBOS kl. 07.17) skriver `audit_tabell.json` uten avvik
-og `audit_fixtures.json` med kilde "kalenderfeeden", og at ingen henter fra
-fotball.no (henteloggen). Karenstiden (14 døgn eller 72 timer) avklares med
-Trond.
+morgenen 1.10, OBOS kl. 07.17) skriver `audit_tabell.json` uten avvik og
+`audit_fixtures.json` med kilde "kalenderfeeden", og at ingen henter fra
+fotball.no (henteloggen). Etter OBOS-runden 2.–5.10: at prognosene før
+avspark ble fryst med den nye modellen, at grunnlagsfilen er i bruk etterpå,
+og at tabellkontrollen stemmer. Rapporteres før runde 23 i Eliteserien
+(9.10).
 
 **Testene som sammenlignet lagrede kopier med dagens data, eller forutsatte
 faste avsparkstider, datoer eller tabellstillinger** (gjennomgått 1.10):
