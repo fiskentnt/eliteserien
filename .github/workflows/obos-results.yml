@@ -172,18 +172,9 @@ jobs:
         continue-on-error: true  # skal aldri stoppe resultatene
         run: python3 scripts/accuracy_log.py obos
 
-      - name: Daglig revisjon av terminlisten mot fotball.no
-        id: revisjon
-        # Den ENESTE uavhengige kontrollen obos har paa runde, dato og
-        # avspark. De 22 feilene vi rettet 25. september var nettopp saann
-        # data. Et kritisk avvik gjor stempelet rodt til en ny revisjon
-        # bekrefter at det er borte.
-        #
-        # nff_source henter hoyst en gang i dognet av seg selv, saa dette
-        # steget koster ingen ekstra forespørsel naar noe annet alt har hentet.
-        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
-          && steps.bygg.outcome == 'success'
-        run: python3 scripts/daglig_revisjon.py obos
+      # Den daglige revisjonen mot fotball.no er tatt ut (1.10.2026).
+      # fotball.no hentes bare automatisk som reserve naar ligasiden ikke
+      # svarer, aldri ellers (se nff_source.py).
 
       - name: Merk daglig vedlikehold som utført
         # SISTE steg for lagring, og bare naar DET DAGLIGE ARBEIDET faktisk
@@ -199,7 +190,6 @@ jobs:
           && steps.odds.outcome == 'success'
           && steps.bygg.outcome == 'success'
           && steps.logg.outcome == 'success'
-          && steps.revisjon.outcome == 'success' 
         run: python3 scripts/merk_daglig.py obos
 
       - name: Se etter neste sesongs terminliste (obos)

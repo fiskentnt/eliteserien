@@ -362,14 +362,10 @@ def main(cache_dir=None):
         # staar urort.
         ntf_rows, _fordeling = bare_aktiv_sesong(ntf_rows, _aktiv0, log=log)
 
-        # fotball.no, hoeyst ett forsok per dogn (nff_source styrer det selv).
-        # Brukes BARE i den daglige revisjonen under, aldri i avstemmingen.
-        try:
-            nff_rows = nff_source.fetch_all(LIGA, cache_dir=cache_dir, log=log)
-        except Exception as e:
-            log(f"ADVARSEL: fotball.no feilet ({e}) -- fortsetter uten "
-                f"uavhengig kontroll av terminlisten denne runden.")
-            nff_rows = []
+        # fotball.no hentes IKKE her (1.10.2026): bare automatisk som reserve
+        # naar ligasiden ikke svarer, aldri i den daglige kjeden. Den daglige
+        # kontrollen under gaar mot ffksupporter.
+        nff_rows = []
 
         # Reserve. Feiler den, er det ikke lenger kritisk.
         try:
