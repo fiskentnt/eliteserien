@@ -875,9 +875,9 @@
   /* break-word, ikke anywhere: anywhere delte ord midt inni, så
      "Kristiansund-seier" kunne brekke etter "Kristian". break-word deler
      bare et ord som ikke får plass i det hele tatt. */
-  /* "Kopier tekst" og "Kopier lenke" nederst i svaret: små og dempede, med
-     hvert sitt ikon og ord. "Kopiert" en kort stund etter trykket (kopier()).
-     Større treffflate på berøringsskjerm. */
+  /* "Kopier tekst" nederst i svaret og i lagboksen: liten og dempet, med ikon
+     og ord. "Kopiert" en kort stund etter trykket (kopier()). Større
+     treffflate på berøringsskjerm. */
   .qa-merke{white-space:normal;margin:0 0 6px}
   .qa-merke span{display:inline-block;font:700 11px/1 var(--body);letter-spacing:.02em;text-transform:uppercase;color:var(--q-text,var(--ink));background:var(--q-soft,var(--line-soft));border-radius:999px;padding:4px 8px}
   .qa-kopi{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px 6px;margin:6px -6px -6px 0;white-space:normal}
@@ -3471,9 +3471,6 @@ function fillOdds(){
   const d=lastMC[SELECTED_TEAM]; if(!d) return;
   const mx=Math.max(...d);
 
-  // Midtsjiktet: plassene mellom den fremre sonen og trygghetsgrensa.
-  const midLo = LEAGUE.zones.europa.hi, midHi = LEAGUE.zones.kvalik.boundary || 13;
-  const midtP=d.slice(midLo, midHi).reduce((x,y)=>x+y,0);
   // Når verken gull, Europa, kvalik eller nedrykk er reelle muligheter (alle
   // under 1%) sier de fire tallene ingenting — vis heller én forklarende
   // linje enn en rad med fire "<1 %"-verdier.
@@ -3483,18 +3480,10 @@ function fillOdds(){
   // qaJumpToWhy()/qaZoneByKey().
   // Tallene i boksen: én per sone som er i spill. boxRange begrenser når
   // sonen vises (Champions League bare mellom 1 og 99 prosent).
-  const zoneVal = key => { const z = LEAGUE.zones[key]; if(!z) return null;
-    let v = 0; for(let q=z.lo; q<=z.hi; q++) v += d[q-1]; return v; };
-  // boxAlways: vises uansett verdi (Topp 4, Kvalik, Nedrykk). De andre bare
-  // når de er i spill: Gull over 1 prosent, Champions League mellom 1 og 99.
-  const shown = ZONE_KEYS.filter(k=>{
-    const z = LEAGUE.zones[k]; if(!z || !z.boxLabel) return false;
-    if(z.boxAlways) return true;
-    const v = zoneVal(k), rng = z.boxRange || [0.01, 1.01];
-    return v > rng[0] && v < rng[1];
-  });
+  const zoneVal = key => sonesjanse(d, key);
+  const shown = lagboksSoner(d);
   const row = (shown.every(k=>zoneVal(k)<0.01))
-    ? `<div class="odds-row flat" title="Sannsynlighet for sluttplassering, ut fra modellen">Ingenting er i spill: ${SELECTED_TEAM} ender mellom ${LEAGUE.zones.europa.hi+1}. og ${(LEAGUE.zones.kvalik.boundary||13)}. plass i ${Math.round(midtP*100)} av 100 simuleringer.</div>`
+    ? `<div class="odds-row flat" title="Sannsynlighet for sluttplassering, ut fra modellen">${ingentingISpill(SELECTED_TEAM, d)}</div>`
     : `<div class="odds-row" title="Sannsynlighet for sluttplassering, ut fra modellen. Klikk et tall for å se hvorfor.">
       ${shown.map(k=>`<button class="odds-jump${k==='nedrykk'?' n':''}" data-zone="${k}"><strong>${pctTxt(zoneVal(k))}</strong>${LEAGUE.zones[k].boxLabel}</button>`).join('')}</div>`;
   // Fordelingsstripen over alle 16 plassene sier lite når Europa, kvalik og
@@ -3535,6 +3524,23 @@ function fillOdds(){
     + scenarioSum
     + (lm ? `<button class="lastmatch" title="Se hva kampen betydde">${lm.html}</button>` : '');
   forrigeLinjeOppdater();
+}
+// Sonene lagboksen viser for en fordeling. boxAlways: vises uansett verdi
+// (Topp 4, Kvalik, Nedrykk). De andre bare når de er i spill: Gull over 1
+// prosent, Champions League mellom 1 og 99. Brukes også av "Kopier tekst".
+function lagboksSoner(d){
+  return ZONE_KEYS.filter(k=>{
+    const z = LEAGUE.zones[k]; if(!z || !z.boxLabel) return false;
+    if(z.boxAlways) return true;
+    const v = sonesjanse(d, k), rng = z.boxRange || [0.01, 1.01];
+    return v > rng[0] && v < rng[1];
+  });
+}
+// Setningen når ingen av sonene er i spill (alle under 1 %).
+function ingentingISpill(team, d){
+  const midLo = LEAGUE.zones.europa.hi, midHi = LEAGUE.zones.kvalik.boundary || 13;
+  const midtP = d.slice(midLo, midHi).reduce((x,y)=>x+y, 0);
+  return `Ingenting er i spill: ${team} ender mellom ${midLo+1}. og ${midHi}. plass i ${Math.round(midtP*100)} av 100 simuleringer.`;
 }
 // Antall simulerte sesonger for Europa/Ned/lagboksen. 10 000 gir Monte Carlo-støy på
 // rundt 1 prosentpoeng (95 %-margin ved 50 %); målt ca. 0,4 s på en PC i Workeren
@@ -3750,9 +3756,9 @@ document.getElementById('teamSelect').addEventListener('change', e=>{
 // .status.expanded i CSS) — klassen ligger på #verdict selv, som render()
 // aldri bytter ut (bare innerHTML), så den overlever nye render()-kall.
 document.getElementById('verdict').addEventListener('click', e=>{
-  // "Forrige kamp" er en egen knapp som hopper til svaret -- den skal ikke
-  // samtidig slå fordelingsstripen av og på under fingeren.
-  if(e.target.closest('.lastmatch')) return;
+  // "Forrige kamp" er en egen knapp som hopper til svaret, og "Kopier tekst"
+  // kopierer -- ingen av dem skal samtidig slå fordelingsstripen av og på.
+  if(e.target.closest('.lastmatch, .kopi')) return;
   document.getElementById('verdict').classList.toggle('expanded');
 });
 // Én felles, delegert handler for både tekstfelt og H/U/B/×-knappene i hele
@@ -6655,8 +6661,8 @@ async function runQaQuestion(id, keepZoneOverride, noScroll){
   if(!doneEl) return;
   doneEl.className = 'qa-answer';
   doneEl.textContent = text;
-  // To små knapper nederst i svaret: "Kopier tekst" og "Kopier lenke" (se
-  // kopiTekstSvar og kopiLenke). Et feilsvar får ingen knapper.
+  // "Kopier tekst" nederst i svaret (se kopiTekstSvar). Et feilsvar får ingen
+  // knapp.
   qaKopi = text===QA_FEIL ? null : {sporsmal: q.label(SELECTED_TEAM), svar: text};
   if(qaKopi) doneEl.insertAdjacentHTML('beforeend', QA_KOPI_KNAPPER);
   // Bygger svaret på et scenario (resultater lagt inn eller simulert), står
@@ -6673,7 +6679,6 @@ async function runQaQuestion(id, keepZoneOverride, noScroll){
 document.getElementById('qaButtons').addEventListener('click', e=>{
   const btn = e.target.closest('button'); if(!btn) return;
   if(btn.dataset.kopi==='tekst'){ const t = kopiTekstSvar(); if(t) kopier(btn, t, 'Kopiert'); return; }
-  if(btn.dataset.kopi==='lenke'){ kopier(btn, kopiLenke(), 'Kopiert'); return; }
   runQaQuestion(btn.dataset.id);
 });
 // Klikk på et tall i lagboksen (Gull/Europa/Kvalik/Nedrykk) eller på
@@ -6787,7 +6792,9 @@ function qaJumpToWhy(zoneKey){
   qaJumpToSection();
   runQaQuestion('why', true);
 }
-document.getElementById('verdict').addEventListener('click', e=>{
+document.getElementById('verdict').addEventListener('click', async e=>{
+  const kopiBtn = e.target.closest('.kopi');
+  if(kopiBtn){ const t = await kopiTekstLagboks(SELECTED_TEAM); if(t) kopier(kopiBtn, t, 'Kopiert'); return; }
   if(e.target.closest('.lastmatch')){ qaJumpToSection(); runQaQuestion('lastmatch'); return; }
   const btn = e.target.closest('.odds-jump'); if(!btn) return;
   qaJumpToWhy(btn.dataset.zone);
@@ -7012,7 +7019,8 @@ function render(){
     verdictEl.innerHTML=
       `<span class="teamname-lg">${SELECTED_TEAM}</span>
        <div class="posline"${line2Title?` title="${line2Title}"`:''}>${posLine}</div>
-       <div class="odds-box"><div id="odds"></div></div>`;
+       <div class="odds-box"><div id="odds"></div></div>
+       <div class="qa-kopi lagboks-kopi">${KOPI_TEKST_KNAPP('lagboks')}</div>`;
   }
   fillOdds(); scheduleMC();
   updateFollowFit();
@@ -7247,18 +7255,17 @@ async function kopier(btn, tekst, ferdigTekst){
   btn._t = setTimeout(()=>{ mål.textContent = opprinnelig; btn.classList.remove('done'); }, 2500);
 }
 
-// ---- "Spør om tabellen": "Kopier tekst" og "Kopier lenke" nederst i svaret ----
-// "Kopier tekst" gir spørsmålet, svaret og kildelinja "Tabellkalkulator.no,
-// per <dato>" som ren tekst, uten lenke. Står det et scenario (resultater lagt
+// ---- "Kopier tekst": nederst i svarene i "Spør om tabellen" og i lagboksen ----
+// I svaret gir den spørsmålet, svaret og kildelinja "Tabellkalkulator.no, per
+// <dato>" som ren tekst, uten lenke. I lagboksen gir den det viktigste for
+// laget man følger (kopiTekstLagboks). Står det et scenario (resultater lagt
 // inn eller simulert på siden), starter teksten med "Scenario, ikke dagens
 // tall. Forutsetter: ..." med resultatene (høyst fem), og kildelinja er
-// "Scenario laget på tabellkalkulator.no, per <dato>". "Kopier lenke" gir bare
-// lenken: ligasiden, eller scenariolenken (scenarioUrl, samme som "Del
-// scenario"). Begge går gjennom kopier(), som viser "Kopiert" en kort stund.
-const QA_KOPI_KNAPPER = '<div class="qa-kopi">'
-  + '<button type="button" class="kopi" data-kopi="tekst"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6A1.5 1.5 0 0 0 14 4.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></svg><span aria-live="polite">Kopier tekst</span></button>'
-  + '<button type="button" class="kopi" data-kopi="lenke"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M10 14a4 4 0 0 0 5.66 0l3-3a4 4 0 0 0-5.66-5.66l-1.5 1.5"/><path d="M14 10a4 4 0 0 0-5.66 0l-3 3a4 4 0 0 0 5.66 5.66l1.5-1.5"/></svg><span aria-live="polite">Kopier lenke</span></button>'
-  + '</div>';
+// "Scenario laget på tabellkalkulator.no, per <dato>". Lenken kopieres med
+// "Del" øverst og "Del scenario", ikke her. Knappen går gjennom kopier(), som
+// viser "Kopiert" en kort stund.
+const KOPI_TEKST_KNAPP = hva => `<button type="button" class="kopi" data-kopi="${hva}"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6A1.5 1.5 0 0 0 14 4.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></svg><span aria-live="polite">Kopier tekst</span></button>`;
+const QA_KOPI_KNAPPER = `<div class="qa-kopi">${KOPI_TEKST_KNAPP('tekst')}</div>`;
 // Datoen tallene gjelder: når grunnlagsfilen tallene bygger på ble laget
 // (GRUNNLAG.fil.laget), i norsk tid. Er filen ikke i bruk, regnes tallene fra
 // model.json, og da gjelder tidspunktet modellen ble tilpasset. status.json
@@ -7281,14 +7288,42 @@ function kopiScenarioLinje(){
     : vist.length>1 ? `${vist.slice(0, -1).join(', ')} og ${vist[vist.length-1]}` : vist[0];
   return `Scenario, ikke dagens tall. Forutsetter: ${liste}.`;
 }
+const kopiKilde = () => `${kopiScenario() ? 'Scenario laget på tabellkalkulator.no' : 'Tabellkalkulator.no'}, per ${kopiDato()}`;
 function kopiTekstSvar(){
   if(!qaKopi) return null;
-  const scen = kopiScenario();
-  return [...(scen ? [kopiScenarioLinje()] : []), qaKopi.sporsmal, qaKopi.svar,
-    `${scen ? 'Scenario laget på tabellkalkulator.no' : 'Tabellkalkulator.no'}, per ${kopiDato()}`].join('\n');
+  return [...(kopiScenario() ? [kopiScenarioLinje()] : []), qaKopi.sporsmal, qaKopi.svar, kopiKilde()].join('\n');
 }
-function kopiLenke(){
-  return kopiScenario() ? scenarioUrl() : 'https://tabellkalkulator.no' + LEAGUE.path;
+// Lagboksen: lagnavnet, sjansene for sonene som er relevante for laget, linja
+// om forrige kamp og det første avsnittet av "Hva må ... gjøre?", og
+// kildelinja nederst. Sonene er de lagboksen viser (lagboksSoner), uten dem
+// under 1 % -- unntatt kvalik og nedrykk når laget står i fare (minst 1 % for
+// en av dem): da står begge, så faren vises hel. Er ingenting i spill, står
+// samme setning som i boksen. Venter til tabellen og linja om forrige kamp er
+// ferdig regnet for scenarioet, så tallene er de samme som i boksen og svarene.
+async function kopiTekstLagboks(team){
+  const t0 = Date.now();
+  while(!(lastMCFinal && lastMC && lastMCScenarioKey===qaScenarioKey()) && Date.now()-t0 < 20000)
+    await new Promise(r=>setTimeout(r, 100));
+  const d = lastMC && lastMC[team]; if(!d) return null;
+  // Linja om forrige kamp: med et scenario (eller når den lagrede raden ikke
+  // gjelder) regnes tallet etter tabellen. Vent på det, så teksten har hele
+  // linja, som boksen får, og ikke bare resultatet.
+  if(team===SELECTED_TEAM){
+    forrigeLinjeOppdater();
+    const z = qaTargetZone(team), key = z && forrigeLinjeKey(team, qaScenarioKey(), z.key);
+    while(key && forrigeLinjeVenter===key && Date.now()-t0 < 20000) await new Promise(r=>setTimeout(r, 100));
+  }
+  const soner = lagboksSoner(d);
+  const fare = soner.some(k=>LEAGUE.zones[k].boundary!=null && sonesjanse(d, k)>=0.005);
+  const med = soner.filter(k=>sonesjanse(d, k)>=0.005 || (fare && LEAGUE.zones[k].boundary!=null));
+  const sjanser = med.length ? med.map(k=>`${LEAGUE.zones[k].boxLabel} ${pctTxt(sonesjanse(d, k))}`).join(', ')
+    : ingentingISpill(team, d);
+  const lm = qaLastMatchLine(team, lastMatchEntry(team));
+  const tekst = html => { const el = document.createElement('div'); el.innerHTML = html; return el.textContent.trim(); };
+  let hva = null;
+  try{ hva = String(await qaHowTo(team)).split(/\n\s*\n/)[0].trim() || null; } catch(_){ hva = null; }
+  return [...(kopiScenario() ? [kopiScenarioLinje()] : []), team, sjanser, lm ? tekst(lm.html) : null, hva, kopiKilde()]
+    .filter(Boolean).join('\n');
 }
 
 // "Del scenario", og Del-knappen øverst. På telefon og nettbrett

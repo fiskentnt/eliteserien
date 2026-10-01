@@ -416,7 +416,9 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # ../eliteserien/data/justeringer.json, som de andre datafilene. Stjernen
 # foran tallet ("*19", utenfor til venstre i cellen) og lenken til vedtaket
 # fra feltet lenke (1. oktober 2026, senere) er flettet inn uendret (git
-# merge-file uten konflikter).
+# merge-file uten konflikter). Det samme gjelder at "Kopier lenke" er fjernet
+# fra svarene og "Kopier tekst" er lagt til i lagboksen (1. oktober 2026,
+# ettermiddag).
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -432,7 +434,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "8bc46d10f557d8329b94b5d57240598b72d2bc2943b079da8fac83645b256793"
+BASE_SHA = "73349caf400d640d1a8360a55b4f350ab825cb76862dfe033ee7b3de82009a7b"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
