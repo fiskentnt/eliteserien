@@ -141,6 +141,17 @@ svar, i begge ligaene, og ingen andre kopiknapper.
   anslag." (før: "Lagstyrkene holdes som i dag, så tallene er anslag."), i
   Eliteserien og OBOS. Testsidens egen variant ("Ratingen er regnet om ...")
   er ikke rørt. Regresjonen sjekker setningen.
+- Pushet 1.10.2026 kl. 02:00 (aa8fb9a, 225fd2e, 8419314, 9027a32) etter hele
+  testpakken (failsafe 214, regresjonen 1136, kontroll.py og
+  kontroll_paneler.py grønne). CI regnet grunnlaget på nytt (OBOS 8c683f1,
+  Eliteserien 5f47cd9, testsiden 5968333). Kontroll av de publiserte sidene
+  (stor skjerm og mobil, begge ligaene): grunnlaget "i bruk", 16 rader, ingen
+  JS-feil, "Kopier tekst" med tastatur og trykk ("Kopiert" etterpå), kildelinja
+  "Tabellkalkulator.no, per 1. oktober" (grunnlagsfilen laget natt til 1.10),
+  "Kopier lenke" gir ligasiden, ingen andre kopiknapper, den skjulte delingen
+  urørt, og "Hva betydde forrige kamp" slutter med den nye setningen. Første
+  forsøk ventet forgjeves rett etter publiseringen; to minutter senere var
+  begge sidene i orden.
 - Knappene har hvert sitt ikon og ord, er dempet, viser "Kopiert" i 2,5
   sekunder (kopier(), som "Del scenario" bruker), er vanlige <button> (Enter
   og mellomrom) og har større treffflate på berøringsskjerm. Den skjulte
