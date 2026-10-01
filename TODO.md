@@ -176,9 +176,14 @@ oktober" (900×711).
 Gjenstår: se at den første fotball.no-hentingen etter pushen (tidligst
 1.10 kl. 07.03, i praksis morgenkjøringen) har lagret tabellen i
 `data/nff-cache/obos.json` og at `obos/data/audit_fixtures.json` står uten
-avvik. Testen "alle 240 time stemmer mot fasit" i test_kilder.py
-feiler fordi CI flyttet Ranheim–Sogndal (OBOS, 1.11) fra 17.00 til 14.30
-29.9, etter testdataene fra 25.9; ikke knyttet til dette.
+avvik.
+
+Rettet 1.10: testen "alle 240 time stemmer mot fasit" i test_kilder.py
+sammenlignet kopiene fra 25.9 med dagens terminliste og feilet hver gang en
+kamp ble flyttet (Ranheim–Sogndal, OBOS 1.11, 17.00 → 14.30 den 29.9).
+Fasiten er nå produksjonens kamper fra samme dag (commit 606534e, samme
+commit som testdataene), lagret som `testdata/fasit_<liga>_2026-09-25.json`.
+345/345; et endret avspark i fasiten (12.34) gir feil, som det skal.
 
 ## "Spør om tabellen": Kopier tekst og Kopier lenke (1.10.2026)
 
