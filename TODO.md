@@ -18,8 +18,10 @@ og samme tilfeldige tall: hver kamp sin egen strøm; uten Raufoss er de 23
 spilte kampene strøket, de 7 gjenstående tatt ut, lagstyrkene tilpasset på
 nytt på 161 kamper og bare nummer 15 rett ned; tilpasningen med Raufoss
 gjenskaper model.json eksakt, og sidens egen simulering i en prototype ga de
-samme tallene uten Raufoss). Skript og JSON i lab (`raufoss/`, 519d4da).
-Prosent, med → uten:
+samme tallene uten Raufoss). Regnet på nytt 1.10 med Åsanes poengtrekk (−1,
+NFF-vedtak 3.3.2026, se "Poengjusteringer" under): Åsane står med 19, ikke
+20, i begge beregningene. 0 og 100 betyr under 0,05 % og over 99,95 %. Skript og JSON i lab (`raufoss/`; `--uten-justeringer`
+gir de gamle tallene). Prosent, med → uten:
 
 | Lag | Poeng | Direkte opprykk | Topp 6 | Nedrykkskvalik | Direkte nedrykk |
 |---|---|---|---|---|---|
@@ -30,19 +32,22 @@ Prosent, med → uten:
 | Odd | 36 → 33 | 0 → 0 | 84,3 → 85,8 | 0 → 0 | 0 → 0 |
 | Bryne | 35 → 35 | 0 → 0 | 74,6 → 86,4 | 0 → 0 | 0 → 0 |
 | Hødd | 34 → 33 | 0 → 0 | 21,1 → 21,1 | 0 → 0 | 0 → 0 |
-| Egersund | 29 → 26 | 0 → 0 | 11,3 → 4,1 | 0,6 → 0,4 | 0,1 → 0,0 |
-| Lyn | 28 → 25 | 0 → 0 | 2,7 → 0,5 | 3,0 → 3,9 | 0,5 → 0,1 |
-| Ranheim | 28 → 25 | 0 → 0 | 5,6 → 1,5 | 1,6 → 1,2 | 0,3 → 0,0 |
-| Moss | 25 → 25 | 0 → 0 | 0,3 → 0,4 | 11,4 → 2,9 | 4,9 → 0,1 |
-| Strømmen | 25 → 22 | 0 → 0 | 0,1 → 0,1 | 20,5 → 16,6 | 8,6 → 1,8 |
-| Sandnes Ulf | 24 → 18 | 0 → 0 | 0,1 → 0,0 | 25,5 → 55,5 | 12,6 → 13,1 |
-| Sogndal | 23 → 23 | 0 → 0 | 0,1 → 0,2 | 17,1 → 7,1 | 9,7 → 0,4 |
-| Åsane | 20 → 14 | 0 → 0 | 0 → 0 | 10,6 → 12,4 | 80,9 → 84,5 |
-| Raufoss | 19 → – | 0 → 0 | 0 → 0 | 9,7 → – | 82,4 → 100 (sist) |
+| Egersund | 29 → 26 | 0 → 0 | 11,3 → 4,1 | 0,6 → 0,4 | 0,1 → 0 |
+| Lyn | 28 → 25 | 0 → 0 | 2,7 → 0,5 | 3,0 → 3,8 | 0,5 → 0 |
+| Ranheim | 28 → 25 | 0 → 0 | 5,6 → 1,5 | 1,5 → 1,2 | 0,2 → 0 |
+| Moss | 25 → 25 | 0 → 0 | 0,3 → 0,4 | 11,5 → 2,8 | 4,3 → 0,1 |
+| Strømmen | 25 → 22 | 0 → 0 | 0,1 → 0,1 | 21,1 → 16,8 | 7,3 → 1,2 |
+| Sandnes Ulf | 24 → 18 | 0 → 0 | 0,1 → 0 | 26,3 → 58,3 | 11,2 → 10,0 |
+| Sogndal | 23 → 23 | 0 → 0 | 0,1 → 0,2 | 17,4 → 7,0 | 8,9 → 0,3 |
+| Åsane (−1) | 19 → 13 | 0 → 0 | 0 → 0 | 8,2 → 9,6 | 86,0 → 88,4 |
+| Raufoss | 19 → – | 0 → 0 | 0 → 0 | 10,3 → – | 81,6 → 100 (sist) |
 
 Det som flytter mest, er poengene mot Raufoss: Stabæk tok 3, de tre over 6
 hver (Stabæk opprykk 11 → 32 %); Bryne 0 (topp 6 +12); Sandnes Ulf mister 6
-(nedrykkskvalik 26 → 56 %); Moss, Sogndal og Strømmen blir nesten trygge.
+(nedrykkskvalik 26 → 58 %); Moss, Sogndal og Strømmen blir nesten trygge.
+Åsanes trekk flytter mest for Åsane selv (direkte nedrykk 80,9 → 86,0 % med
+Raufoss, 84,5 → 88,4 % uten) og litt for lagene rundt (Raufoss 82,4 → 81,6 %,
+Sandnes Ulf 12,6 → 11,2 %, Sogndal 9,7 → 8,9 %).
 Tallene må regnes på nytt med dagens data når NFF bestemmer seg
 (`raufoss/raufoss_sjanser.py`).
 
@@ -105,6 +110,59 @@ kopierte teksten starter med "Scenario uten Raufoss, ikke dagens tall.
 Forutsetter at Raufoss trekkes fra ligaen og kampene deres strykes." Rettelsen
 av "Rykket ned" og fordelingsstripen i punkt 4 trengs også her. Skjermbildene
 av prototypen: `raufoss/` i lab.
+
+## Poengjusteringer fra NFF: Åsane trukket et poeng (1.10.2026)
+
+Feilen: OBOS-tabellen viste Åsane med 20 poeng, fotball.no 19. NFF trakk
+Åsane ett poeng (vedtak 3.3.2026, "Oversittelse av rapporteringsfrist for
+økonomisk rapportering", registrert 4.3.2026 under "Justeringer" på
+fotball.no/turneringer/obosligaen/). Siden regnet poengene bare fra kampene.
+Sjekket 1.10: OBOS 2026 har bare denne ene justeringen; Eliteserien 2026 har
+ingen (siden har ikke listen "Justeringer" i det hele tatt). Alle andre lag i
+begge ligaer stemte med den offisielle tabellen, poeng for poeng.
+
+Gjort:
+1. `<liga>/data/justeringer.json` (sesong, lag, poeng, dato = registrert på
+   fotball.no, vedtak, årsak, kilde). OBOS: Åsane −1; Eliteserien: tom liste.
+   Frysingen tar filen med (`frys_sesong.py`), og grunnlagsporten ser listen
+   (`grunnlag_port.py`), så grunnlagsfilen regnes på nytt når den endres.
+2. Siden (`eliteserien/index.html`, delt kode): `JUSTERINGER` og
+   `poengJust(lag, dato)` lagt til poengene i tabellen (`compute`, også maks
+   sluttsum), rundetabellen (`computeAt`, fra datoen), rangeringen før
+   scenarioet (`basePos`) og utgangspoengene i simuleringen (P0 i `runMCAsync`
+   og `buildQaOpen`, altså også "Hva må ... gjøre?", svarene og
+   grunnlagsfilen). Heldig/uheldig regner fra kampene og er uendret. Stjerne
+   ved poengsummen (som fotball.no), title "19 poeng, etter trekk på et poeng
+   fra NFF.", og under tabellen "* Åsane trukket et poeng." (Tronds ordlyd),
+   med lenke til vedtaket. Forhåndsbildet (`make_og.py`) bruker også listen.
+   Testsiden: flettet inn med git merge-file, adressen er
+   `../eliteserien/data/justeringer.json`.
+3. Den daglige kontrollen (`daglig_revisjon.py`, `nff_source.py`): samme
+   fotball.no-side som kampene (ingen ekstra forespørsel) gir nå også den
+   offisielle tabellen og "Justeringer", lagret i `data/nff-cache/`. Tabellen
+   vi regner (kampene pluss justeringer.json) sammenlignes lag for lag:
+   kamper, V, U, T, mål for og mot, poeng. Ulikt med likt antall kamper er
+   kritisk (rødt stempel, `audit_fixtures.json`, kjøringen feiler); ulikt
+   antall kamper er en advarsel. Justeringslistene sammenlignes også; en
+   justering som mangler hos oss eller ikke finnes hos fotball.no er kritisk.
+   Mot cachen (ikke hentet i denne kjøringen) blir avvik advarsler, som for
+   terminlisten. Den første sammenligningen kommer med første henting etter
+   pushen (høyst én i døgnet).
+4. Raufoss-tallene regnet på nytt med trekket (tabellen over).
+5. Tester: regression.js "Poengjusteringer" (`--bare justering`): Åsane
+   kampenes poeng −1 med stjerne, mot den offisielle tabellen lag for lag,
+   P0/"Hva må"/grunnlaget, rundetabellen, simuleringen med og uten trekket
+   med samme frø (med = sidens tall; nedrykk Åsane 80,4 → 85,5 %, Raufoss
+   82,5 → 81,6 %), Eliteserien uten; test_kilder.py (tabell og justeringer
+   fra fotball.no-siden, sammenligningsreglene, stempelet); failsafe 26
+   (formatet i justeringer.json) og grunnlagsporten.
+
+Etter pushen: kontroller de publiserte sidene (OBOS: Åsane 19*, merknaden,
+nedrykkssjansene), at grunnlagsfilene er regnet på nytt og i bruk, og at
+den første daglige revisjonen etter pushen har sammenlignet tabellen
+(`obos/data/audit_fixtures.json`, ingen avvik). Lag så de to bildene til
+foruminnlegget på nytt (900 px, uten avsnittet om opprykkskvalifiseringen,
+"per 30. september" på dagens, "per 1. oktober" på scenarioet).
 
 ## "Spør om tabellen": Kopier tekst og Kopier lenke (1.10.2026)
 
