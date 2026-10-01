@@ -2637,13 +2637,15 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     // Nederst i hvert svar i "Spør om tabellen" og i lagboksen for laget man
     // følger står én dempet knapp, "Kopier tekst" (ingen "Kopier lenke": lenken
     // kopieres med "Del" og "Del scenario"). I svaret gir den spørsmålet,
-    // svaret og "Tabellkalkulator.no, per <dato>"; i lagboksen lagnavnet,
+    // svaret og "Tabellkalkulator.no, per <dato>: <lenke til ligasiden>"; i
+    // lagboksen lagnavnet,
     // sjansene for sonene som er relevante (de boksen viser, uten dem under 1 %
     // unntatt kvalik og nedrykk når laget står i fare), linja om forrige kamp,
     // det første avsnittet av "Hva må ... gjøre?" og kildelinja. Med et
     // scenario starter teksten med "Scenario, ikke dagens tall. Forutsetter:"
     // og resultatene (høyst fem, ellers "og N andre resultater"), kildelinja er
-    // "Scenario laget på tabellkalkulator.no, per <dato>", og svaret på siden
+    // "Scenario laget på tabellkalkulator.no, per <dato>: <scenariolenken>"
+    // (samme som "Del scenario"), og svaret på siden
     // har merkelappen "Simulert". Datoen regnes her fra filene: når
     // grunnlagsfilen tallene bygger på ble laget ("laget"), eller når
     // model.json ble tilpasset hvis filen ikke er i bruk, i norsk tid. Det
@@ -2701,7 +2703,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await settle(kp);
       await kopiOpptaker(kp);
       const iBruk = await kp.evaluate(() => GRUNNLAG_STATUS === 'i bruk');
-      const dato = kopiDatoVentet(mappe, iBruk), kilde = `Tabellkalkulator.no, per ${dato}`;
+      const dato = kopiDatoVentet(mappe, iBruk), side = `https://tabellkalkulator.no/${mappe}/`, kilde = `Tabellkalkulator.no, per ${dato}: ${side}`;
       check(`${liga}: datoen i kildelinja er fra ${iBruk ? 'grunnlagsfilen' : 'model.json'} (${dato})`, /^\d{1,2}\. [a-zæøå]+$/.test(dato), dato);
       for (const [l, q] of [[lag, qid], [lag2, qid2]]) {
         const r = await kopiSvar(kp, l, q);
@@ -2722,8 +2724,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           check(`${liga}: knappen viser "Kopiert" etter trykket`, etter === 'Kopiert', etter);
           check(`${liga}: uten scenario har svaret ikke merkelappen "Simulert"`, !(await kp.$('#qaAnswer .qa-merke')));
         }
-        check(`${liga} (${hva}): "Kopier tekst" gir spørsmålet, svaret og "${kilde}", uten lenke, med Enter og mellomrom`,
-          r.svar.length > 20 && tekst === `${r.sporsmal}\n${r.svar}\n${kilde}` && tekstIgjen === tekst && !/https?:|tabellkalkulator\.no\//i.test(tekst),
+        check(`${liga} (${hva}): "Kopier tekst" gir spørsmålet, svaret og "${kilde}", med lenken til ligasiden bare der, med Enter og mellomrom`,
+          r.svar.length > 20 && tekst === `${r.sporsmal}\n${r.svar}\n${kilde}` && tekstIgjen === tekst
+            && (tekst.match(/https?:\/\//g) || []).length === 1 && tekst.endsWith(`: ${side}`),
           JSON.stringify(tekst));
       }
       await new Promise(r => setTimeout(r, 2700));
@@ -2779,6 +2782,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           : vist.length > 1 ? `${vist.slice(0, -1).join(', ')} og ${vist[vist.length - 1]}` : vist[0];
         return `Scenario, ikke dagens tall. Forutsetter: ${liste}.`; };
       const scenKilde = `Scenario laget på tabellkalkulator.no, per ${dato}`;
+      const scenLenke = () => kp.evaluate(() => scenarioUrl());
       for (const [antall, beskr] of [[1, 'ett resultat'], [7, 'sju resultater']]) {
         await kp.evaluate(n => { const fylt = matches.filter(x => x.hg != null).length;
           matches.filter(x => x.hg == null).slice(0, n - fylt).forEach(m => setMatch(m, 2, 1)); render(); }, antall);
@@ -2792,9 +2796,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         await kp.evaluate(() => document.querySelector('#qaAnswer [data-kopi="tekst"]').click());
         await kp.waitForFunction(n => window.__kopi.length === n + 1, {timeout: 5000}, n2);
         const tekst2 = await kp.evaluate(n => window.__kopi[n], n2);
-        const linje = await forutsetter();
-        check(`${liga}, scenario med ${beskr}: teksten starter med "${linje.slice(0, 60)}...", kildelinja sier "Scenario laget på"`,
-          tekst2 === `${linje}\n${r2.sporsmal}\n${r2.svar}\n${scenKilde}` && (antall < 6 || /og 2 andre resultater\.$/.test(linje)),
+        const linje = await forutsetter(), scen = await scenLenke();
+        check(`${liga}, scenario med ${beskr}: teksten starter med "${linje.slice(0, 60)}...", kildelinja sier "Scenario laget på" og har scenariolenken`,
+          tekst2 === `${linje}\n${r2.sporsmal}\n${r2.svar}\n${scenKilde}: ${scen}` && /#s=\d/.test(scen) && (antall < 6 || /og 2 andre resultater\.$/.test(linje)),
           JSON.stringify(tekst2));
         check(`${liga}, scenario med ${beskr}: svaret har merkelappen "Simulert"`,
           await kp.evaluate(() => { const m = document.querySelector('#qaAnswer .qa-merke'); return !!m && m.textContent.trim() === 'Simulert'
@@ -2803,8 +2807,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         await kp.evaluate(() => document.querySelector('#verdict [data-kopi="lagboks"]').click());
         await kp.waitForFunction(n => window.__kopi.length === n + 2, {timeout: 20000}, n2);
         const lbt = await kp.evaluate(n => window.__kopi[n + 1], n2);
-        check(`${liga}, scenario med ${beskr}: lagboksens tekst starter med samme forutsetning, med lagnavnet under, og slutter med "Scenario laget på"`,
-          lbt.startsWith(`${linje}\n${lag}\n`) && lbt.endsWith(`\n${scenKilde}`), JSON.stringify(lbt));
+        check(`${liga}, scenario med ${beskr}: lagboksens tekst starter med samme forutsetning, med lagnavnet under, og slutter med "Scenario laget på" og scenariolenken`,
+          lbt.startsWith(`${linje}\n${lag}\n`) && lbt.endsWith(`\n${scenKilde}: ${scen}`), JSON.stringify(lbt));
         // Tabellen og svarene er regnet på de samme sesongene: tallene
         // svarene som bygger på innsikten viser, er nøyaktig tabellens.
         const avvik = await kp.evaluate(async () => { const A = await innsiktData(); let m = 0;

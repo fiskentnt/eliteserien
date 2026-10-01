@@ -418,7 +418,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # fra feltet lenke (1. oktober 2026, senere) er flettet inn uendret (git
 # merge-file uten konflikter). Det samme gjelder at "Kopier lenke" er fjernet
 # fra svarene og "Kopier tekst" er lagt til i lagboksen (1. oktober 2026,
-# ettermiddag).
+# ettermiddag), og at kildelinja i teksten slutter med en lenke som virker
+# (2. oktober 2026).
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -434,7 +435,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "48e264ed80c491386f8bdec2912ca063249940886127382b5249449566598422"
+BASE_SHA = "75bc3da4c7166dac3664f6ccdfadd60e821b75a735aae4200ae0ef57016f19d3"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

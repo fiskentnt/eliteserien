@@ -7083,13 +7083,13 @@ async function kopier(btn, tekst, ferdigTekst){
 
 // ---- "Kopier tekst": nederst i svarene i "Spør om tabellen" og i lagboksen ----
 // I svaret gir den spørsmålet, svaret og kildelinja "Tabellkalkulator.no, per
-// <dato>" som ren tekst, uten lenke. I lagboksen gir den det viktigste for
-// laget man følger (kopiTekstLagboks). Står det et scenario (resultater lagt
-// inn eller simulert på siden), starter teksten med "Scenario, ikke dagens
-// tall. Forutsetter: ..." med resultatene (høyst fem), og kildelinja er
-// "Scenario laget på tabellkalkulator.no, per <dato>". Lenken kopieres med
-// "Del" øverst og "Del scenario", ikke her. Knappen går gjennom kopier(), som
-// viser "Kopiert" en kort stund.
+// <dato>: <lenke til ligasiden>" som ren tekst. I lagboksen gir den det
+// viktigste for laget man følger (kopiTekstLagboks). Står det et scenario
+// (resultater lagt inn eller simulert på siden), starter teksten med
+// "Scenario, ikke dagens tall. Forutsetter: ..." med resultatene (høyst fem),
+// og kildelinja er "Scenario laget på tabellkalkulator.no, per <dato>:
+// <scenariolenken>". Knappen går gjennom kopier(), som viser "Kopiert" en kort
+// stund.
 const KOPI_TEKST_KNAPP = hva => `<button type="button" class="kopi" data-kopi="${hva}"><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><rect x="8.5" y="8.5" width="11" height="11" rx="2"/><path d="M15.5 8.5V6A1.5 1.5 0 0 0 14 4.5H6A1.5 1.5 0 0 0 4.5 6v8A1.5 1.5 0 0 0 6 15.5h2.5"/></svg><span aria-live="polite">Kopier tekst</span></button>`;
 const QA_KOPI_KNAPPER = `<div class="qa-kopi">${KOPI_TEKST_KNAPP('tekst')}</div>`;
 // Datoen tallene gjelder: når grunnlagsfilen tallene bygger på ble laget
@@ -7114,7 +7114,11 @@ function kopiScenarioLinje(){
     : vist.length>1 ? `${vist.slice(0, -1).join(', ')} og ${vist[vist.length-1]}` : vist[0];
   return `Scenario, ikke dagens tall. Forutsetter: ${liste}.`;
 }
-const kopiKilde = () => `${kopiScenario() ? 'Scenario laget på tabellkalkulator.no' : 'Tabellkalkulator.no'}, per ${kopiDato()}`;
+// Kildelinja nederst, med en lenke som virker: ligasiden, eller med et
+// scenario scenariolenken (samme som "Del scenario"), så leseren ser de samme
+// tallene. En hel https-adresse blir en lenke i forumene.
+const kopiLenke = () => kopiScenario() ? scenarioUrl() : 'https://tabellkalkulator.no' + LEAGUE.path;
+const kopiKilde = () => `${kopiScenario() ? 'Scenario laget på tabellkalkulator.no' : 'Tabellkalkulator.no'}, per ${kopiDato()}: ${kopiLenke()}`;
 function kopiTekstSvar(){
   if(!qaKopi) return null;
   return [...(kopiScenario() ? [kopiScenarioLinje()] : []), qaKopi.sporsmal, qaKopi.svar, kopiKilde()].join('\n');
