@@ -177,6 +177,25 @@ Gjort:
    opprykksspillet ikke er modellert står under "Begrensninger".
 7. **Stjernen** står foran tallet ("*19"), se avsnittet under.
 
+**Pushet 1.10 kl. 05.24** (0ae271c til af85140, med c28a375-innholdet) etter
+to fulle grønne testkjøringer: failsafe 234/234, test_kilder 363/363,
+test_sesongskifte 167/167, regression.js 1162/1162, kontroll.py og
+kontroll_paneler.py. Kontrollert etterpå: grunnlagsfilene regnet på nytt og
+"i bruk" på alle tre sidene; OBOS viser "*19" på 15. plass, 86 % nedrykk og
+"* Åsane trukket et poeng." på 1400 og 390 px, uten avsnittet om
+opprykkskvalifiseringen og uten JS-feil. `--live --bare justering` fant at
+sammenligningen "simuleringen med trekket gir nøyaktig sidens tall" ikke kan
+holde når grunnlagsfilen er i bruk (den er regnet med 100 000 sesonger i
+oppgaveformen): rettet til nøyaktig når siden regner selv, innenfor 3
+prosentpoeng mot grunnlagsfilen (20/20 lokalt og publisert). Forumbildene er
+laget på nytt med stjernen foran tallet (900×695 og 900×711).
+
+Gjenstår: se at de første datakjøringene med den nye koden (Eliteserien om
+natten eller morgenen, OBOS kl. 07.17) skriver `audit_tabell.json` uten avvik
+og `audit_fixtures.json` med kilde "kalenderfeeden", og at ingen henter fra
+fotball.no (henteloggen). Karenstiden (14 døgn eller 72 timer) avklares med
+Trond.
+
 **Testene som sammenlignet lagrede kopier med dagens data, eller forutsatte
 faste avsparkstider, datoer eller tabellstillinger** (gjennomgått 1.10):
 - tests/kilder/test_kilder.py: "alle 240 time stemmer mot fasit" (fasit nå

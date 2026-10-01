@@ -1477,7 +1477,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       const howto = String(await qaHowTo('Åsane')).replace(/<[^>]+>/g, '');
       const sisteRunde = computeAt(ROUND_SEQ.length - 1).find(x => x.name === 'Åsane');
       const runde1 = computeAt(0).find(x => x.name === 'Åsane');
-      return {rader, kamp, P0: q.P0[aa], just: JUSTERINGER.map(j => [j.dato, j.lag, j.poeng, j.maal || 0]), grunnlagP0: grunnlagInndata(GRUNNLAG_N).P0[aa], innsiktP0: A && A.P0 ? A.P0[aa] : null,
+      return {rader, kamp, P0: q.P0[aa], grunnlagIBruk: GRUNNLAG_STATUS === 'i bruk', just: JUSTERINGER.map(j => [j.dato, j.lag, j.poeng, j.maal || 0]), grunnlagP0: grunnlagInndata(GRUNNLAG_N).P0[aa], innsiktP0: A && A.P0 ? A.P0[aa] : null,
         basePos: basePos['Åsane'], avvikMotSiden, howto, sisteRunde: [sisteRunde.pts, sisteRunde.just], runde1: [runde1.pts, runde1.just, runde1.w * 3 + runde1.d],
         ned: {med: {Åsane: ned(med, 'Åsane'), Raufoss: ned(med, 'Raufoss')}, uten: {Åsane: ned(uten, 'Åsane'), Raufoss: ned(uten, 'Raufoss')}},
         sum: [med[aa].reduce((a, b) => a + b, 0), uten[aa].reduce((a, b) => a + b, 0)],
@@ -1516,7 +1516,14 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     check('rundetabellen: trekket gjelder fra 4. mars, altså alle runder',
       r.sisteRunde[0] === kp - 1 && r.sisteRunde[1] === -1 && r.runde1[0] === r.runde1[2] - 1 && r.runde1[1] === -1,
       JSON.stringify([r.sisteRunde, r.runde1]));
-    check('simuleringen med trekket gir nøyaktig sidens tall', r.avvikMotSiden === 0, String(r.avvikMotSiden));
+    // Regner siden selv (lokalt, der grunnlagsfilen svarer 404), er tallene
+    // nøyaktig de samme. Er grunnlagsfilen i bruk (den publiserte siden),
+    // kommer sidens tall fra den: 100 000 sesonger regnet med oppgaveformen,
+    // så de kan bare være like innenfor støyen. At filen bruker trekket, viser
+    // P0-sjekken over.
+    check(r.grunnlagIBruk ? 'simuleringen med trekket gir grunnlagsfilens tall innenfor 3 prosentpoeng'
+                          : 'simuleringen med trekket gir nøyaktig sidens tall',
+      r.grunnlagIBruk ? r.avvikMotSiden < 0.03 : r.avvikMotSiden === 0, String(r.avvikMotSiden));
     check('med trekket: høyere nedrykkssjanse for Åsane og lavere for Raufoss enn uten',
       r.ned.med.Åsane > r.ned.uten.Åsane + 0.01 && r.ned.med.Raufoss < r.ned.uten.Raufoss, JSON.stringify(r.ned));
     check('fordelingen summerer til 1 med og uten', r.sum.every(x => Math.abs(x - 1) < 1e-9), JSON.stringify(r.sum));
