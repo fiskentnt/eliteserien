@@ -342,7 +342,10 @@ kildelinja i den kopierte teksten, i svarene og i lagboksen, slutter nå med
 en lenke som virker: "Tabellkalkulator.no, per <dato>:
 https://tabellkalkulator.no/<liga>/", og med et scenario "Scenario laget på
 tabellkalkulator.no, per <dato>: <scenariolenken>" (samme som "Del
-scenario"). Forumene gjør adressen til en lenke.
+scenario"). Forumene gjør adressen til en lenke. Samme natt (Trond: "ikke
+dobbel link"): navnet står uten ".no" -- "Tabellkalkulator, per <dato>:
+<lenke>" og "Scenario laget på Tabellkalkulator, per <dato>: <lenke>" --
+ellers ble "Tabellkalkulator.no" en lenke til.
 
 Fra Trond, etter to utkast (knapper også i lagboksen og ved kortene, med
 lenken i teksten; begge forkastet før push): to små knapper nederst i hvert

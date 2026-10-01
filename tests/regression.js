@@ -2637,14 +2637,14 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     // Nederst i hvert svar i "Spør om tabellen" og i lagboksen for laget man
     // følger står én dempet knapp, "Kopier tekst" (ingen "Kopier lenke": lenken
     // kopieres med "Del" og "Del scenario"). I svaret gir den spørsmålet,
-    // svaret og "Tabellkalkulator.no, per <dato>: <lenke til ligasiden>"; i
+    // svaret og "Tabellkalkulator, per <dato>: <lenke til ligasiden>" (navnet uten ".no", så det blir én lenke); i
     // lagboksen lagnavnet,
     // sjansene for sonene som er relevante (de boksen viser, uten dem under 1 %
     // unntatt kvalik og nedrykk når laget står i fare), linja om forrige kamp,
     // det første avsnittet av "Hva må ... gjøre?" og kildelinja. Med et
     // scenario starter teksten med "Scenario, ikke dagens tall. Forutsetter:"
     // og resultatene (høyst fem, ellers "og N andre resultater"), kildelinja er
-    // "Scenario laget på tabellkalkulator.no, per <dato>: <scenariolenken>"
+    // "Scenario laget på Tabellkalkulator, per <dato>: <scenariolenken>"
     // (samme som "Del scenario"), og svaret på siden
     // har merkelappen "Simulert". Datoen regnes her fra filene: når
     // grunnlagsfilen tallene bygger på ble laget ("laget"), eller når
@@ -2703,7 +2703,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await settle(kp);
       await kopiOpptaker(kp);
       const iBruk = await kp.evaluate(() => GRUNNLAG_STATUS === 'i bruk');
-      const dato = kopiDatoVentet(mappe, iBruk), side = `https://tabellkalkulator.no/${mappe}/`, kilde = `Tabellkalkulator.no, per ${dato}: ${side}`;
+      const dato = kopiDatoVentet(mappe, iBruk), side = `https://tabellkalkulator.no/${mappe}/`, kilde = `Tabellkalkulator, per ${dato}: ${side}`;
+      // Én lenke i teksten: navnet står uten ".no", ellers blir det en lenke til.
+      const enLenke = t => (t.match(/https?:\/\//g) || []).length === 1 && !/tabellkalkulator\.no/i.test(t.replace(/https?:\/\/\S+/g, ''));
       check(`${liga}: datoen i kildelinja er fra ${iBruk ? 'grunnlagsfilen' : 'model.json'} (${dato})`, /^\d{1,2}\. [a-zæøå]+$/.test(dato), dato);
       for (const [l, q] of [[lag, qid], [lag2, qid2]]) {
         const r = await kopiSvar(kp, l, q);
@@ -2726,7 +2728,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         }
         check(`${liga} (${hva}): "Kopier tekst" gir spørsmålet, svaret og "${kilde}", med lenken til ligasiden bare der, med Enter og mellomrom`,
           r.svar.length > 20 && tekst === `${r.sporsmal}\n${r.svar}\n${kilde}` && tekstIgjen === tekst
-            && (tekst.match(/https?:\/\//g) || []).length === 1 && tekst.endsWith(`: ${side}`),
+            && enLenke(tekst) && tekst.endsWith(`: ${side}`),
           JSON.stringify(tekst));
       }
       await new Promise(r => setTimeout(r, 2700));
@@ -2748,8 +2750,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const ventet = [l, sjanserVentet(lb), lb.lm, forste, kilde].filter(Boolean).join('\n');
         check(`${liga}, lagboksen (${hvem}, ${l}): én knapp, "Kopier tekst"`,
           lb.knapper.length === 1 && lb.knapper[0].tekst === 'Kopier tekst' && lb.knapper[0].type === 'button', JSON.stringify(lb.knapper));
-        check(`${liga}, lagboksen (${hvem}, ${l}): lagnavnet, sjansene som er relevante, forrige kamp, første avsnitt av "Hva må ... gjøre?" og "${kilde}"`,
-          t === ventet && !!lb.lm && forste.length > 20, JSON.stringify({t, ventet}));
+        check(`${liga}, lagboksen (${hvem}, ${l}): lagnavnet, sjansene som er relevante, forrige kamp, første avsnitt av "Hva må ... gjøre?" og "${kilde}", med én lenke`,
+          t === ventet && !!lb.lm && forste.length > 20 && enLenke(t), JSON.stringify({t, ventet}));
         check(`${liga}, lagboksen (${hvem}, ${l}): "Kopiert" etter trykket, og boksen klappes ikke sammen eller ut`,
           lb2.knapper[0].tekst === 'Kopiert' && lb2.ekspandert === lb.ekspandert, JSON.stringify(lb2));
       }
@@ -2781,7 +2783,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const liste = resten > 0 ? `${vist.join(', ')} og ${resten} ${resten === 1 ? 'annet resultat' : 'andre resultater'}`
           : vist.length > 1 ? `${vist.slice(0, -1).join(', ')} og ${vist[vist.length - 1]}` : vist[0];
         return `Scenario, ikke dagens tall. Forutsetter: ${liste}.`; };
-      const scenKilde = `Scenario laget på tabellkalkulator.no, per ${dato}`;
+      const scenKilde = `Scenario laget på Tabellkalkulator, per ${dato}`;
       const scenLenke = () => kp.evaluate(() => scenarioUrl());
       for (const [antall, beskr] of [[1, 'ett resultat'], [7, 'sju resultater']]) {
         await kp.evaluate(n => { const fylt = matches.filter(x => x.hg != null).length;
@@ -2798,7 +2800,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const tekst2 = await kp.evaluate(n => window.__kopi[n], n2);
         const linje = await forutsetter(), scen = await scenLenke();
         check(`${liga}, scenario med ${beskr}: teksten starter med "${linje.slice(0, 60)}...", kildelinja sier "Scenario laget på" og har scenariolenken`,
-          tekst2 === `${linje}\n${r2.sporsmal}\n${r2.svar}\n${scenKilde}: ${scen}` && /#s=\d/.test(scen) && (antall < 6 || /og 2 andre resultater\.$/.test(linje)),
+          tekst2 === `${linje}\n${r2.sporsmal}\n${r2.svar}\n${scenKilde}: ${scen}` && /#s=\d/.test(scen) && enLenke(tekst2)
+            && (antall < 6 || /og 2 andre resultater\.$/.test(linje)),
           JSON.stringify(tekst2));
         check(`${liga}, scenario med ${beskr}: svaret har merkelappen "Simulert"`,
           await kp.evaluate(() => { const m = document.querySelector('#qaAnswer .qa-merke'); return !!m && m.textContent.trim() === 'Simulert'
