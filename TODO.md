@@ -157,12 +157,28 @@ Gjort:
    fra fotball.no-siden, sammenligningsreglene, stempelet); failsafe 26
    (formatet i justeringer.json) og grunnlagsporten.
 
-Etter pushen: kontroller de publiserte sidene (OBOS: Åsane 19*, merknaden,
-nedrykkssjansene), at grunnlagsfilene er regnet på nytt og i bruk, og at
-den første daglige revisjonen etter pushen har sammenlignet tabellen
-(`obos/data/audit_fixtures.json`, ingen avvik). Lag så de to bildene til
-foruminnlegget på nytt (900 px, uten avsnittet om opprykkskvalifiseringen,
-"per 30. september" på dagens, "per 1. oktober" på scenarioet).
+Pushet 1.10 kl. 03.46 (390a5f4 og d304cc3, med fdfce45), etter failsafe
+228/228, regression.js 1151/1151, kontroll.py og kontroll_paneler.py.
+Kontrollert etterpå: regression.js `--live --bare justering` 15/15 mot
+tabellkalkulator.no; grunnlagsfilene regnet på nytt av CI (a9c5859 obos,
+301e45d elo-test, f500e01 eliteserien) og "i bruk" på alle tre sidene; OBOS
+viser Åsane 15. med 19* og 86 % nedrykk, Raufoss 16. med 19 og 81 %, med
+merknaden under tabellen, på 1400 og 390 px, uten JS-feil. Den daglige
+revisjonen ble prøvd i en kopi av repoet: uten trekket rødt stempel og exit 1
+("2 kritisk(e) avvik mellom tabellen og fotball.no: Tabell, Åsane: 20 poeng
+hos oss, 19 hos fotball.no"), med trekket grønt. Forumbildene er laget på
+nytt på skrivebordet (900 px, lyst tema, uten avsnittet om
+opprykkskvalifiseringen, med "* Åsane trukket et poeng."): dagens fra den
+publiserte siden "per 30. september" (900×695), og scenarioet uten Raufoss
+fra prototypen (15 lag, bare nr. 15 ned, 100 000 simuleringer) "per 1.
+oktober" (900×711).
+
+Gjenstår: se at den første fotball.no-hentingen etter pushen (tidligst
+1.10 kl. 07.03, i praksis morgenkjøringen) har lagret tabellen i
+`data/nff-cache/obos.json` og at `obos/data/audit_fixtures.json` står uten
+avvik. Testen "alle 240 time stemmer mot fasit" i test_kilder.py
+feiler fordi CI flyttet Ranheim–Sogndal (OBOS, 1.11) fra 17.00 til 14.30
+29.9, etter testdataene fra 25.9; ikke knyttet til dette.
 
 ## "Spør om tabellen": Kopier tekst og Kopier lenke (1.10.2026)
 
