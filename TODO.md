@@ -314,6 +314,22 @@ commit som testdataene), lagret som `testdata/fasit_<liga>_2026-09-25.json`.
 
 ## "Spør om tabellen": Kopier tekst og Kopier lenke (1.10.2026)
 
+**Endret 1.10 ettermiddag (Trond):** "Kopier lenke" er fjernet fra svarene
+(lenken kopieres med "Del" øverst og "Del scenario"). Lagboksen for laget man
+følger har fått én "Kopier tekst"-knapp, i begge ligaene, med samme stil og
+oppførsel: lagnavnet, sjansene for sonene boksen viser, uten dem under 1 % --
+unntatt kvalik og nedrykk når laget står i fare (minst 1 % for en av dem), da
+står begge -- linja om forrige kamp, det første avsnittet av "Hva må ...
+gjøre?", og "Tabellkalkulator.no, per <dato>" (samme dato som svarene). Med
+scenario: "Scenario, ikke dagens tall. Forutsetter: ..." øverst og "Scenario
+laget på tabellkalkulator.no, per <dato>" nederst. Knappen venter til
+tabellen og linja om forrige kamp er regnet for scenarioet. Et trykk klapper
+ikke lagboksen ut på mobil. Regresjonen ("Kopier tekst: i svarene og i
+lagboksen") sjekker plass 1, 8 og 16 i begge ligaene mot det boksen og svaret
+viser, regelen for soner under 1 %, scenario, tastatur og trykk på mobil.
+Skjermbilder og eksempler vist Trond før push. Det som står under, er
+historikken fra før endringen.
+
 Fra Trond, etter to utkast (knapper også i lagboksen og ved kortene, med
 lenken i teksten; begge forkastet før push): to små knapper nederst i hvert
 svar, i begge ligaene, og ingen andre kopiknapper.
