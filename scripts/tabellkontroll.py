@@ -22,14 +22,18 @@ Lag for lag:
                                GitHub-issue (varsle() under), ikke med rodt
                                stempel.
 
-Resultatet skrives til <liga>/data/audit_tabell.json. Frysingen ved
-sesongslutt krever en kontroll fra SAMME kjoring der alle lag stemmer
-(alle_like), se frys_sesong.ikke_ferdig.
+Resultatet skrives til <liga>/data/audit_tabell.json. Den siste vellykkede
+kontrollen (alle lag stemte) lagres i feltet siste_like med tidspunkt og et
+avtrykk av resultatene og justeringene den gjaldt. Frysingen ved sesongslutt
+godtar den saa lenge ingenting av det er endret siden (se
+frys_sesong.ikke_ferdig): rundt nyttaar kan ligasiden ha byttet til neste
+sesong foer karenstiden er ute, og da kan ingen ny kontroll vaere vellykket.
 
 Bruk i workflowen, etter commit-steget:
 
   python3 scripts/tabellkontroll.py varsle <liga>
 """
+import hashlib
 import json
 import os
 import subprocess
@@ -103,6 +107,26 @@ def sammenlign(vaar, offisiell, kilde="ligasiden"):
     return feil, advarsler, nye, alle_like and not nye
 
 
+def avtrykk(kamper, justeringer):
+    """sha256 av det tabellen bygger paa: resultatene (lag og maal for hver
+    spilte kamp) og justeringene (lag og poeng). Dato og avspark er ikke med;
+    de endrer ikke tabellen."""
+    k = sorted([m["home"], m["away"], m["hg"], m["ag"]] for m in kamper
+               if m.get("hg") is not None and m.get("ag") is not None)
+    j = sorted([x["lag"], x["poeng"]] for x in justeringer)
+    tekst = json.dumps({"kamper": k, "justeringer": j}, ensure_ascii=False, separators=(",", ":"))
+    return hashlib.sha256(tekst.encode("utf-8")).hexdigest()
+
+
+def data_avtrykk(data_dir, sesong):
+    """avtrykk() av matches.json og justeringer.json (sesongen) i data_dir."""
+    data_dir = Path(data_dir)
+    kamper = json.loads((data_dir / "matches.json").read_text(encoding="utf-8"))
+    jsti = data_dir / "justeringer.json"
+    just = json.loads(jsti.read_text(encoding="utf-8")).get("justeringer", []) if jsti.exists() else []
+    return avtrykk(kamper, [j for j in just if int(j.get("sesong", 0)) == int(sesong)])
+
+
 def annen_sesong(vaar, offisiell):
     """En grunn hvis tabellen paa ligasiden ser ut til aa gjelde en ANNEN
     sesong enn vaar, ellers None. Rundt aarsskiftet bytter ligasiden til neste
@@ -136,6 +160,11 @@ def kontroller(liga, sesong, kamper, offisiell, naa=None, data_dir=None, kilde_u
     kilde = (kilde_url or oppsett(liga)["ntf_base"]).replace("https://www.", "").split("/")[0]
     jsti = data_dir / "justeringer.json"
     jdok = json.loads(jsti.read_text(encoding="utf-8")) if jsti.exists() else {"justeringer": []}
+    asti = data_dir / "audit_tabell.json"
+    try:
+        forrige = json.loads(asti.read_text(encoding="utf-8"))
+    except Exception:
+        forrige = {}
     just = [j for j in jdok.get("justeringer", []) if int(j.get("sesong", 0)) == int(sesong)]
     vaar = vaar_tabell(kamper, lag, _just.per_lag(just))
     ut = {"checked_at": naa.isoformat(timespec="seconds"),
@@ -174,7 +203,20 @@ def kontroller(liga, sesong, kamper, offisiell, naa=None, data_dir=None, kilde_u
         ut.update({"sammenlignet": True, "errors": len(feil), "warnings": len(advarsler),
                    "alle_like": bool(alle_like) and not feil, "nye": lagt_inn,
                    "avvik": feil[:20], "advarsler": advarsler[:20]})
-    (data_dir / "audit_tabell.json").write_text(json.dumps(ut, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    # Den siste vellykkede kontrollen, til frysingen (se docstringen oeverst):
+    # en ny vellykket kontroll erstatter den; en kontroll som sammenlignet,
+    # men ikke fant alle like, sletter den (et nyere avvik skal ikke kunne
+    # overstyres av en eldre gronn kontroll); en kontroll som ikke kunne
+    # sammenligne, beholder den.
+    if ut["sammenlignet"] and ut["alle_like"]:
+        ut["siste_like"] = {"checked_at": ut["checked_at"], "kjoring": kjoring, "kilde": kilde_url,
+                            "avtrykk": avtrykk(kamper, [j for j in jdok.get("justeringer", [])
+                                                        if int(j.get("sesong", 0)) == int(sesong)])}
+    elif not ut["sammenlignet"] and forrige.get("sesong") == str(sesong) and forrige.get("siste_like"):
+        ut["siste_like"] = forrige["siste_like"]
+    else:
+        ut["siste_like"] = None
+    asti.write_text(json.dumps(ut, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     for a in ut["advarsler"]:
         log(f"  ADVARSEL: {a}")
     for f in ut["avvik"]:

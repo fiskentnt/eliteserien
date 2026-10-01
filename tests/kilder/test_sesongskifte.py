@@ -76,13 +76,18 @@ def skriv_revisjon(sb, liga, naa, errors=0, alle_like=True, sammenlignet=True,
     """Tabellkontrollens resultat (audit_tabell.json), som frysingen krever:
     tabellen paa ligasiden mot vaar, fra samme kjoring. Den ekte kontrollen
     provnes lenger ned (kjor_ekte_kontroll og hele kjeden)."""
+    import tabellkontroll as _tkh
     d = sb / LIGAER[liga]["data"] / "audit_tabell.json"
+    gronn = bool(alle_like and sammenlignet and not errors)
+    kj = kjoring if kjoring is not None else sesong.kjoring_id()
     d.write_text(json.dumps({
         "checked_date": naa.date().isoformat(),
         "checked_at": naa.isoformat(timespec="seconds"),
         "sammenlignet": sammenlignet, "errors": errors, "warnings": 0,
-        "alle_like": bool(alle_like and sammenlignet and not errors), "nye": [],
-        "kjoring": kjoring if kjoring is not None else sesong.kjoring_id(),
+        "alle_like": gronn, "nye": [], "kjoring": kj, "sesong": "2026",
+        # Den siste vellykkede kontrollen, med avtrykket av dataene den gjaldt.
+        "siste_like": ({"checked_at": naa.isoformat(timespec="seconds"), "kjoring": kj,
+                        "avtrykk": _tkh.data_avtrykk(sb / LIGAER[liga]["data"], "2026")} if gronn else None),
     }), encoding="utf-8")
 
 
@@ -255,20 +260,31 @@ ok, hindre = frys(sb2, "obos", "2026", naa)
 sjekk("når avviket er løst og revisjonen er grønn: fryses", ok, str(hindre))
 sjekk("frosset.json finnes nå", sesong.er_frosset(sb2, "obos", "2026"))
 
-# En kontroll fra en annen kjoring duger ikke
+# En vellykket kontroll fra en annen kjoring (etter siste kamp) duger, saa
+# lenge resultatene og justeringene er uendret siden ...
 sb3 = ny_sandkasse(LAG26)
 sesong.oppdag(sb3, "obos", "2027", terminliste("2027", LAG27), log=lambda _s: None)
 skriv_revisjon(sb3, "obos", naa - timedelta(days=2), kjoring="i-forgaars")
 hindre = frys_sesong.ikke_ferdig(sb3, "obos", "2026", naa=naa)
-sjekk("en tabellkontroll fra en annen kjøring duger ikke",
-      any("annen kjøring" in h for h in hindre), str(hindre))
+sjekk("en vellykket tabellkontroll fra en annen kjøring, med uendrede resultater: duger",
+      not hindre, str(hindre))
+# ... men ikke naar et resultat er endret etterpaa
+_m3 = sb3 / LIGAER["obos"]["data"] / "matches.json"
+_m3_gml = _m3.read_text("utf-8")
+_m3_ny = json.loads(_m3_gml); _m3_ny[0] = {**_m3_ny[0], "hg": 3, "ag": 0}
+_m3.write_text(json.dumps(_m3_ny), encoding="utf-8")
+hindre = frys_sesong.ikke_ferdig(sb3, "obos", "2026", naa=naa)
+sjekk("men ikke når et resultat er endret siden",
+      any("endret siden den siste vellykkede tabellkontrollen" in h for h in hindre), str(hindre))
+_m3.write_text(_m3_gml, encoding="utf-8")
 
-# En kontroll uten tabell (ligasiden ga ingen tabell) duger ikke: den har
-# errors=0 uten aa ha kontrollert noe.
+# En kontroll uten tabell (ligasiden ga ingen tabell) duger ikke alene: den
+# har errors=0 uten aa ha kontrollert noe. Uten en tidligere vellykket
+# kontroll: ingen frysing.
 skriv_revisjon(sb3, "obos", naa, sammenlignet=False)
 hindre = frys_sesong.ikke_ferdig(sb3, "obos", "2026", naa=naa)
-sjekk("tabellkontroll uten tabell duger ikke",
-      any("ingen tabell å sammenligne med" in h for h in hindre), str(hindre))
+sjekk("tabellkontroll uten tabell, og ingen tidligere vellykket: ingen frysing",
+      any("ingen vellykket tabellkontroll" in h for h in hindre), str(hindre))
 
 # Og en REN revisjon fra FOR siste kamp sier ingenting om sluttresultatene.
 skriv_revisjon(sb3, "obos", SISTE_KAMP - timedelta(days=30))
@@ -482,16 +498,16 @@ kode = kjor_ekte_kontroll(sb10, "obos", ligasidens_tabell(vaart, _lag_o), 100)
 sjekk("ekte tabellkontroll mot ligasidens tabell for de samme kampene: ingen avvik", kode == 0)
 sjekk("frysing tillatt i SAMME kjøring", not hindre_naa(sb10, "obos", 100),
       str(hindre_naa(sb10, "obos", 100)))
-sjekk("men ikke i en ANNEN kjøring", any("annen kjøring" in x for x in hindre_naa(sb10, "obos", 999)),
-      str(hindre_naa(sb10, "obos", 999)))
+sjekk("og i en senere kjøring uten ny kontroll, så lenge resultatene er uendret",
+      not hindre_naa(sb10, "obos", 999), str(hindre_naa(sb10, "obos", 999)))
 
-# 2) Ny kjoring der ligasiden ikke ga noen tabell. Den gamle gronne
-#    kontrollen skal ikke kunne aapne for frysing.
+# 2) Ny kjoring der ligasiden ikke ga noen tabell. Den siste vellykkede
+#    kontrollen (kjoring 100) staar, og resultatene er uendret: frysing.
 kode = kjor_ekte_kontroll(sb10, "obos", None, 101)
 h = hindre_naa(sb10, "obos", 101)
-sjekk("ingen tabell i ny kjøring: ingen frysing", bool(h), str(h))
-sjekk("og grunnen er at det ikke var noen tabell å sammenligne med",
-      any("ingen tabell" in x for x in h), str(h))
+_a101 = _json.loads((sb10 / LIGAER["obos"]["data"] / "audit_tabell.json").read_text("utf-8"))
+sjekk("ingen tabell i ny kjøring: den siste vellykkede kontrollen (kjøring 100) står, og frysing er tillatt",
+      not h and _a101["sammenlignet"] is False and (_a101["siste_like"] or {}).get("kjoring") == "100-1", f"{h} {_a101.get('siste_like')}")
 
 # 3) Tabellen hentes, men den viser et annet resultat enn vaart
 feil_tab = ligasidens_tabell(vaart, _lag_o)
@@ -500,13 +516,15 @@ kode = kjor_ekte_kontroll(sb10, "obos", feil_tab, 102)
 sjekk("kritisk avvik i tabellen: kontrollen feiler kjøringen", kode == 1)
 h = hindre_naa(sb10, "obos", 102)
 sjekk("og ingen frysing", any("kritiske avvik" in x for x in h), str(h))
+sjekk("og den siste vellykkede kontrollen er slettet: et nyere avvik overstyres ikke av en eldre grønn kontroll",
+      _json.loads((sb10 / LIGAER["obos"]["data"] / "audit_tabell.json").read_text("utf-8"))["siste_like"] is None)
 
 # 4) Ligasiden har byttet til neste sesong (ingen spilte kamper)
 null_tab = [{**r, "k": 0, "v": 0, "u": 0, "t": 0, "mf": 0, "mm": 0, "poeng": 0} for r in ligasidens_tabell(vaart, _lag_o)]
 kode = kjor_ekte_kontroll(sb10, "obos", null_tab, 103)
 h = hindre_naa(sb10, "obos", 103)
-sjekk("ligasiden viser en ny sesong: ingen avvik og intet rødt stempel, men heller ingen frysing",
-      kode == 0 and any("ingen tabell" in x for x in h), str(h))
+sjekk("ligasiden viser en ny sesong etter avviket: ingen avvik og intet rødt stempel, men heller ingen frysing",
+      kode == 0 and any("ingen vellykket tabellkontroll" in x for x in h), str(h))
 sjekk("og det sies at tabellen ser ut til å være fra en ny sesong",
       "ny sesong" in " ".join(_json.loads((sb10 / LIGAER["obos"]["data"] / "audit_tabell.json").read_text("utf-8"))["advarsler"]))
 
@@ -528,6 +546,91 @@ sjekk("15 lag og 210 kamper (Raufoss trukket): ferdig, ikke \"240\"",
 h = hindre_naa(sb10, "obos", 105)
 sjekk("og 16 lag med 239 kamper er ikke ferdig", any("239 kamper har resultat, men 16 lag gir 240" in x for x in h), str(h))
 (sb10 / LIGAER["obos"]["data"] / "matches.json").write_text(_json.dumps(vaart), encoding="utf-8")
+
+# ============ Nyttaar: ligasiden bytter til neste sesong foer karenstiden er ute
+print("\n=== Nyttår: ligasiden viser 2027 før karenstiden er ute ===")
+# Siste kamp D. Tabellkontrollen er gronn D+1. Fra D+6 viser ligasiden 2027
+# (andre lag, ingen kamper), saa ingen ny kontroll kan vaere vellykket.
+# Frysingen skal likevel skje automatisk etter karenstiden, paa den siste
+# vellykkede kontrollen -- men bare saa lenge resultatene og justeringene er
+# uendret siden, og bare naar ingen nyere kontroll har funnet avvik.
+LIGASIDEN_2027 = [{"lag": l, "plass": i + 1, "k": 0, "v": 0, "u": 0, "t": 0, "mf": 0, "mm": 0, "poeng": 0}
+                  for i, l in enumerate(sorted(LAG27))]
+
+
+def kontroll_dag(sb, tabell, naa, run_id, liga="eliteserien"):
+    d = sb / LIGAER[liga]["data"]
+    kamper = _json.loads((d / "matches.json").read_text("utf-8"))
+    with _vern.miljo(GITHUB_RUN_ID=str(run_id), GITHUB_RUN_ATTEMPT="1"):
+        return _tk2.kontroller(liga, "2026", kamper, tabell, naa=naa, data_dir=d,
+                               kjoring=sesong.kjoring_id(), log=lambda _s: None, lag=LAG26)
+
+
+def ligasiden_2026(sb, liga="eliteserien"):
+    return ligasidens_tabell(_json.loads((sb / LIGAER[liga]["data"] / "matches.json").read_text("utf-8")), LAG26)
+
+
+def frys_dag(sb, naa, run_id, liga="eliteserien"):
+    with _vern.miljo(GITHUB_RUN_ID=str(run_id), GITHUB_RUN_ATTEMPT="1"):
+        return frys(sb, liga, "2026", naa)
+
+
+D = SISTE_KAMP
+sbn = ny_sandkasse(LAG26)
+r1 = kontroll_dag(sbn, ligasiden_2026(sbn), D + timedelta(days=1), 601)
+sjekk("D+1: tabellkontrollen er grønn, og lagres som den siste vellykkede, med tidspunkt",
+      r1["alle_like"] and r1["siste_like"]["checked_at"] == (D + timedelta(days=1)).isoformat(timespec="seconds"),
+      str(r1.get("siste_like")))
+r2 = kontroll_dag(sbn, LIGASIDEN_2027, D + timedelta(days=6), 602)
+sjekk("D+6: ligasiden viser 2027 -- ikke sammenlignet, ingen avvik, og den siste vellykkede kontrollen står",
+      r2["sammenlignet"] is False and r2["errors"] == 0 and "andre lag" in r2["advarsler"][0]
+      and r2["siste_like"] == r1["siste_like"], str(r2))
+kontroll_dag(sbn, LIGASIDEN_2027, D + timedelta(days=10), 603)
+ok, h = frys_dag(sbn, D + timedelta(days=10), 603)
+sjekk("D+10: bare karenstiden står i veien", not ok and len(h) == 1 and "karenstiden er 14" in h[0], str(h))
+kontroll_dag(sbn, LIGASIDEN_2027, D + timedelta(days=15), 604)
+ok, h = frys_dag(sbn, D + timedelta(days=15), 604)
+sjekk("D+15: fryses automatisk på kontrollen fra D+1, selv om ligasiden viser 2027",
+      ok and sesong.er_frosset(sbn, "eliteserien", "2026"), str(h))
+
+# Et resultat endres etter den gronne kontrollen (kamp dommes 3-0)
+sbn2 = ny_sandkasse(LAG26)
+kontroll_dag(sbn2, ligasiden_2026(sbn2), D + timedelta(days=1), 611)
+_mn = sbn2 / LIGAER["eliteserien"]["data"] / "matches.json"
+_kn = _json.loads(_mn.read_text("utf-8")); _kn[5] = {**_kn[5], "hg": 0, "ag": 3}
+_mn.write_text(_json.dumps(_kn), encoding="utf-8")
+kontroll_dag(sbn2, LIGASIDEN_2027, D + timedelta(days=9), 612)
+ok, h = frys_dag(sbn2, D + timedelta(days=15), 613)
+sjekk("et resultat endret etter den grønne kontrollen: ingen frysing",
+      not ok and any("endret siden den siste vellykkede tabellkontrollen" in x for x in h), str(h))
+
+# Et poengtrekk legges inn etter den gronne kontrollen
+sbn3 = ny_sandkasse(LAG26)
+kontroll_dag(sbn3, ligasiden_2026(sbn3), D + timedelta(days=1), 621)
+(sbn3 / LIGAER["eliteserien"]["data"] / "justeringer.json").write_text(_json.dumps({"justeringer": [
+    {"sesong": 2026, "lag": LAG26[0], "poeng": -1, "dato": "2026-12-20", "kilde": "test", "årsak": "test"}]}), encoding="utf-8")
+kontroll_dag(sbn3, LIGASIDEN_2027, D + timedelta(days=9), 622)
+ok, h = frys_dag(sbn3, D + timedelta(days=15), 623)
+sjekk("en justering lagt inn etter den grønne kontrollen: ingen frysing",
+      not ok and any("endret siden den siste vellykkede tabellkontrollen" in x for x in h), str(h))
+
+# Den siste gronne kontrollen er fra FOER siste kamp
+sbn4 = ny_sandkasse(LAG26)
+kontroll_dag(sbn4, ligasiden_2026(sbn4), D - timedelta(days=1), 631)
+kontroll_dag(sbn4, LIGASIDEN_2027, D + timedelta(days=6), 632)
+ok, h = frys_dag(sbn4, D + timedelta(days=15), 633)
+sjekk("den siste grønne kontrollen er fra før siste kamp: ingen frysing",
+      not ok and any("den siste vellykkede tabellkontrollen er fra" in x and "før siste kamp" in x for x in h), str(h))
+
+# En nyere kontroll fant avvik foer ligasiden byttet sesong
+sbn5 = ny_sandkasse(LAG26)
+kontroll_dag(sbn5, ligasiden_2026(sbn5), D + timedelta(days=1), 641)
+_feil = ligasiden_2026(sbn5); _feil[0] = {**_feil[0], "v": _feil[0]["v"] - 1, "u": _feil[0]["u"] + 1, "poeng": _feil[0]["poeng"] - 2}
+r = kontroll_dag(sbn5, _feil, D + timedelta(days=3), 642)
+kontroll_dag(sbn5, LIGASIDEN_2027, D + timedelta(days=6), 643)
+ok, h = frys_dag(sbn5, D + timedelta(days=15), 644)
+sjekk("avvik i en nyere kontroll før byttet: den eldre grønne kontrollen duger ikke, ingen frysing",
+      r["errors"] == 1 and not ok and any("ingen vellykket tabellkontroll" in x for x in h), str(h))
 
 # ====================== Reparasjon ETTER byttet
 print("\n=== Tining og ny frysing etter at 2027 er aktiv ===")

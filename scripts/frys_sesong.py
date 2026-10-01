@@ -65,9 +65,12 @@ def ikke_ferdig(rot, liga, sesong, naa=None, sesongmappe=False):
          en, regnet fra lagene som faktisk er med (trekkes et lag og kampene
          strykes, er det faerre), og ingen gjenstaar i terminlisten
       2. det har gaatt minst 14 dager siden siste kamp
-      3. tabellkontrollen fra SAMME KJORING (tabellkontroll.py, mot tabellen
-         paa ligasiden, eller mot fotball.no ved reparasjon for haand), etter
-         siste kamp, der alle lag stemmer, ogsaa poengene
+      3. en tabellkontroll etter siste kamp der alle lag stemmer, ogsaa
+         poengene (tabellkontroll.py, mot tabellen paa ligasiden, eller mot
+         fotball.no ved reparasjon for haand): fra SAMME KJORING, eller -- naar
+         denne kjoringen ikke kunne sammenligne, fordi ligasiden har byttet
+         til neste sesong -- den siste vellykkede, saa lenge resultatene og
+         justeringene er uendret siden
 
     fotball.no er ikke et krav (regelen fra 1.10.2026, se nff_source.py).
 
@@ -131,32 +134,44 @@ def ikke_ferdig(rot, liga, sesong, naa=None, sesongmappe=False):
     except Exception as e:
         ut.append(f"kunne ikke lese matches.json ({type(e).__name__})")
 
-    # 3) tabellkontrollen fra samme kjoring: alle lag stemmer
+    # 3) tabellkontrollen: alle lag stemmer, etter siste kamp. Helst fra
+    # SAMME kjoring. Kunne ikke denne kjoringen sammenligne (ligasiden har
+    # byttet til neste sesong, eller ga ingen tabell), duger den siste
+    # vellykkede kontrollen etter siste kamp, saa lenge resultatene og
+    # justeringene er uendret siden (tabellkontroll.py, siste_like).
     rev = data / "audit_tabell.json"
     if not rev.exists():
         ut.append("ingen tabellkontroll er kjørt")
     else:
         try:
-            d = _json.loads(rev.read_text(encoding="utf-8"))
-            if not d.get("sammenlignet"):
-                ut.append("tabellkontrollen fikk ingen tabell å sammenligne med")
-            elif int(d.get("errors") or 0):
-                ut.append(f"{d['errors']} åpne kritiske avvik i tabellkontrollen")
-            elif not d.get("alle_like"):
-                ut.append("tabellkontrollen fant ikke at alle lag stemmer")
-            # SAMME KJORING. En gronn kontroll fra i gaar sier ingenting om
-            # at dagens henting gikk bra.
             import sesong as _s2
-            naa_id = _s2.kjoring_id()
-            if d.get("kjoring") != naa_id:
-                ut.append(f"tabellkontrollen er fra en annen kjøring "
-                          f"({d.get('kjoring')}, nå {naa_id})")
+            import tabellkontroll as _tk
+            d = _json.loads(rev.read_text(encoding="utf-8"))
             sett = datetime.fromisoformat(d["checked_at"])
-            # Kontrollen maa vaere utfort ETTER siste kamp. En ren kontroll
-            # fra midtsesongen sier ingenting om sluttresultatene.
-            if siste and sett < siste:
-                ut.append(f"tabellkontrollen er fra {sett:%Y-%m-%d}, før siste kamp "
-                          f"{siste:%Y-%m-%d}")
+            if int(d.get("errors") or 0):
+                ut.append(f"{d['errors']} åpne kritiske avvik i tabellkontrollen")
+            elif d.get("sammenlignet") and not d.get("alle_like"):
+                ut.append("tabellkontrollen fant ikke at alle lag stemmer")
+            elif d.get("sammenlignet") and d.get("kjoring") == _s2.kjoring_id():
+                # Kontrollen er fra denne kjoringen, og alle lag stemmer. Den
+                # maa vaere utfort ETTER siste kamp.
+                if siste and sett < siste:
+                    ut.append(f"tabellkontrollen er fra {sett:%Y-%m-%d}, før siste kamp "
+                              f"{siste:%Y-%m-%d}")
+            else:
+                s = d.get("siste_like")
+                grunn = (f" (siste kontroll: {d['advarsler'][0]})"
+                         if not d.get("sammenlignet") and d.get("advarsler") else "")
+                if not s:
+                    ut.append(f"ingen vellykket tabellkontroll der alle lag stemte{grunn}")
+                else:
+                    s_tid = datetime.fromisoformat(s["checked_at"])
+                    if siste and s_tid < siste:
+                        ut.append(f"den siste vellykkede tabellkontrollen er fra {s_tid:%Y-%m-%d}, "
+                                  f"før siste kamp {siste:%Y-%m-%d}{grunn}")
+                    elif s.get("avtrykk") != _tk.data_avtrykk(data, sesong):
+                        ut.append(f"resultatene eller justeringene er endret siden den siste "
+                                  f"vellykkede tabellkontrollen ({s_tid:%Y-%m-%d}){grunn}")
         except Exception as e:
             ut.append(f"kunne ikke lese tabellkontrollen ({type(e).__name__})")
     return ut

@@ -1064,8 +1064,9 @@ def main():
           "hent_kalender" in _main27 and "nff_source.fetch_all" not in _main27 and "nff_source.hent(" not in _main27)
     _fr27 = (ROOT / "scripts" / "frys_sesong.py").read_text(encoding="utf-8")
     _if27 = _fr27[_fr27.index("def ikke_ferdig("):_fr27.index("def tin(")]
-    check("frysingen krever tabellkontrollen fra samme kjøring, ikke fotball.no",
-          "audit_tabell.json" in _if27 and "audit_fixtures.json" not in _if27 and "len(_lag) * (len(_lag) - 1)" in _if27)
+    check("frysingen krever tabellkontrollen (samme kjøring, eller den siste vellykkede med uendrede resultater og justeringer), ikke fotball.no",
+          "audit_tabell.json" in _if27 and "audit_fixtures.json" not in _if27 and "len(_lag) * (len(_lag) - 1)" in _if27
+          and "siste_like" in _if27 and "data_avtrykk" in _if27)
     for _wf27 in ("update-data.yml", "obos-results.yml"):
         _t27 = (ROOT / ".github" / "workflows" / _wf27).read_text(encoding="utf-8")
         _liga27 = "eliteserien" if _wf27 == "update-data.yml" else "obos"
