@@ -14,6 +14,7 @@ gjennom bare når noe av det er endret siden filen ble regnet:
                              unntatt tidsstempelet (built) og noten
   data/matches.json          resultatene
   data/fixtures.json         kampene som gjenstår
+  data/justeringer.json      poengjusteringene fra NFF (listen)
   data/odds_upcoming.json    prisene (hjemme, borte, H, D, A per kamp), uten
                              tidsstempler og kilde
   scripts/lag_grunnlag.js    skriptet som regner filen
@@ -81,6 +82,7 @@ def inndata(side, root=ROOT):
                       else {k: v for k, v in m.items() if k not in UTEN}),
         "resultater": les(d / "matches.json", lambda m: m),
         "terminliste": les(d / "fixtures.json", lambda f: f),
+        "justeringer": les(d / "justeringer.json", lambda j: j.get("justeringer")),
         "odds": les(d / "odds_upcoming.json", lambda o: sorted(
             [r.get("home"), r.get("away"), r.get("H"), r.get("D"), r.get("A")] for r in (o.get("matches") or []))),
     }

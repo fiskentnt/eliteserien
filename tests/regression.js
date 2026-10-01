@@ -1362,6 +1362,107 @@ async function main() {
       await pg.close();
     } finally { if (!live) GRUNNLAG_MODUS = null; }
   };
+  // ---- Poengjusteringer fra NFF (data/justeringer.json) ----
+  // Åsane ble trukket ett poeng i 2026 (vedtak 3.3., registrert 4.3. på
+  // fotball.no). Siden viste 20 poeng, fotball.no 19. Trekket skal gjelde
+  // tabellen, rangeringen, rundetabellen, simuleringen, "Hva må ... gjøre?"
+  // og grunnlagsfilen, og ikke Eliteserien.
+  //   node tests/regression.js --bare justering
+  const poengjusteringer = async () => {
+    setGroup('Poengjusteringer: Åsane trukket et poeng');
+    // Den offisielle tabellen: fra fotball.no-cachen når den daglige
+    // hentingen har lagret den, ellers fra den lagrede siden i testdata.
+    const {execFileSync} = require('child_process');
+    const offisiell = JSON.parse(execFileSync('python3', ['-c', `
+import json, sys
+sys.path.insert(0, 'scripts')
+import nff_source as n
+t, j, f = n.offisiell_tabell('obos')
+kilde = 'fotball.no-cachen'
+if t is None:
+    side = open('tests/kilder/testdata/nff_obos_2026-09-25.html', encoding='utf-8').read()
+    t, j, kilde = n.parse_tabell(side, 'obos'), n.parse_justeringer(side, 'obos'), 'testdata 25.9.2026'
+print(json.dumps({'tabell': t, 'justeringer': j, 'kilde': kilde}))`], {cwd: ROOT}).toString());
+    const ob = await open(1400, 900, base.replace('/eliteserien/', '/obos/'));
+    const r = await ob.evaluate(async () => {
+      const rader = [...document.querySelectorAll('#tbl tbody tr')].map(tr => ({lag: tr.dataset.team,
+        plass: +tr.querySelector('.pos').textContent, p: tr.querySelector('.pts').textContent.trim(), tittel: tr.querySelector('.pts').title}));
+      const kamp = {}; BASE.forEach(b => { kamp[b[0]] = {k: b[1], poeng: b[2] * 3 + b[3]}; });
+      const q = buildQaOpen(), aa = TI['Åsane'];
+      // Simuleringen med og uten trekket: samme frø, samme kamper, samme
+      // modell, bare Åsanes utgangspoeng ulikt. Med trekket skal det gi
+      // nøyaktig sidens egne tall (lastMC).
+      const kjor = P0 => new Promise(res => {
+        const w = new Worker(URL.createObjectURL(new Blob([WORKER_SRC], {type: 'application/javascript'})));
+        w.onmessage = e => { const d = e.data; if (d.mode !== 'prob' || d.done < d.total) return; w.terminate(); res(d.out); };
+        w.postMessage({runId: 1, seed: hashStr(q.scenarioKey + '|impact'), mu: MODEL.mu, H: MODEL.H, k: FORM_K,
+          att: Array.from(LIVE.att), con: Array.from(LIVE.con), ha: Array.from(LIVE.ha), hc: Array.from(LIVE.hc),
+          P0: Array.from(P0), G0: Array.from(q.G0), F0: Array.from(q.F0), open: q.open.map(o => [o[0], o[1]]),
+          oddsOverride: q.oddsOverride, N: MC_N});
+      });
+      const utenP0 = Float64Array.from(q.P0); utenP0[aa] += 1;
+      const [med, uten] = await Promise.all([kjor(q.P0), kjor(utenP0)]);
+      const avvikMotSiden = Math.max(...TEAMS.map((t, i) => Math.max(...med[i].map((x, j) => Math.abs(x - lastMC[t][j])))));
+      const ned = (out, l) => zoneSum(out[TI[l]], 'ned');
+      const A = await innsiktData();
+      const howto = String(await qaHowTo('Åsane')).replace(/<[^>]+>/g, '');
+      const sisteRunde = computeAt(ROUND_SEQ.length - 1).find(x => x.name === 'Åsane');
+      const runde1 = computeAt(0).find(x => x.name === 'Åsane');
+      return {rader, kamp, P0: q.P0[aa], just: JUSTERINGER.map(j => [j.dato, j.lag, j.poeng, j.maal || 0]), grunnlagP0: grunnlagInndata(GRUNNLAG_N).P0[aa], innsiktP0: A && A.P0 ? A.P0[aa] : null,
+        basePos: basePos['Åsane'], avvikMotSiden, howto, sisteRunde: [sisteRunde.pts, sisteRunde.just], runde1: [runde1.pts, runde1.just, runde1.w * 3 + runde1.d],
+        ned: {med: {Åsane: ned(med, 'Åsane'), Raufoss: ned(med, 'Raufoss')}, uten: {Åsane: ned(uten, 'Åsane'), Raufoss: ned(uten, 'Raufoss')}},
+        sum: [med[aa].reduce((a, b) => a + b, 0), uten[aa].reduce((a, b) => a + b, 0)],
+        jnote: [...document.querySelectorAll('#legend .jnote')].map(e => ({tekst: e.textContent, href: e.querySelector('a') ? e.querySelector('a').href : null})),
+        jnoteForLnote: (() => { const j = document.querySelector('#legend .jnote'), l = document.querySelector('#legend .lnote');
+          return !!j && (!l || !!(j.compareDocumentPosition(l) & Node.DOCUMENT_POSITION_FOLLOWING)); })()};
+    });
+    const aa = r.rader.find(x => x.lag === 'Åsane'), kp = r.kamp['Åsane'].poeng;
+    check('Åsane: poengsummen i tabellen er kampenes poeng minus 1, med stjerne', aa.p === `${kp - 1}*`, JSON.stringify(aa));
+    check('og forklaringen i title sier trekk på et poeng fra NFF',
+      aa.tittel.startsWith(`${kp - 1} poeng, etter trekk på et poeng fra NFF.`), aa.tittel);
+    const andre = r.rader.filter(x => x.lag !== 'Åsane');
+    check('de andre lagene: kampenes poeng, uten stjerne', andre.every(x => x.p === String(r.kamp[x.lag].poeng)),
+      JSON.stringify(andre.filter(x => x.p !== String(r.kamp[x.lag].poeng))));
+    // Mot den offisielle tabellen, lag for lag der antall kamper er likt.
+    const off = Object.fromEntries(offisiell.tabell.map(x => [x.lag, x]));
+    const like = r.rader.filter(x => off[x.lag] && off[x.lag].k === r.kamp[x.lag].k);
+    const ulike = like.filter(x => x.p.replace('*', '') !== String(off[x.lag].poeng) || x.plass !== off[x.lag].plass
+      || x.p.endsWith('*') !== off[x.lag].merket);
+    check(`poeng, plass og stjerne som den offisielle tabellen (${offisiell.kilde}), lag for lag`,
+      like.length > 0 && ulike.length === 0, `${like.length} lag med likt antall kamper; ulike: ${JSON.stringify(ulike.map(x => [x, off[x.lag]]))}`);
+    if (r.kamp['Åsane'].k === 23)
+      check('per 30. september (23 kamper): Åsane 19 poeng på 15. plass, Raufoss 19 på 16.',
+        aa.p === '19*' && aa.plass === 15 && JSON.stringify(r.rader.find(x => x.lag === 'Raufoss')) === JSON.stringify({...r.rader.find(x => x.lag === 'Raufoss'), plass: 16, p: '19'}),
+        JSON.stringify(r.rader.slice(-3)));
+    check('justeringene på siden er de samme som fotball.no sine', JSON.stringify(offisiell.justeringer.map(j => [j.dato, j.lag, j.poeng, j.maal]))
+      === JSON.stringify(r.just) && r.just.length === 1, `${JSON.stringify(offisiell.justeringer)} mot ${JSON.stringify(r.just)}`);
+    check('rangeringen før scenarioet (basePos) bruker trekket', r.basePos === aa.plass, `${r.basePos} mot ${aa.plass}`);
+    check('simuleringen (P0), "Hva må ... gjøre?" og grunnlagsfilen starter Åsane på samme poengsum',
+      r.P0 === kp - 1 && r.innsiktP0 === kp - 1 && r.grunnlagP0 === kp - 1, `${r.P0} ${r.innsiktP0} ${r.grunnlagP0}`);
+    const mH = /ta (\d+) av de \d+ poengene som er igjen for å komme opp på (\d+)/.exec(r.howto);
+    check('"Hva må Åsane gjøre?" regner fra poengsummen med trekket', !!mH && +mH[2] - +mH[1] === kp - 1, r.howto);
+    check('rundetabellen: trekket gjelder fra 4. mars, altså alle runder',
+      r.sisteRunde[0] === kp - 1 && r.sisteRunde[1] === -1 && r.runde1[0] === r.runde1[2] - 1 && r.runde1[1] === -1,
+      JSON.stringify([r.sisteRunde, r.runde1]));
+    check('simuleringen med trekket gir nøyaktig sidens tall', r.avvikMotSiden === 0, String(r.avvikMotSiden));
+    check('med trekket: høyere nedrykkssjanse for Åsane og lavere for Raufoss enn uten',
+      r.ned.med.Åsane > r.ned.uten.Åsane + 0.01 && r.ned.med.Raufoss < r.ned.uten.Raufoss, JSON.stringify(r.ned));
+    check('fordelingen summerer til 1 med og uten', r.sum.every(x => Math.abs(x - 1) < 1e-9), JSON.stringify(r.sum));
+    check('under tabellen: "* Åsane trukket et poeng." med lenke til vedtaket, foran merknaden om sonene',
+      r.jnote.length === 1 && r.jnote[0].tekst === '* Åsane trukket et poeng.'
+      && r.jnote[0].href === 'https://www.fotball.no/lov-og-reglement/beslutninger-fra-utvalg/2026/poengtrekk-for-asane/' && r.jnoteForLnote,
+      JSON.stringify(r.jnote));
+    console.log(`    (nedrykk med trekket: Åsane ${(100 * r.ned.med.Åsane).toFixed(1)} %, Raufoss ${(100 * r.ned.med.Raufoss).toFixed(1)} %;`
+      + ` uten: ${(100 * r.ned.uten.Åsane).toFixed(1)} %, ${(100 * r.ned.uten.Raufoss).toFixed(1)} %)`);
+    await ob.close();
+    // Eliteserien har ingen justeringer: ingen stjerne, ingen merknad, poeng = 3V + U.
+    const es = await open();
+    const e = await es.evaluate(() => ({J: JUSTERINGER.length, stjerner: document.querySelectorAll('#tbl td.pts .just').length,
+      jnote: document.querySelectorAll('#legend .jnote').length,
+      likt: compute().rows.every(x => x.pts === x.w * 3 + x.d && x.just === 0)}));
+    check('Eliteserien: ingen justeringer, ingen stjerne eller merknad, poeng = 3V + U', e.J === 0 && e.stjerner === 0 && e.jnote === 0 && e.likt, JSON.stringify(e));
+    await es.close();
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -1376,7 +1477,8 @@ async function main() {
       else if (BARE === 'neste') await nesteKampKort();
       else if (BARE === 'nestelinje') await nesteKampLinje();
       else if (BARE === 'nullstill') await nullstillGrunnlag();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill)`);
+      else if (BARE === 'justering') await poengjusteringer();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, justering)`);
     } else {
     // ---- 1. lasting ----
     setGroup('Lasting');
@@ -1592,6 +1694,8 @@ async function main() {
     });
     check('lagboksen viser forrige kamp', !!lm && /^Forrige kamp: /.test(lm || ''), String(lm));
     await fresh.close();
+
+    await poengjusteringer();
 
     // ---- 9. tabellen på mobil ----
     setGroup('Tabellen på mobil');

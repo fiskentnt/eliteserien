@@ -238,8 +238,8 @@ def main():
     }
     if _avvik:
         _status["revisjon_avvik"] = _avvik
-        _status["error"] = (f"{_avvik} kritisk(e) avvik mellom terminlisten og "
-                            f"fotball.no, se obos/data/audit_fixtures.json")
+        _status["error"] = (f"{_avvik} kritisk(e) avvik mellom terminlisten eller tabellen "
+                            f"og fotball.no, se obos/data/audit_fixtures.json")
     (DATA / "status.json").write_text(
         json.dumps(_status, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 

@@ -30,7 +30,8 @@ HER = Path(__file__).resolve().parent
 # Filene som utgjør sesongtilstanden. Alt annet er avledet eller irrelevant.
 DATAFILER = ["matches.json", "fixtures.json", "model.json", "odds.json",
              "odds_closing.json", "odds_fd.json", "accuracy.json", "history.json",
-             "lastmatch.json", "keymatch.json", "prekick.json", "status.json"]
+             "lastmatch.json", "keymatch.json", "prekick.json", "status.json",
+             "justeringer.json"]
 
 
 def les_side(rot, sti, ut):

@@ -410,7 +410,10 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # Setningen i "Hva betydde forrige kamp for ...?" ("Hva de andre resultatene
 # ville gitt, er et anslag.", 1. oktober 2026) er byttet bare i produksjonen:
 # testsiden har sin egen variant ("Ratingen er regnet om ..."), som ikke er
-# rørt.
+# rørt. Poengjusteringene fra NFF (1. oktober 2026: JUSTERINGER, poengJust,
+# stjernen ved poengsummen og "* Åsane trukket et poeng." under tabellen) er
+# flettet inn uendret, bortsett fra adressen: testsiden henter
+# ../eliteserien/data/justeringer.json, som de andre datafilene.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -426,7 +429,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "d6d788f9e112d84d8833cab1542a67615e7c140f24ae2627f49c8ed85608bd53"
+BASE_SHA = "af37739d58b88e5db62dfb23cbc249510b2e059ad6c968e15a2a1b3c4f324a63"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

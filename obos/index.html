@@ -665,6 +665,9 @@
   .legend .cl i{background:var(--cl)}
   .legend .eu i{background:var(--eu)}
   .legend .lnote{flex-basis:100%;line-height:1.45}
+  .legend .jnote{flex-basis:100%;display:block;line-height:1.45}
+  .legend .jnote a{color:inherit}
+  td.pts .just{font:700 13px/1 var(--cond);vertical-align:super;margin-left:1px}
   .legend .q i{background:var(--q)}
   .legend .n i{background:repeating-linear-gradient(135deg,var(--ned) 0 2px,transparent 2px 4px);border:1px solid var(--ned)}
   .note{padding:10px 16px 14px;color:var(--muted);font-size:13px}
@@ -1668,6 +1671,36 @@ function checkIsStale(lastCheckDate){
 // ---- Data hentet fra data/matches.json, data/fixtures.json, data/model.json
 // og data/odds_upcoming.json (fylles av boot()) ----
 let TEAMS = [], BASE = [], MATCHES = [], TI = {}, MTI = {}, STATS = {}, MODEL = null, basePos = {};
+// Poengjusteringer fra NFF denne sesongen (data/justeringer.json): trekk eller
+// tillegg i poeng for et lag, med datoen fotball.no registrerte dem. De
+// gjelder tabellen fra den datoen og alt som bygger på tabellen: rangeringen,
+// simuleringen (P0), svarene, "Hva må ... gjøre?" og grunnlagsfilen. Heldig og
+// uheldig (qaLuck) regner poeng fra kampene og tar dem ikke med.
+let JUSTERINGER = [];
+// Summen av justeringene for laget registrert til og med dato (ISO), eller
+// alle denne sesongen uten dato.
+function poengJust(lag, dato){
+  let s = 0;
+  JUSTERINGER.forEach(j=>{ if(j.lag===lag && (!dato || j.dato<=dato)) s += j.poeng; });
+  return s;
+}
+function poengOrd(n){ n=Math.abs(n); return n===1?'et poeng':n===2?'to poeng':`${n} poeng`; }
+// Stjernen ved poengsummen (som på fotball.no) og forklaringen i title.
+function justMerke(just){ return just ? '<span class="just" aria-hidden="true">*</span>' : ''; }
+function justTittel(pts, just){ return `${pts} poeng, ${just<0?'etter trekk på':'med tillegg på'} ${poengOrd(just)} fra NFF.`; }
+// Forklaringen på stjernen, i tegnforklaringen under tabellen (foran
+// LEAGUE.legendNote): "* Åsane trukket et poeng.", med lenke til vedtaket.
+function visJusteringer(){
+  const lg = document.getElementById('legend'); if(!lg) return;
+  lg.querySelectorAll('.jnote').forEach(e=>e.remove());
+  const foran = lg.querySelector('.lnote');
+  JUSTERINGER.forEach(j=>{
+    const el = document.createElement('span'); el.className = 'jnote';
+    const tekst = `${j.poeng<0?'trukket':'gitt'} ${poengOrd(j.poeng)}`;
+    el.innerHTML = `* ${j.lag} ${j.kilde?`<a href="${j.kilde}" target="_blank" rel="noopener" title="NFFs vedtak">${tekst}</a>`:tekst}.`;
+    lg.insertBefore(el, foran);
+  });
+}
 let matches = []; // gjenstående kamper, redigerbare
 let ROUND_LAST_DATE = {}; // runde -> siste kampdato i runden (uansett spilt eller ikke), for "samme runde"-utfylling
 let ODDS_UP = {}, ODDS_FETCHED_AT = null; // odds for kommende kamper, nøkkel "hjemme|borte"
@@ -1788,6 +1821,7 @@ function applyLeagueToDom(){
   if(lg){
     lg.innerHTML = LEAGUE.bands.map(b=>`<span class="${{cl:'cl',eu:'eu',playoff:'q',ned:'n'}[b.cls]}"><i></i>${b.legend}</span>`).join('')
       + (LEAGUE.legendNote ? `<span class="lnote">${LEAGUE.legendNote}</span>` : '');
+    visJusteringer();
   }
   LEAGUE.cols.forEach(c=>{
     const t = document.querySelector(`.card[data-card="${c.key==='ned'?'ned':c.key}"] .card-title`);
@@ -3306,7 +3340,7 @@ function stillingsGrunnlag(){
 }
 function runMCAsync(N){
   const n=TEAMS.length, P0=new Float64Array(n), G0=new Float64Array(n), F0=new Float64Array(n);
-  BASE.forEach(b=>{ const i=TI[b[0]]; P0[i]=b[2]*3+b[3]; G0[i]=b[5]-b[6]; F0[i]=b[5]; });
+  BASE.forEach(b=>{ const i=TI[b[0]]; P0[i]=b[2]*3+b[3]+poengJust(b[0]); G0[i]=b[5]-b[6]; F0[i]=b[5]; });
   const open=[], oddsOverride=[];
   const scenarioParts=[];
   // Alle utfylte kamper (også grå simulerte) står fast — bare tomme kamper
@@ -3901,7 +3935,8 @@ function computeAt(idx){
     if(rh==='W'){h.w++;a.l++;} else if(rh==='L'){a.w++;h.l++;} else {h.d++;a.d++;}
     h.results.push(rh); a.results.push(ra);
   });
-  const rows = Object.values(t).map(r=>({...r, pts:r.w*3+r.d, gd:r.gf-r.ga}));
+  const end = ROUND_SEQ[idx] ? ROUND_SEQ[idx].end : null;
+  const rows = Object.values(t).map(r=>{ const just=poengJust(r.name, end); return {...r, just, pts:r.w*3+r.d+just, gd:r.gf-r.ga}; });
   rows.sort((x,y)=> y.pts-x.pts || y.gd-x.gd || y.gf-x.gf || x.name.localeCompare(y.name,'no'));
   rows.forEach((r,i)=>r.pos=i+1);
   return rows;
@@ -4042,7 +4077,7 @@ function compute(){
     h.p++;a.p++; h.gf+=m.hg;h.ga+=m.ag; a.gf+=m.ag;a.ga+=m.hg;
     if(m.hg>m.ag){h.w++;a.l++;} else if(m.hg<m.ag){a.w++;h.l++;} else {h.d++;a.d++;}
   });
-  const rows=Object.values(t).map(r=>({...r,pts:r.w*3+r.d,gd:r.gf-r.ga,max:r.w*3+r.d+3*r.left}));
+  const rows=Object.values(t).map(r=>{ const just=poengJust(r.name); return {...r,just,pts:r.w*3+r.d+just,gd:r.gf-r.ga,max:r.w*3+r.d+just+3*r.left}; });
   rows.sort((x,y)=> y.pts-x.pts || y.gd-x.gd || y.gf-x.gf || x.name.localeCompare(y.name,'no'));
   return {rows,played};
 }
@@ -5532,7 +5567,7 @@ function qaLuck(){
 // brukeren faktisk ber om svar, ikke ved hver render().
 function buildQaOpen(){
   const n=TEAMS.length, P0=new Float64Array(n), G0=new Float64Array(n), F0=new Float64Array(n);
-  BASE.forEach(b=>{ const i=TI[b[0]]; P0[i]=b[2]*3+b[3]; G0[i]=b[5]-b[6]; F0[i]=b[5]; });
+  BASE.forEach(b=>{ const i=TI[b[0]]; P0[i]=b[2]*3+b[3]+poengJust(b[0]); G0[i]=b[5]-b[6]; F0[i]=b[5]; });
   const open=[], openMatches=[], oddsOverride=[], scenarioParts=[];
   matches.forEach(m=>{
     const h=TI[m.home], a=TI[m.away];
@@ -6819,7 +6854,7 @@ function render(){
       tr.className=[bandClass(pos),r.name===SELECTED_TEAM?'followed':'',LEAGUE.cuts.includes(pos)?'cut':''].join(' ').trim();
       tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="hide-s">${r.p}</td>
         <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
-        <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts">${r.pts}</td>
+        <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts"${r.just?` title="${justTittel(r.pts, r.just)}"`:''}>${r.pts}${justMerke(r.just)}</td>
         <td class="formcol hh"></td><td class="hide-s">${femSisteHtml(somListe(r.results))}${form5Html(form5AvListe(somListe(r.results)), somListe(r.results))}</td><td class="odds gull hide-xs hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
       tb.appendChild(tr);
       return;
@@ -6835,7 +6870,7 @@ function render(){
       : 'Uendret siden forrige modelloppdatering.';
     tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span>${diff}</td><td class="hide-s">${r.p}</td>
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
-      <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.pts} poeng nå. Maks mulig sluttsum: ${r.max}.">${r.pts}</td>
+      <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.just?justTittel(r.pts, r.just):`${r.pts} poeng nå.`} Maks mulig sluttsum: ${r.max}.">${r.pts}${justMerke(r.just)}</td>
       <td class="formcol"><button type="button" class="formbox ${formCls}" data-team="${r.name}" title="${f1(r.form)} av 10. ${changeTxt} Trykk for styrkegrafen." aria-label="Styrke ${f1(r.form)} av 10 for ${r.name}. Vis styrkegrafen.">${f1(r.form)}</button></td>
       <td class="hide-s">${femSisteHtml(r.femSiste)}${form5Html(r.form5, r.femSiste)}</td><td class="odds gull hide-xs"></td><td class="odds p3"></td><td class="odds ned"></td>`;
     tb.appendChild(tr);
@@ -7310,12 +7345,12 @@ async function updateOddsQuotaNote(){
 // Python-scriptene i scripts/ og lest inn her — ingen tilpasning skjer i
 // nettleseren, kun rask JSON-henting.
 async function boot(){
-  let MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN, ACCURACY_IN;
+  let MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN, ACCURACY_IN, JUST_IN;
   // Grunnlagsfilen hentes samtidig med de andre, men utenfor Promise.all:
   // siden venter ikke på den (se grunnlagMottatt).
   const GRUNNLAG_P = fetch(grunnlagFil()).then(r=>r.ok?r.json():null).catch(()=>null);
   try{
-    [MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN, ACCURACY_IN] = await Promise.all([
+    [MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN, ACCURACY_IN, JUST_IN] = await Promise.all([
       fetch('data/matches.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/matches.json'); return r.json(); }),
       fetch('data/fixtures.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/fixtures.json'); return r.json(); }),
       fetch('data/model.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/model.json'); return r.json(); }),
@@ -7336,6 +7371,8 @@ async function boot(){
       // Treffsikkerhetsloggen (scripts/accuracy_log.py). Mangler den, står
       // seksjonen tom -- den er aldri kritisk for resten av siden.
       fetch('data/accuracy.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      // Poengjusteringer fra NFF (se JUSTERINGER). Mangler filen, er det ingen.
+      fetch('data/justeringer.json').then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
   }catch(err){
     console.error('Klarte ikke hente kampdata', err);
@@ -7354,6 +7391,13 @@ async function boot(){
     MATCHES.flatMap(m=>[m.home,m.away]).concat(FIXTURES_IN.flatMap(r=>r.matches.flatMap(m=>[m.home,m.away])))
   )].sort((a,b)=>a.localeCompare(b,'no'));
   TI = {}; TEAMS.forEach((t,i)=>TI[t]=i);
+  // Bare denne sesongen og lag i ligaen. Et ukjent lagnavn er en feil i filen
+  // (scripts/daglig_revisjon.py sjekker den mot fotball.no hver dag).
+  JUSTERINGER = ((JUST_IN && JUST_IN.justeringer) || []).filter(j=>{
+    if(+j.sesong!==LEAGUE.season) return false;
+    if(!TEAMS.includes(j.lag)){ console.warn('Poengjustering for ukjent lag:', j.lag); return false; }
+    return Number.isInteger(j.poeng) && j.poeng!==0;
+  });
 
   // "Følg laget ditt": fylles her (må vente på TEAMS). En delingslenke sitt
   // team=-felt (se encodeScenario/applyScenario) vinner over localStorage --
@@ -7390,7 +7434,7 @@ async function boot(){
   BASE = TEAMS.map(t=>agg[t]);
 
   basePos = {};
-  (()=>{ const r=BASE.map(b=>({n:b[0],pts:b[2]*3+b[3],gd:b[5]-b[6],gf:b[5]}));
+  (()=>{ const r=BASE.map(b=>({n:b[0],pts:b[2]*3+b[3]+poengJust(b[0]),gd:b[5]-b[6],gf:b[5]}));
     r.sort((x,y)=>y.pts-x.pts||y.gd-x.gd||y.gf-x.gf||x.n.localeCompare(y.n,'no'));
     r.forEach((x,i)=>basePos[x.n]=i+1); })();
 

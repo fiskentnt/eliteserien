@@ -1,0 +1,14 @@
+{
+ "note": "Poengjusteringer fra NFF (trekk og tillegg) per sesong, som på fotball.no sin liste \"Justeringer\" på ligasiden. dato: datoen fotball.no registrerte justeringen (gjelder tabellen fra da), vedtak: datoen for vedtaket. Siden bruker dem i tabellen, rangeringen, simuleringen, svarene og grunnlagsfilen. scripts/daglig_revisjon.py sammenligner listen og tabellen med fotball.no hver dag.",
+ "justeringer": [
+  {
+   "sesong": 2026,
+   "lag": "Åsane",
+   "poeng": -1,
+   "dato": "2026-03-04",
+   "vedtak": "2026-03-03",
+   "årsak": "Oversittelse av rapporteringsfrist for økonomisk rapportering",
+   "kilde": "https://www.fotball.no/lov-og-reglement/beslutninger-fra-utvalg/2026/poengtrekk-for-asane/"
+  }
+ ]
+}

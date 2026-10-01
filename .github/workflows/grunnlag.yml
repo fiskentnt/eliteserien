@@ -44,6 +44,8 @@ on:
       - eliteserien/index.html
       - obos/index.html
       - elo-test/index.html
+      - eliteserien/data/justeringer.json
+      - obos/data/justeringer.json
       - scripts/lag_grunnlag.js
       - scripts/grunnlag_port.py
       - .github/workflows/grunnlag.yml

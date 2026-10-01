@@ -717,6 +717,11 @@ def main():
         prov("en oddspris endret", "odds_upcoming.json", lambda o: o["matches"][0].update(H=o["matches"][0]["H"] + 0.0001), True)
         prov("et resultat i matches.json endret", "matches.json", lambda m: m[0].update(hg=m[0]["hg"] + 1), True)
         prov("terminlisten endret", "fixtures.json", lambda f: f[0]["matches"][0].update(time="23:59"), True)
+        _sh.copy(ROOT / "eliteserien" / "data" / "justeringer.json", d)
+        (d / "grunnlag.json").write_text(json.dumps({"inndata": v()[1]}), encoding="utf-8")
+        prov("en poengjustering lagt til i justeringer.json", "justeringer.json",
+             lambda j: j["justeringer"].append({"sesong": 2026, "lag": "Brann", "poeng": -1, "dato": "2026-03-04"}), True)
+        prov("bare noten i justeringer.json endret", "justeringer.json", lambda j: j.update(note="annen"), False)
         for navn, fil in (("siden (index.html)", rot / "eliteserien" / "index.html"), ("skriptet (lag_grunnlag.js)", rot / "scripts" / "lag_grunnlag.js")):
             gml = fil.read_text(encoding="utf-8")
             fil.write_text(gml + "\n<!-- endret -->\n", encoding="utf-8")
@@ -822,7 +827,8 @@ def main():
           and '*) sider="eliteserien obos" ;;' in gw and "python3 scripts/grunnlag_port.py $sider" in gw)
     check("grunnlag.yml: bare kjøringer på main utløser den, og push av sidene og skriptene",
           "types: [completed]\n    branches: [main]\n" in gw and all(f"      - {p_}\n" in gw for p_ in
-          ("eliteserien/index.html", "obos/index.html", "scripts/lag_grunnlag.js", "scripts/grunnlag_port.py")))
+          ("eliteserien/index.html", "obos/index.html", "scripts/lag_grunnlag.js", "scripts/grunnlag_port.py",
+           "eliteserien/data/justeringer.json", "obos/data/justeringer.json")))
     gst = ["\n".join(l for l in x.splitlines() if not l.lstrip().startswith("#")) for x in gw.split("\n      - ")]
     gi = lambda tekst: next((i for i, x in enumerate(gst) if tekst in x), -1)
     i_p2, i_nd, i_rg, i_lg = gi("Fortsatt endret?"), gi("actions/setup-node"), gi("lag_grunnlag.js \"${{ matrix.liga }}\""), gi("name: Lagre")
@@ -971,6 +977,49 @@ def main():
         check(f"{f}: den tekniske teksten og ablasjonen sier 28 dager og l1/l2 8/24",
               "<strong>Halveringstiden på fire uker</strong> (28 dager)" in _t and "<strong>Styrken på regulariseringen</strong> (l1/l2 8/24)" in _t
               and rad in _t and "(35 dager) for tidsvektingen" not in _t and "(l1/l2 16/48)" not in _t and "(l1/l2=16/48)" not in _t)
+
+    # 26. Poengjusteringene fra NFF (<liga>/data/justeringer.json): formatet
+    # siden og scripts/daglig_revisjon.py regner med. Åsane ble trukket ett
+    # poeng i 2026 (vedtak 3.3., registrert 4.3. på fotball.no); siden viste
+    # 20 poeng, fotball.no 19.
+    import re as _re26
+    sys.path.insert(0, str(ROOT / "scripts"))
+    from ligaer import oppsett as _opp26
+    _dato26 = _re26.compile(r"^20\d\d-[01]\d-[0-3]\d$")
+    for liga in ("eliteserien", "obos"):
+        _f26 = ROOT / liga / "data" / "justeringer.json"
+        check(f"{liga}/data/justeringer.json finnes", _f26.exists())
+        if not _f26.exists():
+            continue
+        _j26 = json.loads(_f26.read_text(encoding="utf-8")).get("justeringer")
+        check(f"{liga}/data/justeringer.json: en liste i 'justeringer'", isinstance(_j26, list), str(_j26)[:80])
+        for j in _j26 or []:
+            hvem = f"{liga} {j.get('lag')} {j.get('dato')}"
+            check(f"justering {hvem}: sesong (heltall), lag i ligaen, poeng (heltall ulik 0)",
+                  isinstance(j.get("sesong"), int) and j.get("lag") in _opp26(liga)["lag"]
+                  and isinstance(j.get("poeng"), int) and not isinstance(j.get("poeng"), bool) and j.get("poeng") != 0, str(j))
+            check(f"justering {hvem}: dato og vedtak som ÅÅÅÅ-MM-DD, vedtak ikke etter dato",
+                  bool(_dato26.match(str(j.get("dato")))) and bool(_dato26.match(str(j.get("vedtak"))))
+                  and j["vedtak"] <= j["dato"], str(j))
+            check(f"justering {hvem}: kilde hos fotball.no og årsak",
+                  str(j.get("kilde", "")).startswith("https://www.fotball.no/") and bool(j.get("årsak")), str(j))
+    _o26 = json.loads((ROOT / "obos" / "data" / "justeringer.json").read_text(encoding="utf-8"))["justeringer"]
+    check("obos: Åsane -1 poeng i 2026, registrert 4. mars (vedtak 3. mars)",
+          [(j["sesong"], j["lag"], j["poeng"], j["dato"], j["vedtak"]) for j in _o26 if j["lag"] == "Åsane"]
+          == [(2026, "Åsane", -1, "2026-03-04", "2026-03-03")], str(_o26))
+    _e26 = json.loads((ROOT / "eliteserien" / "data" / "justeringer.json").read_text(encoding="utf-8"))["justeringer"]
+    check("eliteserien: ingen justeringer i 2026 (fotball.no har ingen liste)", [j for j in _e26 if j["sesong"] == 2026] == [], str(_e26))
+    # Siden henter filen, og poengJust brukes overalt der poeng regnes.
+    for f in ("eliteserien/index.html", "obos/index.html"):
+        _t26 = (ROOT / f).read_text(encoding="utf-8")
+        check(f"{f}: henter data/justeringer.json og legger poengJust til i tabellen, rundetabellen, P0 (to steder) og basePos",
+              "fetch('data/justeringer.json')" in _t26
+              and _t26.count("P0[i]=b[2]*3+b[3]+poengJust(b[0])") == 2
+              and "pts:r.w*3+r.d+just" in _t26 and "pts:b[2]*3+b[3]+poengJust(b[0])" in _t26
+              and "const just=poengJust(r.name, end)" in _t26
+              and _re26.search(r"pts: ?r\.w\*3\+r\.d[,}]", _t26) is None)
+    # Frysingen tar filen med, og grunnlagsporten ser den.
+    check("frys_sesong.py fryser justeringer.json", '"justeringer.json"' in (ROOT / "scripts" / "frys_sesong.py").read_text(encoding="utf-8"))
 
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare

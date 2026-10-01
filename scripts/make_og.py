@@ -22,6 +22,8 @@ from pathlib import Path
 
 from PIL import Image, ImageDraw, ImageFont
 
+import justeringer
+
 ROOT = Path(__file__).parent.parent
 LEAGUE = ROOT / "eliteserien"
 FONTS = ROOT / "assets" / "fonts"
@@ -90,7 +92,10 @@ def wrap(draw, text, fnt, max_w):
     return lines
 
 
-def standings(matches):
+def standings(matches, just=None):
+    """Tabellen fra kampene, med poengjusteringene fra NFF ({lag: poeng}, se
+    scripts/justeringer.py) lagt til poengsummen, som på siden."""
+    just = just or {}
     t = {}
     for m in matches:
         for n in (m["home"], m["away"]):
@@ -103,7 +108,7 @@ def standings(matches):
         else: h["d"] += 1; a["d"] += 1
     rows = list(t.values())
     for r in rows:
-        r["pts"] = r["w"] * 3 + r["d"]
+        r["pts"] = r["w"] * 3 + r["d"] + just.get(r["name"], 0)
         r["gd"] = r["gf"] - r["ga"]
     rows.sort(key=lambda r: (-r["pts"], -r["gd"], -r["gf"], r["name"]))
     return rows
@@ -124,7 +129,8 @@ def league_card(cfg=None):
     cfg = cfg or ELITE_OG
     folder = ROOT / cfg["dir"]
     matches = json.loads((folder / "data" / "matches.json").read_text(encoding="utf-8"))
-    rows = standings(matches)[:8]
+    sesong = max(m["date"] for m in matches)[:4]
+    rows = standings(matches, justeringer.per_lag(justeringer.les(folder, sesong)))[:8]
     last = max(matches, key=lambda m: (m["date"], m["round"]))
     im = Image.new("RGB", (W, H), BG)
     d = ImageDraw.Draw(im)

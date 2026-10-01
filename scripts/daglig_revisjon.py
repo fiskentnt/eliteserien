@@ -19,6 +19,14 @@ kritiske avvik, forblir det roedt til en NY revisjon bekrefter at avviket er
 borte. Uten det ville neste kjoring skrevet ok=True og gjort stempelet groent
 mens feilen sto.
 
+TABELLEN sammenlignes ogsaa, lag for lag: kamper, vunnet, uavgjort, tap,
+maal og poeng i tabellen vi regner (matches.json pluss poengjusteringene i
+justeringer.json) mot den offisielle tabellen paa samme fotball.no-side,
+og listen over justeringer mot fotball.no sin. Et avvik med likt antall
+kamper er kritisk (Aasane sto med 20 poeng hos oss og 19 hos NFF fordi
+trekket manglet). Ulikt antall kamper er en advarsel: da er kildene hentet
+paa ulike tidspunkt.
+
 Bruk:  python3 scripts/daglig_revisjon.py <liga>
 """
 import json
@@ -28,6 +36,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import justeringer as _just
 import nff_source
 from ligaer import LIGAER, oppsett
 
@@ -142,6 +151,109 @@ def revider(vaare, nff_rader, ferskt=True, bekreftet=None, sesong=None):
     return feil, advarsler
 
 
+def vaar_tabell(liga, sesong=None):
+    """(tabell, justeringer) slik siden regner dem: {lag: {k, v, u, t, mf, mm,
+    poeng, plass}} fra matches.json med justeringene for sesongen lagt til
+    poengene, og justeringene som [{dato, lag, poeng, maal}]."""
+    kat = data_katalog(liga, sesong)
+    kamper = json.loads((kat / "matches.json").read_text(encoding="utf-8"))
+    aar = str(sesong) if sesong else (max(m["date"] for m in kamper)[:4] if kamper else None)
+    just = _just.les(kat.parent, aar) if aar else []
+    t = {n: {"k": 0, "v": 0, "u": 0, "t": 0, "mf": 0, "mm": 0} for n in oppsett(liga)["lag"]}
+    for m in kamper:
+        if m.get("hg") is None or m.get("ag") is None:
+            continue
+        for lag, f, mot in ((m["home"], m["hg"], m["ag"]), (m["away"], m["ag"], m["hg"])):
+            r = t.setdefault(lag, {"k": 0, "v": 0, "u": 0, "t": 0, "mf": 0, "mm": 0})
+            r["k"] += 1; r["mf"] += f; r["mm"] += mot
+            r["v" if f > mot else "t" if f < mot else "u"] += 1
+    per_lag = _just.per_lag(just)
+    for lag, r in t.items():
+        r["poeng"] = 3 * r["v"] + r["u"] + per_lag.get(lag, 0)
+    rekke = sorted(t, key=lambda n: (-t[n]["poeng"], -(t[n]["mf"] - t[n]["mm"]), -t[n]["mf"], n))
+    for i, n in enumerate(rekke):
+        t[n]["plass"] = i + 1
+    return t, [{"dato": j["dato"], "lag": j["lag"], "poeng": j["poeng"], "maal": j.get("maal", 0)}
+               for j in just]
+
+
+TABELL_FELT = (("k", "kamper"), ("v", "vunnet"), ("u", "uavgjort"), ("t", "tap"),
+               ("mf", "mål for"), ("mm", "mål mot"), ("poeng", "poeng"))
+
+
+def _just_tekst(j):
+    return f"{j['dato']} {j['lag']} {j['poeng']:+d} poeng" + (f", {j['maal']:+d} mål" if j.get("maal") else "")
+
+
+def revider_tabell(vaar, nff_tabell, vaare_just, nff_just, ferskt=True, bekreftet=None,
+                   nff_feil=None):
+    """(feil, advarsler) for tabellen og justeringene. Samme regel for
+    ferskhet som revider(): mot cachet fotball.no-data blir avvik advarsler,
+    med mindre en fersk revisjon har bekreftet dem og vi ikke har rettet noe."""
+    feil, advarsler = [], []
+    bekreftet = bekreftet or {}
+    if nff_tabell is None:
+        return [], [f"Tabell: ikke sammenlignet ({nff_feil or 'fikk ingen tabell fra fotball.no'})"]
+    nff = {r["lag"]: r for r in nff_tabell}
+    for lag in sorted(set(vaar) | set(nff)):
+        v, k = vaar.get(lag), nff.get(lag)
+        if not v or not k:
+            feil.append(f"Tabell, {lag}: står {'bare hos fotball.no' if k else 'bare hos oss'}")
+            continue
+        if v["k"] != k["k"]:
+            advarsler.append(f"Tabell, {lag}: {v['k']} kamper hos oss, {k['k']} hos "
+                             f"fotball.no -- hentet på ulike tidspunkt, ikke sammenlignet")
+            continue
+        ulikt = [f"{v[f]} {navn} hos oss, {k[f]} hos fotball.no" for f, navn in TABELL_FELT if v[f] != k[f]]
+        if ulikt:
+            feil.append(f"Tabell, {lag}: " + "; ".join(ulikt))
+    if not feil and all(vaar[l]["k"] == nff[l]["k"] for l in nff if l in vaar):
+        for lag in sorted(nff, key=lambda l: nff[l]["plass"]):
+            if lag in vaar and vaar[lag]["plass"] != nff[lag]["plass"]:
+                advarsler.append(f"Tabell, {lag}: plass {vaar[lag]['plass']} hos oss, "
+                                 f"{nff[lag]['plass']} hos fotball.no (lik poengsum, ulik rangering)")
+    if nff_just is not None:
+        nokkel = lambda j: (j["dato"], j["lag"], j["poeng"], j.get("maal", 0))
+        hos_oss = [nokkel(j) for j in vaare_just]
+        hos_nff = [nokkel(j) for j in nff_just]
+        for j in nff_just:
+            if nokkel(j) not in hos_oss:
+                feil.append(f"Justering, {j['lag']}: {_just_tekst(j)} hos fotball.no mangler i "
+                            f"justeringer.json" + (" (måljusteringer støttes ikke på siden)" if j.get("maal") else ""))
+        for j in vaare_just:
+            if nokkel(j) not in hos_nff:
+                feil.append(f"Justering, {j['lag']}: {_just_tekst(j)} i justeringer.json finnes ikke hos fotball.no")
+    if not ferskt and feil:
+        beholdt, nedgradert = [], []
+        for f in feil:
+            k = _nokkel(f)
+            if k in bekreftet and bekreftet[k] == _tabell_verdi(vaar, vaare_just, k):
+                beholdt.append(f + " [bekreftet av fersk revisjon, uendret hos oss]")
+            else:
+                nedgradert.append(f"(fotball.no-dataene er fra cachen) {f}")
+        feil, advarsler = beholdt, nedgradert + advarsler
+    return feil, advarsler
+
+
+def _tabell_verdi(vaar, vaare_just, nokkel):
+    """Vaar rad (eller vaare justeringer) for et tabellavvik, til
+    gjenkjenning paa tvers av kjoringer, som _vaar_verdi for kampene."""
+    hva, _, lag = nokkel.partition(", ")
+    if hva == "Tabell":
+        r = vaar.get(lag)
+        return [r[f] for f, _ in TABELL_FELT] if r else None
+    if hva == "Justering":
+        return sorted([j["dato"], j["poeng"], j.get("maal", 0)] for j in vaare_just if j["lag"] == lag)
+    return None
+
+
+def _verdi(nokkel, vaare, vaar=None, vaare_just=()):
+    """Vaar verdi for et avvik, kamp eller tabell."""
+    if nokkel.startswith(("Tabell, ", "Justering, ")):
+        return _tabell_verdi(vaar or {}, list(vaare_just), nokkel)
+    return _vaar_verdi(vaare, nokkel)
+
+
 def _vaar_verdi(vaare, lagpar):
     """Vaar runde, dato, avspark og resultat for et lagpar -- det som skal
     sammenlignes for aa avgjore om vi har rettet noe siden forrige revisjon."""
@@ -204,7 +316,9 @@ def skriv_stempel(liga, feil, naa, sesong=None):
     if feil:
         d["ok"] = False
         d["revisjon_avvik"] = len(feil)
-        d["error"] = (f"{len(feil)} kritisk(e) avvik mellom terminlisten og "
+        hva = ("tabellen" if all(f.startswith(("Tabell, ", "Justering, ")) for f in feil)
+               else "terminlisten")
+        d["error"] = (f"{len(feil)} kritisk(e) avvik mellom {hva} og "
                       f"fotball.no: {feil[0]}")[:300]
     else:
         d["ok"] = True
@@ -244,16 +358,25 @@ def revider_sesong(liga, sesong, naa=None, log=print):
     url = nff_source.turnering_url(turnering)
     log(f"Henter {liga} {sesong} fra {url}")
     try:
-        rader = nff_source.parse_side(nff_source.hent(url), liga, naa=naa,
+        tekst = nff_source.hent(url)
+        rader = nff_source.parse_side(tekst, liga, naa=naa,
                                       log=lambda m: log(f"  {m}"))
     except Exception as e:
         log(f"ADVARSEL: klarte ikke hente {sesong} ({type(e).__name__}: {e}).")
         return 1
+    try:
+        nff_tab, nff_just, nff_feil = (nff_source.parse_tabell(tekst, liga),
+                                       nff_source.parse_justeringer(tekst, liga), None)
+    except nff_source.NffDataError as e:
+        nff_tab, nff_just, nff_feil = None, None, str(e)
 
     vaare = vaare_kamper(liga, sesong)
     feil, advarsler = revider(vaare, rader, ferskt=True,
                               bekreftet=les_bekreftet(liga, naa, sesong),
                               sesong=str(sesong))
+    vaar, vaare_just = vaar_tabell(liga, sesong)
+    tf, ta = revider_tabell(vaar, nff_tab, vaare_just, nff_just, nff_feil=nff_feil)
+    feil, advarsler = feil + tf, advarsler + ta
     log(f"Revisjon av {liga} {sesong}: {len(vaare)} kamper mot {len(rader)} "
         f"hos fotball.no")
     for a in advarsler:
@@ -268,7 +391,7 @@ def revider_sesong(liga, sesong, naa=None, log=print):
         "ferskt": True, "kjoring": _s.kjoring_id(), "turnering": turnering,
         "errors": len(feil), "warnings": len(advarsler),
         "avvik": feil[:20], "advarsler": advarsler[:20],
-        "bekreftet": {_nokkel(f): _vaar_verdi(vaare, _nokkel(f)) for f in feil},
+        "bekreftet": {_nokkel(f): _verdi(_nokkel(f), vaare, vaar, vaare_just) for f in feil},
     }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     skriv_stempel(liga, feil, naa, sesong)
     return 1 if feil else 0
@@ -303,6 +426,12 @@ def main(argv):
     bekreftet_for = les_bekreftet(liga, naa)
     feil, advarsler = revider(vaare, nff_rader, ferskt=ferskt,
                               bekreftet=bekreftet_for, sesong=_a)
+    # Tabellen og justeringene, fra samme henting som kampene.
+    nff_tab, nff_just, nff_feil = nff_source.offisiell_tabell(liga)
+    vaar, vaare_just = vaar_tabell(liga)
+    tf, ta = revider_tabell(vaar, nff_tab, vaare_just, nff_just, ferskt=ferskt,
+                            bekreftet=bekreftet_for, nff_feil=nff_feil)
+    feil, advarsler = feil + tf, advarsler + ta
 
     if ferskt:
         kilde_ord = "hentet i denne kjøringen"
@@ -311,8 +440,9 @@ def main(argv):
                      f"timer siden -- avvik blir advarsler, og frysing sperres")
     else:
         kilde_ord = "ingen henting registrert -- avvik blir advarsler"
-    print(f"Daglig terminlisterevisjon, {oppsett(liga)['visningsnavn']}: "
-          f"{len(vaare)} kamper mot {len(nff_rader)} hos fotball.no ({kilde_ord})")
+    print(f"Daglig terminliste- og tabellrevisjon, {oppsett(liga)['visningsnavn']}: "
+          f"{len(vaare)} kamper mot {len(nff_rader)} hos fotball.no ({kilde_ord}); "
+          f"tabell: {'sammenlignet' if nff_tab is not None else 'ikke sammenlignet'}")
     for a in advarsler:
         print(f"  ADVARSEL: {a}")
     for f in feil:
@@ -337,7 +467,7 @@ def main(argv):
         "avvik": feil[:20], "advarsler": advarsler[:20],
         # Vaar verdi da avviket ble bekreftet. En senere revisjon mot gammel
         # cache holder avviket kritisk saa lenge denne er uendret.
-        "bekreftet": ({_nokkel(f): _vaar_verdi(vaare, _nokkel(f)) for f in feil}
+        "bekreftet": ({_nokkel(f): _verdi(_nokkel(f), vaare, vaar, vaare_just) for f in feil}
                       if ferskt else bekreftet_for),
     }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     skriv_stempel(liga, feil, naa)

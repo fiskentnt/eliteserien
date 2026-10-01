@@ -213,6 +213,111 @@ def parse_side(html_tekst, liga, naa=None, log=lambda s: None):
     return ut
 
 
+# TABELLEN OG JUSTERINGENE ligger paa samme ligaside som kampene, saa de
+# koster ingen ekstra forespoersel. Siden har to tabelltabeller (enkel og
+# utvidet, customTableSorter); den foerste er den enkle med kolonnene under.
+# Plass kan ha en stjerne ("15 *") naar laget har en poengjustering. Maal
+# staar som "72 - 39", og negative tall med minustegn (U+2212).
+STILLING_RE = re.compile(r"<table[^>]*customTableSorter[^>]*>.*?</table>", re.S)
+STILLING_KOLONNER = ["Plass", "Lag", "Kamper", "Vunnet", "Uavgjort", "Tap", "Mål",
+                     "Diff", "Poeng"]
+# "Justeringer" (adjustedTable) finnes bare naar ligaen har noen. Hver
+# justering er en rad med fire celler, fulgt av en rad med aarsaken.
+JUSTERING_RE = re.compile(r"<table[^>]*adjustedTable[^>]*>.*?</table>", re.S)
+JUSTERING_KOLONNER = ["Dato", "Lag", "Poeng", "Mål"]
+TH_RE = re.compile(r"<th[^>]*>(.*?)</th>", re.S)
+MAAL_RE = re.compile(r"^(\d+)\s*-\s*(\d+)$")
+
+
+def _kolonner(tab):
+    """Kolonneoverskriftene, med taggene fjernet uten mellomrom
+    ("K<span>amper</span>" er "Kamper")."""
+    return [html.unescape(re.sub(r"<[^>]+>", "", t)).strip() for t in TH_RE.findall(tab)]
+
+
+def _tall(tekst):
+    t = tekst.replace("\u2212", "-").replace(" ", "")
+    if not re.fullmatch(r"[-+]?\d+", t):
+        raise NffDataError(f"uventet tall fra fotball.no: {tekst!r}")
+    return int(t)
+
+
+def parse_tabell(html_tekst, liga):
+    """Den offisielle tabellen: [{plass, merket, lag, k, v, u, t, mf, mm, diff, poeng}].
+
+    NffDataError hvis tabellen mangler eller har andre kolonner -- da har
+    fotball.no lagt om, og sammenligningen ville vaert verdiloes."""
+    cfg = oppsett(liga)
+    m = STILLING_RE.search(html_tekst)
+    if not m:
+        raise NffDataError(f"fant ingen tabell for {liga} på fotball.no")
+    tab = m.group(0)
+    kol = _kolonner(tab)
+    if kol != STILLING_KOLONNER:
+        raise NffDataError(f"uventede kolonner i tabellen for {liga}: {kol}")
+    ut = []
+    for rad in RAD_RE.findall(tab):
+        c = [_tekst(x) for x in CELLE_RE.findall(rad)]
+        if not c:
+            continue
+        if len(c) != 9:
+            raise NffDataError(f"uventet tabellrad for {liga}: {c}")
+        plass = c[0].replace("*", "").strip()
+        maal = MAAL_RE.match(c[6])
+        if not plass.isdigit() or not maal:
+            raise NffDataError(f"uventet tabellrad for {liga}: {c}")
+        ut.append({"plass": int(plass), "merket": "*" in c[0], "lag": _navn(c[1], cfg),
+                   "k": _tall(c[2]), "v": _tall(c[3]), "u": _tall(c[4]), "t": _tall(c[5]),
+                   "mf": int(maal.group(1)), "mm": int(maal.group(2)),
+                   "diff": _tall(c[7]), "poeng": _tall(c[8])})
+    if len(ut) != len(cfg["lag"]):
+        raise NffDataError(f"tabellen for {liga} har {len(ut)} lag, ventet {len(cfg['lag'])}")
+    return ut
+
+
+def parse_justeringer(html_tekst, liga):
+    """Justeringene: [{dato (ISO), lag, poeng, maal, aarsak}]. [] uten liste."""
+    cfg = oppsett(liga)
+    m = JUSTERING_RE.search(html_tekst)
+    if not m:
+        return []
+    tab = m.group(0)
+    kol = _kolonner(tab)
+    if kol != JUSTERING_KOLONNER:
+        raise NffDataError(f"uventede kolonner i justeringene for {liga}: {kol}")
+    ut = []
+    for rad in RAD_RE.findall(tab):
+        c = [_tekst(x) for x in CELLE_RE.findall(rad)]
+        if not c:
+            continue
+        if len(c) == 1 and "adjustedReason" in rad and ut:
+            ut[-1]["aarsak"] = re.sub(r"^Årsak:\s*", "", c[0])
+            continue
+        d = DATO_RE.match(c[0]) if len(c) == 4 else None
+        if not d:
+            raise NffDataError(f"uventet justeringsrad for {liga}: {c}")
+        ut.append({"dato": f"{d.group(3)}-{d.group(2)}-{d.group(1)}", "lag": _navn(c[1], cfg),
+                   "poeng": _tall(c[2]), "maal": _tall(c[3]), "aarsak": ""})
+    return ut
+
+
+def offisiell_tabell(liga, cache_dir=None):
+    """(tabell, justeringer, feil) fra fotball.no: det fetch_all lagret i
+    cachen sist hentingen lyktes, eller None/None/feilmelding. cache_dir er
+    testinngangen, som i fetch_all."""
+    sti = cache_dir and (Path(cache_dir) / f"nff_{liga}.html")
+    if sti and sti.exists():
+        tekst = sti.read_text(encoding="utf-8")
+        try:
+            return parse_tabell(tekst, liga), parse_justeringer(tekst, liga), None
+        except NffDataError as e:
+            return None, None, str(e)
+    d = les_cache(liga)
+    if "tabell" not in d:
+        return None, None, "tabellen er ikke hentet fra fotball.no ennå"
+    return d.get("tabell"), d.get("justeringer"), d.get("tabell_feil")
+
+
 def hent(url):
     req = urllib.request.Request(url, headers={"User-Agent": USER_AGENT})
     try:
@@ -264,6 +369,17 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
         t = finn_turnering(tekst)
         if t:
             d["turnering"] = t
+        # Tabellen og justeringene fra samme side, til den daglige
+        # sammenligningen (daglig_revisjon.py). Kan de ikke leses, er det
+        # en advarsel der, ikke en feil i kamphentingen.
+        try:
+            d["tabell"] = parse_tabell(tekst, liga)
+            d["justeringer"] = parse_justeringer(tekst, liga)
+            d.pop("tabell_feil", None)
+        except NffDataError as e:
+            d["tabell"], d["justeringer"] = None, None
+            d["tabell_feil"] = str(e)[:200]
+            log(f"[nff {liga}] ADVARSEL: {e}")
     except Exception as e:
         d["siste_feil"] = f"{type(e).__name__}: {e}"[:200]
         _skriv_cache(liga, d)
