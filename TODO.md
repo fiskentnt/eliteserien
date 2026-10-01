@@ -111,6 +111,99 @@ Forutsetter at Raufoss trekkes fra ligaen og kampene deres strykes." Rettelsen
 av "Rykket ned" og fordelingsstripen i punkt 4 trengs også her. Skjermbildene
 av prototypen: `raufoss/` i lab.
 
+## Regelen for fotball.no, tabellkontrollen fra ligasiden og testene som avhang av dagens data (1.10.2026)
+
+**Regelen (Trond, 1.10.2026):** fotball.no hentes BARE automatisk som
+reserve når eliteserien.no eller obos-ligaen.no ikke svarer, aldri ellers.
+Ingen daglig revisjon, ingen tabellkontroll og ikke noe krav ved frysing.
+Reparasjon av en frossen sesong for hånd (`frys_sesong.py --frys-paa-nytt`,
+`daglig_revisjon.revider_sesong`) er ikke automatisk og er unntaket. Regelen
+står også øverst i `scripts/nff_source.py`, og failsafe 27 vokter den.
+
+Hva som hentet fra fotball.no før dette: den daglige revisjonen av
+terminlisten (og fra 1.10 natt tabellen) i `daglig_revisjon.py`, kalt fra
+obos-results.yml og update-data.yml, `update_data.py` (samme daglige
+henting), og frysingen, som krevde en fotball.no-revisjon fra samme kjøring.
+Henteloggen viste én henting per liga per døgn fra 26.9 (to for Eliteserien
+30.9). Arkiveringen, avstemmingen, decide() for OBOS og oppdagelsen av neste
+sesong hentet ikke derfra.
+
+Gjort:
+1. **Stoppet før morgenkjøringen** (1e8c088, pushet 1.10 kl. 04.47 etter
+   failsafe, regression, kontroll.py og kontroll_paneler.py i en egen
+   worktree): revisjonssteget tatt ut av begge workflowene, og
+   `update_data.py` henter ikke lenger fra fotball.no.
+2. **Reserve:** `ntf_source.fetch_all` kaster `SvarerIkke` når ligasiden
+   ikke svarer (nett, tidsavbrudd, HTTP-feil, 403/429). Bare da prøves
+   fotball.no (`update_data.ligasiden_eller_reserve`, `obos_build_data.rows_for`,
+   `obos_results.offisielle_resultater`), høyst ett forsøk per liga per døgn.
+   En side som svarer, men ikke kan leses, gir ingen reserve.
+3. **Tabellkontrollen** (`scripts/tabellkontroll.py`) mot tabellen på
+   resultatsiden vi alt henter (ingen ekstra forespørsel), i hver
+   datakjøring, mot tabellen fra samme henting. Lag for lag: ulikt antall
+   kamper er en advarsel; likt antall, men V/U/T eller mål avviker, er
+   kritisk (rødt stempel, kjøringen feiler, `audit_tabell.json`); likt alt
+   unntatt poengene er et nytt poengtrekk, som legges AUTOMATISK inn i
+   `justeringer.json` (dato og oppdaget = da det ble oppdaget, kilde,
+   automatisk: true, årsak; vedtak og lenke legges inn for hånd). Siden viser
+   stjernen og merknaden med en gang (merknaden lenker bare når `lenke` er
+   lagt inn). Varsel: advarsel i Actions, linje i jobboppsummeringen og en
+   GitHub-issue (`tabellkontroll.py varsle`, `issues: write`). En tabell fra
+   en annen sesong (ingen spilte kamper, andre lag) sies tydelig og
+   sammenlignes ikke.
+4. **Revisjonen av terminlisten** går mot NTFs kalenderfeed
+   (`/terminliste/subscribe`, laget for automatisk bruk), samme steg i
+   workflowene som før: runde og dato kritisk, avspark advarsel, en kamp i
+   feeden som vi mangler kritisk, en uspilt kamp feeden mangler advarsel.
+   Identiske dubletter slås sammen (OBOS: 58 oppføringer, 56 kamper); samme
+   kamp med ulik runde/dato/tid er en tydelig feil. Feeden fra 1.10 stemte
+   med terminlisten på alle 56 + 72 kamper.
+5. **Frysingen** krever: ingen kamper igjen og n·(n−1) kamper med resultat
+   for de n lagene som faktisk er med (ikke fast 240, så det virker også om
+   et lag trekkes), karenstiden etter siste kamp, og en tabellkontroll fra
+   SAMME kjøring der alle lag stemmer. En frossen sesong kan åpnes igjen som
+   før (tin, rett, `--frys-paa-nytt`); reparasjonen sammenligner også
+   tabellen på fotball.no-siden og legger et nytt trekk inn i sesongens egen
+   `justeringer.json`.
+   **Avklares:** Trond skrev 72 timer, men karenstiden har vært 14 døgn
+   siden bcf452f (25.9: "en protest kan ta uker", fem forsøk før 1. januar
+   godtatt samme dag). "72 timer" kom fra en feil i planen min. Den står
+   fortsatt på 14 døgn til Trond bekrefter.
+   **Risiko:** viser ligasiden 2027-tabellen før 2026 er frosset (siste kamp
+   13.12 + 14 døgn = 27.12), kan frysingen ikke skje automatisk; kontrollen
+   sier da "en annen sesong?". Frys da for hånd.
+6. **OBOS-siden:** avsnittet under fargeforklaringen ("Lagene på 3. til 6.
+   plass spiller opprykkskvalifisering ...") er fjernet; setningen om at
+   opprykksspillet ikke er modellert står under "Begrensninger".
+7. **Stjernen** står foran tallet ("*19"), se avsnittet under.
+
+**Testene som sammenlignet lagrede kopier med dagens data, eller forutsatte
+faste avsparkstider, datoer eller tabellstillinger** (gjennomgått 1.10):
+- tests/kilder/test_kilder.py: "alle 240 time stemmer mot fasit" (fasit nå
+  `testdata/fasit_<liga>_2026-09-25.json`, samme commit som testdataene);
+  tabellsammenligningen mot produksjonen (nå kampene og justeringene fra
+  25.9); laglisten i det oppdiktede skiftet til 2027 (nå fast).
+- tests/kilder/test_sesongskifte.py: "en kilde som feiler gir exit 0" var tom
+  før 1. oktober (klokka); nå med fast tidspunkt og sjekk av at kilden ble
+  spurt. Laglistene for 2026 er faste. Workflow-sjekkene leste bare første
+  jobb (klokkejobben i obos-results) og feilet; nå alle jobbene.
+- tests/kilder/verifiser_avvik.py: leste dagens produksjon via absolutt sti
+  og en modul som ikke finnes lenger; nå produksjonen før rettelsene
+  (606534e^) og ntf_source.
+- tests/regression.js: kjører lokalt mot et frosset bilde av datafilene
+  (`tests/data/2026-10-01/`, se README der) i stedet for dagens: blant annet
+  "Sluttoddsen ga" (ville feilet fra rundt 6.10), "Hva må Åsane gjøre?" og
+  nedrykk med/uten trekket, "Neste kamp" for Vålerenga og Moss (valgt fordi
+  de er i nedrykksstriden), merker i tabellen, odds for neste runde,
+  grensene og poenglikhetsscenarioene, "Hva må ... gjøre?" med TEAMS[0],
+  kamper igjen og sesongslutt. Sammenligningen med fotball.no-siden fra 25.9
+  bruker kampene og justeringene fra samme dag (`openMedDag`). Ny gruppe
+  "Dagens data" laster sidene med dagens filer. Med `--live` brukes dagens
+  data som før. Bildet må byttes ved sesongskiftet.
+- tests/failsafe.py: grunnlagsporten (første odds og første gjenstående kamp
+  i dagens filer) bruker bildet; seksjon 19 har sin egen matches.json i
+  stedet for at Kongsvinger–Hødd må ha resultat i produksjonen.
+
 ## Poengjusteringer fra NFF: Åsane trukket et poeng (1.10.2026)
 
 Feilen: OBOS-tabellen viste Åsane med 20 poeng, fotball.no 19. NFF trakk
@@ -137,17 +230,9 @@ Gjort:
    med lenke til vedtaket. Forhåndsbildet (`make_og.py`) bruker også listen.
    Testsiden: flettet inn med git merge-file, adressen er
    `../eliteserien/data/justeringer.json`.
-3. Den daglige kontrollen (`daglig_revisjon.py`, `nff_source.py`): samme
-   fotball.no-side som kampene (ingen ekstra forespørsel) gir nå også den
-   offisielle tabellen og "Justeringer", lagret i `data/nff-cache/`. Tabellen
-   vi regner (kampene pluss justeringer.json) sammenlignes lag for lag:
-   kamper, V, U, T, mål for og mot, poeng. Ulikt med likt antall kamper er
-   kritisk (rødt stempel, `audit_fixtures.json`, kjøringen feiler); ulikt
-   antall kamper er en advarsel. Justeringslistene sammenlignes også; en
-   justering som mangler hos oss eller ikke finnes hos fotball.no er kritisk.
-   Mot cachen (ikke hentet i denne kjøringen) blir avvik advarsler, som for
-   terminlisten. Den første sammenligningen kommer med første henting etter
-   pushen (høyst én i døgnet).
+3. ERSTATTET samme dag, se "Regelen for fotball.no" under: tabellkontrollen
+   mot fotball.no (fra den daglige hentingen) er tatt ut, og kontrollen går
+   mot tabellen på ligasidens resultatside.
 4. Raufoss-tallene regnet på nytt med trekket (tabellen over).
 5. Tester: regression.js "Poengjusteringer" (`--bare justering`): Åsane
    kampenes poeng −1 med stjerne, mot den offisielle tabellen lag for lag,
@@ -173,10 +258,15 @@ publiserte siden "per 30. september" (900×695), og scenarioet uten Raufoss
 fra prototypen (15 lag, bare nr. 15 ned, 100 000 simuleringer) "per 1.
 oktober" (900×711).
 
-Gjenstår: se at den første fotball.no-hentingen etter pushen (tidligst
-1.10 kl. 07.03, i praksis morgenkjøringen) har lagret tabellen i
-`data/nff-cache/obos.json` og at `obos/data/audit_fixtures.json` står uten
-avvik.
+(Punktet om å se etter den første fotball.no-hentingen med tabellen gjelder
+ikke lenger: den daglige hentingen fra fotball.no er stoppet, se under.)
+
+Endret 1.10 (Trond): stjernen står foran tallet, "*19", utenfor til venstre i
+cellen (absolutt plassert), så tallet står på linje med poengene til de andre
+lagene og kolonnen ikke blir bredere. Gjelder tabellen og rundetabellen;
+sjekket på 1400 og 390 px (alle poengtall har samme høyrekant, stjernen
+ligger inne i cellen). regression.js sjekker det samme, og forumbildene lages
+på nytt etter pushen.
 
 Rettet 1.10: testen "alle 240 time stemmer mot fasit" i test_kilder.py
 sammenlignet kopiene fra 25.9 med dagens terminliste og feilet hver gang en
