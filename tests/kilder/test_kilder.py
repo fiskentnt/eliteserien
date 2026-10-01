@@ -2,7 +2,10 @@
 Kjør: python3 test_kilder.py
 
 Testdataene er sidene slik de sto 25. september 2026, lagret i testdata/.
-Fasiten er produksjonens egne filer, bortsett fra de 22 Eliteserie-kampene
+Fasiten er produksjonens filer fra samme dag, lagret ved siden av dem
+(testdata/fasit_<liga>_2026-09-25.json), ikke dagens terminliste: testen
+skal sjekke at parserne leser kopiene riktig, og ikke feile hver gang en
+kamp flyttes senere. Unntaket er de 22 Eliteserie-kampene
 der produksjonen og de offisielle kildene er uenige om dato eller avspark.
 Der er ESPN brukt som uavhengig dommer, og ESPN ga de offisielle kildene rett
 i alle 22. Se verifiser_avvik.py og testdata/verifisert_avvik.json.
@@ -27,7 +30,6 @@ from ligaer import ANTALL_KAMPER, ANTALL_LAG, ANTALL_RUNDER, LIGAER
 from reconcile_ny import reconcile, behold_eksisterende
 
 TESTDATA = Path(__file__).parent / "testdata"
-PROD = ROT
 
 AVVIK = {(x["home"], x["away"]): x
          for x in json.loads((TESTDATA / "verifisert_avvik.json").read_text("utf-8"))}
@@ -62,13 +64,11 @@ def les_nff(liga):
     return (TESTDATA / f"nff_{liga}_2026-09-25.html").read_text(encoding="utf-8")
 
 
-def prod_kamper(liga):
-    d = PROD / LIGAER[liga]["data"]
-    ut = {(r["home"], r["away"]): r for r in json.loads((d / "matches.json").read_text("utf-8"))}
-    for runde in json.loads((d / "fixtures.json").read_text("utf-8")):
-        for k in runde["matches"]:
-            ut[(k["home"], k["away"])] = {**k, "round": runde["round"]}
-    return ut
+def fasit_kamper(liga):
+    """Kampene slik produksjonen hadde dem 25.9.2026, da testdataene ble
+    lagret (se notatet i filen)."""
+    d = json.loads((TESTDATA / f"fasit_{liga}_2026-09-25.json").read_text("utf-8"))
+    return {(r["home"], r["away"]): r for r in d["kamper"]}
 
 
 KILDER = {}
@@ -104,9 +104,9 @@ for liga in LIGAER:
          and (ntf_ix[k]["hg"], ntf_ix[k]["ag"]) != (nff_ix[k]["hg"], nff_ix[k]["ag"])]
     sjekk("de to kildene er enige om resultatene", not u, str(u[:2]))
 
-    print(f"--- {LIGAER[liga]['visningsnavn']}: mot produksjonen ---")
-    prod = prod_kamper(liga)
-    sjekk("samme kampsett som produksjon", set(ntf_ix) == set(prod),
+    print(f"--- {LIGAER[liga]['visningsnavn']}: mot fasiten fra samme dag ---")
+    prod = fasit_kamper(liga)
+    sjekk("samme kampsett som fasiten", set(ntf_ix) == set(prod),
           str(set(ntf_ix) ^ set(prod)))
     ulik = {f: [] for f in ("round", "date", "time")}
     ulikt_res = []
@@ -127,7 +127,7 @@ for liga in LIGAER:
             ulikt_res.append((k, (e["hg"], e["ag"]), (p["hg"], p["ag"])))
     for f in ("round", "date", "time"):
         sjekk(f"alle {ANTALL_KAMPER} {f} stemmer mot fasit", not ulik[f], str(ulik[f][:2]))
-    sjekk("alle resultater stemmer mot produksjon", not ulikt_res, str(ulikt_res[:2]))
+    sjekk("alle resultater stemmer mot fasiten", not ulikt_res, str(ulikt_res[:2]))
 
     print(f"--- {LIGAER[liga]['visningsnavn']}: navneavvik ---")
     cfg = LIGAER[liga]
