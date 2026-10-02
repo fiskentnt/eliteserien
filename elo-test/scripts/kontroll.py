@@ -419,7 +419,12 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # merge-file uten konflikter). Det samme gjelder at "Kopier lenke" er fjernet
 # fra svarene og "Kopier tekst" er lagt til i lagboksen (1. oktober 2026,
 # ettermiddag), og at kildelinja i teksten slutter med en lenke som virker,
-# med navnet uten ".no" så linja har én lenke (2. oktober 2026).
+# med navnet uten ".no" så linja har én lenke (2. oktober 2026). Betingede
+# tall med tabellens sesonger og frø (QA_N_BETINGET, 2. oktober 2026 kveld)
+# er flettet inn; to konflikter i "Hva betydde forrige kamp?" er løst for
+# hånd: testsiden beholder eloAlt i oppgavene (ratingen etter det
+# alternative resultatet), og forrige kamp er ikke i testsidens
+# grunnlagsfil (grunnlagMedForrige gir false her).
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -435,7 +440,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "e693d2a7629e9b4b4f4e7f6992d9aca8476baa12f8056093deba9db0af6244fb"
+BASE_SHA = "49cf433fea96ece4bdf5ab27b03bc667d660ee7daba6d50e6a08e2bf339b9fc3"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
@@ -1183,7 +1188,13 @@ console.log(JSON.stringify({saker, alt}));
          "}, tasks, null, gruppe" in _hv and "mode:'matchImpact'" not in _hv and "grovKandidatOver" not in _hv
          and "eloKandidatOver" not in _hv)
     krev("qaLastMatchData merker det alternative resultatet (eloAlt)",
-         "eloAlt:{home:m.home, away:m.away, hg, ag}" in _hv)
+         "eloAlt:{home:m.home, away:m.away, hg:t.score[0], ag:t.score[1]}" in _hv)
+    # Ratingen etter det alternative resultatet bygger på rating_historikk og
+    # sluttoddsen for spilte kamper, som ikke er i avtrykket: forrige kamp er
+    # ikke i testsidens grunnlagsfil, og svaret regnes alltid på siden.
+    krev("forrige kamp er ikke i testsidens grunnlagsfil (grunnlagMedForrige gir false, siste deklarasjon)",
+         _siste_decl("grunnlagMedForrige").startswith("function grunnlagMedForrige(){ return false; }"),
+         _siste_decl("grunnlagMedForrige")[:90])
 
 # ---------- V: forrige kamp -- kildeordet står i svaret, ikke i lagboksen
 # Sjansen for resultatet før kampen kan være en frosset prognose eller, som

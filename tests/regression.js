@@ -1316,6 +1316,186 @@ async function main() {
       await pg.close();
     }
   };
+  // KORTET OG SVARENE: SAMME TALL, FRA FILEN ELLER TABELLENS SIMULERING.
+  // 2.10.2026 viste kortet "Neste kamp" 91/80/66 % for Haugesund og 25/10/5 %
+  // for Stabæk, svaret på "Hva betyr neste kamp?" 92/80/67 og 24/10/4: kortet
+  // var regnet uten grunnlagsfilen (2 500 sesonger oppå tabellens 10 000),
+  // svaret fra filen. Nå kommer alle betingede tall fra filens 100 000
+  // sesonger når den er i bruk, og fra tabellens egen simulering (samme
+  // antall sesonger og frø, QA_N_BETINGET) ellers. For alle lag i begge
+  // ligaene, med filen og med en simulert runde: kortet og svaret har samme
+  // tall, med filen er de regnet rett fra filens fordelinger, og linja om
+  // forrige kamp i lagboksen er svarets (fra filen, ikke lastmatch.json).
+  // Hver kjøring i poolen logges (runZoneTasks), så testen ser hvor mange
+  // sesonger tallene bygger på, og at utgangspunktet er tabellens, telt for
+  // telt. Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare betinget
+  const betingetLike = async () => {
+    setGroup('Kortet og svarene: samme tall, fra grunnlagsfilen eller tabellens simulering');
+    const linjeRe = /^(.+) for (.+): (\S+ %) med seier, (\S+ %) med uavgjort, (\S+ %) med tap\.$/;
+    // Laget valgt i menyen: vent på tabellen, på kortet regnet for laget,
+    // kampen og scenarioet (nøkkelen sier også om filen er i bruk), og på tall
+    // i linja om forrige kamp.
+    const velg = async (pg, t) => {
+      await pg.select('#teamSelect', t);
+      await settle(pg);
+      await pg.waitForFunction(t => {
+        const el = document.getElementById('nmImpact'), z = qaTargetZone(t);
+        if (z && qaSettled(t, z)) return true;
+        return !!el && !el.hidden && !el.classList.contains('venter')
+          && nmImpactKey === `${t}|${z.key}|${document.getElementById('nextMatch').dataset.id}|${qaScenarioKey()}|${GRUNNLAG ? 'fil' : ''}`;
+      }, {timeout: 60000}, t).catch(() => {});
+      await pg.waitForFunction(() => { const el = document.querySelector('#odds .lastmatch');
+        return !!el && /prosentpoeng\.$|endret lite på .+\.$/.test(el.textContent.trim()); }, {timeout: 30000}).catch(() => {});
+    };
+    // Kortet, svaret, boksen og linja svarets tall gir, filens tall for
+    // kortets kamp, og kjøringene i poolen siden laget ble valgt (fra).
+    const les = (pg, t, fra) => pg.evaluate(async (t, fra) => {
+      const z = qaTargetZone(t), el = document.getElementById('nmImpact'), nm = document.getElementById('nextMatch');
+      const m = matches.find(x => x.id === nm.dataset.id), avgjort = !!(z && qaSettled(t, z));
+      const svar = await qaNextMatch(t), d = await qaLastMatchData(t);
+      const bx = document.querySelector('#odds .lastmatch'), boks = bx ? bx.textContent.replace(/\s+/g, ' ').trim() : '';
+      const l = d && !d.noMatch ? qaLastMatchLine(t, {...forrigeKampRad(d), iScen: matches.includes(d.m)}) : null;
+      const tmp = document.createElement('div');
+      if (l) tmp.innerHTML = l.html;
+      let fil = null;
+      if (GRUNNLAG && !qaScenarioKey() && m && z) {
+        const {openMatches} = buildQaOpen(), idx = openMatches.indexOf(m), n = TEAMS.length, ti = TI[t];
+        const p = id => { const u = GRUNNLAG.fil.utfall[id]; if (!u) return null;
+          let s = 0; for (let k = z.lo - 1; k <= z.hi - 1; k++) s += u[ti * n + k]; return s / GRUNNLAG.N; };
+        const H = m.home === t, base = p('base');
+        const vis = x => x == null ? null : pctTxt(Math.min(1, Math.max(0, z.pct + (x - base))));
+        const raa = [p(`${idx}:${H ? 'H' : 'B'}`), p(`${idx}:U`), p(`${idx}:${H ? 'B' : 'H'}`)];
+        fil = {seier: vis(raa[0]), uavgjort: vis(raa[1]), tap: vis(raa[2]), tabellErFil: Math.abs(z.pct - base) < 1e-9,   // sum av c/N mot (sum c)/N: bare avrunding
+               prosent: raa.map(x => x == null ? null : +(x * 100).toFixed(2))};
+      }
+      return {lag: t, avgjort, linje: el.hidden ? null : el.textContent.trim(), svar, boks,
+        fraSvar: l ? tmp.textContent.replace(/\s+/g, ' ').trim() : null, kamp: m ? `${m.home}-${m.away}` : null,
+        lagret: !!(d && d.m && z && lagretForrige(t, d.m, z.key)), fil, kjor: __kjor.slice(fra)};
+    }, t, fra);
+    const tallFra = r => {
+      const l = r.linje && r.linje.match(linjeRe), s = r.svar;
+      const seier = s.match(/^Seier mot .+? (?:endrer .+? lite \((\S+ %)\)|(?:øker|senker) .+? til (\S+ %) \()/) || [];
+      return {kort: l ? {seier: l[3], uavgjort: l[4], tap: l[5]} : null,
+        svar: {seier: seier[1] || seier[2] || null, uavgjort: (s.match(/Uavgjort gir (\S+ %),/) || [])[1] || null,
+               tap: (s.match(/mens tap (?:senker|øker) den til (\S+ %)\./) || [])[1] || null}};
+    };
+    // Feilene for ett lag. medFil: tallene skal være filens; ellers skal hver
+    // kjøring ha tabellens antall sesonger og tabellens utgangspunkt.
+    const vurder = (r, medFil, N) => {
+      const f = [], {kort, svar} = tallFra(r);
+      let tre = false;
+      if (r.avgjort) { if (r.linje) f.push(`sonen er avgjort, men kortet har tall: ${r.linje}`); }
+      else if (!kort) f.push(`kortet: "${r.linje}"`);
+      else {
+        for (const k of ['seier', 'uavgjort', 'tap']) {
+          if (svar[k] !== null && svar[k] !== kort[k]) f.push(`${k}: kortet ${kort[k]}, svaret ${svar[k]}`);
+          if (medFil && (!r.fil || r.fil[k] !== kort[k])) f.push(`${k}: kortet ${kort[k]}, filen ${r.fil && r.fil[k]}`);
+        }
+        tre = ['seier', 'uavgjort', 'tap'].every(k => svar[k] !== null);
+        if (medFil && r.fil && !r.fil.tabellErFil) f.push('tabellens tall for sonen er ikke filens');
+      }
+      if (r.fraSvar === null || r.boks !== r.fraSvar) f.push(`forrige kamp: boksen "${r.boks}", svaret gir "${r.fraSvar}"`);
+      if (medFil && r.lagret) f.push('boksen bygger på lastmatch.json, ikke filen');
+      const grupper = new Set(r.kjor.map(x => x.gruppe));
+      for (const g of [...(r.avgjort ? [] : ['kort', 'impact']), 'forrige']) if (!grupper.has(g)) f.push(`ingen kjøring i gruppen ${g}`);
+      for (const x of r.kjor) {
+        if (x.sesonger !== N) f.push(`${x.gruppe}: ${x.sesonger} sesonger, ikke ${N}`);
+        if (!medFil && x.N !== N) f.push(`${x.gruppe}: sendt med N = ${x.N}`);
+        if (x.base !== null && x.tabell !== null && Math.round(x.base * N) !== Math.round(x.tabell * N))
+          f.push(`${x.gruppe}: utgangspunktet ${x.base}, tabellen ${x.tabell}`);
+        if (x.base !== null && x.tabell === null) f.push(`${x.gruppe}: tabellen var ikke ferdig`);
+      }
+      return {f, tre, sammenlignet: !!kort, kjoringer: r.kjor.length};
+    };
+    const alleLag = async (pg, medFil, N) => {
+      const lagene = await pg.evaluate(() => TEAMS.slice()), feil = [], eks = {};
+      let tre = 0, sammenlignet = 0, kjoringer = 0;
+      for (const t of lagene) {
+        const fra = await pg.evaluate(() => __kjor.length);
+        await velg(pg, t);
+        const r = await les(pg, t, fra), v = vurder(r, medFil, N);
+        if (v.f.length) feil.push(`${t}: ${v.f.slice(0, 3).join('; ')}`);
+        if (v.tre) tre++;
+        if (v.sammenlignet) sammenlignet++;
+        kjoringer += v.kjoringer;
+        if (r.fil) eks[t] = {kamp: r.kamp, prosent: r.fil.prosent};
+      }
+      return {feil, tre, sammenlignet, kjoringer, n: lagene.length, eks};
+    };
+    for (const liga of ['eliteserien', 'obos']) {
+      const url = base.replace('/eliteserien/', `/${liga}/`);
+      if (!live) GRUNNLAG_MODUS = {innhold: {[liga]: await grunnlagFilFor(liga)}};
+      try {
+        const pg = await open(1400, 1000, url);
+        await pg.waitForFunction('typeof GRUNNLAG_STATUS!=="undefined" && GRUNNLAG_STATUS!=="venter"', {timeout: 120000});
+        await settle(pg);
+        // Logg hver kjøring: gruppe, N, sesongene svaret bygger på,
+        // utgangspunktet og tabellens tall for samme lag og sone.
+        const N = await pg.evaluate(() => {
+          window.__kjor = [];
+          const ekte = runZoneTasks;
+          runZoneTasks = (payload, tasks, onTask, gruppe) => ekte(payload, tasks, onTask, gruppe).then(res => {
+            const d = lastMC && lastMCFinal && lastMCScenarioKey === qaScenarioKey() ? lastMC[TEAMS[payload.ti]] : null;
+            let tabell = null;
+            if (d) { tabell = 0; for (let k = payload.zone.lo - 1; k <= payload.zone.hi - 1; k++) tabell += d[k]; }
+            __kjor.push({gruppe: gruppe.split(':')[0], N: payload.N, sesonger: res.sesonger, base: res.base ? res.base.prob : null, tabell});
+            return res; });
+          return {status: GRUNNLAG_STATUS, fil: GRUNNLAG ? GRUNNLAG.N : null, tabell: MC_N, betinget: QA_N_BETINGET};
+        });
+        // Lokalt leverer testserveren filen siden godtar (grunnlagFilFor); på
+        // den publiserte siden kan den være under ny regning.
+        const medFil = !live || N.status === 'i bruk';
+        if (!medFil) console.log(`    (${liga}: grunnlagsfilen er ikke i bruk på den publiserte siden (${N.status}); bare scenariodelen)`);
+        else check(`${liga}: grunnlagsfilen er i bruk (${N.fil} sesonger), og siden regner betingede tall med tabellens ${N.tabell}`,
+          N.status === 'i bruk' && N.fil === 100000 && N.betinget === N.tabell, JSON.stringify(N));
+        // 1) Med filen, uten scenario.
+        const a = medFil ? await alleLag(pg, true, N.fil) : null;
+        if (a) check(`${liga}: med filen har kortet og svaret filens tall for alle ${a.n} lagene (${a.sammenlignet} kort, ${a.tre} med alle tre tall i svaret, ${a.kjoringer} kjøringer, alle fra filen), og linja om forrige kamp er svarets`,
+          a.feil.length === 0 && a.sammenlignet >= 10 && a.tre >= 3, a.feil.slice(0, 3).join(' | '));
+        if (a && !live && liga === 'obos') {
+          // Lagene fra 2.10.2026 (runde 24 i OBOS-ligaen), slik filen for
+          // bildet (DATA_DAG) har dem: seier / uavgjort / tap i prosent.
+          const vist = ['Haugesund', 'Stabæk', 'Strømsgodset', 'Kongsvinger'].map(t => a.eks[t] ? `${t} (${a.eks[t].kamp}): ${a.eks[t].prosent.join(' / ')}` : `${t}: -`);
+          console.log(`    Filens tall i bildet fra ${DATA_DAG}, seier / uavgjort / tap: ${vist.join('; ')}`);
+        }
+        // 2) Lagets neste runde simulert: siden regner selv, alt fra
+        // tabellens simulering.
+        const R = await pg.evaluate(() => Math.min(...matches.filter(x => x.hg == null).map(x => x.round)));
+        await klikk(pg, `.round-sim[data-round="${R}"]`);
+        await pg.waitForFunction(r => matches.filter(m => m.round === r).every(m => m.hg != null), {timeout: 60000}, R);
+        await settle(pg);
+        const s = await alleLag(pg, false, N.tabell);
+        check(`${liga}: runde ${R} simulert: kortet og svaret har samme tall for alle ${s.n} lagene (${s.sammenlignet} kort, ${s.tre} med alle tre), og alle ${s.kjoringer} kjøringene har tabellens ${N.tabell} sesonger og nøyaktig tabellens utgangspunkt`,
+          s.feil.length === 0 && s.sammenlignet >= 10 && s.tre >= 3 && s.kjoringer >= 3 * s.n, s.feil.slice(0, 3).join(' | '));
+        await pg.close();
+        // 3) Filen kommer sent (6 s): kortet regnes først uten filen, og
+        // byttes til filens tall når den er tatt i bruk.
+        if (!live) {
+          const lag = liga === 'obos' ? 'Haugesund' : 'Vålerenga';
+          GRUNNLAG_MODUS = {innhold: {[liga]: await grunnlagFilFor(liga)}, forsinkelse: 6000};
+          // Ikke open(): den venter til nettverket er stille, altså på filen.
+          const sp = await browser.newPage();
+          sp.on('pageerror', e => errors.push(`${url}: ${e.message}`));
+          await sp.setViewport({width: 1400, height: 1000});
+          await sp.goto(url + '#team=' + encodeURIComponent(lag), {waitUntil: 'domcontentloaded'});
+          const regnet = (t, fil) => !!nmImpactKey && nmImpactKey.startsWith(`${t}|`) && nmImpactKey.endsWith(fil ? '|fil' : '|')
+            && !document.getElementById('nmImpact').classList.contains('venter') && !document.getElementById('nmImpact').hidden;
+          await sp.waitForFunction(regnet, {timeout: 60000}, lag, false).catch(() => {});
+          const foer = await sp.evaluate(() => ({status: GRUNNLAG_STATUS, kort: document.getElementById('nmImpact').textContent.trim()}));
+          await sp.waitForFunction('GRUNNLAG_STATUS==="i bruk"', {timeout: 60000}).catch(() => {});
+          await sp.waitForFunction(regnet, {timeout: 60000}, lag, true).catch(() => {});
+          await sp.evaluate(() => { window.__kjor = []; });
+          const r = await les(sp, lag, 0), {kort, svar} = tallFra(r);
+          check(`${liga}: filen kommer sent: kortet for ${lag} regnes først uten filen og viser filens tall når den er i bruk ("${foer.kort}" → "${r.linje}")`,
+            foer.status === 'venter' && linjeRe.test(foer.kort) && !!kort && !!r.fil
+              && ['seier', 'uavgjort', 'tap'].every(k => kort[k] === r.fil[k] && (svar[k] === null || svar[k] === kort[k])),
+            JSON.stringify({foer, linje: r.linje, fil: r.fil, svar: r.svar}));
+          await sp.close();
+        }
+      } finally { if (!live) GRUNNLAG_MODUS = null; }
+    }
+  };
   // Nullstill skal gi nøyaktig samme tabell og svar som en ny lasting, fra
   // grunnlagsfilen, uten ny tabellsimulering. Før ble filen avvist ("feil
   // avtrykk") når den kom mens et scenario var fylt inn (vanlig på mobil) eller
@@ -1584,8 +1764,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'neste') await nesteKampKort();
       else if (BARE === 'nestelinje') await nesteKampLinje();
       else if (BARE === 'nullstill') await nullstillGrunnlag();
+      else if (BARE === 'betinget') await betingetLike();
       else if (BARE === 'justering') await poengjusteringer();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, justering)`);
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, justering)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -2425,6 +2606,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await forrigeKampScenario();
     await nesteKampKort();
     await nesteKampLinje();
+    await betingetLike();
     await nullstillGrunnlag();
     await page.bringToFront();
 
@@ -3032,6 +3214,15 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     for (const [url, liga] of [[base, 'Eliteserien'], [obosUrl, 'OBOS']]) {
       for (const w of [320, 500, 1400]) {
         const sp = await open(w, 900, url);
+        await settle(sp);
+        // Uten fulgt lag. Laget huskes i localStorage fra gruppene før, og med
+        // et lag regnes linja om forrige kamp i lagboksen på nytt for
+        // scenarioet under; til den er ferdig, står bare resultatet, og
+        // lagboksen er én linje lavere (2.10.2026: med tabellens 10 000
+        // sesonger tok det mer enn 900 ms, og rundevelgeren sto 17 px
+        // høyere). Det er lagboksen, ikke toppmenyen, og hører ikke hjemme
+        // her.
+        await sp.select('#teamSelect', '');
         await settle(sp);
         const synlig = 'checkVisibility({visibilityProperty:true})';
         const f = await sp.evaluate(() => {
@@ -4136,9 +4327,11 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     }
     await page.bringToFront();
 
-    // ---- Rundens viktigste kamp: lav N i nettleseren, høy N i CI ----
-    // Svaret som regnes i nettleseren bruker QA_KEY_N / QA_KEY_CLOSE (3 000 /
-    // 0,901). Innleggene (lag_innlegg.js) regnes med QA_KEY_N_CI /
+    // ---- Rundens viktigste kamp: tabellens N i nettleseren, høy N i CI ----
+    // Svaret som regnes i nettleseren bruker QA_KEY_N = QA_N_BETINGET, altså
+    // tabellens 10 000 sesonger og frø (før 2.10.2026: 3 000), og dermed den
+    // strammere grensa 0,93 (fra QA_KEY_N_STRAM = 6 000). Innleggene
+    // (lag_innlegg.js) regnes med QA_KEY_N_CI /
     // QA_KEY_CLOSE_CI: minst 6 000 og 0,93. Banneret i keymatch.json regnes fra
     // grunnlagsfilen (lag_grunnlag.js, 100 000 sesonger, grensa 0,93, se
     // «Grunnlagsfilen på siden»). Testen fanger N som faktisk sendes til
@@ -4159,14 +4352,14 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           window.runZoneTasks = function (payload, ...rest) { N.push(payload.N); return zt.call(this, payload, ...rest); };
           try {
             const nett = await qaKeyRoundData(), ci = await qaKeyRoundData({N: QA_KEY_N_CI, close: QA_KEY_CLOSE_CI});
-            return {finnes: true, konst: [QA_KEY_N, QA_KEY_CLOSE, QA_KEY_N_CI, QA_KEY_CLOSE_CI], sendt: N,
+            return {finnes: true, konst: [QA_KEY_N, QA_KEY_CLOSE, QA_KEY_N_CI, QA_KEY_CLOSE_CI], sendt: N, MC_N,
                     nett: [nett.sesonger, nett.grense], ci: [ci.sesonger, ci.grense],
                     // grensa brukes: med CI-grensa er ingen i "close" under 93 % av lederen
                     ciGrenseHolder: ci.close.every(x => x.total >= ci.best.total * QA_KEY_CLOSE_CI)};
           } finally { window.runZoneTasks = zt; }
         });
-        check(`${liga}: nettleseren regner rundens viktigste kamp med 3 000 sesonger og grense 0,901`,
-          r.finnes && r.konst[0] === 3000 && r.konst[1] === 0.901 && r.sendt[0] === 3000 && r.nett.join() === '3000,0.901', JSON.stringify(r));
+        check(`${liga}: nettleseren regner rundens viktigste kamp med tabellens ${r.MC_N} sesonger og grense 0,93`,
+          r.finnes && r.MC_N === 10000 && r.konst[0] === r.MC_N && r.sendt[0] === r.MC_N && r.nett.join() === `${r.MC_N},0.93`, JSON.stringify(r));
         check(`${liga}: CI-nivået er minst 6 000 sesonger med grense 0,93, og brukes når det sendes`,
           r.finnes && r.konst[2] >= 6000 && r.konst[3] === 0.93 && r.sendt[1] === r.konst[2] && r.ci.join() === `${r.konst[2]},0.93` && r.ciGrenseHolder,
           JSON.stringify(r));
@@ -4615,9 +4808,12 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
 
       // Oppgavene svarene sender til poolen (runZoneTasks byttes ut og
       // fanger dem), for alle 16 lag: "Heie på", "Hva betyr neste kamp?",
-      // "Hvilke kamper betyr mest?" (grov- og finsiling) og "Rundens
-      // viktigste kamp". Hver av dem skal finnes i filens oppgaver med samme
-      // kamp og resultat, og frøet skal være filens.
+      // "Hvilke kamper betyr mest?" (grov- og finsiling), "Hva betydde
+      // forrige kamp?" og "Rundens viktigste kamp". Hver av dem skal finnes i
+      // filens oppgaver med samme kamp og resultat, og frøet skal være filens.
+      // Forrige kamp har sin egen utgangsstilling (over), som også skal være
+      // filens. Testsiden har ikke forrige kamp i filen (grunnlagMedForrige):
+      // der skal filen heller ikke ha slike oppgaver.
       const dekn = await s1.evaluate(async () => {
         const {openMatches, scenarioKey} = buildQaOpen();
         const fil = new Map(grunnlagOppgaver(openMatches).map(t => [t.id, t])), seed = hashStr(scenarioKey + '|impact');
@@ -4630,17 +4826,19 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           return Promise.resolve(res);
         };
         try {
-          for (const lag of TEAMS) { await qaCheerFor(lag); await qaNextMatch(lag); await qaKeyMatches(lag); }
+          for (const lag of TEAMS) { await qaCheerFor(lag); await qaNextMatch(lag); await qaKeyMatches(lag); if (grunnlagMedForrige()) await qaLastMatchData(lag); }
           await qaKeyRoundData();
         } finally { runZoneTasks = ekte; }
         const mangler = sett.filter(x => { const f = fil.get(x.t.id);
-          return !f || f.idx !== x.t.idx || JSON.stringify(f.score) !== JSON.stringify(x.t.score); });
+          return !f || f.idx !== x.t.idx || JSON.stringify(f.score) !== JSON.stringify(x.t.score) || JSON.stringify(f.over) !== JSON.stringify(x.t.over); });
         return {antall: sett.length, grupper: [...new Set(sett.map(x => x.gruppe.split(':')[0]))].sort(),
                 mangler: mangler.slice(0, 5).map(x => `${x.gruppe} ${x.t.id} ${JSON.stringify(x.t.score)}`), nMangler: mangler.length,
-                feilFro: sett.filter(x => x.seed !== seed).length, oppgaver: fil.size};
+                feilFro: sett.filter(x => x.seed !== seed).length, oppgaver: fil.size, medOver: sett.filter(x => x.t.over).length,
+                medForrige: grunnlagMedForrige(), filForrige: [...fil.keys()].filter(id => id.startsWith('f:')).length};
       });
-      check(`${liga}: filens ${dekn.oppgaver} oppgaver dekker alle ${dekn.antall} oppgavene svarene sender, med samme frø`,
-        dekn.antall > 100 && dekn.nMangler === 0 && dekn.feilFro === 0 && ['heie', 'impact', 'runde'].every(g => dekn.grupper.includes(g)),
+      check(`${liga}: filens ${dekn.oppgaver} oppgaver dekker alle ${dekn.antall} oppgavene svarene sender (${dekn.medOver} med egen utgangsstilling), med samme frø`,
+        dekn.antall > 100 && dekn.nMangler === 0 && dekn.feilFro === 0 && ['heie', 'impact', 'runde'].every(g => dekn.grupper.includes(g))
+          && (dekn.medForrige ? dekn.medOver >= 2 * 16 && dekn.filForrige >= 2 * 8 && dekn.grupper.includes('forrige') : liga === 'elo-test' && dekn.filForrige === 0),
         JSON.stringify(dekn));
 
       // Regningen er poolens, bit for bit: samme oppgave med samme frø og N
@@ -4648,7 +4846,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       const regn = await s1.evaluate(async () => {
         const N = 300, r = await grunnlagRegn(N);
         const {P0, G0, F0, open, openMatches, oddsOverride, scenarioKey} = buildQaOpen();
-        const utvalg = grunnlagOppgaver(openMatches).filter((t, i, a) => t.id === 'base' || t.id.endsWith(':U') || i === a.length - 1).slice(0, 3);
+        // Utgangspunktet, et uavgjort og et utfall av en forrige kamp (egen
+        // utgangsstilling, t.over).
+        const alle = grunnlagOppgaver(openMatches), utvalg = [alle[0], alle.find(t => t.id.endsWith(':U')), alle.find(t => t.over)].filter(Boolean);
         const res = await runZoneTasks({mu: MODEL.mu, H: MODEL.H, k: FORM_K,
           att: Array.from(LIVE.att), con: Array.from(LIVE.con), ha: Array.from(LIVE.ha), hc: Array.from(LIVE.hc),
           P0: Array.from(P0), G0: Array.from(G0), F0: Array.from(F0), open, oddsOverride,
@@ -4661,10 +4861,11 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         let avvist = null;
         const m = matches.find(x => x.hg == null); m.hg = 2; m.ag = 1;
         try { await grunnlagRegn(N); } catch (e) { avvist = e.message; } finally { m.hg = null; m.ag = null; }
-        return {like, summer, utvalg: utvalg.map(t => t.id), avtrykk: r.fingeravtrykk === await grunnlagAvtrykk(N), avvist, n: r.oppgaver.length};
+        return {like, summer, utvalg: utvalg.map(t => t.id), avtrykk: r.fingeravtrykk === await grunnlagAvtrykk(N), avvist, n: r.oppgaver.length, medForrige: grunnlagMedForrige()};
       });
       check(`${liga}: grunnlagRegn gir poolens tall bit for bit (${regn.utvalg.join(', ')}), fordelingene går opp, og avtrykket er sidens`,
-        regn.like && regn.summer && regn.avtrykk, JSON.stringify(regn));
+        regn.like && regn.summer && regn.avtrykk && (regn.medForrige ? regn.utvalg.length === 3 && regn.utvalg[2].startsWith('f:') : regn.utvalg.length === 2),
+        JSON.stringify(regn));
       check(`${liga}: grunnlagRegn nekter å regne med et resultat fylt inn`, /resultater er fylt inn/.test(regn.avvist || ''), String(regn.avvist));
       await s1.close();
     }

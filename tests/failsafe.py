@@ -1078,6 +1078,31 @@ def main():
               and _re27.search(r"permissions:\n  contents: write\n  issues: write", _t27) is not None
               and f"{_liga27}/data/audit_tabell.json" in _t27 and f"{_liga27}/data/justeringer.json" in _t27)
 
+    # 28. Betingede tall (2.10.2026): kortet "Neste kamp", svarene og linja om
+    # forrige kamp i lagboksen kommer fra grunnlagsfilen når den er i bruk, og
+    # ellers fra tabellens simulering (QA_N_BETINGET = MC_N, tabellens frø).
+    # Ingen av dem har et eget antall sesonger (før: 2 500, 3 000 og 6 000,
+    # og kortet og svaret viste ulike tall for samme kamp). Forrige kamp er i
+    # filen på Eliteserien og OBOS, ikke på testsiden (grunnlagMedForrige).
+    import re as _re28
+    for s_ in ("eliteserien", "obos", "elo-test"):
+        _t28 = (ROOT / s_ / "index.html").read_text(encoding="utf-8")
+        _konst28 = ("const QA_N_BETINGET = MC_N;", "const QA_CHEER_N = QA_N_BETINGET;", "const QA_LAST_N = QA_N_BETINGET;",
+                    "const QA_KEY_N = QA_N_BETINGET;")
+        _faste28 = _re28.findall(r"N:\s*\d{3,}", _t28)
+        check(f"{s_}/index.html: alle betingede tall med tabellens sesonger (QA_N_BETINGET), ingen fast N i kallene",
+              all(k in _t28 for k in _konst28) and _t28.count("N:QA_N_BETINGET") >= 3 and not _faste28
+              and "(res.sesonger >= QA_KEY_N_STRAM ? QA_KEY_CLOSE_CI : QA_KEY_CLOSE)" in _t28,
+              f"faste N: {_faste28}" if _faste28 else "")
+        _med28 = s_ != "elo-test"
+        check(f"{s_}/index.html: " + ("forrige kamp i grunnlagsfilen, og linja i lagboksen fra filen når den er i bruk" if _med28
+              else "forrige kamp ikke i grunnlagsfilen (ratingen etter det alternative resultatet er ikke i avtrykket), linja fra lastmatch.json"),
+              "forrigeOppgaver(m, P0, G0, F0).forEach(x=>tasks.push(x));" in _t28
+              and "if(!grunnlagMedForrige()) return tasks;" in _t28
+              and "(GRUNNLAG && GRUNNLAG_STATUS==='i bruk' && grunnlagMedForrige())) return null;" in _t28
+              and "|| (t.over && !t.id.startsWith('f:'))) return null;" in _t28
+              and (_t28.rfind("function grunnlagMedForrige(){ return true; }") > _t28.rfind("function grunnlagMedForrige(){ return false; }")) == _med28)
+
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare
     # kall som aldri skjedde, av selve testene.

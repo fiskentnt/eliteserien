@@ -3079,8 +3079,8 @@ let lastSimSeed = null, lastSimMatchIds = null;
 // svarene med låste utfall (kortet
 // "Neste kamp", "Hva betyr neste kamp?", "Heie på", "Hvilke kamper betyr
 // mest?", "Rundens viktigste kamp") i bassenget. Før sto tabellens prosenter
-// i kø bak kortet "Neste kamp" (2500 × 4 sesonger), som sendes før
-// tabellsimuleringen.
+// i kø bak kortet "Neste kamp" (4 oppgaver, nå à QA_N_BETINGET sesonger),
+// som sendes før tabellsimuleringen.
 function getWorker(){
   if(!mcWorker){
     mcWorker = new Worker(URL.createObjectURL(new Blob([WORKER_SRC],{type:'application/javascript'})));
@@ -3364,6 +3364,18 @@ function ingentingISpill(team, d){
 // rundt 1 prosentpoeng (95 %-margin ved 50 %); målt ca. 0,4 s på en PC i Workeren
 // (4 000 tok 0,17 s), og første anslag kommer etter 1 000 sesonger.
 const MC_N = 10000;
+// Alle betingede tall på siden -- kortet "Neste kamp", svarene ("Hva betyr
+// neste kamp", "Heie på", "Rundens viktigste kamp", "Hva betydde forrige
+// kamp", de viste tallene i "Hvilke kamper betyr mest") og linja om forrige
+// kamp i lagboksen -- kommer fra grunnlagsfilens 100 000 sesonger når den er
+// i bruk (grunnlagSvar), og ellers fra SAMME simulering som tabellen: samme
+// antall sesonger og samme frø (hashStr(scenarioKey+'|impact')), så
+// utgangspunktet er nøyaktig tabellens tall og hvert utfall er de samme
+// sesongene med kampen låst. Før regnet de med 2 500, 3 000 og 6 000
+// sesonger hver for seg, og kortet og svaret kunne vise ulike tall for det
+// samme (Haugesund-Stabæk 2.10.2026: 91/80/66 på kortet, regnet uten filen,
+// 92/80/67 i svaret, fra filen).
+const QA_N_BETINGET = MC_N;
 // Tabellsimuleringen sendes MED EN GANG når et resultat er ferdig lagt inn
 // (begge tallene i en kamp fylt ut, eller H/U/B trykket: mcStraks settes av
 // hendelsen rett før render()). Skriver man bare i ett felt, venter den 250 ms
@@ -3685,7 +3697,7 @@ async function oppdaterNesteKampLinje(m){
   el.classList.add('venter');
   try{
     const data = await runMatchImpactAsync(lag, zone, [{idx, match:m, needsDraw:true}], scenarioKey,
-      {P0,G0,F0,open,oddsOverride,N:2500,wantBaseline:true}, 'kort');
+      {P0,G0,F0,open,oddsOverride,N:QA_N_BETINGET,wantBaseline:true}, 'kort');
     if(nmImpactKey!==key) return;        // scenarioet er endret mens det regnet
     const r = data.results[0];
     const isHome = m.home===lag;
@@ -4337,7 +4349,7 @@ async function qaNextMatch(team){
   const isHome = next.home===team;
   const opp = isHome?next.away:next.home;
 
-  const data = await runMatchImpactAsync(team, zone, [{idx, match:next, needsDraw:true}], scenarioKey, {P0,G0,F0,open,oddsOverride,N:2500,wantBaseline:true});
+  const data = await runMatchImpactAsync(team, zone, [{idx, match:next, needsDraw:true}], scenarioKey, {P0,G0,F0,open,oddsOverride,N:QA_N_BETINGET,wantBaseline:true});
   const r = data.results[0];
   // Tabellens tall er utgangspunktet ("nå"); simuleringen gir bare ENDRINGEN
   // (utfall minus utgangspunkt med samme frø), lagt oppå. Endringer under 2
@@ -4458,7 +4470,7 @@ function runZoneTasks(payload, tasks, onTask, gruppe){
     pumpPool();
   });
 }
-const QA_CHEER_N = 2500; // som spørsmål 5
+const QA_CHEER_N = QA_N_BETINGET; // som spørsmål 5
 const QA_CHANCE = Object.fromEntries(ZONE_KEYS.filter(k=>LEAGUE.zones[k]).map(k=>[k, LEAGUE.zones[k].chance]));
 async function qaCheerFor(team, onPartial){
   const zone = qaTargetZone(team);
@@ -4545,9 +4557,10 @@ async function qaCheerFor(team, onPartial){
 // alternative resultatet -- svaret sier det, så tallet leses som et anslag.
 //   ELO-TEST: her regnes ratingen om for det alternative resultatet
 // (eloRatingMedAlternativ, via eloAlt i oppgaven), og svaret sier det.
-// Samme workerbasseng og frø som de andre spørsmålene, og bare tre kjøringer,
-// så antallet simuleringer kan være høyere enn i "heie på".
-const QA_LAST_N = 6000;
+// Samme workerbasseng, frø og antall sesonger som tabellen og de andre
+// spørsmålene (QA_N_BETINGET). ELO-TEST: aldri fra grunnlagsfilen, se
+// grunnlagMedForrige.
+const QA_LAST_N = QA_N_BETINGET;
 // Lagets siste kamp med resultat, også i scenarioet: en kamp brukeren har
 // fylt inn eller simulert (matches) teller når den er seinere enn den siste
 // faktisk spilte. Uten scenario er det den siste spilte (lastPlayedFor).
@@ -4587,6 +4600,22 @@ const QA_OUT_LABEL = {win:'seier', draw:'uavgjort', loss:'tap'};
 // forkastingsgruppe ("forrige-linje" når linja i lagboksen regnes på siden,
 // se forrigeLinjeOppdater, så den og svaret aldri forkaster hverandres
 // oppgaver; samme frø, samme tall).
+// De andre utfallene av en spilt kamp, som oppgaver: utgangsstillingen med
+// det faktiske resultatet ut og det mest sannsynlige resultatet for utfallet
+// inn (t.over), og id-en og resultatet grunnlagsfilen kjenner dem igjen på.
+// Brukt av "Hva betydde forrige kamp" og av grunnlagsfilen (grunnlagOppgaver).
+function forrigeOppgaver(m, P0, G0, F0){
+  const h0 = TI[m.home], a0 = TI[m.away];
+  const faktisk = m.hg>m.ag ? 'H' : m.hg<m.ag ? 'B' : 'U';
+  return ['H','U','B'].filter(q=>q!==faktisk).map(q=>{
+    const [hg,ag] = likelyScoreGivenOutcome(m.home, m.away, q);
+    const P=Float64Array.from(P0), G=Float64Array.from(G0), F=Float64Array.from(F0);
+    applyResultDelta(P,G,F,h0,a0,m.hg,m.ag,-1); // det faktiske resultatet ut
+    applyResultDelta(P,G,F,h0,a0,hg,ag,1);      // det alternative inn
+    return {id:`f:${m.home}|${m.away}:${q}`, q, idx:-1, score:[hg,ag],
+            over:{P0:Array.from(P), G0:Array.from(G), F0:Array.from(F)}};
+  });
+}
 async function qaLastMatchData(team, gruppe='forrige'){
   const zone = qaTargetZone(team);
   if(!zone) return null;
@@ -4598,17 +4627,14 @@ async function qaLastMatchData(team, gruppe='forrige'){
   // Utfallet sett fra KAMPEN (H/U/B), som modellens rutenett bruker.
   const qFor = o => o==='draw' ? 'U' : (o==='win')===isHome ? 'H' : 'B';
   const {P0,G0,F0,open,oddsOverride,scenarioKey} = buildQaOpen();
-  const h0 = TI[m.home], a0 = TI[m.away];
   const others = ['win','draw','loss'].filter(o=>o!==actual);
-  const tasks = [{id:'actual', idx:-1, score:null}];
-  others.forEach(o=>{
-    const [hg,ag] = likelyScoreGivenOutcome(m.home, m.away, qFor(o));
-    const P=Float64Array.from(P0), G=Float64Array.from(G0), F=Float64Array.from(F0);
-    applyResultDelta(P,G,F,h0,a0,m.hg,m.ag,-1); // det faktiske resultatet ut
-    applyResultDelta(P,G,F,h0,a0,hg,ag,1);      // det alternative inn
-    tasks.push({id:o, idx:-1, score:null, over:{P0:Array.from(P), G0:Array.from(G), F0:Array.from(F)},
-                eloAlt:{home:m.home, away:m.away, hg, ag}});   // ELO-TEST: ratingen etter det alternative resultatet
-  });
+  // Utgangspunktet er tabellens kjøring ('base'), og hvert alternativ har id
+  // og resultat som i grunnlagsfilen (forrigeOppgaver), så svaret kommer
+  // derfra når den er i bruk.
+  const alt = Object.fromEntries(forrigeOppgaver(m, P0, G0, F0).map(t=>[t.q, t]));
+  // ELO-TEST: ratingen etter det alternative resultatet (eloAlt).
+  const tasks = [{id:'base', idx:-1, score:null}, ...others.map(o=>{ const t = alt[qFor(o)];
+    return {...t, eloAlt:{home:m.home, away:m.away, hg:t.score[0], ag:t.score[1]}}; })];
   const res = await runZoneTasks({
     mu:MODEL.mu, H:MODEL.H, k:FORM_K,
     att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
@@ -4618,7 +4644,7 @@ async function qaLastMatchData(team, gruppe='forrige'){
   // Tabellens tall er "det som faktisk skjedde"; alternativene legges oppå som
   // endring fra den samme kjøringen (samme frø), som i spørsmål 3 og 5.
   const tableP = zone.pct;
-  const alts = others.map(o=>({o, d: res[o].prob - res.actual.prob}));
+  const alts = others.map(o=>({o, d: res[alt[qFor(o)].id].prob - res.base.prob}));
   // Under to prosentpoeng er innenfor støyen og vises ikke (som i de andre svarene).
   const shown = alts.filter(x=>Math.abs(x.d)>=0.02);
   // "Bra for laget": høyere sjanse for gull/Europa, lavere for kvalik/nedrykk.
@@ -4766,7 +4792,10 @@ function qaLastMatchLine(team, e){
 // linja og svaret bruker den da, så de sier samme tall selv om odds eller
 // kampdata har endret seg litt siden filen ble regnet.
 function lagretForrige(team, m, zoneKey){
-  if(!m || qaScenarioKey()) return null;
+  // Er grunnlagsfilen i bruk, regnes linja derfra (forrigeLinjeOppdater), så
+  // den og svaret har filens tall. lastmatch.json gjelder når filen ikke er i
+  // bruk; da er den regnet med sidens egen simulering, som siden ville gjort.
+  if(!m || qaScenarioKey() || (GRUNNLAG && GRUNNLAG_STATUS==='i bruk' && grunnlagMedForrige())) return null;
   const e = LASTMATCH && LASTMATCH.teams && LASTMATCH.teams[team];
   return e && e.date===m.date && e.home===m.home && e.away===m.away && e.hg===m.hg && e.ag===m.ag
     && e.zone===zoneKey && e.basis==='forventning' && e.expected!=null ? e : null;
@@ -4805,9 +4834,10 @@ function forrigeKampRad(d){
 // Linja regnet på siden: for laget, scenarioet og sonen når tabellen er
 // ferdig, og vist til noe endres. Nøkkelen tar med om tallene fra før avspark
 // er lastet (preKickProbs), ellers kunne en linje regnet uten forventning
-// blitt stående.
+// blitt stående, og om grunnlagsfilen er i bruk (som kortet "Neste kamp"), så
+// en linje regnet før filen kom byttes til filens tall.
 let forrigeLinje = null, forrigeLinjeVenter = null;
-const forrigeLinjeKey = (team, scen, zoneKey) => `${team}|${scen}|${zoneKey}|${PREKICK||CLOSING ? 'p' : ''}`;
+const forrigeLinjeKey = (team, scen, zoneKey) => `${team}|${scen}|${zoneKey}|${PREKICK||CLOSING ? 'p' : ''}|${GRUNNLAG ? 'fil' : ''}`;
 function forrigeLinjeOppdater(){
   const team = SELECTED_TEAM, scen = qaScenarioKey();
   // Sonen og sjansen i linja skal være kortets: vent på den ferdige
@@ -4896,24 +4926,29 @@ function renderModelExample(){
 // firedobles, og er rundt 3 prosent av totalen ved 6 000 simuleringer.
 //
 // TO NIVÅER. Når siden regner selv i nettleseren (svaret i "Spør om
-// tabellen"), QA_KEY_N / QA_KEY_CLOSE: 3 000 sesonger, og grensa for "omtrent
-// like viktige" tilsvarende bredere (spriket vokser med kvadratroten av
-// 6000/3000). Når kåringen regnes med mange sesonger -- banneret i
-// keymatch.json, fra grunnlagsfilen (100 000, scripts/lag_grunnlag.js), og
-// innleggene i scripts/lag_innlegg.js (QA_KEY_N_CI) -- og når svaret selv
-// kommer fra grunnlagsfilen: den strammere grensa QA_KEY_CLOSE_CI.
+// tabellen" med et scenario, eller før grunnlagsfilen er i bruk), QA_KEY_N:
+// tabellens simulering (QA_N_BETINGET, 10 000 sesonger). Når kåringen regnes
+// med mange sesonger -- banneret i keymatch.json, fra grunnlagsfilen
+// (100 000, scripts/lag_grunnlag.js), og innleggene i scripts/lag_innlegg.js
+// (QA_KEY_N_CI) -- og når svaret selv kommer fra grunnlagsfilen. Den
+// strammere grensa QA_KEY_CLOSE_CI gjelder fra QA_KEY_N_STRAM (6 000)
+// sesonger, altså i alle tre; QA_KEY_CLOSE (0,901) bare om noen ber om færre.
 // Målt 28.9.2026 (dagens tabell + 20 scenarioer per liga): 3 000 / 0,901 gir
 // samme kåring som 6 000 / 0,93 i 86 % (Eliteserien) og 95 % (OBOS) av
 // tabellene, og nevner alltid lederen fra 40 000 sesonger; på en etterlignet
-// telefon (2 kjerner, 4x) tar den 3,7 s mot 7,3 s med 6 000.
-const QA_KEY_N = 3000;
+// telefon (2 kjerner, 4x) tar den 3,7 s med 3 000 og 7,3 s med 6 000. Før
+// 2.10.2026 regnet svaret med 3 000; nå med tabellens sesonger, så tallene er
+// tabellens (se QA_N_BETINGET).
+const QA_KEY_N = QA_N_BETINGET;
 // Kamper innenfor denne andelen av lederen regnes som omtrent like viktige.
 // Grensa er satt slik at en ledelse som ikke er til å skille fra tilfeldig
 // utslag, ikke kåres som én vinner: 0,93 (7 %) ved 6 000 simuleringer, der
 // spriket er rundt 3 prosent; bredere ved færre.
 const QA_KEY_CLOSE = 0.901;
-// I CI (banneret og innleggene): minst 6 000 med 0,93; her 20 000.
-const QA_KEY_N_CI = 20000, QA_KEY_CLOSE_CI = 0.93;
+// I CI (banneret og innleggene): minst 6 000 med 0,93; her 20 000. Den
+// strammere grensa gjelder fra 6 000 sesonger, altså også når siden regner
+// selv med tabellens 10 000 (QA_N_BETINGET).
+const QA_KEY_N_CI = 20000, QA_KEY_CLOSE_CI = 0.93, QA_KEY_N_STRAM = 6000;
 const QA_KEY_ZONES = ['gull', 'europa', 'nedrykk'].map(k => ({
   key: k, strid: LEAGUE.zones[k].strid, chance: LEAGUE.zones[k].chance,
   lo: LEAGUE.zones[k].lo, hi: LEAGUE.zones[k].hi,
@@ -4963,6 +4998,16 @@ function grunnlagOppgaver(openMatches){
                {id:idx+':B', idx, score:forcedScoreline(m.home, m.away, false)});
     if(medU.has(idx)) tasks.push({id:idx+':U', idx, score:forcedDrawScoreline(m.home, m.away)});
   });
+  // Hvert lags forrige kamp: de andre utfallene ("Hva betydde forrige kamp"
+  // og linja i lagboksen), én gang per kamp.
+  if(!grunnlagMedForrige()) return tasks;
+  const {P0,G0,F0} = buildQaOpen(), sett = new Set();
+  TEAMS.forEach(t=>{
+    const m = lastPlayedFor(t);
+    if(!m || sett.has(m)) return;
+    sett.add(m);
+    forrigeOppgaver(m, P0, G0, F0).forEach(x=>tasks.push(x));
+  });
   return tasks;
 }
 // Alt tallene i filen regnes av: modellen, stillingen (poeng, målforskjell og
@@ -4983,6 +5028,10 @@ function grunnlagInndata(N){
 }
 // Det en side regner med i tillegg (testsiden: sin egen modell).
 function grunnlagEkstra(){ return null; }
+// Har filen de andre utfallene av hvert lags forrige kamp (forrigeOppgaver)?
+// Testsiden: nei, der regnes ratingen om for det alternative resultatet, og
+// det den bygger på er ikke i avtrykket.
+function grunnlagMedForrige(){ return true; }
 // SHA-256 (heksadesimalt) av grunnlagInndata(N) som JSON.
 async function grunnlagAvtrykk(N = GRUNNLAG_N){
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(JSON.stringify(grunnlagInndata(N))));
@@ -5062,7 +5111,10 @@ function grunnlagSvar(payload, tasks, gruppe){
   const n = GRUNNLAG.n, N = GRUNNLAG.N, ut = {};
   for(const t of tasks){
     const f = GRUNNLAG.oppg.get(t.id);
-    if(t.over || !f || f[1]!==t.idx || JSON.stringify(f[2])!==JSON.stringify(t.score)) return null;
+    // En oppgave med egen utgangsstilling (t.over, forrige kamp) godtas når
+    // filen har samme id og resultat: stillingen er avledet av dagens stilling
+    // (i avtrykket) og resultatet.
+    if(!f || f[1]!==t.idx || JSON.stringify(f[2])!==JSON.stringify(t.score) || (t.over && !t.id.startsWith('f:'))) return null;
     const u = GRUNNLAG.fil.utfall[t.id];
     let treff = 0;
     for(let k=payload.zone.lo-1; k<=payload.zone.hi-1; k++) treff += u[payload.ti*n+k];
@@ -5155,10 +5207,10 @@ async function qaKeyRoundData(opts){
     N, ti:0, zone:QA_KEY_ZONES[0], seed:hashStr(scenarioKey+'|impact'), wantAll:true
   }, tasks, null, 'runde');
   // Grensa for "omtrent like viktige" følger antallet sesonger tallene faktisk
-  // bygger på: den strammere CI-grensa når de er minst QA_KEY_N_CI (også når
+  // bygger på: den strammere CI-grensa når de er minst QA_KEY_N_STRAM (også når
   // svaret kommer fra grunnlagsfilen, 100 000), ellers nettleserens. Da gir
   // banneret (keymatch.json, regnet fra filen) og svaret samme kåring.
-  const grense = (opts && opts.close) || (res.sesonger >= QA_KEY_N_CI ? QA_KEY_CLOSE_CI : QA_KEY_CLOSE);
+  const grense = (opts && opts.close) || (res.sesonger >= QA_KEY_N_STRAM ? QA_KEY_CLOSE_CI : QA_KEY_CLOSE);
   const zoneOf = key => QA_KEY_ZONES.find(z=>z.key===key);
   const probs = id => { const o={}; QA_KEY_ZONES.forEach(z=>o[z.key]=qaZoneFromPos(res[id].pos, n, z)); return o; };
   const base = probs('base');
@@ -6177,7 +6229,7 @@ async function qaKeyMatches(team){
   // uten låst kamp. Tallene som vises er tabellens tall pluss endringen (utfall
   // minus utgangspunkt), så de alltid henger sammen med tabellen, og endringer
   // under 2 prosentpoeng er støy som ikke vises.
-  const fine = await runMatchImpactAsync(team, zone, top.map(r=>({idx:r.idx, match:openMatches[r.idx]})), scenarioKey, {...base, N:2500, wantBaseline:true});
+  const fine = await runMatchImpactAsync(team, zone, top.map(r=>({idx:r.idx, match:openMatches[r.idx]})), scenarioKey, {...base, N:QA_N_BETINGET, wantBaseline:true});
   const tableP = zone.pct;
   const shown = fine.results.map(r=>{
     const m = openMatches[r.idx];
@@ -7836,6 +7888,12 @@ function laastTaskOver(payload, t){ return eloTaskOver(payload, t); }
    leses aldri fra filen) og ELO-koden som kjører på hovedtråden. Den ligger
    ikke i WORKER_SRC, og en endring i den skal også gjøre filen ugyldig. */
 function grunnlagFil(){ return 'emodell/grunnlag.json'; }
+// Forrige kamp er ikke i testsidens fil: ratingen etter det alternative
+// resultatet (eloRatingMedAlternativ) bygger på rating_historikk og
+// sluttoddsen for spilte kamper, som ikke er i avtrykket. Siden regner den
+// selv, med tabellens sesonger og frø, og linja i lagboksen kommer fra
+// emodell/lastmatch.json som før.
+function grunnlagMedForrige(){ return false; }
 function grunnlagEkstra(){
   const {built, note, rating_historikk, ...modell} = ELO;
   return {modell, ELO_HVA, kode: [eloOLR, eloOddsFor, eloMixLap, eloScenarioKamper, eloLamFor, eloRatingMedLaast,

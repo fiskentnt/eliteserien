@@ -3,6 +3,68 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Betingede tall: kortet og svarene fra samme kilde (2.10.2026)
+
+Kortet "Neste kamp" og svaret "Hva betyr neste kamp?" viste 91/80/66 og
+25/10/5 for Haugesund og Stabæk (Haugesund–Stabæk), svaret 92/80/67 og
+24/10/4. Begge stedene regner samme oppgaver med samme frø, men:
+
+| Sted | Sesonger før | Fra grunnlagsfilen? |
+|---|---|---|
+| Kortet "Neste kamp" | 2 500 oppå tabellens 10 000 | ja, når den var i bruk |
+| "Hva betyr neste kamp?" | 2 500 | ja |
+| "Heie på" | 2 500 | ja |
+| "Hvilke kamper betyr mest?" (viste tall) | 2 500 (grovsiling 400) | ja |
+| "Rundens viktigste kamp" (svaret) | 3 000 | ja |
+| "Hva betydde forrige kamp?" og linja i lagboksen | 6 000, linja fra lastmatch.json | aldri (egen utgangsstilling) |
+| Tabellen | 10 000 | ja |
+
+Kortet var regnet uten filen (tallene er nøyaktig sidens egen regning),
+svaret fra filen (100 000 sesonger). Filens tall (laget 2.10. 16:44Z), seier /
+uavgjort / tap, opprykk: Haugesund 91,58 / 79,87 / 66,64, Stabæk 23,95 /
+9,52 / 4,41, Strømsgodset (mot Åsane) 56,13 / 32,57 / 24,71, Kongsvinger
+(Moss–Kongsvinger 5.10.) 69,88 / 49,87 / 40,24.
+
+Gjort:
+- Alle betingede tall regnes med QA_N_BETINGET = MC_N (tabellens 10 000) og
+  tabellens frø når siden regner selv: utgangspunktet er da nøyaktig
+  tabellens tall, og "tabell + endring" er utfallets eget tall.
+- Grunnlagsfilen har de to andre utfallene av hvert lags forrige kamp
+  (forrigeOppgaver, id `f:<hjemme>|<borte>:<H/U/B>`, med egen
+  utgangsstilling), så "Hva betydde forrige kamp?" og linja i lagboksen
+  kommer fra filen når den er i bruk. lastmatch.json brukes bare når filen
+  ikke er i bruk. Testsiden har ikke forrige kamp i filen
+  (grunnlagMedForrige): ratingen etter det alternative resultatet bygger på
+  data som ikke er i avtrykket.
+- "Rundens viktigste kamp": grensa 0,93 gjelder fra 6 000 sesonger
+  (QA_KEY_N_STRAM), altså også i nettleseren nå.
+- Test: `node tests/regression.js --bare betinget` sammenligner kortet,
+  svaret og linja om forrige kamp for alle lag i begge ligaene, med filen
+  (tallene skal være filens, alle kjøringer fra filen) og med en simulert
+  runde (alle kjøringer med tabellens N og nøyaktig tabellens
+  utgangspunkt), og at kortet bytter til filens tall når filen kommer sent
+  (OBOS, Haugesund i bildet fra 1.10.: 91/79/66 regnet på siden, så
+  92/80/67 fra filen). Dekningstesten for filen tar med forrige kamp og
+  sjekker at utgangsstillingen (over) er filens. Failsafe 28 sjekker at
+  ingen kall har fast N.
+- elo-test/emodell/lastmatch.json er regnet på nytt lokalt med
+  snapshot_probs.js (i en kopi, bare lastmatch.json kopiert tilbake):
+  kontroll_paneler.py (W) sammenligner den med det siden regner, og CI
+  regner panelene bare når modellen eller oddsen endres.
+
+- Første fulle regresjon: "rundevelgeren står stille" feilet på
+  Eliteserien 320/500 px. Testen arvet et fulgt lag fra gruppene før
+  (localStorage), og linja om forrige kamp i lagboksen ble regnet på nytt for
+  scenarioet. Til den er ferdig står bare resultatet, så lagboksen var én
+  linje (17 px) lavere, og med 10 000 sesonger tok det mer enn 900 ms. Det
+  skjer også med koden før (Vålerenga 320 px: +17 px i diagnosen), bare
+  sjeldnere. Testen gjelder toppmenyen, så den velger nå "Alle lag" først.
+  Mulig senere: la linja beholde høyden mens den regnes, som kortet.
+
+Etter push: grunnlagsfilene må regnes på nytt (oppgavene er endret, så
+avtrykket er nytt). Til grunnlag.yml er ferdig, regner sidene selv. Sjekk
+at grunnlag.yml går grønt for alle tre sidene, og at sidene sier "i bruk".
+
 ## Hvis Raufoss trekkes fra OBOS-ligaen (klar plan, ikke gjennomført, 1.10.2026)
 
 Raufoss kan bli slått konkurs og trekke laget. Reglene (sjekket av Trond):
