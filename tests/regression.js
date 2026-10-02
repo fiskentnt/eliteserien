@@ -865,6 +865,20 @@ async function main() {
           gullCeller: [...document.querySelectorAll('#tbl tbody td.gull')].filter(vis).length,
           styrke: vis(document.getElementById('formHeader')),
           merke: merker.length ? Math.max(...merker.map(b => Math.round(b.getBoundingClientRect().width * 10) / 10)) : null,
+          // K (kamper spilt): kolonnene som vises, i rekkefølge, K mot antall
+          // spilte kamper per lag, og skriften i K mot P.
+          kolonner: [...document.querySelectorAll('#tbl thead th')].filter(vis).map(th => th.innerText.trim()),
+          spilt: (() => {
+            const rader = [...document.querySelectorAll('#tbl tbody tr')];
+            const kamper = t => MATCHES.filter(m => m.home === t || m.away === t).length;
+            return {vist: rader.filter(tr => vis(tr.querySelector('td.spilt'))).length,
+              feil: rader.filter(tr => tr.querySelector('td.spilt').textContent.trim() !== String(kamper(tr.dataset.team))).map(tr => tr.dataset.team)};
+          })(),
+          stil: (() => {
+            const k = document.querySelector('#tbl tbody td.spilt'), p = document.querySelector('#tbl tbody td.pts'), m = document.createElement('span');
+            m.style.color = 'var(--muted)'; document.body.appendChild(m); const dempet = getComputedStyle(m).color; m.remove();
+            return {k: parseFloat(getComputedStyle(k).fontSize), p: parseFloat(getComputedStyle(p).fontSize), dempet: getComputedStyle(k).color === dempet};
+          })(),
         };
         document.querySelectorAll('#tbl td.team .diff').forEach(e => e.remove());
         return r;
@@ -884,6 +898,33 @@ async function main() {
         check(`${liga} ${w} px: Styrke vises, ${w < 340 ? 'Gull viker' : 'Gull vises'}`,
           n.styrke && (w < 340 ? n.gull === null && n.gullCeller === 0 : !!n.gull && n.gullCeller === 16),
           `Styrke ${n.styrke}, Gull-overskrift ${JSON.stringify(n.gull)}, ${n.gullCeller} Gull-celler`);
+        // K (kamper spilt) vises på alle bredder (2.10.2026): på telefon rett
+        // mellom Lag og P, mindre og dempet.
+        const kI = n.kolonner.indexOf('K');
+        check(`${liga} ${w} px: K står ${w <= 640 ? 'mellom Lag og P' : 'etter Lag'}, med antall spilte kamper for alle 16 lagene`,
+          kI > 0 && n.kolonner[kI - 1] === 'Lag' && (w > 640 || n.kolonner[kI + 1] === 'P') && n.spilt.vist === 16 && n.spilt.feil.length === 0,
+          `${n.kolonner.join(' | ')}; ${n.spilt.vist} vist, feil hos ${n.spilt.feil.join(', ') || 'ingen'}`);
+        if (w <= 640) check(`${liga} ${w} px: K er mindre og dempet (${n.stil.k} px, P ${n.stil.p} px)`,
+          n.stil.k < n.stil.p && n.stil.k >= 11 && n.stil.dempet, JSON.stringify(n.stil));
+        if (w === 360 || w === 390) {
+          // Rundetabellen (forrige runde): #, Lag, K, P, med kampene til og
+          // med den runden.
+          const rt = await pg.evaluate(() => {
+            const vis = el => !!el && getComputedStyle(el).display !== 'none', wrap = document.querySelector('.tblwrap');
+            stepRound(-1);
+            const fasit = Object.fromEntries(computeAt(viewRoundIdx()).map(r => [r.name, r.p]));
+            const rader = [...document.querySelectorAll('#tbl tbody tr')];
+            const r = {asof: document.getElementById('tbl').classList.contains('asof'), n: rader.length,
+              kolonner: [...document.querySelectorAll('#tbl thead th')].filter(vis).map(th => th.innerText.trim()),
+              feil: rader.filter(tr => !vis(tr.querySelector('td.spilt')) || tr.querySelector('td.spilt').textContent.trim() !== String(fasit[tr.dataset.team])).map(tr => tr.dataset.team),
+              overflow: wrap.scrollWidth - wrap.clientWidth, sideways: document.documentElement.scrollWidth - document.documentElement.clientWidth};
+            selRoundIdx = null; render();
+            return r;
+          });
+          check(`${liga} ${w} px: rundetabellen har K mellom Lag og P, med kampene til og med den runden, uten sidelengs scroll`,
+            rt.asof && rt.n === 16 && rt.kolonner.slice(1).join(' ') === 'Lag K P' && rt.feil.length === 0 && rt.overflow === 0 && rt.sideways === 0,
+            JSON.stringify(rt));
+        }
         if (w <= 430 && w >= 360) {
           const p = await verst(), tol = w === 360 ? 3 : 0;
           check(`${liga} ${w} px: merke og plasspil på hver rad gir ${tol ? `høyst ${tol} px` : 'ingen'} sidelengs scroll`,
@@ -891,6 +932,10 @@ async function main() {
             `${p.merker} merker prøvd, tabell ${p.overflow}, side ${p.sideways}, innenfor ${p.inside}, på to linjer: ${p.tolinjer.join(', ') || 'ingen'}`);
           // Kompakt merke: pillen var 20 px bred før 29.9.2026, nå 15.
           if (w === 390) check(`${liga} 390 px: merket er kompakt (under 17 px bredt)`, p.merke > 0 && p.merke < 17, `bredeste ${p.merke} px`);
+          // Med K-kolonnen er det verste tilfellet innenfor også på 360 px
+          // (tol over gjelder fortsatt som øvre grense).
+          if (w === 360 || w === 390) check(`${liga} ${w} px: med K-kolonnen gir merke og plasspil på hver rad ingen sidelengs scroll`,
+            p.merker > 0 && p.overflow === 0 && p.sideways === 0 && p.inside, `tabell ${p.overflow}, side ${p.sideways}, innenfor ${p.inside}`);
         }
       }
       await pg.close();

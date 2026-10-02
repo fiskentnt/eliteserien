@@ -562,8 +562,27 @@
   .teamname .sm{display:none}
   @media (max-width:760px){.teamname .lg{display:none}.teamname .sm{display:inline}}
   @media (max-width:400px){
-    #tbl thead th:not(:first-child),#tbl td:not(.pos){padding-left:4px;padding-right:4px}
+    #tbl thead th:not(:first-child),#tbl td:not(.pos){padding-left:3px;padding-right:3px}
     #tbl td.odds{min-width:0}
+  }
+  /* K (kamper spilt) står også på telefon (2.10.2026): når en runde er delvis
+     spilt, er tabellen vanskelig å lese uten. Smal, litt mindre og dempet, så
+     P fortsatt er tallet øyet går til. Plassen er tatt fra luften, ikke fra
+     noen kolonne: under 400 px 3 px polstring (var 4), overskriftene 11,5 px
+     (var 12,5), plasskolonnen 26 px (var 30) og en smalere Styrke-boks. Målt
+     2.10.2026: tabellen trenger 289 px på 360 px (297 før, uten K), og med
+     merke og plasspil på hver rad er den innenfor på 360 og 390 px i begge
+     ligaene. Gjelder også rundetabellen (#tbl.asof). */
+  @media (max-width:640px){
+    #tbl thead th.spilt,#tbl td.spilt{padding-left:1px;padding-right:3px}
+    #tbl td.spilt{font-size:12px;font-weight:500;color:var(--muted)}
+  }
+  @media (max-width:400px){
+    #tbl thead th.spilt,#tbl td.spilt{padding-left:1px;padding-right:2px}
+    #tbl thead th{font-size:11.5px}
+    #tbl td.pos{padding-left:7px;width:26px}
+    #tbl td.team,#tbl th.team{left:26px}
+    #tbl .formbox{min-width:24px;padding:2px 4px}
   }
   .teamname:hover{text-decoration:underline}
 
@@ -1066,7 +1085,7 @@
         <div class="tblwrap">
       <table id="tbl">
         <thead><tr>
-          <th></th><th class="team">Lag</th><th class="hide-s">K</th>
+          <th></th><th class="team">Lag</th><th class="spilt" title="Kamper spilt">K</th>
           <th class="hide-s">V</th><th class="hide-s">U</th><th class="hide-s">T</th><th class="hide-s">Mål</th>
           <th class="hide-diff">Diff</th><th>P</th>
           <th class="sortable hh" id="formHeader" title="Styrke: lagets rating nå, regnet om til en skala fra 0 til 10. 5 er et gjennomsnittslag. Klikk for å sortere.">Styrke</th>
@@ -6794,7 +6813,7 @@ function render(){
       // Modellkolonnene (Form, Gull, Europa, Ned) og merkene gjelder bare nå-situasjonen.
       tr.dataset.team=r.name;
       tr.className=[bandClass(pos),r.name===SELECTED_TEAM?'followed':'',LEAGUE.cuts.includes(pos)?'cut':''].join(' ').trim();
-      tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="hide-s">${r.p}</td>
+      tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="spilt">${r.p}</td>
         <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
         <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts"${r.just?` title="${justTittel(r.pts, r.just)}"`:''}>${poengMedMerke(r.pts, r.just)}</td>
         <td class="formcol hh"></td><td class="hide-s">${femSisteHtml(somListe(r.results))}${form5Html(form5AvListe(somListe(r.results)), somListe(r.results))}</td><td class="odds gull hide-xs hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
@@ -6810,7 +6829,7 @@ function render(){
     const changeTxt = r.formChange>=0.05?`Opp ${f1(r.formChange)} siden forrige modelloppdatering.`
       : r.formChange<=-0.05?`Ned ${f1(Math.abs(r.formChange))} siden forrige modelloppdatering.`
       : 'Uendret siden forrige modelloppdatering.';
-    tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span>${diff}</td><td class="hide-s">${r.p}</td>
+    tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span>${diff}</td><td class="spilt">${r.p}</td>
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
       <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.just?justTittel(r.pts, r.just):`${r.pts} poeng nå.`} Maks mulig sluttsum: ${r.max}.">${poengMedMerke(r.pts, r.just)}</td>
       <td class="formcol"><button type="button" class="formbox ${formCls}" data-team="${r.name}" title="${f1(r.form)} av 10. ${changeTxt} Trykk for styrkegrafen." aria-label="Styrke ${f1(r.form)} av 10 for ${r.name}. Vis styrkegrafen.">${f1(r.form)}</button></td>

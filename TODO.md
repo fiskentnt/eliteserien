@@ -3,6 +3,31 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## K (kamper spilt) på telefon (2.10.2026 kveld)
+
+Ønsket: antall kamper skal stå hele tiden på mobil, også når en runde er
+delvis spilt. Gjort: K står som egen smal kolonne mellom Lag og P under 640
+px, 12 px og dempet (P er 19 px), i Eliteserien, OBOS, testsiden og
+rundetabellen. Ingen kolonne er fjernet. Plassen er tatt fra luften under
+400 px: polstring 3 px (var 4), overskrifter 11,5 px (var 12,5),
+plasskolonnen 26 px (var 30), Styrke-boksen min. 24 px (var 30).
+
+Målt (tabellens naturlige bredde, og verste tilfelle med merke og plasspil
+▼15 på hver rad):
+
+| Bredde | Før, uten K | Med K |
+|---|---|---|
+| 360 px | 297 px av 334, verste +2 px sidelengs | 289 px, verste 0 |
+| 390 px | 297 px av 364, verste 0 | 289 px, verste 0 |
+| 320 px | 261 px av 294, verste +6 | 256 px, verste +3 |
+
+K-kolonnen er 16–20 px bred. Den ble ikke for trang på 360 px, så
+alternativet (kampantallet lite og grått i lagfeltet) er ikke laget. Tester
+i "Tabellen på telefon" (`--bare telefon`): K mellom Lag og P med antall
+spilte kamper for alle lag, mindre og dempet, rundetabellen med kampene til
+og med runden, og ingen sidelengs scroll med merke og plasspil på 360 og
+390 px. Skjermbilder vist før push.
+
 ## Betingede tall: kortet og svarene fra samme kilde (2.10.2026)
 
 Kortet "Neste kamp" og svaret "Hva betyr neste kamp?" viste 91/80/66 og

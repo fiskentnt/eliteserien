@@ -424,7 +424,9 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # er flettet inn; to konflikter i "Hva betydde forrige kamp?" er løst for
 # hånd: testsiden beholder eloAlt i oppgavene (ratingen etter det
 # alternative resultatet), og forrige kamp er ikke i testsidens
-# grunnlagsfil (grunnlagMedForrige gir false her).
+# grunnlagsfil (grunnlagMedForrige gir false her). K-kolonnen på telefon
+# (2. oktober 2026 kveld: kamper spilt mellom Lag og P, smal og dempet, også
+# i rundetabellen) er flettet inn uendret (git merge-file uten konflikter).
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -440,7 +442,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "49cf433fea96ece4bdf5ab27b03bc667d660ee7daba6d50e6a08e2bf339b9fc3"
+BASE_SHA = "f6475e3be633e670f443e28ac5255e2006ed8529e870e15cfe6a0d5ac02727ce"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
