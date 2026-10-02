@@ -1795,6 +1795,80 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     check('Eliteserien: ingen justeringer, ingen stjerne eller merknad, poeng = 3V + U', e.J === 0 && e.stjerner === 0 && e.jnote === 0 && e.likt, JSON.stringify(e));
     await es.close();
   };
+  // Rundemerknaden over tabellen (3.10.2026): aldri i dagens tabell (en runde
+  // som er i gang er normalt, og K-kolonnen viser kampene), bare i
+  // rundetabellen for en TIDLIGERE runde der kamper mangler, og da med hvilke
+  // kamper: "Sogndal-Raufoss er flyttet til 21. oktober." Aldri "lagt inn".
+  // Før sto "Runde 24 har resultater for bare 1 av 8 kamper. Tabellen bygger
+  // bare på resultatene som er lagt inn." i dagens tabell, med ekte
+  // resultater. Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare rundemerknad
+  const rundemerknad = async () => {
+    setGroup('Rundemerknaden: bare i en eldre rundetabell, med kampene');
+    const les = pg => pg.evaluate(() => { const el = document.getElementById('roundNote');
+      return {vist: !el.hidden && el.textContent.trim().length > 0, tekst: el.textContent.trim(),
+              asof: document.getElementById('tbl').classList.contains('asof'), runde: ROUND_SEQ[viewRoundIdx()].round}; });
+    // Fyll inn (eller tøm) kampene som passer, som et scenario, og tegn på nytt.
+    const sett = (pg, kode) => pg.evaluate(k => { const velg = eval(k); matches.forEach(m => { const v = velg(m);
+      if (v === null) setMatch(m, null, null); else if (v) setMatch(m, v[0], v[1]); }); selRoundIdx = null; render(); }, kode);
+    const tom = pg => pg.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); selRoundIdx = null; render(); });
+    const tilbake = async pg => { await klikk(pg, '#roundPrev'); await pg.waitForFunction(() => document.getElementById('tbl').classList.contains('asof')); };
+    // Datoen i norsk tid, som siden regner "spilles" eller "mangler resultat" fra.
+    const p = Object.fromEntries(new Intl.DateTimeFormat('en-GB', {timeZone: 'Europe/Oslo', year: 'numeric', month: '2-digit', day: '2-digit'})
+      .formatToParts(new Date()).map(x => [x.type, x.value]));
+    const idag = `${p.year}-${p.month}-${p.day}`;
+    const ventet = (kamp, dato, dag) => dato > idag ? `${kamp} spilles ${dag}.` : `${kamp} mangler resultat.`;
+
+    // ---- OBOS: runde 24 (Sogndal-Raufoss flyttet til 21.10.), runde 25 ----
+    const ob = await open(390, 900, base.replace('/eliteserien/', '/obos/'));
+    await settle(ob);
+    await sett(ob, `m => m.round===24 && m.home==='Ranheim' ? [5,0] : false`);
+    await settle(ob);
+    let r = await les(ob);
+    check('OBOS: runde 24 i gang (1 av 8 spilt): ingen merknad i dagens tabell', !r.vist && !r.asof && r.runde === 24, JSON.stringify(r));
+    await sett(ob, `m => (m.round===24 && m.home!=='Sogndal') ? [1,1] : (m.round===25 ? (m === matches.filter(x=>x.round===25)[0] ? [2,0] : false) : false)`);
+    await settle(ob);
+    r = await les(ob);
+    check('OBOS: runde 25 i gang: ingen merknad i dagens tabell', !r.vist && !r.asof && r.runde === 25, JSON.stringify(r));
+    await tilbake(ob);
+    r = await les(ob);
+    check('OBOS: rundetabellen for runde 24 der bare Sogndal-Raufoss mangler: "Sogndal-Raufoss er flyttet til 21. oktober."',
+      r.asof && r.runde === 24 && r.tekst === 'Sogndal-Raufoss er flyttet til 21. oktober.', JSON.stringify(r));
+    await sett(ob, `m => m.round===24 && m.home==='Bryne' ? null : false`);
+    await settle(ob);
+    await tilbake(ob);
+    r = await les(ob);
+    const forvent2 = `${ventet('Bryne-Lyn', '2026-10-04', '4. oktober')} Sogndal-Raufoss er flyttet til 21. oktober.`;
+    check(`OBOS: to kamper mangler: begge nevnt, i datorekkefølge ("${forvent2}")`, r.asof && r.tekst === forvent2, JSON.stringify(r));
+    await sett(ob, `m => m.round===24 ? null : false`);
+    await settle(ob);
+    await tilbake(ob);
+    r = await les(ob);
+    check('OBOS: alle åtte i runde 24 mangler: antallet, ikke åtte setninger', r.asof && r.tekst === 'I runde 24 er 8 kamper uten resultat.', JSON.stringify(r));
+    await tom(ob);
+    await settle(ob);
+    r = await les(ob);
+    check('OBOS: uten scenario: ingen merknad', !r.vist && !r.asof, JSON.stringify(r));
+    await ob.close();
+
+    // ---- Eliteserien: runde 23 (Brann-Viking 9.10.) og 24 ----
+    const es = await open(390, 900, base);
+    await settle(es);
+    await sett(es, `m => m.round===23 && m.home!=='Brann' ? [1,0] : false`);
+    await settle(es);
+    r = await les(es);
+    check('Eliteserien: runde 23 i gang (7 av 8): ingen merknad i dagens tabell', !r.vist && !r.asof && r.runde === 23, JSON.stringify(r));
+    await sett(es, `m => m.round===24 && m === matches.filter(x=>x.round===24)[0] ? [0,0] : false`);
+    await settle(es);
+    await tilbake(es);
+    r = await les(es);
+    const forventEs = ventet('Brann-Viking', '2026-10-09', '9. oktober');
+    check(`Eliteserien: rundetabellen for runde 23 der Brann-Viking mangler: "${forventEs}"`, r.asof && r.runde === 23 && r.tekst === forventEs, JSON.stringify(r));
+    const alle = await es.evaluate(() => document.body.innerText);
+    check('Eliteserien og OBOS: "lagt inn" og "har resultater for bare" står ikke i merknaden', !/lagt inn|har resultater for bare/.test(r.tekst) && !/har resultater for bare/.test(alle), r.tekst);
+    await tom(es);
+    await es.close();
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -1810,8 +1884,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'nestelinje') await nesteKampLinje();
       else if (BARE === 'nullstill') await nullstillGrunnlag();
       else if (BARE === 'betinget') await betingetLike();
+      else if (BARE === 'rundemerknad') await rundemerknad();
       else if (BARE === 'justering') await poengjusteringer();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, justering)`);
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, justering)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -2653,6 +2728,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await nesteKampLinje();
     await betingetLike();
     await nullstillGrunnlag();
+    await rundemerknad();
     await page.bringToFront();
 
     // ---- 18. rulling til svaret på iPad-bredder ----

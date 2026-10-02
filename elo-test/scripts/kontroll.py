@@ -427,6 +427,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # grunnlagsfil (grunnlagMedForrige gir false her). K-kolonnen på telefon
 # (2. oktober 2026 kveld: kamper spilt mellom Lag og P, smal og dempet, også
 # i rundetabellen) er flettet inn uendret (git merge-file uten konflikter).
+# Rundemerknaden (3. oktober 2026: bare i en eldre rundetabell, med kampene
+# som mangler) er flettet inn uendret.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -442,7 +444,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "f6475e3be633e670f443e28ac5255e2006ed8529e870e15cfe6a0d5ac02727ce"
+BASE_SHA = "a1526ce8692fdfeb4fd186b8ca2f4b91bef2f2346a561da8a55e6a8ebda35039"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

@@ -3987,19 +3987,31 @@ function computeAt(idx){
 }
 // Kamper uten resultat i rundene til og med den valgte: tabellen er da ikke
 // komplett. Sier fra om den valgte runden selv og om tidligere runder.
+// Merknaden over tabellen. Bare i rundetabellen for en TIDLIGERE runde der
+// kamper til og med runden mangler resultat, og da med hvilke kamper det
+// gjelder: "Sogndal-Raufoss er flyttet til 21. oktober." Aldri i dagens
+// tabell: en runde som er i gang er normalt, og K-kolonnen viser hvor mange
+// kamper hvert lag har spilt. Før sto "Runde 24 har resultater for bare 1 av
+// 8 kamper. Tabellen bygger bare på resultatene som er lagt inn." i dagens
+// tabell, også når resultatene var ekte (3.10.2026).
 function roundGapNote(idx){
+  if(idx===currentRoundIdx()) return '';
   const R = ROUND_SEQ[idx].round;
   const inc = new Set(ROUND_SEQ.slice(0, idx+1).map(r=>r.round));
-  const missing = matches.filter(m=>inc.has(m.round) && !hasResult(m));
+  const missing = matches.filter(m=>inc.has(m.round) && !hasResult(m))
+    .sort((a,b)=>a.date.localeCompare(b.date) || a.home.localeCompare(b.home));
   if(!missing.length) return '';
-  const inR = matches.filter(m=>m.round===R);
-  const total = MATCHES.filter(m=>m.round===R).length + inR.length;
-  const haveR = total - inR.filter(m=>!hasResult(m)).length;
-  const parts = [];
-  if(inR.some(m=>!hasResult(m))) parts.push(haveR===0 ? `Runde ${R} har ingen resultater ennå.` : `Runde ${R} har resultater for bare ${haveR} av ${total} kamper.`);
-  const earlier = missing.filter(m=>m.round!==R).length;
-  if(earlier) parts.push(`Tidligere runder mangler resultater for ${earlier} ${earlier===1?'kamp':'kamper'}.`);
-  return parts.join(' ') + ' Tabellen bygger bare på resultatene som er lagt inn.';
+  const p = osloParts(new Date()), pad = x=>String(x).padStart(2,'0');
+  const idag = `${p.year}-${pad(p.month)}-${pad(p.day)}`;
+  const om = m => m.moved ? `${m.home}-${m.away} er flyttet til ${dateNoLong(m.date)}.`
+    : m.date > idag ? `${m.home}-${m.away} spilles ${dateNoLong(m.date)}.`
+    : `${m.home}-${m.away} mangler resultat.`;
+  if(missing.length <= 3) return missing.map(om).join(' ');
+  // Mange kamper (et scenario langt fram, og en eldre runde vises): antallet.
+  const iR = missing.filter(m=>m.round===R).length, tidligere = missing.length - iR;
+  const n = k => k===1 ? 'én kamp' : `${k} kamper`;
+  if(iR && tidligere) return `I runde ${R} er ${n(iR)} uten resultat, og ${n(tidligere)} i tidligere runder.`;
+  return iR ? `I runde ${R} er ${n(iR)} uten resultat.` : `I tidligere runder er ${n(tidligere)} uten resultat.`;
 }
 function updateRoundNav(){
   if(!ROUND_SEQ.length) return;
@@ -7707,7 +7719,7 @@ async function boot(){
         return;
       }
       const id = `m${r.round}_${mi}`;
-      matches.push({id, round:r.round, date:m.date, time:m.time||'', home:m.home, away:m.away, hg:null, ag:null});
+      matches.push({id, round:r.round, date:m.date, time:m.time||'', home:m.home, away:m.away, hg:null, ag:null, moved:!!m.moved});
       const row = document.createElement('div'); row.className='match'; row.dataset.id=id;
       row.dataset.home=m.home; row.dataset.away=m.away;
       row.innerHTML = `

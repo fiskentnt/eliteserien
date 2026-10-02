@@ -3,6 +3,20 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Rundemerknaden over tabellen (3.10.2026)
+
+"Runde 24 har resultater for bare 1 av 8 kamper. Tabellen bygger bare på
+resultatene som er lagt inn." sto i dagens tabell mens runden var i gang, også
+med ekte resultater. Nå: ingen merknad i dagens tabell (K-kolonnen viser
+kampene). I rundetabellen for en tidligere runde der kamper mangler, står
+hvilke: "Sogndal-Raufoss er flyttet til 21. oktober.", "Bryne-Lyn spilles 4.
+oktober." eller "... mangler resultat."; med fire eller flere: "I runde 24 er
+8 kamper uten resultat." Kampene i kamplisten har nå `moved` med fra
+fixtures.json. Tester: `--bare rundemerknad`.
+
+Ikke endret: overskriften i en eldre rundetabell bruker siste kampdato i
+runden, også en flyttet kamp ("etter runde 24 (21. oktober)").
+
 ## Avsparket fra NTFs resultatside i UTC (3.10.2026)
 
 Ranheim–Egersund (2.10.) hadde avspark 19:00 norsk tid (terminlisten,
