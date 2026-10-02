@@ -3,6 +3,31 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Avsparket fra NTFs resultatside i UTC (3.10.2026)
+
+Ranheim–Egersund (2.10.) hadde avspark 19:00 norsk tid (terminlisten,
+kalenderfeeden, OddsPapi 17:00Z), men etter kampen viste NTFs resultatside og
+kampside "17:00", altså UTC. ntf_source.parse_rad leste det som norsk tid, og
+fixtures.json (4ad2cb9) og matches.json (b6dc609) fikk 17:00. Revisjonen mot
+kalenderfeeden ga bare en advarsel.
+
+- Klokkeregelen for "ferdigspilt" (FERDIG_ETTER_MIN = 110) regnet da fra et
+  avspark 120 minutter for tidlig: den åpnet 10 minutter FØR avspark om
+  sommeren (50 minutter etter om vinteren). Radklassen
+  `schedule__match--played` var eneste vern. Ingen kamp ble godtatt for
+  tidlig: Ranheim–Egersund kom på resultatsiden 18:53Z, 113 minutter etter
+  det riktige avsparket.
+- Prognosen før avspark ble ikke berørt (stempel 16:40:36Z, 19,4 min før).
+- Berørt: bare Ranheim–Egersund. De 184 andre OBOS-kampene og alle 168 i
+  Eliteserien står på resultatsiden i norsk tid (kontrollert mot OddsPapi og
+  matches.json). Derfor regnes tiden IKKE om fra UTC uten videre.
+- Rettet: resultatsidens tid regnes om fra UTC når den er det kjente
+  avsparket (fixtures.json, fra terminlisten) i UTC, før klokkeregelen.
+  Dataene: Ranheim–Egersund 19:00 i fixtures.json og matches.json.
+  Tester i test_kilder.py ("Resultatsiden viser avsparket i UTC").
+- Følg med: om lørdagskampene (3.10.) også vises i UTC etter kampen, og at
+  omregningen da logges ("MERK: ... regnet om til norsk tid").
+
 ## K (kamper spilt) på telefon (2.10.2026 kveld)
 
 Ønsket: antall kamper skal stå hele tiden på mobil, også når en runde er

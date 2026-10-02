@@ -408,6 +408,83 @@ rader = ntf_source.parse_side(FERDIG, "resultater", "eliteserien",
 sjekk("men merket ferdig bare 60 min etter avspark: ikke resultat",
       rader[0]["hg"] is None, str(rader[0]))
 
+print("\n=== Resultatsiden viser avsparket i UTC: regnes om til norsk tid ===")
+# 2.10.2026: Ranheim - Egersund hadde avspark 19:00 norsk tid (terminlisten,
+# kalenderfeeden, OddsPapi 17:00Z), men resultatsiden viste "17:00" etter
+# kampen, og vi lagret 17:00. Raden under er den ekte raden fra
+# obos-ligaen.no/resultater 3.10.2026. Lest som norsk tid aapnet
+# klokkeregelen (110 min) 10 minutter FOER avspark.
+RANHEIM_RAD = """<tr class="schedule__match schedule__match--played match__link" onclick="window.location = &#39;https://www.ranheimfotball.no/resultater/kamp?id=8986797&#39;"> <td class="schedule__match__item schedule__match__item--round"> <span>#24</span> </td> <td class="schedule__match__item schedule__match__item--teams"> <span class="team-form team-form--small team-form--float"></span> Ranheim TF - <span class="results__team--opponent">Egersund</span> <span class="schedule__match__score">(5-0)</span> </td> <td class="schedule__match__item schedule__match__item--result">5-0</td> <td class="schedule__match__item schedule__match__item--date">02.10.<span class="schedule__match__item--date__year">2026</span> 17:00 <span class="schedule__match__item--match-round-number">#24</span> </td> <td class="schedule__match__item schedule__match__item--venue">EXTRA Arena</td> <td class="schedule__match__item schedule__match__item--league schedule__match__item--league--results"> <img src="/_/asset/no.seeds.app.football:0000019ff1790cb0/img/obos.png" alt="OBOS-ligaen"/> </td> </tr>"""
+_OSLO = ZoneInfo("Europe/Oslo")
+_kjent = {("Ranheim", "Egersund"): ("2026-10-02", "19:00")}
+_logg = []
+_r = ntf_source.parse_side(RANHEIM_RAD, "resultater", "obos", naa=_dt(2026, 10, 2, 21, 30, tzinfo=_OSLO),
+                           log=_logg.append, kjent_avspark=_kjent)
+sjekk("kamp kl. 19:00 norsk tid vist som 17:00 på resultatsiden: lagres som 19:00",
+      (_r[0]["date"], _r[0]["time"]) == ("2026-10-02", "19:00"), str(_r[0]))
+sjekk("og resultatet tas inn 2,5 time etter det riktige avsparket", (_r[0]["hg"], _r[0]["ag"]) == (5, 0), str(_r[0]))
+sjekk("omregningen logges", any(l.startswith("MERK: Ranheim - Egersund") and "i UTC" in l for l in _logg), str(_logg))
+# Klokkeregelen regner fra det riktige avsparket: merket ferdig 60 minutter
+# etter avspark (20:00) er IKKE et resultat. Uten omregningen var det 180
+# minutter etter "17:00", og resultatet ble godtatt.
+_r = ntf_source.parse_side(RANHEIM_RAD, "resultater", "obos", naa=_dt(2026, 10, 2, 20, 0, tzinfo=_OSLO),
+                           log=lambda _s: None, kjent_avspark=_kjent)
+sjekk("merket ferdig 60 min etter det riktige avsparket: ikke resultat (klokkeregelen bruker 19:00)",
+      _r[0]["hg"] is None and _r[0]["time"] == "19:00", str(_r[0]))
+_r = ntf_source.parse_side(RANHEIM_RAD, "resultater", "obos", naa=_dt(2026, 10, 2, 20, 0, tzinfo=_OSLO),
+                           log=lambda _s: None)
+sjekk("(uten kjent avspark leses 17:00 som norsk tid, og regelen ville godtatt resultatet: derfor omregningen)",
+      _r[0]["hg"] == 5 and _r[0]["time"] == "17:00", str(_r[0]))
+# Raden viser norsk tid (som de eldre kampene): står som den er.
+_logg = []
+_r = ntf_source.parse_side(RANHEIM_RAD.replace("2026</span> 17:00", "2026</span> 19:00"), "resultater", "obos",
+                           naa=_dt(2026, 10, 2, 21, 30, tzinfo=_OSLO), log=_logg.append, kjent_avspark=_kjent)
+sjekk("resultatsiden viser norsk tid (19:00): uendret, ingen omregning",
+      _r[0]["time"] == "19:00" and not any(l.startswith("MERK") for l in _logg), f"{_r[0]} {_logg}")
+# En tid som verken er det kjente avsparket eller det i UTC: ingen gjetning.
+_r = ntf_source.parse_side(RANHEIM_RAD.replace("2026</span> 17:00", "2026</span> 16:00"), "resultater", "obos",
+                           naa=_dt(2026, 10, 2, 21, 30, tzinfo=_OSLO), log=lambda _s: None, kjent_avspark=_kjent)
+sjekk("en annen tid (16:00): står som den er", _r[0]["time"] == "16:00", str(_r[0]))
+# Vintertid: én time. 7.11.2026 kl. 18:00 norsk tid er 17:00 UTC.
+_r = ntf_source.parse_side(RANHEIM_RAD.replace("02.10.<span", "07.11.<span"), "resultater", "obos",
+                           naa=_dt(2026, 11, 7, 21, 30, tzinfo=_OSLO), log=lambda _s: None,
+                           kjent_avspark={("Ranheim", "Egersund"): ("2026-11-07", "18:00")})
+sjekk("vintertid: 17:00 på resultatsiden er 18:00 norsk tid",
+      (_r[0]["date"], _r[0]["time"]) == ("2026-11-07", "18:00"), str(_r[0]))
+
+# Hele veien: fetch_all leser det kjente avsparket fra fixtures.json og
+# bruker det bare paa resultatsiden. Sandkasse for repoet og hentingsloggen.
+import tempfile as _tfu
+import hentelogg as _hlu
+_sbu = Path(_tfu.mkdtemp())
+(_sbu / "obos" / "data").mkdir(parents=True)
+(_sbu / "obos" / "data" / "fixtures.json").write_text(json.dumps([{"round": 24, "matches": [
+    {"home": "Ranheim", "away": "Egersund", "date": "2026-10-02", "time": "19:00", "played": False}]}]), encoding="utf-8")
+(_sbu / "obos" / "data" / "matches.json").write_text("[]", encoding="utf-8")
+_cacheu = _sbu / "cache"
+_cacheu.mkdir()
+_res = les_ntf("obos", "resultater")
+_i = _res.index('<tr class="schedule__match schedule__match--played')
+(_cacheu / "obos_resultater.html").write_text(_res[:_i] + RANHEIM_RAD + _res[_i:], encoding="utf-8")
+(_cacheu / "obos_terminliste.html").write_text(les_ntf("obos", "terminliste"), encoding="utf-8")
+_ekte_rot_u, _ekte_kat_u = ntf_source.ROT, _hlu.KATALOG
+ntf_source.ROT, _hlu.KATALOG = _sbu, _sbu / "hentelogg"
+try:
+    _alle = ntf_source.fetch_all("obos", cache_dir=_cacheu, log=lambda _s: None,
+                                 naa=_dt(2026, 10, 2, 21, 30, tzinfo=_OSLO))
+finally:
+    ntf_source.ROT, _hlu.KATALOG = _ekte_rot_u, _ekte_kat_u
+_re = [r for r in _alle if (r["home"], r["away"], r["date"]) == ("Ranheim", "Egersund", "2026-10-02")]
+sjekk("fetch_all: Ranheim - Egersund får 19:00 fra fixtures.json, med resultatet",
+      len(_re) == 1 and _re[0]["time"] == "19:00" and _re[0]["hg"] == 5, str(_re))
+# De andre radene paa resultatsiden: samme dato og tid som uten omregning.
+_som_foer = {(r["home"], r["away"], r["date"]): r["time"] for r in ntf_source.parse_side(
+    _res, "resultater", "obos", naa=_dt(2026, 10, 2, 21, 30, tzinfo=_OSLO), log=lambda _s: None)}
+_eldre = [r for r in _alle if (r["home"], r["away"], r["date"]) in _som_foer]
+_flyttet = [r for r in _eldre if r["time"] != _som_foer[(r["home"], r["away"], r["date"])]]
+sjekk(f"fetch_all: de {len(_eldre)} andre kampene på resultatsiden står med samme klokkeslett som før",
+      len(_eldre) > 100 and not _flyttet, str(_flyttet[:3]))
+
 from datetime import datetime
 from zoneinfo import ZoneInfo
 OSLO = ZoneInfo("Europe/Oslo")

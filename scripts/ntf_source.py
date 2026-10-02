@@ -136,14 +136,54 @@ def _navn(rått, cfg):
     return n
 
 
+# NTFS RESULTATSIDE OG UTC (2.10.2026). Ranheim - Egersund hadde avspark
+# 19:00 norsk tid (terminlisten, kalenderfeeden og OddsPapi 17:00Z), men
+# etter kampen viste resultatsiden og kampsiden "17:00": avsparket i UTC.
+# Lest som norsk tid ble det lagret to timer for tidlig, og klokkeregelen
+# under (FERDIG_ETTER_MIN) regnet fra et avspark som var 120 minutter for
+# tidlig: den aapnet 10 minutter FOER avspark i stedet for 110 etter (om
+# vinteren 50 minutter etter avspark). De 184 eldre OBOS-kampene og alle
+# 168 i Eliteserien staar paa resultatsiden i norsk tid (kontrollert mot
+# OddsPapi 3.10.2026), saa tiden derfra kan ikke regnes om fra UTC uten
+# videre: det ville flyttet dem en eller to timer. Regelen: viser
+# resultatsiden det avsparket vi alt kjenner for kampen (fra terminlisten,
+# lagret i fixtures.json), men i UTC, regnes den om til norsk tid. Ellers
+# staar den som den er. Omregningen skjer foer klokkeregelen.
+def _utc_til_oslo(dato, tid):
+    """(dato, tid) lest som UTC -> (dato, tid) i norsk tid."""
+    d = datetime.fromisoformat(f"{dato}T{tid}:00").replace(tzinfo=timezone.utc).astimezone(OSLO)
+    return d.strftime("%Y-%m-%d"), d.strftime("%H:%M")
+
+
+def kjente_avspark(liga, rot=None):
+    """{(hjemme, borte): (dato, tid)} i norsk tid fra fixtures.json (fra
+    terminlisten), med matches.json som reserve. Tomt hvis filene mangler."""
+    data = Path(rot or ROT) / oppsett(liga)["data"]
+    ut = {}
+    for fil in ("matches.json", "fixtures.json"):     # fixtures.json sist: den vinner
+        try:
+            d = json.loads((data / fil).read_text(encoding="utf-8"))
+        except Exception:
+            continue
+        kamper = [m for r in d for m in r.get("matches", [])] if fil == "fixtures.json" else d
+        for m in kamper:
+            if m.get("date") and m.get("time"):
+                ut[(m["home"], m["away"])] = (m["date"], m["time"])
+    return ut
+
+
 def parse_rad(rad, kilde, cfg, klasser="", naa=None, log=lambda s: None,
-              har_resultat=None, hoppet=None):
+              har_resultat=None, hoppet=None, kjent_avspark=None):
     """Én kamprad -> dict, eller None hvis raden ikke hører til ligaen.
 
     har_resultat(hjemme, borte): True hvis kampen alt har resultat i
     matches.json. Da stopper ikke en ugyldig dato hentingen: raden hoppes over
     med en advarsel (og legges i listen hoppet). Brukes bare paa
-    resultatsiden. Uten resultat stopper en ugyldig dato fortsatt alt."""
+    resultatsiden. Uten resultat stopper en ugyldig dato fortsatt alt.
+
+    kjent_avspark: {(hjemme, borte): (dato, tid)} i norsk tid (kjente_avspark).
+    Viser raden det kjente avsparket i UTC, regnes den om (se over). Brukes
+    bare paa resultatsiden."""
     naa = naa or datetime.now(OSLO)
     celler = _celler(rad)
     lag_celle = _finn(celler, "--teams")
@@ -182,6 +222,12 @@ def parse_rad(rad, kilde, cfg, klasser="", naa=None, log=lambda s: None,
 
     t = TID_RE.search(dato_celle)
     tid = t.group(1) if t else None
+    if tid and kjent_avspark:
+        kjent = kjent_avspark.get((hjemme, borte))
+        if kjent and (dato, tid) != kjent and _utc_til_oslo(dato, tid) == kjent:
+            log(f"MERK: {hjemme} - {borte} ({kilde}) viser avspark {dato} {tid}, som er det "
+                f"kjente avsparket {kjent[0]} {kjent[1]} norsk tid i UTC -- regnet om til norsk tid")
+            dato, tid = kjent
 
     # Runde står normalt i egen celle. "Neste kamp" har den i datocellen.
     runde_celle = _finn(celler, "--round")
@@ -227,13 +273,14 @@ def parse_rad(rad, kilde, cfg, klasser="", naa=None, log=lambda s: None,
 
 
 def parse_side(html_tekst, kilde, liga, naa=None, log=lambda s: None,
-               har_resultat=None, hoppet=None):
+               har_resultat=None, hoppet=None, kjent_avspark=None):
     cfg = oppsett(liga)
     naa = naa or datetime.now(OSLO)
     ut = []
     for klasser, rad in RAD_RE.findall(html_tekst):
         rad_data = parse_rad(rad, kilde, cfg, klasser, naa, log,
-                             har_resultat=har_resultat, hoppet=hoppet)
+                             har_resultat=har_resultat, hoppet=hoppet,
+                             kjent_avspark=kjent_avspark)
         if rad_data:
             ut.append(rad_data)
     if not ut:
@@ -531,7 +578,10 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
             nye = parse_side(tekst, navn, liga, naa=naa, log=log,
                              har_resultat=(lambda h, b: (h, b) in med_resultat)
                              if navn == "resultater" else None,
-                             hoppet=hoppet)
+                             hoppet=hoppet,
+                             # Resultatsiden kan vise avsparket i UTC (se
+                             # _utc_til_oslo); terminlisten viser norsk tid.
+                             kjent_avspark=kjente_avspark(liga) if navn == "resultater" else None)
         except TomSide as e:
             ferdig, hvorfor = sesongen_ferdigspilt(navn, rader, liga, rot=ROT)
             if not ferdig:
