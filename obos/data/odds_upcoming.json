@@ -1,21 +1,23 @@
 {
- "fetched_at": "2026-10-02T09:03:32+00:00",
+ "fetched_at": "2026-10-02T16:00:50+00:00",
  "matches": [
   {
    "home": "Ranheim",
    "away": "Egersund",
    "commence_time": "2026-10-02T17:00:00Z",
-   "H": 0.4877,
-   "D": 0.2111,
-   "A": 0.3012,
+   "H": 0.49,
+   "D": 0.2099,
+   "A": 0.3001,
    "odds": {
-    "H": 1.98,
-    "U": 4.44,
-    "B": 3.16
+    "H": 1.97,
+    "U": 4.46,
+    "B": 3.17
    },
    "n_bookmakers": 1,
    "bookmaker": "pinnacle",
-   "priced_at": "2026-10-02T07:39:04.492Z"
+   "priced_at": "2026-10-02T16:00:49.986Z",
+   "prekick": true,
+   "minutter_for": 59.2
   },
   {
    "home": "Strømmen",
@@ -129,5 +131,6 @@
    "bookmaker": "pinnacle",
    "priced_at": "2026-10-02T07:10:05.760Z"
   }
- ]
+ ],
+ "prekick_at": "2026-10-02T16:00:50+00:00"
 }
