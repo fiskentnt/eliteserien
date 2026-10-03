@@ -13,7 +13,7 @@ Resten er som før: oddsleddet i tilpasningen med vekt 40, ρ = −0,04, formopp
 
 ### Slik ble det testet
 
-Hver kamp i 2012–2025 ble spådd med modellen tilpasset bare på kampene med tidligere dato (walk-forward), uten markedsoddsen for selve kampen. For Eliteserien bygger testen på resultater og sluttodds fra football-data.co.uk, for OBOS-ligaen på snittodds fra oddsportal.com, som ligger i et privat arkiv og ikke i det offentlige repoet.
+Hver kamp i 2012–2025 ble spådd med modellen tilpasset bare på kampene med tidligere dato (walk-forward), uten markedsoddsen for selve kampen. For Eliteserien bygger testen på resultater og sluttodds fra football-data.co.uk, for OBOS-ligaen på en oddshistorikk som ikke er offentlig (snittodds), og som derfor ikke ligger i repoet.
 
 Innstillingene ble valgt på 2012–2021, én om gangen, og kontrollert på 2022–2025. Hovedmålet var log loss per kamp (lavere er bedre). Reglene og grensene ble bestemt før testene: kalibreringen og favorittene kunne ikke bli merkbart dårligere, og sjansene for gull, topp 4, opprykk, topp 6 og nedrykk (Brier) kunne ikke bli mer enn 0,001 dårligere i noen sone.
 
@@ -59,7 +59,7 @@ Ikke alle deler av modellen kommer fra forskningslitteraturen. Der vi bruker egn
 
 Vi spådde alle kampene i Eliteserien og OBOS-ligaen 2012–2025 på nytt, hver gang bare med kamper som var spilt før kampen: 2 800 kamper i hver liga. Styrken på uavgjort-justeringen ble valgt på de samme sesongene, og flere av modellens andre innstillinger er valgt på overlappende historikk. Dette er derfor ikke en helt uavhengig test.
 
-For Eliteserien bygger testen på resultater og sluttodds fra football-data.co.uk. For OBOS-ligaen bygger den på snittodds fra oddsportal.com. Den oddshistorikken ligger i et privat arkiv og ikke i det offentlige repoet, så OBOS-tallene kan ikke gjenskapes fra repoet alene.
+For Eliteserien bygger testen på resultater og sluttodds fra football-data.co.uk. For OBOS-ligaen bygger den på en oddshistorikk som ikke er offentlig (snittodds), så OBOS-tallene kan ikke gjenskapes fra repoet alene.
 
 - Uavgjort: modellen gir nå 24 prosent i snitt, mot 31 før. I virkeligheten endte 24 prosent av kampene i Eliteserien og 23 prosent i OBOS-ligaen uavgjort.
 - Favorittene: lagene som var favoritter i markedet, vant 53 og 54 prosent av kampene. Modellen gir dem nå 50 og 49 prosent i snitt, mot 46 og 45 før.

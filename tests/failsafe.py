@@ -985,11 +985,13 @@ def main():
         check(f"{liga}/data/model.json er tilpasset med halveringstid 28 dager og l1/l2 8/24", _v == _ventet, str(_v))
     # Den forrige modellen (16/48, 35 dager) kan nevnes som sammenligning,
     # men ikke der teksten beskriver modellen som er i bruk.
-    for f, rad in (("eliteserien/index.html", "Full modell (l1/l2=8/24)"), ("obos/index.html", "Modell uten odds (l1/l2=8/24)")):
-        _t = (ROOT / f).read_text(encoding="utf-8")
-        check(f"{f}: den tekniske teksten og ablasjonen sier 28 dager og l1/l2 8/24",
+    # Ablasjonen står på modellsjekk-siden (<liga>/modellsjekk/) fra 3.10.2026.
+    for liga, rad in (("eliteserien", "Full modell (l1/l2=8/24)"), ("obos", "Modell uten odds (l1/l2=8/24)")):
+        _t = (ROOT / liga / "index.html").read_text(encoding="utf-8")
+        _m = (ROOT / liga / "modellsjekk" / "index.html").read_text(encoding="utf-8")
+        check(f"{liga}: den tekniske teksten sier 28 dager og l1/l2 8/24, og ablasjonen på modellsjekk-siden det samme",
               "<strong>Halveringstiden på fire uker</strong> (28 dager)" in _t and "<strong>Styrken på regulariseringen</strong> (l1/l2 8/24)" in _t
-              and rad in _t and "(35 dager) for tidsvektingen" not in _t and "(l1/l2 16/48)" not in _t and "(l1/l2=16/48)" not in _t)
+              and rad in _m and all(x not in t for t in (_t, _m) for x in ("(35 dager) for tidsvektingen", "(l1/l2 16/48)", "(l1/l2=16/48)")))
 
     # 26. Poengjusteringene fra NFF (<liga>/data/justeringer.json): formatet
     # siden og scripts/daglig_revisjon.py regner med. Åsane ble trukket ett
@@ -1102,6 +1104,48 @@ def main():
               and "(GRUNNLAG && GRUNNLAG_STATUS==='i bruk' && grunnlagMedForrige())) return null;" in _t28
               and "|| (t.over && !t.id.startsWith('f:'))) return null;" in _t28
               and (_t28.rfind("function grunnlagMedForrige(){ return true; }") > _t28.rfind("function grunnlagMedForrige(){ return false; }")) == _med28)
+
+    # 29. Modellsjekk-sidene (3.10.2026). "Vis detaljer" i "Hvordan vet vi at
+    # modellen virker?" er kortet ned, og resten (Brier-tabellene, kontrollen
+    # med faste kuttpunkter, hva hvert ledd tilfører, tabellen per fase, log
+    # loss for sluttoddsen og metoden, og tabellene for sesongen) står på
+    # <liga>/modellsjekk/, bygget av scripts/build_modellsjekk.py. Navnet på
+    # den ikke-offentlige oddskilden for OBOS-historikken skal ikke stå i noen
+    # fil i repoet (git-historikken skrives ikke om).
+    _kilde29 = "odds" + "portal"
+    _filer29 = subprocess.run(["git", "ls-files", "-z"], cwd=ROOT, capture_output=True, text=True).stdout.split("\0")
+    _filer29 = [f for f in _filer29 if f] + ["eliteserien/modellsjekk/index.html", "obos/modellsjekk/index.html"]
+    _treff29 = []
+    for _f in _filer29:
+        try:
+            if _kilde29 in (ROOT / _f).read_text(encoding="utf-8", errors="ignore").lower():
+                _treff29.append(_f)
+        except (IsADirectoryError, FileNotFoundError):
+            pass
+    check("navnet på den ikke-offentlige oddskilden står ikke i noen fil i repoet", not _treff29, ", ".join(_treff29))
+    _b29 = subprocess.run([sys.executable, str(ROOT / "scripts" / "build_modellsjekk.py"), "--check"], capture_output=True, text=True)
+    check("modellsjekk-sidene er bygget fra kildene (build_modellsjekk.py --check)", _b29.returncode == 0, _b29.stdout.strip())
+    # "Med og uten odds" under "Vis detaljer": korte tall, ingen standardfeil og
+    # ingen omtale av repoet (3.10.2026). Tallene er fra valideringen 30.9.2026
+    # (walkforward/validering/wf_es.log og obos_medodds.log i lab).
+    _med29 = {
+        "eliteserien": "Lagstyrken og oddsen gjør prosentene mer treffsikre enn uten dem, særlig tidlig i sesongen. I den første fjerdedelen av sesongen er Brier-feilen 0,0180 lavere for gull og 0,0252 lavere for topp 4. Over hele sesongen er forbedringen tydeligst for nedrykk, med 0,0076 lavere Brier-feil.",
+        "obos": "Lagstyrken og oddsen gjør prosentene mer treffsikre enn uten dem, særlig tidlig i sesongen. Brier-feilen er 0,0116 lavere for opprykk, 0,0156 lavere for topp 6 og 0,0069 lavere for nedrykk."}
+    for _liga29, _sone29 in _med29.items():
+        _t29 = (ROOT / _liga29 / "index.html").read_text(encoding="utf-8")
+        _a29 = _t29.index("<!-- LIGA-MODELLSJEKK -->")
+        _s29 = _t29[_a29:_t29.index("\n</details>", _a29)]     # den ytre </details> står uten innrykk
+        _m29 = (ROOT / _liga29 / "modellsjekk" / "index.html").read_text(encoding="utf-8")
+        check(f"{_liga29}: Vis detaljer er kortet ned med lenken til modellsjekk-siden, og tabellene står der",
+              '<a href="modellsjekk/">Full dokumentasjon av testene</a>' in _s29 and _sone29 in _s29
+              and not any(x in _s29 for x in ("Kontroll: faste kuttpunkter", "<table", "Siden ble lansert", 'id="accuracyTall"',
+                                              "standardfeil", "repoet", "GitHub", "tabellen alene", "sier tabellen", "Tabellen sier"))
+              and "Modellen ble justert igjen 30. september etter ny tilbaketesting." in _s29
+              and all(x in _m29 for x in ("Kontroll: faste kuttpunkter", "per fase av sesongen", 'id="accuracyTall"', "Sist validert",
+                                          "høyere log loss enn sluttoddsen", "window.tegnTreffsikkerhet")))
+    _wf29 = (ROOT / ".github" / "workflows" / "build-leagues.yml").read_text(encoding="utf-8")
+    check("build-leagues.yml bygger og committer modellsjekk-sidene",
+          "python3 scripts/build_modellsjekk.py" in _wf29 and '"modellsjekk/**"' in _wf29 and "obos/modellsjekk/index.html" in _wf29)
 
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare

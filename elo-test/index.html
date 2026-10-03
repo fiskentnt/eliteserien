@@ -584,6 +584,18 @@
     #tbl td.team,#tbl th.team{left:26px}
     #tbl .formbox{min-width:24px;padding:2px 4px}
   }
+  /* Overskriften står over tallene sine. P (td.pts) og Styrke (td.formcol)
+     har mer luft til høyre enn de andre cellene, og overskriften får den
+     samme, så høyrekanten er lik. Før sto "P" 7 px til høyre for
+     poengtallene mellom 401 og 640 px (vanlige telefoner, 412-430 px) og
+     5 px over 640 px, og Styrke-overskriften 5 og 3 px til høyre for boksen
+     (3.10.2026). Under 400 px har alle cellene 3 px. Gjelder også
+     rundetabellen. */
+  #tbl thead th.pts,#tbl td.pts{padding-right:12px}
+  #tbl thead th.formcol,#tbl td.formcol{padding-right:10px}
+  @media (max-width:400px){
+    #tbl thead th.pts,#tbl td.pts,#tbl thead th.formcol,#tbl td.formcol{padding-right:3px}
+  }
   .teamname:hover{text-decoration:underline}
 
   /* Form-kolonnen (task 3b): farget boks 0-10 */
@@ -690,6 +702,9 @@
      større skrift enn resten, så den leses først. Alt det tekniske ligger bak
      "Vis detaljer" (details.details-tech). */
   details.howitworks .plain-lead{font-size:16.5px;color:var(--ink)}
+  /* Lenken "Full dokumentasjon av testene" (modellsjekk-siden): tekstfarge og
+     understrek, ikke nettleserens blå, som er uleselig på mørk bakgrunn. */
+  details.howitworks .in a{color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:2px}
   details.howitworks h4{font:700 15px/1.25 var(--cond);margin:18px 0 8px}
   @media (max-width:640px){details.howitworks{padding:0 16px}}
   table.mt th,table.mt td{padding:5px 6px;font-size:13px}
@@ -1087,8 +1102,8 @@
         <thead><tr>
           <th></th><th class="team">Lag</th><th class="spilt" title="Kamper spilt">K</th>
           <th class="hide-s">V</th><th class="hide-s">U</th><th class="hide-s">T</th><th class="hide-s">Mål</th>
-          <th class="hide-diff">Diff</th><th>P</th>
-          <th class="sortable hh" id="formHeader" title="Styrke: lagets rating nå, regnet om til en skala fra 0 til 10. 5 er et gjennomsnittslag. Klikk for å sortere.">Styrke</th>
+          <th class="hide-diff">Diff</th><th class="pts">P</th>
+          <th class="sortable hh formcol" id="formHeader" title="Styrke: lagets rating nå, regnet om til en skala fra 0 til 10. 5 er et gjennomsnittslag. Klikk for å sortere.">Styrke</th>
           <th class="sortable hide-s hh" id="form5Header" data-sort="form5" title="Formen nå: vanlige poeng i de fem siste seriekampene (3 for seier, 1 for uavgjort), regnet om til skalaen 0 til 10. Fem seirer gir 15 av 15 poeng, altså 10,0. Resultatene står til høyre, eldst først. Klikk for å sortere.">Form</th>
           <th class="sortable hide-xs hh" id="gullHeader" data-sort="gull" ></th>
           <th class="sortable hh" id="europaHeader" data-sort="europa" ></th>
@@ -6646,17 +6661,21 @@ window.matchMedia('(min-width:1100px)').addEventListener('change', ()=>{ if(qaSt
 // Treffsikkerhetsloggen under "Hvordan vet vi at modellen virker?". Tallene
 // kommer ferdig regnet fra data/accuracy.json (scripts/accuracy_log.py), som
 // bare bruker sannsynligheter lagret før avspark. Antall kamper står alltid,
-// og med få kamper sies det rett ut at tallene er usikre.
+// og med få kamper sies det rett ut at tallene er usikre. Ingen tall før
+// minst ACC_MIN_KAMPER kamper er loggført denne sesongen (3.10.2026: én kamp
+// ga "traff i 100 % av kampene"). Tabellene står på modellsjekk-siden
+// (<liga>/modellsjekk/, data-tabeller="modellsjekk" på #accuracyLog); på
+// ligasiden står bare én kort setning. Testsiden har dem i loggen som før.
 const ACC_NAVN = {side:'Siden (odds og modell)', modell:'Modellen alene', odds:'Sluttoddsen alene'};
+const ACC_MIN_KAMPER = 20;
 function renderAccuracy(data){
   const box = document.getElementById('accuracyLog');
   if(!box) return;
   const n = data && data.n || 0;
   const tall0 = document.getElementById('accuracyTall');
   if(tall0){ tall0.innerHTML = ''; tall0.hidden = true; }
-  if(!n){
-    box.innerHTML = `<p class="note">Treffsikkerheten vises her etter hvert som kampene spilles. `
-      + `De første tallene kommer etter neste runde.</p>`;
+  if(n < ACC_MIN_KAMPER){
+    box.innerHTML = `<p class="note">Loggføringen er i gang. Tall vises når det er spilt minst ${ACC_MIN_KAMPER} kamper.</p>`;
     return;
   }
   const pct = v => v==null ? '–' : `${Math.round(v*100)} %`;
@@ -6694,7 +6713,9 @@ function renderAccuracy(data){
       + `<thead><tr><th>Modellen sa</th><th>Tilfeller</th><th>Snitt</th><th>Skjedde</th></tr></thead>`
       + `<tbody>${kal}</tbody></table></div>` : '');
   const tall = document.getElementById('accuracyTall');
-  if(tall){
+  if(box.dataset.tabeller === 'modellsjekk'){
+    box.innerHTML = `<p class="note">${kort}${usikker}${spilt}</p>`;
+  } else if(tall){
     box.innerHTML = `<p class="note">${kort}${usikker}${spilt}</p>`;
     tall.innerHTML = `<h3>Treffsikkerhet denne sesongen, tall</h3>` + tabeller;
     tall.hidden = false;

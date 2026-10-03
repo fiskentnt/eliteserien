@@ -1,0 +1,1244 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<!-- BYGGET av scripts/build_modellsjekk.py fra modellsjekk/eliteserien.html og
+     eliteserien/index.html. Ikke rediger her: endre kildene og bygg på nytt. -->
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Modellsjekk: Eliteserien | Tabellkalkulator</title>
+<meta name="description" content="Full dokumentasjon av testene bak sannsynlighetene for Eliteserien: Brier-score, kontroll med faste kuttpunkter, hva hvert ledd tilfører, sluttoddsen og treffsikkerheten denne sesongen.">
+<link rel="canonical" href="https://tabellkalkulator.no/eliteserien/modellsjekk/">
+<meta name="theme-color" content="#13305f">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<script>
+// Kjøres synkront i <head>, før noe rekker å tegnes: leser et eventuelt lagret
+// temavalg og setter data-theme med en gang, slik at siden aldri først blinker
+// i systemfargen og så hopper til det lagrede valget et øyeblikk senere. Uten
+// lagret valg settes ingenting her -- CSS-en sin egen @media(prefers-color-
+// scheme) tar seg av systeminnstillingen helt av seg selv (se :root-reglene).
+(function(){
+  try{
+    const saved = localStorage.getItem('theme');
+    if(saved==='dark'||saved==='light') document.documentElement.dataset.theme = saved;
+  }catch(e){}
+})();
+</script>
+<!-- Besøksstatistikk: GoatCounter. Ingen informasjonskapsler, ingen
+     kryssidesporing, ingen samtykkebanner -- derfor heller ingen banner her.
+     Lastes BARE på det publiserte domenet: lokale kjøringer og testene skal
+     aldri telles med, og da slipper vi også en blokkert forespørsel i
+     konsollen når man jobber lokalt. -->
+<script>
+  (function(){
+    if(location.hostname !== 'tabellkalkulator.no') return;
+    window.goatcounter = {
+      // Delingslenkene legger scenarioet i hashen (#s=...). Uten dette ville
+      // hver eneste delte lenke blitt talt som sin egen side. Vi teller
+      // stien -- /eliteserien/ og /obos/ hver for seg, som ønsket.
+      path: function(){ return location.pathname.replace(/index\.html$/, '') || '/'; },
+      // Kom besøkende via forsiden, er document.referrer forsiden selv (se
+      // location.replace der). Da brukes den opprinnelige henvisningen den
+      // la til side, så en lenke fra diskutopia.no ikke ser ut som intern
+      // trafikk. Brukes én gang, så et nytt sidebesøk ikke arver den.
+      referrer: function(){
+        try{
+          var r = document.referrer;
+          if(r && new URL(r).hostname !== location.hostname) return r;
+          var lagret = sessionStorage.getItem('tk:henvisning');
+          if(lagret){ sessionStorage.removeItem('tk:henvisning'); return lagret; }
+        }catch(e){}
+        return document.referrer;
+      }
+    };
+    var s = document.createElement('script');
+    s.async = true;                       // blokkerer aldri tegningen av siden
+    s.src = '//gc.zgo.at/count.js';
+    s.setAttribute('data-goatcounter', 'https://tabellkalkulator.goatcounter.com/count');
+    s.onerror = function(){};             // blokkert av en utvidelse: ikke en feil for oss
+    document.head.appendChild(s);
+  })();
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#eef2f7; --panel:#ffffff; --ink:#0f1b2d; --muted:#56667d; --line:#d8e0ec; --line-soft:#e8edf5;
+    /* --accent/--accent-deep/--eu/--q er faste fyllfarger (knapper, sterke
+       ruter) -- samme verdi i lyst og mørkt, alltid parret med hvit tekst, se
+       kontrollen i scratchpad-scriptet som validerte hele paletten mot WCAG AA.
+       --*-text er samme farge brukt som SKRIFT mot --panel/--bg, og lysnes i
+       mørk modus siden en mørk rødfarge mot en mørk bakgrunn ikke er lesbar.
+       --accent* er sidens EGEN, faste fargeidentitet (fokusring,
+       avkrysningsboks, og universelle semantiske farger som nedrykk-merket
+       og tapskvadratet i Form) -- UAVHENGIG av hvilket lag som følges.
+       --top-bg* ER themet OG dynamisk (satt av JS, se applyTeamColors()):
+       toppbanneret følger nå det valgte lagets klubbfarge, ikke lenger fast
+       Brann-rødt. -l/-d er lys/mørk-modus-varianten (mørk modus dempes --
+       et helt flatt, metta felt i full høyde leser "skrikende" mot en mørk
+       side på en måte en liten farget knapp ikke gjør), og
+       --top-bg/-deep/-text/-pill/-warn/-toggle-border/-toggle-bg er de
+       themede aliasene (samme mønster som --team-text). Tekstfargen
+       (tittel, undertittel, stempel) velges PER LAG i lys modus -- mørk
+       ink mot lyse klubbfarger (Glimt gult, Start gyllent) -- mens mørk
+       modus alltid er trygg med hvit tekst (se scratchpad/banner_colors.py
+       fra utviklingen: alle 16 lags dempede bannerfarge har minst 6:1
+       kontrast mot hvitt). */
+    --top-bg-l:#c5111d; --top-bg-deep-l:#8e0c15; --top-text-l:#ffffff;
+    --top-pill-l:rgba(0,0,0,.18); --top-warn-l:#ffd6da;
+    --top-toggle-border-l:rgba(255,255,255,.4); --top-toggle-bg-l:rgba(255,255,255,.12); --top-toggle-hover-l:rgba(255,255,255,.24);
+    --top-label-l:rgba(255,255,255,.85);
+    --top-bg-d:#63181d; --top-bg-deep-d:#471115;
+    --top-bg: var(--top-bg-l); --top-bg-deep: var(--top-bg-deep-l); --top-text: var(--top-text-l);
+    --top-pill: var(--top-pill-l); --top-warn: var(--top-warn-l); --top-label: var(--top-label-l);
+    --top-toggle-border: var(--top-toggle-border-l); --top-toggle-bg: var(--top-toggle-bg-l); --top-toggle-hover: var(--top-toggle-hover-l);
+    --accent:#c4111d; --accent-deep:#8d0a13; --accent-soft:#fdecee; --accent-text:#c4111d;
+    --formbox-red-bg:#c4111d;
+    --eu:#1d7a63; --eu-soft:#e2f1ec; --eu-text:#1d7a63;
+    /* Champions League-plassene (1 og 2) har egen farge, som hos FotMob: blått
+       for mesterligakvalifisering, grønt (--eu) for Conference League. */
+    --cl:#1d5fb4; --cl-text:#1d5fb4;
+    --q:#cf951a; --q-soft:#fbf1dc; --q-text:#9a6c08; --q-border:#d9b872; --q-note:#8a6a1f;
+    --ned:#6c7479;
+    --strong-bg:#0f1b2d; --strong-fg:#ffffff; --strong-bg-hover:#000000;
+    --cut-line:#b4bfd0;
+    --input-bg:#f4f7fb; --sim-bg:#e6ecf4; --sim-border:#c5d0e0;
+    --played-bg:#f2f5f9; --played-fg:#7d8ca1; --played-score-bg:#dfe6ef; --played-score-fg:#66768c;
+    --ned-row-a:#f5f7fb; --ned-row-b:#fafbfd;
+    --hist-flat:#e3c3c6; --hist-eu:#8cc3b3; --hist-q:#e8c374; --hist-n:#c98a90; --hist-cl:#7ea8d8;
+    /* --team*: DYNAMISK, satt av JS (applyTeamColors()) fra TEAM_COLORS ut
+       fra valgt lag. --team-fill/-deep/-fill-text er unthemet (samme "fyll
+       med hvit/mørk tekst"-logikk som --accent), --team-text-light/-dark og
+       --team-soft-light/-dark byttes akkurat som --eu-text/--q-text.
+       --team-soft er markeringens BAKGRUNN i tabell/kampliste (tabell/rad),
+       en svak, gjennomsiktig fargevask av lagets egen farge -- lav alfa
+       (samme mønster som --accent-soft i mørk modus) i stedet for en fast,
+       Brann-tilpasset rosa, slik at vasken faktisk følger valgt lag.
+       Standardverdiene her er bare et fall-tilbake før boot() har satt de
+       ekte. De er sidens egen nøytrale blå (NEUTRAL_ACCENT), ikke et lags
+       farge: dette er delt CSS, og et Eliteserien-lag ville blinket til i
+       navigasjonen på OBOS-siden før JS rakk å sette den riktige. */
+    --team-fill:#2f6fed; --team-deep:#2251b8; --team-fill-text:#ffffff;
+    --team-text-light:#1f5fd6; --team-text-dark:#7aa8ff;
+    --team-text: var(--team-text-light);
+    --team-soft-light:rgba(47,111,237,.08); --team-soft-dark:rgba(122,168,255,.12);
+    --team-soft: var(--team-soft-light);
+    --cond:"Barlow Condensed","Arial Narrow","Roboto Condensed",system-ui,sans-serif;
+    --body:"Barlow",system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  }
+  /* Mørk modus: følger prefers-color-scheme til brukeren trykker på
+     tema-knappen (setTheme() i JS), som setter data-theme og dermed vinner
+     over media-spørringen. Alle fargeverdier under er validert mot WCAG AA
+     (4.5:1 for tekst, 3:1 for UI-grenser som formboksene) -- se
+     scratchpad/contrast.py fra utviklingen av denne funksjonen. Bakgrunn og
+     paneler er bevisst gitt god avstand (bg #15181a, panel #1f2426, ikke
+     nesten-sorte og nesten-like) slik at kortene og radskillene faktisk
+     synes -- se samme scriptet for luminans-sjekken. */
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#0a1220; --panel:#111c2e; --ink:#e9eff8; --muted:#93a3ba; --line:#2a3a54; --line-soft:#1e2c44;
+      --top-bg: var(--top-bg-d); --top-bg-deep: var(--top-bg-deep-d);
+      --top-text:#ffffff; --top-pill:rgba(0,0,0,.18); --top-warn:#ffd6da; --top-label:rgba(255,255,255,.85);
+      --top-toggle-border:rgba(255,255,255,.4); --top-toggle-bg:rgba(255,255,255,.12); --top-toggle-hover:rgba(255,255,255,.24);
+      --accent-soft:rgba(255,107,116,.12); --accent-text:#ff6b74; --formbox-red-bg:#d1272f;
+      --eu-soft:rgba(79,211,171,.14); --eu-text:#4fd3ab;
+      --cl:#4f8fe0; --cl-text:#7db4ff;
+      --q-soft:rgba(224,173,74,.12); --q-text:#e0ad4a; --q-border:#6b5220; --q-note:#caa059;
+      --ned:#8b939a;
+      --team-text: var(--team-text-dark);
+      --team-soft: var(--team-soft-dark);
+      --strong-bg:#2a3a54; --strong-fg:#e9eff8; --strong-bg-hover:#36496a;
+      --cut-line:#3a4a63;
+      --input-bg:#16243a; --sim-bg:#1a2a44; --sim-border:#2f4262;
+      --played-bg:#0f1a2b; --played-fg:#8697ae; --played-score-bg:#1a2940; --played-score-fg:#93a3ba;
+      --ned-row-a:#0f1a2b; --ned-row-b:#121f33;
+      --hist-flat:#4d4142; --hist-eu:#427c66; --hist-q:#8d6e2e; --hist-n:#8d4e52; --hist-cl:#3f6a9e;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#0a1220; --panel:#111c2e; --ink:#e9eff8; --muted:#93a3ba; --line:#2a3a54; --line-soft:#1e2c44;
+    --top-bg: var(--top-bg-d); --top-bg-deep: var(--top-bg-deep-d);
+    --top-text:#ffffff; --top-pill:rgba(0,0,0,.18); --top-warn:#ffd6da; --top-label:rgba(255,255,255,.85);
+    --top-toggle-border:rgba(255,255,255,.4); --top-toggle-bg:rgba(255,255,255,.12); --top-toggle-hover:rgba(255,255,255,.24);
+    --accent-soft:rgba(255,107,116,.12); --accent-text:#ff6b74; --formbox-red-bg:#d1272f;
+    --eu-soft:rgba(79,211,171,.14); --eu-text:#4fd3ab;
+    --cl:#4f8fe0; --cl-text:#7db4ff;
+    --q-soft:rgba(224,173,74,.12); --q-text:#e0ad4a; --q-border:#6b5220; --q-note:#caa059;
+    --ned:#8b939a;
+    --team-text: var(--team-text-dark);
+    --team-soft: var(--team-soft-dark);
+    --strong-bg:#2a3a54; --strong-fg:#e9eff8; --strong-bg-hover:#36496a;
+    --cut-line:#3a4a63;
+    --input-bg:#16243a; --sim-bg:#1a2a44; --sim-border:#2f4262;
+    --played-bg:#0f1a2b; --played-fg:#8697ae; --played-score-bg:#1a2940; --played-score-fg:#93a3ba;
+    --ned-row-a:#0f1a2b; --ned-row-b:#121f33;
+    --hist-flat:#4d4142; --hist-eu:#427c66; --hist-q:#8d6e2e; --hist-n:#8d4e52; --hist-cl:#3f6a9e;
+  }
+  html{background:var(--bg)}
+  * { transition: background-color .15s ease, border-color .15s ease, color .15s ease; }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 var(--body);font-variant-numeric:tabular-nums}
+  /* overflow-x:clip, ikke hidden: hidden/auto/scroll på en ANESTOR av et
+     position:sticky-element gjør ancestoren til element sitt eget scroll-
+     og containing-block, som bryter stickyen (mest merkbart i Firefox).
+     clip gir samme visuelle resultat (aldri vannrett scroll på siden; .tblwrap
+     har sin egen, ønskede scroll) uten den bivirkningen. */
+  body{overflow-x:clip}
+  body{padding-bottom:env(safe-area-inset-bottom,0px)}
+
+  /* Navigasjon øverst (skisse A/B): merkenavn, hopplenker til seksjonene og
+     mørk/lys-bryteren. Står fast øverst (top:0), med en tynn strek i lagets
+     farge nederst. Tabellen som følger med under scrolling starter under den
+     (se NAV_H i updateFollowFit()), og seksjonene har scroll-margin-top så
+     hopplenkene ikke legger overskriften bak linja. */
+  :root{--nav-h:56px}
+  .topnav{position:sticky;top:0;z-index:30;background:var(--panel);border-bottom:2px solid var(--team-fill);padding-top:env(safe-area-inset-top,0px)}
+  .nav-in{max-width:1380px;margin:0 auto;padding:0 24px;height:var(--nav-h);display:flex;align-items:center;gap:20px}
+  .brand{display:inline-flex;align-items:center;gap:10px;font:800 21px/1 var(--cond);letter-spacing:.02em;color:var(--ink);text-decoration:none;white-space:nowrap}
+  .brand-mark{flex:none;display:block}
+  /* Ligafanene: rett til høyre for logoen, tydelig hvilken som er aktiv.
+     De er navigasjon mellom to sider, ikke seksjoner på samme side, så de
+     ser ut som knapper og ikke som seksjonslenkene ved siden av. */
+  .league-tabs{flex:none;display:flex;gap:4px;padding:3px;border-radius:999px;background:var(--input-bg);border:1px solid var(--line)}
+  .league-tabs a{display:block;padding:6px 13px;border-radius:999px;text-decoration:none;
+    color:var(--muted);font:700 13.5px/1.15 var(--cond);letter-spacing:.01em;white-space:nowrap}
+  .league-tabs a:hover{color:var(--ink)}
+  .league-tabs a[aria-current="page"]{background:var(--team-fill);color:var(--team-fill-text)}
+  .league-tabs a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .nav-links{flex:1;min-width:0;display:flex;justify-content:center;gap:2px;overflow-x:auto;scrollbar-width:none}
+  .nav-links::-webkit-scrollbar{display:none}
+  .nav-links .sm{display:none}
+  .nav-links a{color:var(--muted);text-decoration:none;font-weight:600;font-size:14px;padding:18px 14px 16px;border-bottom:2px solid transparent;white-space:nowrap}
+  .nav-links a:hover{color:var(--ink)}
+  .nav-links a.active{color:var(--ink);border-bottom-color:var(--team-fill)}
+  .theme-toggle{flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .theme-toggle:hover{background:var(--input-bg)}
+  .theme-toggle svg{width:18px;height:18px;display:block}
+  .theme-toggle .icon-moon{display:none}
+  :root[data-theme="dark"] .theme-toggle .icon-sun{display:none}
+  :root[data-theme="dark"] .theme-toggle .icon-moon{display:block}
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]) .theme-toggle .icon-sun{display:none}
+    :root:not([data-theme="light"]) .theme-toggle .icon-moon{display:block}
+  }
+  @media (max-width:380px){
+    /* Helt smalt (320px): navnet krympes heller enn å forsvinne. */
+    .brand{font-size:17px;gap:6px}
+    .brand-mark{width:22px;height:22px}
+  }
+  @media (max-width:760px){
+    /* Fanene får en egen linje under logoen, så seksjonslenkene ikke blir
+       trangere enn de var. Menylinja er da to rader høy, og JS måler den og
+       setter --nav-h (se maalNavHoyde). --nav-h må ALDRI være "auto": den
+       brukes i calc() for scroll-margin-top på seksjonene, og calc(auto+12px)
+       er ugyldig -- da mister ankrene avstanden til menylinja. */
+    .nav-in{flex-wrap:wrap;height:auto;padding:8px 12px;row-gap:6px}
+    .brand{order:1}
+    .theme-toggle{order:2;margin-left:auto}
+    .league-tabs{order:3;width:100%}
+    .league-tabs a{flex:1;text-align:center}
+    .nav-links{order:4;width:100%;flex:1 0 100%}
+    .nav-links a{padding:8px 10px 8px}
+  }
+  @media (max-width:640px){
+    /* Navnet ble skjult her den gangen logo, faner og seksjonslenker delte
+       én rad. Fra 760px og ned ligger fanene og lenkene på egne rader, så
+       logoraden er bare merkenavn og lysbryter -- da er det plass. Navnet er
+       det eneste som sier hvor man er, så det skal stå. */
+    .brand{font-size:19px;gap:8px}
+    .brand-mark{width:26px;height:26px}
+    .nav-links{justify-content:flex-start}
+    .nav-links a{padding:8px 10px;font-size:13.5px}
+    .nav-links .lg{display:none}
+    .nav-links .sm{display:inline}
+  }
+  /* Sidehode: tittel, undertittel, stempel og blikkfang-spørsmålet -- nøytralt,
+     ikke lenger et fargefelt i lagets farge (laget viser seg i aksenten i
+     navigasjonen og i markeringen i tabellen). */
+  .pagehead{max-width:1380px;margin:0 auto;padding:22px 24px 4px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title pick" "sub pick" "qa qa";column-gap:24px;align-items:start}
+  .pagehead .titlerow{grid-area:title}
+  .pagehead .subline{grid-area:sub}
+  .pagehead .qa-highlight{grid-area:qa}
+  /* Lagvelgeren: tydelig etikett og ramme i lagets farge, så den er lett å finne. */
+  .followpick{grid-area:pick;display:flex;align-items:center;gap:10px;align-self:center;margin:0}
+  .followpick label{font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap}
+  .followpick select{font:inherit;font-weight:700;font-size:15px;color:var(--ink);background:var(--panel);border:2px solid var(--team-fill);border-radius:10px;padding:8px 12px;min-width:190px;cursor:pointer}
+  .followpick select:hover{background:var(--input-bg)}
+  @media (max-width:760px){
+    .pagehead{padding:16px 16px 0;grid-template-columns:minmax(0,1fr);grid-template-areas:"title" "sub" "pick" "qa"}
+    .followpick{margin:10px 0 0;align-self:start}
+    .followpick select{flex:1;min-width:0}
+  }
+  .titlerow{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+  h1{margin:0;font:800 clamp(26px,3.4vw,34px)/1 var(--cond);letter-spacing:-.01em}
+  .subtitle{font:600 clamp(13px,1.4vw,15px)/1.2 var(--cond);color:var(--muted);letter-spacing:.01em}
+  .subline{margin:8px 0 0;font-size:12.5px}
+  .stamp{display:inline-block;background:var(--input-bg);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:2px 10px;font-weight:600}
+  .stamp .warn{color:var(--accent-text)}
+  .stamp .stale{color:inherit}
+  /* Det mest aktuelle spørsmålet for valgt lag (eller "heldig/uheldig" uten
+     lag) -- se qaHighlightUpdate(). Egen knapp, ikke del av .team-picker sin
+     flex-rad, siden spørsmålsteksten kan bli lang og trenger egen linje. */
+  /* Blikkfang: viser hva siden kan. Samme kondenserte skrift som tittelen,
+     anførselstegn (ikke kursiv -- en kondensert skrift har ingen ekte kursiv,
+     og skrå syntetisk kursiv ser skral ut) så den leses som et spørsmål og
+     ikke som en knapp, full tekstfarge, pil etter, og luft over og under.
+     Ved hover understrekes den. Stor tekst (over 18 px
+     halvfet) trenger bare 3:1 mot banneret; alle klubbfarger har over 4,5:1. */
+  .qa-highlight{display:block;margin:18px 0 6px;background:none;border:none;padding:0;color:var(--team-text);font:600 19px/1.25 var(--cond);letter-spacing:.005em;text-align:left;cursor:pointer;max-width:100%}
+  .qa-highlight::before{content:'"'}
+  .qa-highlight.plain::before{content:none}
+  .qa-highlight.plain::after{content:"\00A0\00A0\2192"}
+  .qa-highlight::after{content:'"\00A0\00A0\2192'}
+  .qa-highlight:hover,.qa-highlight:focus-visible{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
+  .qa-highlight:empty{display:none}
+  /* Lagboksen (når et lag følges): et kort øverst i høyrekolonnen. */
+  .status{background:linear-gradient(var(--team-soft),var(--team-soft)),var(--panel);color:var(--ink);border:1px solid var(--line);border-top:5px solid var(--team-fill);border-radius:12px;padding:14px 16px}
+  .status .teamname-lg{display:block;font:800 clamp(18px,2vw,22px)/1.1 var(--cond);color:var(--team-text);margin:0 0 6px}
+  .status .posline{font:700 14.5px/1.3 var(--body);color:var(--ink)}
+  .status .posline b{font:800 17px/1 var(--cond);color:var(--ink);margin-right:2px}
+
+
+  /* ---- Nytt oppsett (skisse A/B) ---- */
+  .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+  .panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px 10px}
+  .panel-head h2{margin:0;font:700 22px/1 var(--cond);display:flex;align-items:center;gap:8px}
+  .panel-head h2 .count{font:500 14px var(--body);color:var(--muted)}
+  .h-ic svg{width:20px;height:20px;display:block;color:var(--ink)}
+  .head-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+  .head-link{background:none;border:none;padding:0;color:var(--team-text);font-size:13px;font-weight:600;cursor:pointer}
+  .head-link:hover{text-decoration:underline}
+  /* Nullstill i overskriftsraden: vises bare når et scenario er aktivt, så
+     man slipper å scrolle ned til kamplisten. Den ligger FØRST i .head-tools,
+     som er høyrestilt -- da vokser raden mot venstre når knappen dukker opp,
+     og rundevelgeren står stille i stedet for å hoppe. */
+  .head-reset{flex:none;display:inline-flex;align-items:center;justify-content:center;gap:6px;
+    height:30px;padding:0 10px;border-radius:8px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);font:600 12.5px/1 var(--cond);cursor:pointer}
+  /* Når knappen ikke gjelder, skjules den med visibility og ikke display:
+     da beholder den plassen sin, og rundevelgeren står nøyaktig der den sto
+     i stedet for å hoppe idet et scenario starter. (display:none her flyttet
+     rundevelgeren 40px på skjermer under 640px, der raden brytes og er
+     venstrestilt.) Merk at hidden-attributtet alene ikke holder: nettleserens
+     display:none for [hidden] taper mot display-regelen over, så knappen sto
+     synlig hele tiden før denne regelen kom. */
+  .head-reset[hidden]{visibility:hidden;pointer-events:none}
+  .head-reset:hover{border-color:var(--ink)}
+  .head-reset:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .head-reset svg{width:14px;height:14px;flex:none;display:block}
+  .reset-said{margin:-2px 16px 8px;color:var(--muted);font-size:12.5px;font-weight:600}
+  @media (max-width:499px){
+    /* For trangt til tekst: bare ikonet. Forklaringen kommer ved trykk, i
+       .reset-said, siden et title-tips ikke finnes på berøringsskjerm. */
+    .head-reset span{display:none}
+    .head-reset{width:30px;padding:0}
+  }
+  .roundnav{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted)}
+  .roundnav button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:18px;line-height:1;padding:0}
+  .roundnav button:hover{border-color:var(--ink)}
+  .roundnav .head-link{width:auto;height:auto;border:none;background:none;font-size:12.5px;margin-left:4px}
+  .round-note{margin:0 16px 10px;padding:8px 12px;border-radius:8px;background:var(--q-soft);color:var(--ink);font-size:13px;border:1px solid var(--q-border)}
+  .round-note[hidden]{display:none}
+  .sort-note{margin:0 16px 8px;font-size:13px;color:var(--muted)}
+  .sort-note[hidden]{display:none}
+  .sort-note .head-link{font-size:13px}
+  #tbl.sorted tr.cut td{border-bottom:1px solid var(--line-soft)}
+  /* Tabell for en annen runde enn den gjeldende: modellkolonnene (Form og prosentene) gjelder bare nå-situasjonen. */
+  #tbl.asof .hh,#tbl.asof .badge{display:none}
+  #tbl th .sm{display:none}
+  @media (max-width:760px),(min-width:1100px) and (max-width:1219px){#tbl th .lg{display:none}#tbl th .sm{display:inline}}
+  .roundnav button:disabled{color:var(--muted);opacity:.5;cursor:default}
+  .cards{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-top:14px}
+  /* Tabellradene er tettere enn de var, så tabell og kort til sammen er lave nok til å
+     stå fast uten å kappes under navigasjonen ved bunnen av siden. */
+  #tbl td{padding-top:4px;padding-bottom:4px}
+  /* Lave vinduer (PC): tabell og kort er tettere, så begge rekker å stå fast uten at
+     kortene kappes nederst. Kortene viser da to lag i stedet for tre. */
+  @media (min-width:1100px) and (max-height:690px){  /* svært lave vinduer: enda tettere */
+    #tbl td{padding-top:2px;padding-bottom:2px}
+    .panel-head{padding-top:10px;padding-bottom:6px}
+    .cards{margin-top:10px}
+    .card{padding:8px 12px 7px;gap:5px}
+    .card-list li:nth-child(n+3){display:none}
+  }
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:11px 14px 10px;display:flex;flex-direction:column;gap:7px;min-width:0}
+  .card-h{display:flex;align-items:center;gap:7px;font:700 15px/1.1 var(--cond);min-width:0}
+  .card-h svg{width:20px;height:20px;flex:none;color:var(--ink)}
+  .card-title{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .card-list{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:3px}
+  .card-list li{display:flex;align-items:baseline;justify-content:space-between;gap:8px;min-width:0;line-height:1.25}
+  .card-list li.empty{color:var(--muted);font-size:13px}
+  .card-team{font-weight:600;font-size:13.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+  .card-pct{font:800 17px/1 var(--cond);flex:none}
+  .c-gull .card-pct,.c-eu .card-pct,.c-form .card-pct{color:var(--eu-text)}
+  .c-ned .card-pct{color:var(--accent-text)}
+  .c-ned .card-h svg{color:var(--accent-text)}
+  .card-link{margin-left:auto;flex:none;background:none;border:none;padding:0;color:var(--team-text);font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap}
+  .card-link:hover{text-decoration:underline}
+  @media (max-width:760px){.cards{grid-template-columns:repeat(2,minmax(0,1fr))}}
+  /* Neste kamp */
+  .nm-body{padding:0 16px 16px}
+  .nm-when{margin:0 0 12px;font-size:13px;color:var(--muted)}
+  .nm-teams{display:flex;align-items:center;justify-content:center;gap:14px;font:700 21px/1.1 var(--cond);margin-bottom:14px;flex-wrap:wrap;text-align:center}
+  .nm-dash{color:var(--muted);font-weight:500}
+  .nm-hub{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+  .nm-hub button{padding:9px 6px;border-radius:8px;border:1px solid var(--line);background:var(--input-bg);color:var(--ink);font-weight:700;font-size:13.5px}
+  .nm-hub button:hover{border-color:var(--ink)}
+  /* Bekreftelsen etter et trykk på H/U/B: kampen som ble trukket, står øverst,
+     og neste kamp uten resultat under (renderNextMatch). */
+  .nm-res{margin:0 0 12px;padding:0 0 10px;border-bottom:1px solid var(--line);text-align:center;font:600 13.5px/1.2 var(--body);color:var(--muted)}
+  .nm-res b{font:800 17px/1 var(--cond);margin:0 1px;color:var(--ink)}
+  /* Kamper-seksjonen (verktøy + forrige runde + gjenstående) */
+  .kamper{display:flex;flex-direction:column;gap:20px;min-width:0}
+  /* Verktøyknappene ligger nå INNE i "Gjenstående kamper"-panelet, rett over
+     kampene, og følger panelets egen sideluft (16 px) som h2 og avkryssings-
+     boksen -- ikke .tools sin gamle luft fra da de lå fritt i kolonnen. */
+  .kamper #fxPanel .tools{padding:0 16px 12px}
+  /* Prosentkolonnene: grønt for høy sjanse, rødt for nedrykk, grått under 1 % */
+  td.odds{font-weight:600}
+  td.odds.pc-zero{color:var(--muted);font-weight:500}
+  td.odds.gull.pc-hi,td.odds.p3.pc-hi{color:var(--eu-text);font-weight:800}
+  td.odds.gull.pc-mid,td.odds.p3.pc-mid{color:var(--eu-text)}
+  td.odds.ned.pc-mid,td.odds.ned.pc-hi{color:var(--accent-text)}
+  td.odds.ned.pc-hi{font-weight:800}
+  tr.followed td.odds.pc-zero{color:var(--muted)}
+  th.sortable{cursor:pointer}
+  th.sortable.active{color:var(--ink)}
+  .about{padding:0 4px 4px;color:var(--muted);font-size:13.5px}
+  .about h2{font:700 16px/1.2 var(--cond);color:var(--ink);margin:0 0 6px}
+  .about p{margin:0 0 8px;max-width:80ch;line-height:1.55}
+  /* Seksjonene som hopplenkene går til */
+  #tabell,#kamper,#fxPanel,#qaPanel,#omModellen{scroll-margin-top:calc(var(--nav-h) + 12px)}
+  #tabell{position:relative}
+  .round{scroll-margin-top:calc(var(--nav-h) + 12px)}
+  .round.flash{animation:roundflash 1.4s ease}
+  @keyframes roundflash{0%,60%{background:var(--team-soft)}100%{background:transparent}}
+  /* De tre feltene nederst ("Slik fungerer det", "Hvordan vet vi at modellen
+     virker?" og "Ofte spurt") står under hverandre over hele bredden.
+     Brødteksten holdes til rundt 72-75 tegn per linje (max-width i ch under),
+     mens tabellene kan bruke hele bredden. */
+  .bottomdetails{max-width:1380px;margin:0 auto;padding:0 24px 16px;display:grid;grid-template-columns:minmax(0,1fr);gap:20px;align-items:start}
+  .bottomdetails details.howitworks{max-width:none;margin:0;padding:0}
+  .bottomdetails details.howitworks summary{display:flex;align-items:center;gap:10px;font-size:18px}
+  .bottomdetails .sum-ic svg{width:20px;height:20px;display:block;color:var(--muted)}
+  @media (max-width:900px){
+    .bottomdetails{grid-template-columns:minmax(0,1fr);padding:0 16px 24px}
+    .bottomdetails details.howitworks{padding:0}
+  }
+
+  /* Verktøy */
+  .tools{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px 14px}
+  .tools[hidden]{display:none}
+  button{font:inherit;cursor:pointer}
+  .tools button{border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:7px 14px;font-weight:600;font-size:14px}
+  .tools button:hover{border-color:var(--ink)}
+  .tools button:disabled{color:var(--muted);cursor:default}
+  .tools button:disabled:hover{border-color:var(--line)}
+  /* Knappene for valgt lag (et "scenario") lyser i lagets egen farge; de
+     andre fyllingsknappene ("andre kamper") får en egen, nøytral markering
+     — se deriveScenario(). */
+  .tools button.on{background:var(--team-fill);border-color:var(--team-fill);color:var(--team-fill-text)}
+  .tools button.on:hover{background:var(--team-deep);border-color:var(--team-deep)}
+  .tools button.on-other{background:var(--strong-bg);border-color:var(--strong-bg);color:var(--strong-fg)}
+  .tools button.on-other:hover{background:var(--strong-bg-hover);border-color:var(--strong-bg-hover)}
+  .tools button.reset{margin-left:8px;border:none;background:transparent;color:var(--muted);font-weight:500;font-size:13px;padding:7px 10px}
+  .tools button.reset:hover{color:var(--ink);text-decoration:underline}
+  .tools button.share{margin-left:auto;background:var(--strong-bg);border-color:var(--strong-bg);color:var(--strong-fg)}
+  .tools button.share.done{background:var(--eu);border-color:var(--eu);color:#fff}
+  button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  /* Layout */
+  .wrap{display:grid;grid-template-columns:minmax(0,1.65fr) minmax(360px,1fr);column-gap:20px;row-gap:0;padding:16px 24px 20px;max-width:1380px;margin:0 auto;align-items:start}
+  #verdict{grid-column:2;grid-row:1;margin-bottom:20px}
+  .wrap > .leftcol{grid-column:1;grid-row:1 / span 2}
+  .wrap > .rightcol{grid-column:2;grid-row:2}
+  @media (max-width:1099px){
+    .wrap{grid-template-columns:minmax(0,1fr);row-gap:20px}
+    #verdict,.wrap > .leftcol,.wrap > .rightcol{grid-column:auto;grid-row:auto;margin-bottom:0}
+  }
+  .rightcol,.leftcol{display:flex;flex-direction:column;gap:20px;min-width:0}
+  /* "Forrige runde": samme radstil som spilte kamper i kamplisten (.match.played),
+     se renderLastRound() -- bare selve panelet/overskriften er egen her. */
+  .recent .round{margin-top:0}
+  /* Tabellen blir stående (samme CSS-mekanisme som "sticky", men elementene
+     har bevisst ANDRE navn enn "sticky"/"fixed"/"float"/"pin" — de ordene
+     fanges av cosmetic-filtre i uBlock Origins Annoyances-lister og slår av
+     posisjoneringen) mens du blar i kamplisten ved siden av, på PC fra
+     1100px. top settes dynamisk av JS (updateFollowFit()) til
+     min(16px, vindushøyde - tabellhøyde - 16px): en kort tabell fester seg
+     16px fra toppen med en gang, en tabell høyere enn vinduet scroller til
+     bunnen (med forklaringen) er synlig og låses først da. Ingen effekt på
+     mobil, og ingen effekt i det hele tatt når kamplisten er kortere enn
+     tabellen (styrt av .panel-follow-klassen fra JS, ikke her). */
+  /* Bare tabellpanelet står fast, ikke hele venstrekolonnen: en kolonne med
+     både tabell og "Spør om tabellen" er høyere enn skjermen og ville blitt
+     låst med bunnen synlig, slik at spørsmålene sto fast og tabellen
+     forsvant. .tblzone strekkes til samme høyde som høyrekolonnen (den er
+     festeområdet), og "Spør om tabellen" ligger UNDER festeområdet i vanlig
+     flyt, så tabellen aldri overlapper den. */
+  @media (min-width:1100px){
+    .leftcol{align-self:stretch}
+    .tblzone{flex:1 1 auto;min-height:0}
+    .tblzone > .followbox.panel-follow{position:sticky}
+  }
+  .panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .panel > h2{font:700 22px/1 var(--cond);margin:0;padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .panel > h2 .count{font:500 14px var(--body);color:var(--muted)}
+  .simnote{margin:-4px 16px 10px;color:var(--muted);font-size:12.5px}
+  .scenario-line{margin:-4px 16px 10px;color:var(--ink);font-size:12.5px;font-weight:600}
+
+  /* Tabell */
+  .tblwrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse}
+  /* Frys posisjon og lagnavn: blir stående til venstre når resten av tabellen skrolles */
+  #tbl td.pos,#tbl thead th:first-child{position:sticky;left:0;z-index:2;background:var(--panel)}
+  #tbl td.team,#tbl th.team{position:sticky;left:40px;z-index:2;background:var(--panel);box-shadow:2px 0 6px -2px rgba(0,0,0,.15)}
+  @media (max-width:640px){
+    #tbl td.team,#tbl th.team{left:30px}
+  }
+  th,td{padding:6px 7px;text-align:right;white-space:nowrap}
+  thead th{font-weight:600;color:var(--muted);font-size:12.5px;border-bottom:2px solid var(--ink);padding-top:4px}
+  tbody td{border-bottom:1px solid var(--line-soft)}
+  td.team,th.team{text-align:left}
+  td.pos{width:40px;text-align:center;padding-left:12px;font:700 17px/1 var(--cond);color:var(--muted);position:relative}
+  td.pos::before{content:"";position:absolute;left:0;top:0;bottom:0;width:5px}
+  tr.cl td.pos::before{background:var(--cl)}
+  tr.eu td.pos::before{background:var(--eu)}
+  tr.playoff td.pos::before{background:var(--q)}
+  tr.ned td.pos::before{background:repeating-linear-gradient(135deg,var(--ned) 0 3px,transparent 3px 6px)}
+  tr.cl td.pos{color:var(--cl-text)}
+  tr.eu td.pos{color:var(--eu-text)}
+  tr.playoff td.pos{color:var(--q-text)}
+  tr.ned td{background:repeating-linear-gradient(135deg,var(--ned-row-a) 0 6px,var(--ned-row-b) 6px 12px)}
+  td.team{font-weight:500}
+  td.pts{font:800 19px/1 var(--cond);padding-right:12px}
+  td.gd{color:var(--muted)}
+  tr.followed td{background:var(--team-soft)}
+  /* #tbl td.pos/#tbl td.team over (id-selektor, for den frosne venstrekanten)
+     slår ellers alltid tr.followed sin bakgrunn, uansett rekkefølge --
+     trenger samme id-prefiks for å faktisk vinne der raden er fulgt. */
+  #tbl tr.followed td.pos,#tbl tr.followed td.team{background:var(--team-soft)}
+  tr.followed td.team{color:var(--team-text);font-weight:700}
+  tr.followed td.pts{color:var(--team-text)}
+  tr.cut td{border-bottom:2px dashed var(--cut-line)}
+  .diff{font-size:11.5px;margin-left:6px;font-weight:600}
+  .diff.up{color:var(--eu-text)}.diff.down{color:var(--accent-text)}
+
+  /* Merker: matematisk avgjort (task 3a) */
+  .badge{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font:700 10px/1.7 var(--body);letter-spacing:.02em;vertical-align:middle;white-space:nowrap;cursor:pointer}
+  .badge:empty{display:none;margin-left:0}
+  .badge .bi{display:none}
+  .badge:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+  /* Boblen med forklaringen på merket. Ligger i tabellpanelet, som er
+     position:relative, så den kan legges over uten å flytte noe i tabellen. */
+  .badge-tip{position:absolute;z-index:6;max-width:min(260px,calc(100% - 16px));background:var(--ink);color:var(--panel);
+    padding:7px 10px;border-radius:8px;font:600 12.5px/1.35 var(--body);box-shadow:0 6px 20px rgba(0,0,0,.25)}
+  .badge-tip[hidden]{display:none}
+  .badge.champ{background:var(--q);color:#3a2c05}
+  .badge.europe{background:var(--eu-soft);color:var(--eu-text)}
+  .badge.safe{background:var(--line-soft);color:var(--muted)}
+  .badge.relegated{background:var(--accent-soft);color:var(--accent-text)}
+  /* Mobil, og det smale tokolonnesområdet (1100 til 1219 px, iPad Air på
+     tvers): bare ikonet, så lagkolonnen ikke spiser tallkolonnene. Målt ved
+     1180 px: med «Sikret topp 6» som tekst var OBOS-tabellen 15 px for bred
+     for kolonnen og måtte scrolles sidelengs; som ikon får den plass. */
+  @media (max-width:640px),(min-width:1100px) and (max-width:1219px){
+    .badge{margin-left:5px;padding:1px 5px;font-size:11px}
+    .badge .bt{display:none}
+    .badge .bi{display:inline}
+    .badge.champ .bi::before{content:"★"}
+    .badge.europe .bi::before{content:"✓"}
+    .badge.safe .bi::before{content:"✓"}
+    .badge.relegated .bi::before{content:"↓"}
+  }
+  /* Telefon: mindre pille og plasspil, så lagkolonnen ikke blir bredere enn
+     kortnavnet trenger, og Gull får plass ved siden av Styrke (se .teamname
+     .sm under). Målt 29.9.2026: pillen går fra 20 til 15 px. */
+  @media (max-width:640px){
+    .badge{margin-left:3px;padding:0 3px;font-size:9.5px;line-height:1.5}
+    .diff{margin-left:3px;font-size:10.5px}
+  }
+
+  /* Lagnavnet: et trykk følger laget (som "Følg laget ditt"), et nytt trykk på
+     laget som alt følges velger det bort. Formgrafen ligger på Form-tallet. */
+  .teamname{cursor:pointer}
+  .teamname:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+  /* Under 760 px brukes de korte lagnavnene fra kamplisten (shortTeam,
+     LEAGUE.shortNames), så Gull og Styrke får plass sammen med de andre
+     tallkolonnene uten sideveis scroll. De lange navnene ("Sarpsborg 08",
+     "Kristiansund", "Bodø/Glimt") bestemte bredden på hele lagkolonnen. Lag
+     uten kortnavn står fullt ut; "Strømmen" og "Sandefjord" får plass med litt
+     mindre luft i kolonnene under 400 px (under): mindre polstring, og
+     prosentkolonnene blir ikke bredere enn innholdet (min-width 44 px ga Gull
+     og Nedr. 6-9 px luft hver). Målt 29.9.2026 på 360, 390 og 430 px i begge
+     ligaene, også med merke og plasspil på det lengste navnet. Over 760 px
+     står navnene fullt ut. */
+  .teamname .sm{display:none}
+  @media (max-width:760px){.teamname .lg{display:none}.teamname .sm{display:inline}}
+  @media (max-width:400px){
+    #tbl thead th:not(:first-child),#tbl td:not(.pos){padding-left:3px;padding-right:3px}
+    #tbl td.odds{min-width:0}
+  }
+  /* K (kamper spilt) står også på telefon (2.10.2026): når en runde er delvis
+     spilt, er tabellen vanskelig å lese uten. Smal, litt mindre og dempet, så
+     P fortsatt er tallet øyet går til. Plassen er tatt fra luften, ikke fra
+     noen kolonne: under 400 px 3 px polstring (var 4), overskriftene 11,5 px
+     (var 12,5), plasskolonnen 26 px (var 30) og en smalere Styrke-boks. Målt
+     2.10.2026: tabellen trenger 289 px på 360 px (297 før, uten K), og med
+     merke og plasspil på hver rad er den innenfor på 360 og 390 px i begge
+     ligaene. Gjelder også rundetabellen (#tbl.asof). */
+  @media (max-width:640px){
+    #tbl thead th.spilt,#tbl td.spilt{padding-left:1px;padding-right:3px}
+    #tbl td.spilt{font-size:12px;font-weight:500;color:var(--muted)}
+  }
+  @media (max-width:400px){
+    #tbl thead th.spilt,#tbl td.spilt{padding-left:1px;padding-right:2px}
+    #tbl thead th{font-size:11.5px}
+    #tbl td.pos{padding-left:7px;width:26px}
+    #tbl td.team,#tbl th.team{left:26px}
+    #tbl .formbox{min-width:24px;padding:2px 4px}
+  }
+  /* Overskriften står over tallene sine. P (td.pts) og Styrke (td.formcol)
+     har mer luft til høyre enn de andre cellene, og overskriften får den
+     samme, så høyrekanten er lik. Før sto "P" 7 px til høyre for
+     poengtallene mellom 401 og 640 px (vanlige telefoner, 412-430 px) og
+     5 px over 640 px, og Styrke-overskriften 5 og 3 px til høyre for boksen
+     (3.10.2026). Under 400 px har alle cellene 3 px. Gjelder også
+     rundetabellen. */
+  #tbl thead th.pts,#tbl td.pts{padding-right:12px}
+  #tbl thead th.formcol,#tbl td.formcol{padding-right:10px}
+  @media (max-width:400px){
+    #tbl thead th.pts,#tbl td.pts,#tbl thead th.formcol,#tbl td.formcol{padding-right:3px}
+  }
+  .teamname:hover{text-decoration:underline}
+
+  /* Form-kolonnen (task 3b): farget boks 0-10 */
+  th.sortable{cursor:pointer;user-select:none}
+  th.sortable:hover,th.sortable.active{color:var(--ink)}
+  td.formcol{padding-right:10px}
+  /* Formtallet står til HØYRE for resultatrutene, i samme celle: rutene
+     leses eldst til venstre, og tallet oppsummerer dem til slutt. */
+  /* Samme størrelse som de andre tallene i raden (15px). Var 12,5px, og
+     ble da det minste tallet i tabellen enda det er et hovedtall. */
+  .form5{display:inline-block;min-width:18px;margin-left:6px;font:700 15px/1 var(--cond);color:var(--ink)}
+  /* Smalt tokolonnesoppsett (1100 til 1219 px): tallet blir stående, rutene
+     vikes. De sier det samme, og uten dette ble tabellen for bred. */
+  @media (min-width:1100px) and (max-width:1219px){
+    #tbl td .form{display:none}
+    .form5{margin-left:0}
+  }
+  .formbox{display:inline-block;min-width:30px;padding:2px 7px;border-radius:5px;font:700 13px/1.3 var(--cond);text-align:center;color:#fff}
+  /* Form-tallet er en knapp som åpner formgrafen, som tallene i lagboksen
+     åpner et svar: samme utseende som før, men den kan trykkes på. */
+  button.formbox{border:none;margin:0;cursor:pointer}
+  button.formbox:hover{text-decoration:underline;filter:brightness(1.08)}
+  button.formbox:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .formbox.red{background:var(--formbox-red-bg)}
+  .formbox.yellow{background:var(--q);color:#3a2c05}
+  .formbox.lightgreen{background:#7fb9a8;color:#0d3327}
+  .formbox.green{background:var(--eu)}
+
+  .legend{padding:12px 16px;color:var(--muted);font-size:13px;display:flex;gap:16px;flex-wrap:wrap;border-top:1px solid var(--line)}
+  .legend span{display:inline-flex;align-items:center;gap:6px}
+  .legend i{display:inline-block;width:12px;height:12px;border-radius:2px}
+  .legend .cl i{background:var(--cl)}
+  .legend .eu i{background:var(--eu)}
+  .legend .lnote{flex-basis:100%;line-height:1.45}
+  .legend .jnote{flex-basis:100%;display:block;line-height:1.45}
+  .legend .jnote a{color:inherit}
+  /* Stjernen foran tallet ("*19"), utenfor til venstre: tallet står på linje
+     med poengene til de andre lagene, og kolonnen blir ikke bredere. */
+  td.pts .pjust{position:relative}
+  td.pts .just{position:absolute;right:100%;top:-1px;margin-right:1px;font:700 13px/1 var(--cond)}
+  .legend .q i{background:var(--q)}
+  .legend .n i{background:repeating-linear-gradient(135deg,var(--ned) 0 2px,transparent 2px 4px);border:1px solid var(--ned)}
+  .note{padding:10px 16px 14px;color:var(--muted);font-size:13px}
+  /* Form og sannsynligheter */
+  .form{display:inline-flex;gap:2px;vertical-align:middle}
+  .form b{width:9px;height:9px;border-radius:2px;display:inline-block}
+  .form .W{background:var(--eu)} .form .D{background:#b3babd} .form .L{background:var(--accent-text)}
+  /* Kamper fra scenarioet skilles fra de ekte, slik resultatfeltene i
+     kamplisten gjør: dempet og med ramme, så rekken viser hva som er spilt
+     og hva som er fylt inn. */
+  .form b.scen{opacity:.55;box-shadow:0 0 0 1.5px var(--sim-border);border-radius:3px}
+  td.odds{font-size:13px;color:var(--muted);text-align:right;min-width:44px}
+  td.odds.hot{color:var(--ink);font-weight:700}
+  tr.followed td.odds{color:var(--team-text)}
+  /* Status: sannsynligheter for det fulgte laget — tallrekke + smal stripe (maks 30px) */
+  .odds-box{margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
+  .odds-row{display:flex;gap:10px;flex-wrap:wrap;font-size:10.5px;color:var(--muted)}
+  .odds-row strong{display:block;font:800 15px/1 var(--cond);color:var(--ink)}
+  .odds-row .n strong{color:var(--accent-text)}
+  .odds-row.flat{font-size:12.5px;color:var(--ink)}
+  /* Tallene i lagboksen (Gull/Europa/Kvalik/Nedrykk) hopper til og åpner
+     "Hvorfor har <lag> X% sjanse for ..." i spør-om-tabellen-seksjonen --
+     knapper, ikke span, men tilbakestilt til å se ut som den vanlige teksten
+     de erstattet (ellers helt vanlig knappe-fokus/tastatur-tilgjengelighet). */
+  /* Forrige kamp, nederst i lagboksen. Fargen på tallet sier om kampen var BRA
+     eller DÅRLIG for laget, ikke om tallet er pluss eller minus: for et bunnlag
+     er en lavere nedrykkssjanse bra, og da er minus grønt. */
+  .status .lastmatch{display:block;width:100%;margin:6px 0 0;padding:6px 0 0;border:none;border-top:1px solid var(--line);background:none;text-align:left;font:600 12.5px/1.35 var(--body);color:var(--muted);cursor:pointer}
+  .status .lastmatch b{font:800 14px/1 var(--cond);margin-left:1px}
+  /* To kolonner: lagboksen står over "Spør om tabellen" i samme kolonne, og
+     linja over bryter til to linjer for noen lag og ikke for andre. Uten fast
+     høyde flyttet alt under seg 17 px når man byttet lag. Plass til to linjer
+     (padding 6 + kant 1 + 2 x 1,35em) holder boksen like høy for alle lag. */
+  @media (min-width:1100px){ .status .lastmatch{min-height:calc(7px + 2.7em)} }
+  .status .lastmatch b.good{color:var(--eu-text)}
+  .status .lastmatch b.bad{color:var(--accent-text)}
+  .status .lastmatch:hover,.status .lastmatch:focus-visible{text-decoration:underline}
+  .odds-jump{font:inherit;color:inherit;background:none;border:none;padding:0;margin:0;text-align:left;cursor:pointer}
+  .odds-jump:hover strong{text-decoration:underline}
+  .hist{display:grid;grid-template-columns:repeat(16,1fr);gap:1px;align-items:end;height:20px;margin-top:6px}
+  .hist i{display:block;background:var(--hist-flat);border-radius:1px 1px 0 0;min-height:1px}
+  /* Samme soneinndeling som tabellen: blått for plass 1 og 2, grønt for 3 og 4,
+     gult for 14, skravert for 15 og 16. */
+  .hist i.cl{background:var(--hist-cl)}
+  .hist i.eu{background:var(--hist-eu)}.hist i.q{background:var(--hist-q)}
+  .hist i.n{background:repeating-linear-gradient(135deg,var(--hist-n) 0 2px,transparent 2px 4px)}
+  .hist-l{display:none} /* aksetallene tar for mye plass i den smale stripen — samme info står i title på hver stolpe */
+  @media (max-width:640px){
+    .status{cursor:pointer}
+    .status .hist{display:none}
+    .status.expanded .hist{display:grid}
+  }
+  /* Kampsannsynlighet */
+  /* Slik fungerer det */
+  details.howitworks{max-width:1380px;margin:0 auto 32px;padding:0 24px}
+  details.howitworks summary{cursor:pointer;padding:14px 16px;font:700 20px/1 var(--cond);background:var(--panel);border:1px solid var(--line);border-radius:10px}
+  details.howitworks[open] summary{border-radius:10px 10px 0 0;border-bottom:none}
+  details.howitworks .in{background:var(--panel);border:1px solid var(--line);border-top:none;border-radius:0 0 10px 10px;padding:4px 20px 18px}
+  details.howitworks h3{font:700 16px/1 var(--cond);margin:16px 0 8px}
+  details.howitworks p{font-size:14px;line-height:1.55;color:var(--ink);margin:0 0 12px;max-width:72ch}
+  details.howitworks hr{border:none;border-top:1px solid var(--line);margin:16px 0}
+  details.howitworks .note{padding:0 0 12px;font-size:13px}
+  /* Folkelig forklaring øverst i "Hvordan vet vi at modellen virker?": litt
+     større skrift enn resten, så den leses først. Alt det tekniske ligger bak
+     "Vis detaljer" (details.details-tech). */
+  details.howitworks .plain-lead{font-size:16.5px;color:var(--ink)}
+  /* Lenken "Full dokumentasjon av testene" (modellsjekk-siden): tekstfarge og
+     understrek, ikke nettleserens blå, som er uleselig på mørk bakgrunn. */
+  details.howitworks .in a{color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:2px}
+  details.howitworks h4{font:700 15px/1.25 var(--cond);margin:18px 0 8px}
+  @media (max-width:640px){details.howitworks{padding:0 16px}}
+  table.mt th,table.mt td{padding:5px 6px;font-size:13px}
+  /* Tabellene i "Slik fungerer det" og "Hvordan vet vi at modellen virker?"
+     ligger i en beholder som scroller sidelengs inne i seg selv, så en for
+     bred tabell aldri får hele siden til å scrolle sidelengs. På mobil gjøres
+     de i tillegg smalere: kortere overskrifter (.sm i stedet for .lg), korte
+     lagnavn, mindre skrift og luft, formkolonnen skjult, og ablasjonstabellen
+     stables med én variant per blokk. */
+  .tblscroll{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch}
+  table.mt .sm{display:none}
+  @media (max-width:640px){
+    details.howitworks .in{padding-left:14px;padding-right:14px}
+    table.mt .lg{display:none}
+    table.mt .sm{display:inline}
+    table.mt th,table.mt td{padding:4px 3px;font-size:12px}
+    table.mt .mtx{display:none}
+    table.mt.ablation,table.mt.ablation tbody,table.mt.ablation tr,table.mt.ablation td{display:block}
+    table.mt.ablation thead{display:none}
+    table.mt.ablation tr{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin-bottom:8px}
+    table.mt.ablation td{border:none;padding:2px 0;text-align:left;display:flex;justify-content:space-between;gap:12px}
+    table.mt.ablation td::before{content:attr(data-l);color:var(--muted)}
+    table.mt.ablation td:not([data-l]){display:block}
+    table.mt.ablation td:not([data-l])::before{content:none}
+    table.mt.ablation td:first-child{font-weight:700;padding-bottom:4px}
+    table.mt.ablation td:last-child{color:var(--muted);padding-top:4px}
+    table.mt.ablation td{overflow-wrap:anywhere;white-space:normal}
+    table.mt.brier td:first-child,table.mt.brier th:first-child{white-space:normal}
+  }
+  table.mt thead th{border-bottom:2px solid var(--ink)}
+  table.mt td{border-bottom:1px solid var(--line-soft)}
+  table.mt .grp{text-align:center;border-bottom:1px solid var(--line)}
+  /* "Hvordan vet vi at modellen virker?": kalibrering/Brier/ablasjon --
+     tallkolonner høyrestilt, første (og for ablasjon: siste, tekst)
+     venstrestilt. Egne klasser (ikke table.mt generelt) for ikke å endre
+     den eksisterende #modelTbl-tabellen, som har en annen kolonnestruktur. */
+  table.mt.calib{margin-bottom:14px}
+  table.mt.calib td,table.mt.calib th,table.mt.brier td,table.mt.brier th{text-align:right}
+  table.mt.calib td:first-child,table.mt.calib th:first-child,
+  table.mt.brier td:first-child,table.mt.brier th:first-child{text-align:left}
+  table.mt.ablation td,table.mt.ablation th{text-align:left}
+  table.mt.ablation td:nth-child(2),table.mt.ablation td:nth-child(3),table.mt.ablation td:nth-child(4),
+  table.mt.ablation th:nth-child(2),table.mt.ablation th:nth-child(3),table.mt.ablation th:nth-child(4){text-align:right}
+
+  /* Kalibreringsgrafen i "Hvordan vet vi at modellen virker?": statisk inline
+     SVG (tallene er faste testresultater, ingenting regnes i nettleseren).
+     Alle farger er CSS-variabler, så grafen følger lys/mørk modus -- --eu-text
+     og --accent-text er nettopp de themede tekstvariantene som er lesbare mot
+     --panel i begge moduser. Punktradius ~ kvadratroten av antallet, så
+     AREALET er proporsjonalt med antall prediksjoner. */
+  .calibchart{display:block;width:100%;max-width:440px;height:auto;margin:2px 0 6px;overflow:visible}
+  .calibchart .cgrid{stroke:var(--line-soft);stroke-width:1}
+  .calibchart .caxis{stroke:var(--line);stroke-width:1.5}
+  .calibchart .cdiag{stroke:var(--muted);stroke-width:1.5;stroke-dasharray:5 4;opacity:.8}
+  .calibchart .cdlbl{fill:var(--muted);font:500 10px var(--body);opacity:.9}
+  .calibchart .ctick{fill:var(--muted);font:500 10.5px var(--body)}
+  .calibchart .cax{fill:var(--muted);font:600 11px var(--body)}
+  .calibchart .ctop{fill:var(--eu-text);fill-opacity:.32;stroke:var(--eu-text);stroke-width:1.3}
+  .calibchart .cned{fill:var(--accent-text);fill-opacity:.28;stroke:var(--accent-text);stroke-width:1.3}
+  .clegend{display:flex;align-items:center;flex-wrap:wrap;gap:6px 8px;font-size:13px;color:var(--muted);padding:0 0 12px}
+  .clegend .ckey{width:11px;height:11px;border-radius:50%;flex:none}
+  .clegend .ckey+*{margin-right:6px}
+  .clegend .ctopkey{background:var(--eu-text);opacity:.55;border:1.3px solid var(--eu-text)}
+  .clegend .cnedkey{background:var(--accent-text);opacity:.5;border:1.3px solid var(--accent-text)}
+  .clegend .cnote{flex-basis:100%}
+  ul.baselines{margin:0 0 12px;padding-left:20px;color:var(--muted);font-size:13.5px;line-height:1.5;max-width:75ch}
+  ul.baselines li{margin:0 0 5px}
+  ul.baselines strong{color:var(--ink)}
+  details.details-tech{margin:10px 0 0;border-top:1px solid var(--line);padding-top:10px}
+  details.details-tech > summary{cursor:pointer;color:var(--team-text);font-weight:600;font-size:14px;width:fit-content}
+  details.details-tech > summary:hover{text-decoration:underline}
+  details.details-tech[open] > summary{margin-bottom:12px}
+
+  /* Formgraf: modal med SVG-graf, åpnes ved klikk på et lag i tabellen */
+  .modal-backdrop{position:fixed;inset:0;background:rgba(10,12,13,.5);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .modal-backdrop[hidden]{display:none}
+  .modal{background:var(--panel);border-radius:12px;padding:20px 22px;max-width:640px;width:100%;max-height:85vh;overflow:auto;position:relative;box-shadow:0 30px 60px -20px rgba(0,0,0,.4)}
+  .modal-close{position:absolute;top:10px;right:10px;border:none;background:transparent;font-size:24px;line-height:1;cursor:pointer;color:var(--muted);padding:4px 9px}
+  .modal-close:hover{color:var(--ink)}
+  .modal h3{margin:0 4px 2px;font:700 20px/1.2 var(--cond)}
+  .modal-sub{margin:0 4px 14px;color:var(--muted);font-size:13px}
+  #formChart svg{width:100%;height:auto;display:block}
+  .fc-zone.red{fill:var(--accent-soft)}
+  .fc-zone.yellow{fill:var(--q-soft)}
+  .fc-zone.green{fill:var(--eu-soft)}
+  .fc-line{fill:none;stroke:var(--ink);stroke-width:2}
+  .fc-dot{fill:var(--ink)}
+  .fc-ytick{font:500 9px var(--body);fill:var(--muted)}
+  .fc-avg{stroke:var(--muted);stroke-width:1;stroke-dasharray:4 3;opacity:.7}
+
+  @media (max-width:640px){
+    .top{padding-left:16px;padding-right:16px}
+    .top-in{grid-template-columns:1fr}
+    .status{max-width:none;min-width:0}
+    /* Innrykket gjelder kampene, ikke overskriften (som har sitt eget). */
+    .recent > .rounds,.tools{padding-left:16px;padding-right:16px}
+    .wrap{padding-left:12px;padding-right:12px}
+    th.hide-s,td.hide-s{display:none}
+    th,td{padding-left:5px;padding-right:5px}
+    td.pos{padding-left:9px;width:30px}
+    .panel > h2,.qa > summary,.recent > summary{padding-left:12px;padding-right:12px}
+  }
+
+  /* Kamper */
+  .autofill{display:flex;align-items:center;gap:7px;padding:0 16px 12px;font-size:13.5px;color:var(--muted);cursor:pointer;user-select:none}
+  .autofill.active{color:var(--ink)}
+  .autofill input{margin:0;cursor:pointer;accent-color:var(--accent)}
+  .rounds{padding:0 16px 16px}
+  .showAll{display:block;margin:4px 16px 16px;width:calc(100% - 32px);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:8px;padding:10px;font-weight:600;font-size:14px}
+  .showAll:hover{border-color:var(--ink)}
+  /* "Spør om tabellen": knappene ligner .tools sine, men egne (ikke delt)
+     siden .active her betyr "sist stilte spørsmål", en annen betydning enn
+     .tools sin .on/.on-other (aktivt scenario). */
+  /* Sammenleggbar: lukket som standard når layouten er stablet (mobil), åpen på
+     PC -- se qaApplyDefault(). Overskriften har samme utseende som .panel > h2. */
+  .qa > summary{list-style:none;cursor:pointer;font:700 22px/1 var(--cond);padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:center;gap:12px;user-select:none}
+  .qa > summary::-webkit-details-marker{display:none}
+  /* "Forrige runde": sammenfoldet som standard (LEAGUE.recentOpen), med samme
+     pil som "Spør om tabellen". Runden står til høyre, før pilen. */
+  .recent > summary{list-style:none;cursor:pointer;font:700 22px/1 var(--cond);padding:16px;display:flex;align-items:center;gap:12px;user-select:none}
+  .recent[open] > summary{padding-bottom:12px}
+  .recent > summary::-webkit-details-marker{display:none}
+  .recent > summary .count{margin-left:auto;font:500 14px var(--body);color:var(--muted)}
+  .recent > summary::after{content:"";flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;margin-right:4px}
+  .recent[open] > summary::after{transform:rotate(45deg)}
+  .recent > summary:hover::after{border-color:var(--ink)}
+  .recent > summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:10px}
+  .qa > summary::after{content:"";flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .15s;margin-right:4px}
+  .qa[open] > summary::after{transform:rotate(45deg)}
+  .qa > summary:hover::after{border-color:var(--ink)}
+  .qa > summary:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:10px}
+  .qa-list{display:flex;flex-direction:column;padding:0 16px 16px}
+  .qa-item{border-top:1px solid var(--line-soft)}
+  .qa-item:first-child{border-top:none}
+  .qa-item > button{display:block;width:100%;border:none;background:none;color:var(--ink);padding:10px 0;font:600 14px/1.35 var(--body);text-align:left;cursor:pointer}
+  .qa-item > button::before{content:"▸";display:inline-block;width:1.1em;color:var(--muted)}
+  /* "Flere spørsmål": resten av spørsmålene, samme radstil som de tre øverste,
+     men med en åpne/lukke-linje som ser ut som en lenke. */
+  details.qa-extra{border-top:1px solid var(--line-soft)}
+  details.qa-extra > summary{list-style:none;cursor:pointer;padding:10px 0;font:600 14px/1.35 var(--body);color:var(--team-text)}
+  details.qa-extra > summary::-webkit-details-marker{display:none}
+  details.qa-extra > summary::before{content:"▸";display:inline-block;width:1.1em;color:var(--muted)}
+  details.qa-extra[open] > summary::before{content:"▾"}
+  details.qa-extra > summary:hover{text-decoration:underline}
+  .qa-item > button:hover{text-decoration:underline}
+  .qa-item.active > button::before{content:"▾"}
+  /* "Ditt scenario": lagets sluttsum når alle kampene deres er fylt inn.
+     Samme plass som "Forrige kamp", rett over den. */
+  .scenario-sum{margin:8px 0 0;padding:8px 10px;border-radius:7px;background:var(--team-soft);
+    color:var(--ink);font-size:12.5px;line-height:1.45;font-weight:600}
+  .scenario-sum b{font-weight:800}
+  /* break-word, ikke anywhere: anywhere delte ord midt inni, så
+     "Kristiansund-seier" kunne brekke etter "Kristian". break-word deler
+     bare et ord som ikke får plass i det hele tatt. */
+  /* "Kopier tekst" nederst i svaret og i lagboksen: liten og dempet, med ikon
+     og ord. "Kopiert" en kort stund etter trykket (kopier()). Større
+     treffflate på berøringsskjerm. */
+  .qa-merke{white-space:normal;margin:0 0 6px}
+  .qa-merke span{display:inline-block;font:700 11px/1 var(--body);letter-spacing:.02em;text-transform:uppercase;color:var(--q-text,var(--ink));background:var(--q-soft,var(--line-soft));border-radius:999px;padding:4px 8px}
+  .qa-kopi{display:flex;flex-wrap:wrap;justify-content:flex-end;gap:2px 6px;margin:6px -6px -6px 0;white-space:normal}
+  .kopi{display:inline-flex;align-items:center;gap:5px;border:none;background:transparent;color:var(--muted);padding:4px 6px;border-radius:6px;cursor:pointer;font:600 12px/1 var(--body)}
+  .kopi svg{width:15px;height:15px;display:block;flex:none}
+  .kopi:hover{color:var(--ink);background:var(--line-soft)}
+  .kopi:focus-visible{outline:2px solid var(--team-text);outline-offset:1px}
+  .kopi.done{color:var(--eu-text)}
+  @media (pointer:coarse){.kopi{padding:8px 10px}}
+  .qa-answer{scroll-margin-bottom:16px;margin:0 0 12px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-line;overflow-wrap:break-word}
+  .qa-more{display:flex;align-items:center;gap:9px;margin-top:8px;color:var(--muted)}
+  .qa-answer.loading{color:var(--muted);display:flex;align-items:center;gap:9px}
+  .qa-spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--muted);animation:qa-spin .7s linear infinite;flex:none}
+  @keyframes qa-spin{to{transform:rotate(360deg)}}
+  /* Fra 1100px (samme grense som gjør tabellen sticky, se .panel-follow)
+     vises alle rundene med en gang — tabellen ved siden av gjør lengden
+     ufarlig der. Under grensen (og på mobil) holdes "Vis alle runder" som
+     før, siden siden ellers blir veldig lang uten en sticky tabell å måle mot. */
+  @media (min-width:1100px){
+    #hiddenRounds[hidden]{display:block}
+    #showAllRounds{display:none}
+  }
+  .round{margin-top:14px}
+  .round h3{margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;font:700 17px/1.2 var(--cond);border-bottom:2px solid var(--ink);padding-bottom:4px}
+  .round h3 .when-row{display:flex;align-items:baseline;gap:10px}
+  .round h3 .when{font:500 13px var(--body);color:var(--muted)}
+  .round h3 .round-sim{font:600 12px var(--body);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:3px 11px;cursor:pointer}
+  .round h3 .round-sim[hidden]{display:none}
+  .round h3 .round-sim:hover{border-color:var(--ink)}
+  /* Runde 12 (utsatt fra juli): diskret markert så plasseringen mellom runde 24 og 25 ikke ser ut som en feil */
+  .round.moved{background:var(--q-soft);border:1px dashed var(--q-border);border-radius:8px;padding:8px 10px 4px;margin-top:18px}
+  .round.moved h3{border-bottom-color:var(--q-border)}
+  .moved-note{margin:0 0 8px;font-size:12px;color:var(--q-note)}
+  .dayhead{margin:10px 0 2px;font:700 12.5px/1.2 var(--cond);color:var(--muted)}
+  .dayhead:first-of-type{margin-top:6px}
+  .match{display:grid;grid-template-columns:27px minmax(0,1fr) 40px 8px 40px minmax(0,1fr) auto;align-items:center;gap:3px;padding:6px 4px;border-bottom:1px solid var(--line-soft);border-radius:6px;max-width:100%}
+  .match .home{text-align:right}
+  .match .away{text-align:left}
+  .match .home,.match .away{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:12.5px}
+  .match .when{text-align:center;font-size:10.5px;line-height:1;white-space:nowrap}
+  .match .when .t{font-weight:700;color:var(--ink)}
+  /* Én utsatt kamp i en runde: merkes på kampen, så datospennet i
+     rundeoverskriften (som regnes uten den, se scripts/leaguedata.py) ikke
+     ser ut som en feil. */
+  .match .when .ut{display:block;margin-top:2px;color:var(--muted);font-size:9.5px;font-weight:600;letter-spacing:.02em}
+  .match.played .when .t{color:var(--played-fg)}
+  .match .followed-name{color:var(--team-text);font-weight:700}
+  .match input{width:40px;height:34px;text-align:center;font:700 19px/1 var(--cond);border:1px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--ink);padding:0}
+  .match input.set{background:var(--strong-bg);color:var(--strong-fg);border-color:var(--strong-bg)}
+  .match.followed input.set{background:var(--team-fill);border-color:var(--team-fill);color:var(--team-fill-text)}
+  .match input.set.sim{background:var(--sim-bg);color:var(--ink);border-color:var(--sim-border);font-style:italic}
+  @media (max-width:760px){th.hide-diff,td.hide-diff{display:none}}
+  /* Gull (Opprykk) vises på telefon, men viker under 340 px: der ville
+     tabellen måttet rulles sidelengs (målt 29.9.2026: 12-15 px på 320 px). */
+  @media (max-width:339px){th.hide-xs,td.hide-xs{display:none}}
+  .match .colon{text-align:center;color:var(--muted);font-weight:700}
+  .match.played{background:var(--played-bg);color:var(--played-fg)}
+  .match.played .score{width:40px;height:34px;display:flex;align-items:center;justify-content:center;font:700 19px/1 var(--cond);border-radius:6px;background:var(--played-score-bg);color:var(--played-score-fg)}
+  .match.played .done{margin-left:6px;font-size:12.5px;font-weight:600;color:var(--played-fg);width:100px;text-align:center;white-space:nowrap}
+  /* Etter .match.played, ikke før -- ellers vinner .match.played sin
+     bakgrunn (samme spesifisitet, senere regel vinner) over markeringen for
+     en kamp som er BÅDE spilt OG følges (f.eks. alt i "Forrige runde", som
+     alltid er spilte kamper). */
+  .match.followed{background:var(--team-soft)}
+  .quick{display:flex;gap:2px;margin-left:3px;align-items:flex-start}
+  .quick .q{display:flex;flex-direction:column;align-items:center;gap:2px;width:25px}
+  .quick .pct{font:500 10.5px/1 var(--body);letter-spacing:-.01em;color:var(--muted);height:11px;white-space:nowrap}
+  .quick .pct.best{color:var(--ink);font-weight:700}
+  /* "odds" er en opplysning om hvor tallene kommer fra, ikke en advarsel:
+     samme dempede farge som klokkeslettet, ikke aksentfargen (rød). */
+  .quick .pct.odds{color:var(--muted);font-weight:600;font-size:10px;letter-spacing:.02em;
+    cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
+  .quick .pct.odds:hover{color:var(--ink)}
+  .quick .pct.odds:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:3px}
+  /* Selve oddsen vises her, ikke i listen: listen skal fortsatt vise
+     sannsynligheter. Popover og ikke title, fordi et title-tips ikke finnes
+     på berøringsskjerm -- og merket skal kunne trykkes på. */
+  /* Reserve når nettleseren nekter å skrive til utklippstavlen. Ingen
+     prompt(): den fryser siden i Chrome. */
+  .tools button[hidden], .share[hidden]{display:none}
+  .faq-panel{padding:14px 16px 16px}
+  .faq-panel h2{margin:0 0 10px;font:700 22px/1 var(--cond)}
+  .faq-list h3{margin:12px 0 3px;font:700 15px/1.35 var(--cond);color:var(--ink);max-width:75ch}
+  .faq-list h3:first-child{margin-top:0}
+  .faq-list p{margin:0;font-size:13.5px;line-height:1.55;color:var(--muted);max-width:75ch}
+  .kopiboks{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:80;
+    width:min(560px,calc(100vw - 24px));padding:12px 14px;border-radius:10px;
+    border:1px solid var(--line);background:var(--panel);color:var(--ink);
+    box-shadow:0 8px 30px rgba(0,0,0,.25);font-size:13px}
+  .kopiboks[hidden]{display:none}
+  .kopiboks p{margin:0 0 8px}
+  .kopiboks textarea{width:100%;box-sizing:border-box;font:400 12.5px/1.45 var(--body);
+    color:var(--ink);background:var(--input-bg);border:1px solid var(--line);
+    border-radius:7px;padding:7px 9px;resize:vertical}
+  .kopiboks button{margin-top:8px;padding:5px 12px;border-radius:7px;border:1px solid var(--line);
+    background:var(--panel);color:var(--ink);font-weight:600;cursor:pointer}
+  /* Hva utfallene betyr for laget man følger, sett fra DET laget. Vises bare
+     når laget spiller kampen. */
+  .nm-impact{margin:8px 0 0;font-size:12.5px;line-height:1.5;color:var(--muted);
+    min-height:calc(2 * 1.5 * 12.5px)}
+  .nm-impact b{color:var(--ink);font-weight:700}
+  .nm-impact[hidden]{display:none}
+  /* Venter på at tabellen er ferdig regnet (oppdaterNesteKampLinje): plassen
+     står, så kortet ikke hopper, men de gamle tallene vises ikke. */
+  .nm-impact.venter{visibility:hidden}
+  .oddspop{position:absolute;z-index:60;width:max-content;max-width:min(280px,calc(100vw - 20px));
+    padding:10px 12px;border-radius:10px;border:1px solid var(--line);background:var(--panel);
+    color:var(--ink);box-shadow:0 6px 24px rgba(0,0,0,.18);font:400 12.5px/1.45 var(--body)}
+  .oddspop[hidden]{display:none}
+  .oddspop .kilde{font-weight:700}
+  .oddspop .rad{display:flex;gap:14px;margin:7px 0 6px}
+  .oddspop .rad span{display:flex;flex-direction:column;align-items:center;gap:3px}
+  .oddspop .rad b{font:700 16px/1 var(--cond)}
+  .oddspop .rad i{font:600 10.5px/1 var(--body);font-style:normal;color:var(--muted);letter-spacing:.04em}
+  .oddspop .naar{color:var(--muted)}
+  .oddspop .marg{margin:7px 0 0;padding-top:7px;border-top:1px solid var(--line);
+    color:var(--muted);font-size:11.5px;line-height:1.4}
+  .match.locked .quick .pct{visibility:hidden}
+  .quick button{padding:4px 0;font-size:12.5px;width:28px;border:1px solid var(--line);background:var(--panel);border-radius:5px;font-weight:600;color:var(--ink)}
+  .quick button:hover{border-color:var(--ink)}
+  .quick button.on{background:var(--strong-bg);color:var(--strong-fg);border-color:var(--strong-bg)}
+  .quick button.x{color:var(--muted)}
+  @media (max-width:520px){
+    .match{grid-template-columns:minmax(0,1fr) 40px 8px 40px minmax(0,1fr);row-gap:4px}
+    .match .when{grid-column:1 / -1;order:-1;text-align:center}
+    .quick{grid-column:1 / -1;justify-content:center;margin-left:0}
+    .match.played .done{grid-column:1 / -1;width:auto;margin-left:0}
+  }
+
+  /* PC: lavere tabell og kort, så begge får god plass på en 900 px høy skjerm uten å
+     se trange ut. Bare mindre luft: skriften i tabellen og formboksen er som før
+     (15 / 15 / 19), rader ca. 28 px (var 31), og mindre luft mellom overskrift og
+     kolonnenavn. Kortene har omtrent original skrift, men tettere indre luft
+     (ca. 95 px høye, var 113). Ligger sist i stilarket så reglene vinner over de
+     generelle. */
+  @media (min-width:1100px){
+    #tbl td{padding-top:3px;padding-bottom:3px;line-height:1.3}
+    #tbl td.pos,#tbl td.pts{line-height:1}
+    #tbl thead th{padding-top:1px;padding-bottom:3px}
+    .tblpanel .panel-head{padding-top:12px;padding-bottom:2px}
+    .tblpanel .round-note{margin-bottom:6px}
+    .legend{padding:8px 16px}
+    .cards{gap:10px;margin-top:10px}
+    .card{padding:7px 12px 6px;gap:4px}
+    .card-h svg{width:18px;height:18px}
+    .card-list{gap:0}
+    .card-list li{line-height:1.25}
+  }
+
+  /* Modellsjekk-siden (scripts/build_modellsjekk.py). */
+  .doc{max-width:900px;margin:0 auto;padding:20px 24px 40px}
+  .doc-top{display:flex;flex-wrap:wrap;align-items:center;gap:6px 10px;margin:0 0 12px;font:600 14px/1.3 var(--body);color:var(--muted)}
+  .doc a{color:var(--ink);text-decoration:underline;text-underline-offset:2px}
+  .doc .in{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:8px 22px 20px}
+  .doc h1{font:800 28px/1.1 var(--cond);margin:14px 0 10px}
+  .doc h2{font:700 20px/1.15 var(--cond);margin:26px 0 8px}
+  .doc h3{font:700 16px/1.25 var(--cond);margin:18px 0 8px}
+  .doc p,.doc li{font-size:14px;line-height:1.55;color:var(--ink);max-width:72ch}
+  .doc p{margin:0 0 12px}
+  .doc .note{padding:0 0 12px;font-size:13px;color:var(--muted)}
+  .doc .plain-lead{font-size:16.5px}
+  .doc ul{margin:0 0 12px;padding-left:20px}
+  .doc .tblscroll{margin:0 0 10px}
+  .doc .tilbake{margin-top:26px}
+  .doc code{font-size:12.5px;overflow-wrap:anywhere}
+  /* Effekt-kolonnen i ablasjonstabellen brytes i stedet for å gå ut til høyre
+     (på telefon er tabellen kort per rad, se table.mt.ablation i ligasiden). */
+  @media (min-width:641px){.doc table.mt.ablation td:last-child{white-space:normal;min-width:16em}}
+  @media (max-width:640px){.doc{padding:12px 12px 32px}.doc .in{padding:4px 14px 16px}.doc h1{font-size:24px}}
+</style>
+</head>
+<body>
+<main class="doc">
+<nav class="doc-top"><a href="/">Tabellkalkulator</a><span>/</span><a href="../">Eliteserien</a><span>/</span><span>Modellsjekk</span></nav>
+<article class="in">
+<!-- Kilden til eliteserien/modellsjekk/index.html, som bygges av
+     scripts/build_modellsjekk.py. Innholdet sto før under "Vis detaljer" i
+     "Hvordan vet vi at modellen virker?" på ligasiden (flyttet 3.10.2026). -->
+<h1>Modellsjekk: Eliteserien</h1>
+<p class="plain-lead">Full dokumentasjon av testene bak prosentene for Eliteserien. Kortversjonen står under "Hvordan vet vi at modellen virker?" på <a href="../">ligasiden</a>.</p>
+
+<h2>Treffsikkerhet denne sesongen</h2>
+<p>Prognosene lagres før avspark og holdes opp mot resultatet etterpå. Ingenting regnes på nytt, så tallene kan ikke bli bedre av etterpåklokskap.</p>
+<div id="accuracyTall"><p class="note">Henter tallene ...</p></div>
+
+<h2>Hvordan testen er gjort</h2>
+<p>Modellen testes på framtiden, ikke på kampene den allerede har sett. Før hver kampdag i hver sesong tilpasses modellen bare på kampene som var spilt før den dagen, slik siden gjør. Deretter simuleres resten av sesongen, og sannsynlighetene sammenlignes med det som faktisk skjedde. Dette kalles walk-forward.</p>
+<p>Fram til oktober 2026 ble modellen testet ved fire faste kuttpunkter i hver sesong, etter 40, 55, 70 og 85 prosent av kampene. Metoden er endret fordi walk-forward måler modellen slik siden faktisk brukes, gjennom hele sesongen. Kuttpunktene hoppet over den første delen av sesongen, der lagstyrken betyr mest. Tallene med kuttpunktene står under Brier-tabellen som kontroll.</p>
+
+<h2>Treffer den?</h2>
+<p>Tabellene under deler modellens sannsynligheter i intervaller og viser hvor ofte det faktisk gikk slik. Ligger de to tallene nær hverandre, holder prosentene omtrent vann. Når modellen har gitt mellom 20 og 30 prosent sjanse, i snitt 25 prosent, har det skjedd i 23 prosent av tilfellene. Intervaller med få prediksjoner spretter mye av seg selv.</p>
+<p class="note">Sist validert: 30. september 2026, med modellen fra 30. september 2026 (l1/l2 8/24, halveringstid 28 dager), mot NOR.csv (football-data.co.uk), sesongene 2016–2025. Før hver kampdag med minst 10 spilte kamper tilpasses modellen bare på kampene med tidligere dato, og resten av sesongen simuleres 100 000 ganger. Det gir 690 tidspunkter og 11 040 lag-observasjoner. Standardfeilene er klustret på sesong. Lagene i en sesong er ikke uavhengige forsøk &ndash; bare ett lag kan vinne serien, og den samme sesongen måles før hver kampdag. Regner man hver lag-observasjon som et eget forsøk, blir standardfeilene altfor små, og forskjeller ser mer sikre ut enn de er. Alle modellene får de samme tilfeldige tallene på hvert tidspunkt, så forskjellene mellom dem er uten simuleringsstøy. Kvalikkampene, som ligger i samme CSV-fil, er holdt utenfor. Kjøringen ligger i <code>scripts/backtest_walkforward.py</code> i kildekoden, og kontrollen med faste kuttpunkter i <code>scripts/backtest_zones.py</code>, så tallene kan reproduseres. De regnes ikke ut i nettleseren.</p>
+<p class="note">To forbehold om tabellene under: intervaller med få prediksjoner svinger mye av seg selv, så et intervall der tallene ligger langt fra hverandre, behøver ikke bety at modellen er skjev der. Og prediksjonene er ikke uavhengige av hverandre: samme sesong måles før hver kampdag, og de samme lagene går igjen, så et lag som overrasker gjennom en sesong, flytter flere intervaller samtidig. Antallene er lag-observasjoner, ikke uavhengige utfall: bak dem ligger 160 lag-sesonger.</p>
+
+<h3>Kalibrering, tall</h3>
+<div class="tblscroll"><table class="mt calib">
+<thead><tr><th colspan="4">Topp 4</th></tr><tr><th>Intervall</th><th>Antall</th><th><span class="lg">Snitt predikert</span><span class="sm">Snitt pred.</span></th><th><span class="lg">Faktisk andel</span><span class="sm">Faktisk</span></th></tr></thead>
+<tbody>
+<tr><td>0–10 %</td><td>6349</td><td>1,6 %</td><td>2,1 %</td></tr>
+<tr><td>10–20 %</td><td>950</td><td>14,6 %</td><td>17,2 %</td></tr>
+<tr><td>20–30 %</td><td>543</td><td>24,6 %</td><td>26,3 %</td></tr>
+<tr><td>30–40 %</td><td>367</td><td>34,5 %</td><td>34,1 %</td></tr>
+<tr><td>40–50 %</td><td>327</td><td>45,1 %</td><td>42,8 %</td></tr>
+<tr><td>50–60 %</td><td>281</td><td>54,9 %</td><td>49,8 %</td></tr>
+<tr><td>60–70 %</td><td>293</td><td>65,0 %</td><td>66,6 %</td></tr>
+<tr><td>70–80 %</td><td>324</td><td>75,2 %</td><td>68,5 %</td></tr>
+<tr><td>80–90 %</td><td>392</td><td>85,2 %</td><td>76,5 %</td></tr>
+<tr><td>90–100 %</td><td>1214</td><td>97,7 %</td><td>98,6 %</td></tr>
+</tbody>
+</table></div>
+<div class="tblscroll"><table class="mt calib">
+<thead><tr><th colspan="4">Nedrykk</th></tr><tr><th>Intervall</th><th>Antall</th><th><span class="lg">Snitt predikert</span><span class="sm">Snitt pred.</span></th><th><span class="lg">Faktisk andel</span><span class="sm">Faktisk</span></th></tr></thead>
+<tbody>
+<tr><td>0–10 %</td><td>7760</td><td>1,4 %</td><td>2,2 %</td></tr>
+<tr><td>10–20 %</td><td>1046</td><td>14,7 %</td><td>11,0 %</td></tr>
+<tr><td>20–30 %</td><td>658</td><td>24,4 %</td><td>22,6 %</td></tr>
+<tr><td>30–40 %</td><td>381</td><td>34,6 %</td><td>29,1 %</td></tr>
+<tr><td>40–50 %</td><td>269</td><td>44,8 %</td><td>33,8 %</td></tr>
+<tr><td>50–60 %</td><td>240</td><td>54,7 %</td><td>52,5 %</td></tr>
+<tr><td>60–70 %</td><td>159</td><td>64,5 %</td><td>69,8 %</td></tr>
+<tr><td>70–80 %</td><td>108</td><td>74,9 %</td><td>90,7 %</td></tr>
+<tr><td>80–90 %</td><td>124</td><td>84,5 %</td><td>91,9 %</td></tr>
+<tr><td>90–100 %</td><td>295</td><td>97,6 %</td><td>100,0 %</td></tr>
+</tbody>
+</table></div>
+
+<h2>Brier-score</h2>
+<p>Brier-score måler hvor nær sannsynlighetene var de faktiske utfallene. Lavere er bedre, og 0 er perfekt. Modellen sammenlignes med tre enklere alternativer:</p>
+<ul class="baselines">
+<li><strong>Naiv basisrate:</strong> samme faste sannsynlighet for alle lag, uansett tabell og form: 1/16 for gull, 4/16 for topp 4, 2/16 for nedrykk.</li>
+<li><strong>Tabellmodell:</strong> starter fra dagens tabell og antar at alle lag er like sterke i de gjenstående kampene, med samme forventede målnivå hjemme og borte (snittet i sesongen så langt). Den bruker ikke tabellplasseringen til å anslå lagstyrke. Dette er den strenge sammenligningen: den viser hva kunnskap om lagene tilfører.</li>
+<li><strong>Ren Poisson:</strong> lagstyrke tilpasset på mål alene, uten odds, formoppdatering eller Dixon-Coles.</li>
+</ul>
+<div class="tblscroll"><table class="mt brier">
+<thead><tr><th>Modell</th><th>Seriemester</th><th>Topp 4</th><th>Nedrykk</th></tr></thead>
+<tbody>
+<tr><td>Naiv basisrate</td><td>0,0586</td><td>0,1875</td><td>0,1094</td></tr>
+<tr><td>Tabellmodell (alle lag like sterke)</td><td>0,0261</td><td>0,0812</td><td>0,0649</td></tr>
+<tr><td>Ren Poisson (uten odds)</td><td>0,0244</td><td>0,0867</td><td>0,0661</td></tr>
+<tr><td>Full modell (i bruk)</td><td>0,0191</td><td>0,0744</td><td>0,0573</td></tr>
+</tbody>
+</table></div>
+
+<p class="note">Det meste av treffsikkerheten kommer av å spille resten av sesongen tusenvis av ganger fra dagens tabell: tabellmodellen gjør nettopp det, med like sterke lag i kampene som står igjen, og kommer det meste av veien fra basisraten. At modellen i tillegg vet hvor gode lagene er, hjelper mest tidlig i sesongen (se tabellen per fase under). Over hele sesongen, målt parvis mot tabellmodellen, er den bedre på nedrykk med 0,0076 ± 0,0033, altså 2,3 standardfeil, og retningen er den samme i alle fasene. For gull er den bedre med 0,0070 ± 0,0051 (1,4 standardfeil) og for topp 4 med 0,0068 ± 0,0057 (1,2 standardfeil), altså ingen målbar forskjell over hele sesongen. Ren Poisson er dårligere enn tabellmodellen på topp 4 (0,0867 mot 0,0812, 2,3 standardfeil): det er odds og tabell sammen som gjør jobben, ikke lagstyrke fra mål alene.</p>
+
+<h3>Kontroll: faste kuttpunkter</h3>
+<p>Den samme modellen testet slik siden gjorde fram til oktober 2026: ved fire faste kuttpunkter i hver sesong, etter 40, 55, 70 og 85 prosent av kampene, med 100&nbsp;000 simuleringer og 640 lag-observasjoner.</p>
+<div class="tblscroll"><table class="mt brier">
+<thead><tr><th>Modell</th><th>Seriemester</th><th>Topp 4</th><th>Nedrykk</th></tr></thead>
+<tbody>
+<tr><td>Naiv basisrate</td><td>0,0586</td><td>0,1875</td><td>0,1094</td></tr>
+<tr><td>Tabellmodell (alle lag like sterke)</td><td>0,0186</td><td>0,0615</td><td>0,0543</td></tr>
+<tr><td>Ren Poisson (uten odds)</td><td>0,0183</td><td>0,0666</td><td>0,0536</td></tr>
+<tr><td>Full modell (i bruk)</td><td>0,0157</td><td>0,0605</td><td>0,0485</td></tr>
+</tbody>
+</table></div>
+<p class="note">Brier-tallene er lavere her fordi kuttpunktene først måler når 40 prosent av kampene er spilt, og mindre står igjen. For nedrykk gir kuttpunktene det samme bildet som walk-forward: modellen er 0,0058 ± 0,0026 bedre enn tabellmodellen (2,2 standardfeil). For gull og topp 4 er fordelen mindre, 0,0029 ± 0,0045 og 0,0011 ± 0,0043 (0,7 og 0,2 standardfeil), fordi den første delen av sesongen ikke er med. Med den forrige modellen (l1/l2 16/48, halveringstid 35 dager) ga kuttpunktene 0,0156, 0,0606 og 0,0486 for full modell.</p>
+
+<h2>Ablasjonstest</h2>
+<p>Samme test (walk-forward), bygget stegvis: hva tilfører hver enkelt del av modellen faktisk sluttplassprediksjonen? Hvert steg legger til én ting på steget over. Forskjellene er målt parvis, på samme lag og tidspunkt, og "ingen målbar forskjell" betyr at avviket er mindre enn to standardfeil, altså innenfor testens egen støy.</p>
+<div class="tblscroll"><table class="mt ablation">
+<thead><tr><th>Steg</th><th>Seriemester</th><th>Topp 4</th><th>Nedrykk</th><th>Effekt</th></tr></thead>
+<tbody>
+<tr><td>1. Ren Poisson</td><td data-l="Seriemester">0,0244</td><td data-l="Topp 4">0,0867</td><td data-l="Nedrykk">0,0661</td><td>Utgangspunkt</td></tr>
+<tr><td>2. + historiske sluttodds</td><td data-l="Seriemester">0,0187</td><td data-l="Topp 4">0,0760</td><td data-l="Nedrykk">0,0570</td><td>Bedre på alle tre; på nedrykk utenfor støyen (2,5 standardfeil)</td></tr>
+<tr><td>3. + formoppdatering</td><td data-l="Seriemester">0,0189</td><td data-l="Topp 4">0,0750</td><td data-l="Nedrykk">0,0570</td><td>Ingen målbar forskjell</td></tr>
+<tr><td>4. + Dixon-Coles</td><td data-l="Seriemester">0,0189</td><td data-l="Topp 4">0,0750</td><td data-l="Nedrykk">0,0570</td><td>Ingen målbar forskjell</td></tr>
+<tr><td>5. Full modell (l1/l2=8/24)</td><td data-l="Seriemester">0,0191</td><td data-l="Topp 4">0,0744</td><td data-l="Nedrykk">0,0573</td><td>Topp 4 0,0006 bedre (2,0 standardfeil, på grensen), ellers ingen målbar forskjell</td></tr>
+<tr><td>Sidegren: + rekke-rampe (på steg 3)</td><td data-l="Seriemester">0,0190</td><td data-l="Topp 4">0,0748</td><td data-l="Nedrykk">0,0571</td><td>Ga ingen målbar forskjell, og ble <strong>fjernet</strong> i september 2026.</td></tr>
+</tbody>
+</table></div>
+<p class="note">Hovedfunnet i denne tabellen er at oddssteget gjør nesten hele jobben: det er det eneste steget som er klart utenfor støyen, på nedrykk. De andre stegene er små, og ingen av dem er alene tydelig utenfor to standardfeil. Lagt sammen gir de en modell som er bedre enn tabellmodellen på nedrykk over hele sesongen (2,3 standardfeil, se over), og på gull og topp 4 tidlig i sesongen. Testen er ikke stor nok til å måle de små stegene hver for seg, så radene bør leses som "ikke dårligere", ikke som "bevist bedre".</p>
+
+<h3>Forbedring mot tabellmodellen, per fase av sesongen</h3>
+<p>Negativt tall betyr at modellen er bedre enn å lese tabellen. Fasen er hvor stor del av sesongens kamper som var spilt.</p>
+<div class="tblscroll"><table class="mt brier">
+<thead><tr><th>Spilt</th><th>Gull</th><th>Topp 4</th><th>Nedrykk</th></tr></thead>
+<tbody>
+<tr><td>Under 25 %</td><td>−0,0180 ± 0,0063</td><td>−0,0252 ± 0,0094</td><td>−0,0122 ± 0,0068</td></tr>
+<tr><td>25–40 %</td><td>−0,0114 ± 0,0081</td><td>−0,0062 ± 0,0096</td><td>−0,0114 ± 0,0056</td></tr>
+<tr><td>40–55 %</td><td>−0,0085 ± 0,0060</td><td>+0,0001 ± 0,0086</td><td>−0,0079 ± 0,0040</td></tr>
+<tr><td>55–70 %</td><td>−0,0011 ± 0,0059</td><td>−0,0014 ± 0,0033</td><td>−0,0036 ± 0,0034</td></tr>
+<tr><td>70–85 %</td><td>+0,0009 ± 0,0034</td><td>−0,0025 ± 0,0027</td><td>−0,0057 ± 0,0017</td></tr>
+<tr><td>Over 85 %</td><td>−0,0007 ± 0,0017</td><td>−0,0005 ± 0,0017</td><td>−0,0031 ± 0,0018</td></tr>
+</tbody>
+</table></div>
+<p class="note">Den første fjerdedelen av sesongen, som kuttpunktene ikke målte, er der modellen slår tabellmodellen mest. For gull og topp 4 er gevinsten der utenfor støyen (2,8 og 2,7 standardfeil). Den avtar utover i sesongen, og etter 55 prosent spilt er forskjellen for gull og topp 4 innenfor støyen. For nedrykk er modellen bedre i alle fasene, og utenfor støyen ved 70–85 prosent (3,3 standardfeil); ved 25–40 og 40–55 prosent er den på grensen (2,0). Fasene er ikke uavhengige tester: det er de samme sesongene, og et lag som overrasker, flytter flere faser samtidig. Antall lag-observasjoner per fase: 2&nbsp;272, 1&nbsp;520, 2&nbsp;112, 1&nbsp;888, 1&nbsp;952 og 1&nbsp;296.</p>
+
+<h3>Enkeltkamper: hva er det verdt å vite hvem som spiller?</h3>
+<p>Samme type test, men på hver enkelt kamp i stedet for sluttplassen, over 2268 kamper i sesongene 2016–2025. Hver kamp er spådd med modellen tilpasset på kampene før kampdagen (walk-forward, <code>scripts/backtest_walkforward.py --enkeltkamper</code>). Modellen sammenlignes med en variant der alle lag er like sterke og bare hjemmefordelen er med.</p>
+<div class="tblscroll"><table class="mt brier">
+<thead><tr><th>Modell</th><th><span class="lg">Log loss</span><span class="sm">Log loss</span></th><th><span class="lg">Traff utfallet</span><span class="sm">Traff</span></th></tr></thead>
+<tbody>
+<tr><td>Alle lag like sterke</td><td>1,0618</td><td>46,3 %</td></tr>
+<tr><td>Full modell (i bruk)</td><td>1,0036</td><td>51,2 %</td></tr>
+</tbody>
+</table></div>
+<p class="note">På enkeltkamper er altså lagstyrken tydelig verdt noe: 4,9 prosentpoeng flere riktige utfall. At det betyr mindre for sluttplassen, særlig sent i sesongen, er fordi tabellen som er spilt inn allerede bærer mye av den samme informasjonen, og fordi 30 kamper jevner ut mye.</p>
+
+<h2>Hvorfor oddsen hentes rett før avspark</h2>
+<p>Lagstyrken beregnes ut fra både resultatene og oddsen på kampene som er spilt. Dermed får modellen indirekte med seg ting som skader, suspensjoner og lagoppstillinger. På kommende kamper brukes markedsoddsen også direkte når den er tilgjengelig.</p>
+<p>Sluttoddsen er den siste oddsen vi henter mellom 60 og 15 minutter før avspark. Da er som regel også laguttaket kjent.</p>
+<p>Dette har faktisk betydning. I 351 kamper i Eliteserien og OBOS endret sannsynlighetene seg i snitt 2,9 prosentpoeng fra dagen før til rett før kamp. I 2–4 prosent av kampene skiftet også favoritten. I Eliteserien traff oddsen rett før kamp bedre enn oddsen fra dagen før; i OBOS var forskjellen innenfor støyen.</p>
+<p>Får vi ikke hentet odds i dette tidsrommet, står kampen uten sluttodds. Vi bruker aldri en eldre odds i stedet.</p>
+<p class="note">Treffsikkerheten er målt med log loss, som straffer sikre sannsynligheter som bommer; lavere er bedre. Oddsen fra dagen før hadde 0,0124 ± 0,0057 høyere log loss enn sluttoddsen i Eliteserien (2,2 standardfeil) og 0,0020 ± 0,0062 i OBOS (0,3 standardfeil, altså ingen sikker forskjell). Med alle 351 kampene sammen er forskjellen 0,0070 ± 0,0042 (1,6 standardfeil). Sannsynlighetene flyttet seg i snitt 2,77 prosentpoeng i Eliteserien og 3,11 i OBOS, og favoritten byttet i 4 av 167 og 8 av 184 kamper. Oddsen er målt 22. september 2026 med <code>scripts/odds_drift.py</code> (Pinnacle), og marginen er tatt ut med Shins metode som ellers på siden.</p>
+
+<h2>Begrensninger</h2>
+<p>Med 100&nbsp;000 simuleringer er usikkerheten høyst omtrent ±0,3 prosentpoeng, og ±1 prosentpoeng med de 10&nbsp;000 nettleseren regner når du fyller inn resultater selv. Den er mindre for lave og høye sannsynligheter, så prosentene på siden bør ikke tolkes på desimalnivå.</p>
+<p class="note">Kilder til dataene på siden: ffksupporter.net, ESPN, football-data.co.uk, OddsPapi og The Odds API, alt hentet automatisk. Sluttoddsen kommer fra OddsPapi (Pinnacle, ellers bet365, ellers Unibet), med football-data.co.uk som reserve der vinduet er tomt.</p>
+
+<p class="tilbake"><a href="../">Tilbake til Eliteserien</a></p>
+</article>
+</main>
+<script>
+// Treffsikkerheten denne sesongen på modellsjekk-sidene: log loss og
+// kalibrering fra ../data/accuracy.json (scripts/accuracy_log.py), med samme
+// tall, ordlyd og terskel som kortversjonen på ligasiden (renderAccuracy i
+// index.html). Bygges inn i <liga>/modellsjekk/index.html av
+// scripts/build_modellsjekk.py. Tall vises først når minst MIN_KAMPER kamper
+// er loggført denne sesongen.
+(function(){
+  const MIN_KAMPER = 20;
+  const MND = ['januar','februar','mars','april','mai','juni','juli','august','september','oktober','november','desember'];
+  const datoLang = iso => { const d = new Date(iso + 'T12:00:00Z'); return `${d.getUTCDate()}. ${MND[d.getUTCMonth()]}`; };
+  const NAVN = {side: 'Siden (odds og modell)', modell: 'Modellen alene', odds: 'Sluttoddsen alene'};
+  const pct = v => v == null ? '–' : `${Math.round(v * 100)} %`;
+  function tegn(data){
+    const el = document.getElementById('accuracyTall');
+    if(!el) return;
+    const n = data && data.n || 0;
+    if(n < MIN_KAMPER){
+      el.innerHTML = `<p class="note">Loggføringen er i gang. Tall vises når det er spilt minst ${MIN_KAMPER} kamper.</p>`;
+      return;
+    }
+    const rader = Object.keys(NAVN).filter(k => data.kilder[k] && data.kilder[k].n).map(k => { const v = data.kilder[k];
+      return `<tr><td>${NAVN[k]}</td><td>${v.n}</td><td>${pct(v.treff)}</td><td>${v.logloss.toFixed(4).replace('.', ',')}</td></tr>`; }).join('');
+    const kal = (data.kalibrering || []).filter(b => b.n > 0).map(b =>
+      `<tr><td>${Math.round(b.lo * 100)}–${Math.round(b.hi * 100)} %</td><td>${b.n}</td><td>${pct(b.ventet)}</td><td>${pct(b.faktisk)}</td></tr>`).join('');
+    const antall = `${n} kamper`;
+    const usikker = n < 50 ? `Tallene bygger på ${antall}, og sier lite før det er flere.` : `Tallene bygger på ${antall}.`;
+    const spilt = !data.fra ? '' : ' Kampene ble spilt '
+      + (data.fra === data.til ? `${datoLang(data.fra)}.`
+        : data.fra.slice(0, 7) === data.til.slice(0, 7) ? `mellom ${+data.fra.slice(8, 10)}. og ${datoLang(data.til)}.`
+        : `mellom ${datoLang(data.fra)} og ${datoLang(data.til)}.`);
+    const side = data.kilder.side;
+    const kort = side && side.n ? `Utfallet siden ga størst sjanse, skjedde i ${pct(side.treff)} av kampene. ` : '';
+    el.innerHTML = `<p class="note">${kort}${usikker}${spilt}</p>`
+      + `<div class="tblscroll"><table class="mt">`
+      + `<thead><tr><th>Kilde</th><th>Kamper</th><th>Traff utfallet</th><th>Log loss</th></tr></thead>`
+      + `<tbody>${rader}</tbody></table></div>`
+      + `<p class="note">"Traff utfallet" er hvor ofte det mest sannsynlige utfallet ble det som skjedde. `
+      + `Log loss straffer sikre prediksjoner som bommer; lavere er bedre.</p>`
+      + (kal ? `<h3>Kalibrering denne sesongen</h3>`
+        + `<div class="tblscroll"><table class="mt calib">`
+        + `<thead><tr><th>Modellen sa</th><th>Tilfeller</th><th>Snitt</th><th>Skjedde</th></tr></thead>`
+        + `<tbody>${kal}</tbody></table></div>` : '');
+  }
+  window.tegnTreffsikkerhet = tegn;    // testene kaller denne med egne tall
+  fetch('../data/accuracy.json').then(r => r.ok ? r.json() : null).then(tegn).catch(() => tegn(null));
+})();
+</script>
+</body>
+</html>

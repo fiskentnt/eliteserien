@@ -409,8 +409,8 @@ testsidespesifikk og skal ikke porteres. `ELO_EKTE` kan fjernes.
   2026 fra den filen. **2026 må fryses inn i `historikk.json` før det skjer**,
   ellers mister ratingen en sesong. Da endres også sha256-festet i
   `kontroll.py`, og det må gjøres bevisst.
-- **OBOS.** Ikke med. ELO-Odds der forutsetter Oddsportal-tilbakefyllet, som
-  ikke skal ligge i det offentlige repoet. `scripts/build_league.py` genererer
+- **OBOS.** Ikke med. ELO-Odds der forutsetter en oddshistorikk som ikke er
+  offentlig, og som ikke skal ligge i repoet. `scripts/build_league.py` genererer
   `obos/index.html` fra `eliteserien/index.html`, men ikke fra testsiden, og
   skal ikke gjøre det.
 - **Historikkpanelet** (`history.json`) er ikke regnet for testsiden og

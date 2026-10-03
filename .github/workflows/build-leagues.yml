@@ -1,6 +1,8 @@
 name: "Bygg ligasidene"
 
-# obos/index.html genereres fra eliteserien/index.html (scripts/build_league.py).
+# obos/index.html genereres fra eliteserien/index.html (scripts/build_league.py),
+# og modellsjekk-sidene (<liga>/modellsjekk/index.html) fra modellsjekk/ og
+# stilarket i ligasiden (scripts/build_modellsjekk.py).
 # Glemmer noen å bygge, når ikke rettelsen ut til OBOS-siden. Denne jobben
 # bygger den ved hver push som rører kilden, og committer hvis resultatet ble
 # et annet. Bygger den ingenting nytt, gjør jobben ingenting -- så committen
@@ -12,6 +14,8 @@ on:
       - "eliteserien/index.html"
       - "obos/page/**"
       - "scripts/build_league.py"
+      - "modellsjekk/**"
+      - "scripts/build_modellsjekk.py"
   workflow_dispatch: {}
 
 permissions:
@@ -31,16 +35,20 @@ jobs:
       - name: Bygg obos/index.html
         run: python3 scripts/build_league.py obos
 
+      - name: Bygg modellsjekk-sidene
+        run: python3 scripts/build_modellsjekk.py
+
       - name: Commit hvis den var utdatert
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          if git diff --quiet -- obos/index.html; then
-            echo "obos/index.html var allerede bygget fra dagens kilde."
+          FILER="obos/index.html eliteserien/modellsjekk/index.html obos/modellsjekk/index.html"
+          if git diff --quiet -- $FILER; then
+            echo "Ligasidene og modellsjekk-sidene var allerede bygget fra dagens kilde."
             exit 0
           fi
-          echo "obos/index.html var utdatert -- bygget på nytt."
-          git add obos/index.html
-          git commit -m "Bygg obos/index.html fra eliteserien/index.html"
+          echo "Utdatert -- bygget på nytt: $(git diff --name-only -- $FILER | tr '\n' ' ')"
+          git add $FILER
+          git commit -m "Bygg obos/index.html og modellsjekk-sidene fra kildene"
           git pull --rebase --autostash origin main || true
           bash scripts/push_med_rebase.sh

@@ -107,8 +107,9 @@ def hva_mix_lap(R, kamper, p, hjemme_r, w, logg=None):
     w = 0, altsaa vanlig Elo-Goals.
 
     Eliteserien har 100 % dekning i alle sesongene 2012-2026, saa fallbacken
-    slaar ikke inn der. OBOS har 3359 av 3360 for 2012-2025 (Oddsportal,
-    snitt av sluttodds, tilbakefyll) og 184 av 184 i 2026 (OddsPapi), saa
+    slaar ikke inn der. OBOS har 3359 av 3360 for 2012-2025 (en
+    oddshistorikk som ikke er offentlig, snitt av sluttodds, tilbakefyll)
+    og 184 av 184 i 2026 (OddsPapi), saa
     fallbacken slaar inn i noyaktig EN kamp: 2021-11-10
     Sogndal-Stjordals-Blink.
     """

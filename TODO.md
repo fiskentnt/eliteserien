@@ -3,6 +3,64 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Modellsjekk-sidene og "Vis detaljer" (3.10.2026)
+
+"Vis detaljer" i "Hvordan vet vi at modellen virker?" hadde altfor mye tekst.
+Nå: fire korte avsnitt (Hvordan testen er gjort, Med og uten odds, Sluttodds,
+Begrensninger) og lenken "Full dokumentasjon av testene" til nye sider på
+/eliteserien/modellsjekk/ og /obos/modellsjekk/ med resten: Brier-tabellene,
+kontrollen med faste kuttpunkter, hva hvert ledd tilfører, tabellen per fase,
+log loss for sluttoddsen, metoden og tabellene for sesongen.
+
+- Kildene: modellsjekk/<liga>.html og modellsjekk/treffsikkerhet.js. Sidene
+  bygges av scripts/build_modellsjekk.py (stilarket og temaet fra ligasiden),
+  også i "Bygg ligasidene" når kildene eller ligasiden endres. Failsafe 29
+  sjekker at de er bygget.
+- "Treffsikkerhet denne sesongen" viser ingen tall før minst 20 kamper er
+  loggført: "Loggføringen er i gang. Tall vises når det er spilt minst 20
+  kamper." Samme terskel på modellsjekk-sidene og testsiden.
+- Avsnittet om lanseringen er fjernet; "Modellen ble justert igjen 30.
+  september etter ny tilbaketesting." står der notisen sto.
+- Navnet på den ikke-offentlige oddskilden for OBOS-historikken er tatt ut
+  av alle filer i repoet (siden, ENDRINGER.md, TODO.md, elo-test/README.md,
+  dc_rho_studie.py og eloodds.py, der festet sha256 i elo-test/scripts/
+  kontroll.py er oppdatert for kommentarendringen). Git-historikken er ikke
+  skrevet om. Failsafe 29 sjekker at navnet ikke kommer tilbake.
+- "Med og uten odds" er forenklet (Tronds tekst, 3.10.2026): ingen
+  standardfeil, ingen forklaring av sammenligningen og ingen omtale av
+  repoet. Eliteserien: 0,0180 (gull) og 0,0252 (topp 4) i den første
+  fjerdedelen, 0,0076 (nedrykk) over hele sesongen. OBOS: 0,0116, 0,0156 og
+  0,0069. Kontrollert mot walkforward/validering/wf_es.log og
+  obos_medodds.log i lab (30.9.2026). Standardfeil, metoden og om
+  oddshistorikken er offentlig står bare på modellsjekk-sidene.
+- På det synlige nivået er tabellen ikke lenger sammenligning ("Tabellen
+  sier mye, men ikke alt", "bedre enn tabellen alene", "Mot slutten sier
+  tabellen/poengene det meste" er fjernet); begge ligaene har nå "Modellen tar
+  hensyn til hvor sterke lagene har vært, og det betyr mest tidlig i
+  sesongen. Den bruker også oddsen, som fanger opp ting som skader og
+  laguttak." Eksempelet i Eliteserien (et lag mange poeng foran, men ikke stor
+  favoritt i én kamp) står fortsatt.
+- Ligasidene nevner ikke repoet, GitHub, filstier eller skript (test i
+  `--bare nederst`).
+- Eliteserien: under "Treffsikkerhet denne sesongen" står alltid det
+  historiske treffet fra enkeltkamptesten: "I 2268 kamper i sesongene
+  2016–2025 traff modellen utfallet ... i 51 % av kampene. Med like sterke lag
+  ville treffet vært 46 %, og med tilfeldig gjetting 33 %." (wf_kamper_es.log:
+  51,2 og 46,3 %; gjetting er 1/3), og under det loggen for i år. OBOS har
+  ingen tilsvarende enkeltkamptest med dagens modell, så der står bare loggen.
+  Kan lages med lab/walkforward/wf_kamper.py for OBOS (med den ikke-offentlige
+  oddshistorikken) hvis det er ønsket.
+- Testsiden beholder sin egen modellsjekk-seksjon.
+
+Samme push: overskriftene står over tallene sine. "P" sto 7 px til høyre for
+poengtallene mellom 401 og 640 px (vanlige telefoner, 412–430 px) og 5 px
+over 640 px; under 400 px var den riktig (alle cellene har 3 px der).
+Poengcellene har 12 px luft til høyre, overskriften hadde 5 eller 7. Nå har
+P- og Styrke-overskriften samme luft som cellene (`#tbl thead th.pts`,
+`th.formcol`), i begge ligaene, rundetabellen og testsiden. Test: `--bare
+kanter` måler høyrekanten på overskrift og innhold for P, K og de andre
+kolonnene på 360, 390, 430 og 1400 px.
+
 ## Rundemerknaden over tabellen (3.10.2026)
 
 "Runde 24 har resultater for bare 1 av 8 kamper. Tabellen bygger bare på
@@ -1307,7 +1365,7 @@ simuleringen). Ingen parametre er valgt ut fra resultatene.
   (kvalikkampene holdt utenfor). Odds i tilpasningen som produksjonen: BFEC,
   ellers AvgC, ellers PSC. Sluttodds i B: Pinnacle (PSC) i 2764 av 2800
   sammenlignede kamper, snittet (AvgC) i 36.
-- OBOS: oddsportal-historikken i lab (snitt av sluttodds, avskrevet for hånd,
+- OBOS: den ikke-offentlige oddshistorikken i lab (snitt av sluttodds, avskrevet for hånd,
   kontrollert mot RSSSF), 2012–2025, 3360 kamper, odds for 3359. Ligger ikke i
   det offentlige repoet; OBOS-tallene kan ikke gjenskapes derfra.
 - C (tidligere markedsodds): **ikke mulig**. NOR.csv har bare
@@ -1465,7 +1523,7 @@ brukes til å velge vekt, og brukes bare til å kontrollere den valgte vekten.
 - Vektene som testes: 0,0, 0,1, ..., 1,0.
 - Datasett for valget: 2012–2025, walk-forward som i studien, på de samme
   kampene (fra runde 5, med sluttodds): 2800 i Eliteserien (Pinnacle, PSC,
-  ellers snittet, AvgC) og 2799 i OBOS (oddsportal-snittet). Hver vekt regnes
+  ellers snittet, AvgC) og 2799 i OBOS (snittoddsen i den ikke-offentlige historikken). Hver vekt regnes
   gjennom sidens egen vei: blanding på hjemme og borte, fitRates,
   Dixon-Coles -0,04. Vekt 1,0 er derfor oddsen gjennom fitRates, ikke
   nøyaktig "markedet alene" (M) i tabellene over; M rapporteres ved siden av.
@@ -1511,7 +1569,7 @@ mellomliggende vektene (0,1–0,6 og 0,8–0,9, og 1,0 gjennom fitRates) ikke sk
 brukes til å flytte kriteriet etter at hele kurven er sett.
 
 **Begrensning: oddsen i OBOS-historikken.** OBOS-historikken er snittodds fra
-oddsportal, skrevet av for hånd og med større margin (median overround
+en oddshistorikk som ikke er offentlig, skrevet av for hånd og med større margin (median overround
 1,071), mens produksjonen bruker Pinnacle. Det kan forklare noe av at 70/30
 ligger 0,0033 bak markedet i OBOS mot 0,0023 i Eliteserien. I 2026, med
 Pinnacle, var forskjellen i OBOS 0,0009 ± 0,0035. Hvor mye som skyldes
@@ -1549,7 +1607,7 @@ den beste er 1,0, oddsen alene gjennom fitRates, som er lik markedet alene
   0,0012 (174 kamper, innenfor støyen). Retningen stemmer i begge; utvalget er
   lite.
 - Det er OBOS som flytter valget fra 0,7 til 0,8, og OBOS-historikken er
-  oddsportal-snitt, ikke Pinnacle (se begrensningen over). Regelen endres ikke
+  snittodds fra en oddshistorikk som ikke er offentlig, ikke Pinnacle (se begrensningen over). Regelen endres ikke
   av det. Beslutningen tas i punkt 7 i "Modellarbeid høsten 2026"; til da er
   ODDS_W 0,7.
 
@@ -1575,7 +1633,7 @@ sluttplassering blir dårligere?
 - Walk-forward som i studien av tilbaketestene: før hver kampdato
   tilpasses modellen på kampene med tidligere dato (faktisk dato), og
   kampene den dagen predikeres. Eliteserien: NOR.csv, seriekampene
-  (kvalikkampene holdt utenfor); OBOS: oddsportal-historikken i lab.
+  (kvalikkampene holdt utenfor); OBOS: den ikke-offentlige oddshistorikken i lab.
 - Kampene som telles: alle kamper walk-forward dekker (minst 10 spilte kamper
   før kampdatoen) og som har sluttodds (trengs for favorittene).
   Fasene (runde 1–4 og 5 og utover) rapporteres også, men beslutningen bygger
@@ -2365,13 +2423,13 @@ Skript og JSON i lab (`walkforward/validering/`).
 - **Funn: uten odds er 8/24 og 28 dager dårligere enn 16/48 og 35 dager i
   OBOS** (samme tall, parvis): opprykk +0,0015 ± 0,0005, topp 6 +0,0028 ±
   0,0004, nedrykk +0,0008 ± 0,0003, nesten bare før 55 % spilt. Med odds
-  (pakketesten, oddsportal) ble ingen sone dårligere. Produksjonen har odds i
+  (pakketesten, den ikke-offentlige oddshistorikken) ble ingen sone dårligere. Produksjonen har odds i
   alle OBOS-kampene i 2026, men faller tilbake til bare mål uten sluttodds
   (obos_build_data.py), og da med de samme verdiene. Står på OBOS-siden og i
   ENDRINGER.md; lagt fram for Trond før push.
 
 **Etter Tronds tre punkter før push (30.9.2026 kveld).**
-1. OBOS med odds (oddsportal-historikken i lab, `walkforward/validering/
+1. OBOS med odds (den ikke-offentlige oddshistorikken i lab, `walkforward/validering/
    obos_medodds.py`), nye innstillinger, walk-forward, 100 000 simuleringer:
    tabell 0,0546 / 0,1265 / 0,0621, modellen 0,0431 / 0,1110 / 0,0552; mot
    tabell −0,0116 ± 0,0027 (4,2 SE), −0,0156 ± 0,0033 (4,7), −0,0069 ±

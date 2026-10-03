@@ -39,8 +39,8 @@ Data:
   sha256 151c7368b4c5386912f6be952f4ee2fd4e5896d4ff1992228632e58fdc9c67c9.
   Sesongene 2012–2025 i en nyere fil bør gi de samme tallene.
   OBOS: obos_historikk_2012-2025.csv i det private lab-repoet
-  (~/Documents/tabellkalkulator-lab/data/): tredjepartsdata (snittodds fra
-  oddsportal.com, kontrollert mot RSSSF), ligger ikke her fordi dette repoet
+  (~/Documents/tabellkalkulator-lab/data/): tredjepartsdata (snittodds fra en
+  oddshistorikk som ikke er offentlig, kontrollert mot RSSSF), ligger ikke her fordi dette repoet
   er offentlig. Opphav, rettelser og sha256: resultater/obos_odds_tilbakefyll.md
   i lab.
 

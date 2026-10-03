@@ -40,7 +40,9 @@ FEIL = []
 # i CI der laben ikke finnes.
 FESTET = {
     "emodell/historikk.json": "b48baa5de8de8093f36b0bea8d1030921a403bebd823c822559c77d9fce7e108",
-    "scripts/eloodds.py": "6afdad7421c64d84f01f1f09b390f6a310ab930bd3452c70d0269d073d3f36b2",
+    # 3.10.2026: bare en kommentar i docstringen er endret (navnet på
+    # oddskilden for OBOS er tatt ut av de offentlige filene); koden er lik.
+    "scripts/eloodds.py": "30d475da6a80803c9cc33344a42cefa4f05e7dc5a7b26866ffd75dd868955d1d",
 }
 
 
@@ -428,7 +430,12 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # (2. oktober 2026 kveld: kamper spilt mellom Lag og P, smal og dempet, også
 # i rundetabellen) er flettet inn uendret (git merge-file uten konflikter).
 # Rundemerknaden (3. oktober 2026: bare i en eldre rundetabell, med kampene
-# som mangler) er flettet inn uendret.
+# som mangler) er flettet inn uendret. Modellsjekk-sidene (3. oktober 2026:
+# "Vis detaljer" kortet ned, resten på <liga>/modellsjekk/): testsiden
+# beholder sin egen modellsjekk-seksjon (konflikten løst for hånd), og får bare
+# terskelen på 20 kamper i renderAccuracy; tabellene står i loggen som før.
+# Høyrekanten på P- og Styrke-overskriften (samme luft som cellene, 3.10.2026)
+# er flettet inn uendret.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -444,7 +451,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "a1526ce8692fdfeb4fd186b8ca2f4b91bef2f2346a561da8a55e6a8ebda35039"
+BASE_SHA = "d83271ec60236a7333ed1d8e40a8bf74374149c29c4453e752b7ec1773386431"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
