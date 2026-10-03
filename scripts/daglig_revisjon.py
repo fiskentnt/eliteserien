@@ -211,11 +211,19 @@ def revider_kontroller(vaare, kontroller, naa):
     gang er ikke en flytting). Én kontroll med annen dato eller tid er en
     advarsel. To kontroller som er enige med hverandre om en annen DATO enn
     vår, er et avvik: to uavhengige leverandører sier det samme."""
-    feil, advarsler = [], []
+    funn = _kontrollfunn(vaare, kontroller, naa)
+    return [f["tekst"] for f in funn if f["avvik"]], [f["tekst"] for f in funn if not f["avvik"]]
+
+
+def _kontrollfunn(vaare, kontroller, naa):
+    """Funnene i revider_kontroller, med kampen og vår dato og tid den gangen
+    (så en senere revisjon samme dag kan bruke dem, se kontroller_i_dag)."""
+    advarsler, feil = [], []
     for key, v in sorted(vaare.items()):
         if v.get("hg") is not None or _har_startet(v, naa):
             continue
         hvem = f"{key[0]}-{key[1]}"
+        f0 = {"kamp": list(key), "vaar_dato": v.get("date"), "vaar_tid": v.get("time")}
         datoer = {}
         for navn, rader in kontroller.items():
             k = rader.get(key)
@@ -223,15 +231,49 @@ def revider_kontroller(vaare, kontroller, naa):
                 continue
             if k.get("date") != v.get("date"):
                 datoer.setdefault(k.get("date"), []).append(navn)
-                advarsler.append(f"{hvem}: dato {v.get('date')} hos oss, {k.get('date')} hos {navn}")
+                advarsler.append({**f0, "avvik": False, "tekst": f"{hvem}: dato {v.get('date')} hos oss, {k.get('date')} hos {navn}"})
             elif k.get("time") and v.get("time") and k["time"] != v["time"]:
-                advarsler.append(f"{hvem}: avspark {v['time']} hos oss, {k['time']} hos {navn}")
+                advarsler.append({**f0, "avvik": False, "tekst": f"{hvem}: avspark {v['time']} hos oss, {k['time']} hos {navn}"})
             if k.get("round") and v.get("round") and k["round"] != v["round"]:
-                advarsler.append(f"{hvem}: runde {v['round']} hos oss, {k['round']} hos {navn}")
+                advarsler.append({**f0, "avvik": False, "tekst": f"{hvem}: runde {v['round']} hos oss, {k['round']} hos {navn}"})
         for dato, hvem_kilder in datoer.items():
             if len(hvem_kilder) >= 2:
-                feil.append(f"{hvem}: dato {v.get('date')} hos oss, {dato} hos både {' og '.join(hvem_kilder)}")
-    return feil, advarsler
+                feil.append({**f0, "avvik": True, "tekst": f"{hvem}: dato {v.get('date')} hos oss, {dato} hos både {' og '.join(hvem_kilder)}"})
+    return feil + advarsler
+
+
+def kontroller_i_dag(liga, vaare, naa, tidligere, hent=None):
+    """Kontrollkildene (ESPN, Highlightly, OddsPapi) hentes ved FØRSTE
+    revisjon i døgnet (norsk dato), ikke ved hver.
+
+    Highlightly har 100 kall i døgnet, og resultatkontrollen trenger dem. Porten
+    slipper revisjonen gjennom hvert tiende minutt så lenge en kamp venter på
+    resultat, og hele sesongen er 4 kall: uten denne grensen ville dagstaket
+    vært nådd etter 15 kjøringer, akkurat når et resultat mangler (3.10.2026).
+
+    Senere revisjoner samme dag bruker funnene fra den første, for kamper som
+    fortsatt ikke har startet og der vår dato og tid er de samme som da.
+
+    tidligere: forrige audit_fixtures.json (dict, eller None).
+    Returnerer (kilder, feil, advarsler, blokk, gjenbrukt); blokk lagres i
+    audit_fixtures.json under "kontroller"."""
+    i_dag = naa.astimezone(OSLO).strftime("%Y-%m-%d")
+    blokk = (tidligere or {}).get("kontroller") or {}
+    if blokk.get("dato") == i_dag:
+        def gjelder(f):
+            v = vaare.get(tuple(f["kamp"]))
+            return bool(v) and v.get("hg") is None and not _har_startet(v, naa) \
+                and (v.get("date"), v.get("time")) == (f["vaar_dato"], f["vaar_tid"])
+        funn = [f for f in blokk.get("funn", []) if gjelder(f)]
+        return (blokk.get("kilder", []), [f["tekst"] for f in funn if f["avvik"]],
+                [f["tekst"] for f in funn if not f["avvik"]] + blokk.get("feilet", []),
+                {**blokk, "funn": funn}, True)
+    kontroller, feilet = (hent or hent_kontroller)(liga, vaare, naa)
+    funn = _kontrollfunn(vaare, kontroller, naa)
+    blokk = {"dato": i_dag, "hentet": naa.isoformat(timespec="seconds"),
+             "kilder": list(kontroller), "funn": funn, "feilet": feilet}
+    return (list(kontroller), [f["tekst"] for f in funn if f["avvik"]],
+            [f["tekst"] for f in funn if not f["avvik"]] + feilet, blokk, False)
 
 
 def etterkontroll_football_data(spilte, fd_rader):
@@ -493,10 +535,14 @@ def main(argv, naa=None):
     feil, advarsler = revider_kalender(vaare, kalender, sesong=_a, naa=naa,
                                        log=lambda l: print(f"  {l}"))
     # Kontrollen mot de uavhengige kildene (3.10.2026): Eliteserien ESPN og
-    # Highlightly, OBOS Highlightly og OddsPapi.
-    _kontroller, _ka = hent_kontroller(liga, vaare, naa)
-    _kf, _ka2 = revider_kontroller(vaare, _kontroller, naa)
-    feil, advarsler = feil + _kf, advarsler + _ka + _ka2
+    # Highlightly, OBOS Highlightly og OddsPapi. Hentes én gang i døgnet, se
+    # kontroller_i_dag.
+    try:
+        _tidligere = json.loads(sti.read_text(encoding="utf-8"))
+    except Exception:
+        _tidligere = None
+    _kontroller, _kf, _ka, _kblokk, _gjenbrukt = kontroller_i_dag(liga, vaare, naa, _tidligere)
+    feil, advarsler = feil + _kf, advarsler + _ka
     if liga == "eliteserien":
         try:
             _fd = json.loads((ROT / oppsett(liga)["data"] / "odds_fd.json").read_text(encoding="utf-8")).get("matches", [])
@@ -506,7 +552,9 @@ def main(argv, naa=None):
             print(f"  etterkontroll mot football-data.co.uk: {sum(1 for r in _fd if r.get('hg') is not None)} resultater, {len(_ff)} uenige")
         except Exception as e:
             advarsler.append(f"etterkontrollen mot football-data.co.uk kunne ikke kjøres ({type(e).__name__}: {e})")
-    print(f"  kontrollert mot {', '.join(_kontroller) or 'ingen'} ({len(_kf)} avvik, {len(_ka) + len(_ka2)} advarsel(er))")
+    print(f"  kontrollert mot {', '.join(_kontroller) or 'ingen'} ({len(_kf)} avvik, {len(_ka)} advarsel(er))"
+          + (f" -- funnene fra kl. {datetime.fromisoformat(_kblokk['hentet']).astimezone(OSLO):%H:%M} i dag, kildene hentes én gang i døgnet"
+             if _gjenbrukt else ""))
     print(f"Daglig terminlisterevisjon, {oppsett(liga)['visningsnavn']}: "
           f"{len(vaare)} kamper hos oss mot {len(kalender)} i kalenderfeeden")
     for a in advarsler:
@@ -527,6 +575,7 @@ def main(argv, naa=None):
         "kjoring": _ses.kjoring_id(),
         "errors": len(feil), "warnings": len(advarsler),
         "avvik": feil[:20], "advarsler": advarsler[:20], "bekreftet": {},
+        "kontroller": _kblokk,
     }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     skriv_stempel(liga, feil, naa)
 

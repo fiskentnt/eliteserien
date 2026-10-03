@@ -2523,6 +2523,46 @@ _f, _a = _drk.revider_kontroller(_vo, _kos2, _naa_r)
 sjekk("OBOS: OddsPapi med annet avspark (17:00 mot 19:00): advarsel",
       _f == [] and _a == ["Bryne-Raufoss: avspark 19:00 hos oss, 17:00 hos OddsPapi"], f"{_f} {_a}")
 
+print("\n=== Kontrollkildene hentes én gang i døgnet (daglig_revisjon.kontroller_i_dag) ===")
+# Porten slipper revisjonen gjennom hvert tiende minutt mens en kamp venter på
+# resultat. Hele sesongen fra Highlightly er 4 kall, og dagstaket (60) skal
+# holde til resultatkontrollen. Blokken går gjennom JSON som i audit_fixtures.json.
+_hentet = []
+def _hent_kontroll(liga, vaare, naa):
+    _hentet.append(naa)
+    return {k: dict(v) for k, v in _kes2.items()}, ["kontrollen mot OddsPapi kunne ikke kjøres (Test: nede)"]
+_tur = lambda b: json.loads(json.dumps(b, ensure_ascii=False))
+_k1 = _drk.kontroller_i_dag("eliteserien", _ve2, _naa_r, None, hent=_hent_kontroll)
+sjekk("første revisjon i døgnet henter kontrollene: ett kall til henteren, funnene som revider_kontroller gir",
+      len(_hentet) == 1 and _k1[4] is False and _k1[0] == ["ESPN", "Highlightly"]
+      and _k1[1] == _drk.revider_kontroller(_ve2, _kes2, _naa_r)[0]
+      and _k1[2] == _drk.revider_kontroller(_ve2, _kes2, _naa_r)[1] + ["kontrollen mot OddsPapi kunne ikke kjøres (Test: nede)"],
+      f"{len(_hentet)} {_k1[:3]}")
+sjekk("og funnene er ikke tomme (Brann-Viking: en annen dato hos Highlightly, ESPN enig med oss)",
+      any("Brann-Viking" in t for t in _k1[2]), str(_k1[2]))
+_k2 = _drk.kontroller_i_dag("eliteserien", _ve2, _naa_r + _td(hours=3), {"kontroller": _tur(_k1[3])}, hent=_hent_kontroll)
+sjekk("tre timer senere samme dag: ingen ny henting, de samme funnene og de samme kildene",
+      len(_hentet) == 1 and _k2[4] is True and _k2[:3] == _k1[:3], f"{len(_hentet)} {_k2[:3]}")
+_ve3 = {k: dict(m) for k, m in _ve2.items()}
+_ve3[("Brann", "Viking")]["date"] = "2026-10-09"
+_k3 = _drk.kontroller_i_dag("eliteserien", _ve3, _naa_r + _td(hours=3), {"kontroller": _tur(_k1[3])}, hent=_hent_kontroll)
+sjekk("vår dato er endret siden: funnet for kampen gjelder ikke lenger (sjekkes på nytt i morgen)",
+      len(_hentet) == 1 and not any("Brann-Viking" in t for t in _k3[1] + _k3[2]) and _k3[2][-1].startswith("kontrollen mot OddsPapi"),
+      str(_k3[1:3]))
+_bv = _ve2[("Brann", "Viking")]
+_etter_avspark = _dt.fromisoformat(f"{_bv['date']}T{_bv['time']}:00").replace(tzinfo=_drk.OSLO) + _td(minutes=5)
+_blokk_fram = {**_tur(_k1[3]), "dato": _etter_avspark.strftime("%Y-%m-%d")}
+_k4 = _drk.kontroller_i_dag("eliteserien", _ve2, _etter_avspark, {"kontroller": _blokk_fram}, hent=_hent_kontroll)
+sjekk("kampen har startet: funnet for den er borte, uten ny henting",
+      len(_hentet) == 1 and _k4[4] is True and not any("Brann-Viking" in t for t in _k4[1] + _k4[2]), str(_k4[1:3]))
+_k5 = _drk.kontroller_i_dag("eliteserien", _ve2, _naa_r + _td(days=1), {"kontroller": _tur(_k1[3])}, hent=_hent_kontroll)
+sjekk("neste dag: kontrollene hentes på nytt", len(_hentet) == 2 and _k5[4] is False and _k5[3]["dato"] != _k1[3]["dato"],
+      f"{len(_hentet)} {_k5[3].get('dato')} {_k1[3].get('dato')}")
+_src_dr = Path(_drk.__file__).read_text(encoding="utf-8")
+_hoved = _src_dr[_src_dr.index("def main("):]
+sjekk("revisjonen henter kontrollene bare gjennom kontroller_i_dag, og lagrer blokken i audit_fixtures.json",
+      "kontroller_i_dag(" in _hoved and "hent_kontroller(" not in _hoved and '"kontroller": _kblokk' in _hoved)
+
 print("\n=== Etterkontrollen mot football-data.co.uk (Eliteserien) ===")
 # NOR.csv 3.10.2026 (bare 2026-radene): fetch_odds_history tar nå med
 # sluttresultatet (HG/AG), og den daglige revisjonen sammenligner de
