@@ -3,6 +3,47 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Kildene: rekkefølge, regelen for resultatene og reservene (3.10.2026 kveld)
+
+Godkjent plan (3.10.), gjort i seks commits ("Kilder (del 1-6)"):
+
+1. scripts/highlightly_source.py: soccer.highlightly.net, nøkkelen
+   HIGHLIGHTLY_API_KEY (x-rapidapi-key), ligaene 88437 (Eliteserien) og
+   89288 (OBOS), navnekart fra kartleggingen. Tidene er UTC og regnes om.
+   Resultater per dato (ett kall per kampdag); en hel sesong får dublettene
+   fjernet på kamp-id og det som mangler hentet per dato, og brukes bare
+   med nøyaktig 240 unike kamper (sidedelingen er ustabil: Egersund-Stabæk,
+   Sandefjord-Brann og Vålerenga-Molde manglet, andre kom to ganger).
+   Dagstak 60 av 100; hvert kall telles i data/highlightly-bruk.
+2. scripts/resultatregel.py: hovedkilden og en annen leverandør må være
+   enige (fotball.no og NTF er samme). Ligasiden nede: neste kilde er
+   hovedkilde. Uten uavhengig kilde: ligasiden alene etter 24 timer,
+   ukontrollert, og kjøringen er rød (resultatregel.py sjekk <liga>, eget
+   steg til slutt) til en annen leverandør bekrefter det; konflikter er også
+   røde. En annen enkeltkilde publiserer aldri. ESPN sitt 0-0 som er uenig
+   med ligasiden, publiseres aldri alene (to slike kamper 29.5.).
+3. OBOS (obos_results.py): ligasiden, Highlightly, OddsPapi (bare som
+   reserve, ett tellende kall per kamp, prøves før 24-timersregelen),
+   Wikipedia, fotball.no. Eliteserien (update_data.kontroller_nye_resultater):
+   ligasiden, ESPN (hele sesongen i ett kall), Highlightly, ffksupporter.
+   Tilstanden står i <liga>/data/results_state.json; should_fetch slipper
+   gjennom en kjøring i timeslotten mens noe står uten kontroll.
+4. Terminlisten (terminliste_reserve.py): kalenderfeeden, ESPN
+   (Eliteserien, runden fra den lagrede), Highlightly (med runde), den siste
+   gyldige terminlisten; fotball.no bare i krise (ligasiden svarer ikke og
+   den siste gyldige finnes ikke). Publiserte resultater røres aldri, og en
+   kamp som har startet beholder avsparket vårt.
+5. Daglig kontroll (daglig_revisjon.py): Eliteserien mot ESPN og
+   Highlightly, OBOS mot Highlightly og OddsPapi (den mellomlagrede
+   kamplisten, ingen nye kall). To leverandører enige mot oss er et avvik.
+6. Etterkontroll av Eliteserie-resultatene mot football-data.co.uk:
+   fetch_odds_history tar med HG/AG i odds_fd.json (først når NOR.csv
+   endres neste gang); uenig er et avvik.
+
+API-Football er fjernet (6f676d2); nøkkelen API_FOOTBALL_KEY kan slettes.
+Highlightly-kall i døgnet: resultatene 1-3 per kampdag per liga, den
+daglige kontrollen 3-4 per liga.
+
 ## Forrige kamp: boksen og svaret deler én utregning (3.10.2026 kveld)
 
 I en full regresjon ga boksen 8 og svaret 7 prosentpoeng for Raufoss

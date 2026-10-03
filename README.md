@@ -79,11 +79,21 @@ tegnes på nytt.
 
 | Hva | Kilde |
 |---|---|
-| Eliteserien-resultater | ffksupporter.net er fasit; ESPN fyller inn ferske resultater som ikke er lagt inn der ennå |
-| OBOS-resultater | OddsPapi, med Wikipedia som kontroll |
+| Eliteserien-resultater | eliteserien.no, så ESPN, Highlightly, ffksupporter.net og fotball.no (bare i krise); football-data.co.uk som etterkontroll |
+| OBOS-resultater | obos-ligaen.no, så Highlightly, OddsPapi (bare som reserve, hvert kall koster), Wikipedia og fotball.no (bare i krise) |
+| Terminliste og avspark | ligasidene; reserve: kalenderfeeden, ESPN (Eliteserien), Highlightly, den siste gyldige terminlisten, fotball.no bare i krise. Daglig kontroll mot ESPN og Highlightly (Eliteserien) og Highlightly og OddsPapi (OBOS) |
 | Sluttodds | OddsPapi (Pinnacle, ellers bet365, ellers Unibet), med football-data.co.uk som reserve |
 | Odds for kommende kamper | OddsPapi og The Odds API |
-| Historiske sesonger | football-data.co.uk (`NOR.csv`), OBOS-CSV 2012–2026 |
+| Historiske sesonger | football-data.co.uk (`NOR.csv`), OBOS-CSV 2012–2025 (CSV-en brukes ellers bare ved sesongstart) |
+
+**Regelen for resultatene** (`scripts/resultatregel.py`): et resultat
+publiseres når hovedkilden og minst én kilde fra en annen leverandør er
+enige. fotball.no og ligasidene (NTF) er samme leverandør. Er ligasiden nede,
+blir neste kilde hovedkilde. Uten uavhengig kilde publiseres ligasidens
+resultat alene etter 24 timer, aldri en annen enkeltkilde, og kjøringen er
+rød til det er kontrollert. Tider fra ESPN, Highlightly og OddsPapi er UTC og
+regnes om med Europe/Oslo. Highlightly hentes per dato (sidedelingen er
+ustabil), og en hel sesong brukes bare med nøyaktig 240 unike kamper.
 
 Alt hentes automatisk av workflowene i `.github/workflows/`. Ingenting
 publiseres uten at valideringen går gjennom.
