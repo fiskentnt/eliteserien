@@ -65,7 +65,8 @@ krev("frysregelen er produksjonens modul (ingen kopi i elo-test/)",
      "require('./prekick_frys')" in (ROT / "scripts" / "snapshot_probs.js").read_text(encoding="utf-8")
      and not list((ROT / "elo-test").rglob("prekick_frys*")))
 krev("siden henter de fire panelfilene fra emodell/, og ikke history.json",
-     all(f"fetch('emodell/{n}.json')" in _h for n in ("keymatch", "lastmatch", "prekick", "accuracy"))
+     # hentFersk (3.10.2026): samme filer, hentet uten gammel kopi.
+     all(f"hentFersk('emodell/{n}.json')" in _h for n in ("keymatch", "lastmatch", "prekick", "accuracy"))
      and "history.json" not in _akt and "Promise.resolve(null)" not in _h)
 krev("history.json skrives ikke for testsiden", not (UT / "history.json").exists())
 _pk = UT / "prekick.json"
