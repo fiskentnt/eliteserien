@@ -39,6 +39,7 @@ OSLO = ZoneInfo("Europe/Oslo")
 ROT = Path(__file__).resolve().parent.parent
 ANTALL_KAMPER = 240
 DAGSTAK = 60          # av 100 i døgnet hos Highlightly
+KVOTE_ADVARSEL = 20   # advarsel når Highlightly selv sier at færre kall er igjen
 TIMEOUT = 30
 
 # Ligaenes id hos Highlightly (kartleggingen 3.10.2026).
@@ -113,6 +114,12 @@ def _tell():
     fil.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
+# Kvoten slik Highlightly selv oppgir den i svaret på siste kall
+# (x-ratelimit-requests-remaining og -limit). Vår egen teller (dagsbruk)
+# ser bare våre kall; denne ser alt som er brukt på nøkkelen i dag.
+_siste_kvote = {}
+
+
 def _http(sti, param):
     """Ett kall. Byttes ut i testene (lagrede svar)."""
     nokkel = os.environ.get("HIGHLIGHTLY_API_KEY", "").strip()
@@ -121,7 +128,31 @@ def _http(sti, param):
     url = f"{BASE}{sti}?{urllib.parse.urlencode(param)}"
     req = urllib.request.Request(url, headers={"x-rapidapi-key": nokkel, "User-Agent": "tabellkalkulator.no"})
     with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
+        for navn in ("x-ratelimit-requests-remaining", "x-ratelimit-requests-limit"):
+            if r.headers.get(navn) is not None:
+                _siste_kvote[navn] = r.headers.get(navn)
         return json.loads(r.read().decode("utf-8"))
+
+
+def _kvote(liga, sti, param, log=print):
+    """Logger det Highlightly sier er igjen i dag, ved hvert kall, og advarer
+    under KVOTE_ADVARSEL (4.10.2026). Returnerer antallet, eller None når
+    svaret ikke hadde headeren."""
+    hva = f"{sti}{' ' + param['date'] if param.get('date') else ''} ({liga})"
+    try:
+        igjen = int(_siste_kvote.get("x-ratelimit-requests-remaining"))
+    except (TypeError, ValueError):
+        log(f"[highlightly] {hva}: svaret hadde ikke x-ratelimit-requests-remaining")
+        return None
+    grense = _siste_kvote.get("x-ratelimit-requests-limit")
+    log(f"[highlightly] {hva}: {igjen}{f' av {grense}' if grense else ''} kall igjen i dag "
+        f"(x-ratelimit-requests-remaining)")
+    if igjen < KVOTE_ADVARSEL:
+        tekst = f"Highlightly har bare {igjen} kall igjen i dag (under {KVOTE_ADVARSEL})"
+        log(f"ADVARSEL: {tekst}")
+        if os.environ.get("GITHUB_ACTIONS"):
+            log(f"::warning title=Highlightly-kvoten::{tekst}")
+    return igjen
 
 
 def kall(sti, param, liga="alle"):
@@ -129,12 +160,15 @@ def kall(sti, param, liga="alle"):
     if dagsbruk() >= DAGSTAK:
         raise Budsjett(f"dagstaket er nådd ({DAGSTAK} kall i dag)")
     _tell()
+    _siste_kvote.clear()
     try:
         d = _http(sti, param)
     except Exception as e:
         hentelogg.logg(liga, "highlightly-matches", "feil", melding=f"{type(e).__name__}: {e}"[:200])
         raise
-    hentelogg.logg(liga, "highlightly-matches", "ok", kamper=len(d.get("data", [])))
+    igjen = _kvote(liga, sti, param)
+    hentelogg.logg(liga, "highlightly-matches", "ok", kamper=len(d.get("data", [])),
+                   melding=f"{igjen} kall igjen i dag hos Highlightly" if igjen is not None else "")
     return d
 
 

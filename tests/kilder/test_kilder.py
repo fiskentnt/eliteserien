@@ -2285,6 +2285,46 @@ try:
     _hls.DAGSTAK = _ekte_tak
     sjekk(f"dagstaket: kallene telles ({_brukt} i testen), og over taket går ingen kall ut",
           _brukt >= 10 and _kast is not None and _hl_kall == [], f"{_brukt} {_kast} {_hl_kall}")
+    # Kvoten fra Highlightly (x-ratelimit-requests-remaining) logges ved hvert
+    # kall, og under 20 er det en advarsel (4.10.2026). Svaret uten headeren
+    # sies også.
+    import io as _io, contextlib as _cl, os as _os4
+    def _med_kvote(igjen):
+        def h(sti, param):
+            d = _hl_http(sti, param)
+            if igjen is not None:
+                _hls._siste_kvote.update({"x-ratelimit-requests-remaining": str(igjen), "x-ratelimit-requests-limit": "100"})
+            return d
+        return h
+    _kv = {}
+    _ekte_gh = _os4.environ.pop("GITHUB_ACTIONS", None)
+    for _igjen in (57, 20, 19, None):
+        _hls._http = _med_kvote(_igjen)
+        _buf = _io.StringIO()
+        with _cl.redirect_stdout(_buf):
+            _hls.hent_dag("2026-10-03")
+        _kv[_igjen] = _buf.getvalue()
+    if _ekte_gh is not None:
+        _os4.environ["GITHUB_ACTIONS"] = _ekte_gh
+    _hls._http = _hl_http
+    sjekk("kvoten logges ved hvert kall: «57 av 100 kall igjen i dag (x-ratelimit-requests-remaining)», ingen advarsel ved 57 og 20",
+          "/matches 2026-10-03 (alle): 57 av 100 kall igjen i dag (x-ratelimit-requests-remaining)" in _kv[57]
+          and "ADVARSEL" not in _kv[57] and "20 av 100 kall igjen" in _kv[20] and "ADVARSEL" not in _kv[20], _kv[57] + _kv[20])
+    sjekk("under 20: advarsel (19 kall igjen)",
+          "ADVARSEL: Highlightly har bare 19 kall igjen i dag (under 20)" in _kv[19], _kv[19])
+    sjekk("svar uten headeren: det sies, ingen advarsel", "hadde ikke x-ratelimit-requests-remaining" in _kv[None]
+          and "ADVARSEL" not in _kv[None], _kv[None])
+    _os4.environ["GITHUB_ACTIONS"] = "true"
+    _buf = _io.StringIO()
+    _hls._http = _med_kvote(3)
+    with _cl.redirect_stdout(_buf):
+        _hls.hent_dag("2026-10-03")
+    if _ekte_gh is None:
+        _os4.environ.pop("GITHUB_ACTIONS", None)
+    else:
+        _os4.environ["GITHUB_ACTIONS"] = _ekte_gh
+    sjekk("i GitHub Actions blir advarselen også en ::warning", "::warning title=Highlightly-kvoten::Highlightly har bare 3 kall igjen i dag" in _buf.getvalue(),
+          _buf.getvalue())
 finally:
     _hls._http = _hl_ekte_http
 
