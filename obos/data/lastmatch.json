@@ -14,10 +14,10 @@
    "actual": "win",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": 10,
+   "pp": 9,
    "good": true,
    "basis": "forventning",
-   "expected": 0.6549
+   "expected": 0.652
   },
   "Egersund": {
    "date": "2026-10-02",
@@ -29,12 +29,12 @@
    "gf": 0,
    "ga": 5,
    "actual": "loss",
-   "zone": "kvalik",
-   "chance": "kvaliksjansen",
-   "pp": 0,
+   "zone": "europa",
+   "chance": "topp 6-sjansen",
+   "pp": -5,
    "good": false,
    "basis": "forventning",
-   "expected": 0.0074
+   "expected": 0.1006
   },
   "Haugesund": {
    "date": "2026-09-20",
@@ -51,7 +51,7 @@
    "pp": 5,
    "good": true,
    "basis": "forventning",
-   "expected": 0.7708
+   "expected": 0.7627
   },
   "Hødd": {
    "date": "2026-09-20",
@@ -65,10 +65,10 @@
    "actual": "loss",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": -3,
+   "pp": -4,
    "good": false,
    "basis": "forventning",
-   "expected": 0.2627
+   "expected": 0.2568
   },
   "Kongsvinger": {
    "date": "2026-09-20",
@@ -85,7 +85,7 @@
    "pp": 5,
    "good": true,
    "basis": "forventning",
-   "expected": 0.5297
+   "expected": 0.5259
   },
   "Lyn": {
    "date": "2026-09-20",
@@ -102,7 +102,7 @@
    "pp": 2,
    "good": false,
    "basis": "forventning",
-   "expected": 0.0136
+   "expected": 0.0125
   },
   "Moss": {
    "date": "2026-09-20",
@@ -116,10 +116,10 @@
    "actual": "win",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": -10,
+   "pp": -9,
    "good": true,
    "basis": "forventning",
-   "expected": 0.1995
+   "expected": 0.1962
   },
   "Odd": {
    "date": "2026-09-20",
@@ -133,10 +133,10 @@
    "actual": "win",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": 9,
+   "pp": 10,
    "good": true,
    "basis": "forventning",
-   "expected": 0.7479
+   "expected": 0.7533
   },
   "Ranheim": {
    "date": "2026-10-02",
@@ -153,7 +153,7 @@
    "pp": 4,
    "good": true,
    "basis": "forventning",
-   "expected": 0.0609
+   "expected": 0.0636
   },
   "Raufoss": {
    "date": "2026-09-20",
@@ -170,7 +170,7 @@
    "pp": 4,
    "good": false,
    "basis": "forventning",
-   "expected": 0.7739
+   "expected": 0.7743
   },
   "Sandnes Ulf": {
    "date": "2026-10-03",
@@ -187,7 +187,7 @@
    "pp": -1,
    "good": true,
    "basis": "forventning",
-   "expected": 0.1161
+   "expected": 0.108
   },
   "Sogndal": {
    "date": "2026-09-20",
@@ -204,7 +204,7 @@
    "pp": 1,
    "good": false,
    "basis": "forventning",
-   "expected": 0.0871
+   "expected": 0.0755
   },
   "Stabæk": {
    "date": "2026-09-20",
@@ -218,10 +218,10 @@
    "actual": "win",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": 3,
+   "pp": 2,
    "good": true,
    "basis": "forventning",
-   "expected": 0.0937
+   "expected": 0.0872
   },
   "Strømmen": {
    "date": "2026-10-03",
@@ -235,45 +235,45 @@
    "actual": "draw",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 1,
+   "pp": 0,
    "good": false,
    "basis": "forventning",
-   "expected": 0.0746
+   "expected": 0.0675
   },
   "Strømsgodset": {
-   "date": "2026-09-20",
-   "home": "Raufoss",
-   "away": "Strømsgodset",
-   "hg": 0,
-   "ag": 2,
-   "opp": "Raufoss",
-   "gf": 2,
+   "date": "2026-10-03",
+   "home": "Strømsgodset",
+   "away": "Åsane",
+   "hg": 1,
+   "ag": 0,
+   "opp": "Åsane",
+   "gf": 1,
    "ga": 0,
    "actual": "win",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": 4,
+   "pp": 3,
    "good": true,
    "basis": "forventning",
-   "expected": 0.4358
+   "expected": 0.4713
   },
   "Åsane": {
-   "date": "2026-09-19",
-   "home": "Åsane",
-   "away": "Bryne",
-   "hg": 0,
-   "ag": 4,
-   "opp": "Bryne",
+   "date": "2026-10-03",
+   "home": "Strømsgodset",
+   "away": "Åsane",
+   "hg": 1,
+   "ag": 0,
+   "opp": "Strømsgodset",
    "gf": 0,
-   "ga": 4,
+   "ga": 1,
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 7,
+   "pp": 2,
    "good": false,
    "basis": "forventning",
-   "expected": 0.7752
+   "expected": 0.8642
   }
  },
- "updated": "2026-10-03T14:33:58Z"
+ "updated": "2026-10-03T15:53:25Z"
 }
