@@ -1593,7 +1593,6 @@ function visJusteringer(){
   });
 }
 let matches = []; // gjenstående kamper, redigerbare
-let ROUND_LAST_DATE = {}; // runde -> siste kampdato i runden (uansett spilt eller ikke), for "samme runde"-utfylling
 let ODDS_UP = {}, ODDS_FETCHED_AT = null; // odds for kommende kamper, nøkkel "hjemme|borte"
 const RATES = {};
 
@@ -3880,19 +3879,33 @@ function updateSummaryCards(){
 // (spilte runder, fra faktiske resultater) eller blir (kommende, fra resultatene
 // i kamplisten) etter valgt runde. Rundene sorteres etter dato, ikke nummer:
 // runde 12 er utsatt til oktober og havner mellom 24 og 25. ----
-let ROUND_SEQ = []; // [{round, end}] i tidsrekkefølge, end = siste kampdato i runden
+let ROUND_SEQ = []; // [{round, mid, end}] i tidsrekkefølge, end = datoen runden ble spilt ferdig (se under)
+// En kamp mer enn så mange dager etter mediandatoen er flyttet ut av runden.
+// I 2026 ligger kampene i en runde fra fire dager før til to dager etter
+// mediandatoen, og de utsatte kampene 10 til 122 dager etter.
+const RUNDE_SAMLET_DAGER = 6;
 function buildRoundSeq(){
   // Sorteres på MEDIANEN av kampdatoene i runden, ikke på siste dato: en enkelt
   // utsatt kamp (runde 1, 2, 8, 11 har hver én) skal ikke flytte hele runden,
   // mens runde 12 (alle kampene utsatt til oktober) havner mellom 24 og 25.
-  const dates = {}, last = {};
-  const add = m=>{ (dates[m.round] = dates[m.round] || []).push(m.date); if(!last[m.round] || m.date>last[m.round]) last[m.round] = m.date; };
+  // Sluttdatoen (end) følger samme regel: siste dato blant kampene som ligger
+  // samlet rundt mediandatoen, ikke en kamp flyttet langt ut. Den står i
+  // overskriften ("etter runde 24 (5. oktober)") og er grensen for
+  // poengjusteringene i rundetabellen. Før var det rundens siste kampdato
+  // uansett: "etter runde 24 (21. oktober)" fordi Sogndal-Raufoss er flyttet
+  // til 21. oktober, og "etter runde 2 (22. juli)" i Eliteserien (3.10.2026).
+  const dates = {};
+  const add = m=>{ (dates[m.round] = dates[m.round] || []).push(m.date); };
   MATCHES.forEach(add); matches.forEach(add);
   ROUND_SEQ = Object.keys(dates).map(r=>{
-    const d = dates[r].slice().sort();
-    return {round:+r, mid:d[Math.floor(d.length/2)], end:last[r]};
+    const d = dates[r].slice().sort(), mid = d[Math.floor(d.length/2)];
+    const grense = new Date(mid+'T12:00:00Z'); grense.setUTCDate(grense.getUTCDate()+RUNDE_SAMLET_DAGER);
+    const g = grense.toISOString().slice(0,10);
+    return {round:+r, mid, end:d.filter(x=>x<=g).pop()};
   }).sort((a,b)=> a.mid.localeCompare(b.mid) || a.round-b.round);
 }
+// Datoen runden ble spilt ferdig (end over), for overskriften over tabellen.
+const rundeSlutt = round => { const r = ROUND_SEQ.find(x=>x.round===round); return r ? r.end : null; };
 let selRoundIdx = null; // null = gjeldende tabell (alle resultater)
 const hasResult = m => m.hg!=null && m.ag!=null;
 // Forrige runde (i tidsrekkefølge) med minst ett resultat, spilt eller fylt inn:
@@ -6949,7 +6962,7 @@ function render(){
   if(!isCurrent){
     document.getElementById('tblInfo').textContent = `etter runde ${ROUND_SEQ[viewIdx].round} (${dateNoLong(ROUND_SEQ[viewIdx].end)})`;
   } else if(ownMatch){
-    const targetDate = ROUND_LAST_DATE[ownMatch.round] || ownMatch.date;
+    const targetDate = rundeSlutt(ownMatch.round) || ownMatch.date;
     document.getElementById('tblInfo').textContent = `etter runde ${ownMatch.round} (${dateNoLong(targetDate)})`;
   } else {
     // Før første serierunde er det ingen kamp å regne "etter".
@@ -7677,8 +7690,6 @@ async function boot(){
   // som ikke er ferdig, vises gråtonet og legges ikke i den redigerbare listen.
   // De to neste rundene vises åpent, resten legges bak "Vis alle runder".
   matches = [];
-  ROUND_LAST_DATE = {};
-  FIXTURES_IN.forEach(r=>{ ROUND_LAST_DATE[r.round] = r.matches.reduce((mx,m)=> m.date>mx?m.date:mx, r.matches[0].date); });
   const hiddenRounds = document.createElement('div'); hiddenRounds.hidden = true; hiddenRounds.id = 'hiddenRounds';
   FIXTURES_IN.forEach((r,ri)=>{
     const d = document.createElement('div'); d.className='round'; d.dataset.round = r.round;

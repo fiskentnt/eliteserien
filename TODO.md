@@ -3,6 +3,32 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Rundens sluttdato: kampene som ligger samlet (3.10.2026)
+
+Overskriften over tabellen sto "etter runde 24 (21. oktober)" i OBOS
+(Sogndal-Raufoss flyttet til 21. oktober) og "etter runde 2 (22. juli)" i
+Eliteserien (Bodø/Glimt-HamKam spilt 22. juli), og poengjusteringene i
+rundetabellen ble talt til den datoen. Årsak: ROUND_SEQ.end (og
+ROUND_LAST_DATE for overskriften med et eget resultat) var rundens siste
+kampdato uansett.
+
+Nå: samme utgangspunkt som når rundene sorteres, mediandatoen. Sluttdatoen
+er siste dato blant kampene som ligger høyst RUNDE_SAMLET_DAGER (6) dager
+etter mediandatoen. I 2026 ligger kampene i en runde fra fire dager før til
+to dager etter mediandatoen, og de utsatte kampene 10 til 122 dager etter.
+Endret: OBOS runde 1 (7. juni -> 7. april) og 24 (21. -> 5. oktober),
+Eliteserien runde 1 (15. april -> 15. mars), 2 (22. juli -> 22. mars), 8
+(20. -> 10. mai) og 11 (22. juli -> 30. mai). Eliteserien runde 12 er hele
+runden flyttet og slutter 25. oktober som før. Åsane-trekket (4. mars) er
+før alle disse datoene, så ingen rundetabell med ekte data endrer poeng. ROUND_LAST_DATE er
+fjernet; overskriften bruker rundeSlutt(runde). Hvilke kamper rundetabellen
+tar med, er uendret (alle kampene med rundenummeret til og med runden).
+
+Test: `node tests/regression.js --bare rundeslutt` (7 kontroller: datoen,
+overskriften med eget resultat og i rundevelgeren, og to testtrekk på og
+etter rundens dato). Mot den publiserte siden med den gamle koden feilet
+alle 7.
+
 ## "Fyll ut runden": bare samme rundenummer (3.10.2026)
 
 "Simuler runden" på OBOS runde 24 og så H på Strømmen-Sandnes Ulf fylte i
@@ -22,11 +48,8 @@ kamper" (alle tomme) og rundetabellen (computeAt tar med rundene til og med
 den valgte etter rundenummer, i tidsrekkefølge etter mediandatoen) hadde
 ikke feilen.
 
-Ikke endret: rundens sluttdato i ROUND_SEQ og ROUND_LAST_DATE tar med den
-flyttede kampen, så overskriften står "etter runde 24 (21. oktober)" når et
-eget resultat ligger i runde 24, og poengjusteringene til rundetabellen for
-runde 24 telles til 21. oktober. Det samme gjelder de spilte rundene med en
-utsatt kamp (Eliteserien runde 2: "etter runde 2 (22. juli)").
+Rundens sluttdato tok også med den flyttede kampen ("etter runde 24 (21.
+oktober)", "etter runde 2 (22. juli)"); rettet i egen commit, se under.
 
 Test: `node tests/regression.js --bare fyllrunden` (21 kontroller, klikk i
 kamplisten, OBOS runde 24 og Eliteserien runde 12). Mot den publiserte

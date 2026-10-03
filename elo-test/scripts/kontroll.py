@@ -444,6 +444,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # er flettet inn uendret.
 # "Fyll ut runden" fyller bare kampene med samme rundenummer som kampen som
 # ble endret (3.10.2026, før alle til rundens siste dato) er flettet inn uendret.
+# Rundens sluttdato regnet av kampene som ligger samlet rundt mediandatoen,
+# ikke en enkelt kamp flyttet langt ut (3.10.2026), er flettet inn uendret.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -459,7 +461,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "86ae40905f1c09c0b4daac8d768590e52ba74edcf9540952034b6b75d269cb6b"
+BASE_SHA = "72246c3728d19cd696ba84d511390a9ce73cb9790f9ba9c47f609fa8bfebd77b"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

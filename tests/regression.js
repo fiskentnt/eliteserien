@@ -2080,6 +2080,65 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await pg.close();
     }
   };
+  // Rundens sluttdato (3.10.2026): datoen runden ble spilt ferdig, regnet av
+  // kampene som ligger samlet rundt mediandatoen (samme utgangspunkt som når
+  // rundene sorteres), ikke av en enkelt kamp flyttet langt ut. Før sto
+  // "etter runde 24 (21. oktober)" i OBOS (Sogndal-Raufoss flyttet til 21.
+  // oktober) og "etter runde 2 (22. juli)" i Eliteserien (Bodø/Glimt-HamKam
+  // spilt 22. juli), og poengjusteringene i rundetabellen ble talt til den
+  // datoen. Overskriften med et eget resultat i runden og i rundetabellen
+  // (rundevelgeren), og justeringene med to testtrekk: ett på rundens dato
+  // (telles) og ett mellom den og den flyttede kampen (telles ikke før neste
+  // runde). Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare rundeslutt
+  const rundeslutt = async () => {
+    setGroup('Rundens sluttdato: datoen runden ble spilt, ikke en kamp flyttet langt ut');
+    for (const [sti, liga, R, dato, tekst, trekk, mellom] of [
+      ['/obos/', 'OBOS', 24, '2026-10-05', '5. oktober', 'Bryne', ['Moss', '2026-10-10']],
+      ['/eliteserien/', 'Eliteserien', 2, '2026-03-22', '22. mars', 'Molde', ['Brann', '2026-04-01']]]) {
+      const pg = await open(1400, 900, base.replace('/eliteserien/', sti) + '#team=');
+      await settle(pg);
+      const info = () => pg.evaluate(() => ({info: document.getElementById('tblInfo').textContent, runde: document.getElementById('roundLabel').textContent}));
+      const r = await pg.evaluate(R => { const x = ROUND_SEQ.find(y => y.round === R), alle = [...MATCHES, ...matches].filter(m => m.round === R).map(m => m.date).sort();
+        return {end: x.end, sisteKamp: alle[alle.length - 1]}; }, R);
+      check(`${liga}: runde ${R} er spilt ferdig ${tekst}, ikke ${r.sisteKamp} (siste kamp i runden)`, r.end === dato && r.sisteKamp > dato, JSON.stringify(r));
+      // Overskriften med et eget resultat i runden (OBOS: kampen er uspilt).
+      if (sti === '/obos/') {
+        await pg.evaluate(() => { const b = document.getElementById('showAllRounds'); if (!b.hidden) b.click(); });
+        const id = await pg.evaluate(R => matches.find(m => m.round === R && !m.moved).id, R);
+        await klikk(pg, `.match[data-id="${id}"] .quick button[data-q="H"]`);
+        await settle(pg);
+        const a = await info();
+        check(`${liga}: med et eget resultat i runde ${R}: "etter runde ${R} (${tekst})"`, a.info === `etter runde ${R} (${tekst})`, JSON.stringify(a));
+        await pg.evaluate(R => { matches.filter(m => m.round === R + 1).forEach(m => setMatch(m, 1, 0)); render(); }, R);
+        await settle(pg);
+      }
+      // Rundetabellen for runden, valgt med rundevelgeren.
+      for (let i = 0; i < 40; i++) {
+        const a = await info();
+        if (a.runde.startsWith(`Runde ${R} `)) break;
+        await klikk(pg, '#roundPrev');
+      }
+      const b = await info();
+      check(`${liga}: rundetabellen for runde ${R}: "etter runde ${R} (${tekst})"`, b.runde.startsWith(`Runde ${R} `) && b.info === `etter runde ${R} (${tekst})`, JSON.stringify(b));
+      // Poengjusteringene: testtrekk på rundens dato og etter den.
+      const j = await pg.evaluate((R, dato, trekk, mellom) => {
+        const lagret = JUSTERINGER;
+        JUSTERINGER = [...lagret, {lag: trekk, poeng: -1, dato}, {lag: mellom[0], poeng: -2, dato: mellom[1]}];
+        const iR = ROUND_SEQ.findIndex(x => x.round === R);
+        const just = (i, lag) => computeAt(i).find(x => x.name === lag).just;
+        const ut = {paaDato: just(iR, trekk), etter: just(iR, mellom[0]), nesteRunde: just(iR + 1, mellom[0])};
+        render();
+        const celle = [...document.querySelectorAll('#tbl tbody tr')].find(tr => tr.dataset.team === trekk).querySelector('td.pts').textContent;
+        ut.celle = celle; ut.pts = computeAt(iR).find(x => x.name === trekk).pts;
+        JUSTERINGER = lagret; render();
+        return ut;
+      }, R, dato, trekk, mellom);
+      check(`${liga}: rundetabellen for runde ${R} teller et trekk ${dato} (${trekk}), ikke et ${mellom[1]} (${mellom[0]}); det kommer med i neste runde`,
+        j.paaDato === -1 && j.etter === 0 && j.nesteRunde === -2 && j.celle === `*${j.pts}`, JSON.stringify(j));
+      await pg.close();
+    }
+  };
   // Rundemerknaden over tabellen (3.10.2026): aldri i dagens tabell (en runde
   // som er i gang er normalt, og K-kolonnen viser kampene), bare i
   // rundetabellen for en TIDLIGERE runde der kamper mangler, og da med hvilke
@@ -2263,9 +2322,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'kanter') await overskriftKanter();
       else if (BARE === 'tidsrekkefolge') await tidsrekkefolge();
       else if (BARE === 'fyllrunden') await fyllrunden();
+      else if (BARE === 'rundeslutt') await rundeslutt();
       else if (BARE === 'nederst') await nederstPaaSiden();
       else if (BARE === 'justering') await poengjusteringer();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, justering)`);
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, justering)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -3111,6 +3171,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await overskriftKanter();
     await tidsrekkefolge();
     await fyllrunden();
+    await rundeslutt();
     await page.bringToFront();
 
     // ---- 18. rulling til svaret på iPad-bredder ----
