@@ -187,6 +187,9 @@ jobs:
         # ikke svarer, aldri ellers (se nff_source.py).
         if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
           && steps.bygg.outcome == 'success'
+        env:
+          # Kontrollen mot Highlightly (hele sesongen, 3-4 kall i døgnet).
+          HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
         run: python3 scripts/daglig_revisjon.py obos
 
       - name: Merk daglig vedlikehold som utført

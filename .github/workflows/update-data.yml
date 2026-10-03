@@ -105,6 +105,9 @@ jobs:
         # 1.10.2026): den hentes bare automatisk som reserve naar ligasiden
         # ikke svarer, aldri ellers (se nff_source.py).
         if: steps.gate.outputs.should_fetch == 'true'
+        env:
+          # Kontrollen mot Highlightly (hele sesongen, 3-4 kall i døgnet).
+          HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
         run: python3 scripts/daglig_revisjon.py eliteserien
 
       - name: Se etter neste sesongs terminliste (eliteserien)

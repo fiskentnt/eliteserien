@@ -202,6 +202,78 @@ def revider_kalender(vaare, kalender, sesong=None, naa=None, log=lambda s: None)
     return feil, advarsler
 
 
+def revider_kontroller(vaare, kontroller, naa):
+    """(feil, advarsler) for de kommende kampene våre mot kontrollkildene
+    (3.10.2026): Eliteserien ESPN og Highlightly, OBOS Highlightly og
+    OddsPapi. kontroller: {navn: {(hjemme, borte): {date, time, round?}}}.
+
+    Bare kamper som ikke har startet (et avspark i UTC eller en kamp som er i
+    gang er ikke en flytting). Én kontroll med annen dato eller tid er en
+    advarsel. To kontroller som er enige med hverandre om en annen DATO enn
+    vår, er et avvik: to uavhengige leverandører sier det samme."""
+    feil, advarsler = [], []
+    for key, v in sorted(vaare.items()):
+        if v.get("hg") is not None or _har_startet(v, naa):
+            continue
+        hvem = f"{key[0]}-{key[1]}"
+        datoer = {}
+        for navn, rader in kontroller.items():
+            k = rader.get(key)
+            if not k:
+                continue
+            if k.get("date") != v.get("date"):
+                datoer.setdefault(k.get("date"), []).append(navn)
+                advarsler.append(f"{hvem}: dato {v.get('date')} hos oss, {k.get('date')} hos {navn}")
+            elif k.get("time") and v.get("time") and k["time"] != v["time"]:
+                advarsler.append(f"{hvem}: avspark {v['time']} hos oss, {k['time']} hos {navn}")
+            if k.get("round") and v.get("round") and k["round"] != v["round"]:
+                advarsler.append(f"{hvem}: runde {v['round']} hos oss, {k['round']} hos {navn}")
+        for dato, hvem_kilder in datoer.items():
+            if len(hvem_kilder) >= 2:
+                feil.append(f"{hvem}: dato {v.get('date')} hos oss, {dato} hos både {' og '.join(hvem_kilder)}")
+    return feil, advarsler
+
+
+def hent_kontroller(liga, vaare, naa, log=print):
+    """Kontrollkildene for terminlisten som {navn: {(hjemme, borte): rad}}.
+    En kilde som ikke kan hentes, gir en advarsel, aldri et avvik."""
+    aar = naa.astimezone(OSLO).year
+    ut, advarsler = {}, []
+    kjente = {k: v.get("date") for k, v in vaare.items()}
+    hentere = []
+    if liga == "eliteserien":
+        def _espn():
+            import espn_source
+            return espn_source.fetch_season(aar, log=lambda _s: None)
+        hentere.append(("ESPN", _espn))
+
+    def _hl():
+        import highlightly_source
+        return highlightly_source.hent_sesong(liga, aar, kjente)
+    hentere.append(("Highlightly", _hl))
+    if liga == "obos":
+        def _op():
+            import obos_results
+            fx = json.loads(obos_results.FIXTURES_CACHE.read_text(encoding="utf-8")).get("fixtures", [])
+            navn, lag = obos_results.load_names(), {obos_results.norm(t): t for k in vaare for t in k}
+            rader = []
+            for f in fx:
+                h = lag.get(obos_results.norm(navn.get(f.get("participant1Name"), f.get("participant1Name"))))
+                b = lag.get(obos_results.norm(navn.get(f.get("participant2Name"), f.get("participant2Name"))))
+                t = f.get("startTime")
+                if h and b and t:
+                    d = datetime.fromisoformat(t.replace("Z", "+00:00")).astimezone(OSLO)
+                    rader.append({"home": h, "away": b, "date": d.strftime("%Y-%m-%d"), "time": d.strftime("%H:%M")})
+            return rader
+        hentere.append(("OddsPapi", _op))
+    for navn, hent in hentere:
+        try:
+            ut[navn] = {(r["home"], r["away"]): r for r in hent()}
+        except Exception as e:
+            advarsler.append(f"kontrollen mot {navn} kunne ikke kjøres ({type(e).__name__}: {e})")
+    return ut, advarsler
+
+
 def _er_vaart_avspark_i_utc(k, v):
     """True naar feedens (dato, tid) er vaart avspark (norsk tid) skrevet i UTC."""
     if not (k.get("time") and v.get("time") and v.get("date")):
@@ -405,6 +477,12 @@ def main(argv, naa=None):
         return 0
     feil, advarsler = revider_kalender(vaare, kalender, sesong=_a, naa=naa,
                                        log=lambda l: print(f"  {l}"))
+    # Kontrollen mot de uavhengige kildene (3.10.2026): Eliteserien ESPN og
+    # Highlightly, OBOS Highlightly og OddsPapi.
+    _kontroller, _ka = hent_kontroller(liga, vaare, naa)
+    _kf, _ka2 = revider_kontroller(vaare, _kontroller, naa)
+    feil, advarsler = feil + _kf, advarsler + _ka + _ka2
+    print(f"  kontrollert mot {', '.join(_kontroller) or 'ingen'} ({len(_kf)} avvik, {len(_ka) + len(_ka2)} advarsel(er))")
     print(f"Daglig terminlisterevisjon, {oppsett(liga)['visningsnavn']}: "
           f"{len(vaare)} kamper hos oss mot {len(kalender)} i kalenderfeeden")
     for a in advarsler:

@@ -2495,6 +2495,34 @@ sjekk("ESPN sine feil 0-0 endrer aldri et publisert resultat (Vålerenga-Kristia
       (_ri[("Vålerenga", "Kristiansund")]["hg"], _ri[("Vålerenga", "Kristiansund")]["ag"]) == (3, 1)
       and (_ri[("Aalesund", "HamKam")]["hg"], _ri[("Aalesund", "HamKam")]["ag"]) == (2, 2), str(_ri[("Vålerenga", "Kristiansund")]))
 
+print("\n=== Den daglige kontrollen mot ESPN, Highlightly og OddsPapi (daglig_revisjon.revider_kontroller) ===")
+# Bare kommende kamper. Én kontroll som er uenig: advarsel. To kontroller
+# som er enige med hverandre om en annen dato enn vår: avvik (rødt).
+_ve = {k: dict(m) for k, m in _fasit_alle["eliteserien"].items()}
+_vo = {k: dict(m) for k, m in _fasit_alle["obos"].items()}
+_kes = {"ESPN": {(r["home"], r["away"]): r for r in _espn3()},
+        "Highlightly": {(r["home"], r["away"]): r for r in (_hls.parse_kamp(m, "eliteserien") for m in
+                        {m["id"]: m for m in _hl_les("sesong_eliteserien_2026")}.values())}}
+_f, _a = _drk.revider_kontroller(_ve, _kes, _naa_r)
+sjekk("Eliteserien 3.10.: terminlisten fra 1.10. mot ESPN og Highlightly: ingen avvik og ingen advarsler", (_f, _a) == ([], []), f"{_f} {_a[:3]}")
+_kos = {"Highlightly": {(r["home"], r["away"]): r for r in _hl_obos()}}
+_f, _a = _drk.revider_kontroller(_vo, _kos, _naa_r)
+sjekk("OBOS 3.10.: mot Highlightly: ingen avvik og ingen advarsler (dagens kamper som har startet, er ikke med)", (_f, _a) == ([], []), f"{_f} {_a[:3]}")
+_ve2 = {k: dict(m) for k, m in _ve.items()}
+_ve2[("Brann", "Viking")]["date"] = "2026-10-10"
+_f, _a = _drk.revider_kontroller(_ve2, _kes, _naa_r)
+sjekk("vi har en annen dato enn både ESPN og Highlightly: avvik (to leverandører enige)",
+      _f == ["Brann-Viking: dato 2026-10-10 hos oss, 2026-10-09 hos både ESPN og Highlightly"], f"{_f} {_a}")
+_kes2 = {"ESPN": dict(_kes["ESPN"]), "Highlightly": _kes["Highlightly"]}
+_kes2["ESPN"][("Brann", "Viking")] = {**_kes["ESPN"][("Brann", "Viking")], "date": "2026-10-10"}
+_f, _a = _drk.revider_kontroller(_ve, _kes2, _naa_r)
+sjekk("bare én kontroll (ESPN) har en annen dato: advarsel, ikke avvik",
+      _f == [] and _a == ["Brann-Viking: dato 2026-10-09 hos oss, 2026-10-10 hos ESPN"], f"{_f} {_a}")
+_kos2 = {"Highlightly": dict(_kos["Highlightly"]), "OddsPapi": {("Bryne", "Raufoss"): {"date": "2026-10-14", "time": "17:00"}}}
+_f, _a = _drk.revider_kontroller(_vo, _kos2, _naa_r)
+sjekk("OBOS: OddsPapi med annet avspark (17:00 mot 19:00): advarsel",
+      _f == [] and _a == ["Bryne-Raufoss: avspark 19:00 hos oss, 17:00 hos OddsPapi"], f"{_f} {_a}")
+
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.
 _vern.sjekk_urort(sjekk)
