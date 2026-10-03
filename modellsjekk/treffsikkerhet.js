@@ -22,20 +22,20 @@
       return `<tr><td>${NAVN[k]}</td><td>${v.n}</td><td>${pct(v.treff)}</td><td>${v.logloss.toFixed(4).replace('.', ',')}</td></tr>`; }).join('');
     const kal = (data.kalibrering || []).filter(b => b.n > 0).map(b =>
       `<tr><td>${Math.round(b.lo * 100)}–${Math.round(b.hi * 100)} %</td><td>${b.n}</td><td>${pct(b.ventet)}</td><td>${pct(b.faktisk)}</td></tr>`).join('');
-    const antall = `${n} kamper`;
-    const usikker = n < 50 ? `Tallene bygger på ${antall}, og sier lite før det er flere.` : `Tallene bygger på ${antall}.`;
-    const spilt = !data.fra ? '' : ' Kampene ble spilt '
-      + (data.fra === data.til ? `${datoLang(data.fra)}.`
-        : data.fra.slice(0, 7) === data.til.slice(0, 7) ? `mellom ${+data.fra.slice(8, 10)}. og ${datoLang(data.til)}.`
-        : `mellom ${datoLang(data.fra)} og ${datoLang(data.til)}.`);
+    // Samme setning som på ligasiden (renderAccuracy): "I år har siden tippet
+    // riktig i X % av enkeltkampene. Tallene bygger på N kamper spilt mellom
+    // A og B, og er fortsatt usikre." Fra 50 kamper uten "og er fortsatt usikre".
     const side = data.kilder.side;
-    const kort = side && side.n ? `Utfallet siden ga størst sjanse, skjedde i ${pct(side.treff)} av kampene. ` : '';
-    el.innerHTML = `<p class="note">${kort}${usikker}${spilt}</p>`
+    const periode = !data.fra ? '' : ' spilt ' + (data.fra === data.til ? datoLang(data.fra)
+      : data.fra.slice(0, 7) === data.til.slice(0, 7) ? `mellom ${+data.fra.slice(8, 10)}. og ${datoLang(data.til)}`
+      : `mellom ${datoLang(data.fra)} og ${datoLang(data.til)}`);
+    const setning = (side && side.n ? `I år har siden tippet riktig i ${pct(side.treff)} av enkeltkampene. ` : '')
+      + `Tallene bygger på ${n} kamper${periode}${n < 50 ? ', og er fortsatt usikre' : ''}.`;
+    el.innerHTML = `<p class="note">${setning}</p>`
       + `<div class="tblscroll"><table class="mt">`
-      + `<thead><tr><th>Kilde</th><th>Kamper</th><th>Traff utfallet</th><th>Log loss</th></tr></thead>`
+      + `<thead><tr><th>Kilde</th><th>Kamper</th><th>Tippet riktig</th><th>Log loss</th></tr></thead>`
       + `<tbody>${rader}</tbody></table></div>`
-      + `<p class="note">"Traff utfallet" er hvor ofte det mest sannsynlige utfallet ble det som skjedde. `
-      + `Log loss straffer sikre prediksjoner som bommer; lavere er bedre.</p>`
+      + `<p class="note">Tippet riktig er hvor ofte kampen endte slik siden mente var mest sannsynlig: hjemmeseier, uavgjort eller borteseier.</p>`
       + (kal ? `<h3>Kalibrering denne sesongen</h3>`
         + `<div class="tblscroll"><table class="mt calib">`
         + `<thead><tr><th>Modellen sa</th><th>Tilfeller</th><th>Snitt</th><th>Skjedde</th></tr></thead>`

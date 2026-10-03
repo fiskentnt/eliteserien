@@ -282,16 +282,21 @@ async function main() {
     // størst sjanse, skjedde), og tabellene på modellsjekk-siden
     // (<liga>/modellsjekk/, #accuracyTall). Testsiden har tabellene i loggen
     // som før, med samme terskel.
-    const kort = 'Utfallet siden ga størst sjanse, skjedde i 50 % av kampene. ';
+    // Tronds ordlyd (3.10.2026): "I år har siden tippet riktig i X % av
+    // enkeltkampene. Tallene bygger på N kamper spilt mellom A og B, og er
+    // fortsatt usikre." Fra 50 kamper uten "og er fortsatt usikre". Ordet
+    // "utfallet" brukes ikke i treffsikkerheten.
+    const kort = 'I år har siden tippet riktig i 50 % av enkeltkampene. ';
     const melding = 'Loggføringen er i gang. Tall vises når det er spilt minst 20 kamper.';
     const tilfeller = [
       {navn: 'ingen kamper', n: 0, fra: null, til: null, ventet: melding},
       {navn: '1 kamp', n: 1, fra: '2026-10-02', til: '2026-10-02', ventet: melding},
       {navn: '19 kamper', n: 19, fra: '2026-10-02', til: '2026-10-05', ventet: melding},
-      {navn: '20 kamper samme dag', n: 20, fra: '2026-10-02', til: '2026-10-02', ventet: `${kort}Tallene bygger på 20 kamper, ${lite} Kampene ble spilt 2. oktober.`},
-      {navn: '20 kamper over to dager', n: 20, fra: '2026-10-02', til: '2026-10-03', ventet: `${kort}Tallene bygger på 20 kamper, ${lite} Kampene ble spilt mellom 2. og 3. oktober.`},
-      {navn: 'kamper over månedsskiftet', n: 20, fra: '2026-09-30', til: '2026-10-02', ventet: `${kort}Tallene bygger på 20 kamper, ${lite} Kampene ble spilt mellom 30. september og 2. oktober.`},
-      {navn: '50 kamper', n: 50, fra: '2026-10-02', til: '2026-11-08', ventet: `${kort}Tallene bygger på 50 kamper. Kampene ble spilt mellom 2. oktober og 8. november.`},
+      {navn: '20 kamper samme dag', n: 20, fra: '2026-10-02', til: '2026-10-02', ventet: `${kort}Tallene bygger på 20 kamper spilt 2. oktober, og er fortsatt usikre.`},
+      {navn: '20 kamper over to dager', n: 20, fra: '2026-10-02', til: '2026-10-03', ventet: `${kort}Tallene bygger på 20 kamper spilt mellom 2. og 3. oktober, og er fortsatt usikre.`},
+      {navn: 'kamper over månedsskiftet', n: 20, fra: '2026-09-30', til: '2026-10-02', ventet: `${kort}Tallene bygger på 20 kamper spilt mellom 30. september og 2. oktober, og er fortsatt usikre.`},
+      {navn: '49 kamper', n: 49, fra: '2026-10-02', til: '2026-11-07', ventet: `${kort}Tallene bygger på 49 kamper spilt mellom 2. oktober og 7. november, og er fortsatt usikre.`},
+      {navn: '50 kamper', n: 50, fra: '2026-10-02', til: '2026-11-08', ventet: `${kort}Tallene bygger på 50 kamper spilt mellom 2. oktober og 8. november.`},
     ];
     const data = c => { const kilde = {n: c.n, treff: 0.5, logloss: 1.01};
       return {n: c.n, fra: c.fra, til: c.til, kilder: c.n ? {side: kilde, modell: kilde, odds: kilde} : {}, kalibrering: []}; };
@@ -301,7 +306,7 @@ async function main() {
       const r = await pg.evaluate(t => t.map(c => {
         renderAccuracy(c);
         const el = document.getElementById('accuracyLog'), ps = [...el.querySelectorAll(':scope > p.note')];
-        return {tekst: ps.length ? ps[ps.length - 1].textContent.trim() : '', tabeller: el.querySelectorAll('table').length,
+        return {tekst: ps.length ? ps[ps.length - 1].textContent.trim() : '', tabeller: el.querySelectorAll('table').length, utfallet: /utfallet/i.test(el.textContent),
                 kamper: [...el.querySelectorAll('tbody tr td:nth-child(2)')].map(x => x.textContent),
                 accuracyTall: !!document.getElementById('accuracyTall')};
       }), tilfeller.map(data));
@@ -319,7 +324,7 @@ async function main() {
       const side = sti.replace(/\//g, '');
       const nyForm = sti !== '/elo-test/';
       tilfeller.forEach((c, i) => check(`${side}: ${c.navn}: "${c.ventet}"`,
-        r[i].tekst === c.ventet && !r[i].accuracyTall
+        r[i].tekst === c.ventet && !r[i].accuracyTall && !r[i].utfallet
           && (nyForm ? r[i].tabeller === 0 : (c.n < 20 ? r[i].tabeller === 0 : r[i].kamper.length === 3 && r[i].kamper.every(k => k === String(c.n)))),
         JSON.stringify(r[i])));
       if (nyForm) {
@@ -338,14 +343,17 @@ async function main() {
           tegnTreffsikkerhet(c);
           const el = document.getElementById('accuracyTall'), ps = [...el.querySelectorAll('p.note')];
           return {tekst: ps.length ? ps[0].textContent.trim() : '', forklaring: ps.length > 1 ? ps[1].textContent.trim() : '',
-                  kamper: [...el.querySelectorAll('tbody tr td:nth-child(2)')].map(x => x.textContent)};
+                  kamper: [...el.querySelectorAll('tbody tr td:nth-child(2)')].map(x => x.textContent),
+                  kolonne: (el.querySelectorAll('thead th')[2] || {}).textContent || '', alt: el.closest('.doc').querySelector('#accuracyTall').parentElement.textContent};
         }), tilfeller.map(data));
         tilfeller.forEach((c, i) => check(`${side}/modellsjekk: ${c.navn}: ${c.n < 20 ? 'meldingen' : 'setningen og tabellen'}`,
           m[i].tekst === c.ventet && (c.n < 20 ? m[i].kamper.length === 0 : m[i].kamper.length === 3 && m[i].kamper.every(k => k === String(c.n))),
           JSON.stringify(m[i])));
-        check(`${side}/modellsjekk: forklaringen til tabellen har "Traff utfallet" med vanlige anførselstegn`,
-          m.filter((x, i) => tilfeller[i].n >= 20).every(x => x.forklaring.startsWith('"Traff utfallet" er hvor ofte')) && !m.some(x => x.forklaring.includes('«')),
-          JSON.stringify(m.map(x => x.forklaring)));
+        check(`${side}/modellsjekk: kolonnen heter "Tippet riktig", med forklaringen under, og "utfallet" står ikke i treffsikkerheten`,
+          m.filter((x, i) => tilfeller[i].n >= 20).every(x => x.kolonne === 'Tippet riktig'
+            && x.forklaring === 'Tippet riktig er hvor ofte kampen endte slik siden mente var mest sannsynlig: hjemmeseier, uavgjort eller borteseier.')
+            && !m.some(x => /utfallet/i.test(x.alt)),
+          JSON.stringify(m.map(x => [x.kolonne, x.forklaring])));
         const sl = await dp.evaluate(() => {
           const h = [...document.querySelectorAll('.doc h2')].find(x => x.textContent === 'Hvorfor oddsen hentes rett før avspark');
           if (!h) return null;
@@ -1996,11 +2004,15 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
                 // (det står på modellsjekk-siden), og tabellen brukes ikke som
                 // sammenligning i modellsjekken, verken synlig eller under
                 // "Vis detaljer" (3.10.2026).
-                historisk: (() => { const ps = [...document.querySelectorAll('.modelcheck .in > p')], logg = document.getElementById('accuracyLog');
-                  const h = ps.find(x => x.textContent.includes('2268 kamper'));
-                  if (!h) return 'mangler';
-                  return h.textContent.trim() === 'I 2268 kamper i sesongene 2016–2025 traff modellen utfallet, hjemmeseier, uavgjort eller borteseier, i 51 % av kampene. Med like sterke lag ville treffet vært 46 %, og med tilfeldig gjetting 33 %.'
-                    && logg && (h.compareDocumentPosition(logg) & Node.DOCUMENT_POSITION_FOLLOWING) && !h.closest('details.details-tech') ? 'foer-logg' : `feil: ${h.textContent.trim()}`; })(),
+                // Eliteserien: det historiske treffet i avsnittet om testen
+                // (p.plain-lead), rett etter testbeskrivelsen; OBOS har ingen.
+                historisk: (() => { const lead = document.querySelector('.modelcheck .in > p.plain-lead');
+                  const alle = [...document.querySelectorAll('.modelcheck p')].filter(x => x.textContent.includes('2268'));
+                  if (!alle.length) return 'mangler';
+                  const slutt = 'Testene viser at prosentene stort sett holder godt over tid. I 2268 enkeltkamper i sesongene 2016–2025 tippet modellen riktig H, U eller B i 51 % av kampene. Med like sterke lag ville den tippet riktig i 46 %, og med tilfeldig gjetting i 33 %.';
+                  return alle.length === 1 && alle[0] === lead && lead.textContent.trim().endsWith(slutt) ? 'i-avsnittet' : `feil: ${alle.map(x => x.textContent.trim().slice(-200)).join(' | ')}`; })(),
+                underOverskrift: (() => { const h = [...document.querySelectorAll('.modelcheck h3')].find(x => x.textContent === 'Treffsikkerhet denne sesongen');
+                  const e = h && h.nextElementSibling; return e ? (e.id || e.tagName) : null; })(),
                 repo: (document.body.innerText.match(/[^.\n]*(repo|github|scripts\/|\.py\b|\.csv\b|\.json\b)[^.\n]*/gi) || []).slice(0, 3),
                 tabell: (() => { const m = document.querySelector('.modelcheck'); if (!m) return ['ingen modellsjekk'];
                   return (m.textContent.replace(/\s+/g, ' ').match(/[^.]*\b(tabellen|tabell alene|sier poengene)\b[^.]*\./gi) || []).slice(0, 3); })(),
@@ -2020,20 +2032,20 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       check(`${liga}: synlig: testen forklart enkelt, med konklusjonen`,
         r.synlig.includes('Før hver kampdag lot vi den spå resten av sesongen med bare kampene som var spilt til da')
           && r.synlig.includes('Testene viser at prosentene stort sett holder godt over tid.'), r.synlig.slice(0, 500));
-      check(`${liga}: synlig: treffsikkerhet denne sesongen, og at prognosene lagres før avspark`,
-        r.synlig.includes('Treffsikkerhet denne sesongen') && r.synlig.includes('Prognosene lagres før avspark'), r.synlig.slice(0, 700));
+      check(`${liga}: synlig: "Treffsikkerhet denne sesongen" med bare loggen for i år under`,
+        r.synlig.includes('Treffsikkerhet denne sesongen') && r.underOverskrift === 'accuracyLog', `${r.underOverskrift} | ${r.synlig.slice(0, 300)}`);
       if (liga === 'Eliteserien') check(`${liga}: synlig: eksempelet med tabellen mot modellen`, r.eksempel === true, String(r.eksempel));
       check(`${liga}: synlig: lagstyrken og oddsen, uten sammenligning med tabellen`,
         r.synlig.includes('Modellen tar hensyn til hvor sterke lagene har vært, og det betyr mest tidlig i sesongen. Den bruker også oddsen, som fanger opp ting som skader og laguttak.')
           && !r.tabell.length, `${r.synlig.slice(0, 500)} | ${JSON.stringify(r.tabell)}`);
       check(`${liga}: siden nevner ikke repoet, GitHub, filstier eller skript`, !r.repo.length, JSON.stringify(r.repo));
-      // Det historiske treffet fra enkeltkamptesten står alltid synlig under
-      // "Treffsikkerhet denne sesongen" i Eliteserien, før loggen for i år
-      // (3.10.2026). OBOS har ingen tilsvarende test: bare loggen.
-      const historisk = 'I 2268 kamper i sesongene 2016–2025 traff modellen utfallet, hjemmeseier, uavgjort eller borteseier, i 51 % av kampene. Med like sterke lag ville treffet vært 46 %, og med tilfeldig gjetting 33 %.';
-      check(liga === 'Eliteserien' ? `${liga}: synlig: det historiske treffet (51 %, 46 % med like sterke lag, 33 % ved gjetting), før loggen for i år`
+      // Det historiske treffet fra enkeltkamptesten står alltid synlig i
+      // avsnittet om testen i Eliteserien; under "Treffsikkerhet denne
+      // sesongen" står bare loggen for i år (3.10.2026). OBOS har ingen
+      // tilsvarende test: bare loggen.
+      check(liga === 'Eliteserien' ? `${liga}: synlig: det historiske treffet (51 %, 46 % med like sterke lag, 33 % ved gjetting) i avsnittet om testen`
                                    : `${liga}: ingen historisk treffprosent (ingen enkeltkamptest for OBOS), bare loggen`,
-        liga === 'Eliteserien' ? r.historisk === 'foer-logg' : r.historisk === 'mangler', r.historisk);
+        liga === 'Eliteserien' ? r.historisk === 'i-avsnittet' : r.historisk === 'mangler', r.historisk);
       // Om oddshistorikken er offentlig, står på modellsjekk-siden, ikke her.
       check(`${liga}: under "Vis detaljer": regnestykket for form, oddshentingen, Brier-tallene og lenken til modellsjekk-siden, ingen omtale av oddshistorikken`,
         r.form && r.oddshenting && r.brier && r.lenke && !r.privat,

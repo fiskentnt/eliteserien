@@ -1302,17 +1302,16 @@
 <details class="howitworks modelcheck">
   <summary><span class="sum-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 20v-7M12 20V6M18 20v-11"/></svg></span>Hvordan vet vi at modellen virker?</summary>
   <div class="in">
-    <p class="plain-lead">Vi har testet modellen på sesongene 2016–2025. Før hver kampdag lot vi den spå resten av sesongen med bare kampene som var spilt til da, og sammenlignet med hvordan det faktisk gikk. Testene viser at prosentene stort sett holder godt over tid.</p>
+    <p class="plain-lead">Vi har testet modellen på sesongene 2016–2025. Før hver kampdag lot vi den spå resten av sesongen med bare kampene som var spilt til da, og sammenlignet med hvordan det faktisk gikk. Testene viser at prosentene stort sett holder godt over tid. I 2268 enkeltkamper i sesongene 2016–2025 tippet modellen riktig H, U eller B i 51 % av kampene. Med like sterke lag ville den tippet riktig i 46 %, og med tilfeldig gjetting i 33 %.</p>
     <p>Modellen tar hensyn til hvor sterke lagene har vært, og det betyr mest tidlig i sesongen. Den bruker også oddsen, som fanger opp ting som skader og laguttak.</p>
     <p id="modelExample"></p>
 
+    <!-- Det historiske treffet i avsnittet over er fra enkeltkamptesten
+         (walk-forward, 2268 kamper, 2016–2025: full modell 51,2 %, like sterke
+         lag 46,3 %; lab walkforward/validering/wf_kamper_es.log, 30.9.2026).
+         Tilfeldig gjetting blant tre utfall er 1/3. OBOS har ingen tilsvarende
+         test. Under overskriften står bare loggen for i år (3.10.2026). -->
     <h3>Treffsikkerhet denne sesongen</h3>
-    <!-- Historisk treff fra enkeltkamptesten (walk-forward, 2268 kamper,
-         2016–2025: full modell 51,2 %, like sterke lag 46,3 %; lab
-         walkforward/validering/wf_kamper_es.log, 30.9.2026). Tilfeldig gjetting
-         blant tre utfall er 1/3. OBOS har ingen tilsvarende test. -->
-    <p>I 2268 kamper i sesongene 2016–2025 traff modellen utfallet, hjemmeseier, uavgjort eller borteseier, i 51 % av kampene. Med like sterke lag ville treffet vært 46 %, og med tilfeldig gjetting 33 %.</p>
-    <p>Prognosene lagres før avspark og holdes opp mot resultatet etterpå. Ingenting regnes på nytt, så tallene kan ikke bli bedre av etterpåklokskap.</p>
     <div id="accuracyLog" data-tabeller="modellsjekk"></div>
 
     <details class="details-tech">
@@ -6738,41 +6737,36 @@ function renderAccuracy(data){
   const kal = (data.kalibrering||[]).filter(b=>b.n>0).map(b=>
     `<tr><td>${Math.round(b.lo*100)}–${Math.round(b.hi*100)} %</td><td>${b.n}</td>`
     + `<td>${pct(b.ventet)}</td><td>${pct(b.faktisk)}</td></tr>`).join('');
-  // Hvor mange kamper tallene bygger på, og når de ble spilt, med datoene
-  // skrevet helt ut og måneden bare én gang når den er lik: "2. oktober",
-  // "mellom 2. og 3. oktober", "mellom 30. september og 2. oktober".
-  const antall = n===1 ? '1 kamp' : `${n} kamper`;
-  const usikker = n < 50
-    ? `Tallene bygger på ${antall}, og sier lite før det er flere.`
-    : `Tallene bygger på ${antall}.`;
-  const spilt = !data.fra ? '' : ` ${n===1 ? 'Kampen' : 'Kampene'} ble spilt `
-    + (data.fra===data.til ? `${dateNoLong(data.fra)}.`
-      : data.fra.slice(0,7)===data.til.slice(0,7)
-        ? `mellom ${+data.fra.slice(8,10)}. og ${dateNoLong(data.til)}.`
-        : `mellom ${dateNoLong(data.fra)} og ${dateNoLong(data.til)}.`);
-  // Synlig: én kort setning. Tabellene (log loss og kalibrering) står under
-  // "Vis detaljer" i #accuracyTall. Mangler den (testsiden), står de her.
+  // Én setning om i år (3.10.2026, Tronds ordlyd): "I år har siden tippet
+  // riktig i X % av enkeltkampene. Tallene bygger på N kamper spilt mellom A
+  // og B, og er fortsatt usikre." Fra 50 kamper uten "og er fortsatt
+  // usikre". Datoene skrives helt ut, med måneden bare én gang når den er
+  // lik: "2. oktober", "mellom 2. og 3. oktober", "mellom 30. september og 2.
+  // oktober". Samme tekst på modellsjekk-siden (modellsjekk/treffsikkerhet.js).
   const side = data.kilder.side;
-  const kort = side && side.n ? `Utfallet siden ga størst sjanse, skjedde i ${pct(side.treff)} av kampene. ` : '';
+  const periode = !data.fra ? '' : ' spilt ' + (data.fra===data.til ? dateNoLong(data.fra)
+    : data.fra.slice(0,7)===data.til.slice(0,7) ? `mellom ${+data.fra.slice(8,10)}. og ${dateNoLong(data.til)}`
+    : `mellom ${dateNoLong(data.fra)} og ${dateNoLong(data.til)}`);
+  const setning = (side && side.n ? `I år har siden tippet riktig i ${pct(side.treff)} av enkeltkampene. ` : '')
+    + `Tallene bygger på ${n} kamper${periode}${n < 50 ? ', og er fortsatt usikre' : ''}.`;
   const tabeller =
     `<div class="tblscroll"><table class="mt">`
-    + `<thead><tr><th>Kilde</th><th>Kamper</th><th>Traff utfallet</th><th>Log loss</th></tr></thead>`
+    + `<thead><tr><th>Kilde</th><th>Kamper</th><th>Tippet riktig</th><th>Log loss</th></tr></thead>`
     + `<tbody>${rows}</tbody></table></div>`
-    + `<p class="note">"Traff utfallet" er hvor ofte det mest sannsynlige utfallet ble det som skjedde. `
-    + `Log loss straffer sikre prediksjoner som bommer; lavere er bedre.</p>`
+    + `<p class="note">Tippet riktig er hvor ofte kampen endte slik siden mente var mest sannsynlig: hjemmeseier, uavgjort eller borteseier.</p>`
     + (kal ? `<h4>Kalibrering denne sesongen</h4>`
       + `<div class="tblscroll"><table class="mt calib">`
       + `<thead><tr><th>Modellen sa</th><th>Tilfeller</th><th>Snitt</th><th>Skjedde</th></tr></thead>`
       + `<tbody>${kal}</tbody></table></div>` : '');
   const tall = document.getElementById('accuracyTall');
   if(box.dataset.tabeller === 'modellsjekk'){
-    box.innerHTML = `<p class="note">${kort}${usikker}${spilt}</p>`;
+    box.innerHTML = `<p class="note">${setning}</p>`;
   } else if(tall){
-    box.innerHTML = `<p class="note">${kort}${usikker}${spilt}</p>`;
+    box.innerHTML = `<p class="note">${setning}</p>`;
     tall.innerHTML = `<h3>Treffsikkerhet denne sesongen, tall</h3>` + tabeller;
     tall.hidden = false;
   } else {
-    box.innerHTML = tabeller + `<p class="note">${kort}${usikker}${spilt}</p>`;
+    box.innerHTML = tabeller + `<p class="note">${setning}</p>`;
   }
 }
 function qaJumpToSection(){

@@ -434,6 +434,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # "Vis detaljer" kortet ned, resten på <liga>/modellsjekk/): testsiden
 # beholder sin egen modellsjekk-seksjon (konflikten løst for hånd), og får bare
 # terskelen på 20 kamper i renderAccuracy; tabellene står i loggen som før.
+# Treffsikkerhetens ordlyd ("I år har siden tippet riktig i X % av
+# enkeltkampene ...", kolonnen "Tippet riktig") er flettet inn uendret.
 # Høyrekanten på P- og Styrke-overskriften (samme luft som cellene, 3.10.2026)
 # er flettet inn uendret.
 #
@@ -451,7 +453,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "d83271ec60236a7333ed1d8e40a8bf74374149c29c4453e752b7ec1773386431"
+BASE_SHA = "93689f687efb7d6656c54f091a5501ca404d17f633b4e222e1e7a8921f95e652"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

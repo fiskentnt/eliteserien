@@ -42,14 +42,19 @@ log loss for sluttoddsen, metoden og tabellene for sesongen.
   favoritt i én kamp) står fortsatt.
 - Ligasidene nevner ikke repoet, GitHub, filstier eller skript (test i
   `--bare nederst`).
-- Eliteserien: under "Treffsikkerhet denne sesongen" står alltid det
-  historiske treffet fra enkeltkamptesten: "I 2268 kamper i sesongene
-  2016–2025 traff modellen utfallet ... i 51 % av kampene. Med like sterke lag
-  ville treffet vært 46 %, og med tilfeldig gjetting 33 %." (wf_kamper_es.log:
-  51,2 og 46,3 %; gjetting er 1/3), og under det loggen for i år. OBOS har
-  ingen tilsvarende enkeltkamptest med dagens modell, så der står bare loggen.
-  Kan lages med lab/walkforward/wf_kamper.py for OBOS (med den ikke-offentlige
-  oddshistorikken) hvis det er ønsket.
+- Treffsikkerheten (Tronds ordlyd, 3.10.2026, etter pushen av sidene):
+  Eliteserien har det historiske treffet i avsnittet om testen: "I 2268
+  enkeltkamper i sesongene 2016–2025 tippet modellen riktig H, U eller B i
+  51 % av kampene. Med like sterke lag ville den tippet riktig i 46 %, og med
+  tilfeldig gjetting i 33 %." (wf_kamper_es.log: 51,2 og 46,3 %; gjetting er
+  1/3). Under "Treffsikkerhet denne sesongen" står bare loggen for i år, i
+  begge ligaene: under 20 kamper "Loggføringen er i gang ...", fra 20 "I år
+  har siden tippet riktig i X % av enkeltkampene. Tallene bygger på N kamper
+  spilt mellom A og B, og er fortsatt usikre.", fra 50 uten "og er fortsatt
+  usikre". På modellsjekk-sidene heter kolonnen "Tippet riktig". "Utfallet"
+  brukes ikke i treffsikkerheten. OBOS har ingen tilsvarende enkeltkamptest
+  med dagens modell; den kan lages med lab/walkforward/wf_kamper.py --liga
+  obos (med den ikke-offentlige oddshistorikken) hvis det er ønsket.
 - Testsiden beholder sin egen modellsjekk-seksjon.
 
 Samme push: overskriftene står over tallene sine. "P" sto 7 px til høyre for
