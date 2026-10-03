@@ -449,6 +449,9 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # "Del bilde av tabellen" (knappen i tabellhodet, tabellVisning og
 # tegnTabellBilde) og Form-overskriften i rundetabellen (3.10.2026) er flettet
 # inn uendret; Styrke-overskriften beholder testsidens egen tekst.
+# Ferske data (hentFersk med cache: 'no-cache', sjekkNyeData og linja "Nye
+# resultater", 3.10.2026) er flettet inn; testsidens egne stier
+# (../eliteserien/data/, emodell/) er beholdt, med hentFersk og hentSporet.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -464,7 +467,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "ed4c36df7d2df664a45570be951bf794abbd3ce4eaaa49b8792596e7d6289333"
+BASE_SHA = "5ba4027a7cbeef489d05ccf3a0dce27ff90d12e17fa05f434e6ae1dbf1e2c043"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

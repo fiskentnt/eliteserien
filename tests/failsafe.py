@@ -779,7 +779,9 @@ def main():
     # Porten tar med de datafilene siden faktisk regner med (boot()).
     side = (ROOT / "eliteserien" / "index.html").read_text(encoding="utf-8")
     check("grunnlag-port: filene er de siden laster i boot() (matches, fixtures, model, odds_upcoming)",
-          all(f"fetch('data/{f}')" in side for f in ("matches.json", "fixtures.json", "model.json", "odds_upcoming.json")))
+          # hentSporet/hentFersk (3.10.2026): samme filer, hentet uten gammel kopi.
+          all(any(f"{h}('data/{f}')" in side for h in ("hentSporet", "hentFersk"))
+              for f in ("matches.json", "fixtures.json", "model.json", "odds_upcoming.json")))
     for s_ in ("eliteserien", "obos"):
         t = (ROOT / s_ / "index.html").read_text(encoding="utf-8")
         check(f"{s_}/index.html: fast N = 100 000 i grunnlagsfilen (GRUNNLAG_N), versjon 2 med innsiktsblokken", "const GRUNNLAG_VERSJON = 2, GRUNNLAG_N = 100000;" in t)
@@ -1034,7 +1036,7 @@ def main():
     for f in ("eliteserien/index.html", "obos/index.html"):
         _t26 = (ROOT / f).read_text(encoding="utf-8")
         check(f"{f}: henter data/justeringer.json og legger poengJust til i tabellen, rundetabellen, P0 (to steder) og basePos",
-              "fetch('data/justeringer.json')" in _t26
+              "hentFersk('data/justeringer.json')" in _t26
               and _t26.count("P0[i]=b[2]*3+b[3]+poengJust(b[0])") == 2
               and "pts:r.w*3+r.d+just" in _t26 and "pts:b[2]*3+b[3]+poengJust(b[0])" in _t26
               and "const just=poengJust(r.name, end)" in _t26
@@ -1146,6 +1148,18 @@ def main():
     _wf29 = (ROOT / ".github" / "workflows" / "build-leagues.yml").read_text(encoding="utf-8")
     check("build-leagues.yml bygger og committer modellsjekk-sidene",
           "python3 scripts/build_modellsjekk.py" in _wf29 and '"modellsjekk/**"' in _wf29 and "obos/modellsjekk/index.html" in _wf29)
+
+    # Ferske data (3.10.2026): ingen datafil hentes med vanlig fetch(), som
+    # kunne gi en opptil ti minutter gammel kopi (GitHub Pages: max-age=600).
+    # Alle går gjennom hentFersk (cache: 'no-cache') eller hentSporet, og
+    # siden sjekker selv om nye resultater er publisert (sjekkNyeData).
+    import re as _re30
+    for _side30 in ("eliteserien/index.html", "obos/index.html", "elo-test/index.html"):
+        _t30 = (ROOT / _side30).read_text(encoding="utf-8")
+        _rene30 = _re30.findall(r"(?<![\w.])fetch\((?:'[^']*\.json'|grunnlagFil\(\)|LEAGUE\.closingOddsFile)", _t30)
+        check(f"{_side30}: datafilene hentes uten gammel kopi (hentFersk/hentSporet), og siden ser etter nye data",
+              not _rene30 and "const hentFersk = (url, opt) => fetch(url, {cache:'no-cache'" in _t30
+              and "hentSporet(" in _t30 and "startDataSjekk();" in _t30, str(_rene30[:3]))
 
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare

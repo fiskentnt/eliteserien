@@ -396,6 +396,13 @@
   .roundnav .head-link{width:auto;height:auto;border:none;background:none;font-size:12.5px;margin-left:4px}
   .round-note{margin:0 16px 10px;padding:8px 12px;border-radius:8px;background:var(--q-soft);color:var(--ink);font-size:13px;border:1px solid var(--q-border)}
   .round-note[hidden]{display:none}
+  /* "Nye resultater er publisert" over tabellen, med knappen (3.10.2026). */
+  .nye-data{margin:0 16px 10px;padding:8px 8px 8px 12px;border-radius:8px;background:var(--eu-soft);border:1px solid var(--eu);color:var(--ink);font-size:13px;line-height:1.4;display:flex;align-items:center;gap:6px 12px;flex-wrap:wrap}
+  .nye-data[hidden]{display:none}
+  .nye-data .nd-tekst{flex:1 1 220px;min-width:0}
+  .nye-data button{flex:none;min-height:30px;padding:4px 12px;border-radius:8px;border:1px solid var(--eu);background:var(--eu);color:#fff;font:600 13px/1.2 var(--body);cursor:pointer}
+  .nye-data button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .nye-data.nd-ferdig button{background:var(--panel);color:var(--eu-text)}
   .sort-note{margin:0 16px 8px;font-size:13px;color:var(--muted)}
   .sort-note[hidden]{display:none}
   .sort-note .head-link{font-size:13px}
@@ -1161,6 +1168,9 @@
           </div>
         </div>
         <p class="reset-said" id="resetSaid" role="status" hidden></p>
+        <!-- Nye resultater publisert mens siden står åpen (sjekkNyeData), og
+             "Oppdatert kl. ..." etter omlastingen (etterOppdatering). -->
+        <div class="nye-data" id="nyeData" role="status" hidden><span class="nd-tekst"></span><button type="button" id="nyeDataKnapp">Oppdater</button></div>
         <p class="sort-note" id="sortNote" hidden></p>
         <p class="round-note" id="roundNote" hidden></p>
         <p class="scenario-line" id="scenarioLine" hidden></p>
@@ -7054,6 +7064,7 @@ function render(){
   // tastaturrekkefølgen og skjermleseren på annen måte enn av display:none.
   hr.setAttribute('aria-hidden', harScenario?'false':'true');
   hr.setAttribute('tabindex', harScenario?'0':'-1');
+  if(NYE_DATA) visNyeData();   // knappen og teksten følger scenarioet
   const hs=document.getElementById('headShare');
   hs.hidden=!harScenario;
   hs.setAttribute('aria-hidden', harScenario?'false':'true');
@@ -7133,9 +7144,12 @@ function render(){
 // for lang, og HELE det grå settet kommer fra ett samlet simuleringskall
 // (lastSimSeed/lastSimMatchIds), bruker vi et kort frø for akkurat den
 // sesongen i stedet for å liste hvert resultat.
-function encodeScenario(){
+function encodeScenario(utenFro){
   const filled = matches.filter(m=>m.hg!=null&&m.ag!=null);
   const full = filled.map(m=>`${TI[m.home]}.${TI[m.away]}.${m.hg}.${m.ag}${m.sim?'s':''}`).join('_');
+  // utenFro: alle resultatene i lenken, også de simulerte (lastPaaNytt). Med
+  // nye spilte kamper ville frøet trukket de simulerte på nytt.
+  if(utenFro) return full;
   const simIds = new Set(filled.filter(m=>m.sim).map(m=>m.id));
   // Er hele det simulerte settet fra ett og samme kall, holder det å ta med
   // frøet. Før ble snarveien bare brukt når lenken passerte 1500 tegn, så en
@@ -7199,8 +7213,8 @@ function renderFaq(){
 // ---- Deling: lenke, tekst og BB-kode ----
 // Lenken bygges ETT sted, så "Del scenario" (som før bare kopierer adressen)
 // og de nye knappene aldri kan peke på ulike scenarier.
-function scenarioUrl(){
-  const code=encodeScenario();
+function scenarioUrl(utenFro){
+  const code=encodeScenario(utenFro);
   // team= tas alltid med (også tomt, for "ingen lag"), så lenken alltid
   // gjenskaper lagvalget -- se hashTeam-parsingen i boot() for hvordan en
   // GAMMEL lenke uten team= i stedet faller tilbake på mottakerens egen
@@ -7765,7 +7779,7 @@ function findPendingAndNext(fixturesIn){
 // status.json ennå, vises bare datoteksten som allerede står der.
 async function updateCheckStamp(fixturesIn){
   try{
-    const res = await fetch('data/status.json');
+    const res = await hentFersk('data/status.json');
     if(!res.ok) return;
     const status = await res.json();
     const t = new Date(status.last_checked);
@@ -7797,7 +7811,7 @@ async function updateOddsQuotaNote(){
   // fanget og ufarlig, men ren støy.
   if(LEAGUE.oddsSource !== 'The Odds API') return;
   try{
-    const res = await fetch('data/odds_quota.json');
+    const res = await hentFersk('data/odds_quota.json');
     if(!res.ok) return;
     const quota = await res.json();
     const p = osloParts(new Date());
@@ -7813,35 +7827,195 @@ async function updateOddsQuotaNote(){
 // Modellen (lagstyrker) og odds for kommende kamper er ferdig beregnet av
 // Python-scriptene i scripts/ og lest inn her — ingen tilpasning skjer i
 // nettleseren, kun rask JSON-henting.
+// ---- Ferske data (3.10.2026) ----
+// Datafilene hentes alltid på nytt fra serveren. GitHub Pages sender
+// max-age=600, og uten cache: 'no-cache' kunne en omlasting gi opptil ti
+// minutter gamle kampdata. Nettleseren spør serveren hver gang og får 304
+// når filen er uendret, så det koster nesten ingenting.
+const hentFersk = (url, opt) => fetch(url, {cache:'no-cache', ...(opt||{})});
+// Kampene og terminlisten slik siden lastet dem: adresse -> {versjon, tekst}.
+// Adressen er den siden faktisk brukte, så testsiden (../eliteserien/data/)
+// sjekker sine egne filer.
+const DATA_SPORET = {};
+async function hentSporet(url){
+  const r = await hentFersk(url);
+  if(!r.ok) throw new Error('HTTP '+r.status+' på '+url);
+  const tekst = await r.text();
+  DATA_SPORET[url] = {versjon: r.headers.get('etag') || r.headers.get('last-modified'), tekst};
+  return JSON.parse(tekst);
+}
+// En side som står åpen, henter ikke nye data av seg selv. En bruker så
+// tabellen uten Haugesund-Stabæk og Hødd-Odd lenge etter at de var publisert.
+// Hvert femte minutt, når fanen blir aktiv igjen og når nettet kommer
+// tilbake, sjekkes kampene og terminlisten: først versjonen (HEAD, ETag),
+// og bare når den er ny, innholdet. GitHub Pages gir ny ETag ved hver
+// publisering, også når filen er lik, så innholdet avgjør.
+//   Uten scenario, når fanen er eller var skjult: siden laster seg selv på
+//   nytt, med lagvalg, runde og rulleposisjon (lastPaaNytt).
+//   Ellers: linja "Nye resultater" over tabellen, med en knapp. Et scenario
+//   endres aldri av seg selv; knappen beholder det.
+const DATA_SJEKK_MS = 5*60*1000, DATA_SJEKK_MINST_MS = 60*1000;
+let sisteDataSjekk = 0, dataSjekkPagar = false, NYE_DATA = null;
+const harScenarioNaa = () => matches.some(m=>m.hg!=null && m.ag!=null);
+async function sjekkNyeData(fraSkjult){
+  if(dataSjekkPagar || !Object.keys(DATA_SPORET).length) return null;
+  if(Date.now() - sisteDataSjekk < DATA_SJEKK_MINST_MS) return null;
+  sisteDataSjekk = Date.now(); dataSjekkPagar = true;
+  try{
+    const nye = {};
+    for(const [url, sp] of Object.entries(DATA_SPORET)){
+      const u = url + (url.includes('?') ? '&' : '?') + 't=' + Date.now();
+      if(sp.versjon){
+        const h = await fetch(u, {method:'HEAD', cache:'no-store'});
+        const v = h.ok && (h.headers.get('etag') || h.headers.get('last-modified'));
+        if(!v || v===sp.versjon) continue;
+        sp.nyVersjon = v;
+      }
+      const r = await fetch(u, {cache:'no-store'});
+      if(!r.ok) continue;
+      const tekst = await r.text();
+      if(tekst===sp.tekst){ if(sp.nyVersjon) sp.versjon = sp.nyVersjon; continue; }
+      nye[url] = JSON.parse(tekst);
+    }
+    const info = nyeDataInfo(nye);
+    if(!info) return null;
+    NYE_DATA = info;
+    if((fraSkjult || document.hidden) && !harScenarioNaa()){ lastPaaNytt(); return info; }
+    visNyeData();
+    return info;
+  }catch(_){ return null; }   // ikke på nett, eller serveren svarte ikke: neste gang
+  finally{ dataSjekkPagar = false; }
+}
+// Hva er nytt i forhold til det siden viser: resultater, rettede resultater
+// og uspilte kamper med ny dato eller tid. null når ingenting av det.
+function nyeDataInfo(nye){
+  const fil = navn => Object.entries(nye).find(([u])=>u.split('?')[0].endsWith(navn));
+  const nyM = fil('matches.json'), nyF = fil('fixtures.json');
+  const har = new Map(MATCHES.map(m=>[m.home+'|'+m.away, m]));
+  const resultater = [], rettet = [], flyttet = [];
+  if(nyM) nyM[1].forEach(m=>{ const g = har.get(m.home+'|'+m.away);
+    if(!g) resultater.push(m); else if(g.hg!==m.hg || g.ag!==m.ag) rettet.push(m); });
+  if(nyF){ const naa = new Map(matches.map(m=>[m.home+'|'+m.away, m]));
+    nyF[1].forEach(r=>r.matches.forEach(m=>{ const g = naa.get(m.home+'|'+m.away);
+      if(g && !m.played && (g.date!==m.date || (g.time||'')!==(m.time||''))) flyttet.push(m); })); }
+  if(!resultater.length && !rettet.length && !flyttet.length) return null;
+  const tid = m => m.date+(m.time||'');
+  resultater.sort((a,b)=>tid(a).localeCompare(tid(b)) || a.home.localeCompare(b.home));
+  return {resultater, rettet, flyttet};
+}
+const kampMedResultat = m => `${m.home}-${m.away} ${m.hg}-${m.ag}`;
+function oppramsing(a, n=4){
+  const v = a.slice(0, n), rest = a.length - v.length;
+  return rest ? `${v.join(', ')} og ${rest} ${rest===1 ? 'annen' : 'andre'}`
+    : v.length>1 ? `${v.slice(0,-1).join(', ')} og ${v[v.length-1]}` : v[0];
+}
+function nyeDataTekst(info){
+  const deler = [];
+  if(info.resultater.length) deler.push(`Nye resultater er publisert: ${oppramsing(info.resultater.map(kampMedResultat))}.`);
+  if(info.rettet.length) deler.push(`Rettet: ${oppramsing(info.rettet.map(kampMedResultat))}.`);
+  if(info.flyttet.length===1){ const m = info.flyttet[0];
+    deler.push(`${m.home}-${m.away} er flyttet til ${dateNoLong(m.date)}${m.time ? ` kl. ${m.time.replace(':','.')}` : ''}.`); }
+  else if(info.flyttet.length) deler.push(`${info.flyttet.length} kamper har fått ny dato eller tid.`);
+  return deler.join(' ');
+}
+// Linja over tabellen. Tegnes også av render(), så knappen og teksten
+// følger scenarioet: fyller man inn en kamp etter at linja kom, står det.
+function visNyeData(){
+  const el = document.getElementById('nyeData');
+  if(!el || !NYE_DATA) return;
+  const sc = harScenarioNaa();
+  const iScenario = NYE_DATA.resultater.filter(m=>{ const x = matches.find(q=>q.home===m.home && q.away===m.away);
+    return x && x.hg!=null && x.ag!=null; });
+  let tekst = nyeDataTekst(NYE_DATA);
+  if(iScenario.length) tekst += ` ${oppramsing(iScenario.map(m=>`${m.home}-${m.away}`))} er fylt inn i scenarioet; `
+    + `det ekte resultatet erstatter ${iScenario.length===1 ? 'det' : 'dem'}.`;
+  el.querySelector('.nd-tekst').textContent = tekst;
+  const k = el.querySelector('button');
+  k.textContent = sc ? 'Oppdater og behold scenarioet' : 'Oppdater';
+  k.dataset.mode = 'oppdater';
+  el.classList.remove('nd-ferdig');
+  el.hidden = false;
+}
+// Laster siden på nytt med de nye dataene. Lagvalget står i adressen
+// (team=), runden og rulleposisjonen tas vare på i sessionStorage, og et
+// scenario legges i adressen med alle resultatene, uten frø, så de
+// simulerte kampene ikke trekkes på nytt. Kamper som er spilt i mellomtiden,
+// finnes ikke lenger blant de uspilte og får det ekte resultatet.
+const OPPDATERT_NOKKEL = 'tkOppdatert' + location.pathname;
+function lastPaaNytt(){
+  try{ sessionStorage.setItem(OPPDATERT_NOKKEL, JSON.stringify({t: Date.now(),
+    spilte: MATCHES.map(m=>m.home+'|'+m.away),
+    runde: selRoundIdx==null || selRoundIdx===currentRoundIdx() ? null : ROUND_SEQ[selRoundIdx].round,
+    y: Math.round(window.scrollY)})); }catch(_){}
+  history.replaceState(null, '', harScenarioNaa() ? scenarioUrl(true)
+    : location.href.split('#')[0] + '#team=' + encodeURIComponent(SELECTED_TEAM));
+  location.reload();
+}
+// Etter omlastingen: runden og rulleposisjonen tilbake, og linja sier hva som
+// er nytt ("Oppdatert kl. 18.43 med nye resultater: ...").
+function etterOppdatering(){
+  let st = null;
+  try{ st = JSON.parse(sessionStorage.getItem(OPPDATERT_NOKKEL) || 'null'); sessionStorage.removeItem(OPPDATERT_NOKKEL); }catch(_){}
+  if(!st || Date.now() - st.t > 120000) return;
+  if(st.runde!=null){
+    const i = ROUND_SEQ.findIndex(r=>r.round===st.runde);
+    if(i>=0 && i!==currentRoundIdx()){ selRoundIdx = i; render(); }
+  }
+  if(st.y) requestAnimationFrame(()=>window.scrollTo(0, st.y));
+  const for0 = new Set(st.spilte || []);
+  const nye = MATCHES.filter(m=>!for0.has(m.home+'|'+m.away))
+    .sort((a,b)=>(a.date+(a.time||'')).localeCompare(b.date+(b.time||'')) || a.home.localeCompare(b.home));
+  const p = osloParts(new Date()), to = x => String(x).padStart(2, '0');
+  const el = document.getElementById('nyeData');
+  el.querySelector('.nd-tekst').textContent = `Oppdatert kl. ${to(p.hour)}.${to(p.minute)}`
+    + (nye.length ? ` med nye resultater: ${oppramsing(nye.map(kampMedResultat))}.` : '.');
+  const k = el.querySelector('button');
+  k.textContent = 'Lukk'; k.dataset.mode = 'lukk';
+  el.classList.add('nd-ferdig');
+  el.hidden = false;
+}
+document.getElementById('nyeDataKnapp').addEventListener('click', e=>{
+  e.stopPropagation();
+  if(e.currentTarget.dataset.mode==='lukk'){ document.getElementById('nyeData').hidden = true; return; }
+  lastPaaNytt();
+});
+function startDataSjekk(){
+  setInterval(()=>sjekkNyeData(false), DATA_SJEKK_MS);
+  document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) sjekkNyeData(true); });
+  window.addEventListener('online', ()=>sjekkNyeData(false));
+}
+
 async function boot(){
   let MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN, ACCURACY_IN, JUST_IN;
   // Grunnlagsfilen hentes samtidig med de andre, men utenfor Promise.all:
   // siden venter ikke på den (se grunnlagMottatt).
-  const GRUNNLAG_P = fetch(grunnlagFil()).then(r=>r.ok?r.json():null).catch(()=>null);
+  const GRUNNLAG_P = hentFersk(grunnlagFil()).then(r=>r.ok?r.json():null).catch(()=>null);
   try{
     [MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN, ACCURACY_IN, JUST_IN] = await Promise.all([
-      fetch('data/matches.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/matches.json'); return r.json(); }),
-      fetch('data/fixtures.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/fixtures.json'); return r.json(); }),
-      fetch('data/model.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/model.json'); return r.json(); }),
-      fetch('data/odds_upcoming.json').then(r=>r.ok?r.json():{matches:[],fetched_at:null}).catch(()=>({matches:[],fetched_at:null})),
+      // Kampene og terminlisten huskes slik de ble lastet (hentSporet), så
+      // siden kan se når nye resultater er publisert (sjekkNyeData).
+      hentSporet('data/matches.json'),
+      hentSporet('data/fixtures.json'),
+      hentFersk('data/model.json').then(r=>{ if(!r.ok) throw new Error('HTTP '+r.status+' på data/model.json'); return r.json(); }),
+      hentFersk('data/odds_upcoming.json').then(r=>r.ok?r.json():{matches:[],fetched_at:null}).catch(()=>({matches:[],fetched_at:null})),
       // Rundens viktigste kamp: regnet ut i workflowen etter hver oppdatering
       // (scripts/snapshot_probs.js), ikke i nettleseren -- banneret skal stå
       // der med en gang, uten å vente på en simulering. Mangler filen (eller
       // er den for gammel, se qaKeyBannerStale), faller banneret tilbake til
       // spørsmålet om hell og uhell.
-      fetch('data/keymatch.json').then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch('data/lastmatch.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      hentFersk('data/keymatch.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      hentFersk('data/lastmatch.json').then(r=>r.ok?r.json():null).catch(()=>null),
       // Sannsynlighetene som gjaldt FØR avspark (skrevet av snapshot_probs.js
       // mens kampen var uspilt), og sluttoddsen som reserve for kamper som ble
       // spilt før vi begynte å lagre dem. Begge er valgfrie: uten dem sier
       // "forrige kamp" ingenting om hvor overraskende resultatet var.
-      fetch('data/prekick.json').then(r=>r.ok?r.json():null).catch(()=>null),
-      fetch(LEAGUE.closingOddsFile).then(r=>r.ok?r.json():null).catch(()=>null),
+      hentFersk('data/prekick.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      hentFersk(LEAGUE.closingOddsFile).then(r=>r.ok?r.json():null).catch(()=>null),
       // Treffsikkerhetsloggen (scripts/accuracy_log.py). Mangler den, står
       // seksjonen tom -- den er aldri kritisk for resten av siden.
-      fetch('data/accuracy.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      hentFersk('data/accuracy.json').then(r=>r.ok?r.json():null).catch(()=>null),
       // Poengjusteringer fra NFF (se JUSTERINGER). Mangler filen, er det ingen.
-      fetch('data/justeringer.json').then(r=>r.ok?r.json():null).catch(()=>null),
+      hentFersk('data/justeringer.json').then(r=>r.ok?r.json():null).catch(()=>null),
     ]);
   }catch(err){
     console.error('Klarte ikke hente kampdata', err);
@@ -8099,6 +8273,8 @@ async function boot(){
   await applyScenario();
   if(!hadScenario) await updateAutoFill();
   render();
+  etterOppdatering();
+  startDataSjekk();
   GRUNNLAG_P.then(grunnlagMottatt).catch(err=>{ GRUNNLAG_STATUS='feil'; console.warn('Grunnlagsfilen', err); });
 }
 boot();

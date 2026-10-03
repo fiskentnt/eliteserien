@@ -89,10 +89,20 @@ function sesongstartData(rot, liga, fil) {
   F.sort((a, b) => a.round - b.round);
   return JSON.stringify(F);
 }
+// Datafiler med nytt innhold etter at siden er lastet (gruppen «Nye data mens
+// siden står åpen»): sti (/obos/data/matches.json) -> tekst. DATA_ETAG_SALT
+// gir ny ETag med samme innhold, som en ny publisering hos GitHub Pages.
+let DATA_ENDRET = {};
+let DATA_ETAG_SALT = '';
+const etagFor = innhold => '"' + require('crypto').createHash('sha1').update(DATA_ETAG_SALT).update(innhold).digest('hex').slice(0, 16) + '"';
 function serve(rot = ROOT) {
   const server = http.createServer((req, res) => {
     let p = decodeURIComponent(req.url.split('?')[0]);
     if (p.endsWith('/')) p += 'index.html';
+    // JSON-filene får ETag, som hos GitHub Pages, og HEAD svarer uten innhold.
+    const sendJson = innhold => { res.writeHead(200, {'Content-Type': 'application/json', 'ETag': etagFor(innhold)});
+      res.end(req.method === 'HEAD' ? undefined : innhold); };
+    if (DATA_ENDRET[p] != null) { sendJson(DATA_ENDRET[p]); return; }
     const f = rot === ROOT && DATA_DAG && DATA_RE.test(p) ? path.join(ROOT, 'tests', 'data', DATA_DAG, p) : path.join(rot, p);
     const sm = SESONGSTART && /^\/([^/]+)\/data\/(matches|fixtures)\.json$/.exec(p);
     if (sm) { res.writeHead(200, {'Content-Type': 'application/json'}); res.end(sesongstartData(rot, sm[1], sm[2])); return; }
@@ -109,6 +119,7 @@ function serve(rot = ROOT) {
       return;
     }
     if (!f.startsWith(rot) || !fs.existsSync(f) || fs.statSync(f).isDirectory()) { res.writeHead(404); res.end(); return; }
+    if (path.extname(f) === '.json') { sendJson(fs.readFileSync(f)); return; }
     res.writeHead(200, {'Content-Type': MIME[path.extname(f)] || 'application/octet-stream'});
     fs.createReadStream(f).pipe(res);
   });
@@ -2298,6 +2309,127 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await pg.close();
     }
   };
+  // Nye data mens siden står åpen (3.10.2026). En bruker så tabellen uten
+  // Haugesund-Stabæk og Hødd-Odd lenge etter at de var publisert, fordi siden
+  // var lastet før og aldri hentet på nytt. A: alle datafilene hentes med
+  // cache: 'no-cache' (GitHub Pages sender max-age=600). B: sjekkNyeData ser
+  // på versjonen (HEAD, ETag) og innholdet til kampene og terminlisten:
+  // samme innhold med ny ETag gir ingenting; nye resultater med fanen synlig
+  // gir linja "Nye resultater er publisert: ..." med "Oppdater"; med fanen
+  // skjult og uten scenario laster siden seg selv på nytt med samme lag og
+  // runde; med scenario aldri av seg selv, heller ikke når fanen blir synlig
+  // igjen, og "Oppdater og behold scenarioet" beholder det egne resultatet og
+  // de simulerte. Testserveren bytter datafilene etter at siden er lastet
+  // (DATA_ENDRET). OBOS, Eliteserien og testsiden (som leser
+  // ../eliteserien/data/). Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare nyedata
+  const nyedata = async () => {
+    setGroup('Nye data mens siden står åpen: ferske filer, linja og omlastingen');
+    for (const [sti, liga, mappe, lag] of [['/obos/', 'OBOS', 'obos', 'Moss'], ['/eliteserien/', 'Eliteserien', 'eliteserien', 'Molde'],
+                                           ['/elo-test/', 'elo-test', 'eliteserien', 'Molde']]) {
+      const url = base.replace('/eliteserien/', sti);
+      // De nye dataene: de to første uspilte kampene er spilt, 2-0 og 1-3.
+      const M = JSON.parse(fs.readFileSync(dataFil(mappe, 'data', 'matches.json'), 'utf8'));
+      const F = JSON.parse(fs.readFileSync(dataFil(mappe, 'data', 'fixtures.json'), 'utf8'));
+      const apne = F.flatMap(r => r.matches.filter(m => !m.played).map(m => ({...m, round: r.round})))
+        .sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')) || a.home.localeCompare(b.home)).slice(0, 2);
+      const res = [[2, 0], [1, 3]];
+      const M2 = [...M, ...apne.map((m, i) => ({date: m.date, time: m.time, round: m.round, home: m.home, away: m.away, hg: res[i][0], ag: res[i][1]}))];
+      const F2 = JSON.parse(JSON.stringify(F));
+      F2.forEach(r => r.matches.forEach(m => { const i = apne.findIndex(x => x.home === m.home && x.away === m.away);
+        if (i >= 0) Object.assign(m, {played: true, hg: res[i][0], ag: res[i][1]}); }));
+      const nye = () => { DATA_ENDRET = {[`/${mappe}/data/matches.json`]: JSON.stringify(M2), [`/${mappe}/data/fixtures.json`]: JSON.stringify(F2)}; };
+      const nullstill = () => { DATA_ENDRET = {}; DATA_ETAG_SALT = ''; };
+      const kampA = `${apne[0].home}-${apne[0].away}`, kampB = `${apne[1].home}-${apne[1].away}`;
+      const forventet = `Nye resultater er publisert: ${kampA} 2-0 og ${kampB} 1-3.`;
+      const lastet = async pg => { await pg.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000}); await settle(pg); };
+      nullstill();
+      const pg = await browser.newPage();
+      pg.on('pageerror', e => errors.push(`${url} (nye data): ${e.message}`));
+      await pg.setViewport({width: 1280, height: 900});
+      await pg.evaluateOnNewDocument(() => { window.__hentet = []; const o = window.fetch;
+        window.fetch = function (u, init) { window.__hentet.push({u: String(u), cache: init && init.cache, metode: (init && init.method) || 'GET'}); return o.apply(this, arguments); }; });
+      try {
+        await pg.goto(url + '#team=', {waitUntil: 'networkidle0'});
+        await lastet(pg);
+        // A: datafilene hentes uten gammel kopi.
+        const a = await pg.evaluate(() => { const d = window.__hentet.filter(x => /\.json(\?|$)/.test(x.u));
+          return {n: d.length, uten: d.filter(x => x.cache !== 'no-cache' && x.cache !== 'no-store').map(x => x.u),
+                  sporet: Object.keys(DATA_SPORET)}; });
+        check(`${liga}: alle ${a.n} datafilene hentes uten gammel kopi (cache: 'no-cache'), og kampene og terminlisten huskes (${a.sporet.join(', ')})`,
+          a.n >= 8 && !a.uten.length && a.sporet.length === 2 && a.sporet.every(u => u.startsWith(sti === '/elo-test/' ? '../eliteserien/data/' : 'data/')), JSON.stringify(a));
+        // Ny publisering med samme innhold (ny ETag): innholdet hentes og sammenlignes, ingen linje.
+        DATA_ETAG_SALT = 'ny publisering';
+        let r = await pg.evaluate(async () => { sisteDataSjekk = 0; window.__hentet = []; const i = await sjekkNyeData(false);
+          return {i, vist: !document.getElementById('nyeData').hidden, kall: window.__hentet.map(x => `${x.metode} ${x.cache}`)}; });
+        check(`${liga}: ny ETag med samme innhold: innholdet sjekkes, ingen linje`,
+          r.i === null && !r.vist && r.kall.filter(k => k === 'HEAD no-store').length === 2 && r.kall.filter(k => k === 'GET no-store').length === 2, JSON.stringify(r));
+        r = await pg.evaluate(async () => { sisteDataSjekk = 0; window.__hentet = []; const i = await sjekkNyeData(false);
+          return {i, kall: window.__hentet.map(x => `${x.metode} ${x.cache}`)}; });
+        check(`${liga}: uendret ETag: bare HEAD, innholdet hentes ikke`, r.i === null && JSON.stringify(r.kall) === '["HEAD no-store","HEAD no-store"]', JSON.stringify(r));
+        // Nye resultater med fanen synlig og uten scenario: linja, tabellen urørt.
+        nye();
+        r = await pg.evaluate(async () => { sisteDataSjekk = 0; const n0 = MATCHES.length; await sjekkNyeData(false); const el = document.getElementById('nyeData');
+          return {vist: !el.hidden, tekst: el.querySelector('.nd-tekst').textContent, knapp: el.querySelector('button').textContent, n0, n: MATCHES.length}; });
+        check(`${liga}: nye resultater, fanen synlig, uten scenario: "${forventet}" med "Oppdater", og tabellen er urørt`,
+          r.vist && r.tekst === forventet && r.knapp === 'Oppdater' && r.n === r.n0, JSON.stringify(r));
+        // Fanen skjult, uten scenario: siden laster seg selv på nytt, med lag og runde.
+        await pg.select('#teamSelect', lag);
+        const foer = await pg.evaluate(() => { stepRound(-2); return {runde: ROUND_SEQ[viewRoundIdx()].round, lag: SELECTED_TEAM, n: MATCHES.length}; });
+        await Promise.all([pg.waitForNavigation({waitUntil: 'networkidle0', timeout: 60000}),
+          pg.evaluate(() => { Object.defineProperty(document, 'hidden', {configurable: true, get: () => true}); sisteDataSjekk = 0; sjekkNyeData(false); })]);
+        await lastet(pg);
+        r = await pg.evaluate(() => { const el = document.getElementById('nyeData');
+          return {n: MATCHES.length, runde: ROUND_SEQ[viewRoundIdx()].round, lag: SELECTED_TEAM, vist: !el.hidden, tekst: el.querySelector('.nd-tekst').textContent,
+                  knapp: el.querySelector('button').textContent}; });
+        check(`${liga}: fanen skjult, uten scenario: siden laster seg selv på nytt med ${kampA} og ${kampB}, samme lag (${lag}) og runde (${foer.runde})`,
+          r.n === foer.n + 2 && r.lag === foer.lag && r.runde === foer.runde, JSON.stringify(r));
+        check(`${liga}: etterpå: "Oppdatert kl. ... med nye resultater: ${kampA} 2-0 og ${kampB} 1-3." med "Lukk"`,
+          r.vist && /^Oppdatert kl\. \d\d\.\d\d med nye resultater: /.test(r.tekst) && r.tekst.endsWith(`${kampA} 2-0 og ${kampB} 1-3.`) && r.knapp === 'Lukk', JSON.stringify(r));
+        await klikk(pg, '#nyeDataKnapp');
+        check(`${liga}: "Lukk" skjuler linja`, await pg.evaluate(() => document.getElementById('nyeData').hidden));
+        // Med scenario: aldri av seg selv.
+        // Ny lasting med de gamle dataene (via about:blank: samme adresse med
+        // bare ny #team= ville ikke lastet siden på nytt).
+        nullstill();
+        await pg.goto('about:blank');
+        await pg.goto(url + '#team=', {waitUntil: 'networkidle0'});
+        await lastet(pg);
+        const sc = await pg.evaluate(async (apne) => {
+          const ny = matches.find(m => m.home === apne[0].home && m.away === apne[0].away);
+          const egen = matches.find(m => !apne.some(x => x.home === m.home && x.away === m.away) && m.round !== ny.round);
+          setMatch(ny, 1, 1); setMatch(egen, 3, 2);
+          const R = [...new Set(matches.map(m => m.round))].find(r => r !== egen.round && r !== ny.round && !apne.some(x => x.round === r));
+          await simulateRound(R, false); render();
+          return {egen: `${egen.home}-${egen.away}`, R, n: MATCHES.length,
+                  sim: matches.filter(m => m.round === R && m.sim).map(m => `${m.home}-${m.away} ${m.hg}-${m.ag}`).sort()};
+        }, apne);
+        await settle(pg);
+        nye();
+        // Fanen blir synlig igjen: med scenario ingen omlasting, bare linja.
+        await pg.evaluate(() => { Object.defineProperty(document, 'hidden', {configurable: true, get: () => false}); sisteDataSjekk = 0;
+          document.dispatchEvent(new Event('visibilitychange')); });
+        await pg.waitForFunction(() => !dataSjekkPagar && NYE_DATA, {timeout: 30000});
+        r = await pg.evaluate(() => { const el = document.getElementById('nyeData');
+          return {vist: !el.hidden, tekst: el.querySelector('.nd-tekst').textContent, knapp: el.querySelector('button').textContent, n: MATCHES.length}; });
+        check(`${liga}: med scenario lastes siden ikke på nytt når fanen blir synlig igjen; linja sier at ${kampA} er fylt inn, knappen er "Oppdater og behold scenarioet"`,
+          r.vist && r.n === sc.n && r.knapp === 'Oppdater og behold scenarioet'
+          && r.tekst === `${forventet} ${kampA} er fylt inn i scenarioet; det ekte resultatet erstatter det.`, JSON.stringify(r));
+        await Promise.all([pg.waitForNavigation({waitUntil: 'networkidle0', timeout: 60000}), klikk(pg, '#nyeDataKnapp')]);
+        await lastet(pg);
+        r = await pg.evaluate((egen, R, kampA) => { const e = matches.find(m => `${m.home}-${m.away}` === egen);
+          const a = MATCHES.find(m => `${m.home}-${m.away}` === kampA);
+          return {n: MATCHES.length, egen: e && [e.hg, e.ag, !!e.sim], a: a && [a.hg, a.ag],
+                  sim: matches.filter(m => m.round === R && m.sim).map(m => `${m.home}-${m.away} ${m.hg}-${m.ag}`).sort()}; }, sc.egen, sc.R, kampA);
+        check(`${liga}: "Oppdater og behold scenarioet": ${kampA} har det ekte resultatet 2-0, ${sc.egen} 3-2 og de simulerte i runde ${sc.R} står som før`,
+          r.n === sc.n + 2 && JSON.stringify(r.a) === '[2,0]' && JSON.stringify(r.egen) === '[3,2,false]'
+          && r.sim.length > 0 && JSON.stringify(r.sim) === JSON.stringify(sc.sim), JSON.stringify({r, sc}));
+      } finally {
+        nullstill();
+        await pg.close();
+      }
+    }
+  };
   const rundeslutt = async () => {
     setGroup('Rundens sluttdato: datoen runden ble spilt, ikke en kamp flyttet langt ut');
     for (const [sti, liga, R, dato, tekst, trekk, mellom] of [
@@ -2531,9 +2663,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'fyllrunden') await fyllrunden();
       else if (BARE === 'rundeslutt') await rundeslutt();
       else if (BARE === 'tabellbilde') await tabellbilde();
+      else if (BARE === 'nyedata') await nyedata();
       else if (BARE === 'nederst') await nederstPaaSiden();
       else if (BARE === 'justering') await poengjusteringer();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, justering)`);
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, justering)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -3381,6 +3514,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await fyllrunden();
     await rundeslutt();
     await tabellbilde();
+    await nyedata();
     await page.bringToFront();
 
     // ---- 18. rulling til svaret på iPad-bredder ----

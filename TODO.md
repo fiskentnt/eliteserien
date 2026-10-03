@@ -3,6 +3,30 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Ferske data i nettleseren (3.10.2026 kveld)
+
+En bruker så tabellen uten Haugesund-Stabæk og Hødd-Odd lenge etter at de
+ble publisert 16:43Z: siden var lastet før og hentet aldri på nytt, og
+GitHub Pages sender max-age=600, så også en omlasting kunne gi en gammel
+kopi.
+
+A. Alle datafilene hentes med cache: 'no-cache' (hentFersk; 304 når
+   filen er uendret), også på testsiden og modellsjekk-sidene.
+B. sjekkNyeData: hvert femte minutt, når fanen blir synlig og når nettet
+   kommer tilbake. HEAD (ETag) mot matches.json og fixtures.json, og
+   innholdet bare når ETag er ny (GitHub Pages gir ny ETag ved hver
+   publisering). Nye resultater, rettede resultater eller en flyttet
+   kamp: uten scenario og med fanen skjult (eller nettopp skjult) laster
+   siden seg selv på nytt med lag, runde og rulleposisjon, og sier
+   "Oppdatert kl. ... med nye resultater: ...". Ellers linja "Nye
+   resultater er publisert: ..." over tabellen med "Oppdater", eller
+   "Oppdater og behold scenarioet" (scenarioet i lenken med alle
+   resultatene, uten frø). Et scenario endres aldri av seg selv.
+
+Test: `node tests/regression.js --bare nyedata` (27 kontroller, OBOS,
+Eliteserien og testsiden; testserveren har nå ETag, HEAD og DATA_ENDRET),
+og failsafe sjekker at ingen datafil hentes med vanlig fetch().
+
 ## NTF-terminlisten, reserven og kalenderfeeden (3.10.2026 kveld)
 
 Haugesund-Stabæk (2-0) og Hødd-Odd (2-3) kom først inn 16:43Z, enda de var

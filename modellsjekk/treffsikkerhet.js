@@ -42,5 +42,5 @@
         + `<tbody>${kal}</tbody></table></div>` : '');
   }
   window.tegnTreffsikkerhet = tegn;    // testene kaller denne med egne tall
-  fetch('../data/accuracy.json').then(r => r.ok ? r.json() : null).then(tegn).catch(() => tegn(null));
+  fetch('../data/accuracy.json', {cache: 'no-cache'}).then(r => r.ok ? r.json() : null).then(tegn).catch(() => tegn(null));
 })();
