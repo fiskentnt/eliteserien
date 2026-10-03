@@ -327,6 +327,14 @@ jobs:
           echo "::error title=Sesongskiftet er ikke klart::Byttedatoen er passert, men neste sesong er ikke oppdaget og validert. Siden viser en ferdigspilt sesong. Se loggen for steget «Sesongskifte»."
           exit 1
 
+      - name: Gjør kjøringen rød hvis et resultat står uten kontroll eller i konflikt
+        # Også sist, av samme grunn: resultatene og tabellen er lagret.
+        # Ligasiden alene publiseres etter 24 timer uten uavhengig kilde, og
+        # står da som ukontrollert til en annen leverandør bekrefter det
+        # (resultatregel.py).
+        if: always()
+        run: python3 scripts/resultatregel.py sjekk obos
+
       - name: Gjør kjøringen rød hvis en kilde er ute
         # SIST, og etter at data er lagret: en kilde som har feilet flere
         # ganger paa rad skal gjore kjoringen rod, men den skal ikke hindre
@@ -338,14 +346,6 @@ jobs:
         # der, mens hentelogget viser feil paa feil paa feil.
         if: always()
         run: python3 scripts/hentelogg.py sjekk
-
-      - name: Gjør kjøringen rød hvis et resultat står uten kontroll eller i konflikt
-        # Også sist, av samme grunn: resultatene og tabellen er lagret.
-        # Ligasiden alene publiseres etter 24 timer uten uavhengig kilde, og
-        # står da som ukontrollert til en annen leverandør bekrefter det
-        # (resultatregel.py).
-        if: always()
-        run: python3 scripts/resultatregel.py sjekk obos
 
       - name: Livstegn til healthchecks.io (bare når hele kjøringen er grønn)
         # SIST, etter kildevakten. Dødmannsknappen (planlegger/README.md):
