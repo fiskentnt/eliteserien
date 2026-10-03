@@ -149,12 +149,22 @@ def revider(vaare, nff_rader, ferskt=True, bekreftet=None, sesong=None):
     return feil, advarsler
 
 
-def revider_kalender(vaare, kalender, sesong=None):
+def revider_kalender(vaare, kalender, sesong=None, naa=None, log=lambda s: None):
     """(feil, advarsler) for terminlisten mot kalenderfeeden.
 
     vaare er ALLE kampene vaare ({(hjemme, borte): rad}), spilte og uspilte:
     en kamp som nettopp er spilt, kan fortsatt staa i feeden, og skal da
-    sammenlignes, ikke se ut som en kamp vi mangler."""
+    sammenlignes, ikke se ut som en kamp vi mangler.
+
+    AVSPARK I UTC (3.10.2026): naar NTF endrer en oppfoering ved kampslutt,
+    lagres klokkeslettet i UTC, men feeden oppgir fortsatt TZID=Europe/Oslo
+    (Haugesund-Stabæk 16:00 sto som 14:00, LAST-MODIFIED 15:52Z; det samme
+    paa resultatsiden, se ntf_source._utc_til_oslo). For en kamp som har
+    STARTET (vaart avspark <= naa) leses feedens tid da som UTC naar den
+    nettopp er vaart avspark i UTC, og det er ikke et avvik. For en kamp som
+    ikke har startet, gjoeres det aldri: der kan det vaere en ekte flytting to
+    timer fram, og den skal sees. Advarselen sier da at det kan vaere feilen."""
+    naa = naa or datetime.now(timezone.utc)
     feil, advarsler = [], []
     if sesong:
         annen = [r for r in kalender if not (r.get("date") or "").startswith(str(sesong))]
@@ -173,6 +183,15 @@ def revider_kalender(vaare, kalender, sesong=None):
             continue
         if k["round"] != v.get("round"):
             feil.append(f"{hvem}: runde {v.get('round')} hos oss, {k['round']} i kalenderfeeden")
+        i_utc = _er_vaart_avspark_i_utc(k, v)
+        if i_utc and _har_startet(v, naa):
+            log(f"MERK: {hvem} står med avspark {k['date']} {k['time']} i kalenderfeeden, som er "
+                f"avsparket vårt {v['date']} {v['time']} i UTC (kampen har startet) -- regnet om til norsk tid")
+            continue
+        if i_utc:
+            advarsler.append(f"{hvem}: avspark {v['date']} {v['time']} hos oss, {k['date']} {k['time']} i "
+                             f"kalenderfeeden (det er vårt avspark i UTC -- en flytting, eller tiden lagret i UTC)")
+            continue
         if k["date"] != v.get("date"):
             feil.append(f"{hvem}: dato {v.get('date')} hos oss, {k['date']} i kalenderfeeden")
         elif k.get("time") and v.get("time") and k["time"] != v["time"]:
@@ -181,6 +200,25 @@ def revider_kalender(vaare, kalender, sesong=None):
         if v.get("hg") is None and key not in kal and (not sesong or (v.get("date") or "").startswith(str(sesong))):
             advarsler.append(f"{key[0]}-{key[1]}: uspilt hos oss, men står ikke i kalenderfeeden")
     return feil, advarsler
+
+
+def _er_vaart_avspark_i_utc(k, v):
+    """True naar feedens (dato, tid) er vaart avspark (norsk tid) skrevet i UTC."""
+    if not (k.get("time") and v.get("time") and v.get("date")):
+        return False
+    if (k["date"], k["time"]) == (v["date"], v["time"]):
+        return False
+    oslo = datetime.fromisoformat(f"{k['date']}T{k['time']}:00").replace(tzinfo=timezone.utc).astimezone(OSLO)
+    return (oslo.strftime("%Y-%m-%d"), oslo.strftime("%H:%M")) == (v["date"], v["time"])
+
+
+def _har_startet(v, naa):
+    """True naar vaart avspark (norsk tid) er passert."""
+    try:
+        avspark = datetime.fromisoformat(f"{v['date']}T{v.get('time') or '00:00'}:00").replace(tzinfo=OSLO)
+    except Exception:
+        return False
+    return avspark <= naa
 
 
 def _vaar_verdi(vaare, lagpar):
@@ -365,7 +403,8 @@ def main(argv, naa=None):
         print(f"Daglig terminlisterevisjon, {oppsett(liga)['visningsnavn']}: kalenderfeeden kunne ikke "
               f"brukes ({type(e).__name__}: {e}) -- ingen kontroll denne gangen.")
         return 0
-    feil, advarsler = revider_kalender(vaare, kalender, sesong=_a)
+    feil, advarsler = revider_kalender(vaare, kalender, sesong=_a, naa=naa,
+                                       log=lambda l: print(f"  {l}"))
     print(f"Daglig terminlisterevisjon, {oppsett(liga)['visningsnavn']}: "
           f"{len(vaare)} kamper hos oss mot {len(kalender)} i kalenderfeeden")
     for a in advarsler:

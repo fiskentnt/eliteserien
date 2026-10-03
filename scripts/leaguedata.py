@@ -111,5 +111,51 @@ def flyttede(group):
     return ut
 
 
+def forrige_terminliste(data_dir, sesong, forventet_par=None, log=lambda s: None):
+    """Den siste gyldige terminlisten vi selv har skrevet: de spilte kampene
+    fra matches.json og de uspilte fra fixtures.json, paa radformen
+    {round, date, time, home, away, hg, ag}.
+
+    Reserven naar ligasiden ikke kan leses (3.10.2026). Foer var reserven
+    CSV-en, et oeyeblikksbilde fra sesongstart, og da ble Ranheim-Sogndal satt
+    tilbake fra 14:30 til 17:00 i 50 minutter, enda flyttingen var rettet
+    hos oss for lenge siden. En feil hos NTF skal aldri sette tilbake et
+    klokkeslett vi har rettet.
+
+    None hvis filene mangler, har kamper fra en annen sesong, eller ikke har
+    nøyaktig lagparene i forventet_par (hele terminlisten) -- da faller
+    kalleren tilbake paa CSV-en, som ved sesongstart."""
+    from pathlib import Path as _P
+    data_dir = _P(data_dir)
+    try:
+        spilte = json.loads((data_dir / "matches.json").read_text(encoding="utf-8"))
+        runder = json.loads((data_dir / "fixtures.json").read_text(encoding="utf-8"))
+    except Exception as e:
+        log(f"  forrige terminliste: kunne ikke lese matches.json og fixtures.json ({e})")
+        return None
+    rader = {}
+    for m in spilte:
+        rader[(m["home"], m["away"])] = {"round": m["round"], "date": m["date"], "time": m.get("time"),
+                                         "home": m["home"], "away": m["away"], "hg": m["hg"], "ag": m["ag"]}
+    for r in runder:
+        for m in r.get("matches", []):
+            k = (m["home"], m["away"])
+            if k in rader:
+                continue          # spilt: matches.json gjelder
+            rader[k] = {"round": r["round"], "date": m["date"], "time": m.get("time"),
+                        "home": m["home"], "away": m["away"],
+                        "hg": m.get("hg") if m.get("played") else None,
+                        "ag": m.get("ag") if m.get("played") else None}
+    annen = [k for k, v in rader.items() if not str(v["date"] or "").startswith(str(sesong))]
+    if annen:
+        log(f"  forrige terminliste: {len(annen)} kamper er ikke fra {sesong} -- brukes ikke")
+        return None
+    if forventet_par is not None and set(rader) != set(forventet_par):
+        log(f"  forrige terminliste: {len(rader)} kamper, ventet {len(forventet_par)} "
+            f"({len(set(forventet_par) - set(rader))} mangler) -- brukes ikke")
+        return None
+    return sorted(rader.values(), key=lambda m: (m["date"], m["time"] or "", m["home"]))
+
+
 def write_json(path, data, indent=2):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=indent) + "\n", encoding="utf-8")

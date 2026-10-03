@@ -172,8 +172,29 @@ def kjente_avspark(liga, rot=None):
     return ut
 
 
+def kjente_uspilte(liga, rot=None):
+    """{(hjemme, borte): (dato, tid)} for kampene som er USPILTE hos oss:
+    i fixtures.json uten played, og uten resultat i matches.json. Brukes naar
+    terminlisten viser en uspilt kamp uten dato (se parse_rad). Bare uspilte:
+    paa terminlisten kan samme lagpar vaere neste sesongs kamp, og den skal
+    ikke faa datoen til aarets spilte kamp. Tomt hvis filene mangler."""
+    data = Path(rot or ROT) / oppsett(liga)["data"]
+    try:
+        runder = json.loads((data / "fixtures.json").read_text(encoding="utf-8"))
+    except Exception:
+        return {}
+    try:
+        spilte = {(m["home"], m["away"]) for m in json.loads((data / "matches.json").read_text(encoding="utf-8"))
+                  if m.get("hg") is not None}
+    except Exception:
+        spilte = set()
+    return {(m["home"], m["away"]): (m["date"], m.get("time"))
+            for r in runder for m in r.get("matches", [])
+            if not m.get("played") and m.get("date") and (m["home"], m["away"]) not in spilte}
+
+
 def parse_rad(rad, kilde, cfg, klasser="", naa=None, log=lambda s: None,
-              har_resultat=None, hoppet=None, kjent_avspark=None):
+              har_resultat=None, hoppet=None, kjent_avspark=None, uspilt_avspark=None):
     """Én kamprad -> dict, eller None hvis raden ikke hører til ligaen.
 
     har_resultat(hjemme, borte): True hvis kampen alt har resultat i
@@ -183,7 +204,12 @@ def parse_rad(rad, kilde, cfg, klasser="", naa=None, log=lambda s: None,
 
     kjent_avspark: {(hjemme, borte): (dato, tid)} i norsk tid (kjente_avspark).
     Viser raden det kjente avsparket i UTC, regnes den om (se over). Brukes
-    bare paa resultatsiden."""
+    bare paa resultatsiden.
+
+    uspilt_avspark: {(hjemme, borte): (dato, tid)} for kampene som er uspilte
+    hos oss (kjente_uspilte). En USPILT rad uten dato beholder da dato og
+    avspark herfra i stedet for aa stoppe hele siden. En spilt rad uten dato
+    (merket ferdigspilt eller med resultat) avvises fortsatt."""
     naa = naa or datetime.now(OSLO)
     celler = _celler(rad)
     lag_celle = _finn(celler, "--teams")
@@ -217,12 +243,31 @@ def parse_rad(rad, kilde, cfg, klasser="", naa=None, log=lambda s: None,
             if hoppet is not None:
                 hoppet.append(f"{hjemme} - {borte}")
             return None
-        raise EsDataError(f"manglende dato for {hjemme} - {borte} ({kilde})")
-    dato = f"{d.group(3)}-{d.group(2)}-{d.group(1)}"
-
-    t = TID_RE.search(dato_celle)
-    tid = t.group(1) if t else None
-    if tid and kjent_avspark:
+        # En USPILT kamp uten dato stopper ikke resten av siden (3.10.2026:
+        # NTF viste Sandnes Ulf - Haugesund og saa Bryne - Raufoss uten dato
+        # mens kampene ble endret, og hele terminlisten ble avvist i 50
+        # minutter -- ingen resultater ble publisert, og reserven satte
+        # tilbake et avspark vi hadde rettet). Dato og avspark beholdes fra
+        # det vi har. Bare for kamper som er uspilte hos oss, og bare naar
+        # raden heller ikke hos NTF er spilt.
+        res0 = _finn(celler, "--result")
+        spilt_hos_ntf = (FERDIG_KLASSE in klasser.split()
+                         or bool(res0 and RESULTAT_RE.match(re.sub(r"<[^>]+>", "", res0))))
+        kjent = (uspilt_avspark or {}).get((hjemme, borte))
+        if not kjent or spilt_hos_ntf:
+            raise EsDataError(f"manglende dato for {hjemme} - {borte} ({kilde})")
+        melding = (f"ADVARSEL: manglende dato for {hjemme} - {borte} ({kilde}) -- kampen er "
+                   f"uspilt, beholder datoen og avsparket vi har ({kjent[0]} {kjent[1] or 'uten klokkeslett'})")
+        log(melding)
+        print(melding, file=sys.stderr)
+        if os.environ.get("GITHUB_ACTIONS"):
+            print(f"::warning title=NTF: manglende dato::{melding}")
+        dato, tid = kjent
+    else:
+        dato = f"{d.group(3)}-{d.group(2)}-{d.group(1)}"
+        t = TID_RE.search(dato_celle)
+        tid = t.group(1) if t else None
+    if d and tid and kjent_avspark:
         kjent = kjent_avspark.get((hjemme, borte))
         if kjent and (dato, tid) != kjent and _utc_til_oslo(dato, tid) == kjent:
             log(f"MERK: {hjemme} - {borte} ({kilde}) viser avspark {dato} {tid}, som er det "
@@ -273,14 +318,14 @@ def parse_rad(rad, kilde, cfg, klasser="", naa=None, log=lambda s: None,
 
 
 def parse_side(html_tekst, kilde, liga, naa=None, log=lambda s: None,
-               har_resultat=None, hoppet=None, kjent_avspark=None):
+               har_resultat=None, hoppet=None, kjent_avspark=None, uspilt_avspark=None):
     cfg = oppsett(liga)
     naa = naa or datetime.now(OSLO)
     ut = []
     for klasser, rad in RAD_RE.findall(html_tekst):
         rad_data = parse_rad(rad, kilde, cfg, klasser, naa, log,
                              har_resultat=har_resultat, hoppet=hoppet,
-                             kjent_avspark=kjent_avspark)
+                             kjent_avspark=kjent_avspark, uspilt_avspark=uspilt_avspark)
         if rad_data:
             ut.append(rad_data)
     if not ut:
@@ -402,7 +447,34 @@ def siste_tabell(liga):
 # sammen, mens to oppfoeringer av samme kamp med ulik runde, dato eller tid
 # er en feil -- da vet vi ikke hvilken som gjelder.
 KAL_RUNDE_RE = re.compile(r"\(runde (\d+)\)")
-KAL_START_RE = re.compile(r"^DTSTART(?:;TZID=Europe/Oslo)?(?:;VALUE=DATE)?:(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})\d{2})?$")
+# DTSTART med parametre (TZID=..., VALUE=DATE) og eventuelt Z (UTC). Tiden
+# regnes om til norsk tid etter tidssonen den er oppgitt i (_kal_start):
+# Z eller TZID=UTC er UTC, en annen TZID er den sonen, TZID=Europe/Oslo og
+# ingen sone ("flytende" tid) er norsk tid. Foer godtok vi bare
+# TZID=Europe/Oslo, og en tid i UTC ville stoppet hele revisjonen.
+KAL_START_RE = re.compile(r"^DTSTART((?:;[A-Za-z-]+=[^;:]*)*):(\d{4})(\d{2})(\d{2})(?:T(\d{2})(\d{2})\d{2}(Z?))?$")
+
+
+def _kal_start(linje):
+    """(dato, tid) i norsk tid fra en DTSTART-linje, eller None. tid er None
+    for en heldagsoppfoering. EsDataError for en tidssone vi ikke kjenner."""
+    m = KAL_START_RE.match(linje or "")
+    if not m:
+        return None
+    param = dict(p.split("=", 1) for p in m.group(1).split(";") if "=" in p)
+    dato = f"{m.group(2)}-{m.group(3)}-{m.group(4)}"
+    if not m.group(5):
+        return dato, None
+    tid = f"{m.group(5)}:{m.group(6)}"
+    sone = "UTC" if m.group(7) else param.get("TZID", "Europe/Oslo").strip('"')
+    if sone in ("Europe/Oslo", ""):
+        return dato, tid
+    try:
+        tz = timezone.utc if sone.upper() in ("UTC", "Z", "ETC/UTC", "GMT") else ZoneInfo(sone)
+    except Exception:
+        raise EsDataError(f"ukjent tidssone i kalenderfeeden: {linje}")
+    d = datetime.fromisoformat(f"{dato}T{tid}:00").replace(tzinfo=tz).astimezone(OSLO)
+    return d.strftime("%Y-%m-%d"), d.strftime("%H:%M")
 
 
 def hent_kalender(liga, log=lambda s: None):
@@ -440,11 +512,10 @@ def parse_kalender(tekst, liga):
     for h in hendelser:
         lag = (h.get("SUMMARY") or "").split(" - ")
         r = KAL_RUNDE_RE.search(h.get("DESCRIPTION") or "")
-        d = KAL_START_RE.match(h.get("DTSTART") or "")
+        d = _kal_start(h.get("DTSTART"))
         if len(lag) != 2 or not r or not d:
             raise EsDataError(f"uventet oppføring i kalenderfeeden for {liga}: {h}")
-        rad = {"round": int(r.group(1)), "date": f"{d.group(1)}-{d.group(2)}-{d.group(3)}",
-               "time": f"{d.group(4)}:{d.group(5)}" if d.group(4) else None,
+        rad = {"round": int(r.group(1)), "date": d[0], "time": d[1],
                "home": _navn(lag[0].replace("\\,", ","), cfg), "away": _navn(lag[1].replace("\\,", ","), cfg)}
         k = (rad["home"], rad["away"])
         if k in ut and ut[k] != rad:
@@ -527,7 +598,7 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
       scripts/update_data.py         FILTRERER -- bare_aktiv_sesong() rett
                                      etter dette kallet, for reconcile
       scripts/obos_build_data.py     FILTRERER -- samme, i rows_for(), og
-                                     utenfor CSV-fallbacken
+                                     utenfor reservene (forrige terminliste, CSV)
       scripts/obos_results.py        FILTRERER -- samme, i ligaside_results()
       scripts/oppdag_sesong.py       SER ALLE SESONGER, med vilje: den skal
                                      finne NESTE sesongs terminliste, og
@@ -581,7 +652,9 @@ def fetch_all(liga, cache_dir=None, log=lambda s: None, naa=None):
                              hoppet=hoppet,
                              # Resultatsiden kan vise avsparket i UTC (se
                              # _utc_til_oslo); terminlisten viser norsk tid.
-                             kjent_avspark=kjente_avspark(liga) if navn == "resultater" else None)
+                             kjent_avspark=kjente_avspark(liga) if navn == "resultater" else None,
+                             # En uspilt kamp uten dato beholder det vi har (parse_rad).
+                             uspilt_avspark=kjente_uspilte(liga))
         except TomSide as e:
             ferdig, hvorfor = sesongen_ferdigspilt(navn, rader, liga, rot=ROT)
             if not ferdig:

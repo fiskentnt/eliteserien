@@ -78,8 +78,16 @@ def load_names():
 
 
 def schedule():
-    """Terminlisten fra CSV-en: nøkkel (hjemme, borte) -> kamp."""
+    """Terminlisten: nøkkel (hjemme, borte) -> kamp.
+
+    Runde, dato og avspark herfra skrives i matches.json for resultatene som
+    publiseres, og avsparket avgjør ventetiden i decide(). Derfor den siste
+    gyldige terminlisten vi selv har skrevet (fixtures.json og matches.json,
+    leaguedata.forrige_terminliste), ikke CSV-en: den er fra sesongstart og
+    har ikke flyttingene siden (3.10.2026). CSV-en bare når filene mangler
+    eller ikke har hele terminlisten, som ved sesongstart."""
     import csv
+    import leaguedata
     out = {}
     for r in csv.DictReader(CSV_PATH.open(encoding="utf-8-sig")):
         if r["sesong"] != SEASON:
@@ -88,6 +96,11 @@ def schedule():
             "round": int(r["runde"]), "date": r["dato"], "time": r["tid"],
             "home": r["hjemme"], "away": r["borte"],
         }
+    forrige = leaguedata.forrige_terminliste(DATA, SEASON, forventet_par=set(out), log=log)
+    if forrige:
+        return {(m["home"], m["away"]): {"round": m["round"], "date": m["date"], "time": m["time"],
+                                         "home": m["home"], "away": m["away"]} for m in forrige}
+    log("  terminliste fra CSV-en (forrige terminliste finnes ikke eller er ufullstendig)")
     return out
 
 

@@ -3,6 +3,40 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## NTF-terminlisten, reserven og kalenderfeeden (3.10.2026 kveld)
+
+Haugesund-Stabæk (2-0) og Hødd-Odd (2-3) kom først inn 16:43Z, enda de var
+ferdigspilt hos obos-ligaen.no lenge før. NTF viste en uspilt kamp uten
+dato en stund (Sandnes Ulf - Haugesund 15:53Z, Bryne - Raufoss
+16:01-16:33Z), og parse_rad avviste da HELE terminlisten ("manglende
+dato"). Uten terminlisten visste resultatkjeden ikke hvilke kamper som var
+ferdigspilt, og byggingen falt tilbake på CSV-en: Ranheim-Sogndal (1.11.)
+sto med 17:00 fra 15:53Z til 16:43Z, enda den ble flyttet til 14:30 29.9.
+
+1. ntf_source.parse_rad: en USPILT kamp uten dato beholder dato og avspark
+   fra fixtures.json (kjente_uspilte), med advarsel. Bare kamper som er
+   uspilte hos oss, og bare når raden heller ikke hos NTF er spilt.
+   Gjelder begge ligaene (fetch_all).
+2. Reserven er den forrige terminlisten (leaguedata.forrige_terminliste:
+   fixtures.json + matches.json), ikke CSV-en, på alle tre stedene i
+   obos_build_data (ligasiden feiler, kamp som mangler hos ligasiden,
+   datovakten) og i obos_results.schedule(), som skriver dato og avspark i
+   matches.json. CSV-en bare når filene mangler eller er ufullstendige
+   (sesongstart). obos_closing_odds bruker fortsatt CSV-en, men bare til å
+   koble lagpar og i rapporten om flyttinger; avsparket tar den fra
+   OddsPapi. Eliteserien har ingen CSV-reserve.
+3. Kalenderfeeden: DTSTART leses med tidssonen (Z, TZID=UTC, en annen
+   TZID) og regnes om til norsk tid. Feeden 3.10. hadde fortsatt
+   TZID=Europe/Oslo overalt, men de fire kampene som var spilt den dagen,
+   sto med avsparket i UTC (oppføringen endret ved kampslutt,
+   LAST-MODIFIED 15:50-15:56Z). revider_kalender(naa=...): for en kamp som
+   har STARTET leses en slik tid som UTC (MERK i loggen); før avspark er
+   det fortsatt en advarsel, med forklaringen, så en ekte flytting to
+   timer fram ikke skjules.
+
+Test: tests/kilder/test_kilder.py, tre nye avsnitt (21 kontroller), med
+feeden fra 3.10. som testdata (ntf_obos_kalender_2026-10-03.ics).
+
 ## Del bilde av tabellen (3.10.2026)
 
 Knappen "Del bilde" (aria-label "Del bilde av tabellen") står i tabellhodet

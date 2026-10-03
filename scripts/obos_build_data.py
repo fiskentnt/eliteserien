@@ -80,13 +80,21 @@ def rows_for(season=SEASON, log=print):
     from reconcile_ny import bare_aktiv_sesong, reconcile
     import sesong as _sesong
     _aktiv = _sesong.aktiv_sesong(ROOT, "obos", log=log)
+    # Den siste gyldige terminlisten vi selv har skrevet (fixtures.json og
+    # matches.json). Reserven og forrige verdi under, foran CSV-en: CSV-en er
+    # fra sesongstart og satte 3.10.2026 tilbake et avspark vi hadde rettet
+    # (Ranheim-Sogndal 14:30 -> 17:00). CSV-en brukes bare naar filene
+    # mangler eller er ufullstendige, som ved sesongstart.
+    forrige = leaguedata.forrige_terminliste(
+        DATA, season, forventet_par={(m["home"], m["away"]) for m in fra_csv}, log=log)
     try:
         ntf = ntf_source.fetch_all("obos", log=log)
     except Exception as e:
         ntf = []
         # RESERVE (regelen fra 1.10.2026, se nff_source.py): BARE naar
         # ligasiden ikke svarer, proeves fotball.no -- hoeyst ett forsok per
-        # dogn, ellers det som ligger i cachen. Deretter CSV-terminlisten.
+        # dogn, ellers det som ligger i cachen. Deretter den forrige
+        # terminlisten, og CSV-en bare uten den.
         if isinstance(e, ntf_source.SvarerIkke):
             log(f"ADVARSEL: ligasiden svarte ikke ({e}) -- prøver fotball.no som reserve.")
             try:
@@ -94,14 +102,20 @@ def rows_for(season=SEASON, log=print):
                 ntf = nff_source.fetch_all("obos", log=log)
             except Exception as e2:
                 log(f"ADVARSEL: fotball.no (reserve) feilet ({e2}).")
+        if not ntf and forrige:
+            log(f"ADVARSEL: ligasiden feilet ({e}) -- bruker forrige terminliste "
+                f"(fixtures.json og matches.json) denne kjøringen. En kamp som er "
+                f"flyttet siden forrige kjøring blir fanget opp når ligasiden svarer igjen.")
+            return forrige
         if not ntf:
-            log(f"ADVARSEL: ligasiden feilet ({e}) -- bruker CSV-terminlisten "
-                f"denne kjøringen. En kamp som er flyttet i dag blir da ikke fanget opp.")
+            log(f"ADVARSEL: ligasiden feilet ({e}), og forrige terminliste finnes ikke "
+                f"-- bruker CSV-terminlisten denne kjøringen. En kamp som er flyttet "
+                f"siden sesongstart blir da ikke fanget opp.")
             fra_csv.sort(key=lambda m: (m["date"], m["time"], m["home"]))
             return fra_csv
 
     # SESONGGRENSEN, og den ligger UTENFOR except-blokken over med vilje.
-    # "Kilden er nede" kan forsvares med CSV-reserven; "kilden viser en annen
+    # "Kilden er nede" kan forsvares med reserven; "kilden viser en annen
     # sesong" kan det ikke -- da vet vi ikke hvilken sesong dataene hoerer
     # til, og aa bygge fra CSV-en i stedet ville skjult kildefeilen bak et
     # datasett som ser riktig ut. FeilSesong faar derfor gaa videre ut av
@@ -110,18 +124,22 @@ def rows_for(season=SEASON, log=print):
     # fotball.no er ikke med (regelen fra 1.10.2026, se nff_source.py): bare
     # som reserve over, naar ligasiden ikke svarer. Den loepende kontrollen
     # er kalenderfeeden (daglig_revisjon.py) og tabellen (tabellkontroll.py).
-    offisiell = reconcile(ntf, [], reserver=[("csv", fra_csv)], log=log)
-    # En dato utenfor sesongvinduet er alltid feil hos kilden. CSV-en er
-    # fasiten vi faller tilbake paa: den er handkurert og staar stille.
+    # En kamp som mangler hos ligasiden, tas med fra reserven: den forrige
+    # terminlisten, med dato og avspark slik vi sist hadde dem (CSV-en bare
+    # uten den).
+    reserve = ("forrige terminliste", forrige) if forrige else ("csv", fra_csv)
+    offisiell = reconcile(ntf, [], reserver=[reserve], log=log)
+    # En dato utenfor sesongvinduet er alltid feil hos kilden. Den rettes til
+    # datoen i den forrige terminlisten (CSV-en bare uten den).
     from reconcile_ny import rimelige_datoer
-    offisiell, utenfor, _datofeil = rimelige_datoer(offisiell, fra_csv, _aktiv, log=log)
+    offisiell, utenfor, _datofeil = rimelige_datoer(offisiell, forrige or fra_csv, _aktiv, log=log)
     # utenfor er None naar det ikke finnes autoritativ sesong. Da har vakten
     # staatt over, og main() skal feile TIL SLUTT -- etter at dataene er
     # skrevet, slik at en manglende fil ikke stopper hele kjeden.
     if utenfor is not None and len(utenfor) > len(offisiell) * 0.25:
         raise SystemExit(
             f"FEIL: {len(utenfor)} av {len(offisiell)} kamper hadde dato utenfor "
-            f"sesongen. Datoene er beholdt fra CSV-en, men kilden må "
+            f"sesongen. Datoene er beholdt fra forrige terminliste, men kilden må "
             f"sjekkes:\n" + "\n".join(utenfor[:10]))
     # FOR SKRIVINGEN: rows_for() kalles for foerste write_json i main(), saa
     # en raise her lar de eksisterende filene staa urort. Beskjeden laa til

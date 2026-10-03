@@ -485,6 +485,87 @@ _flyttet = [r for r in _eldre if r["time"] != _som_foer[(r["home"], r["away"], r
 sjekk(f"fetch_all: de {len(_eldre)} andre kampene på resultatsiden står med samme klokkeslett som før",
       len(_eldre) > 100 and not _flyttet, str(_flyttet[:3]))
 
+print("\n=== En uspilt kamp uten dato stopper ikke terminlisten ===")
+# 3.10.2026: NTF viste Sandnes Ulf - Haugesund (15:53Z) og Bryne - Raufoss
+# (16:01-16:33Z) uten dato mens kampene ble endret. Hele terminlisten ble
+# avvist ("manglende dato"), ingen resultater ble publisert i 50 minutter, og
+# reserven satte tilbake et avspark. Nå beholder en USPILT kamp uten dato
+# datoen og avsparket vi har, og resten av siden brukes. En spilt kamp uten
+# dato avvises fortsatt, og det samme gjør et lagpar som er spilt hos oss
+# (på terminlisten kan det være neste sesongs kamp).
+import re as _re_u
+_term = les_ntf("obos", "terminliste")
+_cfg_o = ntf_source.oppsett("obos")
+_naa_u = _dt(2026, 10, 3, 18, 10, tzinfo=_OSLO)
+def _par_u(k, r):
+    try:
+        x = ntf_source.parse_rad(r, "terminliste", _cfg_o, k, naa=_naa_u, log=lambda _s: None)
+    except Exception:
+        return None
+    return x and (x["home"], x["away"])
+_br = next((k, r) for k, r in ntf_source.RAD_RE.findall(_term) if _par_u(k, r) == ("Bryne", "Raufoss"))
+_br_uten = _re_u.sub(r'(schedule__match__item--date">).*?(</td>)', r"\1 \2", _br[1], count=1, flags=_re_u.S)
+_term_uten = _term.replace(_br[1], _br_uten)
+_uspilte = {("Bryne", "Raufoss"): ("2026-10-14", "19:00")}
+_foer = ntf_source.parse_side(_term, "terminliste", "obos", naa=_naa_u, log=lambda _s: None)
+_logg = []
+_etter = ntf_source.parse_side(_term_uten, "terminliste", "obos", naa=_naa_u, log=_logg.append, uspilt_avspark=_uspilte)
+_brr = [r for r in _etter if (r["home"], r["away"]) == ("Bryne", "Raufoss")]
+sjekk("raden for Bryne - Raufoss har ingen dato i testen (ellers er testen tom)",
+      _br_uten != _br[1] and not ntf_source.DATO_RE.search(_br_uten), _br_uten[:300])
+sjekk("uspilt kamp uten dato: hele terminlisten leses, og kampen beholder datoen og avsparket vi har (14.10. 19:00)",
+      len(_etter) == len(_foer) and len(_brr) == 1 and (_brr[0]["date"], _brr[0]["time"]) == ("2026-10-14", "19:00")
+      and _brr[0]["hg"] is None, f"{len(_etter)} {len(_foer)} {_brr}")
+sjekk("de andre kampene står som før", [r for r in _etter if (r["home"], r["away"]) != ("Bryne", "Raufoss")]
+      == [r for r in _foer if (r["home"], r["away"]) != ("Bryne", "Raufoss")])
+sjekk("det logges", any("manglende dato for Bryne - Raufoss" in l and "beholder" in l for l in _logg), str(_logg))
+try:
+    ntf_source.parse_side(_term_uten, "terminliste", "obos", naa=_naa_u, log=lambda _s: None, uspilt_avspark={})
+    _kast = None
+except ntf_source.EsDataError as e:
+    _kast = str(e)
+sjekk("uten et avspark vi har for kampen (ukjent, eller spilt hos oss): avvist som før",
+      _kast is not None and "manglende dato for Bryne - Raufoss" in _kast, str(_kast))
+_spilt_klasser = _br[0].replace("schedule__match--upcoming", "schedule__match--played") + " schedule__match--played"
+_spilt_rad = _re_u.sub(r'(schedule__match__item--result">).*?(</td>)', r"\g<1>2-1\2", _br_uten, count=1, flags=_re_u.S)
+try:
+    ntf_source.parse_rad(_spilt_rad, "terminliste", _cfg_o, _spilt_klasser, naa=_naa_u, log=lambda _s: None, uspilt_avspark=_uspilte)
+    _kast = None
+except ntf_source.EsDataError as e:
+    _kast = str(e)
+sjekk("en SPILT kamp uten dato (merket ferdigspilt hos NTF) avvises, også når vi har den som uspilt",
+      _kast is not None and "manglende dato" in _kast, str(_kast))
+# kjente_uspilte: bare kamper som er uspilte hos oss.
+_sbk = Path(_tfu.mkdtemp())
+(_sbk / "obos" / "data").mkdir(parents=True)
+(_sbk / "obos" / "data" / "fixtures.json").write_text(json.dumps([{"round": 26, "matches": [
+    {"home": "Bryne", "away": "Raufoss", "date": "2026-10-14", "time": "19:00", "played": False},
+    {"home": "Moss", "away": "Odd", "date": "2026-10-14", "time": "19:00", "played": True, "hg": 1, "ag": 0},
+    {"home": "Lyn", "away": "Hødd", "date": "2026-10-14", "time": "19:00", "played": False}]}]), encoding="utf-8")
+(_sbk / "obos" / "data" / "matches.json").write_text(json.dumps([{"home": "Lyn", "away": "Hødd", "hg": 2, "ag": 2,
+    "date": "2026-04-01", "time": "18:00", "round": 3}]), encoding="utf-8")
+_ku = ntf_source.kjente_uspilte("obos", rot=_sbk)
+sjekk("kjente_uspilte: bare kampene som er uspilte hos oss (ikke played, ikke resultat i matches.json)",
+      _ku == {("Bryne", "Raufoss"): ("2026-10-14", "19:00")}, str(_ku))
+# Hele veien: fetch_all med terminlisten der Bryne - Raufoss mangler dato.
+(_sbk / "obos" / "data" / "matches.json").write_text("[]", encoding="utf-8")
+_cachek = _sbk / "cache"
+_cachek.mkdir()
+(_cachek / "obos_resultater.html").write_text(les_ntf("obos", "resultater"), encoding="utf-8")
+(_cachek / "obos_terminliste.html").write_text(_term_uten, encoding="utf-8")
+ntf_source.ROT, _hlu.KATALOG = _sbk, _sbk / "hentelogg"
+try:
+    _alle_k = ntf_source.fetch_all("obos", cache_dir=_cachek, log=lambda _s: None, naa=_naa_u)
+    _kast = None
+except Exception as e:
+    _alle_k, _kast = [], repr(e)
+finally:
+    ntf_source.ROT, _hlu.KATALOG = _ekte_rot_u, _ekte_kat_u
+_brk = [r for r in _alle_k if (r["home"], r["away"]) == ("Bryne", "Raufoss")]
+sjekk("fetch_all: terminlisten med Bryne - Raufoss uten dato leses, med datoen fra fixtures.json",
+      _kast is None and len(_alle_k) > 200 and len(_brk) == 1 and (_brk[0]["date"], _brk[0]["time"]) == ("2026-10-14", "19:00"),
+      f"{_kast} {len(_alle_k)} {_brk}")
+
 from datetime import datetime
 from zoneinfo import ZoneInfo
 OSLO = ZoneInfo("Europe/Oslo")
@@ -1268,6 +1349,52 @@ _v = {**_fasit_alle["obos"], ("Ranheim", "Egersund"): {**_fasit_alle["obos"][("R
 _f, _a = _drk.revider_kalender(_v, _ko, sesong="2026")
 sjekk("en kamp som nettopp er spilt, men fortsatt står i feeden, sammenlignes og er ikke et avvik", (_f, _a) == ([], []), f"{_f} {_a}")
 
+# Tidssonen i DTSTART (3.10.2026). Feeden oppgir TZID=Europe/Oslo, men en
+# tid i UTC (Z eller TZID=UTC) eller en annen sone skal regnes om, ikke stoppe
+# revisjonen ("uventet oppføring") eller leses som norsk tid.
+def _ett_kal(dtstart):
+    return ("BEGIN:VCALENDAR\r\nBEGIN:VEVENT\r\nSUMMARY:Haugesund - Stabæk\r\nDESCRIPTION: OBOS-ligaen (runde 24)\r\n"
+            f"{dtstart}\r\nEND:VEVENT\r\nEND:VCALENDAR\r\n")
+_tz_tilfeller = [("DTSTART;TZID=Europe/Oslo:20261003T160000", ("2026-10-03", "16:00")),
+                 ("DTSTART:20261003T160000", ("2026-10-03", "16:00")),
+                 ("DTSTART:20261003T140000Z", ("2026-10-03", "16:00")),
+                 ("DTSTART;TZID=UTC:20261003T140000", ("2026-10-03", "16:00")),
+                 ("DTSTART;TZID=Europe/London:20261003T150000", ("2026-10-03", "16:00")),
+                 ("DTSTART:20261107T170000Z", ("2026-11-07", "18:00")),
+                 ("DTSTART;VALUE=DATE:20261003", ("2026-10-03", None))]
+_tz_ut = [(d, (lambda r: (r[0]["date"], r[0]["time"]))(ntf_source.parse_kalender(_ett_kal(d), "obos"))) for d, _v in _tz_tilfeller]
+sjekk("DTSTART i norsk tid, flytende, UTC (Z og TZID=UTC), en annen sone, vintertid og heldag: alle til norsk tid",
+      [u for _d, u in _tz_ut] == [v for _d, v in _tz_tilfeller], str(_tz_ut))
+try:
+    ntf_source.parse_kalender(_ett_kal("DTSTART;TZID=Mars/Olympus:20261003T160000"), "obos")
+    _kast = None
+except ntf_source.EsDataError as e:
+    _kast = str(e)
+sjekk("ukjent tidssone: tydelig feil, ikke en gjetning", _kast is not None and "tidssone" in _kast, str(_kast))
+# Feeden fra 3.10.2026 kl. 18.49: de fire kampene som var spilt den dagen,
+# sto med avsparket i UTC under TZID=Europe/Oslo (NTF lagret tiden slik da
+# oppføringen ble endret ved kampslutt). Revisjonen ga fem advarsler
+# ("avspark 16:00 hos oss, 14:00 i kalenderfeeden").
+_k3 = ntf_source.parse_kalender((TESTDATA / "ntf_obos_kalender_2026-10-03.ics").read_text("utf-8"), "obos")
+_hs = next(m for m in _k3 if (m["home"], m["away"]) == ("Haugesund", "Stabæk"))
+sjekk("feeden 3.10.: Haugesund - Stabæk står med 14:00 (avsparket 16:00 i UTC)", _hs["time"] == "14:00", str(_hs))
+_v3 = {k: dict(m) for k, m in _fasit_alle["obos"].items()}
+for _k, _res in {("Ranheim", "Egersund"): (5, 0), ("Strømmen", "Sandnes Ulf"): (3, 3), ("Strømsgodset", "Åsane"): (1, 0),
+                 ("Haugesund", "Stabæk"): (2, 0), ("Hødd", "Odd"): (2, 3)}.items():
+    _v3[_k]["hg"], _v3[_k]["ag"] = _res
+_logg = []
+_f, _a = _drk.revider_kalender(_v3, _k3, sesong="2026", naa=_dt(2026, 10, 3, 16, 33, tzinfo=_tz.utc), log=_logg.append)
+sjekk("revisjonen 3.10. kl. 18.33: ingen avvik og ingen advarsler; de fire er regnet om fra UTC og logget",
+      (_f, _a) == ([], []) and sum(l.startswith("MERK:") and "i UTC" in l for l in _logg) == 4, f"{_f} {_a} {_logg}")
+_f, _a = _drk.revider_kalender(_v3, _k3, sesong="2026", naa=_dt(2026, 10, 3, 11, 0, tzinfo=_tz.utc), log=lambda _s: None)
+sjekk("samme feed FØR avspark: advarsel for alle fire (en ekte flytting to timer fram skal sees), med forklaringen",
+      not _f and len(_a) == 4 and all("vårt avspark i UTC" in x for x in _a), f"{_f} {_a}")
+_v4 = {k: dict(m) for k, m in _v3.items()}
+_v4[("Haugesund", "Stabæk")]["time"] = "18:00"
+_f, _a = _drk.revider_kalender(_v4, _k3, sesong="2026", naa=_dt(2026, 10, 3, 16, 33, tzinfo=_tz.utc), log=lambda _s: None)
+sjekk("en tid som ikke er vårt avspark i UTC, er fortsatt en advarsel etter avspark",
+      not _f and _a == ["Haugesund-Stabæk: avspark 18:00 hos oss, 14:00 i kalenderfeeden"], f"{_f} {_a}")
+
 print("\n=== fotball.no bare som reserve når ligasiden ikke svarer ===")
 import urllib.error as _ue
 import hentelogg as _hlr
@@ -1323,6 +1450,70 @@ try:
     sjekk("ligasiden svarer: fotball.no hentes aldri", _nff_kall == [], str(_nff_kall))
 finally:
     ntf_source.hent, ntf_source.fetch_all, _nffr.fetch_all = _ekte_ntf_hent, _ekte_ntf_fa, _ekte_nff_fa
+    _hlr.KATALOG = _ekte_hl_kat
+
+print("\n=== Reserven er den forrige terminlisten, ikke CSV-en ===")
+# 3.10.2026: mens NTF-terminlisten feilet (15:53-16:33Z), bygget OBOS-kjeden
+# fra CSV-en, og Ranheim-Sogndal (1.11.) sto med 17:00 hos oss i 50 minutter,
+# enda den ble flyttet til 14:30 29.9. Reserven er nå den siste gyldige
+# terminlisten vi selv har skrevet (fixtures.json og matches.json), også når
+# en kamp mangler hos ligasiden, i datovakten og i resultatkjeden
+# (obos_results.schedule skriver dato og avspark i matches.json). CSV-en
+# bare når filene mangler eller er ufullstendige, som ved sesongstart.
+import shutil as _shr
+_sbr = Path(_tf2.mkdtemp())
+for _f in ("fixtures.json", "matches.json"):
+    _shr.copy(ROT / "tests" / "data" / "2026-10-01" / "obos" / "data" / _f, _sbr / _f)
+_csv_par = {}
+import csv as _csvr
+for _r in _csvr.DictReader((ROT / "obos" / "data" / "obos_2012-2026.csv").open(encoding="utf-8-sig")):
+    if _r["sesong"] == "2026":
+        _csv_par[(_r["hjemme"], _r["borte"])] = (_r["dato"], _r["tid"])
+sjekk("forutsetningen: CSV-en har Ranheim-Sogndal 1.11. 17:00, terminlisten vår 14:30",
+      _csv_par.get(("Ranheim", "Sogndal")) == ("2026-11-01", "17:00"), str(_csv_par.get(("Ranheim", "Sogndal"))))
+_fr = leaguedata.forrige_terminliste(_sbr, "2026", forventet_par=set(_csv_par))
+_rs = [m for m in (_fr or []) if (m["home"], m["away"]) == ("Ranheim", "Sogndal")]
+sjekk("forrige_terminliste: alle 240 kampene fra fixtures.json og matches.json, Ranheim-Sogndal 14:30",
+      _fr is not None and len(_fr) == 240 and (_rs[0]["date"], _rs[0]["time"]) == ("2026-11-01", "14:30")
+      and sum(m["hg"] is not None for m in _fr) == len(json.loads((_sbr / "matches.json").read_text("utf-8"))), str(_rs))
+sjekk("forrige_terminliste: None når en kamp mangler, eller sesongen er en annen",
+      leaguedata.forrige_terminliste(_sbr, "2026", forventet_par=set(_csv_par) | {("Moss", "Moss")}) is None
+      and leaguedata.forrige_terminliste(_sbr, "2027") is None)
+_ekte_data_obd, _ekte_data_obr, _ekte_fa_r = _obd.DATA, _obr.DATA, ntf_source.fetch_all
+_hlr.KATALOG = Path(_tf2.mkdtemp()) / "hentelogg"
+try:
+    _obd.DATA, _obr.DATA = _sbr, _sbr
+    ntf_source.fetch_all = lambda *a, **k: (_ for _ in ()).throw(ntf_source.EsDataError("manglende dato for Bryne - Raufoss (terminliste)"))
+    _logg = []
+    _rr = _obd.rows_for(log=_logg.append)
+    _rs = [m for m in _rr if (m["home"], m["away"]) == ("Ranheim", "Sogndal")]
+    sjekk("ligasiden kan ikke leses: byggingen bruker forrige terminliste, Ranheim-Sogndal står med 14:30 (ikke CSV-ens 17:00)",
+          len(_rr) == 240 and (_rs[0]["date"], _rs[0]["time"]) == ("2026-11-01", "14:30")
+          and any("bruker forrige terminliste" in l for l in _logg) and not any("CSV-terminlisten" in l for l in _logg), f"{_rs} {_logg}")
+    # Ligasiden svarer, men mangler en kamp: den tas med fra forrige terminliste.
+    _ntf_rader = [{**m, "ferdig": m["hg"] is not None} for m in _fr if (m["home"], m["away"]) != ("Ranheim", "Sogndal")]
+    ntf_source.fetch_all = lambda *a, **k: [dict(r) for r in _ntf_rader]
+    _logg = []
+    _rr = _obd.rows_for(log=_logg.append)
+    _rs = [m for m in _rr if (m["home"], m["away"]) == ("Ranheim", "Sogndal")]
+    sjekk("en kamp som mangler hos ligasiden, tas med fra forrige terminliste (14:30), ikke fra CSV-en",
+          len(_rr) == 240 and len(_rs) == 1 and _rs[0]["time"] == "14:30"
+          and any("forrige terminliste" in l and "Ranheim-Sogndal" in l for l in _logg), f"{_rs} {[l for l in _logg if 'Ranheim' in l]}")
+    # Resultatkjeden: dato og avspark i matches.json kommer fra schedule().
+    _sch = _obr.schedule()
+    sjekk("resultatkjeden (obos_results.schedule): forrige terminliste, Ranheim-Sogndal 14:30",
+          len(_sch) == 240 and _sch[("Ranheim", "Sogndal")]["time"] == "14:30", str(_sch.get(("Ranheim", "Sogndal"))))
+    # Uten forrige terminliste (sesongstart): CSV-en, som før.
+    (_sbr / "fixtures.json").unlink()
+    ntf_source.fetch_all = lambda *a, **k: (_ for _ in ()).throw(ntf_source.EsDataError("lagt om"))
+    _logg = []
+    _rr = _obd.rows_for(log=_logg.append)
+    _rs = [m for m in _rr if (m["home"], m["away"]) == ("Ranheim", "Sogndal")]
+    sjekk("uten forrige terminliste (sesongstart): CSV-en, med advarsel",
+          (_rs[0]["date"], _rs[0]["time"]) == ("2026-11-01", "17:00") and any("CSV-terminlisten" in l for l in _logg)
+          and _obr.schedule()[("Ranheim", "Sogndal")]["time"] == "17:00", f"{_rs} {_logg}")
+finally:
+    _obd.DATA, _obr.DATA, ntf_source.fetch_all = _ekte_data_obd, _ekte_data_obr, _ekte_fa_r
     _hlr.KATALOG = _ekte_hl_kat
 
 print("\n=== Datovakten bruker den AKTIVE sesongen, ikke dataene ===")
