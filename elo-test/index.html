@@ -3172,6 +3172,8 @@ function medLaast(d){
 }
 `;
 let mcWorker=null, mcRunId=0, mcTimer=null, lastMC=null, lastMCScenarioKey=null;
+// Øker hver gang tabellens tall (lastMC) byttes: nøkkelen til forrigeKampData.
+let lastMCVersjon = 0;
 // Sannsynlighetene UTEN scenario, til delingsteksten. Dette er ikke en ny
 // beregning: det er den samme kjøringen siden alt gjør, fanget den gangen
 // scenarioet var tomt. Derfor er "fra"-tallet nøyaktig det siden viser for
@@ -3228,7 +3230,7 @@ function getWorker(){
       }
       if(runId!==mcRunId) return; // scenarioet er endret siden denne kjøringen startet — forkast
       const outObj={}; TEAMS.forEach((t,i)=>outObj[t]=out[i]);
-      lastMC=outObj; lastMCN = data.done; lastMCFinal = data.done>=data.total; fillOdds();
+      lastMC=outObj; lastMCN = data.done; lastMCFinal = data.done>=data.total; lastMCVersjon++; fillOdds();
       if(lastMCFinal) innsiktForhand();
     };
   }
@@ -4757,9 +4759,8 @@ const QA_OUT_LABEL = {win:'seier', draw:'uavgjort', loss:'tap'};
 // linja i lagboksen (qaLastMatchLine) skal bygges av samme ordlyd -- og fordi
 // scripts/snapshot_probs.js kaller denne for alle 16 lag og lagrer resultatet
 // i data/lastmatch.json, slik at linja vises med en gang. gruppe: poolens
-// forkastingsgruppe ("forrige-linje" når linja i lagboksen regnes på siden,
-// se forrigeLinjeOppdater, så den og svaret aldri forkaster hverandres
-// oppgaver; samme frø, samme tall).
+// forkastingsgruppe. Linja og svaret på siden går gjennom forrigeKampData,
+// som deler én utregning per lag, scenario, sone og tabell.
 // De andre utfallene av en spilt kamp, som oppgaver: utgangsstillingen med
 // det faktiske resultatet ut og det mest sannsynlige resultatet for utfallet
 // inn (t.over), og id-en og resultatet grunnlagsfilen kjenner dem igjen på.
@@ -4837,7 +4838,7 @@ async function qaLastMatchData(team, gruppe='forrige'){
     pp, expected, preKick: pk, good: pp==null ? null : good(pp)>0};
 }
 async function qaLastMatch(team){
-  const data = await qaLastMatchData(team);
+  const data = await forrigeKampData(team);   // samme utregning som linja i lagboksen
   if(!data) return 'Ingen data å regne på ennå.';
   if(data.noMatch) return `${team} har ingen spilte kamper ennå.`;
   const {m, opp, gf, ga, actual, zone, tableP, shown} = data;
@@ -4997,7 +4998,35 @@ function forrigeKampRad(d){
 // blitt stående, og om grunnlagsfilen er i bruk (som kortet "Neste kamp"), så
 // en linje regnet før filen kom byttes til filens tall.
 let forrigeLinje = null, forrigeLinjeVenter = null;
-const forrigeLinjeKey = (team, scen, zoneKey) => `${team}|${scen}|${zoneKey}|${PREKICK||CLOSING ? 'p' : ''}|${GRUNNLAG ? 'fil' : ''}`;
+const forrigeLinjeKey = (team, scen, zoneKey) => `${team}|${scen}|${zoneKey}|${PREKICK||CLOSING ? 'p' : ''}|${GRUNNLAG ? 'fil' : ''}|${lastMCVersjon}`;
+// ÉN utregning av forrige kamp per lag, scenario, sone og tabell (3.10.2026).
+// Boksen (forrigeLinjeOppdater) og svaret (qaLastMatch) regnet hver sin gang,
+// og i en kjøring ga de 8 og 7 prosentpoeng for Raufoss: svaret kunne regnes
+// mens tabellens simulering ennå ikke var ferdig, med et annet "tall nå".
+// Nå venter utregningen på den ferdige tabellen for scenarioet, og begge
+// bruker løftet herfra, så de har de samme tallene og ikke kan bli uenige.
+// Egen gruppe per lag i poolen: et annet lag forkaster ikke denne.
+const FORRIGE_DATA = new Map();
+async function forrigeKampData(team){
+  const t0 = Date.now();
+  while(!(lastMCFinal && lastMC && lastMCScenarioKey===qaScenarioKey()) && Date.now()-t0 < 30000)
+    await new Promise(r=>setTimeout(r, 50));
+  const z = qaTargetZone(team);
+  if(!z) return null;
+  // Sannsynlighetene fra før avspark (preKickProbs) er med i nøkkelen:
+  // forventningen bygger på dem, og de kan komme eller endres uten at
+  // scenarioet gjør det.
+  const m = sisteKampFor(team), pk = m ? preKickProbs(m.home, m.away) : null;
+  const key = `${forrigeLinjeKey(team, qaScenarioKey(), z.key)}|${pk ? [pk.H, pk.U, pk.B, pk.kilde].join(',') : ''}`;
+  let p = FORRIGE_DATA.get(key);
+  if(!p){
+    if(FORRIGE_DATA.size > 64) FORRIGE_DATA.clear();
+    p = qaLastMatchData(team, `forrige:${team}`);
+    p.catch(()=>{ if(FORRIGE_DATA.get(key)===p) FORRIGE_DATA.delete(key); });
+    FORRIGE_DATA.set(key, p);
+  }
+  return p;
+}
 function forrigeLinjeOppdater(){
   const team = SELECTED_TEAM, scen = qaScenarioKey();
   // Sonen og sjansen i linja skal være kortets: vent på den ferdige
@@ -5008,7 +5037,7 @@ function forrigeLinjeOppdater(){
   const key = forrigeLinjeKey(team, scen, z.key);
   if((forrigeLinje && forrigeLinje.key===key) || forrigeLinjeVenter===key) return;
   forrigeLinjeVenter = key;
-  qaLastMatchData(team, 'forrige-linje').then(d=>{
+  forrigeKampData(team).then(d=>{   // samme utregning som svaret
     if(forrigeLinjeVenter!==key) return;       // et annet lag eller scenario regnes nå
     forrigeLinjeVenter = null;
     if(!d || d.noMatch) return;
@@ -5259,7 +5288,7 @@ function grunnlagFordeling(id){
 // (mcRunId), så den ikke skriver over filens tall når den blir ferdig.
 function grunnlagTilTabell(){
   mcRunId++;
-  lastMCScenarioKey = ''; lastMC = grunnlagFordeling('base'); lastMCN = GRUNNLAG.N; lastMCFinal = true;
+  lastMCScenarioKey = ''; lastMC = grunnlagFordeling('base'); lastMCN = GRUNNLAG.N; lastMCFinal = true; lastMCVersjon++;
   fillOdds();
 }
 // Svaret på oppgavene fra filen, eller null: bare når ALLE oppgavene finnes

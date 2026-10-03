@@ -2430,6 +2430,48 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       }
     }
   };
+  // Forrige kamp: boksen og svaret deler én utregning (3.10.2026). De regnet
+  // hver sin gang (forrigeLinjeOppdater og qaLastMatch), og i en kjøring ga
+  // de 8 og 7 prosentpoeng for Raufoss: svaret kunne regnes før tabellens
+  // simulering var ferdig. Her bes svaret om rett etter "Simuler runden",
+  // før tabellen er ferdig, og laget følges så boksen regner sin linje.
+  // qaLastMatchData skal da kalles nøyaktig én gang per lag, og boksen og
+  // svaret si det samme tallet. Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare forrigedelt
+  const forrigedelt = async () => {
+    setGroup('Forrige kamp: boksen og svaret deler én utregning');
+    for (const [sti, liga] of [['/obos/', 'OBOS'], ['/eliteserien/', 'Eliteserien']]) {
+      const pg = await open(1400, 1000, base.replace('/eliteserien/', sti) + '#team=');
+      await settle(pg);
+      const R = await pg.evaluate(() => Math.min(...matches.filter(x => x.hg == null).map(x => x.round)));
+      const lagene = await pg.evaluate(R => [...new Set(matches.filter(m => m.round === R).flatMap(m => [m.home, m.away]))].slice(0, 4), R);
+      for (const lag of lagene) {
+        const r = await pg.evaluate(async (R, lag) => {
+          window.__kall = window.__kall || {};
+          if (!window.__ekteData) { window.__ekteData = qaLastMatchData;
+            qaLastMatchData = (team, ...a) => { __kall[team] = (__kall[team] || 0) + 1; return __ekteData(team, ...a); }; }
+          matches.forEach(m => setMatch(m, null, null)); render();
+          const t0 = Date.now(); while (!(lastMCFinal && lastMCScenarioKey === qaScenarioKey()) && Date.now() - t0 < 60000) await new Promise(x => setTimeout(x, 50));
+          __kall[lag] = 0;
+          await simulateRound(R, false); render();
+          const ferdigFoer = lastMCFinal && lastMCScenarioKey === qaScenarioKey();
+          const svarP = qaLastMatch(lag);           // før tabellen er ferdig
+          SELECTED_TEAM = lag; render();            // boksen regner sin linje når tabellen er ferdig
+          const svar = String(await svarP);
+          const t1 = Date.now();
+          while (!(forrigeLinje && forrigeLinje.key === forrigeLinjeKey(lag, qaScenarioKey(), (qaTargetZone(lag) || {}).key)) && Date.now() - t1 < 30000)
+            await new Promise(x => setTimeout(x, 50));
+          await new Promise(x => setTimeout(x, 200));
+          const boks = (document.querySelector('#odds .lastmatch') || {}).textContent || '';
+          const tall = t => { const m = t.match(/med (\d+) prosentpoeng/); return m ? +m[1] : /endret lite/.test(t) ? 'lite' : null; };
+          return {ferdigFoer, kall: __kall[lag], svar: svar.slice(0, 200), boks: boks.slice(0, 200), svarTall: tall(svar), boksTall: tall(boks)};
+        }, R, lag);
+        check(`${liga}, ${lag}: svaret bedt om før tabellen var ferdig; én utregning, og boksen og svaret sier det samme (${r.boksTall})`,
+          !r.ferdigFoer && r.kall === 1 && r.boksTall !== null && r.boksTall === r.svarTall, JSON.stringify(r));
+      }
+      await pg.close();
+    }
+  };
   const rundeslutt = async () => {
     setGroup('Rundens sluttdato: datoen runden ble spilt, ikke en kamp flyttet langt ut');
     for (const [sti, liga, R, dato, tekst, trekk, mellom] of [
@@ -2664,9 +2706,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'rundeslutt') await rundeslutt();
       else if (BARE === 'tabellbilde') await tabellbilde();
       else if (BARE === 'nyedata') await nyedata();
+      else if (BARE === 'forrigedelt') await forrigedelt();
       else if (BARE === 'nederst') await nederstPaaSiden();
       else if (BARE === 'justering') await poengjusteringer();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, justering)`);
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, justering)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -3515,6 +3558,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await rundeslutt();
     await tabellbilde();
     await nyedata();
+    await forrigedelt();
     await page.bringToFront();
 
     // ---- 18. rulling til svaret på iPad-bredder ----

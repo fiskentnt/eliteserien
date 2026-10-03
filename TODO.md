@@ -3,6 +3,20 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Forrige kamp: boksen og svaret deler én utregning (3.10.2026 kveld)
+
+I en full regresjon ga boksen 8 og svaret 7 prosentpoeng for Raufoss
+(simulert 0-1 mot Sogndal). Årsak: forrigeLinjeOppdater og qaLastMatch
+regnet hver sin gang, og svaret kunne regnes før tabellens simulering var
+ferdig, med et annet "tall nå". Mot den publiserte siden ga testen under 4
+mot 3 og 8 mot 7. Nå går begge gjennom forrigeKampData: den venter på den
+ferdige tabellen for scenarioet, og løftet huskes per lag, scenario, sone,
+tabellversjon (lastMCVersjon) og sannsynlighetene fra før avspark.
+
+Test: `node tests/regression.js --bare forrigedelt` (svaret bes om før
+tabellen er ferdig; qaLastMatchData kalles én gang per lag, og boksen og
+svaret sier det samme).
+
 ## Ferske data i nettleseren (3.10.2026 kveld)
 
 En bruker så tabellen uten Haugesund-Stabæk og Hødd-Odd lenge etter at de
