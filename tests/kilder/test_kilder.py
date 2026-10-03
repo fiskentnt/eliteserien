@@ -2348,6 +2348,73 @@ finally:
         setattr(_obr, _n, _v)
     _obr.time.sleep, sys.argv, _hls._http = _ekte_sleep, _ekte_argv, _ekte_hlhttp
 
+print("\n=== Eliteserien: nye resultater med regelen (update_data.kontroller_nye_resultater) ===")
+# Lagrede svar: ESPN-sesongen 3.10. (to feil 0-0 fra 29.5.) og Highlightly per
+# dato. Ligasiden har de riktige resultatene. Testdataene fra 1.10. med
+# kampene 29.5. og 20.9. tatt ut av det publiserte, så de er nye.
+import update_data as _udr
+_espn_ses = lambda aar: __import__("espn_source").tolk(json.loads((TESTDATA / "espn_sesong_2026-10-03.json").read_text("utf-8"))["events"])[0]
+def _hl_es(d):
+    sti = _HLD / f"dag_{d}.json"
+    if not sti.exists():
+        return []
+    return [_hls.parse_kamp(m, "eliteserien") for m in json.loads(sti.read_text("utf-8")) if m["league"]["id"] == _hls.LIGA_ID["eliteserien"]]
+_es_m = json.loads((ROT / "tests" / "data" / "2026-10-01" / "eliteserien" / "data" / "matches.json").read_text("utf-8"))
+_nye_d = ("2026-05-29", "2026-09-20")
+_tidl = [m for m in _es_m if m["date"] not in _nye_d]
+_merged = [{**m, "src": "ntf"} for m in _es_m]
+_liga = [dict(m) for m in _es_m]
+_sbs = Path(_tf2.mkdtemp())
+def _kjor_es(naa, hl=_hl_es, espn=_espn_ses, state=None):
+    _st = _sbs / "results_state.json"
+    if state is None and _st.exists():
+        _st.unlink()
+    _udr.LIGAKILDE = "ligasiden"
+    _ut, _s = _udr.kontroller_nye_resultater([dict(r) for r in _merged], _tidl, _liga, [], [], naa, log=lambda _x: None,
+                                             hl_dag=hl, espn_sesong=espn, state_sti=_st)
+    return {(r["home"], r["away"]): (r["hg"], r["ag"]) for r in _ut}, _s
+_naa_es = _dt(2026, 9, 20, 23, 0, tzinfo=ZoneInfo("Europe/Oslo"))
+_r, _s = _kjor_es(_naa_es)
+_nye = [(m["home"], m["away"]) for m in _es_m if m["date"] in _nye_d]
+sjekk(f"ligasiden, ESPN og Highlightly: alle {len(_nye)} nye resultatene (29.5. og 20.9.) publiseres",
+      all(_r[k] == next((m["hg"], m["ag"]) for m in _es_m if (m["home"], m["away"]) == k) for k in _nye) and not _s["conflicts"],
+      f"{[(k, _r[k]) for k in _nye if _r[k][0] is None]} {_s}")
+sjekk("Vålerenga-Kristiansund 3-1 og Aalesund-HamKam 2-2 publiseres selv om ESPN har 0-0 (Highlightly er enig med ligasiden)",
+      _r[("Vålerenga", "Kristiansund")] == (3, 1) and _r[("Aalesund", "HamKam")] == (2, 2), str((_r[("Vålerenga", "Kristiansund")], _r[("Aalesund", "HamKam")])))
+# Uten Highlightly, 2,5 time etter avspark 29.5.: ESPN sitt 0-0 er uenig med
+# ligasiden. Aalesund-HamKam blir konflikt (ESPN 0-0 uten vinnermerke);
+# Vålerenga-Kristiansund har ESPN merket mistenkelig (0-0 med vinner), så der
+# finnes ingen uavhengig kilde: vent. Ingen av dem publiseres.
+def _hl_nede(d):
+    raise RuntimeError("Highlightly svarer ikke")
+_r, _s = _kjor_es(_dt(2026, 5, 29, 21, 30, tzinfo=ZoneInfo("Europe/Oslo")), hl=_hl_nede)
+sjekk("uten Highlightly: et 0-0 fra ESPN som er uenig med ligasiden, publiseres aldri; Aalesund-HamKam er konflikt",
+      _r[("Aalesund", "HamKam")] == (None, None) and _r[("Vålerenga", "Kristiansund")] == (None, None)
+      and any("Aalesund-HamKam" in c for c in _s["conflicts"]) and any("Vålerenga-Kristiansund" in w for w in _s["waiting"]),
+      f"{_s['conflicts']} {_s['waiting'][:3]}")
+sjekk("og de andre kampene 29.5., der ESPN er enig med ligasiden, publiseres",
+      _r[("Brann", "Sarpsborg 08")] == (1, 2) and _r[("Fredrikstad", "Start")] == (2, 1), str((_r[("Brann", "Sarpsborg 08")], _r[("Fredrikstad", "Start")])))
+# Etter 24 timer uten uavhengig kilde: ligasiden alene, ukontrollert (rødt),
+# men Aalesund-HamKam er fortsatt konflikt (ESPN er uenig).
+_r, _s = _kjor_es(_dt(2026, 5, 31, 12, 0, tzinfo=ZoneInfo("Europe/Oslo")), hl=_hl_nede)
+sjekk("etter 24 timer: Vålerenga-Kristiansund publiseres uten kontroll; Aalesund-HamKam holdes fortsatt tilbake",
+      _r[("Vålerenga", "Kristiansund")] == (3, 1) and _s["ukontrollert"] == {("Vålerenga", "Kristiansund"): (3, 1)}
+      and _r[("Aalesund", "HamKam")] == (None, None), str(_s))
+_udr.skriv_state(_s, _dt(2026, 5, 31, 12, 0, tzinfo=_tz.utc), state_sti=_sbs / "results_state.json")
+_ok_es = Path(_tf2.mkdtemp()); (_ok_es / "eliteserien" / "data").mkdir(parents=True)
+_shr.copy(_sbs / "results_state.json", _ok_es / "eliteserien" / "data" / "results_state.json")
+sjekk("og kjøringen er rød (resultatregel.py sjekk eliteserien)", _regel.sjekk("eliteserien", rot=_ok_es) == 1)
+# En time senere svarer Highlightly: bekreftet, og grønt.
+_tidl2 = _tidl + [m for m in _es_m if (m["home"], m["away"]) == ("Vålerenga", "Kristiansund")]
+_tidl_lagret = _tidl
+_tidl = _tidl2
+try:
+    _r, _s = _kjor_es(_dt(2026, 5, 31, 13, 30, tzinfo=ZoneInfo("Europe/Oslo")), state=True)
+finally:
+    _tidl = _tidl_lagret
+sjekk("en time senere bekrefter Highlightly 3-1: ikke lenger uten kontroll",
+      _s["ukontrollert"] == {}, str(_s))
+
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.
 _vern.sjekk_urort(sjekk)

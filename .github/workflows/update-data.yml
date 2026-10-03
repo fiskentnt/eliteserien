@@ -62,6 +62,9 @@ jobs:
           # Sluttodds fra OddsPapi-vinduet. Gratis oppslag. Mangler nøkkelen,
           # hopper update_data.py over steget og bruker football-data som før.
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
+          # Uavhengig kontroll av ligasidens resultater (resultatregel.py),
+          # per dato, ett kall per kampdag.
+          HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
         run: python3 scripts/update_data.py
 
       - uses: actions/setup-node@v4
@@ -183,6 +186,8 @@ jobs:
           [ -f data/oddspapi_usage.json ] && git add data/oddspapi_usage.json
           # Katalogen finnes bare naar et tellende kall er gjort i dag.
           [ -d data/oddspapi-bruk ] && git add data/oddspapi-bruk
+          [ -d data/highlightly-bruk ] && git add data/highlightly-bruk
+          [ -f eliteserien/data/results_state.json ] && git add eliteserien/data/results_state.json
           # fotball.no-cachen: forsoket som reserve (hoyst ett per liga per
           # dogn) ligger her.
           [ -d data/nff-cache ] && git add data/nff-cache
@@ -235,6 +240,13 @@ jobs:
         # der, mens hentelogget viser feil paa feil paa feil.
         if: always()
         run: python3 scripts/hentelogg.py sjekk
+
+      - name: Gjør kjøringen rød hvis et resultat står uten kontroll eller i konflikt
+        # Sist, etter at dataene er lagret. Ligasiden alene publiseres etter
+        # 24 timer uten uavhengig kilde, og står da som ukontrollert til en
+        # annen leverandør bekrefter det (resultatregel.py).
+        if: always()
+        run: python3 scripts/resultatregel.py sjekk eliteserien
 
       - name: Livstegn til healthchecks.io (bare når hele kjøringen er grønn)
         # SIST, etter kildevakten. Dødmannsknappen (planlegger/README.md):

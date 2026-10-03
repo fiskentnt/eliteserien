@@ -15,7 +15,7 @@ workflowen (kun hvis noe faktisk endret seg).
 import json
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from zoneinfo import ZoneInfo
 
@@ -138,14 +138,126 @@ def ligasiden_eller_reserve(cache_dir=None, log=lambda s: None):
     hoeyst ett forsok per dogn, ellers det som ligger i cachen. Svarer
     ligasiden, men vi ikke forstaar den, er det en feil hos oss, og den skal
     ikke skjules bak en annen kilde."""
+    global LIGAKILDE
     try:
-        return ntf_source.fetch_all(LIGA, cache_dir=cache_dir, log=log)
+        rader = ntf_source.fetch_all(LIGA, cache_dir=cache_dir, log=log)
+        LIGAKILDE = "ligasiden"
+        return rader
     except ntf_source.SvarerIkke as e:
         log(f"ADVARSEL: ligasiden svarte ikke ({e}) -- bruker fotball.no som reserve.")
         rader = nff_source.fetch_all(LIGA, log=log)
         if not rader:
             raise
+        LIGAKILDE = "fotball.no"
         return rader
+
+
+# Hvilken kilde ligasiden_eller_reserve() ga radene fra: "ligasiden", eller
+# "fotball.no" når ligasiden ikke svarte. Samme leverandør (NTF) i
+# resultatregel.py, men fotball.no er ikke den offisielle ligasiden.
+LIGAKILDE = "ligasiden"
+STATE = LEAGUE / "data" / "results_state.json"
+
+
+def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rader, now, log=lambda s: None,
+                              hl_dag=None, espn_sesong=None, state_sti=None):
+    """Regelen i resultatregel.py (3.10.2026) for resultatene som er NYE i
+    denne kjøringen: et resultat publiseres når hovedkilden og minst én kilde
+    fra en annen leverandør er enige. Ellers står kampen som uspilt (vent)
+    eller holdes tilbake (konflikt). Publiserte resultater røres ikke
+    (behold_eksisterende). Bare ligasiden kan publisere alene, etter 24
+    timer, og står da som ukontrollert i results_state.json til ESPN,
+    Highlightly eller ffksupporter bekrefter det.
+
+    Kildene: ligasiden (eller fotball.no, LIGAKILDE), ESPN (hele sesongen i
+    ett kall, siden dagens rundetavle ikke ser en kamp fra i går), Highlightly
+    (per dato, ett kall per kampdag), ffksupporter. hl_dag og espn_sesong kan
+    byttes ut i testene. Returnerer (merged, state)."""
+    import resultatregel
+    hl_dag = hl_dag or (lambda d: __import__("highlightly_source").hent_dag(d, ligaer=("eliteserien",))["eliteserien"])
+    espn_sesong = espn_sesong or (lambda aar: espn_source.fetch_season(aar, log=log))
+    state_sti = state_sti or STATE
+    try:
+        gml = json.loads(state_sti.read_text(encoding="utf-8"))
+    except Exception:
+        gml = {}
+    ukontr = {tuple(k.split("|")): tuple(v) for k, v in (gml.get("ukontrollert") or {}).items()}
+    sist = gml.get("ukontrollert_sjekket")
+    sjekk_ukontr = bool(ukontr) and (not sist or now - datetime.fromisoformat(sist) >= timedelta(hours=1))
+
+    publisert = {(m["home"], m["away"]) for m in tidligere if m.get("hg") is not None}
+    nye = [r for r in merged if r.get("hg") is not None and (r["home"], r["away"]) not in publisert]
+    resultat = lambda rader: {(r["home"], r["away"]): (r["hg"], r["ag"]) for r in rader
+                              if r.get("hg") is not None and not r.get("suspect")}
+    if not nye and not sjekk_ukontr:
+        return merged, {"conflicts": [], "waiting": [], "ukontrollert": ukontr, "ukontrollert_sjekket": sist}
+
+    kilder = {LIGAKILDE: resultat(liga_rader), "ffksupporter": resultat(ffk_rader) if ffk_rader else None}
+    try:
+        espn = espn_sesong(now.astimezone(OSLO).year)
+        kilder["espn"] = resultat(espn)
+    except Exception as e:
+        log(f"  ESPN (sesongen) feilet ({type(e).__name__}: {e}) -- fortsetter uten")
+        kilder["espn"] = resultat(espn_rader) if espn_rader else None
+    datoer = sorted({r["date"] for r in nye} | ({m["date"] for m in tidligere if (m["home"], m["away"]) in ukontr}
+                                                if sjekk_ukontr else set()))
+    hl, svarte = {}, False
+    for d in datoer:
+        try:
+            hl.update(resultat([r for r in hl_dag(d) if r.get("ferdig")]))
+            svarte = True
+        except Exception as e:
+            log(f"  Highlightly {d}: {type(e).__name__}: {e}")
+    kilder["highlightly"] = hl if svarte else None
+    oppe = {k for k, v in kilder.items() if v is not None}
+
+    waiting, conflicts, nye_ukontr = [], [], {}
+    ut = []
+    for r in merged:
+        k = (r["home"], r["away"])
+        if r.get("hg") is None or k in publisert:
+            ut.append(r)
+            continue
+        try:
+            avspark = _kickoff_utc(r["date"], r["time"]) if r.get("time") else None
+        except Exception:
+            avspark = None
+        svar = {kilde: v[k] for kilde, v in kilder.items() if v and k in v}
+        u = resultatregel.avgjor("eliteserien", svar, oppe, avspark=avspark, naa=now)
+        hvem = f"{k[0]}-{k[1]}"
+        if u["utfall"] == "publiser":
+            ut.append({**r, "hg": u["resultat"][0], "ag": u["resultat"][1]})
+            if u["ukontrollert"]:
+                nye_ukontr[k] = u["resultat"]
+            if u["uenige"] or u["ukontrollert"]:
+                log(f"  {hvem}: {u['grunn']}")
+            continue
+        (conflicts if u["utfall"] == "konflikt" else waiting).append(f"{hvem}: {u['grunn']}")
+        ut.append({**r, "hg": None, "ag": None, "src": None})
+    if sjekk_ukontr:
+        svar_pk = {k: {kilde: v[k] for kilde, v in kilder.items() if v and k in v} for k in ukontr}
+        ukontr, bekreftet, uenige = resultatregel.kontroller_ukontrollerte("eliteserien", ukontr, svar_pk)
+        for k in bekreftet:
+            log(f"  {k[0]}-{k[1]}: publisert uten kontroll, nå bekreftet")
+        for k, rr, uavh in uenige:
+            conflicts.append(f"{k[0]}-{k[1]}: publisert {rr[0]}-{rr[1]} uten kontroll, men "
+                             + ", ".join(f"{kilde} har {v[0]}-{v[1]}" for kilde, v in uavh.items()))
+    ukontr.update(nye_ukontr)
+    for c in conflicts:
+        log(f"  KONFLIKT {c}")
+    for w in waiting:
+        log(f"  venter: {w}")
+    return ut, {"conflicts": conflicts, "waiting": waiting, "ukontrollert": ukontr,
+                "ukontrollert_sjekket": now.isoformat(timespec="seconds") if sjekk_ukontr else sist}
+
+
+def skriv_state(state, now, state_sti=None):
+    (state_sti or STATE).write_text(json.dumps({
+        "checked_at": now.isoformat(timespec="seconds"),
+        "conflicts": state["conflicts"], "waiting": state["waiting"],
+        "ukontrollert": {f"{k[0]}|{k[1]}": list(v) for k, v in state["ukontrollert"].items()},
+        "ukontrollert_sjekket": state["ukontrollert_sjekket"],
+    }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
 def write_status(ok, now, error=None):
@@ -416,6 +528,9 @@ def main(cache_dir=None):
         import sesong as _sesong
         _aktiv = _sesong.aktiv_sesong(ROOT, LIGA, log=log)
         merged, utenfor, _datofeil = rimelige_datoer(merged, tidligere, _aktiv, log=log)
+        # Regelen for nye resultater (resultatregel.py): hovedkilden og en
+        # annen leverandør må være enige. Publiserte resultater røres ikke.
+        merged, _resstate = kontroller_nye_resultater(merged, tidligere, ntf_rows, espn_rows, ffk_rows, now, log=log)
 
         # FOR SKRIVINGEN, ikke etter. "sesongskifte_mangler" betyr at
         # terminlisten hoerer til en ANNEN sesong enn registeret sier -- altsaa
@@ -439,6 +554,7 @@ def main(cache_dir=None):
         data_dir.mkdir(exist_ok=True)
         write_json(data_dir / "matches.json", matches_out)
         write_json(data_dir / "fixtures.json", fixtures_out)
+        skriv_state(_resstate, now)
 
         # Tabellkontrollen mot tabellen paa ligasiden, fra samme henting
         # (scripts/tabellkontroll.py). Et nytt poengtrekk legges inn i
