@@ -1409,8 +1409,8 @@ const LEAGUE = {
   faq: [
     {q: 'Hvem vinner Eliteserien 2026?',
      a: () => { const t = faqTopp('gull', 2);
-       return t.length ? `${t[0].t} er størst favoritt med ${pctTxt(t[0].v)}`
-         + (t[1] ? `, foran ${t[1].t} med ${pctTxt(t[1].v)}.` : '.')
+       return t.length ? `${t[0].t} er størst favoritt med ${pctTxt(t[0].v, t[0].s)}`
+         + (t[1] ? `, foran ${t[1].t} med ${pctTxt(t[1].v, t[1].s)}.` : '.')
          : 'Tabellen over viser sjansen for hvert lag.'; }},
     {q: 'Hvem rykker ned fra Eliteserien 2026?',
      a: () => { const t = faqTopp('nedrykk', 3);
@@ -1759,7 +1759,7 @@ const PROB_KEYS = ['gull','europa','ned'];
 function probOf(team,key){
   const d = typeof lastMC!=='undefined' && lastMC && lastMC[team];
   if(!d) return 0;
-  return zoneSum(d, key);
+  return medStatus(zoneSum(d, key), soneStatus(team, key));
 }
 // Kolonnenavnene i tabellen, både som overskrift og når kolonnen er sortert.
 const SORT_LABELS = Object.assign({form:'Styrke', form5:'Form'}, Object.fromEntries(LEAGUE.cols.map(c =>
@@ -2695,7 +2695,7 @@ function solveDirection(byname, remaining, excludeName, target, direction, deadl
   // (Før talte "above" bare lag som kunne komme STRENGT over, og et lag som
   // kunne nå samme poengsum og gå forbi på målforskjell ble oversett.)
   var candNames = rows.filter(function(r){ return direction==='above' ? r.max>=target : r.pts<=target; }).map(function(r){ return r.name; });
-  if(candNames.length===0) return {count:0, exact:true};
+  if(candNames.length===0) return {count:0, exact:true, ovre:0};
 
   var idx={}; candNames.forEach(function(n,i){ idx[n]=i; });
   var n=candNames.length;
@@ -2742,7 +2742,7 @@ function solveDirection(byname, remaining, excludeName, target, direction, deadl
 
   var stillIdx=[]; for(var i2=0;i2<n;i2++) if(!resolvedSafe[i2]) stillIdx.push(i2);
   var metCount=0; for(var i3=0;i3<n;i3++) if(resolvedSafe[i3]) metCount++;
-  if(stillIdx.length===0) return {count:metCount, exact:true};
+  if(stillIdx.length===0) return {count:metCount, exact:true, ovre:metCount};
 
   var need = stillIdx.map(function(i){ return direction==='above' ? Math.max(0, target-curFloor(i)) : target-curFloor(i); });
   var localIdx={}; stillIdx.forEach(function(gi,li){ localIdx[gi]=li; });
@@ -2752,19 +2752,39 @@ function solveDirection(byname, remaining, excludeName, target, direction, deadl
 }
 // terskler (valgfri): merkegrensene antallet sammenlignes med. Da stopper
 // søket så snart merket er avgjort, se tidlig stopp under.
+// Svaret: count (se under), exact, og ovre: en GYLDIG ØVRE GRENSE for det
+// sanne antallet. For "above" er count selv det. For "atmost" er count det
+// beste funnet (en nedre grense), og ovre det som kan brukes som bevis.
 function searchResidual(metBase, m, need, games, direction, deadline, terskler){
   if(games.length===0){
     var cnt=0; for(var i=0;i<m;i++) if(direction==='above' ? need[i]<=0 : need[i]>=0) cnt++;
-    return {count:metBase+cnt, exact:true};
+    return {count:metBase+cnt, exact:true, ovre:metBase+cnt};
   }
   var earned=new Array(m).fill(0);
   var bestFound=0;
+  // "atmost": de trangeste kampene først (minst å gå på for det ene laget).
+  // To lag uten noe å gå på som møter hverandre, gjør at ett av dem havner
+  // over, og da kuttes grenen med en gang. Med kampene i terminlisteorden
+  // kom Viking-Glimt sist, og HamKam brukte hele tidsgrensen på å vise at
+  // laget ikke kan vinne serien (4.10.2026).
+  if(direction==='atmost'){
+    games=games.slice().sort(function(a,b){
+      return Math.min(need[a[0]],need[a[1]])-Math.min(need[b[0]],need[b[1]]) || (need[a[0]]+need[a[1]])-(need[b[0]]+need[b[1]]);
+    });
+  }
   function successCount(){
     var c=0; for(var i=0;i<m;i++) if(direction==='above' ? earned[i]>=need[i] : earned[i]<=need[i]) c++;
     return c;
   }
+  // Øvre grense for antallet i resten av søket. "atmost": lagene som
+  // fortsatt er innenfor (poeng kommer bare til, så et lag som er over, blir
+  // aldri innenfor igjen). Maksflyten under gjelder bare "above": den teller
+  // lag som kan NÅ et poengtall. Før 4.10.2026 sto det 'lte' her mens kallet
+  // het 'atmost', og maksflyten kuttet grener med flere lag innenfor: Åsane
+  // fikk 8 lag som kunne ende under seg i stedet for 10, og topp 6 ville
+  // vært "umulig". Merket «Rykket ned» kunne komme for tidlig av samme grunn.
   function bound(gi){
-    if(direction==='lte') return successCount();
+    if(direction==='atmost') return successCount();
     var remNeed = need.map(function(v,i){ return Math.max(0, v-earned[i]); });
     var mc=0; var stillNeedArr=[];
     var stillNeedFlag=new Array(m).fill(false);
@@ -2796,80 +2816,105 @@ function searchResidual(metBase, m, need, games, direction, deadline, terskler){
       stoppVed = L - metBase;
     } else stoppVed = Math.max.apply(null, terskler) - metBase;
   }
-  function avgjort(){ return direction==='above' ? {count:grense, exact:false} : {count:metBase+bestFound, exact:false}; }
+  function avgjort(){ return direction==='above' ? {count:grense, exact:false, ovre:grense} : {count:metBase+bestFound, exact:false, ovre:metBase+m}; }
   if(bestFound>=stoppVed) return avgjort();
+  // "atmost" med terskler: bare om antallet er under hver terskel betyr noe.
+  // En gren som ikke kan nå neste terskel over det beste funnet, kan ikke
+  // endre noe svar og kuttes. Den øvre grensen er da neste terskel minus én.
+  // Uten terskler (og for "above") er dette det vanlige kuttet, bound <= beste.
+  var rel = direction==='atmost' && terskler && terskler.length
+    ? terskler.map(function(t){ return t-metBase; }).sort(function(a,b){ return a-b; }) : null;
+  function nesteTerskel(){
+    if(!rel) return bestFound+1;
+    for(var ri=0; ri<rel.length; ri++) if(rel[ri]>bestFound) return rel[ri];
+    return Infinity;
+  }
   var visited=0, timedOut=false, stoppet=false;
+  var UTFALL=[[3,0],[0,3],[1,1]];
   function dfs(gi){
     if(timedOut || stoppet) return;
     visited++;
     if((visited & 511)===0 && Date.now()>deadline){ timedOut=true; return; }
     if(gi===games.length){ var c=successCount(); if(c>bestFound){ bestFound=c; if(bestFound>=stoppVed) stoppet=true; } return; }
-    if(bound(gi)<=bestFound) return;
-    var pair=games[gi], i=pair[0], j=pair[1];
-    earned[i]+=3; dfs(gi+1); earned[i]-=3;
-    if(timedOut || stoppet) return;
-    earned[j]+=3; dfs(gi+1); earned[j]-=3;
-    if(timedOut || stoppet) return;
-    earned[i]+=1; earned[j]+=1; dfs(gi+1); earned[i]-=1; earned[j]-=1;
+    if(bound(gi)<nesteTerskel()) return;
+    var pair=games[gi], i=pair[0], j=pair[1], valg=UTFALL;
+    // "atmost": prøv først utfallet som holder flest av de to lagene
+    // innenfor, med mest å gå på. Da finnes en god løsning tidlig, og kuttet
+    // over tar resten (Sandefjord brukte 1,6 s uten, i dagens tabell).
+    if(direction==='atmost'){
+      var ri2=need[i]-earned[i], rj2=need[j]-earned[j];
+      var verdi=function(v){ var a=ri2-v[0], b=rj2-v[1]; return ((a>=0?1:0)+(b>=0?1:0))*1000 + Math.min(a,b); };
+      valg=UTFALL.slice().sort(function(x,y){ return verdi(y)-verdi(x); });
+    }
+    for(var vi=0; vi<3; vi++){
+      earned[i]+=valg[vi][0]; earned[j]+=valg[vi][1];
+      dfs(gi+1);
+      earned[i]-=valg[vi][0]; earned[j]-=valg[vi][1];
+      if(timedOut || stoppet) return;
+    }
   }
   dfs(0);
   if(stoppet) return avgjort();
   var exact=!timedOut;
+  if(direction==='atmost'){
+    var ovre = exact ? metBase + Math.min(m, nesteTerskel()-1) : metBase + m;
+    return {count:metBase+bestFound, exact:exact && ovre===metBase+bestFound, ovre:ovre};
+  }
   var count = metBase + (exact ? bestFound : bound(0));
-  return {count:count, exact:exact};
+  return {count:count, exact:exact, ovre:count};
 }
-// Ferdigspilt sesong: merkene settes etter faktisk plass, sortert som
-// tabellen (poeng, målforskjell, scorede mål). Et lag som står helt likt med
-// et annet på alle tre, kan ende på begge sider av det: innbyrdes oppgjør er
-// ikke regnet inn. Står de likt ved en grense, får derfor ingen av dem merket
-// for den grensen.
-function finalBadge(byname, name, cfg){
-  var me=byname[name];
-  function cmp(o){ return (o.pts-me.pts) || (o.gd-me.gd) || (o.gf-me.gf); }
-  var kanOver=0, kanUnder=0;
-  for(var k in byname){ if(k===name) continue; var c=cmp(byname[k]); if(c>=0) kanOver++; if(c<=0) kanUnder++; }
-  for(var bi=0; bi<cfg.badges.length; bi++){
-    if(kanOver < cfg.badges[bi].above) return {cls:cfg.badges[bi].cls, text:cfg.badges[bi].text};
+// Verste og beste plass laget MATEMATISK kan ende på, {verst, best}: verst
+// er en gyldig øvre grense, best en gyldig nedre grense, så ingen av dem er
+// noen gang for optimistiske. Merkene og "100 %"/"–" i prosentene kommer
+// begge herfra (4.10.2026; se matStatus på hovedtråden): en sone [lo, hi] er
+// sikret når verst <= hi og best >= lo, og umulig når verst < lo eller
+// best > hi.
+//   verst: 1 + så mange som kan ende foran eller likt når laget taper resten
+//          ("above" mot lagets poeng nå).
+//   best:  antall lag minus så mange som kan ende bak eller likt når laget vinner
+//          resten ("atmost" mot lagets maks).
+// Tersklene er plassene der en sone eller et merke skifter (cfg.soner,
+// cfg.badges), så søket stopper så snart svaret er avgjort for alle.
+// "atmost" kjøres bare når det kan avgjøre en sone som ennå står åpen.
+// Ferdigspilt sesong: enkleYtterpunkter alene (tabellens rekkefølge).
+${enkleYtterpunkter}
+function ytterpunkter(byname, remaining, name, budgetMs, cfg){
+  var n=Object.keys(byname).length;
+  var e=enkleYtterpunkter(byname, remaining.length===0, name);
+  if(remaining.length===0) return e;
+  var r=byname[name], deadline=Date.now()+budgetMs, soner=cfg.soner||[];
+  var gyldig=function(t, i, a){ return t>=1 && t<=n-1 && a.indexOf(t)===i; };
+  var over=cfg.badges.map(function(b){ return b.above; });
+  soner.forEach(function(z){ over.push(z[1]); if(z[0]>1) over.push(z[0]-1); });
+  var above=solveDirection(byname, remaining, name, r.pts, 'above', deadline, over.filter(gyldig));
+  var verst=Math.min(e.verst, 1+above.ovre), best=e.best;
+  // Tersklene for "atmost" (antallet som kan ende bak eller likt, k): best
+  // >= p er k < n-p+1, og best > p er k < n-p.
+  var under=[];
+  if(best<cfg.relegatedAt) under.push(n-cfg.relegatedAt+1);   // kan bli «Rykket ned»
+  soner.forEach(function(z){
+    if(verst<=z[1] && best<z[0]) under.push(n-z[0]+1);       // kan bli sikret: best >= lo
+    if(verst>=z[0] && best<=z[1]) under.push(n-z[1]);         // kan bli umulig: best > hi
+  });
+  under=under.filter(gyldig);
+  if(under.length){
+    var atmost=solveDirection(byname, remaining, name, r.max, 'atmost', deadline, under);
+    best=Math.max(best, n-atmost.ovre);
   }
-  if(kanUnder<2) return {cls:cfg.relegatedBadge.cls, text:cfg.relegatedBadge.text};
-  return null;
+  return {verst:verst, best:best};
 }
+${merkeFra}
 function computeOneBadge(byname, remaining, name, budgetMs, cfg){
-  if(remaining.length===0) return finalBadge(byname, name, cfg);
-  // Én delt tidsgrense for HELE laget (ikke per sjekk): "above" bruker det
-  // meste normalt (avgjør champ/europa/safe), "atmost" (rykket ned) får det
-  // som er igjen, bare når "above" ikke allerede ga et merke.
-  var r=byname[name];
-  var deadline=Date.now()+budgetMs;
-  var above=solveDirection(byname, remaining, name, r.pts, 'above', deadline,
-                          cfg.badges.map(function(b){ return b.above; }));
-  var badge=null;
-  // "above" gir enten det eksakte antallet eller, når søket når tidsgrensen,
-  // en GYLDIG ØVRE GRENSE (maksflyt-avslappingen, aldri for lav). Et merke
-  // krever bare at antallet er under grensen, så en øvre grense under den
-  // er like sikker som et eksakt svar. Med likt på poeng som trussel er det
-  // flere kandidater og søket blir oftere ferdig på grensen alene: i sept.
-  // 2026 ga det 9 mulige lag over Viking og Glimt (merket krever under 13)
-  // uten at søket ble ferdig på 20 sekunder. "atmost" krever fortsatt eksakt
-  // svar; grensefunksjonen gjelder ikke den retningen.
-  {
-    for(var bi=0; bi<cfg.badges.length; bi++){
-      if(above.count < cfg.badges[bi].above){ badge={cls:cfg.badges[bi].cls, text:cfg.badges[bi].text}; break; }
-    }
-  }
-  if(!badge){
-    var atmost=solveDirection(byname, remaining, name, r.max, 'atmost', deadline, [2]);
-    if(atmost.exact && atmost.count<2) badge={cls:cfg.relegatedBadge.cls, text:cfg.relegatedBadge.text};
-  }
-  return badge;
+  return merkeFra(ytterpunkter(byname, remaining, name, budgetMs, cfg), cfg);
 }
 function runBadges(d){
   var byname={}; d.rows.forEach(function(r){ byname[r.name]=r; });
-  var out={};
+  var out={}, ytter={};
   d.rows.forEach(function(r){
-    out[r.name] = computeOneBadge(byname, d.remaining, r.name, d.budgetMs||500, d.cfg);
+    ytter[r.name] = ytterpunkter(byname, d.remaining, r.name, d.budgetMs||500, d.cfg);
+    out[r.name] = merkeFra(ytter[r.name], d.cfg);
   });
-  postMessage({runId:d.runId, mode:'badges', badges:out});
+  postMessage({runId:d.runId, mode:'badges', badges:out, ytter:ytter});
 }
 
 // Grense og tilbaketrekking for lagstyrke-drift, delt med hovedtråden (samme
@@ -3332,7 +3377,9 @@ function getBadgeWorker(){
       if(data.mode!=='badges') return;
       if(data.runId!==badgeRunId) return; // scenarioet er endret siden dette kallet startet — forkast
       lastBadges=data.badges;
-      applyBadgesToDom();
+      lastYtter=data.ytter; lastYtterSig=badgeRunSig;
+      // Prosentene bruker samme svar ("100 %" og "–"): tegn dem på nytt.
+      if(lastMC) fillOdds(); else applyBadgesToDom();
     };
   }
   return badgeWorker;
@@ -3456,13 +3503,22 @@ function runMCAsync(N){
   // tabellen, ellers når tabellen er ferdig (innsiktForhand).
   if(scenarioKey!=='' && (navigator.hardwareConcurrency||0) >= INNSIKT_SAMTIDIG_KJERNER) innsiktData();
 }
-const pctTxt=x=> x===0?'0 %': x<0.005?'<1 %': x>0.995&&x<1?'>99 %': Math.round(x*100)+' %';
-// Prosentcellene i tabellen (fillOdds) og delingsbildet: nøyaktig 0 vises
-// som en svak strek, ikke "0 %". Grønt for høy sjanse, rødt for nedrykk,
-// grått under 1 % (klassene pc-hi, pc-mid og pc-zero).
+// Prosent som tekst. s er den matematiske statusen (soneStatus/matStatus):
+// "100 %" og "0 %" bare når det er bevist (s = 1 og s = -1, samme utregning
+// som merkene). Ellers ">99 %" og "<1 %" i endene, også når alle
+// simuleringene ga samme svar: Strømsgodset og Kongsvinger sto med "100 %"
+// topp 6 uten å være sikret, og Åsane med "–" med 38 poeng mulig (4.10.2026).
+// Fra 0,995 er det ">99 %" (Math.round ga "100 %" for nøyaktig 0,995).
+const pctTxt=(x,s)=> s===1?'100 %': s===-1?'0 %': x>=0.995?'>99 %': x<0.005?'<1 %': Math.round(x*100)+' %';
+// Prosentcellene i tabellen (fillOdds) og delingsbildet: umulig vises som en
+// svak strek, ikke "0 %". Grønt for høy sjanse, rødt for nedrykk, grått
+// under 1 % (klassene pc-hi, pc-mid og pc-zero).
 // Fargen på Styrke-boksen (formbox red/yellow/lightgreen/green), i tabellen og bildet.
 function styrkeKlasse(form){ return form<4.0?'red':form<5.5?'yellow':form<6.5?'lightgreen':'green'; }
-function sjanseCelle(v){ return {tekst:v===0 ? '–' : pctTxt(v), cls:v<0.005 ? 'pc-zero' : v>=0.5 ? 'pc-hi' : 'pc-mid'}; }
+function sjanseCelle(v, s){
+  v = medStatus(v, s);
+  return {tekst:s===-1 ? '–' : pctTxt(v, s), cls:v<0.005 ? 'pc-zero' : v>=0.5 ? 'pc-hi' : 'pc-mid'};
+}
 function fillOdds(){
   if(!lastMC) return;
   renderQaButtons(); // spørsmål 1/2 sine knappetekster trenger lastMC (se qaTargetZone) -- oppdater så snart det er klart, ikke bare på neste fulle render()
@@ -3473,11 +3529,10 @@ function fillOdds(){
   oppdaterNesteKampLinjeFraDom();
   renderFaq();   // svarene henter tall fra lastMC
   document.querySelectorAll('#tbl tbody tr').forEach(tr=>{
-    const d=lastMC[tr.dataset.team]; if(!d) return;
-    const gull=zoneSum(d,'gull'), top=zoneSum(d,'europa'), ned=zoneSum(d,'ned');
+    const t=tr.dataset.team, d=lastMC[t]; if(!d) return;
     const g=tr.querySelector('td.gull'), a=tr.querySelector('td.p3'), b=tr.querySelector('td.ned');
-    [[g,gull],[a,top],[b,ned]].forEach(([cell,v])=>{
-      const s = sjanseCelle(v);
+    [[g,'gull'],[a,'europa'],[b,'ned']].forEach(([cell,key])=>{
+      const s = sjanseCelle(zoneSum(d,key), soneStatus(t,key));
       cell.textContent = s.tekst;
       ['pc-zero','pc-hi','pc-mid'].forEach(k=>cell.classList.toggle(k, k===s.cls));
     });
@@ -3506,12 +3561,13 @@ function fillOdds(){
   // qaJumpToWhy()/qaZoneByKey().
   // Tallene i boksen: én per sone som er i spill. boxRange begrenser når
   // sonen vises (Champions League bare mellom 1 og 99 prosent).
-  const zoneVal = key => sonesjanse(d, key);
+  const zoneVal = key => medStatus(sonesjanse(d, key), soneStatus(SELECTED_TEAM, key));
+  const zoneTxt = key => pctTxt(zoneVal(key), soneStatus(SELECTED_TEAM, key));
   const shown = lagboksSoner(d);
   const row = (shown.every(k=>zoneVal(k)<0.01))
     ? `<div class="odds-row flat" title="Sannsynlighet for sluttplassering, ut fra modellen">${ingentingISpill(SELECTED_TEAM, d)}</div>`
     : `<div class="odds-row" title="Sannsynlighet for sluttplassering, ut fra modellen. Klikk et tall for å se hvorfor.">
-      ${shown.map(k=>`<button class="odds-jump${k==='nedrykk'?' n':''}" data-zone="${k}"><strong>${pctTxt(zoneVal(k))}</strong>${LEAGUE.zones[k].boxLabel}</button>`).join('')}</div>`;
+      ${shown.map(k=>`<button class="odds-jump${k==='nedrykk'?' n':''}" data-zone="${k}"><strong>${zoneTxt(k)}</strong>${LEAGUE.zones[k].boxLabel}</button>`).join('')}</div>`;
   // Fordelingsstripen over alle 16 plassene sier lite når Europa, kvalik og
   // nedrykk alle er fjerne — 12 nesten like små stolper mellom to knapt synlige.
   // Vis den bare når noe av det faktisk er i spill (over 5 %), ellers holder
@@ -3540,11 +3596,11 @@ function fillOdds(){
       // AKKURAT dette scenarioet, ikke poengsummen generelt.
       scenarioSum = `<p class="scenario-sum">Ditt scenario: med disse resultatene ender `+
         `${SELECTED_TEAM} på <b>${rad.pts}</b> poeng. `+
-        `<b>${pctTxt(zoneVal(z.key))}</b> sjanse for ${merke.toLowerCase()}.</p>`;
+        `<b>${zoneTxt(z.key)}</b> sjanse for ${merke.toLowerCase()}.</p>`;
     }
   }
   box.innerHTML = row + (showHist
-    ? `<div class="hist" aria-hidden="true" title="Sannsynlighet for sluttplassering, ut fra modellen">${d.map((v,i)=>`<i class="${histClass(i+1)}" style="height:${(v/mx*100).toFixed(1)}%" title="${i+1}. plass: ${pctTxt(v)}"></i>`).join('')}</div>
+    ? `<div class="hist" aria-hidden="true" title="Sannsynlighet for sluttplassering, ut fra modellen">${d.map((v,i)=>`<i class="${histClass(i+1)}" style="height:${(v/mx*100).toFixed(1)}%" title="${i+1}. plass: ${pctTxt(v, matStatus(SELECTED_TEAM, i+1, i+1))}"></i>`).join('')}</div>
     <div class="hist-l">${d.map((v,i)=>`<span>${i+1}</span>`).join('')}</div>`
     : '')
     + scenarioSum
@@ -3908,7 +3964,8 @@ async function oppdaterNesteKampLinje(m){
     const r = data.results[0];
     const isHome = m.home===lag;
     const tableP = zone.pct;
-    const p = d => pctTxt(Math.min(1,Math.max(0,tableP+d)));
+    // Er sonen avgjort nå, er den det etter hvert utfall også (zone.mat).
+    const p = d => pctTxt(Math.min(1,Math.max(0,tableP+d)), zone.mat);
     const dW = (isHome ? r.homeProb : r.awayProb) - r.baseProb;
     const dL = (isHome ? r.awayProb : r.homeProb) - r.baseProb;
     const dD = r.drawProb - r.baseProb;
@@ -3948,8 +4005,8 @@ function updateSummaryCards(){
       : `<li class="empty">${emptyTxt||'–'}</li>`;
   };
   if(lastMC){
-    const all = k => TEAMS.map(t=>({t,v:probOf(t,k)})).sort((a,b)=>b.v-a.v);
-    const txt = x => ({...x, txt:pctTxt(x.v)});
+    const all = k => TEAMS.map(t=>({t,v:probOf(t,k),s:soneStatus(t,k)})).sort((a,b)=>b.v-a.v);
+    const txt = x => ({...x, txt:pctTxt(x.v, x.s)});
     // Seriemester: de to-tre med reell sjanse (5 % eller mer); ellers bare lederen.
     let g = all('gull').filter(x=>x.v>=0.05).slice(0,3);
     if(!g.length) g = all('gull').slice(0,1);
@@ -4207,12 +4264,85 @@ function compute(){
 // (badgeSignature); svaret patches inn i de allerede tegnede radene når det
 // kommer, uten en ny full render().
 let lastBadges = null, lastBadgeSignature = null, badgeRunId = 0;
-function badgeSignatureOf(rows){
+function badgeSignatureOf(rows, remaining){
   // Målforskjell og scorede mål med: i en ferdigspilt sesong avgjør de
   // merkene ved poenglikhet, og et nytt resultat med samme utfall må da
-  // regne merkene på nytt.
-  return rows.map(r=>r.name+':'+r.pts+':'+r.gd+':'+r.gf+':'+r.left).sort().join('|');
+  // regne merkene på nytt. Kampene som gjenstår også: to scenarioer kan gi
+  // samme poeng og antall kamper igjen, men med ulike motstandere.
+  return rows.map(r=>r.name+':'+r.pts+':'+r.gd+':'+r.gf+':'+r.left).sort().join('|')
+    + '#' + (remaining || matches.filter(isEmpty).map(m=>[m.home,m.away])).map(p=>p.join('-')).sort().join(',');
 }
+// ---- Matematisk avgjort (4.10.2026) ----
+// Verste og beste plass hvert lag kan ende på, {verst, best} (se
+// ytterpunkter i Workeren). Både merkene og prosentene bruker dette: "100 %"
+// bare når sonen er sikret, "–" (eller "0 %" i tekst) bare når den er umulig,
+// ellers ">99 %" og "<1 %", også når alle simuleringene ga samme svar.
+// Grensene uten søk, felles for Workeren og hovedtråden (før Workeren har
+// svart): verst er 1 + lagene som kan nå minst like mange poeng, best er 1 +
+// lagene som alt har flere poeng enn lagets maks. Likt på poeng teller som en
+// trussel begge veier. Ferdigspilt sesong: tabellens rekkefølge (poeng,
+// målforskjell, scorede mål); helt likt teller begge veier, for innbyrdes
+// oppgjør er ikke regnet inn.
+function enkleYtterpunkter(byname, ferdig, name){
+  var me=byname[name], over=0, foran=0;
+  for(var k in byname){
+    if(k===name) continue;
+    var o=byname[k];
+    if(ferdig){ var c=(o.pts-me.pts)||(o.gd-me.gd)||(o.gf-me.gf); if(c>=0) over++; if(c>0) foran++; }
+    else { if(o.max>=me.pts) over++; if(o.pts>me.max) foran++; }
+  }
+  return {verst:1+over, best:1+foran};
+}
+// Merket fra ytterpunktene: det første i cfg.badges laget er sikret, ellers
+// «Rykket ned» når laget ikke kan ende over plass relegatedAt.
+function merkeFra(y, cfg){
+  for(var bi=0; bi<cfg.badges.length; bi++){
+    if(y.verst<=cfg.badges[bi].above) return {cls:cfg.badges[bi].cls, text:cfg.badges[bi].text};
+  }
+  if(y.best>=cfg.relegatedAt) return {cls:cfg.relegatedBadge.cls, text:cfg.relegatedBadge.text};
+  return null;
+}
+// Merkene og sonene Workeren avgjør. Sonene er tabellkolonnene og boksene
+// (gull, Champions League, topp 4/6, kvalik, nedrykk), og for kvalik og
+// nedrykk også "13. plass eller bedre", som svarene bruker (qaSettled).
+const MERKE_CFG = {badges:LEAGUE.badges, relegatedBadge:LEAGUE.relegatedBadge,
+  relegatedAt:LEAGUE.zones.nedrykk.lo,
+  soner:ZONE_KEYS.filter(k=>LEAGUE.zones[k]).flatMap(k=>{ const z=LEAGUE.zones[k];
+    return [[z.lo, z.hi]].concat(z.boundary!=null ? [[1, z.boundary]] : []); })};
+// Workerens svar gjelder bare scenarioet det ble regnet for (lastYtterSig).
+let lastYtter = null, lastYtterSig = null, badgeRunSig = null, YTTER_MEMO = null;
+function ytterNaa(){
+  const {rows} = compute();
+  const remaining = matches.filter(isEmpty).map(m=>[m.home,m.away]);
+  const sig = badgeSignatureOf(rows, remaining);
+  if(YTTER_MEMO && YTTER_MEMO.sig===sig && YTTER_MEMO.fra===lastYtter && YTTER_MEMO.fraSig===lastYtterSig) return YTTER_MEMO.y;
+  const byname = Object.fromEntries(rows.map(r=>[r.name, r]));
+  const w = lastYtterSig===sig ? lastYtter : null;
+  const y = {};
+  rows.forEach(r=>{
+    const e = enkleYtterpunkter(byname, !remaining.length, r.name), v = w && w[r.name];
+    y[r.name] = v ? {verst:Math.min(e.verst, v.verst), best:Math.max(e.best, v.best)} : e;
+  });
+  YTTER_MEMO = {sig, fra:lastYtter, fraSig:lastYtterSig, y};
+  return y;
+}
+// 1 sikret, -1 umulig, 0 åpent: laget ender på plass lo til hi.
+function matStatus(team, lo, hi){
+  const y = ytterNaa()[team];
+  if(!y) return 0;
+  if(y.verst<=hi && y.best>=lo) return 1;
+  if(y.verst<lo || y.best>hi) return -1;
+  return 0;
+}
+// Statusen for en sone eller tabellkolonne ('ned' er sonen 'nedrykk').
+function soneStatus(team, key){
+  const z = LEAGUE.zones[COL_ZONE[key] || key];
+  return z ? matStatus(team, z.lo, z.hi) : 0;
+}
+// Sannsynligheten for sonen slik siden bruker den: 1 når sikret, 0 når
+// umulig (summen av plassene kan bli 0,9999999 og ikke 1), ellers fra
+// fordelingen.
+const medStatus = (v, s) => s===1 ? 1 : s===-1 ? 0 : v;
 // Hva merket betyr, vist når det trykkes på (på mobil er merket bare et ikon).
 const BADGE_NOTE = Object.fromEntries(
   LEAGUE.badges.concat([LEAGUE.relegatedBadge]).map(b => [b.cls, b.note]));
@@ -4223,7 +4353,8 @@ const BADGE_NOTE = Object.fromEntries(
 // eller nedrykk. Styres av hideIfChance i ligainnstillingene, så Eliteserien
 // og OBOS kan ha ulik terskel.
 function badgeFor(team){
-  const b = lastBadges && lastBadges[team];
+  const y = ytterNaa()[team];
+  const b = y && merkeFra(y, MERKE_CFG);
   if(!b) return null;
   const cfg = LEAGUE.badges.find(x=>x.cls===b.cls && x.text===b.text);
   const hide = cfg && cfg.hideIfChance;
@@ -4264,14 +4395,15 @@ function showBadgeTip(badge){
 }
 function hideBadgeTip(){ const t = document.getElementById('badgeTip'); if(t) t.hidden = true; }
 function computeBadgesAsync(rows){
-  const sig = badgeSignatureOf(rows);
+  const remainingPairs = matches.filter(isEmpty).map(m=>[m.home,m.away]);
+  const sig = badgeSignatureOf(rows, remainingPairs);
   if(sig===lastBadgeSignature) return; // ingenting som kan ha endret badge-utfallet
   lastBadgeSignature = sig;
   badgeRunId++;
+  badgeRunSig = sig;
   const payloadRows = rows.map(r=>({name:r.name, pts:r.pts, gd:r.gd, gf:r.gf, left:r.left, max:r.max}));
-  const remainingPairs = matches.filter(isEmpty).map(m=>[m.home,m.away]);
   getBadgeWorker().postMessage({mode:'badges', runId:badgeRunId, rows:payloadRows, remaining:remainingPairs, budgetMs:500,
-    cfg:{badges:LEAGUE.badges, relegatedBadge:LEAGUE.relegatedBadge}});
+    cfg:MERKE_CFG});
 }
 
 // "Slik fungerer det"-tabellen: forventede mål ut fra de LEVENDE lagstyrkene
@@ -4383,9 +4515,12 @@ function qaZoneByKey(team, key){
   if(!d || !z) return null;
   let pct = 0;
   for(let p=z.lo; p<=z.hi; p++) pct += d[p-1];
+  // mat: matematisk status (1 sikret, -1 umulig, 0 åpent); pct er 1 eller 0
+  // når den er avgjort. Svarene skriver pctTxt(pct, mat).
+  const mat = matStatus(team, z.lo, z.hi);
   return {key, label:z.label, lo:z.lo, hi:z.hi,
     boundary: z.boundary != null ? z.boundary : z.hi,
-    dir: z.boundary != null ? 'back' : 'front', pct};
+    dir: z.boundary != null ? 'back' : 'front', pct:medStatus(pct, mat), mat};
 }
 // "Mest aktuelt" for laget: gull hvis over 5 %, ellers Europa hvis over 5 %,
 // ellers nedrykk hvis over 5 %, ellers kvalik.
@@ -4455,8 +4590,8 @@ const QA_VERB = Object.fromEntries(ZONE_KEYS.filter(k=>LEAGUE.zones[k]).map(k=>[
 // for suksess: plass <= grensen (gull 1, Europa 4, for kvalik/nedrykk 13 eller
 // bedre = sikret plass direkte). kind:
 //   'done'  ingen kamper igjen i det hele tatt (sesongen er ferdig)
-//   'safe'  / 'out'   matematisk sikret / utelukket (uavgjort poeng regnes
-//           konservativt, som worstBestRank i Workeren)
+//   'safe'  / 'out'   matematisk sikret / utelukket (matStatus, samme
+//           utregning som merkene; likt på poeng regnes konservativt)
 //   'safe~' / 'out~'  ikke matematisk avgjort, men under 1 % / over 99 % i
 //           simuleringene
 //   null    fortsatt åpent -- svarene kan bruke tall
@@ -4471,11 +4606,12 @@ function qaSettled(team, zone){
   const me = rows[idx];
   const b = zone.dir==='front' ? zone.hi : zone.boundary;
   if(!matches.some(isEmpty)) return {kind:'done', pos:idx+1, pts:me.pts, b};
-  const myMax = me.pts + 3*me.left;
-  let worst=1, best=1;
-  rows.forEach((r,i)=>{ if(i===idx) return; if(r.pts+3*r.left>=me.pts) worst++; if(r.pts>=myMax) best++; });
-  if(worst<=b) return {kind:'safe', pos:idx+1, pts:me.pts, b};
-  if(best>b) return {kind:'out', pos:idx+1, pts:me.pts, b};
+  // Samme utregning som merkene og prosentene (matStatus). Før talte et lag
+  // som alt hadde lagets maks som foran, og "kan ikke lenger" kom en kamp
+  // for tidlig når de bare sto likt (målforskjellen kunne avgjøre).
+  const st = matStatus(team, 1, b);
+  if(st===1) return {kind:'safe', pos:idx+1, pts:me.pts, b};
+  if(st===-1) return {kind:'out', pos:idx+1, pts:me.pts, b};
   const d = lastMC && lastMC[team];
   if(d){
     let sp=0; for(let i=0;i<b;i++) sp+=d[i];
@@ -4598,19 +4734,20 @@ async function qaNextMatch(team){
   // Hvor og når kampen spilles hører hjemme i en egen setning til slutt:
   // konklusjonen skal komme først, og én ting per setning.
   const naar = `Kampen spilles ${isHome?'hjemme':'borte'} ${formatDateNo(next.date)}.`;
-  const p = d => pctTxt(Math.min(1,Math.max(0,tableP+d)));
+  const p = d => pctTxt(Math.min(1,Math.max(0,tableP+d)), zone.mat);
   // Differansene mellom de VISTE tallene (vistPp), også for grensen på to
   // prosentpoeng, så nivå, nå og differanse alltid går opp.
   const vWin = vistPp(tableP, tableP+dWin), vDraw = vistPp(tableP, tableP+dDraw), vLose = vistPp(tableP, tableP+dLose);
   if(Math.abs(vWin)<2 && Math.abs(vDraw)<2 && Math.abs(vLose)<2){
-    return `Kampen ${kamp} betyr lite: ${navn} holder seg ${/^[<>]/.test(pctTxt(tableP)) ? '' : 'rundt '}${pctTxt(tableP)} uansett utfall. ${naar}`;
+    const naaTxt = pctTxt(tableP, zone.mat);
+    return `Kampen ${kamp} betyr lite: ${navn} holder seg ${/^[<>]/.test(naaTxt) || zone.mat ? '' : 'rundt '}${naaTxt} uansett utfall. ${naar}`;
   }
   const seier = Math.abs(vWin)<2
     ? `Seier ${kamp} endrer ${navn} lite (${p(dWin)}).`
     : `Seier ${kamp} ${vWin>0?'øker':'senker'} ${navn} til ${p(dWin)} (${ppHelTxt(vWin)} prosentpoeng).`;
   const tap = Math.abs(vLose)<2 ? 'mens tap endrer den lite'
     : `mens tap ${vLose<0?'senker':'øker'} den til ${p(dLose)}`;
-  return `${seier} Uavgjort gir ${p(dDraw)}, ${tap}. ${qaStor(navn)} er ${pctTxt(tableP)} nå. ${naar}`;
+  return `${seier} Uavgjort gir ${p(dDraw)}, ${tap}. ${qaStor(navn)} er ${pctTxt(tableP, zone.mat)} nå. ${naar}`;
 }
 
 // ---- Hvem bør laget heie på denne runden? Neste runde = runden med flest
@@ -4772,7 +4909,7 @@ async function qaCheerFor(team, onPartial){
   }, 'heie');
   const rows = rowsFrom(results);
   if(!rows.length){
-    return `Ingen av de andre kampene i runde ${nr.round} endrer ${navn} med minst to prosentpoeng, uansett hvordan de ender. Den er ${pctTxt(tableP)} nå.`;
+    return `Ingen av de andre kampene i runde ${nr.round} endrer ${navn} med minst to prosentpoeng, uansett hvordan de ender. Den er ${pctTxt(tableP, zone.mat)} nå.`;
   }
   return textFor(rows);
 }
@@ -4932,6 +5069,8 @@ async function qaLastMatch(team){
   // Alternativene, i rekkefølgen seier, uavgjort, tap (det faktiske er utelatt).
   // Under to prosentpoeng fra dagens tall er støy og vises ikke.
   const order = others.filter(o=>shown.some(x=>x.o===o));
+  // Et annet resultat er et annet scenario: dagens status gjelder ikke, så
+  // tallene står uten (">99 %", "<1 %").
   const val = o => pctTxt(clamp(tableP + shown.find(x=>x.o===o).d));
   const alt = !order.length ? ''
     : `Med ${QA_OUT_LABEL[order[0]]} ville ${navn} vært ${val(order[0])}`+
@@ -4945,7 +5084,7 @@ async function qaLastMatch(team){
   // Uten sannsynligheter fra før kampen finnes ingen forventning å måle mot.
   // Da sies det, i stedet for å måle mot seier og overdrive tallet.
   if(!e){
-    return [`Etter ${headLiten} er ${hvem} nå ${pctTxt(tableP)}. Vi vet ikke hva den var før kampen, så vi kan ikke si hvor mye resultatet endret den.`,
+    return [`Etter ${headLiten} er ${hvem} nå ${pctTxt(tableP, zone.mat)}. Vi vet ikke hva den var før kampen, så vi kan ikke si hvor mye resultatet endret den.`,
             alt, anslag.trim()].filter(Boolean).join('\n\n');
   }
   // Endringen først, med tallet før kampen: "Seieren 2-1 mot Bodø/Glimt økte
@@ -4956,9 +5095,9 @@ async function qaLastMatch(team){
   // gitt står i avsnittet etter. .qa-answer har pre-line.
   const first = e.lite
     ? `${head} endret lite på ${hvem}. `+(e.n===0
-        ? `Den er ${pctTxt(e.naa)}, det samme som før kampen.`
-        : `Den er ${pctTxt(e.naa)}, og før kampen var den ${pctTxt(e.foer)}.`)
-    : `${head} ${e.verb} ${hvem} med ${Math.abs(e.n)} prosentpoeng, til ${pctTxt(e.naa)}. Før kampen var den ${pctTxt(e.foer)}.`;
+        ? `Den er ${pctTxt(e.naa, e.mat)}, det samme som før kampen.`
+        : `Den er ${pctTxt(e.naa, e.mat)}, og før kampen var den ${pctTxt(e.foer)}.`)
+    : `${head} ${e.verb} ${hvem} med ${Math.abs(e.n)} prosentpoeng, til ${pctTxt(e.naa, e.mat)}. Før kampen var den ${pctTxt(e.foer)}.`;
   const midt = [overrask, alt].filter(Boolean).join(' ');
   return [first, midt, anslag.trim()].filter(Boolean).join('\n\n');
 }
@@ -4982,7 +5121,7 @@ const lagSone = (team, key) => `${eieform(team)} ${LEAGUE.zones[key].lagSone}`;
 function forrigeEndring(zone, expected){
   if(!zone || expected==null) return null;
   const n = vistPp(expected, zone.pct);
-  return {n, naa:zone.pct, foer:expected, lite:Math.abs(n)<2, verb:n>0 ? 'økte' : 'senket',
+  return {n, naa:zone.pct, mat:zone.mat, foer:expected, lite:Math.abs(n)<2, verb:n>0 ? 'økte' : 'senket',
     bra: zone.dir==='front' ? n>0 : n<0};
 }
 // Hva som var ventet FØR kampen, som {H,U,B} og hvor tallet kommer fra.
@@ -5511,7 +5650,7 @@ async function qaKeyRoundData(opts){
     // spennet mellom utfallene er minst to prosentpoeng (som ellers på siden).
     const teams = TEAMS.slice().sort((a,b)=>byTeam[b]-byTeam[a]).slice(0,3).map(t=>{
       const d = detail.filter(x=>x.team===t).sort((a,b)=>b.span-a.span)[0];
-      return {...d, now: qaZoneNow(t, d.zone)};
+      return {...d, now: qaZoneNow(t, d.zone), mat: soneStatus(t, d.zone)};
     }).filter(x=>x.span>=0.02);
     const maxSpan = Math.max(...detail.map(x=>x.span));
     return {m, total, topZone, teams, maxSpan};
@@ -5525,7 +5664,7 @@ async function qaKeyRoundData(opts){
 function qaZoneNow(team, key){
   const d = lastMC && lastMC[team];
   if(!d) return 0;
-  return zoneSum(d, key);
+  return medStatus(zoneSum(d, key), soneStatus(team, key));
 }
 // keymatch.json (banneret): rundens viktigste kamp slik svaret kårer den.
 // scripts/lag_grunnlag.js skriver den fra grunnlagsfilen, i samme kjøring som
@@ -5576,7 +5715,7 @@ async function qaKeyRound(){
     U: 'Uavgjort',
     B: spiller ? (m.away===hoved.team ? 'Seier' : 'Tap') : `${m.away}-seier`,
   };
-  const rad = key => `${etikett[key]}: ${pctTxt(clamp(hoved.now + (hoved.d[key]||0)))}`;
+  const rad = key => `${etikett[key]}: ${pctTxt(clamp(hoved.now + (hoved.d[key]||0)), hoved.mat)}`;
   // Rekkefølge sett fra laget: seier, uavgjort, tap. Spiller det ikke selv,
   // står utfallene i kampens egen rekkefølge (hjemmeseier, uavgjort, borteseier).
   const rader = (spiller
@@ -5618,7 +5757,7 @@ async function qaKeyRound(){
   return `Rundens viktigste kamp er ${navn(b)} ${formatDateNo(m.date)}. Den påvirker ${b.topZone.strid} mest.\n\n`+
     `Kampen betyr mest for ${hoved.team}${spiller?'':', som ikke spiller selv'}:\n`+
     `${rader}\n`+
-    `${qaStor(hz.chance)} er ${pctTxt(hoved.now)} før kampen.`+andreTxt+tett;
+    `${qaStor(hz.chance)} er ${pctTxt(hoved.now, hoved.mat)} før kampen.`+andreTxt+tett;
 }
 
 // ---- Hvor kan laget realistisk ende? Bare fordelingen over sluttplasser fra
@@ -5626,7 +5765,7 @@ async function qaKeyRound(){
 // spennet fra 5. til 95. persentil (første plass der samlet sjanse når 5 og
 // 95 prosent), som dekker minst 90 prosent av simuleringene. ----
 // Andeler fra et utvalg påstås aldri som 100 %.
-const qaPctCap = x => x>=0.995 ? '>99 %' : pctTxt(x);
+const qaPctCap = x => pctTxt(x);
 function qaRange(team){
   const d = lastMC && lastMC[team];
   if(!d) return 'Ingen data å regne på ennå.';
@@ -5635,13 +5774,12 @@ function qaRange(team){
   if(idx<0) return 'Ingen data å regne på ennå.';
   const me = rows[idx];
   if(!matches.some(isEmpty)) return `Sesongen er ferdig: ${team} endte på ${idx+1}. plass med ${poengTxt(me.pts)}.`;
-  // Matematisk mulig spenn. Lik poengsum kan avgjøres av målforskjell, så et
-  // lag på samme poeng kan ende bak (best) og foran (worst): best teller bare
-  // lag med FLERE poeng enn laget kan nå, worst alle som kan nå like mange.
-  // (Strengere enn qaSettled, som med vilje er konservativ for "sikret".)
-  const myMax = me.pts + 3*me.left;
-  let worst=1, best=1;
-  rows.forEach((r,i)=>{ if(i===idx) return; if(r.pts+3*r.left>=me.pts) worst++; if(r.pts>myMax) best++; });
+  // Matematisk mulig spenn: samme ytterpunkter som merkene og "100 %"/"–"
+  // (ytterNaa). Lik poengsum kan avgjøres av målforskjell, så et lag på samme
+  // poeng kan ende både bak og foran. Før talte svaret selv, uten at lagene
+  // også møter hverandre, og kunne si "så høyt som 1. plass" om et lag som
+  // står med "–" for gull (HamKam: Viking og Glimt møtes, 4.10.2026).
+  const {verst:worst, best} = ytterNaa()[team];
   if(worst===best) return `${team} ender på ${best}. plass uansett hva som skjer i de gjenstående kampene.`;
   let mode = 0;
   d.forEach((v,i)=>{ if(v>d[mode]) mode = i; });
@@ -6112,7 +6250,7 @@ function qaWhyLabel(team){
   const z = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team);
   if(!z) return `Hvorfor har ${team} den sjansen den har?`;
   const st = qaSettled(team, z);
-  if(!st) return `Hvorfor har ${team} ${pctTxt(z.pct)} sjanse for ${z.label}?`;
+  if(!st) return `Hvorfor har ${team} ${pctTxt(z.pct, z.mat)} sjanse for ${z.label}?`;
   if(st.kind==='done') return `Hvordan endte sesongen for ${team}?`;
   if(st.kind==='safe') return `Hvorfor er ${team} ${QA_SAFE_PHRASE[z.key]}?`;
   if(st.kind==='safe~') return `Hvorfor er ${team} så godt som ${QA_SAFE_PHRASE[z.key]}?`;
@@ -6234,7 +6372,7 @@ async function qaWhy(team){
       }
     }
   }
-  const utfall = `${qaUtfallTxt(zone)} i ${pctTxt(zone.pct)} av dem`;
+  const utfall = `${qaUtfallTxt(zone)} i ${pctTxt(zone.pct, zone.mat)} av dem`;
   const part3 = rival && rivalSnitt!=null
     ? `I simuleringene ender ${team} i snitt på ${poengTxt(data.avgFinalPts)} mot ${Math.round(rivalSnitt)} for ${rival.t}, og ${utfall}.`
     : `I simuleringene ender ${team} i snitt på ${poengTxt(data.avgFinalPts)} og ${utfall}.`;
@@ -6381,7 +6519,9 @@ async function qaHowTo(team){
     // "havner i topp 6", "vinner serien"; for kvalik/nedrykk er målet å
     // sikre plassen, og da brukes sonens eget verb.
     const verb = zone.dir==='front' ? qaUtfallTxt(zone) : LEAGUE.zones[zone.key].verb;
-    const all = Math.round(successShare*100)>=100 ? 'alle' : 'nesten alle';
+    // "alle" bare når hver eneste simulering endte slik (summen kan bli
+    // 0,9999999); 99,6 % ble før rundet opp til "alle".
+    const all = successShare > 1-1e-9 ? 'alle' : 'nesten alle';
     const lead = `${team} ${verb} i ${all} simuleringene.`;
     if(safe==null) return lead;
     if(safe<=myPts){
@@ -6501,7 +6641,7 @@ async function qaKeyMatches(team){
             vist:Math.max(Math.abs(vistPp(tableP, tableP+outs[0].d)), Math.abs(vistPp(tableP, tableP+outs[1].d)))};
   }).sort((a,b)=>b.impact-a.impact).filter(x=>x.vist>=2);
   if(!shown.length){
-    return `Ingen enkeltkamp betyr mye for ${team}: ingen utfall endrer ${qaSjanse(zone)} mer enn to prosentpoeng fra dagens ${pctTxt(tableP)}.`;
+    return `Ingen enkeltkamp betyr mye for ${team}: ingen utfall endrer ${qaSjanse(zone)} mer enn to prosentpoeng fra dagens ${pctTxt(tableP, zone.mat)}.`;
   }
   // Konklusjon først, én linje per kamp: "Lillestrøm mot Brann: Brann-seier
   // 18 % (+7), Lillestrøm-seier 4 % (−7)." Utfallet navngis med vinneren.
@@ -6516,7 +6656,7 @@ async function qaKeyMatches(team){
     const v = vistPp(tableP, tableP+o.d);
     return Math.abs(v)<2
       ? `${hva} endrer lite`
-      : `${hva} ${pctTxt(Math.min(1,Math.max(0,tableP+o.d)))} (${ppKort(v)})`;
+      : `${hva} ${pctTxt(Math.min(1,Math.max(0,tableP+o.d)), zone.mat)} (${ppKort(v)})`;
   };
   const lines = shown.map(x=>{
     const egen = x.m.home===team || x.m.away===team;
@@ -6527,7 +6667,7 @@ async function qaKeyMatches(team){
     return `${x.m.home} mot ${x.m.away}: ${bit(outs[0], egen)}, ${bit(outs[1], egen)}.`;
   });
   // Tre avsnitt: innledningen, listen, og forklaringen av parentesen.
-  return `Disse kampene påvirker ${qaGen(team)} ${qaSjanseUbest(zone)} mest. Den er ${pctTxt(tableP)} nå:\n\n`+
+  return `Disse kampene påvirker ${qaGen(team)} ${qaSjanseUbest(zone)} mest. Den er ${pctTxt(tableP, zone.mat)} nå:\n\n`+
     lines.join('\n')+`\n\nTallet i parentes er endringen i prosentpoeng.`;
 }
 
@@ -7125,11 +7265,12 @@ function render(){
     verdictEl.innerHTML = '';
   } else {
     verdictEl.hidden = false;
-    // Verste fall ut fra det som er lagt inn (tomme kamper: laget taper, alle andre vinner sine)
+    // Verste fall ut fra det som er lagt inn: samme ytterpunkter som merkene og
+    // prosentene (ytterNaa), der lagene også møter hverandre. Før talte boksen
+    // selv (tomme kamper: laget taper, alle andre vinner sine), og kunne si
+    // "Kan fortsatt rykke ned" om et lag med merket «Sikret plass».
     const pos=rows.indexOf(followed)+1;
-    // Likt på poeng regnes mot laget, unntatt når begge er ferdigspilt: da avgjør målforskjell og scorede mål
-    const canPass=rows.filter(r=>r.name!==SELECTED_TEAM && (r.max > followed.pts || (r.max===followed.pts && (r.left>0 || followed.left>0 || rows.indexOf(r)<pos-1)))).length;
-    const worst=canPass+1;
+    const worst=ytterNaa()[SELECTED_TEAM].verst, canPass=worst-1;
     let verdictTxt, sub='';
     const kv = LEAGUE.zones.kvalik;
     const safePos = (kv && kv.boundary) || 13;
@@ -7154,7 +7295,7 @@ function render(){
       line2Title = '';
     } else {
       line2 = `${followed.pts} poeng, ${followed.left} kamper igjen`;
-      line2Title = [verdictTxt, sub, `Sjekken regner tomme kamper som tap for ${SELECTED_TEAM} og seier for alle andre. Sier den "sikret", er det sikkert.`].filter(Boolean).join(' ');
+      line2Title = [verdictTxt, sub, `Sjekken regner tomme kamper som tap for ${SELECTED_TEAM}, og tar med at de andre lagene også møter hverandre. Sier den "sikret", er det sikkert.`].filter(Boolean).join(' ');
     }
     // Lagnavn øverst på egen linje (item 2b), så plass og poeng/kamper igjen (eller sluttresultatet).
     const posLine = seasonDone ? `<b>${pos}.</b> plass, ${line2}` : `<b>${pos}.</b> plass, ${line2}`;
@@ -7208,11 +7349,11 @@ async function applyScenario(){
 // resten av siden (sonesjanse), ingen egen beregning.
 function faqTopp(key, n){
   if(!lastMC) return [];
-  return TEAMS.map(t => ({t, v: sonesjanse(lastMC[t], key)}))
+  return TEAMS.map(t => ({t, s: soneStatus(t, key)})).map(x => ({...x, v: medStatus(sonesjanse(lastMC[x.t], key), x.s)}))
     .filter(x => x.v != null && x.v >= 0.005)
     .sort((a,b) => b.v - a.v).slice(0, n);
 }
-const faqListe = a => a.map(x => `${x.t} (${pctTxt(x.v)})`).join(', ');
+const faqListe = a => a.map(x => `${x.t} (${pctTxt(x.v, x.s)})`).join(', ');
 // Teksten skrives ETT sted og brukes to: den synlige lista og JSON-LD-en.
 // Da kan de to aldri si ulike ting, som ville vært et brudd på Googles krav
 // om at schemaet skal speile det brukeren ser.
@@ -7466,7 +7607,7 @@ async function kopiTekstLagboks(team){
   const soner = lagboksSoner(d);
   const fare = soner.some(k=>LEAGUE.zones[k].boundary!=null && sonesjanse(d, k)>=0.005);
   const med = soner.filter(k=>sonesjanse(d, k)>=0.005 || (fare && LEAGUE.zones[k].boundary!=null));
-  const sjanser = med.length ? med.map(k=>`${LEAGUE.zones[k].boxLabel} ${pctTxt(sonesjanse(d, k))}`).join(', ')
+  const sjanser = med.length ? med.map(k=>`${LEAGUE.zones[k].boxLabel} ${pctTxt(sonesjanse(d, k), soneStatus(team, k))}`).join(', ')
     : ingentingISpill(team, d);
   const lm = qaLastMatchLine(team, lastMatchEntry(team));
   const tekst = html => { const el = document.createElement('div'); el.innerHTML = html; return el.textContent.trim(); };
@@ -7535,7 +7676,7 @@ function tabellVisning(){
         k:r.p, v:r.w, u:r.d, t:r.l, maal:`${r.gf}-${r.ga}`, diff:`${r.gd>0?'+':''}${r.gd}`, p:r.pts, just:!!r.just,
         styrke:{tekst:f1(form), cls:styrkeKlasse(form)},
         form:{ruter:liste.slice(-5).map(x=>({res:x.res, scen:!!x.scen})), tall:f5==null ? '' : f1(f5)},
-        sjanser:d ? kol.map(c=>sjanseCelle(zoneSum(d, c.key))) : null};
+        sjanser:d ? kol.map(c=>sjanseCelle(zoneSum(d, c.key), soneStatus(r.name, c.key))) : null};
     });
     scenario = matches.some(m=>m.hg!=null && m.ag!=null);
   } else {

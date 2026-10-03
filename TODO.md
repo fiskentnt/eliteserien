@@ -3,6 +3,43 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## "100 %" og "–" bare når det er matematisk avgjort (4.10.2026)
+
+Funnet i OBOS etter fem kamper i runde 24 (3.10.): Haugesund hadde merket
+«Sikret topp 6», men sto med ">99 %". Alle 100 000 sesongene i
+grunnlagsfilen hadde laget i topp 6, men summen av andelene for plass 1
+til 6 ble 0,9999999999999999 (målt på den publiserte siden), og pctTxt
+viste ">99 %" for alt under 1. Strømsgodset og Kongsvinger sto med "100 %"
+uten å være sikret (Hødd kunne nå 52), fordi alle sesongene endte i topp 6
+(Kongsvinger med summen 1,0000000000000002). Åsane sto med "–" med 37
+poeng mulig, fordi ingen gjorde det.
+
+Regelen nå, i tabellen, kortene, lagboksen, bildet, svarene og FAQ: "100 %"
+bare når sonen er matematisk sikret, "–" (og "0 %" i tekst) bare når den er
+umulig, ellers ">99 %" og "<1 %" i endene. Fra 0,995 er det ">99 %".
+
+Samme utregning som merkene: Workeren regner verste og beste mulige plass
+for hvert lag (ytterpunkter), og merkene, prosentene (matStatus/soneStatus),
+qaSettled, "Hvor kan laget ende?" og vurderingen i lagboksen bruker den.
+Før Workeren har svart for scenarioet, gjelder grensene uten søk
+(enkleYtterpunkter); et svar for et annet scenario brukes ikke.
+
+Feil i merkesøket rettet samtidig: søket for "ender bak eller likt"
+("atmost", brukt til «Rykket ned») hadde en grense som bare gjaldt den andre
+retningen. Det sto `'lte'` der kallet het `'atmost'`, og maksflyten kuttet
+grener med flere lag innenfor. Åsane fikk 8 lag som kunne ende bak seg i
+stedet for 10. I tilfeldige små ligaer ga 8223 av 22130 svar feil antall.
+Nå teller grensen lagene som fortsatt er innenfor, og kampene sorteres
+med de trangeste først (HamKam: 500 ms og ikke ferdig, nå 1 ms).
+Ingen besøkende kan ha sett et feil «Rykket ned»: siden har bare vært åpen
+siden forrige runde, og ingen lag har vært nær nedrykk. Sesongen spilt av
+etter hvert resultat med den gamle koden (Eliteserien 169, OBOS 190
+stillinger) ga aldri merket.
+
+Test: `node tests/regression.js --bare matstatus` (søket mot opptelling av
+alle utfall, og varianten med den gamle grensen skal feile; OBOS med runde
+24 slik den sto 3.10.; tabellen, kortene, lagboksen, bildet og svarene).
+
 ## Kildene: rekkefølge, regelen for resultatene og reservene (3.10.2026 kveld)
 
 Godkjent plan (3.10.), gjort i seks commits ("Kilder (del 1-6)"):

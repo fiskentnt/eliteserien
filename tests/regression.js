@@ -1472,7 +1472,7 @@ async function main() {
         const p = id => { const u = GRUNNLAG.fil.utfall[id]; if (!u) return null;
           let s = 0; for (let k = z.lo - 1; k <= z.hi - 1; k++) s += u[ti * n + k]; return s / GRUNNLAG.N; };
         const H = m.home === t, base = p('base');
-        const vis = x => x == null ? null : pctTxt(Math.min(1, Math.max(0, z.pct + (x - base))));
+        const vis = x => x == null ? null : pctTxt(Math.min(1, Math.max(0, z.pct + (x - base))), z.mat);
         const raa = [p(`${idx}:${H ? 'H' : 'B'}`), p(`${idx}:U`), p(`${idx}:${H ? 'B' : 'H'}`)];
         fil = {seier: vis(raa[0]), uavgjort: vis(raa[1]), tap: vis(raa[2]), tabellErFil: Math.abs(z.pct - base) < 1e-9,   // sum av c/N mot (sum c)/N: bare avrunding
                prosent: raa.map(x => x == null ? null : +(x * 100).toFixed(2))};
@@ -2138,7 +2138,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         data = rows.map((r, i) => { const liste = femSiste(r.name), f5 = form5AvListe(liste), d = lastMC[r.name], b = badgeFor(r.name);
           return {pos: i + 1, lag: r.name, k: r.p, v: r.w, u: r.d, t: r.l, maal: `${r.gf}-${r.ga}`, diff: `${r.gd > 0 ? '+' : ''}${r.gd}`, p: r.pts, just: !!r.just,
             styrke: f1_(form[TI[r.name]]), ruter: liste.slice(-5).map(x => x.res + (x.scen ? 's' : '')).join(''), f5: f5 == null ? '' : f1_(f5),
-            sjanser: LEAGUE.cols.map(c => { const v = zoneSum(d, c.key); return v === 0 ? '–' : pctTxt(v); }).join(' '),
+            sjanser: LEAGUE.cols.map(c => { const v = zoneSum(d, c.key), s = soneStatus(r.name, c.key); return s === -1 ? '–' : pctTxt(v, s); }).join(' '),
             merke: b ? b.text : '', flytt: basePos[r.name] - (i + 1)}; });
       } else {
         data = computeAt(idx).map(r => { const liste = somListe(r.results), f5 = form5AvListe(liste);
@@ -2703,6 +2703,203 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         JSON.stringify({form: r.form, oddshenting: r.oddshenting, brier: r.brier, privat: r.privat, lenke: r.lenke}));
     }
   };
+  // "100 %" bare når det er matematisk sikret, "–" bare når det er umulig
+  // (4.10.2026). Brukerens funn i OBOS etter fem kamper i runde 24 (3.10.):
+  // Haugesund hadde merket «Sikret topp 6», men sto med ">99 %"; Strømsgodset
+  // og Kongsvinger sto med "100 %" uten å være sikret (Hødd kunne nå 52); og
+  // Åsane med "–" selv om 37 poeng fortsatt var mulig. Prosentene bruker nå
+  // samme utregning som merkene (ytterpunkter i Workeren, matStatus på
+  // hovedtråden). Søket for «ender bak eller likt» ("atmost") brukte en
+  // grense som ikke gjaldt den retningen ('lte' mot 'atmost'), og ga for få
+  // lag; det er rettet. Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare matstatus
+  const matstatus = async () => {
+    setGroup('Matematisk sikret og umulig: prosentene følger merkene');
+    // Runde 24 i OBOS slik den sto 3.10.2026 (bildet er fra 1.10.).
+    const R24 = [['Ranheim', 'Egersund', 5, 0], ['Strømmen', 'Sandnes Ulf', 3, 3], ['Haugesund', 'Stabæk', 2, 0],
+                 ['Hødd', 'Odd', 2, 3], ['Strømsgodset', 'Åsane', 1, 0]];
+    for (const liga of ['obos', 'eliteserien']) {
+      const pg = await open(1400, 1000, base.replace('/eliteserien/', `/${liga}/`) + '#team=');
+      await settle(pg);
+      // 1) Søket mot uttømmende opptelling på små tilfeldige ligaer, med
+      // alle plassintervaller som soner. Varianten med den gamle grensen
+      // skal feile, ellers beviser testen ingenting.
+      const sok = await pg.evaluate(() => {
+        const lag = src => { const W = {}; (new Function('W', 'var postMessage=function(){}; var self={};' + src + '; W.y=ytterpunkter;'))(W); return W.y; };
+        const fra = "if(direction==='atmost') return successCount();";
+        const treff = WORKER_SRC.split(fra).length - 1;
+        const ny = lag(WORKER_SRC), gml = lag(WORKER_SRC.replace(fra, "if(direction==='lte') return successCount();"));
+        const sann = (byname, rem, name) => {
+          const navn = Object.keys(byname), pts = {}; navn.forEach(k => pts[k] = byname[k].pts);
+          let verst = 0, best = 99;
+          (function rek(i) {
+            if (i === rem.length) { let o = 0, f = 0; for (const k of navn) { if (k === name) continue; if (pts[k] >= pts[name]) o++; if (pts[k] > pts[name]) f++; }
+              verst = Math.max(verst, 1 + o); best = Math.min(best, 1 + f); return; }
+            const [a, b] = rem[i];
+            pts[a] += 3; rek(i + 1); pts[a] -= 3; pts[b] += 3; rek(i + 1); pts[b] -= 3; pts[a]++; pts[b]++; rek(i + 1); pts[a]--; pts[b]--;
+          })(0);
+          return {verst, best};
+        };
+        const st = (y, lo, hi) => y.verst <= hi && y.best >= lo ? 1 : (y.verst < lo || y.best > hi) ? -1 : 0;
+        let frø = 4242; const tilf = () => { frø = (frø * 1103515245 + 12345) % 2147483648; return frø / 2147483648; };
+        const ut = {treff, lag: 0, statuser: 0, ulike: [], ugyldige: 0, gmlUgyldige: 0, avgjort: 0};
+        for (let t = 0; t < 300; t++) {
+          const N = 5 + Math.floor(tilf() * 3), navn = [...Array(N)].map((_, i) => 'L' + i), rem = [];
+          for (let i = 0; i < N; i++) for (let j = i + 1; j < N; j++) if (tilf() < 0.5) rem.push(tilf() < 0.5 ? [navn[i], navn[j]] : [navn[j], navn[i]]);
+          rem.length = Math.min(rem.length, 8);
+          const byname = {};
+          navn.forEach(k => { const left = rem.filter(p => p[0] === k || p[1] === k).length, pts = Math.floor(tilf() * 9); byname[k] = {name: k, pts, gd: 0, gf: 0, left, max: pts + 3 * left}; });
+          const soner = []; for (let lo = 1; lo <= N; lo++) for (let hi = lo; hi <= N; hi++) soner.push([lo, hi]);
+          const cfg = {badges: [{above: 1, cls: 'a', text: 'a'}], relegatedBadge: {cls: 'r', text: 'r'}, relegatedAt: N - 1, soner};
+          for (const k of navn) {
+            const y = ny(byname, rem, k, 5000, cfg), s = sann(byname, rem, k), g = gml(byname, rem, k, 5000, cfg);
+            ut.lag++;
+            if (y.verst < s.verst || y.best > s.best) ut.ugyldige++;
+            if (g.verst < s.verst || g.best > s.best) ut.gmlUgyldige++;
+            for (const [lo, hi] of soner) { ut.statuser++; const a = st(y, lo, hi), b = st(s, lo, hi); if (b) ut.avgjort++;
+              if (a !== b && ut.ulike.length < 3) ut.ulike.push(`${k} [${lo},${hi}]: søket ${a}, opptellingen ${b}`); else if (a !== b) ut.ulike.push(''); }
+          }
+        }
+        return ut;
+      });
+      check(`${liga}: ytterpunktene er like opptellingen av alle utfall (${sok.lag} lag, ${sok.statuser} soner, ${sok.avgjort} avgjort)`,
+        sok.treff === 1 && sok.lag >= 1500 && sok.avgjort > 1000 && sok.ugyldige === 0 && sok.ulike.length === 0,
+        `treff ${sok.treff}, ${sok.ugyldige} ugyldige, ${sok.ulike.length} ulike: ${sok.ulike.slice(0, 3).join('; ')}`);
+      check(`${liga}: med den gamle grensen for "atmost" blir best for optimistisk (${sok.gmlUgyldige} lag), så testen fanger feilen`,
+        sok.gmlUgyldige > 0, String(sok.gmlUgyldige));
+
+      // 2) Tabellen, kortene, lagboksen og bildet viser det samme, og
+      // "100 %"/"–" følger statusen. Både i bildet fra 1.10. og (OBOS) med
+      // runde 24 slik den sto 3.10.
+      const vent = () => pg.waitForFunction(() => lastMCFinal && lastMCScenarioKey === qaScenarioKey()
+        && lastYtterSig === badgeSignatureOf(compute().rows), {timeout: 120000});
+      const les = () => pg.evaluate(() => {
+        const KOL = [['gull', 'td.gull'], ['europa', 'td.p3'], ['ned', 'td.ned']];
+        const celler = {}, brudd = [], ytter = ytterNaa();
+        let hundre = 0, strek = 0, alleSim = 0;
+        document.querySelectorAll('#tbl tbody tr').forEach(tr => {
+          const t = tr.dataset.team; celler[t] = {};
+          for (const [k, sel] of KOL) {
+            const txt = tr.querySelector(sel).textContent.trim(), s = soneStatus(t, k), v = zoneSum(lastMC[t], k);
+            celler[t][k] = txt;
+            if (txt === '100 %') hundre++; if (txt === '–') strek++;
+            if (s === 0 && (v >= 1 - 1e-9 || v === 0)) alleSim++;
+            if ((txt === '100 %') !== (s === 1)) brudd.push(`${t} ${k}: "${txt}", status ${s}`);
+            if ((txt === '–') !== (s === -1)) brudd.push(`${t} ${k}: "${txt}", status ${s}`);
+            if (txt === '0 %') brudd.push(`${t} ${k}: "0 %" i tabellen`);
+          }
+          // Merket og statusen: samme ytterpunkter.
+          const b = badgeFor(t), y = ytter[t], cfg = LEAGUE.badges.find(x => b && x.cls === b.cls && x.text === b.text);
+          if (cfg && !(y.verst <= cfg.above)) brudd.push(`${t}: merket ${b.text}, men verst ${y.verst}`);
+          if (b && b.cls === 'relegated' && soneStatus(t, 'ned') !== 1) brudd.push(`${t}: rykket ned, men nedrykk ${soneStatus(t, 'ned')}`);
+        });
+        // Kortene: samme tekst som cellen for samme lag og kolonne.
+        const kort = [];
+        for (const k of ['gull', 'europa', 'ned']) document.querySelectorAll(`.card[data-card="${k}"] .card-list li:not(.empty)`).forEach(li => {
+          const t = li.querySelector('.card-team').textContent, p = li.querySelector('.card-pct').textContent;
+          kort.push(t); const c = celler[t] && celler[t][k];
+          if (c !== (p === '0 %' ? '–' : p)) brudd.push(`kortet ${k}: ${t} "${p}", tabellen "${c}"`);
+        });
+        // Bildet: sjansene i tabellVisning er cellene.
+        const vis = tabellVisning();
+        vis.rader.forEach(r => { if (!r.sjanser) return; ['gull', 'europa', 'ned'].forEach((k, i) => {
+          if (r.sjanser[i].tekst !== celler[r.lag][k]) brudd.push(`bildet ${r.lag} ${k}: "${r.sjanser[i].tekst}", tabellen "${celler[r.lag][k]}"`); }); });
+        return {brudd, hundre, strek, alleSim, kort: kort.length, celler,
+          y: Object.fromEntries(Object.entries(ytter).map(([t, v]) => [t, `${v.best}-${v.verst}`]))};
+      });
+      const lagboks = lag => pg.evaluate(async lag => {
+        SELECTED_TEAM = lag; render();
+        const t0 = Date.now(); while (!document.querySelector('#odds .odds-jump') && Date.now() - t0 < 20000) await new Promise(r => setTimeout(r, 50));
+        const ut = {};
+        document.querySelectorAll('#odds .odds-jump').forEach(b => ut[b.dataset.zone] = b.querySelector('strong').textContent);
+        return {knapper: ut, celle: (() => { const tr = document.querySelector(`#tbl tbody tr[data-team="${lag}"]`);
+          return {gull: tr.querySelector('td.gull').textContent.trim(), europa: tr.querySelector('td.p3').textContent.trim(), nedrykk: tr.querySelector('td.ned').textContent.trim()}; })()};
+      }, lag);
+      const sammeBoks = r => Object.entries(r.knapper).filter(([k]) => k in r.celle).every(([k, v]) => (v === '0 %' ? '–' : v) === r.celle[k]);
+
+      await vent();
+      const a = await les();
+      check(`${liga}, bildet fra ${DATA_DAG}: "100 %" og "–" bare når statusen sier det, og kortene (${a.kort}) og bildet har tabellens tekst`,
+        a.brudd.length === 0 && a.kort >= 5, a.brudd.slice(0, 4).join('; '));
+      if (liga === 'eliteserien') { await pg.close(); continue; }
+
+      // OBOS: runde 24 slik den sto 3.10.
+      await pg.evaluate(R24 => { for (const [h, b, hg, ag] of R24) { const m = matches.find(x => x.home === h && x.away === b); setMatch(m, hg, ag); } render(); }, R24);
+      await vent();
+      const o = await les();
+      const sum = await pg.evaluate(() => { const d = lastMC.Haugesund; let v = 0; for (let q = 0; q < 6; q++) v += d[q]; return v; });
+      console.log(`      Haugesund, summen av plass 1 til 6 i simuleringen: ${sum} (${sum < 1 ? 'under 1' : 'nøyaktig 1'}); ytterpunkter ${JSON.stringify(o.y)}`);
+      check('OBOS 3.10.: Haugesund er sikret topp 6: merket «Sikret topp 6» og "100 %" i Topp 6 (ikke ">99 %")',
+        o.celler.Haugesund.europa === '100 %' && await pg.evaluate(() => (badgeFor('Haugesund') || {}).text) === 'Sikret topp 6', JSON.stringify(o.celler.Haugesund));
+      check('OBOS 3.10.: Strømsgodset og Kongsvinger er ikke sikret topp 6: ikke "100 %"',
+        !['Strømsgodset', 'Kongsvinger'].some(t => o.celler[t].europa === '100 %')
+        && await pg.evaluate(() => soneStatus('Strømsgodset', 'europa') === 0 && soneStatus('Kongsvinger', 'europa') === 0),
+        `${o.celler.Strømsgodset.europa} / ${o.celler.Kongsvinger.europa}`);
+      check('OBOS 3.10.: Åsane kan fortsatt nå topp 6: ikke "–"',
+        o.celler['Åsane'].europa !== '–' && await pg.evaluate(() => soneStatus('Åsane', 'europa') === 0), o.celler['Åsane'].europa);
+      check(`OBOS 3.10.: "100 %" og "–" følger statusen i hele tabellen (${o.hundre} × "100 %", ${o.strek} × "–"), kortene og bildet har tabellens tekst`,
+        o.brudd.length === 0 && o.hundre >= 1 && o.strek >= 1, o.brudd.slice(0, 4).join('; '));
+      const hb = await lagboks('Haugesund'), ab = await lagboks('Åsane');
+      check('OBOS 3.10.: lagboksen har tabellens tekst (Haugesund og Åsane)', sammeBoks(hb) && sammeBoks(ab), JSON.stringify([hb, ab]));
+      // Svarene: "100 %" bare når sonen er sikret, "0 %" bare når den er umulig.
+      const svar = await pg.evaluate(async () => {
+        const brudd = []; let hundre = 0;
+        for (const t of TEAMS) {
+          const z = qaTargetZone(t); if (!z) continue;
+          for (const txt of [await qaLastMatch(t), await qaNextMatch(t)]) {
+            if (/(^|[^\d>])100 %/.test(txt)) { hundre++; if (z.mat !== 1) brudd.push(`${t} (${z.key}, status ${z.mat}): ${txt.slice(0, 160)}`); }
+            if (/(^|[^\d<])0 %/.test(txt) && z.mat !== -1) brudd.push(`${t} (${z.key}, status ${z.mat}): ${txt.slice(0, 160)}`);
+          }
+        }
+        qaWhyZoneOverride = 'europa';
+        const sporsmal = {Haugesund: qaWhyLabel('Haugesund'), Kongsvinger: qaWhyLabel('Kongsvinger')};
+        qaWhyZoneOverride = null;
+        return {brudd, hundre, sporsmal};
+      });
+      check('OBOS 3.10.: svarene om forrige og neste kamp skriver "100 %" og "0 %" bare når sonen er avgjort',
+        svar.brudd.length === 0, svar.brudd.slice(0, 3).join(' | '));
+      check('OBOS 3.10.: spørsmålet om topp 6 sier "sikret" om Haugesund, og ikke om Kongsvinger',
+        svar.sporsmal.Haugesund === 'Hvorfor er Haugesund sikret topp 6?' && !/^Hvorfor er Kongsvinger sikret/.test(svar.sporsmal.Kongsvinger),
+        JSON.stringify(svar.sporsmal));
+      // 3) Formatet: alle simuleringene i sonen uten at det er sikret gir
+      // ">99 %", ingen i sonen uten at det er umulig gir "<1 %".
+      const fmt = await pg.evaluate(() => {
+        const f = [pctTxt(1), pctTxt(0.995), pctTxt(0.9949), pctTxt(0), pctTxt(0.0049), pctTxt(0.9999999, 1), pctTxt(0.2, -1)];
+        const t = TEAMS.find(x => soneStatus(x, 'europa') === 0), ekte = lastMC[t];
+        const alle = new Array(16).fill(0); alle[0] = 1;
+        const ingen = new Array(16).fill(0); ingen[15] = 1;
+        const celle = () => document.querySelector(`#tbl tbody tr[data-team="${t}"] td.p3`).textContent.trim();
+        lastMC[t] = alle; fillOdds(); const c1 = celle();
+        lastMC[t] = ingen; fillOdds(); const c2 = celle();
+        lastMC[t] = ekte; fillOdds();
+        const sikret = TEAMS.find(x => soneStatus(x, 'europa') === 1), ekteS = lastMC[sikret];
+        const nesten = new Array(16).fill(0); for (let q = 0; q < 6; q++) nesten[q] = (1 - 1e-12) / 6;
+        lastMC[sikret] = nesten; fillOdds();
+        const c3 = document.querySelector(`#tbl tbody tr[data-team="${sikret}"] td.p3`).textContent.trim();
+        lastMC[sikret] = ekteS; fillOdds();
+        return {f, t, c1, c2, sikret, c3};
+      });
+      check(`formatet: pctTxt gir ">99 %" for 1 og 0,995, "99 %" for 0,9949, "<1 %" for 0 og 0,0049; "100 %"/"0 %" bare med status`,
+        fmt.f.join('|') === '>99 %|>99 %|99 %|<1 %|<1 %|100 %|0 %', fmt.f.join('|'));
+      check(`OBOS: ${fmt.t} (ikke avgjort) med alle simuleringene i topp 6 står med ">99 %", med ingen "<1 %"`,
+        fmt.c1 === '>99 %' && fmt.c2 === '<1 %', `${fmt.c1} / ${fmt.c2}`);
+      check(`OBOS: ${fmt.sikret} (sikret) med summen 0,999999999999 står med "100 %"`, fmt.c3 === '100 %', fmt.c3);
+      // 4) Et svar fra Workeren gjelder bare scenarioet det ble regnet for.
+      const gammel = await pg.evaluate(() => {
+        const t = TEAMS.find(x => soneStatus(x, 'gull') === 0);
+        const ekte = {y: lastYtter, s: lastYtterSig};
+        lastYtter = Object.fromEntries(TEAMS.map(x => [x, {verst: 1, best: 1}])); lastYtterSig = 'et annet scenario';
+        const annet = soneStatus(t, 'gull');
+        lastYtterSig = badgeSignatureOf(compute().rows);
+        const samme = soneStatus(t, 'gull');
+        lastYtter = ekte.y; lastYtterSig = ekte.s;
+        return {t, annet, samme, igjen: soneStatus(t, 'gull')};
+      });
+      check(`et svar fra Workeren for et annet scenario brukes ikke (${gammel.t}: ${gammel.annet}), for samme scenario brukes det (${gammel.samme})`,
+        gammel.annet === 0 && gammel.samme === 1 && gammel.igjen === 0, JSON.stringify(gammel));
+      await pg.close();
+    }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -2726,9 +2923,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'tabellbilde') await tabellbilde();
       else if (BARE === 'nyedata') await nyedata();
       else if (BARE === 'forrigedelt') await forrigedelt();
+      else if (BARE === 'matstatus') await matstatus();
       else if (BARE === 'nederst') await nederstPaaSiden();
       else if (BARE === 'justering') await poengjusteringer();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, justering)`);
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, justering)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -3228,7 +3426,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       check(`${liga}: siden melder riktig liga-id`, id === liga, `fikk "${id}"`);
       const fasit = SONER[liga];
       const funn = await tp.evaluate(soner => {
-        const pct = x => x === 0 ? '0 %' : x < 0.005 ? '<1 %' : x > 0.995 && x < 1 ? '>99 %' : Math.round(x * 100) + ' %';
+        // "100 %" og "–" bare når siden har bevist det (soneStatus, samme
+        // utregning som merkene); ellers ">99 %" og "<1 %" i endene, også når
+        // alle simuleringene ga samme svar (4.10.2026).
+        const pct = (x, s) => s === 1 ? '100 %' : s === -1 ? '–' : x >= 0.995 ? '>99 %' : x < 0.005 ? '<1 %' : Math.round(x * 100) + ' %';
         const sum = (d, [lo, hi]) => { let v = 0; for (let q = lo; q <= hi; q++) v += d[q - 1]; return v; };
         const celle = {gull: 'td.gull', europa: 'td.p3', ned: 'td.ned'};
         const rader = [...document.querySelectorAll('#tbl tbody tr')].map(tr => {
@@ -3236,7 +3437,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           for (const k of Object.keys(soner)) {
             const vist = tr.querySelector(celle[k]).textContent.trim();
             const ventet = sum(d, soner[k]);
-            o[k] = {vist, ventet: ventet === 0 ? '–' : pct(ventet), andel: ventet};
+            o[k] = {vist, ventet: pct(ventet, soneStatus(t, k)), andel: ventet};
           }
           return o;
         });
@@ -3259,7 +3460,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const rader = funn.kort[k].filter(x => !x.tom);
         const feilKort = rader.filter(x => {
           const r = funn.rader.find(y => y.team === x.team);
-          return !r || r[k].ventet !== x.pct;
+          return !r || r[k].ventet !== (x.pct === '0 %' ? '–' : x.pct);
         });
         check(`${liga}: kortet "${k}" viser samme tall som kolonnen`, feilKort.length === 0,
           feilKort.map(x => `${x.team}: kort ${x.pct}`).join('; '));
@@ -3578,6 +3779,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await tabellbilde();
     await nyedata();
     await forrigedelt();
+    await matstatus();
     await page.bringToFront();
 
     // ---- 18. rulling til svaret på iPad-bredder ----
@@ -4717,30 +4919,36 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         stat.tabeller >= 200 && igjenMin > 0 && stat.tilfeller > 0 && stat.lavere.length === 0 && stat.ikkeEksakt === 0,
         `${stat.lavere.length} lavere: ${stat.lavere.slice(0, 5).join('; ')}; ${stat.tilfeller} tilfeller, ${stat.ikkeEksakt} ikke eksakte`);
 
-      // Tidlig stopp i merkesøket. Merket avgjøres av tersklene i
-      // LEAGUE.badges, så søket stopper når det beste funnet og den øvre
-      // grensen ligger mellom de samme to tersklene. Merket skal være LIKT det
-      // søket uten tidlig stopp gir (dagens kode før rettelsen): testen bygger
-      // den varianten ved å fjerne tersklene fra de to kallene i
-      // computeOneBadge -- nøyaktig én tekstbytting hver, ellers feiler den.
-      // Sammenlignes på dagens tabell og grensetestens 200 tilfeldige tabeller
-      // (samme frø), med produksjonens tidsgrense (500 ms per lag).
+      // Tidlig stopp i merkesøket. Merket og statusen for sonene (4.10.2026)
+      // avgjøres av tersklene (merkene og sonene i MERKE_CFG), så søket
+      // stopper, og "atmost" kutter grener, når svaret er avgjort. Merkene og
+      // statusene skal være LIKE dem søket uten terskler gir: testen bygger
+      // den varianten ved å fjerne tersklene fra de to kallene i ytterpunkter
+      // -- nøyaktig én tekstbytting hver, ellers feiler den. Uten terskler
+      // får søket 5 s, så det blir eksakt. Sammenlignes på dagens tabell og
+      // grensetestens 200 tilfeldige tabeller (samme frø).
       const stopp = await mp.evaluate(() => {
-        const fra1 = "cfg.badges.map(function(b){ return b.above; })", fra2 = "'atmost', deadline, [2])";
+        const fra1 = "'above', deadline, over.filter(gyldig))", fra2 = "'atmost', deadline, under)";
         const treff = [WORKER_SRC.split(fra1).length - 1, WORKER_SRC.split(fra2).length - 1];
-        const lag = src => { const W = {}; (new Function('W', 'var postMessage=function(){}; var self={};' + src + '; W.f=computeOneBadge;'))(W); return W.f; };
-        const ny = lag(WORKER_SRC), uten = lag(WORKER_SRC.replace(fra1, 'undefined').replace(fra2, "'atmost', deadline)"));
-        const cfg = {badges: LEAGUE.badges, relegatedBadge: LEAGUE.relegatedBadge};
-        const ut = {treff, tabeller: 0, lag: 0, ulike: [], tregeNy: [], tidNy: 0, tidUten: 0, dagensUten: []};
+        const lagF = src => { const W = {}; (new Function('W', 'var postMessage=function(){}; var self={};' + src + '; W.f=ytterpunkter; W.m=merkeFra;'))(W); return W; };
+        const Wny = lagF(WORKER_SRC), Wuten = lagF(WORKER_SRC.replace(fra1, "'above', deadline)").replace(fra2, "'atmost', deadline)"));
+        const cfg = MERKE_CFG;
+        const svar = (W, byname, rem, navn, ms) => { const y = W.f(byname, rem, navn, ms, cfg);
+          return {merke: W.m(y, cfg), soner: cfg.soner.map(([lo, hi]) => y.verst <= hi && y.best >= lo ? 1 : (y.verst < lo || y.best > hi) ? -1 : 0).join('')}; };
+        const ny = (byname, rem, navn, ms) => svar(Wny, byname, rem, navn, ms), uten = (byname, rem, navn) => svar(Wuten, byname, rem, navn, 5000);
+        const ut = {treff, tabeller: 0, lag: 0, ulike: [], tregeNy: [], tidNy: 0, tidUten: 0, dagensUten: [], ikkeEksakt: []};
         const sammenlign = dagens => {
           const {rows} = compute(), byname = {};
           rows.forEach(r => byname[r.name] = {name: r.name, pts: r.pts, gd: r.gd, gf: r.gf, left: r.left, max: r.max});
           const rem = matches.filter(isEmpty).map(m => [m.home, m.away]);
           ut.tabeller++;
           rows.forEach(r => {
-            let t0 = performance.now(); const u = uten(byname, rem, r.name, 500, cfg); const dU = performance.now() - t0;
-            t0 = performance.now(); const n = ny(byname, rem, r.name, 500, cfg); const dN = performance.now() - t0;
+            let t0 = performance.now(); const u = uten(byname, rem, r.name); const dU = performance.now() - t0;
+            t0 = performance.now(); const n = ny(byname, rem, r.name, 500); const dN = performance.now() - t0;
             ut.lag++; ut.tidNy += dN; ut.tidUten += dU;
+            // Nådde søket uten terskler tidsgrensen, er det ingen fasit (det
+            // er grunnen til tersklene): telles, ikke sammenlignet.
+            if (dU > 4900) { ut.ikkeEksakt.push(`${dagens ? 'dagens' : 'tilfeldig'}: ${r.name}`); return; }
             if (JSON.stringify(u) !== JSON.stringify(n)) ut.ulike.push(`${dagens ? 'dagens' : 'tilfeldig'}: ${r.name} uten ${JSON.stringify(u)}, med ${JSON.stringify(n)}`);
             if (dagens && dU > 100) ut.dagensUten.push(`${r.name} ${dU.toFixed(0)} ms`);
           });
@@ -4750,7 +4958,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           const {rows} = compute(), byname = {};
           rows.forEach(r => byname[r.name] = {name: r.name, pts: r.pts, gd: r.gd, gf: r.gf, left: r.left, max: r.max});
           const rem = matches.filter(isEmpty).map(m => [m.home, m.away]);
-          rows.forEach(r => { const t0 = performance.now(); ny(byname, rem, r.name, 500, cfg);
+          rows.forEach(r => { const t0 = performance.now(); ny(byname, rem, r.name, 500);
             const d = performance.now() - t0; if (d > 100) ut.tregeNy.push(`${r.name} ${d.toFixed(0)} ms`); });
         }
         if (treff[0] !== 1 || treff[1] !== 1) return ut;
@@ -4778,10 +4986,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await mp.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); render(); });
       console.log(`      ${liga}: ${stopp.lag} merker i ${stopp.tabeller} tabeller, søketid uten tidlig stopp ${(stopp.tidUten / 1000).toFixed(2)} s, med ${(stopp.tidNy / 1000).toFixed(2)} s` +
         (stopp.dagensUten.length ? `; dagens tabell uten tidlig stopp: ${stopp.dagensUten.join(', ')}` : ''));
-      check(`${liga}: testen finner tersklene i computeOneBadge (én gang hver)`, stopp.treff.join() === '1,1', `treff ${stopp.treff}`);
-      check(`${liga}: tidlig stopp gir samme merke som søket uten, i dagens tabell og ${stopp.tabeller - 1} tilfeldige`,
-        stopp.treff.join() === '1,1' && stopp.tabeller === 201 && stopp.ulike.length === 0,
-        `${stopp.ulike.length} ulike av ${stopp.lag}: ${stopp.ulike.slice(0, 5).join('; ')}`);
+      check(`${liga}: testen finner tersklene i ytterpunkter (én gang hver)`, stopp.treff.join() === '1,1', `treff ${stopp.treff}`);
+      check(`${liga}: tidlig stopp gir samme merke og samme status for sonene som søket uten, i dagens tabell og ${stopp.tabeller - 1} tilfeldige`,
+        stopp.treff.join() === '1,1' && stopp.tabeller === 201 && stopp.ulike.length === 0 && stopp.ikkeEksakt.length <= 5,
+        `${stopp.ulike.length} ulike av ${stopp.lag}: ${stopp.ulike.slice(0, 5).join('; ')}; uten fasit (søket uten terskler nådde 5 s): ${stopp.ikkeEksakt.join(', ') || 'ingen'}`);
       check(`${liga}: dagens tabell, ingen lag bruker over 100 ms på merket`, stopp.tregeNy.length === 0,
         stopp.tregeNy.join(', '));
 
@@ -5931,8 +6139,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const tab = await pg.evaluate(g => {
           const n = TEAMS.length, N = g.sesonger, fra = (t, i) => g.utfall.base.slice(i * n, i * n + n).map(c => c / N);
           const celler = [...document.querySelectorAll('#tbl tbody tr')].map(tr => {
-            const d = lastMC[tr.dataset.team], v = zoneSum(d, 'gull');
-            return tr.querySelector('td.gull').textContent === (v === 0 ? '–' : pctTxt(v)); });
+            const d = lastMC[tr.dataset.team], v = zoneSum(d, 'gull'), s = soneStatus(tr.dataset.team, 'gull');
+            return tr.querySelector('td.gull').textContent === (s === -1 ? '–' : pctTxt(v, s)); });
           return {status: GRUNNLAG_STATUS, N: lastMCN,
             tabell: TEAMS.every((t, i) => JSON.stringify(lastMC[t]) === JSON.stringify(fra(t, i))),
             basis: TEAMS.every((t, i) => JSON.stringify(BASE_MC[t]) === JSON.stringify(fra(t, i))),
@@ -6108,7 +6316,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           qaWhyZoneOverride = null;
           const zN = tell('zoneTask') - z1, iA = tell('insightsAlle') - i2; await qaNextMatch(lagA);
           return {med, innsikt, avbrudd, fire, utenScenario, tilbake, nyTabell: tell('tabell') - t1, annenSone: zN, annenInnsikt: iA,
-                  egenSone: tell('zoneTask') - z1 - zN, lagA, andre, pctAnnen: pctTxt(qaZoneByKey(lagA, andre).pct), hvorforAnnen, nesteAnnen};
+                  egenSone: tell('zoneTask') - z1 - zN, lagA, andre, pctAnnen: (z => pctTxt(z.pct, z.mat))(qaZoneByKey(lagA, andre)), hvorforAnnen, nesteAnnen};
         }, lagMedSone);
         check(`${liga}: med ett resultat fylt inn regner siden selv (tabellsimulering og oppgaver til poolen)`,
           sc.med.tabell >= 1 && sc.med.zoneTask > 0 && sc.med.N === sc.med.MC_N, JSON.stringify(sc.med));
@@ -6226,7 +6434,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         for (const key of [fremre, bakre]) {
           const ekte = orig.qaZoneByKey(t, key);
           for (const P of [0.003, 0.012, 0.024, 0.5, 0.988, 0.997]) {
-            const z = {...ekte, pct: P};
+            // Nivået settes her, så sonen er åpen (mat 0): den ekte statusen
+            // gjelder lagets virkelige stilling, ikke det valgte nivået.
+            const z = {...ekte, pct: P, mat: 0};
             qaTargetZone = () => z; qaZoneByKey = () => z; qaSettled = () => null; qaWhyZoneOverride = null;
             for (const d of [0.0249, -0.009, 0.009, -0.02, -0.022, 0.0760, -0.0760, 0.0351, -0.0449, 0.9, -0.9]) {
               runMatchImpactAsync = async (team, zone, specs) => ({results: specs.map(c => ({
