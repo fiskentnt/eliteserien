@@ -83,46 +83,17 @@ def get_json(url):
         raise
 
 
-def fetch_all(cache_dir=None, log=lambda s: None):
-    """Ett kall til rundetavle-endepunktet. MERK: nøyaktig spørreparameter-
-    format for ESPN sitt scoreboard-endepunkt for fotball er ikke verifisert
-    mot live API (ingen nettverkstilgang tilgjengelig da dette ble skrevet) —
-    et forsøk med datoperiode (?dates=YYYYMMDD-YYYYMMDD) ga 400 Bad Request i
-    produksjon. Bruker nå en enkelt dato (i dag, norsk tid) som et enklere,
-    mer sannsynlig gyldig forsøk. Feiler dette også: update_data.py fanger
-    ALLTID opp feil herfra og fortsetter uten ESPN (se main() sin try/except)
-    — ffksupporter.net er uansett fasit, så en feilende ESPN-sjekk degraderer
-    aldri til et ødelagt resultat, bare til sjeldnere friskhet."""
-    now_oslo = datetime.now(OSLO)
-    day = now_oslo.strftime("%Y%m%d")
-    cache_file = cache_dir and (cache_dir / "espn_scoreboard.json")
-    if cache_file and cache_file.exists():
-        d = json.loads(cache_file.read_text(encoding="utf-8"))
-        log("[espn] scoreboard: fra lokal cache")
-        _logg("cache", f"scoreboard {day}")
-    else:
-        url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{LEAGUE}/scoreboard?dates={day}"
-        log(f"[espn] Henter rundetavle for {day} (ett kall) ...")
-        try:
-            d = get_json(url)
-        except Exception as e:
-            # Loggfor forsoket FOR vi kaster videre. update_data.py fanger
-            # ESPN-feil og fortsetter, saa uten denne linjen ville en ESPN
-            # som er nede i en uke ikke vaere synlig noe sted.
-            _logg("feil", f"{type(e).__name__}: {e}")
-            raise
-        if cache_file:
-            cache_dir.mkdir(parents=True, exist_ok=True)
-            cache_file.write_text(json.dumps(d), encoding="utf-8")
-
-    events = d.get("events", [])
-    log(f"[espn] {len(events)} kamp(er) i svaret for {day}.")
+def tolk(events, log=lambda s: None):
+    """Kampene i et svar fra rundetavle-endepunktet -> (rader, problemer).
+    Tiden er UTC hos ESPN og regnes om til norsk tid (dato og klokkeslett).
+    problemer: ferdigspilte kamper som ikke kunne tolkes (se EspnDataError)."""
     out = []
     problems = []  # ferdigspilte kamper som ikke kunne tolkes -- se EspnDataError under
     for e in events:
         comp = e["competitions"][0]
         utc_dt = datetime.fromisoformat(e["date"].replace("Z", "+00:00"))
         date = utc_dt.astimezone(OSLO).strftime("%Y-%m-%d")
+        time = utc_dt.astimezone(OSLO).strftime("%H:%M")
         completed = comp["status"]["type"]["completed"]
         home = away = hg = ag = None
         winner_home = winner_away = False
@@ -172,11 +143,49 @@ def fetch_all(cache_dir=None, log=lambda s: None):
             # Slikt forkastes her (ikke None -> spilt, men markert usikkert)
             # og overlates til ffksupporter.net i update_data.py.
             suspect = (hg == 0 and ag == 0) and (winner_home or winner_away)
-            out.append({"home": home, "away": away, "date": date,
+            out.append({"home": home, "away": away, "date": date, "time": time,
                         "hg": int(hg), "ag": int(ag), "suspect": suspect})
         else:
-            out.append({"home": home, "away": away, "date": date, "hg": None, "ag": None, "suspect": False})
+            out.append({"home": home, "away": away, "date": date, "time": time, "hg": None, "ag": None, "suspect": False})
 
+    return out, problems
+
+
+def fetch_all(cache_dir=None, log=lambda s: None):
+    """Ett kall til rundetavle-endepunktet. MERK: nøyaktig spørreparameter-
+    format for ESPN sitt scoreboard-endepunkt for fotball er ikke verifisert
+    mot live API (ingen nettverkstilgang tilgjengelig da dette ble skrevet) —
+    et forsøk med datoperiode (?dates=YYYYMMDD-YYYYMMDD) ga 400 Bad Request i
+    produksjon. Bruker nå en enkelt dato (i dag, norsk tid) som et enklere,
+    mer sannsynlig gyldig forsøk. Feiler dette også: update_data.py fanger
+    ALLTID opp feil herfra og fortsetter uten ESPN (se main() sin try/except)
+    — ffksupporter.net er uansett fasit, så en feilende ESPN-sjekk degraderer
+    aldri til et ødelagt resultat, bare til sjeldnere friskhet."""
+    now_oslo = datetime.now(OSLO)
+    day = now_oslo.strftime("%Y%m%d")
+    cache_file = cache_dir and (cache_dir / "espn_scoreboard.json")
+    if cache_file and cache_file.exists():
+        d = json.loads(cache_file.read_text(encoding="utf-8"))
+        log("[espn] scoreboard: fra lokal cache")
+        _logg("cache", f"scoreboard {day}")
+    else:
+        url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{LEAGUE}/scoreboard?dates={day}"
+        log(f"[espn] Henter rundetavle for {day} (ett kall) ...")
+        try:
+            d = get_json(url)
+        except Exception as e:
+            # Loggfor forsoket FOR vi kaster videre. update_data.py fanger
+            # ESPN-feil og fortsetter, saa uten denne linjen ville en ESPN
+            # som er nede i en uke ikke vaere synlig noe sted.
+            _logg("feil", f"{type(e).__name__}: {e}")
+            raise
+        if cache_file:
+            cache_dir.mkdir(parents=True, exist_ok=True)
+            cache_file.write_text(json.dumps(d), encoding="utf-8")
+
+    events = d.get("events", [])
+    log(f"[espn] {len(events)} kamp(er) i svaret for {day}.")
+    out, problems = tolk(events, log)
     if problems:
         _logg("feil", f"{len(problems)} ferdigspilt(e) kamp(er) kunne ikke tolkes")
         raise EspnDataError(
@@ -186,6 +195,30 @@ def fetch_all(cache_dir=None, log=lambda s: None):
     _logg("ok", f"scoreboard {day}", kamper=len(out))
     return out
 
+
+
+def fetch_season(sesong, log=lambda s: None):
+    """Hele sesongen i ett kall (?dates=<år>&limit=1000), kartlagt 3.10.2026:
+    alle 240 kampene, med samme dato og tid som våre etter omregning fra UTC,
+    også runde 12 (flyttet til 24.-25.10.). Ingen runde hos ESPN: den tas
+    fra vår lagrede terminliste. ESPN har feil 0-0 for to kamper 29.5.
+    (Aalesund-HamKam 2-2, Vålerenga-Kristiansund 3-1); et resultat herfra
+    publiseres derfor aldri alene (se resultatregel.py)."""
+    url = f"https://site.api.espn.com/apis/site/v2/sports/soccer/{LEAGUE}/scoreboard?dates={sesong}&limit=1000"
+    log(f"[espn] Henter hele sesongen {sesong} (ett kall) ...")
+    try:
+        d = get_json(url)
+    except Exception as e:
+        _logg("feil", f"{type(e).__name__}: {e}")
+        raise
+    out, problems = tolk(d.get("events", []), log)
+    if problems:
+        _logg("feil", f"{len(problems)} ferdigspilt(e) kamp(er) kunne ikke tolkes")
+        raise EspnDataError(
+            f"{len(problems)} ferdigspilt(e) kamp(er) fra ESPN kunne ikke tolkes riktig:\n" +
+            "\n".join(f"  - {p}" for p in problems))
+    _logg("ok", f"sesong {sesong}", kamper=len(out))
+    return out
 
 if __name__ == "__main__":
     cache = Path(sys.argv[1]) if len(sys.argv) > 1 else None

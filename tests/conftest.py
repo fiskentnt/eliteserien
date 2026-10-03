@@ -31,13 +31,15 @@ from pathlib import Path
 
 ROT = Path(__file__).resolve().parent.parent
 
-# De tre stiene en kilde kan skrive til, og miljovariabelen som flytter hver
-# av dem. Alle tre maa ha en variabel: uten NFF_CACHE_KATALOG ville en
-# subprosess skrevet fotball.no-cachen rett i produksjonsdataene.
+# Stiene en kilde kan skrive til, og miljovariabelen som flytter hver av
+# dem. Alle maa ha en variabel: uten NFF_CACHE_KATALOG ville en subprosess
+# skrevet fotball.no-cachen rett i produksjonsdataene. Highlightly-telleren
+# kom til 3.10.2026.
 MILJO = {
     "hentelogg": "HENTELOGG_KATALOG",
     "oddspapi-bruk": "ODDSPAPI_BRUK_KATALOG",
     "nff-cache": "NFF_CACHE_KATALOG",
+    "highlightly-bruk": "HIGHLIGHTLY_BRUK_KATALOG",
 }
 
 _FOER = None
@@ -66,7 +68,8 @@ def _sett_modulattributter(kataloger):
     import importlib
     for modul, felt, navn in (("hentelogg", "KATALOG", "hentelogg"),
                               ("oddspapi", "BRUK_KATALOG", "oddspapi-bruk"),
-                              ("nff_source", "CACHE_KATALOG", "nff-cache")):
+                              ("nff_source", "CACHE_KATALOG", "nff-cache"),
+                              ("highlightly_source", "BRUK_KATALOG", "highlightly-bruk")):
         try:
             setattr(importlib.import_module(modul), felt, kataloger[navn])
         except Exception:

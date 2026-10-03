@@ -2100,6 +2100,159 @@ _nffs.hent = _nff_ekte_hent
 _nffs.CACHE_KATALOG = _nff_ekte_kat
 _hl.KATALOG = _ekte_kat
 
+print("\n=== Regelen for å publisere et resultat (resultatregel.py) ===")
+# 3.10.2026: et resultat publiseres når hovedkilden og minst én kilde fra en
+# annen leverandør er enige. Er ligasiden nede, blir neste kilde hovedkilde.
+# fotball.no og NTF er samme leverandør. Uten uavhengig kilde: 24 timer, og
+# da bare for den offisielle ligasiden alene, aldri en annen enkeltkilde, og
+# kjøringen er rød til resultatet er kontrollert.
+import resultatregel as _rr
+_A = _dt(2026, 5, 29, 19, 0, tzinfo=ZoneInfo("Europe/Oslo"))
+_kort, _lenge = _A + __import__("datetime").timedelta(hours=3), _A + __import__("datetime").timedelta(hours=25)
+_alle_es = set(_rr.KILDER["eliteserien"])
+def _avg(liga, svar, oppe=None, naa=None):
+    return _rr.avgjor(liga, svar, set(oppe if oppe is not None else _rr.KILDER[liga]), avspark=_A, naa=naa or _kort)
+_t = [
+    ("OBOS: ligasiden og Highlightly enige: publiseres", "obos", {"ligasiden": (2, 0), "highlightly": (2, 0)}, None, None,
+     ("publiser", (2, 0), "ligasiden", "highlightly", False)),
+    ("Eliteserien: ligasiden 3-1, ESPN 0-0 (feil hos ESPN), Highlightly 3-1: publiseres, ESPN står som uenig",
+     "eliteserien", {"ligasiden": (3, 1), "espn": (0, 0), "highlightly": (3, 1)}, None, None, ("publiser", (3, 1), "ligasiden", "highlightly", False)),
+    ("Eliteserien: ligasiden 3-1 og bare ESPN 0-0: konflikt, holdes tilbake",
+     "eliteserien", {"ligasiden": (3, 1), "espn": (0, 0)}, None, None, ("konflikt", None, "ligasiden", None, False)),
+    ("ligasiden nede, bare ESPN 0-0: vent (en enkeltkilde publiserer aldri alene), også etter 24 timer",
+     "eliteserien", {"espn": (0, 0)}, _alle_es - {"ligasiden"}, _lenge, ("vent", None, "espn", None, False)),
+    ("ligasiden nede, ESPN 0-0 og Highlightly 3-1: konflikt",
+     "eliteserien", {"espn": (0, 0), "highlightly": (3, 1)}, _alle_es - {"ligasiden"}, None, ("konflikt", None, "espn", None, False)),
+    ("ligasiden nede: ESPN blir hovedkilde, og ESPN og fotball.no enige (ulike leverandører): publiseres",
+     "eliteserien", {"espn": (2, 1), "fotball.no": (2, 1)}, {"espn", "fotball.no"}, None, ("publiser", (2, 1), "espn", "fotball.no", False)),
+    ("ligasiden og fotball.no enige: samme leverandør (NTF), så ikke enighet: vent",
+     "eliteserien", {"ligasiden": (2, 1), "fotball.no": (2, 1)}, None, None, ("vent", None, "ligasiden", None, False)),
+    ("bare ligasiden har resultatet etter 25 timer: publiseres uten kontroll (rødt)",
+     "obos", {"ligasiden": (1, 1)}, None, _lenge, ("publiser", (1, 1), "ligasiden", None, True)),
+    ("bare ligasiden etter 3 timer: vent",
+     "obos", {"ligasiden": (1, 1)}, None, None, ("vent", None, "ligasiden", None, False)),
+    ("ligasiden er oppe, men har ikke resultatet: vent, selv om ESPN og Highlightly er enige",
+     "eliteserien", {"espn": (1, 0), "highlightly": (1, 0)}, None, None, ("vent", None, "ligasiden", None, False)),
+    ("OBOS: Highlightly mangler, OddsPapi (reserve) enig: publiseres",
+     "obos", {"ligasiden": (0, 4), "oddspapi": (0, 4)}, None, None, ("publiser", (0, 4), "ligasiden", "oddspapi", False)),
+]
+for _navn, _l, _sv, _opp, _naa, _f in _t:
+    _u = _avg(_l, _sv, _opp, _naa)
+    sjekk(_navn, (_u["utfall"], _u["resultat"], _u["hoved"], _u["enig"], _u["ukontrollert"]) == _f, str(_u))
+_fort, _bekr, _ueni = _rr.kontroller_ukontrollerte("obos", {("Moss", "Odd"): (1, 1), ("Lyn", "Bryne"): (2, 0), ("Hødd", "Moss"): (0, 0)},
+    {("Moss", "Odd"): {"highlightly": (1, 1)}, ("Lyn", "Bryne"): {"fotball.no": (2, 0)}, ("Hødd", "Moss"): {"wikipedia": (1, 0)}})
+sjekk("uten kontroll: bekreftet av Highlightly; fotball.no (samme leverandør) bekrefter ikke; Wikipedia uenig",
+      _bekr == [("Moss", "Odd")] and set(_fort) == {("Lyn", "Bryne"), ("Hødd", "Moss")} and [u[0] for u in _ueni] == [("Hødd", "Moss")],
+      f"{_fort} {_bekr} {_ueni}")
+
+print("\n=== Highlightly: lagrede svar fra kartleggingen 3.10.2026 ===")
+# Svarene er fra highlightly-probe.yml (bare feltene vi bruker). Tidene er
+# UTC; sidedelingen er ustabil (16.8. og 30.8.: kamper med samme avspark kom
+# to ganger, og Egersund-Stabæk, Sandefjord-Brann og Vålerenga-Molde manglet).
+# Resultatene hentes derfor per dato, og en hel sesong får dublettene fjernet
+# og det som mangler hentet per dato -- ellers kastes den.
+import highlightly_source as _hls
+_HLD = TESTDATA / "highlightly"
+_hl_les = lambda navn: json.loads((_HLD / f"{navn}.json").read_text("utf-8"))
+_hl_kall = []
+def _hl_http(sti, param, fjern=None):
+    """Lagrede svar: datoene som egne filer, sesongen side for side (100 per side,
+    i rekkefølgen den kom, med dublettene)."""
+    _hl_kall.append(dict(param))
+    if "date" in param:
+        d = _hl_les(f"dag_{param['date']}")
+        if fjern:
+            d = [m for m in d if (m["homeTeam"]["name"], m["awayTeam"]["name"]) not in fjern]
+        return {"data": d, "pagination": {"totalCount": len(d), "offset": 0, "limit": 100}}
+    liga = {v: k for k, v in _hls.LIGA_ID.items()}[param["leagueId"]]
+    alle = _hl_les(f"sesong_{liga}_2026")
+    o = param.get("offset", 0)
+    return {"data": alle[o:o + 100], "pagination": {"totalCount": len(alle), "offset": o, "limit": 100}}
+_hl_ekte_http = _hls._http
+_hls._http = _hl_http
+try:
+    # Tidene: UTC til norsk tid, før og etter vintertid (25.10.2026 kl. 03).
+    _s_o = {(r["home"], r["away"]): r for r in (_hls.parse_kamp(m, "obos") for m in
+            {m["id"]: m for m in _hl_les("sesong_obos_2026")}.values())}
+    _s_e = {(r["home"], r["away"]): r for r in (_hls.parse_kamp(m, "eliteserien") for m in
+            {m["id"]: m for m in _hl_les("sesong_eliteserien_2026")}.values())}
+    sjekk("Sogndal-Raufoss (flyttet): 21.10. 17:00Z er 19:00 norsk tid, runde 24",
+          (_s_o[("Sogndal", "Raufoss")]["date"], _s_o[("Sogndal", "Raufoss")]["time"], _s_o[("Sogndal", "Raufoss")]["round"]) == ("2026-10-21", "19:00", 24),
+          str(_s_o[("Sogndal", "Raufoss")]))
+    sjekk("Eliteserien runde 12: 24.10. 14:00Z er 16:00 (sommertid), 25.10. 13:30Z er 14:30 (vintertid)",
+          (_s_e[("Bodø/Glimt", "Vålerenga")]["time"], _s_e[("Viking", "Tromsø")]["time"], _s_e[("Viking", "Tromsø")]["round"]) == ("16:00", "14:30", 12),
+          f"{_s_e[('Bodø/Glimt', 'Vålerenga')]} {_s_e[('Viking', 'Tromsø')]}")
+    # Navnene: alle 16 i hver liga kjennes igjen; et ukjent navn stopper.
+    _navn = {l: sorted({m[s]["name"] for m in _hl_les(f"sesong_{l}_2026") for s in ("homeTeam", "awayTeam")}) for l in ("obos", "eliteserien")}
+    sjekk("navnekartet: alle 16 lagnavn i hver liga blir våre (Haugesund FK, ODD Ballklubb, Strommen, Sandnes ULF, Kongsvinger IL, Tromsø IL ...)",
+          all(len({_hls._lag(n, l) for n in _navn[l]}) == 16 == len(_navn[l]) for l in _navn), str(_navn))
+    try:
+        _hls._lag("Haugesund", "eliteserien"); _kast = None
+    except _hls.HighlightlyDataError as e:
+        _kast = str(e)
+    sjekk("et lag fra en annen liga (eller et ukjent navn): tydelig feil", _kast is not None and "ukjent lag" in _kast, str(_kast))
+    # Resultatene per dato: ett kall for begge ligaene, bare ligaenes kamper.
+    _hl_kall.clear()
+    _d = _hls.hent_dag("2026-10-03")
+    _hs = [r for r in _d["obos"] if (r["home"], r["away"]) == ("Haugesund", "Stabæk")]
+    sjekk("hent_dag 3.10.: ett kall, de fire OBOS-kampene med resultat (Haugesund-Stabæk 2-0, 16:00), ingen fra kvinneligaen",
+          len(_hl_kall) == 1 and len(_d["obos"]) == 4 and _d["eliteserien"] == [] and _hs and (_hs[0]["hg"], _hs[0]["ag"], _hs[0]["time"], _hs[0]["ferdig"]) == (2, 0, "16:00", True),
+          f"{_hl_kall} {_d}")
+    _d = _hls.hent_dag("2026-05-29")
+    _r = {(r["home"], r["away"]): (r["hg"], r["ag"]) for r in _d["eliteserien"]}
+    sjekk("hent_dag 29.5.: Vålerenga-Kristiansund 3-1 og Aalesund-HamKam 2-2 (der ESPN viser 0-0)",
+          _r.get(("Vålerenga", "Kristiansund")) == (3, 1) and _r.get(("Aalesund", "HamKam")) == (2, 2), str(_r))
+    # Hele sesongen: dubletter fjernet, det som mangler hentet per dato.
+    for _l, _dag, _mangler in (("obos", "2026-08-16", [("Egersund", "Stabæk")]),
+                              ("eliteserien", "2026-08-30", [("Sandefjord", "Brann"), ("Vålerenga", "Molde")])):
+        _rå = _hl_les(f"sesong_{_l}_2026")
+        _dubl = len(_rå) - len({m["id"] for m in _rå})
+        _kj = {}
+        for _f in ("matches.json",):
+            for _m in json.loads((ROT / "tests" / "data" / "2026-10-01" / _l / "data" / _f).read_text("utf-8")):
+                _kj[(_m["home"], _m["away"])] = _m["date"]
+        for _rr in json.loads((ROT / "tests" / "data" / "2026-10-01" / _l / "data" / "fixtures.json").read_text("utf-8")):
+            for _m in _rr["matches"]:
+                _kj.setdefault((_m["home"], _m["away"]), _m["date"])
+        _hl_kall.clear()
+        _ses = _hls.hent_sesong(_l, 2026, _kj)
+        _nok = {(r["home"], r["away"]) for r in _ses}
+        sjekk(f"{_l}: sesongen med {_dubl} dublett(er) på kamp-id gir 240 unike kamper, og {', '.join(f'{a}-{b}' for a, b in _mangler)} hentes fra {_dag} (4 kall)",
+              _dubl > 0 and len(_ses) == 240 and len(_nok) == 240 and all(k in _nok for k in _mangler)
+              and len(_hl_kall) == 4 and _hl_kall[-1].get("date") == _dag, f"{len(_ses)} {len(_nok)} {_hl_kall}")
+        # Mot testdataene fra 1.10.: samme dato, tid og runde for alle, samme
+        # resultat for alle som var spilt da.
+        _v = {}
+        for _m in json.loads((ROT / "tests" / "data" / "2026-10-01" / _l / "data" / "matches.json").read_text("utf-8")):
+            _v[(_m["home"], _m["away"])] = (_m["date"], _m["time"], _m["round"], _m["hg"], _m["ag"])
+        _avvik = [(r["home"], r["away"]) for r in _ses if (r["home"], r["away"]) in _v
+                  and (r["date"], r["time"], r["round"], r["hg"], r["ag"]) != _v[(r["home"], r["away"])]]
+        sjekk(f"{_l}: dato, tid (norsk), runde og resultat er de samme som våre for alle {len(_v)} spilte kampene",
+              not _avvik, str(_avvik[:5]))
+        # Mangler kampen også i dagssvaret, er svaret ufullstendig og brukes ikke.
+        _hls._http = lambda sti, param, _f=set(_mangler): _hl_http(sti, param, fjern={(n, m) for n, m in
+            [("Egersund", "Stabæk"), ("Sandefjord", "Brann"), ("Vålerenga", "Molde")]})
+        try:
+            _hls.hent_sesong(_l, 2026, _kj); _kast = None
+        except _hls.Ufullstendig as e:
+            _kast = str(e)
+        _hls._http = _hl_http
+        sjekk(f"{_l}: mangler kampen også i dagssvaret, er sesongen ufullstendig (ikke 240) og kastes",
+              _kast is not None and "ventet 240" in _kast, str(_kast))
+    # Dagstaket: ingen kall over taket, og hvert kall er talt.
+    _brukt = _hls.dagsbruk()
+    _ekte_tak = _hls.DAGSTAK
+    _hls.DAGSTAK = _brukt
+    try:
+        _hl_kall.clear(); _hls.hent_dag("2026-10-03"); _kast = None
+    except _hls.Budsjett as e:
+        _kast = str(e)
+    _hls.DAGSTAK = _ekte_tak
+    sjekk(f"dagstaket: kallene telles ({_brukt} i testen), og over taket går ingen kall ut",
+          _brukt >= 10 and _kast is not None and _hl_kall == [], f"{_brukt} {_kast} {_hl_kall}")
+finally:
+    _hls._http = _hl_ekte_http
+
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.
 _vern.sjekk_urort(sjekk)
