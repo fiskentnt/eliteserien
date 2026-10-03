@@ -3,6 +3,49 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Tidsrekkefølge i kampsannsynlighetene (3.10.2026)
+
+H/U/B ved en kamp endret seg med kampens eget resultat (FKH-Stabæk 0-2: H
+48 %, 2-0: H 51 %). Årsak: rateFor, og dermed fillProb, kortet "Neste kamp",
+trekningen, oddsOverrideFor og lagstyrkene til Workeren, brukte LIVE
+(computeLiveState), som har ALLE innfylte resultater, også kampens eget og
+senere kamper.
+
+Regelen (Trond): sannsynligheten for en kamp regnes med lagstyrkene etter
+alle innfylte resultater med tidligere dato, aldri med kampens eget resultat
+eller kamper samme dag eller senere. En simulert runde påvirker fortsatt neste.
+Styrke-kolonnen viser fortsatt styrken etter alle innfylte resultater (LIVE).
+
+- stillingFoer(dato): stillingen etter de innfylte resultatene før datoen,
+  dag for dag (kampene samme dag fra stillingen ved dagens start).
+  computeLiveState() = stillingFoer(null).
+- rateFor bruker stillingFoer(kampens dato) (stillingForKamp).
+- Workeren får lagstyrkene uten scenario og en forskyvning per åpen kamp
+  (simStilling): stillingFoer(kampens dato) minus stillingen uten scenario.
+  Uten innfylte resultater før kampen er forskyvningen null, og Workeren
+  regner som før. laastOver (svar med låst utfall) følger samme regel.
+- Uten scenario: tabellen, innsikten og forrige-kamp-oppgavene i
+  grunnlagsfilen er bit for bit like (regnet på nytt lokalt og sammenlignet).
+  Oppgavene med låst utfall endres (83 av 140 i OBOS, 112 av 169 i
+  Eliteserien), fordi et låst resultat nå bare virker inn på senere kamper.
+  Fingeravtrykket endres (Worker-koden), så CI regner filen på nytt etter push.
+- Merk modellen: et hjemmeresultat flytter angrep og hjemmefordel like mye,
+  så bortestyrken (att - ha) endres ikke, og omvendt. Et resultat påvirker
+  derfor bare lagets kamper i samme rolle.
+- Testsiden (ELO) overstyrer rateFor, computeLiveState og oddsOverrideFor og
+  sender odds for alle kamper; regelen gjelder ikke ELO-tallene der ennå.
+- Tester: `--bare tidsrekkefolge` (fire punkter, i begge ligaene), og
+  "Svarene: låste utfall" sammenligner nå med simStilling.
+- Grunnlagsfilene i alle tre sidene er regnet på nytt lokalt med den nye
+  koden og committet sammen med den, så sidene godtar dem straks (ellers ville
+  sidene regnet selv til CI var ferdig, og testsidens panelkontroll feilet).
+- Avdekket underveis: linja om forrige kamp i lagboksen brukte forventningen
+  avrundet til fire desimaler (forrigeKampRad, for lastmatch.json), svaret
+  uavrundet. Ved en kant (Egersund 0,13498 -> 0,1350) sa linja -2 og svaret
+  -1. Linja regnet på siden bruker nå den uavrundede.
+- Testsiden får sin egen simStilling (de inerte nullene som før): ELO-modellen
+  har ingen att/con/ha/hc, og produksjonens baseStilling krasjet der.
+
 ## Modellsjekk-sidene og "Vis detaljer" (3.10.2026)
 
 "Vis detaljer" i "Hvordan vet vi at modellen virker?" hadde altfor mye tekst.

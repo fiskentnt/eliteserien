@@ -1735,7 +1735,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const w = new Worker(URL.createObjectURL(new Blob([WORKER_SRC], {type: 'application/javascript'})));
         w.onmessage = e => { const d = e.data; if (d.mode !== 'prob' || d.done < d.total) return; w.terminate(); res(d.out); };
         w.postMessage({runId: 1, seed: hashStr(q.scenarioKey + '|impact'), mu: MODEL.mu, H: MODEL.H, k: FORM_K,
-          att: Array.from(LIVE.att), con: Array.from(LIVE.con), ha: Array.from(LIVE.ha), hc: Array.from(LIVE.hc),
+          ...simStilling(q.open),
           P0: Array.from(P0), G0: Array.from(q.G0), F0: Array.from(q.F0), open: q.open.map(o => [o[0], o[1]]),
           oddsOverride: q.oddsOverride, N: MC_N});
       });
@@ -1885,6 +1885,78 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         }
       }
       await pg.evaluate(() => { selRoundIdx = null; render(); });
+      await pg.close();
+    }
+  };
+  // Tidsrekkefølge (3.10.2026): sannsynligheten for en kamp regnes med
+  // lagstyrkene etter de innfylte resultatene med TIDLIGERE dato, aldri med
+  // kampens eget resultat eller kamper samme dag eller senere. Før endret
+  // prosentene ved FKH-Stabæk seg med kampens eget resultat (0-2: H 48 %,
+  // 2-0: H 51 %). For et lag i hver liga, med lagets tre første uspilte
+  // kamper A, B og C i samme rolle (hjemme eller borte), C etter B:
+  // (1) A med ulike resultater gir samme prosenter ved A;
+  // (2) et resultat i A endrer B; (3) et resultat i C endrer ikke B, verken i
+  // kamplisten, på kortet "Neste kamp" eller i det simuleringen får
+  // (oddsOverride og forskyvningen i simStilling); (4) to kamper samme dag
+  // påvirker ikke hverandre (B flyttet til As dag). Uten scenario får
+  // Workeren nøyaktig lagstyrkene uten scenario og ingen forskyvning.
+  // Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare tidsrekkefolge
+  const tidsrekkefolge = async () => {
+    setGroup('Tidsrekkefølge: en kamps sannsynlighet bygger bare på tidligere resultater');
+    for (const [sti, liga, lag] of [['/obos/', 'OBOS', 'Haugesund'], ['/eliteserien/', 'Eliteserien', 'Brann']]) {
+      const pg = await open(1400, 900, base.replace('/eliteserien/', sti) + '#team=' + encodeURIComponent(lag));
+      await settle(pg);
+      const r = await pg.evaluate(lag => {
+        // B og C har laget i samme rolle som i A (hjemme eller borte): et
+        // hjemmeresultat flytter angrep og hjemmefordel like mye, så bortestyrken
+        // (att - ha) og dermed bortekampene endres ikke av det, og omvendt.
+        // Ellers ville (2) og (3) ikke kunne skille ny og gammel regel.
+        const egne = matches.filter(m => m.hg == null && (m.home === lag || m.away === lag)).sort((x, y) => x.date.localeCompare(y.date));
+        const A = egne[0], hjemmeA = A.home === lag;
+        const B = egne.find(m => m.date > A.date && (m.home === lag) === hjemmeA);
+        const C = egne.find(m => m.date > B.date && (m.home === lag) === hjemmeA);   // samme rolle, ellers endrer den ikke B uansett
+        const les = m => { const el = document.querySelector(`.match[data-id="${m.id}"] .quick`);
+          return JSON.stringify({dom: [...el.querySelectorAll('.pct[data-o]')].map(x => x.textContent), r: rateFor(m.home, m.away).map(x => +x.toFixed(12))}); };
+        const kort = () => [...document.querySelectorAll('#nmHub button[data-q]')].map(b => b.textContent).join(' ');
+        const sim = m => { const {open} = buildQaOpen(), j = open.findIndex(o => o[0] === TI[m.home] && o[1] === TI[m.away]), S = simStilling(open);
+          const O = S.forskyvningIdx && S.forskyvningIdx[j] != null ? S.forskyvning[S.forskyvningIdx[j]] : null;
+          return JSON.stringify({O: O && Object.fromEntries(Object.entries(O).map(([k, v]) => [k, v.map(x => +x.toFixed(12))])), odds: oddsOverrideFor(m.home, m.away)}); };
+        const sett = (m, hg, ag) => { setMatch(m, hg, ag); render(); };
+        const tom = () => { matches.forEach(m => setMatch(m, null, null)); render(); };
+        const ut = {lag, A: `${A.home}-${A.away} ${A.date}`, B: `${B.home}-${B.away} ${B.date}`, C: `${C.home}-${C.away} ${C.date}`};
+        // Uten scenario: ingen forskyvning, lagstyrkene uten scenario.
+        tom();
+        const S0 = simStilling(buildQaOpen().open), b0 = baseStilling();
+        ut.utenScenario = !S0.forskyvning && ['att', 'con', 'ha', 'hc'].every(k => S0[k].every((v, i) => v === b0[k][i] && v === LIVE[k][i]));
+        // (1) A tom, 0-2 og 2-0.
+        const a0 = les(A); sett(A, 0, 2); const a1 = les(A); sett(A, 2, 0); const a2 = les(A);
+        ut.en = {likt: a0 === a1 && a1 === a2, a0, a1, a2};
+        // (2) et resultat i A endrer B.
+        tom(); const b0r = les(B); sett(A, 5, 0); const b1r = les(B);
+        ut.to = {endret: b0r !== b1r, b0r, b1r};
+        // (3) et resultat i C endrer ikke B: kamplisten, kortet, simuleringen.
+        tom(); const bL = les(B), bS = sim(B), k0 = kort(); sett(C, 5, 0); const bL2 = les(B), bS2 = sim(B), k1 = kort();
+        ut.tre = {likt: bL === bL2 && bS === bS2 && k0 === k1 && k0.length > 0, bL, bL2, bS: bS.slice(0, 120), bS2: bS2.slice(0, 120), k0, k1};
+        // Simuleringen bruker det samme som kamplisten for B, med et resultat i A.
+        tom(); sett(A, 5, 0);
+        { const {open} = buildQaOpen(), j = open.findIndex(o => o[0] === TI[B.home] && o[1] === TI[B.away]), S = simStilling(open);
+          const O = S.forskyvning[S.forskyvningIdx[j]], st = {att: S.att.map((v, i) => v + O.att[i]), con: S.con.map((v, i) => v + O.con[i]), ha: S.ha.map((v, i) => v + O.ha[i]), hc: S.hc.map((v, i) => v + O.hc[i])};
+          const sr = stateRate(st, B.home, B.away), lr = stateRate(stillingForKamp(B.home, B.away), B.home, B.away), od = oddsOverrideFor(B.home, B.away);
+          ut.samme = {modell: Math.abs(sr[0] - lr[0]) < 1e-9 && Math.abs(sr[1] - lr[1]) < 1e-9, odds: !od || JSON.stringify(od) === JSON.stringify(rateFor(B.home, B.away))}; }
+        // (4) samme dag: B flyttes til As dag.
+        tom(); const dB = B.date; B.date = A.date; refreshLiveState(); render();
+        const s0 = les(B); sett(A, 5, 0); const s1 = les(B);
+        ut.fire = {likt: s0 === s1, s0, s1};
+        tom(); B.date = dB; refreshLiveState(); render();
+        return ut;
+      }, lag);
+      check(`${liga}: uten scenario får Workeren lagstyrkene uten scenario og ingen forskyvning (tallene uendret)`, r.utenScenario, JSON.stringify(r));
+      check(`${liga} (1): ${r.A} med 0-2 og 2-0 gir samme prosenter ved kampen som uten resultat`, r.en.likt, JSON.stringify(r.en));
+      check(`${liga} (2): et resultat i ${r.A} endrer prosentene i ${r.B}`, r.to.endret, JSON.stringify(r.to));
+      check(`${liga} (3): et resultat i ${r.C} endrer ikke ${r.B} i kamplisten, på kortet eller i simuleringen`, r.tre.likt, JSON.stringify(r.tre));
+      check(`${liga}: simuleringen får samme målrater for ${r.B} som kamplisten (lagstyrker og odds)`, r.samme.modell && r.samme.odds, JSON.stringify(r.samme));
+      check(`${liga} (4): to kamper samme dag påvirker ikke hverandre (${r.B} flyttet til samme dag som ${r.A})`, r.fire.likt, JSON.stringify(r.fire));
       await pg.close();
     }
   };
@@ -2069,9 +2141,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'betinget') await betingetLike();
       else if (BARE === 'rundemerknad') await rundemerknad();
       else if (BARE === 'kanter') await overskriftKanter();
+      else if (BARE === 'tidsrekkefolge') await tidsrekkefolge();
       else if (BARE === 'nederst') await nederstPaaSiden();
       else if (BARE === 'justering') await poengjusteringer();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, justering)`);
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, justering)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -2915,6 +2988,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await nullstillGrunnlag();
     await rundemerknad();
     await overskriftKanter();
+    await tidsrekkefolge();
     await page.bringToFront();
 
     // ---- 18. rulling til svaret på iPad-bredder ----
@@ -4321,6 +4395,11 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           let frø = 4242; const tilf = () => { frø = (frø * 1103515245 + 12345) % 2147483648; return frø / 2147483648; };
           const odds = matches.filter(m => ODDS_UP[m.home + '|' + m.away]);
           const apne = matches.filter(m => m.hg == null && !ODDS_UP[m.home + '|' + m.away]);
+          // Tidsrekkefølgen (3.10.2026): bare resultater med tidligere dato
+          // virker inn på oddskampene. Kampene som fylles inn, flyttes derfor
+          // (bare i minnet) til før dem, så hvert scenario gir nye inndata.
+          const datoer = apne.map(m => m.date), tidlig = odds.reduce((x, m) => m.date < x ? m.date : x, '9999');
+          apne.forEach(m => { m.date = '2000-01-01'; });
           const r0 = __rp.regn; let maks = 0, scen = 0;
           while (__rp.regn - r0 < 560 && scen < 400) {
             scen++;
@@ -4331,8 +4410,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           // Sist brukt skal fortsatt være i minnet (eldste kastes, ikke nyeste).
           const r1 = __rp.regn; odds.forEach(m => { delete RATES[m.home + '|' + m.away]; rateFor(m.home, m.away); });
           const sistBruktHusket = __rp.regn === r1;
-          apne.forEach(m => setMatch(m, null, null, false)); render();
-          return {finnes: true, regnet: __rp.regn - r0, scen, maks, naa: FIT_MINNE.size, grense: FIT_MINNE_MAKS, sistBruktHusket};
+          apne.forEach((m, i) => { setMatch(m, null, null, false); m.date = datoer[i]; }); render();
+          return {finnes: true, regnet: __rp.regn - r0, scen, maks, naa: FIT_MINNE.size, grense: FIT_MINNE_MAKS, sistBruktHusket, tidlig};
         });
         check(`${liga}: minnet overstiger aldri 500 etter mange ulike scenarioer`,
           g.finnes && g.grense === 500 && g.regnet > 500 && g.maks <= 500 && g.naa === 500 && g.sistBruktHusket, JSON.stringify(g));
@@ -4407,8 +4486,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     // fanger oppgavene svarveien faktisk sender ("Rundens viktigste kamp", "Hva
     // betyr neste kamp?", "Heie på", finsilingen i "Hvilke kamper betyr
     // mest?"), spiller hver låste oppgave av i en Worker (mode laastStilling,
-    // samme kode som oppgaven kjører) og sammenligner bit for bit med LIVE og
-    // oddsOverrideFor etter setMatch + refreshLiveState. Uten og med et annet
+    // samme kode som oppgaven kjører) og sammenligner bit for bit med
+    // simStilling (lagstyrkene og forskyvningen per kamp etter tidsregelen,
+    // 3.10.2026) og oddsOverrideFor etter setMatch + refreshLiveState. Uten og med et annet
     // resultat allerede fylt inn. Før fikk den låste kjøringen lagstyrkene og
     // oddsratene fra før resultatet.
     //  I tillegg: de delte funksjonene i WORKER_SRC er tegn for tegn
@@ -4499,12 +4579,15 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           const likt = (a, b) => a.length === b.length && a.every((x, i) => Object.is(x, b[i]));
           const ulike = []; let par = 0, maksAvvik = 0;
           laaste.forEach((m, i) => {
-            const st = stillinger[i] || {att: m.att, con: m.con, ha: m.ha, hc: m.hc, oddsOverride: m.oddsOverride};
+            const st = stillinger[i] || {att: m.att, con: m.con, ha: m.ha, hc: m.hc, oddsOverride: m.oddsOverride, forskyvning: m.forskyvning, forskyvningIdx: m.forskyvningIdx};
             const o = m.open[m.forcedIdx], x = matches.find(y => !(y.hg != null && y.ag != null) && TI[y.home] === o[0] && TI[y.away] === o[1]);
             setMatch(x, m.forcedScore[0], m.forcedScore[1], false); refreshLiveState();
-            const navn = `${x.home}-${x.away} ${m.forcedScore.join('-')}`;
+            const navn = `${x.home}-${x.away} ${m.forcedScore.join('-')}`, S = simStilling(m.open);
             for (const f of ['att', 'con', 'ha', 'hc']) { par++;
-              if (!likt(Array.from(st[f]), Array.from(LIVE[f]))) { ulike.push(`${navn}: ${f}`); maksAvvik = Math.max(maksAvvik, ...Array.from(LIVE[f]).map((v, j) => Math.abs(v - st[f][j]))); } }
+              if (!likt(Array.from(st[f]), Array.from(S[f]))) { ulike.push(`${navn}: ${f}`); maksAvvik = Math.max(maksAvvik, ...Array.from(S[f]).map((v, j) => Math.abs(v - st[f][j]))); } }
+            par++;
+            if (JSON.stringify(st.forskyvningIdx || null) !== JSON.stringify(S.forskyvningIdx || null)
+                || JSON.stringify(st.forskyvning || null) !== JSON.stringify(S.forskyvning || null)) ulike.push(`${navn}: forskyvning`);
             m.open.forEach((oo, j) => { if (j === m.forcedIdx) return;
               const sc = oddsOverrideFor(TEAMS[oo[0]], TEAMS[oo[1]]), sendt = (st.oddsOverride || [])[j] || null; par++;
               if (!((sc === null && sendt === null) || (sc && sendt && likt(sc, sendt)))) ulike.push(`${navn}: oddsOverride ${TEAMS[oo[0]]}-${TEAMS[oo[1]]}`); });
@@ -5102,7 +5185,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         // utgangsstilling, t.over).
         const alle = grunnlagOppgaver(openMatches), utvalg = [alle[0], alle.find(t => t.id.endsWith(':U')), alle.find(t => t.over)].filter(Boolean);
         const res = await runZoneTasks({mu: MODEL.mu, H: MODEL.H, k: FORM_K,
-          att: Array.from(LIVE.att), con: Array.from(LIVE.con), ha: Array.from(LIVE.ha), hc: Array.from(LIVE.hc),
+          ...simStilling(open),
           P0: Array.from(P0), G0: Array.from(G0), F0: Array.from(F0), open, oddsOverride,
           N, ti: 3, zone: QA_KEY_ZONES[1], seed: hashStr(scenarioKey + '|impact'), wantAll: true}, utvalg, null, 'grunnlag-test');
         const n = TEAMS.length;
@@ -5338,8 +5421,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           const {P0, G0, F0, open, openMatches, oddsOverride, scenarioKey} = buildQaOpen();
           const nr = qaNextRoundMatches(openMatches), m = nr.list.find(x => x.home === 'Brann' && x.away === 'Viking') || nr.list[0], idx = openMatches.indexOf(m);
           const tasks = grunnlagOppgaver(openMatches).filter(t => t.id === 'base' || t.idx === idx);
-          const payload = (N, seed) => ({mu: MODEL.mu, H: MODEL.H, k: FORM_K, att: Array.from(LIVE.att), con: Array.from(LIVE.con),
-            ha: Array.from(LIVE.ha), hc: Array.from(LIVE.hc), P0: Array.from(P0), G0: Array.from(G0), F0: Array.from(F0), open, oddsOverride,
+          const payload = (N, seed) => ({mu: MODEL.mu, H: MODEL.H, k: FORM_K, ...simStilling(open), P0: Array.from(P0), G0: Array.from(G0), F0: Array.from(F0), open, oddsOverride,
             N, ti: 0, zone: QA_KEY_ZONES[0], seed, wantAll: true});
           const utvalg = tasks.filter(t => t.id === 'base' || t.id.endsWith(':U'));
           const samme = await runZoneTasks(payload(N, hashStr(scenarioKey + '|impact')), utvalg, null, 'grunnlag-test');

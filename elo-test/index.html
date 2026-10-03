@@ -2088,15 +2088,25 @@ function stateRate(state,home,away){
   eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
   return [Math.exp(eh), Math.exp(ea)];
 }
-// Bygger lagstyrkene på nytt: kopi av MODEL (omindeksert til TI-rekkefølge,
-// samme som TEAMS/standings, ikke modellens egen MTI-rekkefølge, så resten av
-// koden kan bruke én felles indeksering), deretter kjøres alle resultater som
-// står i kamplisten nå (også de grå simulerte, se item 7) gjennom
-// oppdateringsregelen i kronologisk rekkefølge.
-function computeLiveState(){
+// Lagstyrkene uten scenario: kopi av MODEL, omindeksert til TI-rekkefølge
+// (samme som TEAMS/standings, ikke modellens egen MTI-rekkefølge, så resten
+// av koden kan bruke én felles indeksering).
+function baseStilling(){
   const n=TEAMS.length;
   const att=new Float64Array(n), con=new Float64Array(n), ha=new Float64Array(n), hc=new Float64Array(n);
   TEAMS.forEach((t,i)=>{ const mi=MTI[t]; att[i]=MODEL.att[mi]; con[i]=MODEL.con[mi]; ha[i]=MODEL.ha[mi]; hc[i]=MODEL.hc[mi]; });
+  return {att,con,ha,hc};
+}
+// TIDSREKKEFØLGE (3.10.2026): sannsynligheten for en kamp regnes med
+// lagstyrkene etter alle innfylte resultater med TIDLIGERE dato, aldri med
+// kampens eget resultat eller kamper samme dag eller senere. Før brukte alle
+// kampene LIVE, med alle innfylte resultater: FKH-Stabæk 0-2 ga H 48 %, 2-0
+// ga 51 %. stillingFoer(dato): stillingen etter de innfylte resultatene med
+// dato før `dato` (null: alle, som LIVE og Styrke-kolonnen). Kampene samme
+// dag regnes fra stillingen ved dagens start og legges til samlet, så de
+// ikke påvirker hverandre. Uten innfylte resultater er det MODEL, som før.
+function stillingFoer(dato){
+  const {att,con,ha,hc} = baseStilling();
   // Grensen (DRIFT_CAP_*) måles fra DENNE starttilstanden -- modellens eget
   // anslag akkurat nå, ikke sesongstart i kalendersans. Riktig referanse
   // uansett når på sesongen dette kalles: kampene som allerede er inne har
@@ -2104,20 +2114,51 @@ function computeLiveState(){
   // videre (resten av det som fylles inn i scenarioet) grensen skal dempe.
   const att0=Float64Array.from(att), con0=Float64Array.from(con), ha0=Float64Array.from(ha), hc0=Float64Array.from(hc);
   const state={att,con,ha,hc};
-  // Flat FORM_K for alle kamper. Samme tilstand driver tabellen, kamplisten,
-  // simuleringen og svarene, så de aldri kan si ulike ting om samme kamp.
-  matches.filter(m=>m.hg!=null&&m.ag!=null).sort((x,y)=>x.date.localeCompare(y.date)).forEach(m=>{
-    const h=TI[m.home], a=TI[m.away], [lh,la]=stateRate(state,m.home,m.away);
-    const rh=m.hg-lh, ra=m.ag-la;
-    const kH=FORM_K, kA=FORM_K;
-    applyDrift(att,att0,h,kH*rh,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,h,kH*rh,DRIFT_CAP_HAHC);
-    applyDrift(con,con0,a,kH*rh,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,a,-kH*rh,DRIFT_CAP_HAHC);
-    applyDrift(att,att0,a,kA*ra,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,a,-kA*ra,DRIFT_CAP_HAHC);
-    applyDrift(con,con0,h,kA*ra,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,h,kA*ra,DRIFT_CAP_HAHC);
-  });
+  // Flat FORM_K for alle kamper. Dag for dag: restene (resultat minus
+  // forventning) for alle kampene en dag regnes fra stillingen ved dagens
+  // start, og legges så til.
+  const fylte = matches.filter(m=>m.hg!=null&&m.ag!=null && (dato==null || m.date<dato))
+    .sort((x,y)=>x.date.localeCompare(y.date));
+  for(let i=0;i<fylte.length;){
+    let j=i; while(j<fylte.length && fylte[j].date===fylte[i].date) j++;
+    const rester = fylte.slice(i,j).map(m=>{ const [lh,la]=stateRate(state,m.home,m.away); return [TI[m.home], TI[m.away], m.hg-lh, m.ag-la]; });
+    rester.forEach(([h,a,rh,ra])=>{
+      const kH=FORM_K, kA=FORM_K;
+      applyDrift(att,att0,h,kH*rh,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,h,kH*rh,DRIFT_CAP_HAHC);
+      applyDrift(con,con0,a,kH*rh,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,a,-kH*rh,DRIFT_CAP_HAHC);
+      applyDrift(att,att0,a,kA*ra,DRIFT_CAP_ATTCON); applyDrift(ha,ha0,a,-kA*ra,DRIFT_CAP_HAHC);
+      applyDrift(con,con0,h,kA*ra,DRIFT_CAP_ATTCON); applyDrift(hc,hc0,h,kA*ra,DRIFT_CAP_HAHC);
+    });
+    i=j;
+  }
   return state;
 }
-function refreshLiveState(){ LIVE=computeLiveState(); for(const k in RATES) delete RATES[k]; }
+// Lagstyrkene etter ALLE innfylte resultater: LIVE, Styrke-kolonnen.
+function computeLiveState(){ return stillingFoer(null); }
+// Utgangsstillingen Workeren simulerer fra, for de åpne kampene `open`: stillingen
+// uten scenario (baseStilling), pluss for hver åpen kamp forskyvningen fra de
+// innfylte resultatene med tidligere dato (stillingFoer(kampens dato) minus
+// baseStilling). Like datoer deler forskyvning. Uten innfylte resultater før
+// kampen er forskyvningen null, og Workeren regner nøyaktig som før.
+function simStilling(open){
+  const b = baseStilling(), ut = {att:Array.from(b.att), con:Array.from(b.con), ha:Array.from(b.ha), hc:Array.from(b.hc)};
+  const fylte = matches.filter(m=>m.hg!=null&&m.ag!=null);
+  if(!fylte.length) return ut;
+  const forste = fylte.reduce((x,m)=>m.date<x?m.date:x, fylte[0].date);
+  const forskyvning = [], idx = {}, forskyvningIdx = open.map(o=>{
+    const m = aapenKampFor(o);
+    if(!m || m.date<=forste) return null;
+    if(!(m.date in idx)){
+      const S = stillingFoer(m.date), f = {};
+      ['att','con','ha','hc'].forEach(k=>{ f[k] = Array.from(S[k], (v,i)=>v - b[k][i]); });
+      idx[m.date] = forskyvning.push(f) - 1;
+    }
+    return idx[m.date];
+  });
+  if(forskyvningIdx.some(x=>x!=null)){ ut.forskyvning = forskyvning; ut.forskyvningIdx = forskyvningIdx; }
+  return ut;
+}
+function refreshLiveState(){ LIVE=computeLiveState(); for(const k in RATES) delete RATES[k]; STILLING_FOER.clear(); }
 
 // Minne for fitRates: samme inndata (de blandede sannsynlighetene og
 // startpunktet, nøyaktige tall) gir alltid samme svar, så det regnes én gang.
@@ -2156,9 +2197,18 @@ function rateMedStilling(state,home,away){
   const pH=ODDS_W*mk[0]+(1-ODDS_W)*md.H, pB=ODDS_W*mk[2]+(1-ODDS_W)*md.B;
   return {r:fitRates(pH,pB,base),odds:true,mk,md,meta:o};
 }
+// Stillingen for en kamp i kamplisten: før kampens dato (stillingFoer). En kamp
+// som ikke står i kamplisten (en spilt kamp) får stillingen uten scenario.
+// Husket per dato til neste refreshLiveState().
+const STILLING_FOER = new Map();
+function stillingForKamp(home,away){
+  const m = matches.find(x=>x.home===home && x.away===away), dato = m ? m.date : '';
+  if(!STILLING_FOER.has(dato)) STILLING_FOER.set(dato, stillingFoer(dato));
+  return STILLING_FOER.get(dato);
+}
 function rateFor(home,away){
   const k=home+"|"+away; if(RATES[k]) return RATES[k].r;
-  RATES[k]=rateMedStilling(LIVE,home,away); return RATES[k].r;
+  RATES[k]=rateMedStilling(stillingForKamp(home,away),home,away); return RATES[k].r;
 }
 function predict(home,away){ const [lh,la]=rateFor(home,away); return [Math.round(lh), Math.round(la)]; }
 
@@ -2420,6 +2470,10 @@ function outcomeProbs(lh, la){
 // Gjenbrukte Float64Array-er (ingen allokering per kamp) og dcTau bare i de fire
 // cellene den avviker fra 1 (tau=1 gir eksakt samme produkt), så tallene er
 // bit-for-bit de samme som med den rene løkka, bare raskere.
+// Forskyvningen for åpen kamp j fra de innfylte resultatene med tidligere dato
+// (simStilling på hovedtråden), lagt oppå lagstyrkene i simuleringen. null
+// uten innfylte resultater før kampen: da regnes det nøyaktig som før.
+function forskyvningFor(d, j){ return d.forskyvningIdx && d.forskyvningIdx[j]!=null ? d.forskyvning[d.forskyvningIdx[j]] : null; }
 var SC_PH=new Float64Array(GMAX+1), SC_PA=new Float64Array(GMAX+1), SC_CUM=new Float64Array((GMAX+1)*(GMAX+1));
 function sampleScoreDC(lh, la, rnd){
   var ph=SC_PH, pa=SC_PA, cum=SC_CUM, n=GMAX+1;
@@ -2445,7 +2499,8 @@ self.onmessage = function(e){
   else if(d.mode==='insightsAlle'){ runInsightsAlle(d); }
   // Bare for testene: utgangsstillingen Workeren ville brukt for et låst utfall.
   else if(d.mode==='laastStilling'){ var ml = medLaast(d);
-    postMessage({runId:d.runId, mode:'laastStilling', att:ml.att, con:ml.con, ha:ml.ha, hc:ml.hc, oddsOverride:ml.oddsOverride}); }
+    postMessage({runId:d.runId, mode:'laastStilling', att:ml.att, con:ml.con, ha:ml.ha, hc:ml.hc, oddsOverride:ml.oddsOverride,
+                 forskyvning:ml.forskyvning, forskyvningIdx:ml.forskyvningIdx}); }
   else if(d.mode==='zoneTask'){
     // Låst utfall: utgangsstillingen (lagstyrker og målrater etter utfallet)
     // regnes her i Workeren, med hovedtrådens egne funksjoner, se medLaast.
@@ -2754,7 +2809,9 @@ function runProb(d){
       var lh, la;
       if(forced){ lh=forced[0]; la=forced[1]; }
       else {
-        var eh=mu+H+attS[h]+haS[h]+conS[a]-hcS[a], ea=mu+attS[a]-haS[a]+conS[h]+hcS[h];
+        var O=forskyvningFor(d,j), eh, ea;
+        if(O){ eh=mu+H+(attS[h]+O.att[h])+(haS[h]+O.ha[h])+(conS[a]+O.con[a])-(hcS[a]+O.hc[a]); ea=mu+(attS[a]+O.att[a])-(haS[a]+O.ha[a])+(conS[h]+O.con[h])+(hcS[h]+O.hc[h]); }
+        else { eh=mu+H+attS[h]+haS[h]+conS[a]-hcS[a]; ea=mu+attS[a]-haS[a]+conS[h]+hcS[h]; }
         eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
         lh=Math.exp(eh); la=Math.exp(ea);
       }
@@ -2814,7 +2871,9 @@ function runTypical(d){
     var lh0, la0;
     if(forced0){ lh0=forced0[0]; la0=forced0[1]; }
     else {
-      var eh0=mu+H+att0[h0]+ha0[h0]+con0[a0]-hc0[a0], ea0=mu+att0[a0]-ha0[a0]+con0[h0]+hc0[h0];
+      var O0=forskyvningFor(d,j0), eh0, ea0;
+      if(O0){ eh0=mu+H+(att0[h0]+O0.att[h0])+(ha0[h0]+O0.ha[h0])+(con0[a0]+O0.con[a0])-(hc0[a0]+O0.hc[a0]); ea0=mu+(att0[a0]+O0.att[a0])-(ha0[a0]+O0.ha[a0])+(con0[h0]+O0.con[h0])+(hc0[h0]+O0.hc[h0]); }
+      else { eh0=mu+H+att0[h0]+ha0[h0]+con0[a0]-hc0[a0]; ea0=mu+att0[a0]-ha0[a0]+con0[h0]+hc0[h0]; }
       eh0=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh0)); ea0=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea0));
       lh0=Math.exp(eh0); la0=Math.exp(ea0);
     }
@@ -2840,7 +2899,9 @@ function runTypical(d){
       var lh, la;
       if(forced){ lh=forced[0]; la=forced[1]; }
       else {
-        var eh=mu+H+att[h]+ha[h]+con[a]-hc[a], ea=mu+att[a]-ha[a]+con[h]+hc[h];
+        var O=forskyvningFor(d,j), eh, ea;
+        if(O){ eh=mu+H+(att[h]+O.att[h])+(ha[h]+O.ha[h])+(con[a]+O.con[a])-(hc[a]+O.hc[a]); ea=mu+(att[a]+O.att[a])-(ha[a]+O.ha[a])+(con[h]+O.con[h])+(hc[h]+O.hc[h]); }
+        else { eh=mu+H+att[h]+ha[h]+con[a]-hc[a]; ea=mu+att[a]-ha[a]+con[h]+hc[h]; }
         eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
         lh=Math.exp(eh); la=Math.exp(ea);
       }
@@ -2942,7 +3003,9 @@ function runInsightsAlle(d){
       var h=open[j][0], a=open[j][1], fo=oddsOverride[j], lh, la;
       if(fo){ lh=fo[0]; la=fo[1]; }
       else {
-        var eh=mu+H+attS[h]+haS[h]+conS[a]-hcS[a], ea=mu+attS[a]-haS[a]+conS[h]+hcS[h];
+        var O=forskyvningFor(d,j), eh, ea;
+        if(O){ eh=mu+H+(attS[h]+O.att[h])+(haS[h]+O.ha[h])+(conS[a]+O.con[a])-(hcS[a]+O.hc[a]); ea=mu+(attS[a]+O.att[a])-(haS[a]+O.ha[a])+(conS[h]+O.con[h])+(hcS[h]+O.hc[h]); }
+        else { eh=mu+H+attS[h]+haS[h]+conS[a]-hcS[a]; ea=mu+attS[a]-haS[a]+conS[h]+hcS[h]; }
         eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
         lh=Math.exp(eh); la=Math.exp(ea);
       }
@@ -3030,7 +3093,9 @@ function simulateZoneProb(d, forcedIdx, forcedScore, seed, wantAll){
       var lh, la;
       if(forced){ lh=forced[0]; la=forced[1]; }
       else {
-        var eh=d.mu+d.H+attS[h]+haS[h]+conS[a]-hcS[a], ea=d.mu+attS[a]-haS[a]+conS[h]+hcS[h];
+        var O=forskyvningFor(d,j), eh, ea;
+        if(O){ eh=d.mu+d.H+(attS[h]+O.att[h])+(haS[h]+O.ha[h])+(conS[a]+O.con[a])-(hcS[a]+O.hc[a]); ea=d.mu+(attS[a]+O.att[a])-(haS[a]+O.ha[a])+(conS[h]+O.con[h])+(hcS[h]+O.hc[h]); }
+        else { eh=d.mu+d.H+attS[h]+haS[h]+conS[a]-hcS[a]; ea=d.mu+attS[a]-haS[a]+conS[h]+hcS[h]; }
         eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
         lh=Math.exp(eh); la=Math.exp(ea);
       }
@@ -3064,7 +3129,7 @@ function simulateZoneProb(d, forcedIdx, forcedScore, seed, wantAll){
 var TEAMS = [], TI = {}, MTI = {}, MODEL = null, matches = [], ODDS_UP = {}, FORM_K = 0, ODDS_W = 0;
 var FIT_MINNE = new Map(), FIT_MINNE_MAKS = ${FIT_MINNE_MAKS};
 var OUT_PH = new Float64Array(GMAX+1), OUT_PA = new Float64Array(GMAX+1);
-${[pois, poisFyll, outcome, stateRate, computeLiveState, rateMedStilling, fitRates, fitRatesRegn, liveMedLaast, aapenKampFor, laastOver].map(String).join('\n')}
+${[pois, poisFyll, outcome, stateRate, baseStilling, stillingFoer, computeLiveState, simStilling, rateMedStilling, fitRates, fitRatesRegn, liveMedLaast, aapenKampFor, laastOver].map(String).join('\n')}
 // Grunnlaget fra hovedtråden (stillingsGrunnlag): data, ikke kode. Minnet for
 // fitRates fylles med hovedtrådens oppføringer, så kampene et låst utfall
 // ikke endrer, ikke regnes på nytt her.
@@ -3215,11 +3280,20 @@ function aapenKampFor(o){
 // resultatet utfylt. Kjøres i Workerne (medLaast i WORKER_SRC), ikke her:
 // fitRates for oddskampene i hver låste stilling tok opptil 1,6 s på
 // hovedtråden i "Hvilke kamper betyr mest?".
+// Tidsregelen (stillingFoer) gjelder også her: det låste resultatet virker bare
+// inn på kamper med senere dato.
 function laastOver(open, idx, score){
-  const S = liveMedLaast(aapenKampFor(open[idx]), score[0], score[1]);
-  return {att:Array.from(S.att), con:Array.from(S.con), ha:Array.from(S.ha), hc:Array.from(S.hc),
-          oddsOverride: open.map(o=>{ const h=TEAMS[o[0]], a=TEAMS[o[1]];
-            return ODDS_UP[h+"|"+a] ? rateMedStilling(S,h,a).r : null; })};
+  const m = aapenKampFor(open[idx]), hg0 = m.hg, ag0 = m.ag;
+  const datoer = open.map(o=>{ const x = aapenKampFor(o); return x ? x.date : null; });
+  m.hg = score[0]; m.ag = score[1];
+  try{
+    const S = simStilling(open), dag = new Map();
+    S.oddsOverride = open.map((o,j)=>{ const h=TEAMS[o[0]], a=TEAMS[o[1]];
+      if(j===idx || !ODDS_UP[h+"|"+a]) return null;
+      if(!dag.has(datoer[j])) dag.set(datoer[j], stillingFoer(datoer[j]));
+      return rateMedStilling(dag.get(datoer[j]),h,a).r; });
+    return S;
+  } finally { m.hg = hg0; m.ag = ag0; }
 }
 // For én oppgave i runZoneTasks: et låst utfall får egen utgangsstilling,
 // regnet i Workeren (laastStilling), oppå en eventuell t.over (egen
@@ -3277,7 +3351,7 @@ function runMCAsync(N){
   // begge fra grunnlagsfilen, som bruker det samme frøet.
   getWorker().postMessage({
     runId:mcRunId, seed:hashStr(scenarioKey+'|impact'), mu:MODEL.mu, H:MODEL.H, k:FORM_K,
-    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    ...simStilling(open),
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride, N
   });
   // Med minst INNSIKT_SAMTIDIG_KJERNER kjerner starter innsikten samtidig med
@@ -3457,7 +3531,7 @@ function simulateTypicalAsync(open, forcedSeed){
     getHjelpWorker().postMessage({
       mode:'typical', runId, seed,
       mu:MODEL.mu, H:MODEL.H, k:FORM_K,
-      att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+      ...simStilling(openData),
       open: openData, oddsOverride
     });
   });
@@ -4542,7 +4616,7 @@ async function qaCheerFor(team, onPartial){
   });
   const payload = {
     mu:MODEL.mu, H:MODEL.H, k:FORM_K,
-    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    ...simStilling(open),
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
     N:QA_CHEER_N, ti:TI[team], zone, seed:hashStr(scenarioKey+'|impact')
   };
@@ -4683,7 +4757,7 @@ async function qaLastMatchData(team, gruppe='forrige'){
     return {...t, eloAlt:{home:m.home, away:m.away, hg:t.score[0], ag:t.score[1]}}; })];
   const res = await runZoneTasks({
     mu:MODEL.mu, H:MODEL.H, k:FORM_K,
-    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    ...simStilling(open),
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
     N:QA_LAST_N, ti:TI[team], zone, seed:hashStr(scenarioKey+'|impact')
   }, tasks, null, gruppe);
@@ -4898,7 +4972,10 @@ function forrigeLinjeOppdater(){
     if(forrigeLinjeVenter!==key) return;       // et annet lag eller scenario regnes nå
     forrigeLinjeVenter = null;
     if(!d || d.noMatch) return;
-    forrigeLinje = {key:forrigeLinjeKey(team, scen, d.zone.key), e:{...forrigeKampRad(d), iScen:matches.includes(d.m)}};
+    // Forventningen uavrundet, som svaret bruker (qaLastMatch). forrigeKampRad
+    // runder til fire desimaler for lastmatch.json, og ved en kant (0,13498
+    // -> 0,1350) ga linja da 14 % før kampen og svaret 13 % (3.10.2026).
+    forrigeLinje = {key:forrigeLinjeKey(team, scen, d.zone.key), e:{...forrigeKampRad(d), expected:d.expected, iScen:matches.includes(d.m)}};
     const el = document.querySelector('#odds .lastmatch'), l = qaLastMatchLine(team, forrigeLinje.e);
     if(el && l && SELECTED_TEAM===team && qaScenarioKey()===scen) el.innerHTML = l.html;
   }).catch(()=>{ if(forrigeLinjeVenter===key) forrigeLinjeVenter = null; });
@@ -5180,7 +5257,7 @@ async function grunnlagRegn(N = GRUNNLAG_N){
   const tasks = grunnlagOppgaver(openMatches);
   const res = await runZoneTasks({
     mu:MODEL.mu, H:MODEL.H, k:FORM_K,
-    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    ...simStilling(open),
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
     N, ti:0, zone:QA_KEY_ZONES[0], seed:hashStr(scenarioKey+'|impact'), wantAll:true
   }, tasks, null, 'grunnlag');
@@ -5248,7 +5325,7 @@ async function qaKeyRoundData(opts){
   });
   const res = await runZoneTasks({
     mu:MODEL.mu, H:MODEL.H, k:FORM_K,
-    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    ...simStilling(open),
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
     N, ti:0, zone:QA_KEY_ZONES[0], seed:hashStr(scenarioKey+'|impact'), wantAll:true
   }, tasks, null, 'runde');
@@ -5598,7 +5675,7 @@ function innsiktSoner(){
 function innsiktPayload(N){
   const {P0,G0,F0,open,oddsOverride,scenarioKey} = buildQaOpen();
   return {mu:MODEL.mu, H:MODEL.H, k:FORM_K,
-    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    ...simStilling(open),
     P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride, N,
     seed:hashStr(scenarioKey+'|impact'), zones:innsiktSoner(), checkpoints:buildCheckpoints(open)};
 }
@@ -5741,7 +5818,7 @@ function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base, grup
   });
   return runZoneTasks({
     mu:MODEL.mu, H:MODEL.H, k:FORM_K,
-    att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc),
+    ...simStilling(base.open),
     P0:Array.from(base.P0), G0:Array.from(base.G0), F0:Array.from(base.F0), open:base.open,
     oddsOverride:base.oddsOverride, N:base.N||QA_N_IMPACT, ti:TI[team], zone, seed:hashStr(scenarioKey+'|impact')
   }, tasks, null, gruppe || `impact:${++impactGruppeNr}`).then(res=>({results: candidates.map(c=>{
@@ -7815,6 +7892,13 @@ function computeLiveState(){
   // vist tall, og workeren leser dem ikke fordi oddsOverride er satt for ALLE
   // kamper. Dette er ikke konstruerte angreps- og forsvarstall.
   return {R, att:z(), con:z(), ha:z(), hc:z()};
+}
+// ELO-TEST: Workeren får de samme inerte bærerne som før (nuller fra LIVE, se
+// computeLiveState over), ikke produksjonens simStilling: ELO-modellen har ingen
+// att/con/ha/hc, og oddsOverride er satt for alle kamper. Tidsrekkefølgen i
+// produksjonen (stillingFoer) gjelder ikke ELO-tallene her ennå.
+function simStilling(open){
+  return {att:Array.from(LIVE.att), con:Array.from(LIVE.con), ha:Array.from(LIVE.ha), hc:Array.from(LIVE.hc)};
 }
 
 /* LÅSTE UTFALL I SVARENE FØLGER SAMME REGEL SOM SCENARIOENE.

@@ -436,6 +436,10 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # terskelen på 20 kamper i renderAccuracy; tabellene står i loggen som før.
 # Treffsikkerhetens ordlyd ("I år har siden tippet riktig i X % av
 # enkeltkampene ...", kolonnen "Tippet riktig") er flettet inn uendret.
+# Tidsrekkefølgen (3.10.2026: stillingFoer, simStilling, rateFor og laastOver
+# i produksjonen) er flettet inn uendret. Testsiden overstyrer computeLiveState,
+# stateRate, rateFor, oddsOverrideFor og laastTaskOver med ELO-versjonene og
+# sender oddsOverride for alle kamper, så regelen gjelder ikke ELO-tallene der.
 # Høyrekanten på P- og Styrke-overskriften (samme luft som cellene, 3.10.2026)
 # er flettet inn uendret.
 #
@@ -453,7 +457,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "93689f687efb7d6656c54f091a5501ca404d17f633b4e222e1e7a8921f95e652"
+BASE_SHA = "8f73771848055fe46e2dbdb3ce5e2f426a27306b3f2faed9941e7e95050d058f"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
