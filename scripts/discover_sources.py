@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
-"""Finner liga-ID-ene vi trenger hos API-Football og OddsPapi, med så få kall
-som mulig. Kjøres manuelt gjennom .github/workflows/discover-sources.yml, der
-nøklene ligger som secrets -- ikke lokalt, og nøklene skrives aldri ut.
+"""Finner turnerings-ID-ene vi trenger hos OddsPapi, med så få kall som
+mulig. Kjøres manuelt gjennom .github/workflows/discover-sources.yml, der
+nøkkelen ligger som secret -- ikke lokalt, og nøkkelen skrives aldri ut.
 
 Kall som brukes:
-  API-Football   1 kall:  /leagues?country=Norway            (av 100 i døgnet)
   OddsPapi       2 kall:  /v4/sports og /v4/tournaments      (av 250 i måneden)
                           -- /v4/historical-odds er alltid gratis, se docs
+
+API-Football er fjernet (3.10.2026): gratisplanen gir bare sesongene
+2022-2024, og nøkkelen ble ikke brukt til noe annet.
 
 Skriver bare ut det vi leter etter (norske ligaer), ikke hele svaret.
 """
@@ -17,7 +19,6 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-AF_BASE = "https://v3.football.api-sports.io"
 OP_BASE = "https://api.oddspapi.io"
 TIMEOUT = 30
 
@@ -26,70 +27,6 @@ def get(url, headers=None):
     req = urllib.request.Request(url, headers=headers or {})
     with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
         return json.loads(r.read().decode("utf-8"))
-
-
-def api_football(key):
-    print("== API-Football: norske ligaer (1 kall) ==")
-    try:
-        d = get(f"{AF_BASE}/leagues?country=Norway", {"x-apisports-key": key})
-    except urllib.error.HTTPError as e:
-        print(f"  FEIL {e.code}: {e.reason}")
-        return
-    except Exception as e:  # nettverk, tidsavbrudd
-        print(f"  FEIL: {type(e).__name__}: {e}")
-        return
-    errs = d.get("errors")
-    if errs:
-        print(f"  API svarte med feil: {errs}")
-        return
-    rows = d.get("response", [])
-    print(f"  {len(rows)} ligaer i Norge, {d.get('results')} treff")
-    for r in rows:
-        lg, seasons = r["league"], r.get("seasons", [])
-        years = [s["year"] for s in seasons]
-        cur = [s["year"] for s in seasons if s.get("current")]
-        has26 = 2026 in years
-        print(f"  id={lg['id']:>5}  {lg['name']:<28} type={lg.get('type','?'):<8} "
-              f"sesonger={min(years) if years else '-'}-{max(years) if years else '-'} "
-              f"({len(years)} stk){'  2026 FINNES' if has26 else ''}"
-              f"{'  NÅVÆRENDE=' + str(cur[0]) if cur else ''}")
-        if has26:
-            s26 = next(s for s in seasons if s["year"] == 2026)
-            cov = s26.get("coverage", {}).get("fixtures", {})
-            print(f"         2026: {s26.get('start')} til {s26.get('end')}, "
-                  f"dekning: resultater={cov.get('events')}, "
-                  f"statistikk={cov.get('statistics_fixtures')}, tabell={s26.get('coverage',{}).get('standings')}")
-
-
-def api_football_fixtures(key, league=104, season=2026):
-    """Terminlisten for én liga og sesong: 1 kall. Gir lagnavnene navnetabellen
-    trenger, og viser hvor mange kamper som har resultat."""
-    print(f"\n== API-Football: terminliste liga {league}, sesong {season} (1 kall) ==")
-    try:
-        d = get(f"{AF_BASE}/fixtures?league={league}&season={season}", {"x-apisports-key": key})
-    except Exception as e:
-        print(f"  FEIL: {type(e).__name__}: {e}")
-        return
-    if d.get("errors"):
-        print(f"  API svarte med feil: {d['errors']}")
-        return
-    rows = d.get("response", [])
-    teams, played, rounds = set(), 0, set()
-    last = ""
-    for r in rows:
-        teams.add(r["teams"]["home"]["name"]); teams.add(r["teams"]["away"]["name"])
-        rounds.add(r["league"].get("round", ""))
-        if r["goals"]["home"] is not None:
-            played += 1
-            last = max(last, r["fixture"]["date"][:10])
-    print(f"  {len(rows)} kamper, {len(teams)} lag, {len(rounds)} runder, "
-          f"{played} med resultat, siste {last or '-'}")
-    print(f"  lagnavn: {sorted(teams)}")
-    if rows:
-        f = rows[0]
-        print(f"  eksempel: {f['fixture']['date']} runde={f['league'].get('round')!r} "
-              f"{f['teams']['home']['name']} {f['goals']['home']}-{f['goals']['away']} {f['teams']['away']['name']} "
-              f"status={f['fixture']['status']['short']}")
 
 
 def oddspapi(key):
@@ -134,14 +71,7 @@ def oddspapi(key):
 
 
 def main():
-    af = os.environ.get("API_FOOTBALL_KEY", "").strip()
     op = os.environ.get("ODDSPAPI_KEY", "").strip()
-    if af:
-        api_football(af)
-        if os.environ.get("WITH_FIXTURES", "").lower() in ("1", "true", "yes"):
-            api_football_fixtures(af)
-    else:
-        print("== API-Football: hopper over, API_FOOTBALL_KEY er ikke satt ==")
     if op:
         oddspapi(op)
     else:

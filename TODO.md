@@ -3083,9 +3083,8 @@ Kilder, i anbefalt rekkefølge:
                  try from 2022 to 2024.'}
 
    Gratisnivået er 100 kall i døgnet, men inneværende sesong er bak
-   betalingsmur. Koden finnes alt i `scripts/discover_sources.py`
-   (`api_football_fixtures`, leser `f["league"]["round"]`), så den kan tas i
-   bruk umiddelbart hvis vi noen gang betaler.
+   betalingsmur. Koden og API_FOOTBALL_KEY er fjernet (3.10.2026); den
+   brukte ikke nøkkelen til noe annet.
 
 5. **thestatsapi.com.** Kamp-ID, dato, avspark, ingen runde. Må sjekkes om
    det er åpent og om vilkårene tillater offentlig bruk.
