@@ -234,6 +234,21 @@ def revider_kontroller(vaare, kontroller, naa):
     return feil, advarsler
 
 
+def etterkontroll_football_data(spilte, fd_rader):
+    """(feil, advarsler): de publiserte resultatene våre mot football-data.co.uk
+    (NOR.csv, lagret i eliteserien/data/odds_fd.json av fetch_odds_history.py).
+    Etterkontroll for Eliteserien (3.10.2026): oppdateres sjeldnere enn de andre
+    kildene, så en kamp som mangler der, er ikke et avvik. Et annet resultat er
+    det: en publisert kamp som en uavhengig leverandør er uenig i."""
+    fd = {(r["home"], r["away"]): (r["hg"], r["ag"]) for r in fd_rader if r.get("hg") is not None}
+    feil = []
+    for m in spilte:
+        k = (m["home"], m["away"])
+        if k in fd and m.get("hg") is not None and fd[k] != (m["hg"], m["ag"]):
+            feil.append(f"{k[0]}-{k[1]}: resultat {m['hg']}-{m['ag']} hos oss, {fd[k][0]}-{fd[k][1]} hos football-data.co.uk")
+    return feil, []
+
+
 def hent_kontroller(liga, vaare, naa, log=print):
     """Kontrollkildene for terminlisten som {navn: {(hjemme, borte): rad}}.
     En kilde som ikke kan hentes, gir en advarsel, aldri et avvik."""
@@ -482,6 +497,15 @@ def main(argv, naa=None):
     _kontroller, _ka = hent_kontroller(liga, vaare, naa)
     _kf, _ka2 = revider_kontroller(vaare, _kontroller, naa)
     feil, advarsler = feil + _kf, advarsler + _ka + _ka2
+    if liga == "eliteserien":
+        try:
+            _fd = json.loads((ROT / oppsett(liga)["data"] / "odds_fd.json").read_text(encoding="utf-8")).get("matches", [])
+            _spilte = json.loads((ROT / oppsett(liga)["data"] / "matches.json").read_text(encoding="utf-8"))
+            _ff, _fa = etterkontroll_football_data(_spilte, _fd)
+            feil, advarsler = feil + _ff, advarsler + _fa
+            print(f"  etterkontroll mot football-data.co.uk: {sum(1 for r in _fd if r.get('hg') is not None)} resultater, {len(_ff)} uenige")
+        except Exception as e:
+            advarsler.append(f"etterkontrollen mot football-data.co.uk kunne ikke kjøres ({type(e).__name__}: {e})")
     print(f"  kontrollert mot {', '.join(_kontroller) or 'ingen'} ({len(_kf)} avvik, {len(_ka) + len(_ka2)} advarsel(er))")
     print(f"Daglig terminlisterevisjon, {oppsett(liga)['visningsnavn']}: "
           f"{len(vaare)} kamper hos oss mot {len(kalender)} i kalenderfeeden")

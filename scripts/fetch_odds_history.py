@@ -99,8 +99,13 @@ def parse(csv_text, captured_matches=(), log=lambda s: None):
             src = "AvgC"
         else:
             continue
-        out.append({"date": date, "home": home, "away": away, "H": round(h, 4),
-                     "D": round(d, 4), "A": round(a, 4), "src": src})
+        rad = {"date": date, "home": home, "away": away, "H": round(h, 4),
+               "D": round(d, 4), "A": round(a, 4), "src": src}
+        # Sluttresultatet (HG/AG), til etterkontrollen av resultatene våre
+        # (daglig_revisjon.etterkontroll_football_data, 3.10.2026).
+        if (r.get("HG") or "").strip() and (r.get("AG") or "").strip():
+            rad["hg"], rad["ag"] = int(float(r["HG"])), int(float(r["AG"]))
+        out.append(rad)
     if problems:
         raise UnmappedTeamError(
             f"{len(problems)} kamp(er) fra football-data.co.uk har lagnavn som ikke finnes i NAME_MAP, "

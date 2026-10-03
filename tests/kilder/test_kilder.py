@@ -2523,6 +2523,22 @@ _f, _a = _drk.revider_kontroller(_vo, _kos2, _naa_r)
 sjekk("OBOS: OddsPapi med annet avspark (17:00 mot 19:00): advarsel",
       _f == [] and _a == ["Bryne-Raufoss: avspark 19:00 hos oss, 17:00 hos OddsPapi"], f"{_f} {_a}")
 
+print("\n=== Etterkontrollen mot football-data.co.uk (Eliteserien) ===")
+# NOR.csv 3.10.2026 (bare 2026-radene): fetch_odds_history tar nå med
+# sluttresultatet (HG/AG), og den daglige revisjonen sammenligner de
+# publiserte resultatene med dem. Uenig: avvik. Mangler: ikke et avvik.
+import fetch_odds_history as _foh
+_fd = _foh.parse((TESTDATA / "nor_2026-10-03.csv").read_text("utf-8"))
+sjekk("NOR.csv 3.10.: 168 kamper med sluttodds og sluttresultat", len(_fd) == 168 and all("hg" in r for r in _fd), str(len(_fd)))
+_f, _a = _drk.etterkontroll_football_data(_es_m, _fd)
+sjekk("de publiserte resultatene fra 1.10. er de samme som hos football-data.co.uk", (_f, _a) == ([], []), str(_f[:3]))
+_es_feil = [dict(m) for m in _es_m]
+_es_feil[0]["hg"] += 1
+_f, _a = _drk.etterkontroll_football_data(_es_feil, _fd)
+sjekk(f"et annet resultat hos oss ({_es_feil[0]['home']}-{_es_feil[0]['away']}): avvik", len(_f) == 1 and "football-data.co.uk" in _f[0], str(_f))
+_f, _a = _drk.etterkontroll_football_data(_es_m, [r for r in _fd if r["date"] < "2026-09-01"])
+sjekk("kamper football-data ikke har ennå: ikke et avvik", _f == [], str(_f))
+
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.
 _vern.sjekk_urort(sjekk)
