@@ -1425,27 +1425,51 @@ try:
     except ntf_source.SvarerIkke as e:
         _kast = e
     sjekk("og blokkering (403) er også SvarerIkke", _kast is not None, repr(_kast))
+    # Reservekjeden for terminlisten (3.10.2026) går foran fotball.no: med
+    # den siste gyldige terminlisten brukes fotball.no bare i resultatkjeden.
+    # Kalenderfeeden går gjennom ntf_source.hent (stoppet over); ESPN og
+    # Highlightly stoppes her, så ingenting går ut på nettet.
+    import espn_source as _esr
+    import leaguedata as _ldr
+    import highlightly_source as _hlsr
+    _ekte_espn_get, _ekte_hl_http2, _ekte_forrige = _esr.get_json, _hlsr._http, _ldr.forrige_terminliste
+    _esr.get_json = lambda url: (_ for _ in ()).throw(_ue.URLError("ingen ESPN i testen"))
+    _hlsr._http = lambda sti, param: (_ for _ in ()).throw(_ue.URLError("ingen Highlightly i testen"))
     ntf_source.fetch_all = lambda *a, **k: (_ for _ in ()).throw(ntf_source.SvarerIkke("ingen svar"))
     _rader = _obd.rows_for(log=lambda _s: None)
     _res = _obr.offisielle_resultater()
-    sjekk("OBOS: ligasiden svarer ikke -> fotball.no som reserve, både i byggingen og i resultatkjeden",
-          _nff_kall == ["obos", "obos"] and any((m["home"], m["away"]) == ("Ranheim", "Egersund") for m in _rader) and _res == {},
-          f"{_nff_kall} {len(_rader)} {_res}")
+    sjekk("OBOS: ligasiden svarer ikke -> byggingen bruker reservekjeden (her: den siste gyldige terminlisten), resultatkjeden fotball.no",
+          _nff_kall == ["obos"] and len(_rader) == 240 and _res == {}, f"{_nff_kall} {len(_rader)} {_res}")
     import update_data as _ud
     _nff_kall.clear()
     _r = _ud.ligasiden_eller_reserve(None, lambda _s: None)
-    sjekk("Eliteserien: ligasiden svarer ikke -> fotball.no som reserve", _nff_kall == ["eliteserien"] and len(_r) == 1, str(_nff_kall))
+    sjekk("Eliteserien: ligasiden svarer ikke -> reservekjeden (her: den siste gyldige terminlisten), ikke fotball.no",
+          _nff_kall == [] and len(_r) == 240 and _ud.LIGAKILDE == "forrige terminliste", f"{_nff_kall} {len(_r)} {_ud.LIGAKILDE}")
+    # Krise: ligasiden svarer ikke, og den siste gyldige terminlisten finnes ikke.
+    _ldr.forrige_terminliste = lambda *a, **k: None
+    _nff_kall.clear()
+    _rader = _obd.rows_for(log=lambda _s: None)
+    _r = _ud.ligasiden_eller_reserve(None, lambda _s: None)
+    sjekk("i krise (ingen siste gyldige terminliste): fotball.no i begge ligaene",
+          _nff_kall == ["obos", "eliteserien"] and len(_r) == 1 and _ud.LIGAKILDE == "fotball.no", f"{_nff_kall} {_ud.LIGAKILDE}")
+    _ldr.forrige_terminliste = _ekte_forrige
     _nff_kall.clear()
     ntf_source.fetch_all = lambda *a, **k: (_ for _ in ()).throw(ntf_source.EsDataError("lagt om"))
+    _r = _ud.ligasiden_eller_reserve(None, lambda _s: None)
+    _obd.rows_for(log=lambda _s: None)
+    _obr.offisielle_resultater()
+    sjekk("ligasiden svarer, men kan ikke leses: reservekjeden, aldri fotball.no",
+          _nff_kall == [] and len(_r) == 240, f"{_nff_kall} {len(_r)}")
+    _ldr.forrige_terminliste = lambda *a, **k: None
     try:
         _ud.ligasiden_eller_reserve(None, lambda _s: None)
         _kast = None
     except ntf_source.EsDataError as e:
         _kast = e
-    _obd.rows_for(log=lambda _s: None)
-    _obr.offisielle_resultater()
-    sjekk("ligasiden svarer, men kan ikke leses: ingen reserve fra fotball.no (feilen skal ikke skjules)",
+    _ldr.forrige_terminliste = _ekte_forrige
+    sjekk("og uten siste gyldige terminliste: feilen stopper Eliteserie-kjøringen (skjules ikke bak fotball.no)",
           _nff_kall == [] and _kast is not None, f"{_nff_kall} {_kast!r}")
+    _esr.get_json, _hlsr._http = _ekte_espn_get, _ekte_hl_http2
     ntf_source.fetch_all = lambda liga, **k: [{"date": "2026-10-02", "time": "19:00", "round": 24, "home": "Ranheim",
                                                "away": "Egersund", "hg": None, "ag": None, "ferdig": False}]
     _obr.offisielle_resultater()
@@ -1483,8 +1507,15 @@ sjekk("forrige_terminliste: None når en kamp mangler, eller sesongen er en anne
       leaguedata.forrige_terminliste(_sbr, "2026", forventet_par=set(_csv_par) | {("Moss", "Moss")}) is None
       and leaguedata.forrige_terminliste(_sbr, "2027") is None)
 _ekte_data_obd, _ekte_data_obr, _ekte_fa_r = _obd.DATA, _obr.DATA, ntf_source.fetch_all
+_ekte_kal_r = ntf_source.hent_kalender
+import highlightly_source as _hlsr2
+_ekte_hl_http3 = _hlsr2._http
 _hlr.KATALOG = Path(_tf2.mkdtemp()) / "hentelogg"
 try:
+    # Reservekjeden: kalenderfeeden og Highlightly svarer ikke her, så den
+    # siste gyldige terminlisten står (kjeden selv testes for seg under).
+    ntf_source.hent_kalender = lambda liga, log=None: (_ for _ in ()).throw(ntf_source.SvarerIkke("ingen feed i testen"))
+    _hlsr2._http = lambda sti, param: (_ for _ in ()).throw(ntf_source.SvarerIkke("ingen Highlightly i testen"))
     _obd.DATA, _obr.DATA = _sbr, _sbr
     ntf_source.fetch_all = lambda *a, **k: (_ for _ in ()).throw(ntf_source.EsDataError("manglende dato for Bryne - Raufoss (terminliste)"))
     _logg = []
@@ -1492,7 +1523,7 @@ try:
     _rs = [m for m in _rr if (m["home"], m["away"]) == ("Ranheim", "Sogndal")]
     sjekk("ligasiden kan ikke leses: byggingen bruker forrige terminliste, Ranheim-Sogndal står med 14:30 (ikke CSV-ens 17:00)",
           len(_rr) == 240 and (_rs[0]["date"], _rs[0]["time"]) == ("2026-11-01", "14:30")
-          and any("bruker forrige terminliste" in l for l in _logg) and not any("CSV-terminlisten" in l for l in _logg), f"{_rs} {_logg}")
+          and any("den siste gyldige terminlisten" in l for l in _logg) and not any("CSV-terminlisten" in l for l in _logg), f"{_rs} {_logg}")
     # Ligasiden svarer, men mangler en kamp: den tas med fra forrige terminliste.
     _ntf_rader = [{**m, "ferdig": m["hg"] is not None} for m in _fr if (m["home"], m["away"]) != ("Ranheim", "Sogndal")]
     ntf_source.fetch_all = lambda *a, **k: [dict(r) for r in _ntf_rader]
@@ -1517,6 +1548,7 @@ try:
           and _obr.schedule()[("Ranheim", "Sogndal")]["time"] == "17:00", f"{_rs} {_logg}")
 finally:
     _obd.DATA, _obr.DATA, ntf_source.fetch_all = _ekte_data_obd, _ekte_data_obr, _ekte_fa_r
+    ntf_source.hent_kalender, _hlsr2._http = _ekte_kal_r, _ekte_hl_http3
     _hlr.KATALOG = _ekte_hl_kat
 
 print("\n=== Datovakten bruker den AKTIVE sesongen, ikke dataene ===")
@@ -2414,6 +2446,54 @@ finally:
     _tidl = _tidl_lagret
 sjekk("en time senere bekrefter Highlightly 3-1: ikke lenger uten kontroll",
       _s["ukontrollert"] == {}, str(_s))
+
+print("\n=== Reservekjeden for terminlisten (terminliste_reserve.py) ===")
+# Ligasiden kan ikke brukes: kalenderfeeden, (ESPN i Eliteserien),
+# Highlightly og til slutt den siste gyldige terminlisten. Spilte kamper står
+# alltid som hos oss, og en kamp som har startet beholder avsparket vårt.
+# Lagrede svar: feeden 3.10. kl. 18.49, Highlightly- og ESPN-sesongen 3.10.,
+# og terminlisten fra 1.10. som den siste gyldige.
+import terminliste_reserve as _tlr
+_naa_r = _dt(2026, 10, 3, 18, 33, tzinfo=_tz.utc)
+def _forrige(l):
+    return leaguedata.forrige_terminliste(ROT / "tests" / "data" / "2026-10-01" / l / "data", "2026")
+_fo, _fe = _forrige("obos"), _forrige("eliteserien")
+_kal3 = lambda: ntf_source.parse_kalender((TESTDATA / "ntf_obos_kalender_2026-10-03.ics").read_text("utf-8"), "obos")
+_hl_obos = lambda: [_hls.parse_kamp(m, "obos") for m in {m["id"]: m for m in _hl_les("sesong_obos_2026")}.values()]
+_feil = lambda: (_ for _ in ()).throw(RuntimeError("svarer ikke"))
+_ix = lambda rader: {(m["home"], m["away"]): m for m in rader}
+_r, _k = _tlr.kjede("obos", _fo, _naa_r, hent={"kalenderfeeden": _kal3, "highlightly": _hl_obos})
+_ri, _fi = _ix(_r), _ix(_fo)
+sjekk("OBOS: kalenderfeeden er første reserve, og alle 240 kampene står", _k == "kalenderfeeden" and len(_r) == 240, f"{_k} {len(_r)}")
+sjekk("spilte kamper står som hos oss (resultat, dato og avspark)",
+      all(_ri[k] == _fi[k] for k in _fi if _fi[k]["hg"] is not None))
+sjekk("kamper som har startet, beholder avsparket vårt (feeden viser dem i UTC): Haugesund-Stabæk 16:00, Strømmen-Sandnes Ulf 14:30",
+      (_ri[("Haugesund", "Stabæk")]["time"], _ri[("Strømmen", "Sandnes Ulf")]["time"]) == ("16:00", "14:30"),
+      str((_ri[("Haugesund", "Stabæk")], _ri[("Strømmen", "Sandnes Ulf")])))
+sjekk("kommende kamper får dato, avspark og runde fra feeden: Sogndal-Raufoss 21.10. 19:00 runde 24, Ranheim-Sogndal 1.11. 14:30",
+      (_ri[("Sogndal", "Raufoss")]["date"], _ri[("Sogndal", "Raufoss")]["time"], _ri[("Sogndal", "Raufoss")]["round"]) == ("2026-10-21", "19:00", 24)
+      and _ri[("Ranheim", "Sogndal")]["time"] == "14:30", str((_ri[("Sogndal", "Raufoss")], _ri[("Ranheim", "Sogndal")])))
+# Feeden mangler en kommende kamp: neste reserve (Highlightly).
+_kal_uten = lambda: [m for m in _kal3() if (m["home"], m["away"]) != ("Bryne", "Raufoss")]
+_r, _k = _tlr.kjede("obos", _fo, _naa_r, hent={"kalenderfeeden": _kal_uten, "highlightly": _hl_obos})
+_ri = _ix(_r)
+sjekk("feeden mangler Bryne-Raufoss: den brukes ikke, Highlightly tar over (med runden fra Highlightly)",
+      _k == "highlightly" and (_ri[("Bryne", "Raufoss")]["date"], _ri[("Bryne", "Raufoss")]["round"]) == ("2026-10-14", 26), f"{_k} {_ri[('Bryne', 'Raufoss')]}")
+sjekk("og Highlightly sine resultater for kamper som har startet, er med (de går gjennom regelen før de publiseres)",
+      (_ri[("Haugesund", "Stabæk")]["hg"], _ri[("Haugesund", "Stabæk")]["ag"]) == (2, 0) and _ri[("Haugesund", "Stabæk")]["time"] == "16:00",
+      str(_ri[("Haugesund", "Stabæk")]))
+_r, _k = _tlr.kjede("obos", _fo, _naa_r, hent={"kalenderfeeden": _feil, "highlightly": _feil})
+sjekk("ingen reserve svarer: den siste gyldige terminlisten, uendret", _k == "forrige terminliste" and _r == _fo, _k)
+# Eliteserien: feeden svarer ikke, ESPN tar over (runden fra den lagrede).
+_espn3 = lambda: __import__("espn_source").tolk(json.loads((TESTDATA / "espn_sesong_2026-10-03.json").read_text("utf-8"))["events"])[0]
+_r, _k = _tlr.kjede("eliteserien", _fe, _naa_r, hent={"kalenderfeeden": _feil, "espn": _espn3, "highlightly": _feil})
+_ri, _fi = _ix(_r), _ix(_fe)
+sjekk("Eliteserien: feeden svarer ikke, ESPN er reserve; runden fra den lagrede terminlisten (runde 12 står som runde 12)",
+      _k == "espn" and len(_r) == 240 and _ri[("Viking", "Tromsø")]["round"] == 12 and _ri[("Viking", "Tromsø")]["time"] == "14:30",
+      f"{_k} {_ri[('Viking', 'Tromsø')]}")
+sjekk("ESPN sine feil 0-0 endrer aldri et publisert resultat (Vålerenga-Kristiansund 3-1, Aalesund-HamKam 2-2)",
+      (_ri[("Vålerenga", "Kristiansund")]["hg"], _ri[("Vålerenga", "Kristiansund")]["ag"]) == (3, 1)
+      and (_ri[("Aalesund", "HamKam")]["hg"], _ri[("Aalesund", "HamKam")]["ag"]) == (2, 2), str(_ri[("Vålerenga", "Kristiansund")]))
 
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.

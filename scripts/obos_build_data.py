@@ -91,10 +91,15 @@ def rows_for(season=SEASON, log=print):
         ntf = ntf_source.fetch_all("obos", log=log)
     except Exception as e:
         ntf = []
-        # RESERVE (regelen fra 1.10.2026, se nff_source.py): BARE naar
-        # ligasiden ikke svarer, proeves fotball.no -- hoeyst ett forsok per
-        # dogn, ellers det som ligger i cachen. Deretter den forrige
-        # terminlisten, og CSV-en bare uten den.
+        log(f"ADVARSEL: ligasiden feilet ({e}).")
+        # RESERVEKJEDEN (3.10.2026, terminliste_reserve.py): kalenderfeeden,
+        # Highlightly og til slutt den siste gyldige terminlisten. fotball.no
+        # bare i krise: ligasiden svarer ikke, og den siste gyldige
+        # terminlisten finnes ikke (sesongstart). CSV-en helt til slutt.
+        if forrige:
+            import terminliste_reserve
+            rader, _kilde = terminliste_reserve.kjede("obos", forrige, datetime.now(timezone.utc), log=log)
+            return rader
         if isinstance(e, ntf_source.SvarerIkke):
             log(f"ADVARSEL: ligasiden svarte ikke ({e}) -- prøver fotball.no som reserve.")
             try:
@@ -102,11 +107,6 @@ def rows_for(season=SEASON, log=print):
                 ntf = nff_source.fetch_all("obos", log=log)
             except Exception as e2:
                 log(f"ADVARSEL: fotball.no (reserve) feilet ({e2}).")
-        if not ntf and forrige:
-            log(f"ADVARSEL: ligasiden feilet ({e}) -- bruker forrige terminliste "
-                f"(fixtures.json og matches.json) denne kjøringen. En kamp som er "
-                f"flyttet siden forrige kjøring blir fanget opp når ligasiden svarer igjen.")
-            return forrige
         if not ntf:
             log(f"ADVARSEL: ligasiden feilet ({e}), og forrige terminliste finnes ikke "
                 f"-- bruker CSV-terminlisten denne kjøringen. En kamp som er flyttet "

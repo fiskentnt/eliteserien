@@ -143,8 +143,24 @@ def ligasiden_eller_reserve(cache_dir=None, log=lambda s: None):
         rader = ntf_source.fetch_all(LIGA, cache_dir=cache_dir, log=log)
         LIGAKILDE = "ligasiden"
         return rader
-    except ntf_source.SvarerIkke as e:
-        log(f"ADVARSEL: ligasiden svarte ikke ({e}) -- bruker fotball.no som reserve.")
+    except Exception as e:
+        log(f"ADVARSEL: ligasiden feilet ({type(e).__name__}: {e}).")
+        # RESERVEKJEDEN (3.10.2026, terminliste_reserve.py): kalenderfeeden,
+        # ESPN, Highlightly og til slutt den siste gyldige terminlisten.
+        # Feilen hos ligasiden står i hentelogget og gjør kjøringen rød der.
+        import sesong as _ses
+        forrige = leaguedata.forrige_terminliste(LEAGUE / "data", _ses.aktiv_sesong(ROOT, LIGA, log=log), log=log)
+        from ligaer import ANTALL_KAMPER
+        if forrige and len(forrige) == ANTALL_KAMPER:
+            import terminliste_reserve
+            rader, LIGAKILDE = terminliste_reserve.kjede(LIGA, forrige, datetime.now(timezone.utc), log=log)
+            return rader
+        # Uten den siste gyldige terminlisten: fotball.no bare når ligasiden
+        # ikke svarer (krise). Svarer den, men kan ikke leses, er det en feil
+        # hos oss, og den skal ikke skjules bak en annen kilde.
+        if not isinstance(e, ntf_source.SvarerIkke):
+            raise
+        log("ADVARSEL: ligasiden svarte ikke -- bruker fotball.no som reserve.")
         rader = nff_source.fetch_all(LIGA, log=log)
         if not rader:
             raise
