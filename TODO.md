@@ -3,6 +3,35 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## "Fyll ut runden": bare samme rundenummer (3.10.2026)
+
+"Simuler runden" på OBOS runde 24 og så H på Strømmen-Sandnes Ulf fylte i
+tillegg rundene 25, 26 og 27 (24 kamper). Årsak: fillTargetDate() ga
+rundens SISTE kampdato (ROUND_LAST_DATE), og fillToDate() fylte alle tomme
+kamper med m.date <= den datoen. Sogndal-Raufoss i runde 24 er flyttet til
+21. oktober, så rundene 25-27 (11., 14. og 18. oktober) kom med. Regelen var
+bevisst datobasert, for at Eliteseriens flyttede runde 12 skulle tas med når
+utfyllingen passerte 24.-25. oktober; i Eliteserien fylte et resultat i
+runde 12 derfor også rundene 23 og 24, og et i runde 25 også 23, 24 og 12.
+
+Nå: updateAutoFill(m) fyller bare de tomme kampene med samme rundenummer
+som kampen som ble endret (fillRounds). Er runden fylt ut, endres bare den
+ene kampen. Slås boksen på etter at resultater er lagt inn, fylles rundene
+til de egne resultatene. "Simuler runden" (m.round===runde), "Simuler tomme
+kamper" (alle tomme) og rundetabellen (computeAt tar med rundene til og med
+den valgte etter rundenummer, i tidsrekkefølge etter mediandatoen) hadde
+ikke feilen.
+
+Ikke endret: rundens sluttdato i ROUND_SEQ og ROUND_LAST_DATE tar med den
+flyttede kampen, så overskriften står "etter runde 24 (21. oktober)" når et
+eget resultat ligger i runde 24, og poengjusteringene til rundetabellen for
+runde 24 telles til 21. oktober. Det samme gjelder de spilte rundene med en
+utsatt kamp (Eliteserien runde 2: "etter runde 2 (22. juli)").
+
+Test: `node tests/regression.js --bare fyllrunden` (21 kontroller, klikk i
+kamplisten, OBOS runde 24 og Eliteserien runde 12). Mot den publiserte
+siden med den gamle koden feilet 9 av dem (OBOS: 31 kamper i stedet for 7).
+
 ## Tidsrekkefølge i kampsannsynlighetene (3.10.2026)
 
 H/U/B ved en kamp endret seg med kampens eget resultat (FKH-Stabæk 0-2: H

@@ -3656,36 +3656,34 @@ function updateRoundSimButtons(){
   });
 }
 
-// ---- "Tabell på samme tidspunkt": fyller automatisk ut andre kamper til og
-// med SISTE KAMPDAG I RUNDEN til din seneste egne, FERDIG utfylte (begge mål
-// satt) kamp — ikke bare til og med den ene kampens egen dato. Rent
-// datobasert filter (m.date<=targetDate), så en flyttet runde (som runde 12,
-// 24.-25. oktober) tas med så snart utfyllingen passerer de datoene, uansett
-// hvilket rundenummer den har. ----
+// ---- "Fyll ut runden når jeg legger inn et resultat": fyller de tomme
+// kampene med SAMME RUNDENUMMER som kampen du endret, og ingen andre. Er
+// runden allerede fylt ut, endres bare den ene kampen. Før (til 3.10.2026)
+// fylte den alle tomme kamper til og med rundens siste kampdato: OBOS runde
+// 24 har Sogndal-Raufoss flyttet til 21. oktober, og et resultat i runde 24
+// fylte da også rundene 25, 26 og 27. ----
 function latestOwnMatch(){
   let best=null;
   matches.forEach(m=>{ if(m.hg!=null && m.ag!=null && !m.sim && (best===null || m.date>best.date)) best=m; });
   return best;
 }
-function fillTargetDate(){
-  const own=latestOwnMatch();
-  return own ? (ROUND_LAST_DATE[own.round] || own.date) : null;
-}
 // Grå (simulerte) resultater slettes ALDRI av seg selv: å justere én kamp skal
 // gi effekten av akkurat den, med alt annet likt. Vil du trekke på nytt, bruker
 // du "Simuler på nytt" i runden eller "Simuler tomme kamper". Utfyllingen
 // under fyller derfor bare TOMME kamper, og rører verken grå eller egne.
-async function fillToDate(){
-  const targetDate=fillTargetDate();
-  if(!targetDate) return;
-  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && m.date<=targetDate));
+// Rundene som fylles: rundene til kampene i `endret`.
+async function fillRounds(endret){
+  const runder = new Set(endret.map(m=>m.round));
+  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && runder.has(m.round)));
 }
 // Avkryssingsboksen bestemmer bare om tomme kamper fylles ut når du legger inn
-// et resultat. Av eller på: den sletter ingenting.
-async function updateAutoFill(){
+// et resultat. Av eller på: den sletter ingenting. `m` er kampen du endret.
+// Uten kamp (boksen slås på etter at resultater er lagt inn) fylles rundene
+// til resultatene du har lagt inn selv, som om boksen hadde vært på da.
+async function updateAutoFill(m){
   const toggle=document.getElementById('autoFillToggle');
   if(!toggle || !toggle.checked) return;
-  await fillToDate();
+  await fillRounds(m ? [m] : matches.filter(x=>x.hg!=null && x.ag!=null && !x.sim));
 }
 
 // Tvunget resultat ("<lag> vinner/taper alt"): modellens forventede resultat (predict,
@@ -3793,7 +3791,7 @@ async function onRoundsEvent(e){
   // kamp (ett tall skrevet) eller en tømt kamp (×, eller begge felt slettet)
   // skal ikke utløse noe. En tømt kamp forblir tom, og ingenting annet endres.
   tableSort=null;
-  if(m.hg!=null && m.ag!=null){ await updateAutoFill(); mcStraks=true; }
+  if(m.hg!=null && m.ag!=null){ await updateAutoFill(m); mcStraks=true; }
   render();
 }
 roundsEl.addEventListener('input', onRoundsEvent);
@@ -3908,7 +3906,7 @@ document.getElementById('nmHub').addEventListener('click', async e=>{
   if(!m || !drawQuick(m, b.dataset.q)) return;
   nmTrukket = m.id;
   tableSort=null;
-  if(m.hg!=null && m.ag!=null){ await updateAutoFill(); mcStraks=true; }
+  if(m.hg!=null && m.ag!=null){ await updateAutoFill(m); mcStraks=true; }
   render();
 });
 document.getElementById('nmAll').addEventListener('click', ()=> scrollToSection('fxPanel'));

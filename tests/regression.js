@@ -1960,6 +1960,126 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await pg.close();
     }
   };
+  // "Fyll ut runden når jeg legger inn et resultat" (3.10.2026): fyller bare
+  // de tomme kampene med SAMME RUNDENUMMER som kampen du endret. Er runden
+  // allerede fylt ut, endres bare den ene kampen. Før fylte den alle tomme
+  // kamper til og med rundens siste dato: "Simuler runden" på OBOS runde 24
+  // og så H på Strømmen-Sandnes Ulf fylte i tillegg rundene 25, 26 og 27 (24
+  // kamper), fordi Sogndal-Raufoss i runde 24 er flyttet til 21. oktober.
+  // Med en runde som har en flyttet kamp i begge ligaene: OBOS runde 24
+  // (Sogndal-Raufoss) og Eliteserien runde 12 (hele runden flyttet til
+  // 24.-25. oktober, mellom runde 24 og 25). Klikkene går gjennom kamplisten
+  // som for en bruker. Også "Simuler runden", "Simuler tomme kamper",
+  // avkryssingsboksen og rundetabellen. Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare fyllrunden
+  const fyllrunden = async () => {
+    setGroup('Fyll ut runden: bare kampene i samme runde, også med flyttede kamper');
+    for (const [sti, liga] of [['/obos/', 'OBOS'], ['/eliteserien/', 'Eliteserien']]) {
+      const pg = await open(1400, 900, base.replace('/eliteserien/', sti) + '#team=');
+      await settle(pg);
+      await pg.evaluate(() => { const b = document.getElementById('showAllRounds'); if (!b.hidden) b.click(); });
+      // Ferdig: ingen utfylling underveis, og tabellen regnet for scenarioet.
+      const rolig = async () => { await new Promise(r => setTimeout(r, 150));
+        await pg.waitForFunction(() => typicalResolvers.size === 0 && lastMCFinal === true && lastMCScenarioKey === qaScenarioKey(), {timeout: 120000}); };
+      const tom = async (paa = true) => { await pg.evaluate(paa => { matches.forEach(m => setMatch(m, null, null));
+        document.getElementById('autoFillToggle').checked = paa; selRoundIdx = null; render(); }, paa); await rolig(); };
+      const fylt = () => pg.evaluate(() => matches.filter(m => m.hg != null && m.ag != null)
+        .map(m => ({id: m.id, r: m.round, k: `${m.home}-${m.away}`, hg: m.hg, ag: m.ag, sim: !!m.sim})).sort((x, y) => x.id.localeCompare(y.id)));
+      const klikkH = async id => { await klikk(pg, `.match[data-id="${id}"] .quick button[data-q="H"]`); await rolig(); };
+      const simRunde = async r => { await klikk(pg, `.round-sim[data-round="${r}"]`); await rolig(); };
+      const runder = a => [...new Set(a.map(x => x.r))].sort((x, y) => x - y).join(',');
+      const ids = a => a.map(x => x.id).sort().join(' ');
+      // Runden med den flyttede kampen (OBOS) eller den flyttede runden
+      // (Eliteserien), og runden etter den i tidsrekkefølge.
+      const I = await pg.evaluate(() => {
+        const f = matches.find(m => m.moved);
+        const R = f ? f.round : Object.keys(LEAGUE.movedRounds || {}).map(Number).find(r => matches.some(m => m.round === r));
+        const iR = ROUND_SEQ.findIndex(x => x.round === R), neste = ROUND_SEQ[iR + 1].round;
+        const iRunden = matches.filter(m => m.round === R), siste = iRunden.reduce((x, m) => m.date > x ? m.date : x, iRunden[0].date);
+        const id = r => matches.filter(m => m.round === r).map(m => m.id).sort().join(' ');
+        const vanlig = matches.find(m => m.round === R && !m.moved && m.home === 'Strømmen') || matches.find(m => m.round === R && !m.moved);
+        return {R, neste, iR, flyttet: f ? {id: f.id, k: `${f.home}-${f.away}`, d: f.date} : null, siste,
+                idR: id(R), idNeste: id(neste), idAlle: matches.map(m => m.id).sort().join(' '),
+                vanlig: {id: vanlig.id, k: `${vanlig.home}-${vanlig.away}`},
+                annen: (x => ({id: x.id, k: `${x.home}-${x.away}`}))(matches.find(m => m.round === R && !m.moved && m.id !== vanlig.id)),
+                nesteK: (x => ({id: x.id, k: `${x.home}-${x.away}`}))(matches.find(m => m.round === neste)),
+                // Kamper i andre runder til og med rundens siste dato: dem fylte den gamle regelen også.
+                mellom: matches.filter(m => m.round !== R && m.date <= siste).length};
+      });
+      const navnR = I.flyttet ? `runde ${I.R} (${I.flyttet.k} flyttet til ${I.flyttet.d})` : `runde ${I.R} (flyttet til ${I.siste.slice(8, 10)}.10.)`;
+      check(`${liga}: ${navnR} har kamper i andre runder før rundens siste dato (${I.mellom}), så testen skiller regelen fra den gamle`, I.mellom > 0, JSON.stringify(I));
+
+      // 1. Brukerens tilfelle: "Simuler runden", så H på en kamp i runden.
+      await tom(); await simRunde(I.R);
+      const s1 = await fylt();
+      await klikkH(I.vanlig.id);
+      const s2 = await fylt();
+      const klikket = s2.find(x => x.id === I.vanlig.id), andre = (a) => JSON.stringify(a.filter(x => x.id !== I.vanlig.id));
+      check(`${liga}: "Simuler runden" på ${navnR} fyller nøyaktig rundens kamper`, ids(s1) === I.idR && s1.every(x => x.sim), `runder ${runder(s1)}, ${s1.length} kamper`);
+      check(`${liga}: deretter H på ${I.vanlig.k}: bare den kampen endres, ingen andre runder fylles`,
+        ids(s2) === I.idR && andre(s1) === andre(s2) && klikket && !klikket.sim && klikket.hg > klikket.ag,
+        `runder ${runder(s2)}, ${s2.length} kamper (runden har ${I.idR.split(' ').length}), klikket ${JSON.stringify(klikket)}`);
+
+      // 2. H i runden fra tom: hele runden fylles, ingenting annet.
+      await tom(); await klikkH(I.annen.id);
+      let s = await fylt();
+      check(`${liga}: H på ${I.annen.k} fra tom: hele ${navnR} fylles, ingen andre runder`, ids(s) === I.idR, `runder ${runder(s)}, ${s.length} kamper`);
+
+      // 3. OBOS: H på den flyttede kampen selv: bare runden, ikke rundene som spilles før den.
+      if (I.flyttet) {
+        await tom(); await klikkH(I.flyttet.id);
+        s = await fylt();
+        check(`${liga}: H på ${I.flyttet.k} (flyttet til ${I.flyttet.d}): bare runde ${I.R} fylles`, ids(s) === I.idR, `runder ${runder(s)}, ${s.length} kamper`);
+      }
+
+      // 4. H i neste runde: bare den runden, ikke runde ${I.R} eller den flyttede kampen.
+      await tom(); await klikkH(I.nesteK.id);
+      s = await fylt();
+      check(`${liga}: H på ${I.nesteK.k} (runde ${I.neste}): bare runde ${I.neste} fylles`, ids(s) === I.idNeste, `runder ${runder(s)}, ${s.length} kamper`);
+
+      // 5. "Simuler runden" for neste runde, og "Simuler tomme kamper".
+      await tom(); await simRunde(I.neste);
+      s = await fylt();
+      check(`${liga}: "Simuler runden" på runde ${I.neste} fyller bare den runden`, ids(s) === I.idNeste, `runder ${runder(s)}, ${s.length} kamper`);
+      await tom(); await klikkH(I.vanlig.id);
+      const egen = (await fylt()).find(x => x.id === I.vanlig.id);
+      await klikk(pg, '#simRest'); await rolig();
+      s = await fylt();
+      const egenEtter = s.find(x => x.id === I.vanlig.id);
+      check(`${liga}: "Simuler tomme kamper" fyller alle tomme kamper, også den flyttede, og lar ditt eget resultat stå`,
+        ids(s) === I.idAlle && JSON.stringify(egen) === JSON.stringify(egenEtter), `${s.length} kamper, eget før ${JSON.stringify(egen)}, etter ${JSON.stringify(egenEtter)}`);
+
+      // 6. Avkryssingsboksen: av gir bare kampen du endret. Slått på etterpå
+      // fylles rundene til resultatene du har lagt inn selv.
+      await tom(false); await klikkH(I.vanlig.id); await klikkH(I.nesteK.id);
+      s = await fylt();
+      check(`${liga}: "Fyll ut runden" av: bare de to kampene du endret`, ids(s) === [I.vanlig.id, I.nesteK.id].sort().join(' '), `runder ${runder(s)}, ${s.length} kamper`);
+      await pg.evaluate(() => document.getElementById('autoFillToggle').click()); await rolig();
+      s = await fylt();
+      check(`${liga}: slått på etterpå: rundene ${I.R} og ${I.neste} fylles, ingen andre`,
+        ids(s) === [...I.idR.split(' '), ...I.idNeste.split(' ')].sort().join(' '), `runder ${runder(s)}, ${s.length} kamper`);
+
+      // 7. Rundetabellen: tabellen etter runde R har kampene i rundene til og
+      // med R (i tidsrekkefølge), og endres ikke av resultater i neste runde.
+      await tom();
+      const rt = await pg.evaluate((R, neste, iR) => {
+        matches.filter(m => m.round === R && !m.moved).forEach(m => setMatch(m, 2, 1));
+        refreshLiveState();
+        const inc = new Set(ROUND_SEQ.slice(0, iR + 1).map(x => x.round));
+        const ventet = 2 * (MATCHES.filter(m => inc.has(m.round)).length + matches.filter(m => inc.has(m.round) && m.hg != null).length);
+        const sumK = rows => rows.reduce((x, r) => x + r.p, 0);
+        const foer = computeAt(iR);
+        matches.filter(m => m.round === neste).forEach(m => setMatch(m, 0, 3));
+        const etter = computeAt(iR);
+        matches.forEach(m => setMatch(m, null, null)); render();
+        const rekke = ROUND_SEQ.map(x => x.round);
+        return {sumK: sumK(foer), ventet, likt: JSON.stringify(foer) === JSON.stringify(etter), foranNeste: rekke.indexOf(R) < rekke.indexOf(neste), rekke: rekke.slice(Math.max(0, iR - 2), iR + 3)};
+      }, I.R, I.neste, I.iR);
+      check(`${liga}: rundetabellen etter runde ${I.R} har kampene i rundene til og med ${I.R} (${rt.sumK / 2} kamper), ikke runde ${I.neste} (rekkefølge ${rt.rekke.join(', ')})`,
+        rt.sumK === rt.ventet && rt.likt && rt.foranNeste, JSON.stringify(rt));
+      await pg.close();
+    }
+  };
   // Rundemerknaden over tabellen (3.10.2026): aldri i dagens tabell (en runde
   // som er i gang er normalt, og K-kolonnen viser kampene), bare i
   // rundetabellen for en TIDLIGERE runde der kamper mangler, og da med hvilke
@@ -2142,9 +2262,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'rundemerknad') await rundemerknad();
       else if (BARE === 'kanter') await overskriftKanter();
       else if (BARE === 'tidsrekkefolge') await tidsrekkefolge();
+      else if (BARE === 'fyllrunden') await fyllrunden();
       else if (BARE === 'nederst') await nederstPaaSiden();
       else if (BARE === 'justering') await poengjusteringer();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, justering)`);
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, justering)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -2989,6 +3110,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await rundemerknad();
     await overskriftKanter();
     await tidsrekkefolge();
+    await fyllrunden();
     await page.bringToFront();
 
     // ---- 18. rulling til svaret på iPad-bredder ----
