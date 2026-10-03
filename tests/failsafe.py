@@ -51,8 +51,13 @@ def main():
     check("ingen kilder: datasettet er uendret", MATCHES.read_bytes() == before)
 
     # 2. Wikipedia ødelagt, men OddsPapi mangler nøkkel: heller ingen endring.
-    r = run("--break-wikipedia", "--no-oddspapi")
+    #    Tørrkjøring: ligasiden svarer, så kjeden går helt gjennom, og da skal
+    #    verken datasettet eller tilstanden (results_state.json) skrives.
+    tilstand = (ROOT / "obos" / "data" / "results_state.json").read_bytes()
+    r = run("--break-wikipedia", "--no-oddspapi", "--dry-run")
     check("ødelagt Wikipedia: datasettet er uendret", MATCHES.read_bytes() == before)
+    check("tørrkjøring: results_state.json er uendret",
+          (ROOT / "obos" / "data" / "results_state.json").read_bytes() == tilstand, r.stdout[-300:])
 
     # 3. Valideringen: et tidligere publisert resultat som forsvinner eller
     #    endrer seg skal stoppe publiseringen.
@@ -135,7 +140,7 @@ def main():
     check("sluttresultat: leses",
           fake({"scores": {"periods": {"result": {"participant1Score": 2, "participant2Score": 1}}}}) == (2, 1))
 
-    # 7. OddsPapi har resultatet, Wikipedia henger etter.
+    # 7. Regelen for å publisere, med kildene hver for seg.
     from datetime import datetime, timedelta, timezone as _tz
     key = next(iter(sched))
     s2 = sched[key]
@@ -143,30 +148,37 @@ def main():
         tzinfo=R.ZoneInfo("Europe/Oslo")).astimezone(_tz.utc)
     fersk = kick + timedelta(hours=3)      # tre timer etter avspark
     gammel = kick + timedelta(hours=30)    # over et døgn etter
-    # De offisielle kildene (NTF og NFF) har alt blitt enige i reconcile().
-    # Da skal resultatet ut med en gang -- Wikipedia er en ekstra kontroll,
-    # ikke et krav. Uten dette ville et ferskt resultat blitt staaende i 24
-    # timer bare fordi ingen hadde rukket aa redigere Wikipedia-rutenettet.
-    pub, conf, vent = R.decide({key: (2, 1)}, {}, {}, sched, {}, fersk)
-    check("offisielt alene, fersk kamp: publiseres med en gang",
-          pub.get(key) == (2, 1) and not conf and not vent, f"{pub.get(key)} {conf} {vent}")
-    pub, conf, vent = R.decide({key: (2, 1)}, {}, {key: (2, 1)}, sched, {}, fersk)
-    check("offisielt og Wikipedia enige: publiseres", pub.get(key) == (2, 1) and not conf)
-    pub, conf, vent = R.decide({key: (2, 1)}, {}, {key: (1, 1)}, sched, {}, fersk)
-    check("offisielt, men Wikipedia uenig: holdes tilbake",
-          key not in pub and len(conf) == 1, f"{pub.get(key)} {conf}")
-
-    # OddsPapi er siste utvei og teller fortsatt bare som EN kilde.
-    pub, conf, vent = R.decide({}, {key: (2, 1)}, {}, sched, {}, fersk)
-    check("OddsPapi alene, fersk kamp: venter, ingen konflikt",
+    # Regelen fra 3.10.2026 (resultatregel.py): et resultat publiseres når
+    # hovedkilden og minst én kilde fra en annen leverandør er enige. Uten
+    # uavhengig kilde publiseres ligasiden alene etter 24 timer, ukontrollert;
+    # en annen enkeltkilde aldri. off=None betyr at ligasiden ikke svarte.
+    pub, conf, vent, ukon = R.decide({key: (2, 1)}, None, None, sched, {}, fersk)
+    check("ligasiden alene, fersk kamp: venter på en uavhengig kilde",
           key not in pub and not conf and len(vent) == 1, f"{pub.get(key)} {conf} {vent}")
-    pub, conf, vent = R.decide({}, {key: (2, 1)}, {}, sched, {}, gammel)
-    check("OddsPapi alene, over et døgn: publiseres", pub.get(key) == (2, 1) and not conf)
-    pub, conf, vent = R.decide({}, {key: (2, 1)}, {key: (2, 1)}, sched, {}, fersk)
-    check("OddsPapi og Wikipedia enige: publiseres med en gang",
+    pub, conf, vent, ukon = R.decide({key: (2, 1)}, None, None, sched, {}, gammel)
+    check("ligasiden alene, over et døgn: publiseres uten kontroll (rødt til den er bekreftet)",
+          pub.get(key) == (2, 1) and ukon == {key: (2, 1)}, f"{pub.get(key)} {ukon}")
+    pub, conf, vent, ukon = R.decide({key: (2, 1)}, None, None, sched, {}, fersk, hl={key: (2, 1)})
+    check("ligasiden og Highlightly enige: publiseres med en gang", pub.get(key) == (2, 1) and not conf and not ukon)
+    pub, conf, vent, ukon = R.decide({key: (2, 1)}, None, {key: (2, 1)}, sched, {}, fersk)
+    check("ligasiden og Wikipedia enige: publiseres", pub.get(key) == (2, 1) and not conf)
+    pub, conf, vent, ukon = R.decide({key: (2, 1)}, None, {key: (1, 1)}, sched, {}, fersk)
+    check("ligasiden, men Wikipedia uenig og ingen andre: holdes tilbake",
+          key not in pub and len(conf) == 1, f"{pub.get(key)} {conf}")
+    pub, conf, vent, ukon = R.decide({key: (2, 1)}, None, {key: (1, 1)}, sched, {}, fersk, hl={key: (2, 1)})
+    check("ligasiden og Highlightly enige, Wikipedia uenig: publiseres", pub.get(key) == (2, 1) and not conf)
+    pub, conf, vent, ukon = R.decide({key: (2, 1)}, None, None, sched, {}, fersk, nff={key: (2, 1)})
+    check("ligasiden og fotball.no (samme leverandør): venter", key not in pub and len(vent) == 1)
+
+    # Ligasiden nede: neste kilde er hovedkilde, og to leverandører må være enige.
+    pub, conf, vent, ukon = R.decide(None, {key: (2, 1)}, None, sched, {}, gammel)
+    check("ligasiden nede, OddsPapi alene, over et døgn: publiseres aldri",
+          key not in pub and not conf and len(vent) == 1, f"{pub.get(key)} {conf} {vent}")
+    pub, conf, vent, ukon = R.decide(None, {key: (2, 1)}, {key: (2, 1)}, sched, {}, fersk)
+    check("ligasiden nede, OddsPapi og Wikipedia enige: publiseres med en gang",
           pub.get(key) == (2, 1) and not conf)
-    pub, conf, vent = R.decide({}, {key: (2, 1)}, {key: (1, 1)}, sched, {}, gammel)
-    check("OddsPapi og Wikipedia uenige: holdes tilbake og logges",
+    pub, conf, vent, ukon = R.decide(None, {key: (2, 1)}, {key: (1, 1)}, sched, {}, gammel)
+    check("ligasiden nede, OddsPapi og Wikipedia uenige: holdes tilbake og logges",
           key not in pub and len(conf) == 1, f"{pub.get(key)} {conf}")
     check("datasettet er fortsatt uendret etter alle testene",
           MATCHES.read_bytes() == before and len(json.loads(MATCHES.read_bytes())) == n_before)

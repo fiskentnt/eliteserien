@@ -27,7 +27,12 @@ REGELEN:
 
 Ingen nettkall her: kalleren henter kildene og gir svarene inn.
 """
+import json
+import sys
 from datetime import timedelta
+from pathlib import Path
+
+ROT = Path(__file__).resolve().parent.parent
 
 VENT_TIMER = 24
 
@@ -105,3 +110,33 @@ def kontroller_ukontrollerte(liga, ukontrollerte, svar_per_kamp):
                 uenige.append((k, tuple(r), uavh))
             fortsatt[k] = tuple(r)
     return fortsatt, bekreftet, uenige
+
+
+def sjekk(liga, rot=None):
+    """Gjør kjøringen rød (1) så lenge et resultat står uten kontroll eller i
+    konflikt i <liga>/data/results_state.json. Eget steg til slutt i
+    workflowen (if: always()), så resultatene og tabellen er lagret først."""
+    sti = Path(rot or ROT) / liga / "data" / "results_state.json"
+    try:
+        st = json.loads(sti.read_text(encoding="utf-8"))
+    except Exception:
+        print(f"{liga}: ingen results_state.json -- ingenting å sjekke")
+        return 0
+    feil = 0
+    for k, r in (st.get("ukontrollert") or {}).items():
+        print(f"FEIL: {liga}: {k.replace('|', ' mot ')} {r[0]}-{r[1]} er publisert uten kontroll "
+              f"(bare ligasiden) -- venter på en uavhengig kilde")
+        feil += 1
+    for c in st.get("conflicts") or []:
+        print(f"FEIL: {liga}: konflikt: {c}")
+        feil += 1
+    if not feil:
+        print(f"{liga}: ingen resultater uten kontroll, ingen konflikter")
+    return 1 if feil else 0
+
+
+if __name__ == "__main__":
+    if len(sys.argv) == 3 and sys.argv[1] == "sjekk":
+        sys.exit(sjekk(sys.argv[2]))
+    print("Bruk: python3 scripts/resultatregel.py sjekk <liga>", file=sys.stderr)
+    sys.exit(2)

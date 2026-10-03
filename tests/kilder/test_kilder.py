@@ -844,10 +844,13 @@ _sent = _dt(2026, 10, 2, 23, 0, tzinfo=ZoneInfo("Europe/Oslo"))
 _off_ferdig = _off(_NTF, _sent)
 sjekk("ferdig kamp: begge offisielle kilder gir resultatet",
       _off_ferdig == {("Ranheim", "Egersund"): (2, 1)}, str(_off_ferdig))
-_p, _c, _v = _R.decide(_off_ferdig, {}, {}, _sched, {}, _naa2)
-sjekk("og den publiseres i SAMME kjøring, uten å vente på Wikipedia",
+_p, _c, _v, _u = _R.decide(_off_ferdig, None, None, _sched, {}, _naa2, hl={("Ranheim", "Egersund"): (2, 1)})
+sjekk("og den publiseres i SAMME kjøring når Highlightly er enig, uten å vente på Wikipedia",
       _p.get(("Ranheim", "Egersund")) == (2, 1) and not _v, f"{_p} {_v}")
-_p, _c, _v = _R.decide(_off_ferdig, {}, {("Ranheim", "Egersund"): (3, 1)}, _sched, {}, _naa2)
+_p, _c, _v, _u = _R.decide(_off_ferdig, None, None, _sched, {}, _dt(2026, 10, 2, 22, 0, tzinfo=ZoneInfo("Europe/Oslo")))
+sjekk("uten uavhengig kilde venter den, tre timer etter avspark (regelen fra 3.10.2026)",
+      not _p and len(_v) == 1, f"{_p} {_v}")
+_p, _c, _v, _u = _R.decide(_off_ferdig, None, {("Ranheim", "Egersund"): (3, 1)}, _sched, {}, _naa2)
 sjekk("uenighet med Wikipedia holder resultatet tilbake",
       not _p and len(_c) == 1, f"{_p} {_c}")
 
@@ -855,7 +858,7 @@ sjekk("uenighet med Wikipedia holder resultatet tilbake",
 _underveis = _NTF.replace("schedule__match--played", "schedule__match--live")
 _off_live = _off(_underveis, _dt(2026, 10, 2, 19, 40, tzinfo=ZoneInfo("Europe/Oslo")))
 sjekk("pågående kamp: INGEN av de offisielle kildene gir resultat", not _off_live, str(_off_live))
-_p, _c, _v = _R.decide(_off_live, {}, {}, _sched, {}, _naa2)
+_p, _c, _v, _u = _R.decide(_off_live, None, None, _sched, {}, _naa2)
 sjekk("og den kan derfor ikke publiseres som sluttresultat", not _p, str(_p))
 
 print("\n=== Revisjonens dato-sperre maa ikke laase 20-timersklokka ===")
@@ -2106,12 +2109,12 @@ print("\n=== Regelen for å publisere et resultat (resultatregel.py) ===")
 # fotball.no og NTF er samme leverandør. Uten uavhengig kilde: 24 timer, og
 # da bare for den offisielle ligasiden alene, aldri en annen enkeltkilde, og
 # kjøringen er rød til resultatet er kontrollert.
-import resultatregel as _rr
+import resultatregel as _regel
 _A = _dt(2026, 5, 29, 19, 0, tzinfo=ZoneInfo("Europe/Oslo"))
 _kort, _lenge = _A + __import__("datetime").timedelta(hours=3), _A + __import__("datetime").timedelta(hours=25)
-_alle_es = set(_rr.KILDER["eliteserien"])
+_alle_es = set(_regel.KILDER["eliteserien"])
 def _avg(liga, svar, oppe=None, naa=None):
-    return _rr.avgjor(liga, svar, set(oppe if oppe is not None else _rr.KILDER[liga]), avspark=_A, naa=naa or _kort)
+    return _regel.avgjor(liga, svar, set(oppe if oppe is not None else _regel.KILDER[liga]), avspark=_A, naa=naa or _kort)
 _t = [
     ("OBOS: ligasiden og Highlightly enige: publiseres", "obos", {"ligasiden": (2, 0), "highlightly": (2, 0)}, None, None,
      ("publiser", (2, 0), "ligasiden", "highlightly", False)),
@@ -2139,7 +2142,7 @@ _t = [
 for _navn, _l, _sv, _opp, _naa, _f in _t:
     _u = _avg(_l, _sv, _opp, _naa)
     sjekk(_navn, (_u["utfall"], _u["resultat"], _u["hoved"], _u["enig"], _u["ukontrollert"]) == _f, str(_u))
-_fort, _bekr, _ueni = _rr.kontroller_ukontrollerte("obos", {("Moss", "Odd"): (1, 1), ("Lyn", "Bryne"): (2, 0), ("Hødd", "Moss"): (0, 0)},
+_fort, _bekr, _ueni = _regel.kontroller_ukontrollerte("obos", {("Moss", "Odd"): (1, 1), ("Lyn", "Bryne"): (2, 0), ("Hødd", "Moss"): (0, 0)},
     {("Moss", "Odd"): {"highlightly": (1, 1)}, ("Lyn", "Bryne"): {"fotball.no": (2, 0)}, ("Hødd", "Moss"): {"wikipedia": (1, 0)}})
 sjekk("uten kontroll: bekreftet av Highlightly; fotball.no (samme leverandør) bekrefter ikke; Wikipedia uenig",
       _bekr == [("Moss", "Odd")] and set(_fort) == {("Lyn", "Bryne"), ("Hødd", "Moss")} and [u[0] for u in _ueni] == [("Hødd", "Moss")],
@@ -2252,6 +2255,98 @@ try:
           _brukt >= 10 and _kast is not None and _hl_kall == [], f"{_brukt} {_kast} {_hl_kall}")
 finally:
     _hls._http = _hl_ekte_http
+
+print("\n=== OBOS-resultatkjeden med regelen, hele veien (main) ===")
+# obos_results.main() i en sandkasse med terminlisten fra 1.10. og fast
+# klokke. Ligasiden har fem resultater fra 2.-3.10.; Highlightly svarer med
+# de lagrede dagssvarene (3.10. har fire av dem, 2.10. er ikke lagret og gir
+# ingenting). OddsPapi er reserve og skal bare spørres for kampen
+# Highlightly ikke har.
+import types as _types
+_sbo = Path(_tf2.mkdtemp())
+for _f in ("matches.json", "fixtures.json"):
+    _shr.copy(ROT / "tests" / "data" / "2026-10-01" / "obos" / "data" / _f, _sbo / _f)
+_lig = {("Ranheim", "Egersund"): (5, 0), ("Strømmen", "Sandnes Ulf"): (3, 3), ("Haugesund", "Stabæk"): (2, 0),
+        ("Hødd", "Odd"): (2, 3), ("Strømsgodset", "Åsane"): (1, 0)}
+_op_kall = []
+_ekte = {n: getattr(_obr, n) for n in ("DATA", "MATCHES", "STATE", "ligasiden_og_reserve", "wikipedia_results",
+                                       "oddspapi_fixtures", "finished_without_result", "oddspapi_score", "datetime")}
+_ekte_sleep, _ekte_argv, _ekte_hlhttp = _obr.time.sleep, sys.argv, _hls._http
+def _klokke(t):
+    class _D(_dt):
+        @classmethod
+        def now(cls, tz=None):
+            return t if tz is None else t.astimezone(tz)
+    return _D
+def _hl_stub(sti, param, endre=None):
+    _hl_kall.append(dict(param))
+    d = [dict(m) for m in (_hl_les(f"dag_{param['date']}") if (_HLD / f"dag_{param['date']}.json").exists() else [])]
+    for m in d:
+        if endre and (m["homeTeam"]["name"], m["awayTeam"]["name"]) in endre:
+            m["state"] = {**m["state"], "score": {"current": endre[(m["homeTeam"]["name"], m["awayTeam"]["name"])]}}
+    return {"data": d, "pagination": {"totalCount": len(d), "offset": 0, "limit": 100}}
+def _kjor(naa, lig=_lig, hl_endre=None, wiki=None):
+    _obr.datetime = _klokke(naa)
+    _obr.ligasiden_og_reserve = lambda: (dict(lig), None)
+    _obr.wikipedia_results = lambda names: wiki
+    _hls._http = lambda sti, param: _hl_stub(sti, param, hl_endre)
+    _hl_kall.clear()
+    sys.argv = ["obos_results.py"]
+    with _vern.miljo(ODDSPAPI_KEY="test"):
+        kode = _obr.main()
+    st = json.loads((_sbo / "results_state.json").read_text("utf-8"))
+    pub = {(m["home"], m["away"]): (m["hg"], m["ag"]) for m in json.loads((_sbo / "matches.json").read_text("utf-8"))}
+    return kode, st, pub
+try:
+    _obr.DATA, _obr.MATCHES, _obr.STATE = _sbo, _sbo / "matches.json", _sbo / "results_state.json"
+    _obr.time.sleep = lambda _x: None
+    _obr.oddspapi_fixtures = lambda key: [{"fixtureId": "x"}]
+    _obr.finished_without_result = lambda fx, prev, names, teams: [(k, {"fixtureId": f"{k[0]}|{k[1]}"}) for k in _lig if k not in prev]
+    _obr.oddspapi_score = lambda key, fid: (_op_kall.append(fid), {"Ranheim|Egersund": (5, 0)}.get(fid))[1]
+    _hls._http = _hl_stub
+    _n0 = len(json.loads((_sbo / "matches.json").read_text("utf-8")))
+    _kode, _st, _pub = _kjor(_dt(2026, 10, 3, 18, 43, tzinfo=_tz.utc))
+    sjekk("ligasiden + Highlightly 3.10.: de fire kampene publiseres; Ranheim-Egersund (2.10., ikke hos Highlightly) avgjøres av OddsPapi",
+          all(_pub.get(k) == v for k, v in _lig.items()) and len(_pub) == _n0 + 5 and not _st["conflicts"] and not _st["ukontrollert"],
+          f"{_kode} {len(_pub)} {_n0} {_st}")
+    sjekk("OddsPapi (koster ett kall per kamp) spørres bare for Ranheim-Egersund", _op_kall == ["Ranheim|Egersund"], str(_op_kall))
+    sjekk("Highlightly: ett kall per kampdag (2.10. og 3.10.)",
+          sorted(k["date"] for k in _hl_kall) == ["2026-10-02", "2026-10-03"], str(_hl_kall))
+    # Uenighet: Highlightly har 1-0 for Haugesund-Stabæk (ligasiden 2-0), og ingen andre.
+    for _f in ("matches.json",):
+        _shr.copy(ROT / "tests" / "data" / "2026-10-01" / "obos" / "data" / _f, _sbo / _f)
+    (_sbo / "results_state.json").unlink()
+    _op_kall.clear()
+    _kode, _st, _pub = _kjor(_dt(2026, 10, 3, 18, 43, tzinfo=_tz.utc), hl_endre={("Haugesund FK", "Stabæk"): "1 - 0"})
+    sjekk("Highlightly uenig (1-0 mot ligasidens 2-0): Haugesund-Stabæk holdes tilbake som konflikt, de andre publiseres",
+          ("Haugesund", "Stabæk") not in _pub and any("Haugesund mot Stabæk" in c for c in _st["conflicts"])
+          and _pub.get(("Hødd", "Odd")) == (2, 3), f"{_st['conflicts']} {_pub.get(('Haugesund', 'Stabæk'))}")
+    sjekk("og OddsPapi spørres for den omstridte kampen (og Ranheim-Egersund)",
+          sorted(_op_kall) == ["Haugesund|Stabæk", "Ranheim|Egersund"], str(_op_kall))
+    # Uten kontroll: bare ligasiden har Ranheim-Egersund, 25 timer etter avspark.
+    _shr.copy(ROT / "tests" / "data" / "2026-10-01" / "obos" / "data" / "matches.json", _sbo / "matches.json")
+    (_sbo / "results_state.json").unlink()
+    _obr.oddspapi_score = lambda key, fid: (_op_kall.append(fid), None)[1]
+    _kode, _st, _pub = _kjor(_dt(2026, 10, 3, 18, 1, tzinfo=_tz.utc), lig={("Ranheim", "Egersund"): (5, 0)})
+    sjekk("bare ligasiden, 25 timer etter avspark: Ranheim-Egersund publiseres uten kontroll og står i tilstanden",
+          _pub.get(("Ranheim", "Egersund")) == (5, 0) and _st["ukontrollert"] == {"Ranheim|Egersund": [5, 0]}, str(_st))
+    _ok_rr = Path(_tf2.mkdtemp()); (_ok_rr / "obos" / "data").mkdir(parents=True)
+    _shr.copy(_sbo / "results_state.json", _ok_rr / "obos" / "data" / "results_state.json")
+    sjekk("og kjøringen er rød så lenge den står uten kontroll (resultatregel.py sjekk obos)", _regel.sjekk("obos", rot=_ok_rr) == 1)
+    # Neste time: Highlightly har kampen (2.10. lagt til som dagssvar fra 3.10.-filen sin form).
+    _dag2 = [m for m in _hl_les("sesong_obos_2026") if m["homeTeam"]["name"] == "Ranheim" and m["awayTeam"]["name"] == "Egersund"]
+    (_HLD / "dag_2026-10-02.json").write_text(json.dumps(_dag2[:1]), encoding="utf-8")
+    try:
+        _kode, _st, _pub = _kjor(_dt(2026, 10, 3, 19, 5, tzinfo=_tz.utc), lig={("Ranheim", "Egersund"): (5, 0)})
+    finally:
+        (_HLD / "dag_2026-10-02.json").unlink()
+    _shr.copy(_sbo / "results_state.json", _ok_rr / "obos" / "data" / "results_state.json")
+    sjekk("en time senere bekrefter Highlightly 5-0: ikke lenger uten kontroll, og kjøringen er grønn",
+          _st["ukontrollert"] == {} and _regel.sjekk("obos", rot=_ok_rr) == 0, str(_st))
+finally:
+    for _n, _v in _ekte.items():
+        setattr(_obr, _n, _v)
+    _obr.time.sleep, sys.argv, _hls._http = _ekte_sleep, _ekte_argv, _ekte_hlhttp
 
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.

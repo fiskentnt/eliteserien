@@ -139,6 +139,15 @@ def should_fetch(now=None, liga="eliteserien"):
         if now.minute < 10:
             return True, f"{len(pending)} kamp(er) over 6 timer uten resultat ('venter på resultat'), prøver i timeslotten"
         return False, f"{len(pending)} kamp(er) over 6 timer uten resultat, venter til neste timeslott"
+    # Resultater publisert uten kontroll (bare ligasiden, etter 24 timer,
+    # resultatregel.py): sjekkes på nytt i timeslotten til en uavhengig kilde
+    # har bekreftet dem.
+    try:
+        st = json.loads((LIGAER[liga] / "data" / "results_state.json").read_text(encoding="utf-8"))
+    except Exception:
+        st = {}
+    if st.get("ukontrollert") and now.minute < 10:
+        return True, f"{len(st['ukontrollert'])} resultat(er) uten kontroll, sjekkes på nytt i timeslotten"
     forfalt, hvorfor = daglig_forfalt(liga, now)
     if forfalt:
         merk_forsok(liga, now)

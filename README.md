@@ -102,8 +102,6 @@ Notert, ikke rettet.
   resultatsiden med ugyldig dato hoppes over når (hjemme, borte) har resultat
   i `matches.json` (`scripts/ntf_source.py`). Oppslaget har ikke med
   sesongen. Det er trygt så lenge `matches.json` bare har én sesong.
-- **`obos_results.py --dry-run` skriver til `obos/data/results_state.json`**
-  (`checked_at` og `oddspapi_usage`). En tørrkjøring skal ikke skrive.
 - **`prekick_odds.py` kan ha samme 404-mønster** for kommende kamper som
   `obos_upcoming_odds.py` hadde: 404 «No historical odds found» logges som
   feil selv om markedet bare ikke er åpnet. Sjekkes når Eliteserie-kampene

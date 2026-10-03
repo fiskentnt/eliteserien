@@ -177,73 +177,63 @@ def finished_without_result(fixtures, prev, names, teams):
     return out
 
 
-def decide(off, op_scores, wiki, sched, prev, now):
-    """Avgjør hva som kan publiseres.
+def decide(off, op_scores, wiki, sched, prev, now, hl=None, nff=None):
+    """Avgjør hva som kan publiseres, med regelen i resultatregel.py (3.10.2026):
+    et resultat publiseres når hovedkilden og minst én kilde fra en annen
+    leverandør er enige. Hovedkilden er den første som svarte i rekkefølgen
+    ligasiden, Highlightly, OddsPapi, Wikipedia, fotball.no. fotball.no og
+    ligasiden er samme leverandør (NTF). Uten uavhengig kilde publiseres
+    ligasidens resultat alene etter 24 timer, og står da som ukontrollert til
+    en uavhengig kilde bekrefter det; en annen enkeltkilde publiserer aldri.
 
-LIGASIDEN alene kan publisere. Den er den offisielle kilden, og et
-    resultat der er ikke et gjetningsresultat -- det staar bare naar kampen
-    er eksplisitt merket ferdigspilt OG det har gaatt over 110 minutter siden
-    avspark (ntf_source).
-
-      ligasiden, og Wikipedia enig eller mangler  -> publiser
-      ligasiden, men Wikipedia uenig              -> hold tilbake, konflikt
-
-    Wikipedia er altsaa en EKSTRA kontroll, ikke et krav. Wikipedia-rutenettet
-    oppdateres av frivillige og ligger ofte timer etter. Krevde vi at det var
-    med, ville et ferskt resultat blitt staaende i 24 timer bare fordi ingen
-    hadde rukket aa redigere siden.
-
-    fotball.no er ikke med i denne avgjorelsen (regelen fra 1.10.2026, se
-    nff_source.py): den brukes bare som reserve naar ligasiden ikke svarer.
-    Den loepende kontrollen er tabellen og kalenderfeeden fra ligasiden.
-
-    For de andre kildene gjelder den gamle regelen, der to kilder trengs:
-
-      OddsPapi og Wikipedia enige       -> publiser
-      uenige                            -> hold tilbake, konflikt
-      bare en av dem, under 24 timer    -> vent
-      bare en av dem, over 24 timer     -> publiser den kilden
-
-    Returnerer (publiser, konflikter, venter)."""
-    publish, conflicts, waiting = dict(prev), [], []
-    cand = set(off) | set(op_scores) | {k for k in (wiki or {}) if k not in prev}
+    off (ligasiden), hl (Highlightly), op_scores (OddsPapi), wiki (Wikipedia),
+    nff (fotball.no): {(hjemme, borte): (hg, ag)}, eller None når kilden ikke
+    svarte. Returnerer (publiser, konflikter, venter, ukontrollert)."""
+    import resultatregel
+    kilder = {"ligasiden": off, "highlightly": hl, "oddspapi": op_scores, "wikipedia": wiki, "fotball.no": nff}
+    oppe = {k for k, v in kilder.items() if v is not None}
+    publish, conflicts, waiting, ukontrollert = dict(prev), [], [], {}
+    cand = set()
+    for v in kilder.values():
+        cand |= set(v or {})
     for k in sorted(cand):
         if k in prev or k not in sched:
             continue
-        f, w = off.get(k), (wiki or {}).get(k)
-        if f:
-            if w and w != f:
-                conflicts.append(f"{k[0]} mot {k[1]}: offisielt {f[0]}-{f[1]}, "
-                                 f"Wikipedia {w[0]}-{w[1]}")
-            else:
-                publish[k] = f
-            continue
-        o = op_scores.get(k)
         s2 = sched[k]
         try:
             kickoff = datetime.fromisoformat(f"{s2['date']}T{s2['time']}").replace(
                 tzinfo=ZoneInfo("Europe/Oslo")).astimezone(timezone.utc)
         except Exception:
-            kickoff = now
-        old_enough = (now - kickoff) > timedelta(hours=WAIT_HOURS)
-        if o and w:
-            if o == w:
-                publish[k] = o
-            else:
-                conflicts.append(f"{k[0]} mot {k[1]}: OddsPapi {o[0]}-{o[1]}, Wikipedia {w[0]}-{w[1]}")
-        elif o or w:
-            src, val = ("OddsPapi", o) if o else ("Wikipedia", w)
-            if old_enough:
-                publish[k] = val
-                log(f"  bare {src} har {k[0]} mot {k[1]} ({val[0]}-{val[1]}), over {WAIT_HOURS} t siden: publiseres")
-            else:
-                waiting.append(f"{k[0]} mot {k[1]}: bare {src} har det ennå, venter på den andre")
-    return publish, conflicts, waiting
+            kickoff = None
+        svar = {kilde: v[k] for kilde, v in kilder.items() if v and k in v and v[k] is not None}
+        u = resultatregel.avgjor("obos", svar, oppe, avspark=kickoff, naa=now)
+        hvem = f"{k[0]} mot {k[1]}"
+        if u["utfall"] == "publiser":
+            publish[k] = u["resultat"]
+            if u["ukontrollert"]:
+                ukontrollert[k] = u["resultat"]
+            if u["uenige"] or u["ukontrollert"]:
+                log(f"  {hvem}: {u['grunn']}")
+        elif u["utfall"] == "konflikt":
+            conflicts.append(f"{hvem}: {u['grunn']}")
+        else:
+            waiting.append(f"{hvem}: {u['grunn']}")
+    return publish, conflicts, waiting, ukontrollert
 
 
 # ------------------------------------------------- offisielle ligakilder
 def offisielle_resultater():
-    """Resultater fra den offisielle ligasiden. Gratis, ingen kvote.
+    """Ligasidens resultater, eller fotball.no sine når ligasiden ikke svarer
+    (som før 3.10.2026, for kallerne som vil ha én liste). main() bruker
+    ligasiden_og_reserve(), der de to står hver for seg."""
+    off, nff = ligasiden_og_reserve()
+    return off if off is not None else (nff or {})
+
+
+def ligasiden_og_reserve():
+    """(ligasiden, fotball.no): {(hjemme, borte): (hg, ag)} eller None når
+    kilden ikke svarte. Gratis, ingen kvote. Holdes hver for seg fordi de er
+    samme leverandør (NTF), se resultatregel.py.
 
     Etter kildebyttet er disse hovedkilden ogsaa for OBOS. De gjor
     /v4/scores unodvendig i normal drift: et tellende kall skal ikke brukes
@@ -260,7 +250,8 @@ def offisielle_resultater():
         import ntf_source
     except Exception as e:
         log(f"  ligasiden utilgjengelig ({type(e).__name__}: {e})")
-        return {}
+        return None, None
+    kilde = "ligasiden"
     try:
         ntf = ntf_source.fetch_all("obos", log=lambda _s: None)
     except Exception as e:
@@ -270,16 +261,17 @@ def offisielle_resultater():
         # dogn, ellers det som ligger i cachen. fotball.no har samme vern
         # mot en kamp underveis (nff_source.FERDIG_ETTER_MIN).
         if not isinstance(e, ntf_source.SvarerIkke):
-            return {}
+            return None, None
         try:
             import nff_source
             ntf = nff_source.fetch_all("obos", log=lambda m: log(f"  {m}"))
         except Exception as e2:
             log(f"  fotball.no (reserve) feilet ({e2})")
-            return {}
+            return None, None
         if not ntf:
-            return {}
+            return None, None
         log("  bruker fotball.no som reserve for ligasiden")
+        kilde = "fotball.no"
 
     # SESONGGRENSEN. Uten den var dette den verste veien inn: nokkelen er
     # (hjemme, borte), og radene kommer fra ligasiden uansett sesong. Etter
@@ -301,8 +293,33 @@ def offisielle_resultater():
                                 log=lambda m: log(f"  {m}"))
     ut = {(r["home"], r["away"]): (r["hg"], r["ag"])
           for r in ntf if r.get("hg") is not None}
-    log(f"  ligasiden: {len(ut)} ferdigspilte kamper")
-    return ut
+    log(f"  {kilde}: {len(ut)} ferdigspilte kamper")
+    return (ut, None) if kilde == "ligasiden" else (None, ut)
+
+
+def highlightly_resultater(datoer):
+    """Ferdigspilte OBOS-kamper hos Highlightly for datoene (ett kall per
+    dato), {(hjemme, borte): (hg, ag)}; None når Highlightly ikke svarte for
+    noen av dem, eller ingen datoer trengs."""
+    if not datoer:
+        return None
+    try:
+        import highlightly_source as H
+    except Exception as e:
+        log(f"  Highlightly utilgjengelig ({type(e).__name__}: {e})")
+        return None
+    ut, svarte = {}, False
+    for d in datoer:
+        try:
+            rader = H.hent_dag(d, ligaer=("obos",))["obos"]
+        except Exception as e:
+            log(f"  Highlightly {d}: {type(e).__name__}: {e}")
+            continue
+        svarte = True
+        ut.update({(r["home"], r["away"]): (r["hg"], r["ag"]) for r in rader if r["ferdig"]})
+    if svarte:
+        log(f"  Highlightly: {len(ut)} ferdigspilte kamper ({len(datoer)} dag(er), ett kall per dag)")
+    return ut if svarte else None
 
 
 # ---------------------------------------------------------------- Wikipedia
@@ -445,40 +462,69 @@ def main():
         log(f"Glemmer runde {args.forget_round}: {len(drop)} resultater tas ut, så kjeden må hente dem på nytt.")
     log(f"Terminliste: {len(sched)} kamper. Publisert fra før: {len(prev)} resultater.")
 
-    # Gratiskildene foerst. I normal drift daekker de alt, og da gjoeres
-    # ingen tellende OddsPapi-kall i det hele tatt.
-    off = {} if args.break_all else offisielle_resultater()
+    # ---- kildene (regelen i resultatregel.py, 3.10.2026)
+    # Ligasiden (og fotball.no bare når den ikke svarer) og Wikipedia er
+    # gratis. Highlightly hentes per dato, ett kall per kampdag, og bare for
+    # kamper som trenger kontroll. OddsPapi er reserve: hvert kall koster, så
+    # det spørres bare der regelen ikke kan publisere uten.
+    off, nff = (None, None) if args.break_all else ligasiden_og_reserve()
     wiki = None if args.break_all or args.break_wikipedia else wikipedia_results(names)
+    now = datetime.now(timezone.utc)
+    gml_state = {}
+    try:
+        gml_state = json.loads(STATE.read_text(encoding="utf-8"))
+    except Exception:
+        pass
+    ukontr_for = {tuple(k.split("|")): tuple(v) for k, v in (gml_state.get("ukontrollert") or {}).items()}
 
+    def avspark(k2):
+        s2 = sched.get(k2)
+        try:
+            return datetime.fromisoformat(f"{s2['date']}T{s2['time']}").replace(
+                tzinfo=ZoneInfo("Europe/Oslo")).astimezone(timezone.utc)
+        except Exception:
+            return None
+    # Kamper Highlightly skal kontrollere: ligasiden har resultatet (eller er
+    # nede og kampen er over), og det er ikke publisert. De ukontrollerte
+    # sjekkes på nytt høyst én gang i timen.
+    trenger = [k2 for k2 in sched if k2 not in prev and avspark(k2) and avspark(k2) <= now
+               and ((off is not None and k2 in off) or off is None)]
+    sist = gml_state.get("ukontrollert_sjekket")
+    if ukontr_for and (not sist or now - datetime.fromisoformat(sist) >= timedelta(hours=1)):
+        trenger += [k2 for k2 in ukontr_for if k2 in sched]
+        sjekket_naa = True
+    else:
+        sjekket_naa = False
+    hl = None if args.break_all else highlightly_resultater(sorted({sched[k2]["date"] for k2 in trenger}))
+
+    # Første runde uten OddsPapi. Det som ikke kan publiseres, får OddsPapi
+    # som reserve (ett tellende kall per kamp), og avgjøres på nytt.
+    publish, conflicts, waiting, ukontrollert = decide(off, None, wiki, sched, prev, now, hl=hl, nff=nff)
+    # Også det regelen ville publisert uten kontroll: OddsPapi er en
+    # uavhengig kilde og skal prøves før ligasiden får stå alene.
+    uavgjort = [k2 for k2 in trenger if (k2 not in publish or k2 in ukontrollert) and k2 not in ukontr_for]
     key = None if args.no_oddspapi else (oddspapi and __import__("os").environ.get("ODDSPAPI_KEY", "").strip())
-    op_scores, fixtures = {}, []
-    if key:
-        # Kamplisten er mellomlagret i 20 timer, saa dette er hoeyst ett
-        # tellende kall i doegnet -- og det trengs til odds-koblingen, ikke
-        # til resultatene.
+    op_scores = None
+    if key and uavgjort:
         fixtures = oddspapi_fixtures(key) or []
         teams = {t for k2 in sched for t in k2}
-        missing = finished_without_result(fixtures, prev, names, teams)
-        # SISTE UTVEI: bare kamper ingen av gratiskildene har. Et tellende
-        # kall skal aldri brukes paa et resultat vi allerede har gratis.
-        rest = [(k2, f) for k2, f in missing
-                if k2 not in off and k2 not in (wiki or {})]
-        log(f"  ferdigspilte uten publisert resultat: {len(missing)}, "
-            f"uten dekning i gratiskildene: {len(rest)}")
+        missing = dict(finished_without_result(fixtures, prev, names, teams))
+        rest = [(k2, missing[k2]) for k2 in uavgjort if k2 in missing]
+        log(f"  OddsPapi som reserve: {len(rest)} kamp(er) uten avgjørelse")
+        op_scores = {}
         for k2, f in rest[: args.max_scores]:
             sc = oddspapi_score(key, f.get("fixtureId"))
             if sc:
                 op_scores[k2] = sc
                 log(f"    {k2[0]} mot {k2[1]}: {sc[0]}-{sc[1]} (tellende kall)")
             time.sleep(1.2)
-    elif not args.no_oddspapi:
-        log("  ODDSPAPI_KEY mangler: hopper over OddsPapi")
+        publish, conflicts, waiting, ukontrollert = decide(off, op_scores, wiki, sched, prev, now, hl=hl, nff=nff)
+    elif key is None and not args.no_oddspapi and uavgjort:
+        log("  ODDSPAPI_KEY mangler: OddsPapi brukes ikke som reserve")
 
     if args.break_wikipedia or args.break_all:
         log("  (test: later som kilden er ødelagt)")
-    if args.break_all:
-        op_scores = {}
-    if wiki is None and not op_scores:
+    if all(x is None for x in (off, nff, wiki, hl, op_scores)):
         log("INGEN KILDER SVARTE. Beholder forrige datasett uendret.")
         return 2
 
@@ -492,14 +538,26 @@ def main():
         for c in old_conf[:10]:
             log(f"    UENIGHET {c}")
 
-    # ---- sammenlign og avgjør
-    now = datetime.now(timezone.utc)
-    publish, conflicts, waiting = decide(off, op_scores, wiki, sched, prev, now)
-    log(f"\nNye resultater: {len(publish) - len(prev)}. Venter: {len(waiting)}. Konflikter: {len(conflicts)}.")
+    # Resultater publisert uten kontroll: bekreftet nå, eller fortsatt uten.
+    import resultatregel
+    if sjekket_naa:
+        svar_pk = {k2: {kilde: v[k2] for kilde, v in (("highlightly", hl), ("wikipedia", wiki), ("oddspapi", op_scores))
+                        if v and k2 in v} for k2 in ukontr_for}
+        ukontr_for, bekreftet, uenige = resultatregel.kontroller_ukontrollerte("obos", ukontr_for, svar_pk)
+        for k2 in bekreftet:
+            log(f"  {k2[0]} mot {k2[1]}: publisert uten kontroll, nå bekreftet")
+        for k2, r, uavh in uenige:
+            conflicts.append(f"{k2[0]} mot {k2[1]}: publisert {r[0]}-{r[1]} uten kontroll, men "
+                             + ", ".join(f"{kilde} har {v[0]}-{v[1]}" for kilde, v in uavh.items()))
+    ukontr_for.update(ukontrollert)
+    log(f"\nNye resultater: {len(publish) - len(prev)}. Venter: {len(waiting)}. Konflikter: {len(conflicts)}. "
+        f"Uten kontroll: {len(ukontr_for)}.")
     for c in conflicts:
         log(f"  KONFLIKT {c}")
     for w2 in waiting:
         log(f"  venter: {w2}")
+    for k2, r in ukontr_for.items():
+        log(f"  UTEN KONTROLL {k2[0]} mot {k2[1]} {r[0]}-{r[1]} (bare ligasiden)")
 
     rows = []
     for k2, (hg, ag) in publish.items():
@@ -517,18 +575,24 @@ def main():
             log(f"  {p}")
         return 3
 
-    STATE.write_text(json.dumps({
-        "checked_at": now.isoformat(timespec="seconds"),
-        "published": len(rows), "new": len(publish) - len(prev),
-        "conflicts": conflicts, "waiting": waiting,
-        "oddspapi_usage": oddspapi.usage()[0],
-    }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+    # En tørrkjøring skriver ingenting, heller ikke tilstanden.
+    if not args.dry_run:
+        STATE.write_text(json.dumps({
+            "checked_at": now.isoformat(timespec="seconds"),
+            "published": len(rows), "new": len(publish) - len(prev),
+            "conflicts": conflicts, "waiting": waiting,
+            # Publisert uten kontroll (bare ligasiden, etter 24 timer): kjøringen
+            # er rød til en uavhengig kilde bekrefter dem (resultatregel.py sjekk).
+            "ukontrollert": {f"{k2[0]}|{k2[1]}": list(r) for k2, r in ukontr_for.items()},
+            "ukontrollert_sjekket": now.isoformat(timespec="seconds") if sjekket_naa else sist,
+            "oddspapi_usage": oddspapi.usage()[0],
+        }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
     if args.dry_run:
         log(f"\n--dry-run: ville publisert {len(rows)} resultater (ingenting skrevet)")
     else:
         MATCHES.write_text(json.dumps(rows, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-        log(f"\nPubliserte {len(rows)} resultater til {MATCHES.relative_to(ROOT)}")
+        log(f"\nPubliserte {len(rows)} resultater til {MATCHES.relative_to(ROOT) if MATCHES.is_relative_to(ROOT) else MATCHES}")
     used, limit = oddspapi.usage()
     log(f"OddsPapi-forbruk denne måneden: {used} av {limit} tellende kall")
     return 0
