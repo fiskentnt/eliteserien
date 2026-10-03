@@ -1454,9 +1454,16 @@ async function main() {
     const les = (pg, t, fra) => pg.evaluate(async (t, fra) => {
       const z = qaTargetZone(t), el = document.getElementById('nmImpact'), nm = document.getElementById('nextMatch');
       const m = matches.find(x => x.id === nm.dataset.id), avgjort = !!(z && qaSettled(t, z));
-      const svar = await qaNextMatch(t), d = await qaLastMatchData(t);
+      const svar = await qaNextMatch(t), d = await qaLastMatchData(t), forrigeSvar = await qaLastMatch(t);
       const bx = document.querySelector('#odds .lastmatch'), boks = bx ? bx.textContent.replace(/\s+/g, ' ').trim() : '';
-      const l = d && !d.noMatch ? qaLastMatchLine(t, {...forrigeKampRad(d), iScen: matches.includes(d.m)}) : null;
+      // Linja svarets tall gir, med de samme feltene som boksen (forrigeLinjeOppdater):
+      // forventningen UAVRUNDET og sonens tall fra utregningen. forrigeKampRad
+      // alene runder forventningen til fire desimaler (for lastmatch.json), og
+      // ved en kant ga det 3 mot boksens 4 prosentpoeng (Moss, 3.10.2026).
+      // Gjelder lastmatch.json, bruker boksen og svaret den.
+      const lagretRad = d && !d.noMatch && z && lagretForrige(t, d.m, z.key);
+      const l = !d || d.noMatch ? null : lagretRad ? qaLastMatchLine(t, lastMatchEntry(t))
+        : qaLastMatchLine(t, {...forrigeKampRad(d), expected: d.expected, naa: d.tableP, iScen: matches.includes(d.m)});
       const tmp = document.createElement('div');
       if (l) tmp.innerHTML = l.html;
       let fil = null;
@@ -1470,7 +1477,7 @@ async function main() {
         fil = {seier: vis(raa[0]), uavgjort: vis(raa[1]), tap: vis(raa[2]), tabellErFil: Math.abs(z.pct - base) < 1e-9,   // sum av c/N mot (sum c)/N: bare avrunding
                prosent: raa.map(x => x == null ? null : +(x * 100).toFixed(2))};
       }
-      return {lag: t, avgjort, linje: el.hidden ? null : el.textContent.trim(), svar, boks,
+      return {lag: t, avgjort, linje: el.hidden ? null : el.textContent.trim(), svar, boks, forrigeSvar,
         fraSvar: l ? tmp.textContent.replace(/\s+/g, ' ').trim() : null, kamp: m ? `${m.home}-${m.away}` : null,
         lagret: !!(d && d.m && z && lagretForrige(t, d.m, z.key)), fil, kjor: __kjor.slice(fra)};
     }, t, fra);
@@ -1497,6 +1504,10 @@ async function main() {
         if (medFil && r.fil && !r.fil.tabellErFil) f.push('tabellens tall for sonen er ikke filens');
       }
       if (r.fraSvar === null || r.boks !== r.fraSvar) f.push(`forrige kamp: boksen "${r.boks}", svaret gir "${r.fraSvar}"`);
+      // Og tallet i boksen står i selve svaret (qaLastMatch).
+      const pp = r.boks.match(/med (\d+) prosentpoeng\.$/);
+      if (pp ? !new RegExp(`med ${pp[1]} prosentpoeng`).test(r.forrigeSvar) : !/endret lite på/.test(r.forrigeSvar))
+        f.push(`forrige kamp: boksen "${r.boks}", svaret "${r.forrigeSvar}"`);
       if (medFil && r.lagret) f.push('boksen bygger på lastmatch.json, ikke filen');
       const grupper = new Set(r.kjor.map(x => x.gruppe));
       for (const g of [...(r.avgjort ? [] : ['kort', 'impact']), 'forrige']) if (!grupper.has(g)) f.push(`ingen kjøring i gruppen ${g}`);
