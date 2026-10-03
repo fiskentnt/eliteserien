@@ -846,10 +846,12 @@ async function main() {
       await ekte.waitForFunction('lastMCFinal===true && lastMCScenarioKey===qaScenarioKey()', {timeout: 120000});
       const e0 = await sjekk();
       for (let i = 0; i < 5; i++) {
-        const rr = await ekte.evaluate(() => { const u = matches.filter(m => m.hg == null && m.round).sort((a, b) => a.date.localeCompare(b.date)); return u.length ? u[0].round : null; });
+        // Den tidligste runden med egne kamper igjen: en flyttet kamp har ingen
+        // "Simuler runden"-knapp (den står i egen gruppe, 4.10.2026).
+        const rr = await ekte.evaluate(() => { const u = matches.filter(m => m.hg == null && m.round && !m.moved).sort((a, b) => a.date.localeCompare(b.date)); return u.length ? u[0].round : null; });
         if (rr == null) break;
         await klikk(ekte, `.round-sim[data-round="${rr}"]`);
-        await ekte.waitForFunction(x => matches.filter(m => m.round === x).every(m => m.hg != null), {timeout: 60000}, rr);
+        await ekte.waitForFunction(x => matches.filter(m => m.round === x && !m.moved).every(m => m.hg != null), {timeout: 60000}, rr);
         await ekte.waitForFunction('lastMCFinal===true && lastMCScenarioKey===qaScenarioKey()', {timeout: 120000});
       }
       const e5 = await sjekk();
@@ -1215,7 +1217,9 @@ async function main() {
       await pg.evaluate(R => document.querySelector(`.round-sim[data-round="${R}"]`).scrollIntoView({block: 'center'}), runde);
       await new Promise(r => setTimeout(r, 300));
       await pg.click(`.round-sim[data-round="${runde}"]`);
-      await pg.waitForFunction(R => matches.filter(m => m.round === R).every(m => m.hg != null), {timeout: 60000}, runde);
+      // Rundens egne kamper: "Simuler runden" fyller gruppen i kamplisten, ikke en
+      // flyttet kamp med samme rundenummer (Sogndal-Raufoss, 4.10.2026).
+      await pg.waitForFunction(R => matches.filter(m => m.round === R && !m.moved).every(m => m.hg != null), {timeout: 60000}, runde);
       await ferdig(pg);
       const r1 = await kort(pg, lag), b1 = await boksen(pg);
       check(`${liga}: runde ${runde} simulert: kortet viser ${r1.ventet}, ikke den simulerte kampen`,
@@ -1402,7 +1406,7 @@ async function main() {
       // valgt. Vent til tabellen er ferdig, så på linja.
       const R = await pg.evaluate(t => matches.filter(x => x.hg == null && (x.home === t || x.away === t)).sort((a, b) => a.date.localeCompare(b.date))[0].round, lag);
       await klikk(pg, `.round-sim[data-round="${R}"]`);
-      await pg.waitForFunction(r => matches.filter(m => m.round === r).every(m => m.hg != null), {timeout: 60000}, R);
+      await pg.waitForFunction(r => matches.filter(m => m.round === r && !m.moved).every(m => m.hg != null), {timeout: 60000}, R);
       await settle(pg);
       const s = await les(pg, lag), vs = sammenlign(s);
       check(`${liga}: runde ${R} simulert: "Neste kamp" har flyttet til ${s.ventet}`,
@@ -1575,7 +1579,7 @@ async function main() {
         // tabellens simulering.
         const R = await pg.evaluate(() => Math.min(...matches.filter(x => x.hg == null).map(x => x.round)));
         await klikk(pg, `.round-sim[data-round="${R}"]`);
-        await pg.waitForFunction(r => matches.filter(m => m.round === r).every(m => m.hg != null), {timeout: 60000}, R);
+        await pg.waitForFunction(r => matches.filter(m => m.round === r && !m.moved).every(m => m.hg != null), {timeout: 60000}, R);
         await settle(pg);
         const s = await alleLag(pg, false, N.tabell);
         check(`${liga}: runde ${R} simulert: kortet og svaret har samme tall for alle ${s.n} lagene (${s.sammenlignet} kort, ${s.tre} med alle tre), og alle ${s.kjoringer} kjøringene har tabellens ${N.tabell} sesonger og nøyaktig tabellens utgangspunkt`,
@@ -1673,9 +1677,9 @@ async function main() {
       const R = await ref0.pg.evaluate(() => Math.min(...matches.filter(m => m.round).map(m => m.round)));
       await ref0.pg.close();
       const lagScenario = {
-        runde: async pg => { const r = await pg.evaluate(t => matches.filter(x => x.home === t || x.away === t).sort((a, b) => a.date.localeCompare(b.date))[0].round, lag);
+        runde: async pg => { const r = await pg.evaluate(t => matches.filter(x => (x.home === t || x.away === t) && !x.moved).sort((a, b) => a.date.localeCompare(b.date))[0].round, lag);
           await klikk(pg, `.round-sim[data-round="${r}"]`);
-          await pg.waitForFunction(rr => matches.filter(m => m.round === rr).every(m => m.hg != null), {timeout: 60000}, r); },
+          await pg.waitForFunction(rr => matches.filter(m => m.round === rr && !m.moved).every(m => m.hg != null), {timeout: 60000}, r); },
         tastatur: async pg => { const id = await pg.evaluate(() => matches[0].id), rad = `.match[data-id="${id}"]`;
           await pg.$eval(rad, el => el.scrollIntoView({block: 'center'}));
           await pg.click(`${rad} [data-side=h]`); await pg.keyboard.type('2');
@@ -1983,8 +1987,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     }
   };
   // "Fyll ut runden når jeg legger inn et resultat" (3.10.2026): fyller bare
-  // de tomme kampene med SAMME RUNDENUMMER som kampen du endret. Er runden
-  // allerede fylt ut, endres bare den ene kampen. Før fylte den alle tomme
+  // de tomme kampene i SAMME GRUPPE som kampen du endret, slik kamplisten
+  // viser den (4.10.2026): rundens egne kamper, eller en flyttet kamp med
+  // gruppen den spilles i (Sogndal-Raufoss står for seg etter runde 27). Er
+  // gruppen allerede fylt ut, endres bare den ene kampen. Før fylte den alle tomme
   // kamper til og med rundens siste dato: "Simuler runden" på OBOS runde 24
   // og så H på Strømmen-Sandnes Ulf fylte i tillegg rundene 25, 26 og 27 (24
   // kamper), fordi Sogndal-Raufoss i runde 24 er flyttet til 21. oktober.
@@ -2018,9 +2024,12 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const R = f ? f.round : Object.keys(LEAGUE.movedRounds || {}).map(Number).find(r => matches.some(m => m.round === r));
         const iR = ROUND_SEQ.findIndex(x => x.round === R), neste = ROUND_SEQ[iR + 1].round;
         const iRunden = matches.filter(m => m.round === R), siste = iRunden.reduce((x, m) => m.date > x ? m.date : x, iRunden[0].date);
-        const id = r => matches.filter(m => m.round === r).map(m => m.id).sort().join(' ');
+        // Rundens egne kamper: gruppen i kamplisten, uten den flyttede kampen.
+        const id = r => matches.filter(m => m.round === r && !m.moved).map(m => m.id).sort().join(' ');
+        // Runden som spilles rett etter den flyttede kampen (OBOS: runde 28).
+        const etter = f ? ROUND_SEQ.find(x => x.start > f.date).round : null;
         const vanlig = matches.find(m => m.round === R && !m.moved && m.home === 'Strømmen') || matches.find(m => m.round === R && !m.moved);
-        return {R, neste, iR, flyttet: f ? {id: f.id, k: `${f.home}-${f.away}`, d: f.date} : null, siste,
+        return {R, neste, iR, flyttet: f ? {id: f.id, k: `${f.home}-${f.away}`, d: f.date} : null, siste, etter, idEtter: etter ? id(etter) : '',
                 idR: id(R), idNeste: id(neste), idAlle: matches.map(m => m.id).sort().join(' '),
                 vanlig: {id: vanlig.id, k: `${vanlig.home}-${vanlig.away}`},
                 annen: (x => ({id: x.id, k: `${x.home}-${x.away}`}))(matches.find(m => m.round === R && !m.moved && m.id !== vanlig.id)),
@@ -2037,7 +2046,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await klikkH(I.vanlig.id);
       const s2 = await fylt();
       const klikket = s2.find(x => x.id === I.vanlig.id), andre = (a) => JSON.stringify(a.filter(x => x.id !== I.vanlig.id));
-      check(`${liga}: "Simuler runden" på ${navnR} fyller nøyaktig rundens kamper`, ids(s1) === I.idR && s1.every(x => x.sim), `runder ${runder(s1)}, ${s1.length} kamper`);
+      check(`${liga}: "Simuler runden" på ${navnR} fyller nøyaktig rundens egne kamper${I.flyttet ? `, ikke ${I.flyttet.k}` : ''}`, ids(s1) === I.idR && s1.every(x => x.sim), `runder ${runder(s1)}, ${s1.length} kamper`);
       check(`${liga}: deretter H på ${I.vanlig.k}: bare den kampen endres, ingen andre runder fylles`,
         ids(s2) === I.idR && andre(s1) === andre(s2) && klikket && !klikket.sim && klikket.hg > klikket.ag,
         `runder ${runder(s2)}, ${s2.length} kamper (runden har ${I.idR.split(' ').length}), klikket ${JSON.stringify(klikket)}`);
@@ -2047,11 +2056,17 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       let s = await fylt();
       check(`${liga}: H på ${I.annen.k} fra tom: hele ${navnR} fylles, ingen andre runder`, ids(s) === I.idR, `runder ${runder(s)}, ${s.length} kamper`);
 
-      // 3. OBOS: H på den flyttede kampen selv: bare runden, ikke rundene som spilles før den.
+      // 3. OBOS: H på den flyttede kampen selv: bare gruppen den står i (den
+      // selv), ikke runde 24 og ikke rundene som spilles før den. Og "Simuler
+      // runden" på runden rett etter den i kamplisten tar den ikke med.
       if (I.flyttet) {
         await tom(); await klikkH(I.flyttet.id);
         s = await fylt();
-        check(`${liga}: H på ${I.flyttet.k} (flyttet til ${I.flyttet.d}): bare runde ${I.R} fylles`, ids(s) === I.idR, `runder ${runder(s)}, ${s.length} kamper`);
+        check(`${liga}: H på ${I.flyttet.k} (flyttet til ${I.flyttet.d}): bare den kampen, gruppen den står i, fylles`, ids(s) === I.flyttet.id, `runder ${runder(s)}, ${s.length} kamper`);
+        await tom(); await simRunde(I.etter);
+        s = await fylt();
+        check(`${liga}: "Simuler runden" på runde ${I.etter} (rett etter ${I.flyttet.k} i kamplisten) fyller rundens egne kamper, ikke ${I.flyttet.k}`,
+          ids(s) === I.idEtter && !s.some(x => x.id === I.flyttet.id), `runder ${runder(s)}, ${s.length} kamper`);
       }
 
       // 4. H i neste runde: bare den runden, ikke runde ${I.R} eller den flyttede kampen.
@@ -2081,14 +2096,15 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       check(`${liga}: slått på etterpå: rundene ${I.R} og ${I.neste} fylles, ingen andre`,
         ids(s) === [...I.idR.split(' '), ...I.idNeste.split(' ')].sort().join(' '), `runder ${runder(s)}, ${s.length} kamper`);
 
-      // 7. Rundetabellen: tabellen etter runde R har kampene i rundene til og
-      // med R (i tidsrekkefølge), og endres ikke av resultater i neste runde.
+      // 7. Rundetabellen: tabellen etter runde R er tabellen på rundens
+      // sluttdato (alle kamper spilt eller fylt inn til og med den), og endres
+      // ikke av resultater i neste runde.
       await tom();
       const rt = await pg.evaluate((R, neste, iR) => {
         matches.filter(m => m.round === R && !m.moved).forEach(m => setMatch(m, 2, 1));
         refreshLiveState();
-        const inc = new Set(ROUND_SEQ.slice(0, iR + 1).map(x => x.round));
-        const ventet = 2 * (MATCHES.filter(m => inc.has(m.round)).length + matches.filter(m => inc.has(m.round) && m.hg != null).length);
+        const end = ROUND_SEQ[iR].end;
+        const ventet = 2 * (MATCHES.filter(m => m.date <= end).length + matches.filter(m => m.date <= end && m.hg != null).length);
         const sumK = rows => rows.reduce((x, r) => x + r.p, 0);
         const foer = computeAt(iR);
         matches.filter(m => m.round === neste).forEach(m => setMatch(m, 0, 3));
@@ -2097,7 +2113,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const rekke = ROUND_SEQ.map(x => x.round);
         return {sumK: sumK(foer), ventet, likt: JSON.stringify(foer) === JSON.stringify(etter), foranNeste: rekke.indexOf(R) < rekke.indexOf(neste), rekke: rekke.slice(Math.max(0, iR - 2), iR + 3)};
       }, I.R, I.neste, I.iR);
-      check(`${liga}: rundetabellen etter runde ${I.R} har kampene i rundene til og med ${I.R} (${rt.sumK / 2} kamper), ikke runde ${I.neste} (rekkefølge ${rt.rekke.join(', ')})`,
+      check(`${liga}: rundetabellen etter runde ${I.R} har kampene til og med rundens sluttdato (${rt.sumK / 2} kamper), ikke runde ${I.neste} (rekkefølge ${rt.rekke.join(', ')})`,
         rt.sumK === rt.ventet && rt.likt && rt.foranNeste, JSON.stringify(rt));
       await pg.close();
     }
@@ -2233,9 +2249,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       // Et scenario med fulgt lag: "Simuler runden" og H på lagets kamp.
       await pg.select('#teamSelect', lag); await rolig();
       await pg.evaluate(() => { const b = document.getElementById('showAllRounds'); if (!b.hidden) b.click(); });
-      const R = await pg.evaluate(lag => matches.find(m => m.hg == null && (m.home === lag || m.away === lag)).round, lag);
+      const R = await pg.evaluate(lag => matches.find(m => m.hg == null && !m.moved && (m.home === lag || m.away === lag)).round, lag);
       await klikk(pg, `.round-sim[data-round="${R}"]`); await rolig();
-      const id = await pg.evaluate((lag, R) => matches.find(m => m.round === R && (m.home === lag || m.away === lag)).id, lag, R);
+      const id = await pg.evaluate((lag, R) => matches.find(m => m.round === R && !m.moved && (m.home === lag || m.away === lag)).id, lag, R);
       await klikk(pg, `.match[data-id="${id}"] .quick button[data-q="H"]`); await rolig();
       await sjekkAlt(`scenario med ${lag} fulgt`);
       // Fast bredde og lyst tema uansett skjerm og tema: samme bilde, piksel for piksel.
@@ -2542,7 +2558,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
   // Rundemerknaden over tabellen (3.10.2026): aldri i dagens tabell (en runde
   // som er i gang er normalt, og K-kolonnen viser kampene), bare i
   // rundetabellen for en TIDLIGERE runde der kamper mangler, og da med hvilke
-  // kamper: "Sogndal-Raufoss er flyttet til 21. oktober." Aldri "lagt inn".
+  // kamper: "Sogndal-Raufoss er utsatt til 21. oktober." Aldri "lagt inn".
   // Før sto "Runde 24 har resultater for bare 1 av 8 kamper. Tabellen bygger
   // bare på resultatene som er lagt inn." i dagens tabell, med ekte
   // resultater. Kjøres med resten av suiten, eller alene:
@@ -2576,19 +2592,21 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     check('OBOS: runde 25 i gang: ingen merknad i dagens tabell', !r.vist && !r.asof && r.runde === 25, JSON.stringify(r));
     await tilbake(ob);
     r = await les(ob);
-    check('OBOS: rundetabellen for runde 24 der bare Sogndal-Raufoss mangler: "Sogndal-Raufoss er flyttet til 21. oktober."',
-      r.asof && r.runde === 24 && r.tekst === 'Sogndal-Raufoss er flyttet til 21. oktober.', JSON.stringify(r));
+    check('OBOS: rundetabellen for runde 24 der bare Sogndal-Raufoss mangler: "Sogndal-Raufoss er utsatt til 21. oktober."',
+      r.asof && r.runde === 24 && r.tekst === 'Sogndal-Raufoss er utsatt til 21. oktober.', JSON.stringify(r));
     await sett(ob, `m => m.round===24 && m.home==='Bryne' ? null : false`);
     await settle(ob);
     await tilbake(ob);
     r = await les(ob);
-    const forvent2 = `${ventet('Bryne-Lyn', '2026-10-04', '4. oktober')} Sogndal-Raufoss er flyttet til 21. oktober.`;
+    const forvent2 = `${ventet('Bryne-Lyn', '2026-10-04', '4. oktober')} Sogndal-Raufoss er utsatt til 21. oktober.`;
     check(`OBOS: to kamper mangler: begge nevnt, i datorekkefølge ("${forvent2}")`, r.asof && r.tekst === forvent2, JSON.stringify(r));
     await sett(ob, `m => m.round===24 ? null : false`);
     await settle(ob);
     await tilbake(ob);
     r = await les(ob);
-    check('OBOS: alle åtte i runde 24 mangler: antallet, ikke åtte setninger', r.asof && r.tekst === 'I runde 24 er 8 kamper uten resultat.', JSON.stringify(r));
+    // Sogndal-Raufoss (21.10.) er utsatt ut av runden og nevnes for seg (4.10.2026).
+    check('OBOS: alle åtte i runde 24 mangler: antallet, ikke åtte setninger, og den utsatte kampen for seg',
+      r.asof && r.tekst === 'I runde 24 er 7 kamper uten resultat. Sogndal-Raufoss er utsatt til 21. oktober.', JSON.stringify(r));
     await tom(ob);
     await settle(ob);
     r = await les(ob);
@@ -2900,6 +2918,219 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await pg.close();
     }
   };
+  // Flyttede kamper i tidslinjen (4.10.2026). En enkeltkamp utenfor rundens
+  // vanlige tidsrom (flyttetFraRunde) plasseres der den spilles: den drar
+  // aldri aktiv runde eller "Forrige runde" tilbake (eller fram), er med i
+  // neste runde for tidsrommet den spilles i, står i kamplisten i
+  // tidsrekkefølge merket "Utsatt kamp fra runde N" / "Kamp fra runde N", og
+  // rundetabellen "etter runde N (dato)" er tabellen slik den sto på rundens
+  // sluttdato. En hel flyttet runde (Eliteseriens runde 12) gjenkjennes av
+  // datoene og er en egen runde. Siden lastes med falsk klokke (Date) og
+  // kampdata der kampene før tidspunktet er spilt (ekte resultater fra bildet,
+  // ellers resultater laget av lagnavnene): OBOS 5.10. (runde 24 uten
+  // Sogndal-Raufoss), 12.10. (runde 25), 19.10. (runde 27), 21.10. (etter
+  // Sogndal-Raufoss) og 25.10. (runde 28), med en kamp fra runde 29 flyttet
+  // fram til 20.10.; Eliteserien 19.10. og 25.10. (runde 12) og 16.4. (etter
+  // Tromsø-Lillestrøm fra runde 15, spilt 15.4.), og bildet slik det er (de
+  // spilte flyttede kampene i runde 1, 2, 8, 11, 15, 17 og 18). Kjøres med
+  // resten av suiten, eller alene:
+  //   node tests/regression.js --bare flyttede
+  const flyttede = async () => {
+    setGroup('Flyttede kamper: tidslinjen, kamplisten og rundetabellen');
+    const off = d => (d < '2026-03-29' || d >= '2026-10-25') ? '+01:00' : '+02:00';
+    const avspark = m => Date.parse(`${m.date}T${m.time || '18:00'}:00${off(m.date)}`);
+    const laget = (h, a) => { let x = 0; for (const c of h + a) x = (x * 31 + c.charCodeAt(0)) % 9973; return [x % 4, Math.floor(x / 4) % 3]; };
+    // Kampdataene slik de ville vært på tidspunktet T.
+    const data = (liga, T, endre) => {
+      const fx = JSON.parse(fs.readFileSync(dataFil(liga, 'data', 'fixtures.json'), 'utf8'));
+      const spilt = JSON.parse(fs.readFileSync(dataFil(liga, 'data', 'matches.json'), 'utf8'));
+      let alle = spilt.map(m => ({date: m.date, time: m.time, round: m.round, home: m.home, away: m.away, hg: m.hg, ag: m.ag}))
+        .concat(fx.flatMap(r => r.matches.filter(m => !m.played).map(m => ({date: m.date, time: m.time, round: r.round, home: m.home, away: m.away, hg: null, ag: null}))));
+      if (endre) alle = endre(alle);
+      alle.forEach(m => {
+        if (avspark(m) + 2 * 3600e3 > T) { m.hg = null; m.ag = null; }
+        else if (m.hg == null) [m.hg, m.ag] = laget(m.home, m.away);
+      });
+      const spilte = alle.filter(m => m.hg != null).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+      const runder = [...new Set(alle.filter(m => m.hg == null).map(m => m.round))];
+      const fixtures = runder.map(r => ({round: r, when: '', matches: alle.filter(m => m.round === r)
+        .map(m => ({home: m.home, away: m.away, date: m.date, time: m.time, played: m.hg != null, hg: m.hg, ag: m.ag}))}));
+      return {spilte, kropp: {matches: JSON.stringify(spilte), fixtures: JSON.stringify(fixtures)}};
+    };
+    const aapne = async (liga, T, d) => {
+      const pg = await browser.newPage();
+      pg.on('pageerror', e => errors.push(`${liga} (klokke ${new Date(T).toISOString()}): ${e.message}`));
+      if (T != null) await pg.evaluateOnNewDocument(T => { const E = Date, off = T - E.now();
+        class F extends E { constructor(...a) { if (a.length) super(...a); else super(E.now() + off); } static now() { return E.now() + off; } }
+        window.Date = F; }, T);
+      if (d) {
+        await pg.setRequestInterception(true);
+        pg.on('request', req => {
+          const m = /\/(?:eliteserien|obos)\/data\/(matches|fixtures|grunnlag|keymatch|lastmatch)\.json(?:\?|$)/.exec(req.url());
+          if (!m) return req.continue();
+          if (!(m[1] in d.kropp)) return req.respond({status: 404, body: ''});
+          req.respond({status: 200, contentType: 'application/json', body: d.kropp[m[1]]});
+        });
+      }
+      await pg.setViewport({width: 1400, height: 1000});
+      await pg.goto(base.replace('/eliteserien/', `/${liga}/`) + '#team=', {waitUntil: 'networkidle0'});
+      await pg.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
+      return pg;
+    };
+    const les = (pg, lagene) => pg.evaluate(lagene => {
+      const txt = el => el ? el.textContent.replace(/\s+/g, ' ').trim() : '';
+      const nr = qaNextRoundMatches(buildQaOpen().openMatches);
+      const kort = {};
+      for (const t of lagene) { SELECTED_TEAM = t; renderNextMatch(); kort[t] = txt(document.getElementById('nmWhen')); }
+      SELECTED_TEAM = null; render();
+      const rundevelger = R => { const i = ROUND_SEQ.findIndex(x => x.round === R); if (i < 0) return null; selRoundIdx = i; render();
+        const t = txt(document.getElementById('roundLabel')); selRoundIdx = null; render(); return t; };
+      return {
+        aktiv: ROUND_SEQ[currentRoundIdx()].round,
+        forrige: {info: txt(document.getElementById('lastRoundInfo')),
+          linjer: [...document.querySelectorAll('#lastRound .round > *')].map(e => e.classList.contains('dayhead') ? `# ${txt(e)}` : `${e.dataset.home}-${e.dataset.away}`)},
+        grupper: [...document.querySelectorAll('#rounds > .round, #hiddenRounds > .round')].map(g => {
+          const ids = [...g.querySelectorAll('.match[data-id]')].map(r => matches.find(m => m.id === r.dataset.id));
+          return {tittel: txt(g.querySelector('h3 > span')), flyttet: !!g.dataset.flyttet,
+            dato: ids.length ? ids.map(m => m.date).sort()[0] : '', kamper: ids.map(m => `${m.home}-${m.away}`)}; }),
+        neste: {runde: nr.round, kamper: nr.list.map(m => `${m.home}-${m.away}`)},
+        kort,
+        slutt: Object.fromEntries(ROUND_SEQ.map(r => [r.round, r.end])),
+        tabeller: ROUND_SEQ.map((r, i) => ({runde: r.round, end: r.end, merknad: roundGapNote(i),
+          K: Object.fromEntries(computeAt(i).map(x => [x.name, x.p]))})),
+        rv12: rundevelger(12),
+      };
+    }, lagene);
+    // Rundetabellen er tabellen slik den sto på sluttdatoen: K = kampene laget
+    // har spilt til og med datoen, talt her fra kampdataene, ikke av siden.
+    const tabellBrudd = (r, spilte) => {
+      const brudd = [];
+      for (const t of r.tabeller) for (const [lag, k] of Object.entries(t.K)) {
+        const n = spilte.filter(m => (m.home === lag || m.away === lag) && m.date <= t.end).length;
+        if (n !== k) brudd.push(`runde ${t.runde} (${t.end}): ${lag} K ${k}, spilt til og med datoen ${n}`);
+      }
+      return brudd;
+    };
+    const plass = (r, tittel) => r.grupper.findIndex(g => g.tittel === tittel);
+    const kronologisk = r => r.grupper.every((g, i) => i === 0 || !g.dato || !r.grupper[i - 1].dato || r.grupper[i - 1].dato <= g.dato);
+
+    // ---- OBOS, med en kamp fra runde 29 flyttet fram til 20.10. kl. 19 ----
+    let fram = null;
+    const endre = alle => {
+      const m = alle.filter(x => x.round === 29 && ![x.home, x.away].some(t => t === 'Sogndal' || t === 'Raufoss'))
+        .sort((a, b) => a.home.localeCompare(b.home, 'no'))[0];
+      fram = `${m.home}-${m.away}`;
+      return alle.map(x => x === m ? {...x, date: '2026-10-20', time: '19:00'} : x);
+    };
+    const TIDER = [['5.10. etter runde 24', '2026-10-05T21:45:00+02:00'], ['12.10. etter runde 25', '2026-10-12T23:00:00+02:00'],
+      ['19.10. etter runde 27', '2026-10-19T12:00:00+02:00'], ['21.10. etter Sogndal-Raufoss', '2026-10-21T21:45:00+02:00'],
+      ['25.10. etter runde 28', '2026-10-25T23:00:00+01:00'], ['2.11. etter runde 29', '2026-11-02T23:00:00+01:00']];
+    const SR = 'Sogndal-Raufoss', UT24 = 'Utsatt kamp fra runde 24', FRA29 = 'Kamp fra runde 29';
+    for (const [navn, iso] of TIDER) {
+      const T = Date.parse(iso), d = data('obos', T, endre), framLag = fram.split('-')[0];
+      const pg = await aapne('obos', T, d);
+      const r = await les(pg, ['Sogndal', framLag]);
+      await pg.close();
+      const tb = tabellBrudd(r, d.spilte);
+      check(`OBOS ${navn}: kamplisten i tidsrekkefølge (${r.grupper.map(g => g.tittel).join(', ')})`, kronologisk(r) && r.grupper.length > 0, JSON.stringify(r.grupper.map(g => [g.tittel, g.dato])));
+      check(`OBOS ${navn}: rundetabellene er tabellen på sluttdatoen (${r.tabeller.length} runder)`, tb.length === 0, tb.slice(0, 3).join('; '));
+      check(`OBOS ${navn}: "Runde 12" i rundevelgeren uten "(utsatt)" (OBOS har ingen flyttet runde)`, r.rv12 === 'Runde 12 av 30', r.rv12);
+      if (navn.startsWith('5.10')) {
+        check('OBOS 5.10.: aktiv runde 24, "Forrige runde" er runde 24 uten den utsatte kampen',
+          r.aktiv === 24 && r.forrige.info === 'Runde 24' && !r.forrige.linjer.includes(SR), JSON.stringify(r.forrige));
+        check(`OBOS 5.10.: kamplisten har ikke "Runde 24" øverst; "${UT24}" står etter runde 27 og "${FRA29}" (20.10.), før runde 28`,
+          plass(r, 'Runde 24') < 0 && plass(r, 'Runde 25') === 0 && plass(r, 'Runde 27') < plass(r, FRA29)
+          && plass(r, FRA29) < plass(r, UT24) && plass(r, UT24) < plass(r, 'Runde 28'), r.grupper.map(g => g.tittel).join(', '));
+        check('OBOS 5.10.: neste runde er 25, uten de flyttede kampene', r.neste.runde === 25 && !r.neste.kamper.includes(SR) && !r.neste.kamper.includes(fram), JSON.stringify(r.neste));
+      }
+      if (navn.startsWith('12.10')) {
+        check('OBOS 12.10.: aktiv runde 25, neste runde 26 uten de flyttede kampene',
+          r.aktiv === 25 && r.neste.runde === 26 && !r.neste.kamper.includes(SR) && !r.neste.kamper.includes(fram), JSON.stringify([r.aktiv, r.neste]));
+        const t24 = r.tabeller.find(t => t.runde === 24);
+        check('OBOS 12.10.: rundetabellen etter runde 24: "Sogndal-Raufoss er utsatt til 21. oktober."', t24.merknad === 'Sogndal-Raufoss er utsatt til 21. oktober.', t24.merknad);
+      }
+      if (navn.startsWith('19.10')) {
+        check(`OBOS 19.10.: neste runde er 28, med ${SR} (21.10.) og ${fram} (20.10.), som spilles før rundens siste kamp`,
+          r.aktiv === 27 && r.neste.runde === 28 && r.neste.kamper.includes(SR) && r.neste.kamper.includes(fram) && r.neste.kamper.length === 10, JSON.stringify(r.neste));
+        check('OBOS 19.10.: kortet "Neste kamp" sier "utsatt kamp fra runde 24" for Sogndal og "kamp fra runde 29" for kampen flyttet fram',
+          /· utsatt kamp fra runde 24$/.test(r.kort.Sogndal) && /· kamp fra runde 29$/.test(r.kort[framLag]), JSON.stringify(r.kort));
+        check(`OBOS 19.10.: kamplisten begynner med "${FRA29}" og "${UT24}", så runde 28`,
+          plass(r, FRA29) === 0 && plass(r, UT24) === 1 && plass(r, 'Runde 28') === 2, r.grupper.map(g => g.tittel).join(', '));
+      }
+      if (navn.startsWith('21.10')) {
+        check(`OBOS 21.10.: aktiv runde fortsatt 27 (ikke 24 eller 29); "Forrige runde" er runde 27 med de to flyttede kampene merket`,
+          r.aktiv === 27 && r.forrige.info === 'Runde 27, og 2 flyttede kamper'
+          && r.forrige.linjer.join('|').includes(`# ${FRA29}|${fram}`) && r.forrige.linjer.join('|').includes(`# ${UT24}|${SR}`), JSON.stringify(r.forrige));
+        check('OBOS 21.10.: neste runde er 28 uten de spilte flyttede kampene', r.neste.runde === 28 && r.neste.kamper.length === 8, JSON.stringify(r.neste));
+      }
+      if (navn.startsWith('25.10')) {
+        const t24 = r.tabeller.find(t => t.runde === 24);
+        check('OBOS 25.10.: aktiv runde 28 (ikke 29), "Forrige runde" er runde 28 uten de flyttede kampene',
+          r.aktiv === 28 && r.forrige.info === 'Runde 28' && !r.forrige.linjer.includes(SR), JSON.stringify(r.forrige));
+        check('OBOS 25.10.: etter runde 24: "Sogndal-Raufoss ble utsatt til 21. oktober og er ikke med."',
+          t24.merknad === 'Sogndal-Raufoss ble utsatt til 21. oktober og er ikke med.' && t24.K.Sogndal === 23, JSON.stringify(t24));
+      }
+      if (navn.startsWith('2.11')) {
+        // Runde 28 er ikke lenger dagens tabell, og har merknaden.
+        const t28 = r.tabeller.find(t => t.runde === 28);
+        check('OBOS 2.11.: aktiv runde 29; etter runde 28: begge de flyttede kampene "er med", i datorekkefølge',
+          r.aktiv === 29 && t28.merknad === `${fram} fra runde 29 ble spilt 20. oktober og er med. Sogndal-Raufoss fra runde 24 ble spilt 21. oktober og er med.`, t28.merknad);
+      }
+    }
+
+    // ---- Eliteserien: runde 12 flyttet i sin helhet ----
+    for (const [navn, iso] of [['19.10.', '2026-10-19T12:00:00+02:00'], ['25.10.', '2026-10-25T23:00:00+01:00']]) {
+      const T = Date.parse(iso), d = data('eliteserien', T);
+      const pg = await aapne('eliteserien', T, d);
+      const r = await les(pg, ['Viking']);
+      await pg.close();
+      const tb = tabellBrudd(r, d.spilte);
+      check(`Eliteserien ${navn}: runde 12 er en egen runde, ingen kamp i den merkes som flyttet; kamplisten i tidsrekkefølge`,
+        r.grupper.every(g => !g.flyttet) && kronologisk(r) && r.rv12 === 'Runde 12 (utsatt) av 30', JSON.stringify([r.grupper.map(g => g.tittel), r.rv12]));
+      check(`Eliteserien ${navn}: rundetabellene er tabellen på sluttdatoen`, tb.length === 0, tb.slice(0, 3).join('; '));
+      if (navn === '19.10.') check('Eliteserien 19.10.: aktiv runde 24, neste runde 12 med alle åtte kampene, "Runde 12 (utsatt)" øverst i kamplisten',
+        r.aktiv === 24 && r.neste.runde === 12 && r.neste.kamper.length === 8 && r.grupper[0].tittel === 'Runde 12 (utsatt)' && /· runde 12$/.test(r.kort.Viking),
+        JSON.stringify([r.aktiv, r.neste, r.grupper[0], r.kort]));
+      if (navn === '25.10.') check('Eliteserien 25.10.: aktiv runde og "Forrige runde" er runde 12; tabellen etter runde 24 er uten runde 12',
+        r.aktiv === 12 && r.forrige.info === 'Runde 12' && r.tabeller.find(t => t.runde === 24).K.Viking === 23, JSON.stringify([r.aktiv, r.forrige.info, r.tabeller.find(t => t.runde === 24).K.Viking]));
+    }
+    // Eliteserien 16.4.: Tromsø-Lillestrøm fra runde 15 (spilt 15.4.) drar ikke aktiv runde fram.
+    {
+      const T = Date.parse('2026-04-16T12:00:00+02:00'), d = data('eliteserien', T);
+      const flyttet = new Set(['Tromsø-Lillestrøm', 'Sarpsborg 08-Bodø/Glimt']);
+      const sisteEgen = d.spilte.filter(m => !flyttet.has(`${m.home}-${m.away}`)).at(-1);
+      const pg = await aapne('eliteserien', T, d);
+      const r = await les(pg, ['Tromsø']);
+      await pg.close();
+      check(`Eliteserien 16.4.: Tromsø-Lillestrøm fra runde 15 drar ikke aktiv runde fram: runde ${sisteEgen.round}, ikke 15`,
+        r.aktiv === sisteEgen.round && r.aktiv !== 15, JSON.stringify([r.aktiv, sisteEgen]));
+      check('Eliteserien 16.4.: "Forrige runde" har de to kampene merket der de ble spilt ("Kamp fra runde 15", "Utsatt kamp fra runde 1")',
+        r.forrige.linjer.join('|').includes('# Kamp fra runde 15|Tromsø-Lillestrøm') && r.forrige.linjer.join('|').includes('# Utsatt kamp fra runde 1|Sarpsborg 08-Bodø/Glimt'),
+        JSON.stringify(r.forrige));
+    }
+    // ---- Bildet slik det er: de spilte flyttede kampene ----
+    for (const [liga, ventet] of [['eliteserien', ['Sarpsborg 08-Bodø/Glimt', 'Tromsø-Lillestrøm', 'Tromsø-Brann', 'Bodø/Glimt-Start', 'Start-Bodø/Glimt',
+      'Lillestrøm-Kristiansund', 'Aalesund-Brann', 'Bodø/Glimt-HamKam', 'Lillestrøm-Viking']], ['obos', ['Egersund-Raufoss', 'Ranheim-Strømmen']]]) {
+      const spilte = JSON.parse(fs.readFileSync(dataFil(liga, 'data', 'matches.json'), 'utf8'));
+      const pg = await aapne(liga, null, null);
+      const r = await les(pg, []);
+      const f = await pg.evaluate(() => MATCHES.filter(m => flyttetFraRunde(m) != null).map(m => `${m.home}-${m.away}`));
+      await pg.close();
+      const tb = tabellBrudd(r, spilte);
+      check(`${liga}: de spilte flyttede kampene gjenkjennes av datoene (${f.length}: ${f.join(', ')})`,
+        f.length === ventet.length && ventet.every(k => f.includes(k)), f.join(', '));
+      check(`${liga}: alle ${r.tabeller.length} rundetabellene er tabellen på sluttdatoen`, tb.length === 0, tb.slice(0, 3).join('; '));
+      if (liga === 'eliteserien') {
+        const t = R => r.tabeller.find(x => x.runde === R);
+        const forste15 = r.tabeller.find(x => x.merknad.includes('Tromsø-Lillestrøm fra runde 15'));
+        check('Eliteserien: etter runde 2 (22. mars) er de to utsatte kampene ikke med, og merknaden sier det',
+          t(2).merknad === 'Lillestrøm-Kristiansund ble utsatt til 20. mai og er ikke med. Bodø/Glimt-HamKam ble utsatt til 22. juli og er ikke med.'
+          && t(2).K['Bodø/Glimt'] === 0, JSON.stringify(t(2)));
+        check(`Eliteserien: Tromsø-Lillestrøm (runde 15, spilt 15. april) nevnes i den første tabellen den er med i (runde ${forste15 && forste15.runde}), og bare der`,
+          !!forste15 && forste15.end >= '2026-04-15' && r.tabeller.filter(x => x.merknad.includes('Tromsø-Lillestrøm fra runde 15')).length === 1, forste15 && forste15.merknad);
+      }
+    }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -2924,9 +3155,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'nyedata') await nyedata();
       else if (BARE === 'forrigedelt') await forrigedelt();
       else if (BARE === 'matstatus') await matstatus();
+      else if (BARE === 'flyttede') await flyttede();
       else if (BARE === 'nederst') await nederstPaaSiden();
       else if (BARE === 'justering') await poengjusteringer();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, justering)`);
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -3780,6 +4012,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await nyedata();
     await forrigedelt();
     await matstatus();
+    await flyttede();
     await page.bringToFront();
 
     // ---- 18. rulling til svaret på iPad-bredder ----

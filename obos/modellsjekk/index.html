@@ -922,7 +922,7 @@
   .round h3 .round-sim{font:600 12px var(--body);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:3px 11px;cursor:pointer}
   .round h3 .round-sim[hidden]{display:none}
   .round h3 .round-sim:hover{border-color:var(--ink)}
-  /* Runde 12 (utsatt fra juli): diskret markert så plasseringen mellom runde 24 og 25 ikke ser ut som en feil */
+  /* En hel flyttet runde (Eliteseriens runde 12, utsatt fra juli): diskret markert så plasseringen mellom runde 24 og 25 ikke ser ut som en feil */
   .round.moved{background:var(--q-soft);border:1px dashed var(--q-border);border-radius:8px;padding:8px 10px 4px;margin-top:18px}
   .round.moved h3{border-bottom-color:var(--q-border)}
   .moved-note{margin:0 0 8px;font-size:12px;color:var(--q-note)}
@@ -934,10 +934,10 @@
   .match .home,.match .away{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:12.5px}
   .match .when{text-align:center;font-size:10.5px;line-height:1;white-space:nowrap}
   .match .when .t{font-weight:700;color:var(--ink)}
-  /* Én utsatt kamp i en runde: merkes på kampen, så datospennet i
-     rundeoverskriften (som regnes uten den, se scripts/leaguedata.py) ikke
-     ser ut som en feil. */
-  .match .when .ut{display:block;margin-top:2px;color:var(--muted);font-size:9.5px;font-weight:600;letter-spacing:.02em}
+  /* En flyttet enkeltkamp står der den spilles, i en egen gruppe ("Utsatt
+     kamp fra runde 24"), og i "Forrige runde" med en egen merkelapp. */
+  .round.flyttet{border-left:3px solid var(--q-border);padding-left:8px;margin-top:14px}
+  .dayhead.flyttet{color:var(--q-note)}
   .match.played .when .t{color:var(--played-fg)}
   .match .followed-name{color:var(--team-text);font-weight:700}
   .match input{width:40px;height:34px;text-align:center;font:700 19px/1 var(--cond);border:1px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--ink);padding:0}

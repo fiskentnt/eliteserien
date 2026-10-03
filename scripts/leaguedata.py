@@ -48,7 +48,7 @@ def build_fixtures(rows):
     """fixtures.json: rundene det står kamper igjen i.
 
     To regler som begge ligaene trenger:
-      Rundene sorteres kronologisk etter tidligste kampdato, ikke etter
+      Rundene sorteres kronologisk etter mediandatoen, ikke etter
       rundenummer. En runde som er flyttet skal stå der den faktisk spilles,
       ikke først i listen fordi nummeret er lavt.
       En ferdigspilt runde tas ikke med. Kamplisten er til for å legge inn
@@ -57,7 +57,12 @@ def build_fixtures(rows):
     by_round = {}
     for r in rows:
         by_round.setdefault(r["round"], []).append(r)
-    round_order = sorted(by_round, key=lambda rn: min(r["date"] for r in by_round[rn]))
+    # Mediandatoen, som rundene på siden (buildRoundSeq): en enkelt flyttet kamp
+    # flytter ikke runden, en hel flyttet runde flyttes.
+    def _median(rn):
+        d = sorted(r["date"] for r in by_round[rn])
+        return d[len(d) // 2]
+    round_order = sorted(by_round, key=lambda rn: (_median(rn), rn))
 
     out = []
     for round_no in round_order:
@@ -83,32 +88,34 @@ def build_fixtures(rows):
     return out
 
 
-MOVED_GAP_DAYS = 4
+# Samme regel som siden (RUNDE_SAMLET_DAGER og flyttetFraRunde i
+# eliteserien/index.html, 4.10.2026): en kamp mer enn så mange dager fra
+# mediandatoen i runden er flyttet ut av runden, utsatt eller flyttet fram.
+RUNDE_SAMLET_DAGER = 6
 
 
 def flyttede(group):
-    """Kampene i runden som er utsatt, som en mengde av id().
+    """Kampene i runden som er flyttet ut av rundens vanlige tidsrom, som en
+    mengde av id().
 
-    En runde spilles normalt over noen dager. Ligger en kamp MOVED_GAP_DAYS
-    eller mer etter den siste av de andre, er den utsatt -- ikke en del av
-    rundens vanlige spenn. Regelen ser bare på datoene som alt ligger i
-    terminlisten; ingenting hentes eller gjettes.
+    En runde spilles normalt over noen dager rundt mediandatoen. En kamp mer
+    enn RUNDE_SAMLET_DAGER dager før eller etter den er flyttet: utsatt
+    (Sogndal-Raufoss i runde 24, 21.10.) eller flyttet fram (Tromsø-Lillestrøm
+    i runde 15, spilt 15.4.). En hel flyttet runde har medianen med seg og har
+    ingen flyttede kamper. Før gjaldt bare kamper minst fire dager etter den
+    siste av de andre: to kamper utsatt til samme dag (runde 8 i Eliteserien)
+    ble ikke sett, og ingen kamper flyttet fram. Regelen ser bare på datoene
+    som alt ligger i terminlisten; ingenting hentes eller gjettes.
     """
-    from datetime import date as _date
-
-    def d(r):
-        y, m, dd = (int(x) for x in r["date"].split("-"))
-        return _date(y, m, dd)
+    from datetime import date as _date, timedelta as _td
 
     if len(group) < 2:
         return set()
-    ut = set()
-    for r in group:
-        andre = [x for x in group if x is not r]
-        siste_andre = max(d(x) for x in andre)
-        if (d(r) - siste_andre).days >= MOVED_GAP_DAYS:
-            ut.add(id(r))
-    return ut
+    datoer = sorted(r["date"] for r in group)
+    mid = _date.fromisoformat(datoer[len(datoer) // 2])
+    fra = (mid - _td(days=RUNDE_SAMLET_DAGER)).isoformat()
+    til = (mid + _td(days=RUNDE_SAMLET_DAGER)).isoformat()
+    return {id(r) for r in group if r["date"] < fra or r["date"] > til}
 
 
 def forrige_terminliste(data_dir, sesong, forventet_par=None, log=lambda s: None):

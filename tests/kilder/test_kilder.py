@@ -2619,6 +2619,45 @@ sjekk(f"et annet resultat hos oss ({_es_feil[0]['home']}-{_es_feil[0]['away']}):
 _f, _a = _drk.etterkontroll_football_data(_es_m, [r for r in _fd if r["date"] < "2026-09-01"])
 sjekk("kamper football-data ikke har ennå: ikke et avvik", _f == [], str(_f))
 
+print("\n=== Flyttede kamper: samme regel som siden (leaguedata.flyttede, 4.10.2026) ===")
+# En kamp mer enn RUNDE_SAMLET_DAGER (6) dager fra mediandatoen i runden er
+# flyttet ut av runden, utsatt eller flyttet fram -- som flyttetFraRunde på
+# siden. Bildet fra 1.10. (tests/data): alle 240 kampene i hver liga.
+def _alle_kamper(liga):
+    d = ROT / "tests" / "data" / "2026-10-01" / liga / "data"
+    spilt = json.loads((d / "matches.json").read_text("utf-8"))
+    fx = json.loads((d / "fixtures.json").read_text("utf-8"))
+    sett = {(m["home"], m["away"]) for m in spilt}
+    return [dict(m) for m in spilt] + [{"date": m["date"], "time": m.get("time"), "round": r["round"], "home": m["home"],
+            "away": m["away"], "hg": None, "ag": None} for r in fx for m in r["matches"] if (m["home"], m["away"]) not in sett]
+_ventet_flyttet = {
+    "eliteserien": {"Sarpsborg 08-Bodø/Glimt", "Tromsø-Lillestrøm", "Tromsø-Brann", "Bodø/Glimt-Start", "Start-Bodø/Glimt",
+                    "Lillestrøm-Kristiansund", "Aalesund-Brann", "Bodø/Glimt-HamKam", "Lillestrøm-Viking"},
+    "obos": {"Egersund-Raufoss", "Ranheim-Strømmen", "Sogndal-Raufoss"}}
+for _liga in ("eliteserien", "obos"):
+    _alle = _alle_kamper(_liga)
+    _per = {}
+    for _m in _alle:
+        _per.setdefault(_m["round"], []).append(_m)
+    _funnet = set()
+    for _g in _per.values():
+        _ids = leaguedata.flyttede(_g)
+        _funnet |= {f"{m['home']}-{m['away']}" for m in _g if id(m) in _ids}
+    _om = {"eliteserien": ", med to utsatt til samme dag (runde 8) og tre flyttet fram (runde 15, 17, 18)",
+           "obos": ", med Sogndal-Raufoss (runde 24, 21.10.)"}[_liga]
+    sjekk(f"{_liga}: flyttede kamper etter medianregelen: {len(_funnet)} (som siden){_om}",
+          len(_alle) == 240 and _funnet == _ventet_flyttet[_liga], f"{len(_alle)} kamper; ekstra {_funnet - _ventet_flyttet[_liga]}, mangler {_ventet_flyttet[_liga] - _funnet}")
+_fx_es = leaguedata.build_fixtures(_alle_kamper("eliteserien"))
+_fx_ob = leaguedata.build_fixtures(_alle_kamper("obos"))
+_rek = [r["round"] for r in _fx_es]
+sjekk("Eliteserien: runde 12 (hele runden flyttet) står mellom 24 og 25 i fixtures.json, uten flyttede kamper",
+      _rek.index(12) == _rek.index(24) + 1 and _rek.index(25) == _rek.index(12) + 1
+      and not any(m.get("moved") for r in _fx_es if r["round"] == 12 for m in r["matches"]), str(_rek))
+_r24 = next(r for r in _fx_ob if r["round"] == 24)
+sjekk("OBOS: i runde 24 er bare Sogndal-Raufoss merket flyttet, og datospennet regnes uten den (2. til 5. okt)",
+      [f"{m['home']}-{m['away']}" for m in _r24["matches"] if m.get("moved")] == ["Sogndal-Raufoss"] and _r24["when"] == "2. til 5. okt",
+      str((_r24["when"], [m for m in _r24["matches"] if m.get("moved")])))
+
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.
 _vern.sjekk_urort(sjekk)

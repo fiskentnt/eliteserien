@@ -3,6 +3,41 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Flyttede kamper følger tidslinjen (4.10.2026)
+
+OBOS fikk en reell test: Sogndal-Raufoss i runde 24 spilles 21.10., etter
+rundene 25 til 27. Med falsk klokke (5.10., 12.10., 19.10., 21.10., 25.10.)
+viste siden runde 24 øverst i kamplisten i tre uker, "Forrige runde: Runde 24"
+21.10., ingen Sogndal-Raufoss i "Rundens viktigste kamp" og "Heie på" 19.10.,
+og rundetabellen "etter runde 24 (5. oktober)" med en kamp spilt 21.10. Det
+siste gjaldt allerede i Eliteserien: "etter runde 2 (22. mars)" tok med
+Bodø/Glimt-HamKam, spilt 22. juli.
+
+Regelen (flyttetFraRunde på siden, leaguedata.flyttede i Python, samme
+grense): en kamp mer enn 6 dager fra mediandatoen i runden er flyttet ut av
+runden, utsatt eller flyttet fram. Rundenummeret i dataene endres aldri.
+  * aktiv runde og "Forrige runde" regnes av rundenes egne kamper; en
+    flyttet kamp vises i "Forrige runde" for tidsrommet den ble spilt i
+  * rundetabellen "etter runde N (dato)" er tabellen på rundens sluttdato:
+    alle kamper spilt til og med datoen (ikke rundenummer <= N)
+  * neste runde ("Rundens viktigste kamp", "Heie på") tar med flyttede
+    kamper som spilles før rundens siste kamp
+  * kamplisten følger tidsrekkefølgen; en flyttet kamp står i egen gruppe,
+    "Utsatt kamp fra runde N" eller "Kamp fra runde N"
+  * "Simuler runden" og "Fyll ut runden" følger gruppen i kamplisten
+    (kampGruppe): rundens egne kamper, eller den flyttede kampen alene
+  * en hel flyttet runde (Eliteseriens runde 12) gjenkjennes av datoene;
+    LEAGUE.movedRounds gir bare etiketten (hardkodingen av runde 12 er borte)
+
+Funnet samtidig: Eliteserien har tre kamper flyttet fram (Tromsø-Lillestrøm
+fra runde 15 spilt 15.4., Tromsø-Brann fra runde 17 29.4., Bodø/Glimt-Start
+fra runde 18 30.4.), og den gamle Python-regelen så ikke to kamper utsatt til
+samme dag (runde 8).
+
+Test: `node tests/regression.js --bare flyttede` (falsk klokke, også 2.11. og
+16.4., en kamp fra runde 29 flyttet fram til 20.10., og rundetabellene mot
+kampene spilt til og med sluttdatoen) og `--bare fyllrunden`.
+
 ## "100 %" og "–" bare når det er matematisk avgjort (4.10.2026)
 
 Funnet i OBOS etter fem kamper i runde 24 (3.10.): Haugesund hadde merket

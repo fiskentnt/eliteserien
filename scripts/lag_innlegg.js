@@ -110,8 +110,13 @@ function etterRunden(liga){
       if(fra == null || til == null) continue;
       const d = pst(til) - pst(fra);
       if(!d) continue;
-      // Kampen laget spilte i runden som nettopp ble ferdig.
-      const kamp = (m || []).filter(x => x.round === nu.round && (x.home === lag || x.away === lag))[0];
+      // Kampen laget spilte siden forrige punkt (dato), ellers kampen i runden
+      // som nettopp ble ferdig. På dato først: en flyttet kamp (Sogndal-Raufoss
+      // i runde 24, spilt 21.10.) har ikke rundenummeret til punktet (27).
+      const egne = (m || []).filter(x => x.home === lag || x.away === lag);
+      const kamp = egne.filter(x => x.date > (for_.date || '') && x.date <= (nu.date || '9999'))
+        .sort((p, q) => p.date.localeCompare(q.date)).at(-1)
+        || egne.filter(x => x.round === nu.round)[0];
       ut.push({lag, sone, fra: pst(fra), til: pst(til), endring: Math.abs(d) / 100,
                runde: nu.round, kamp});
     }

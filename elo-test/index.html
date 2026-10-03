@@ -905,7 +905,7 @@
   .round h3 .round-sim{font:600 12px var(--body);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:3px 11px;cursor:pointer}
   .round h3 .round-sim[hidden]{display:none}
   .round h3 .round-sim:hover{border-color:var(--ink)}
-  /* Runde 12 (utsatt fra juli): diskret markert så plasseringen mellom runde 24 og 25 ikke ser ut som en feil */
+  /* En hel flyttet runde (Eliteseriens runde 12, utsatt fra juli): diskret markert så plasseringen mellom runde 24 og 25 ikke ser ut som en feil */
   .round.moved{background:var(--q-soft);border:1px dashed var(--q-border);border-radius:8px;padding:8px 10px 4px;margin-top:18px}
   .round.moved h3{border-bottom-color:var(--q-border)}
   .moved-note{margin:0 0 8px;font-size:12px;color:var(--q-note)}
@@ -917,10 +917,10 @@
   .match .home,.match .away{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:12.5px}
   .match .when{text-align:center;font-size:10.5px;line-height:1;white-space:nowrap}
   .match .when .t{font-weight:700;color:var(--ink)}
-  /* Én utsatt kamp i en runde: merkes på kampen, så datospennet i
-     rundeoverskriften (som regnes uten den, se scripts/leaguedata.py) ikke
-     ser ut som en feil. */
-  .match .when .ut{display:block;margin-top:2px;color:var(--muted);font-size:9.5px;font-weight:600;letter-spacing:.02em}
+  /* En flyttet enkeltkamp står der den spilles, i en egen gruppe ("Utsatt
+     kamp fra runde 24"), og i "Forrige runde" med en egen merkelapp. */
+  .round.flyttet{border-left:3px solid var(--q-border);padding-left:8px;margin-top:14px}
+  .dayhead.flyttet{color:var(--q-note)}
   .match.played .when .t{color:var(--played-fg)}
   .match .followed-name{color:var(--team-text);font-weight:700}
   .match input{width:40px;height:34px;text-align:center;font:700 19px/1 var(--cond);border:1px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--ink);padding:0}
@@ -3647,15 +3647,18 @@ async function simulateEmpty(){
 // en fersk sesong for hele runden. Alt annet (spilt i virkeligheten, eller
 // fylt inn av brukeren selv) får ingen knapp.
 function roundButtonState(roundNum){
-  const roundMatches = matches.filter(m=>m.round===roundNum);
+  // Rundens egne kamper, som gruppen i kamplisten (kampGruppe): en flyttet
+  // kamp står i en egen gruppe og simuleres ikke med runden.
+  const roundMatches = matches.filter(m=>kampGruppe(m)===`r${roundNum}`);
   if(!roundMatches.length) return null; // ingen redigerbare kamper igjen i runden -- spilt
   if(roundMatches.some(isEmpty)) return 'simulate';
   if(roundMatches.every(m=>m.sim)) return 'resimulate';
   return null; // alt satt, og minst én er fylt inn av brukeren selv
 }
 async function simulateRound(roundNum, resim){
-  if(resim) matches.filter(m=>m.round===roundNum && m.sim).forEach(m=>setMatch(m,null,null));
-  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && m.round===roundNum));
+  const iRunden = m => kampGruppe(m)===`r${roundNum}`;
+  if(resim) matches.filter(m=>iRunden(m) && m.sim).forEach(m=>setMatch(m,null,null));
+  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && iRunden(m)));
 }
 function updateRoundSimButtons(){
   document.querySelectorAll('.round-sim').forEach(btn=>{
@@ -3668,11 +3671,14 @@ function updateRoundSimButtons(){
 }
 
 // ---- "Fyll ut runden når jeg legger inn et resultat": fyller de tomme
-// kampene med SAMME RUNDENUMMER som kampen du endret, og ingen andre. Er
-// runden allerede fylt ut, endres bare den ene kampen. Før (til 3.10.2026)
-// fylte den alle tomme kamper til og med rundens siste kampdato: OBOS runde
-// 24 har Sogndal-Raufoss flyttet til 21. oktober, og et resultat i runde 24
-// fylte da også rundene 25, 26 og 27. ----
+// kampene i SAMME GRUPPE som kampen du endret, slik kamplisten viser den
+// (kampGruppe): rundens egne kamper, eller en flyttet kamp med gruppen den
+// spilles i. Er gruppen allerede fylt ut, endres bare den ene kampen. Før
+// (til 3.10.2026) fylte den alle tomme kamper til og med rundens siste
+// kampdato: OBOS runde 24 har Sogndal-Raufoss flyttet til 21. oktober, og et
+// resultat i runde 24 fylte da også rundene 25, 26 og 27. Fra 3.10. fylte
+// den alle med samme rundenummer, også Sogndal-Raufoss, som står for seg
+// etter runde 27 i kamplisten (4.10.2026). ----
 function latestOwnMatch(){
   let best=null;
   matches.forEach(m=>{ if(m.hg!=null && m.ag!=null && !m.sim && (best===null || m.date>best.date)) best=m; });
@@ -3682,10 +3688,10 @@ function latestOwnMatch(){
 // gi effekten av akkurat den, med alt annet likt. Vil du trekke på nytt, bruker
 // du "Simuler på nytt" i runden eller "Simuler tomme kamper". Utfyllingen
 // under fyller derfor bare TOMME kamper, og rører verken grå eller egne.
-// Rundene som fylles: rundene til kampene i `endret`.
+// Gruppene som fylles: gruppene til kampene i `endret`.
 async function fillRounds(endret){
-  const runder = new Set(endret.map(m=>m.round));
-  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && runder.has(m.round)));
+  const grupper = new Set(endret.map(kampGruppe));
+  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && grupper.has(kampGruppe(m))));
 }
 // Avkryssingsboksen bestemmer bare om tomme kamper fylles ut når du legger inn
 // et resultat. Av eller på: den sletter ingenting. `m` er kampen du endret.
@@ -3830,7 +3836,8 @@ function renderNextMatch(){
   box.hidden = false;
   box.dataset.id = m.id;
   const when = capFirst(formatDateNo(m.date)) + (m.time ? ` kl. ${m.time}` : '');
-  document.getElementById('nmWhen').textContent = when + ` · runde ${m.round}`;
+  // En flyttet kamp heter "utsatt kamp fra runde 24", ikke "runde 24".
+  document.getElementById('nmWhen').textContent = when + ` · ${flyttetTekst(m) || `runde ${m.round}`}`;
   document.getElementById('nmHome').textContent = m.home;
   document.getElementById('nmAway').textContent = m.away;
   const [lh,la] = rateFor(m.home, m.away), o = outcome(lh,la);
@@ -3967,19 +3974,25 @@ function updateSummaryCards(){
 // (spilte runder, fra faktiske resultater) eller blir (kommende, fra resultatene
 // i kamplisten) etter valgt runde. Rundene sorteres etter dato, ikke nummer:
 // runde 12 er utsatt til oktober og havner mellom 24 og 25. ----
-let ROUND_SEQ = []; // [{round, mid, end}] i tidsrekkefølge, end = datoen runden ble spilt ferdig (se under)
-// En kamp mer enn så mange dager etter mediandatoen er flyttet ut av runden.
+let ROUND_SEQ = []; // [{round, mid, fra, til, start, end}] i tidsrekkefølge (se buildRoundSeq)
+let ROUND_BY = {};    // runde -> samme objekt
+// En kamp mer enn så mange dager fra mediandatoen er flyttet ut av runden.
 // I 2026 ligger kampene i en runde fra fire dager før til to dager etter
 // mediandatoen, og de utsatte kampene 10 til 122 dager etter.
 const RUNDE_SAMLET_DAGER = 6;
+const dagerFra = (dato, n) => { const d = new Date(dato+'T12:00:00Z'); d.setUTCDate(d.getUTCDate()+n); return d.toISOString().slice(0,10); };
 function buildRoundSeq(){
   // Sorteres på MEDIANEN av kampdatoene i runden, ikke på siste dato: en enkelt
   // utsatt kamp (runde 1, 2, 8, 11 har hver én) skal ikke flytte hele runden,
   // mens runde 12 (alle kampene utsatt til oktober) havner mellom 24 og 25.
-  // Sluttdatoen (end) følger samme regel: siste dato blant kampene som ligger
-  // samlet rundt mediandatoen, ikke en kamp flyttet langt ut. Den står i
-  // overskriften ("etter runde 24 (5. oktober)") og er grensen for
-  // poengjusteringene i rundetabellen. Før var det rundens siste kampdato
+  // En hel flyttet runde gjenkjennes slik av datoene; LEAGUE.movedRounds gir
+  // bare etiketten ("(utsatt)").
+  // Rundens vanlige tidsrom er fra RUNDE_SAMLET_DAGER før til like mange dager
+  // etter mediandatoen (fra, til). Kampene innenfor er rundens egne; en kamp
+  // utenfor er flyttet ut av runden (flyttetFraRunde), utsatt eller flyttet
+  // fram. start og end er første og siste dato blant rundens egne kamper. end
+  // står i overskriften ("etter runde 24 (5. oktober)") og er datoen
+  // rundetabellen gjelder (computeAt). Før var det rundens siste kampdato
   // uansett: "etter runde 24 (21. oktober)" fordi Sogndal-Raufoss er flyttet
   // til 21. oktober, og "etter runde 2 (22. juli)" i Eliteserien (3.10.2026).
   const dates = {};
@@ -3987,20 +4000,59 @@ function buildRoundSeq(){
   MATCHES.forEach(add); matches.forEach(add);
   ROUND_SEQ = Object.keys(dates).map(r=>{
     const d = dates[r].slice().sort(), mid = d[Math.floor(d.length/2)];
-    const grense = new Date(mid+'T12:00:00Z'); grense.setUTCDate(grense.getUTCDate()+RUNDE_SAMLET_DAGER);
-    const g = grense.toISOString().slice(0,10);
-    return {round:+r, mid, end:d.filter(x=>x<=g).pop()};
+    const fra = dagerFra(mid, -RUNDE_SAMLET_DAGER), til = dagerFra(mid, RUNDE_SAMLET_DAGER);
+    const egne = d.filter(x=>x>=fra && x<=til);
+    return {round:+r, mid, fra, til, start:egne[0], end:egne[egne.length-1]};
   }).sort((a,b)=> a.mid.localeCompare(b.mid) || a.round-b.round);
+  ROUND_BY = Object.fromEntries(ROUND_SEQ.map(r=>[r.round, r]));
+}
+// ---- Flyttede kamper (4.10.2026) ----
+// Runden en enkeltkamp er flyttet ut av (utenfor rundens vanlige tidsrom),
+// ellers null. Gjelder både utsatte kamper (Sogndal-Raufoss i runde 24, spilt
+// 21.10.) og kamper flyttet fram (Tromsø-Lillestrøm i runde 15, spilt 15.4.).
+// Rundenummeret i dataene endres aldri; kampen plasseres der den spilles:
+//   * den drar aldri aktiv runde eller "Forrige runde" tilbake (eller fram)
+//   * rundetabellen er tabellen slik den sto på rundens sluttdato (computeAt)
+//   * den er med i "Rundens viktigste kamp" og "Heie på" for tidsrommet den
+//     spilles i (qaNextRoundMatches)
+//   * kamplisten viser den i tidsrekkefølge, merket "Utsatt kamp fra runde N"
+//     eller "Kamp fra runde N" (flyttetTekst)
+// En hel flyttet runde (Eliteseriens runde 12) har medianen med seg og er
+// fortsatt en egen runde.
+function flyttetFraRunde(m){
+  const r = ROUND_BY[m.round];
+  return r && (m.date < r.fra || m.date > r.til) ? m.round : null;
+}
+// Gruppen kampen står i i kamplisten, og som "Simuler runden" og "Fyll ut
+// runden" fyller: rundens egne kamper ('r24'), eller de flyttede kampene fra
+// samme runde samme dag ('f24|2026-10-21').
+function kampGruppe(m){ return flyttetFraRunde(m)==null ? `r${m.round}` : `f${m.round}|${m.date}`; }
+// "utsatt kamp fra runde 24" / "kamp fra runde 15" (flyttet fram), ellers ''.
+function flyttetTekst(m){
+  const R = flyttetFraRunde(m);
+  if(R==null) return '';
+  return m.date > ROUND_BY[R].til ? `utsatt kamp fra runde ${R}` : `kamp fra runde ${R}`;
+}
+// Runden (indeks i ROUND_SEQ) som spilles i tidsrommet datoen ligger i: fra
+// rundens første kamp til neste rundes første kamp.
+function rundeIdxForDato(dato){
+  let idx = 0;
+  ROUND_SEQ.forEach((r,i)=>{ if(r.start<=dato) idx = i; });
+  return idx;
 }
 // Datoen runden ble spilt ferdig (end over), for overskriften over tabellen.
-const rundeSlutt = round => { const r = ROUND_SEQ.find(x=>x.round===round); return r ? r.end : null; };
+const rundeSlutt = round => { const r = ROUND_BY[round]; return r ? r.end : null; };
 let selRoundIdx = null; // null = gjeldende tabell (alle resultater)
 const hasResult = m => m.hg!=null && m.ag!=null;
-// Forrige runde (i tidsrekkefølge) med minst ett resultat, spilt eller fylt inn:
-// tabellen med alle resultater står etter denne runden.
+// Den siste runden (i tidsrekkefølge) med minst ett resultat i rundens egne
+// kamper, spilt eller fylt inn: tabellen med alle resultater står etter denne
+// runden. En flyttet enkeltkamp teller ikke: Sogndal-Raufoss (runde 24) spilt
+// 21.10. drar ikke runden tilbake til 24, og en kamp fra runde 29 spilt
+// fram drar den ikke fram.
 function currentRoundIdx(){
-  const has = new Set(MATCHES.map(m=>m.round));
-  matches.forEach(m=>{ if(hasResult(m)) has.add(m.round); });
+  const has = new Set();
+  MATCHES.forEach(m=>{ if(!flyttetFraRunde(m)) has.add(m.round); });
+  matches.forEach(m=>{ if(hasResult(m) && !flyttetFraRunde(m)) has.add(m.round); });
   let idx = 0;
   ROUND_SEQ.forEach((r,i)=>{ if(has.has(r.round)) idx = i; });
   return idx;
@@ -4009,14 +4061,19 @@ function viewRoundIdx(){
   const cur = currentRoundIdx();
   return (selRoundIdx==null || selRoundIdx===cur) ? cur : Math.max(0, Math.min(ROUND_SEQ.length-1, selRoundIdx));
 }
-// Tabellen etter runde-indeks idx: alle spilte kamper (MATCHES) og resultater i
-// kamplisten (matches) i rundene til og med den valgte.
+// Tabellen etter runde-indeks idx: tabellen slik den sto på rundens sluttdato,
+// altså alle kamper spilt (MATCHES) eller fylt inn (matches) til og med den
+// datoen. Ikke rundenummer: en utsatt kamp fra en tidligere runde kommer ikke
+// med før den er spilt, og en kamp flyttet fram fra en senere runde kommer med
+// når den er spilt. Før talte alle kampene med rundenummer til og med den
+// valgte, og "etter runde 2 (22. mars)" tok med Bodø/Glimt-HamKam, spilt
+// 22. juli (4.10.2026).
 function computeAt(idx){
-  const inc = new Set(ROUND_SEQ.slice(0, idx+1).map(r=>r.round));
+  const end = ROUND_SEQ[idx] ? ROUND_SEQ[idx].end : null;
   const t = {}; TEAMS.forEach(n=>t[n]={name:n,p:0,w:0,d:0,l:0,gf:0,ga:0,results:[]});
   const games = [];
-  MATCHES.forEach(m=>{ if(inc.has(m.round)) games.push(m); });
-  matches.forEach(m=>{ if(inc.has(m.round) && hasResult(m)) games.push(m); });
+  MATCHES.forEach(m=>{ if(end && m.date<=end) games.push(m); });
+  matches.forEach(m=>{ if(end && m.date<=end && hasResult(m)) games.push(m); });
   games.sort((x,y)=>x.date.localeCompare(y.date));
   games.forEach(m=>{
     const h=t[m.home], a=t[m.away];
@@ -4025,45 +4082,58 @@ function computeAt(idx){
     if(rh==='W'){h.w++;a.l++;} else if(rh==='L'){a.w++;h.l++;} else {h.d++;a.d++;}
     h.results.push(rh); a.results.push(ra);
   });
-  const end = ROUND_SEQ[idx] ? ROUND_SEQ[idx].end : null;
   const rows = Object.values(t).map(r=>{ const just=poengJust(r.name, end); return {...r, just, pts:r.w*3+r.d+just, gd:r.gf-r.ga}; });
   rows.sort((x,y)=> y.pts-x.pts || y.gd-x.gd || y.gf-x.gf || x.name.localeCompare(y.name,'no'));
   rows.forEach((r,i)=>r.pos=i+1);
   return rows;
 }
-// Kamper uten resultat i rundene til og med den valgte: tabellen er da ikke
-// komplett. Sier fra om den valgte runden selv og om tidligere runder.
-// Merknaden over tabellen. Bare i rundetabellen for en TIDLIGERE runde der
-// kamper til og med runden mangler resultat, og da med hvilke kamper det
-// gjelder: "Sogndal-Raufoss er flyttet til 21. oktober." Aldri i dagens
-// tabell: en runde som er i gang er normalt, og K-kolonnen viser hvor mange
-// kamper hvert lag har spilt. Før sto "Runde 24 har resultater for bare 1 av
-// 8 kamper. Tabellen bygger bare på resultatene som er lagt inn." i dagens
-// tabell, også når resultatene var ekte (3.10.2026).
+// Merknaden over tabellen. Bare i rundetabellen for en TIDLIGERE runde, aldri
+// i dagens tabell: en runde som er i gang er normalt, og K-kolonnen viser hvor
+// mange kamper hvert lag har spilt. Den sier hva som skiller tabellen fra
+// rundens kamper: rundens egne kamper som er utsatt til etter sluttdatoen (de
+// er ikke med), flyttede kamper fra andre runder som kommer med for første
+// gang (de er med), og kamper til og med sluttdatoen som mangler resultat (et
+// scenario langt fram).
 function roundGapNote(idx){
   if(idx===currentRoundIdx()) return '';
-  const R = ROUND_SEQ[idx].round;
-  const inc = new Set(ROUND_SEQ.slice(0, idx+1).map(r=>r.round));
-  const missing = matches.filter(m=>inc.has(m.round) && !hasResult(m))
-    .sort((a,b)=>a.date.localeCompare(b.date) || a.home.localeCompare(b.home));
-  if(!missing.length) return '';
+  const R = ROUND_SEQ[idx], end = R.end;
+  const alle = MATCHES.concat(matches);
   const p = osloParts(new Date()), pad = x=>String(x).padStart(2,'0');
   const idag = `${p.year}-${pad(p.month)}-${pad(p.day)}`;
-  const om = m => m.moved ? `${m.home}-${m.away} er flyttet til ${dateNoLong(m.date)}.`
-    : m.date > idag ? `${m.home}-${m.away} spilles ${dateNoLong(m.date)}.`
-    : `${m.home}-${m.away} mangler resultat.`;
-  if(missing.length <= 3) return missing.map(om).join(' ');
-  // Mange kamper (et scenario langt fram, og en eldre runde vises): antallet.
-  const iR = missing.filter(m=>m.round===R).length, tidligere = missing.length - iR;
+  const kamp = m => `${m.home}-${m.away}`;
+  // Delene som {dato, tekst}, så merknaden står i datorekkefølge.
+  const deler = [];
+  // Rundens egne kamper som er utsatt: ikke med i tabellen.
+  alle.filter(m=>m.round===R.round && m.date>end).forEach(m=>deler.push({d:m.date, h:m.home,
+    t:MATCHES.includes(m) ? `${kamp(m)} ble utsatt til ${dateNoLong(m.date)} og er ikke med.` : `${kamp(m)} er utsatt til ${dateNoLong(m.date)}.`}));
+  // Flyttede kamper fra andre runder som kommer med i DENNE tabellen: spilt
+  // etter forrige rundes sluttdato og til og med denne rundens (Sogndal-Raufoss
+  // fra runde 24 i tabellen etter runde 28). Bare her, ikke i hver tabell etter.
+  const forrigeSlutt = idx>0 ? ROUND_SEQ[idx-1].end : '';
+  MATCHES.filter(m=>m.round!==R.round && flyttetFraRunde(m)!=null && m.date>forrigeSlutt && m.date<=end)
+    .forEach(m=>deler.push({d:m.date, h:m.home, t:`${kamp(m)} fra runde ${m.round} ble spilt ${dateNoLong(m.date)} og er med.`}));
+  const missing = matches.filter(m=>m.date<=end && !hasResult(m));
+  const om = m => ({d:m.date, h:m.home, t: m.date > idag ? `${kamp(m)} spilles ${dateNoLong(m.date)}.` : `${kamp(m)} mangler resultat.`});
+  const tekst = a => a.sort((x,y)=>x.d.localeCompare(y.d) || x.h.localeCompare(y.h)).map(x=>x.t).join(' ');
+  if(missing.length + deler.length <= 3) return tekst(deler.concat(missing.map(om)));
+  if(!missing.length) return tekst(deler);
+  // Mange kamper (et scenario langt fram, og en eldre runde vises): antallet,
+  // og de flyttede kampene etter når de er få.
+  const iR = missing.filter(m=>m.round===R.round).length, tidligere = missing.length - iR;
   const n = k => k===1 ? 'én kamp' : `${k} kamper`;
-  if(iR && tidligere) return `I runde ${R} er ${n(iR)} uten resultat, og ${n(tidligere)} i tidligere runder.`;
-  return iR ? `I runde ${R} er ${n(iR)} uten resultat.` : `I tidligere runder er ${n(tidligere)} uten resultat.`;
+  const tall = iR && tidligere ? `I runde ${R.round} er ${n(iR)} uten resultat, og ${n(tidligere)} i tidligere runder.`
+    : iR ? `I runde ${R.round} er ${n(iR)} uten resultat.` : `I tidligere runder er ${n(tidligere)} uten resultat.`;
+  return deler.length <= 2 && deler.length ? `${tall} ${tekst(deler)}` : tall;
 }
 function updateRoundNav(){
   if(!ROUND_SEQ.length) return;
   const idx = viewRoundIdx();
   const r = ROUND_SEQ[idx].round;
-  document.getElementById('roundLabel').textContent = `Runde ${r}${r===12?' (utsatt)':''} av ${ROUND_SEQ.length}`;
+  // Etiketten for en hel flyttet runde kommer fra LEAGUE.movedRounds; hvor
+  // runden står, kommer av datoene (buildRoundSeq). Før sto "(utsatt)"
+  // hardkodet på runde 12, også i OBOS, der runde 12 ikke er flyttet.
+  const mv = (LEAGUE.movedRounds || {})[r];
+  document.getElementById('roundLabel').textContent = `Runde ${r}${mv && mv.label ? ' '+mv.label : ''} av ${ROUND_SEQ.length}`;
   document.getElementById('roundPrev').disabled = idx===0;
   document.getElementById('roundNext').disabled = idx===ROUND_SEQ.length-1;
   document.getElementById('roundReset').hidden = idx===currentRoundIdx();
@@ -4688,16 +4758,26 @@ async function qaNextMatch(team){
 // lagets sjanse for det mest aktuelle målet (samme sone som spørsmål 1) måles
 // mot tabellens tall. Samme mekanikk, antall simuleringer og frø som spørsmål
 // 3 og 5. ----
+// Neste runde: rundens egne uspilte kamper, pluss flyttede kamper som spilles
+// før rundens siste kamp (tidsrommet de spilles i, 4.10.2026). Runden velges
+// av rundenes egne kamper: den med flest kamper den første uka etter den
+// første uspilte. 19.10. er det runde 28 med Sogndal-Raufoss (runde 24,
+// spilles 21.10.); før ble den utsatte kampen utelatt, og 3.10. var den med
+// i runde 24 selv om den spilles etter rundene 25 til 27.
 function qaNextRoundMatches(openMatches){
   if(!openMatches.length) return {round:null, list:[]};
-  const first = openMatches.reduce((a,m)=>m.date<a?m.date:a, openMatches[0].date);
-  const lim = new Date(first+'T00:00:00Z'); lim.setUTCDate(lim.getUTCDate()+6);
-  const limS = lim.toISOString().slice(0,10);
+  const egne = openMatches.filter(m=>!flyttetFraRunde(m));
+  const grunnlag = egne.length ? egne : openMatches;
+  const first = grunnlag.reduce((a,m)=>m.date<a?m.date:a, grunnlag[0].date);
+  const limS = dagerFra(first, 6);
   const cnt = {};
-  openMatches.forEach(m=>{ if(m.date<=limS) cnt[m.round] = (cnt[m.round]||0)+1; });
+  grunnlag.forEach(m=>{ if(m.date<=limS) cnt[m.round] = (cnt[m.round]||0)+1; });
   let R = null;
   Object.keys(cnt).forEach(r=>{ if(R===null || cnt[r]>cnt[R] || (cnt[r]===cnt[R] && +r<+R)) R = r; });
-  return {round:+R, list:openMatches.filter(m=>m.round===+R)};
+  // Bare flyttede kamper igjen (sesongslutt): den første uka.
+  if(!egne.length) return {round:+R, list:openMatches.filter(m=>m.date<=limS)};
+  const slutt = (ROUND_BY[+R] || {}).end || limS;
+  return {round:+R, list:openMatches.filter(m=>flyttetFraRunde(m)==null ? m.round===+R : m.date<=slutt)};
 }
 // Workerbasseng til "heie på": oppgavene (én kjøring hver: utgangspunktet og
 // hjemmeseier/uavgjort/borteseier for hver kamp) fordeles på like mange
@@ -5633,7 +5713,7 @@ async function qaKeyRound(){
     return `Ingen kamp i ${roundTxt} betyr mye: ingen utfall endrer noe lag mer enn to prosentpoeng for ${QA_KEY_ZONES.map(z=>z.key==='gull'?LEAGUE.zones.gull.label:LEAGUE.zones[z.key].label).join(', ')}.`;
   }
   const m = b.m;
-  const navn = x => `${x.m.home} mot ${x.m.away}`;
+  const navn = x => `${x.m.home} mot ${x.m.away}${flyttetTekst(x.m) ? ` (${flyttetTekst(x.m)})` : ''}`;
   const k = data.close.length;
   // Kampene rangeres på SAMLET påvirkning over alle sonene, mens overskriften
   // bare nevner den største sonen for toppkampen. Da kunne en nedrykkskamp
@@ -7160,14 +7240,18 @@ function render(){
   computeBadgesAsync(rows); // ber Workeren om et nytt svar bare hvis noe faktisk kan ha endret badge-utfallet
   const ownMatch = latestOwnMatch();
   document.getElementById('autoFillLabel').classList.toggle('active', !!ownMatch);
+  const egenRunde = (()=>{ let idx = -1;
+    matches.forEach(m=>{ if(hasResult(m) && !m.sim && !flyttetFraRunde(m)) idx = Math.max(idx, ROUND_SEQ.findIndex(x=>x.round===m.round)); });
+    return idx<0 ? null : ROUND_SEQ[idx].round; })();
   updateRoundNav();
   const gap = roundGapNote(viewIdx), gapEl = document.getElementById('roundNote');
   gapEl.textContent = gap; gapEl.hidden = !gap;
   if(!isCurrent){
     document.getElementById('tblInfo').textContent = `etter runde ${ROUND_SEQ[viewIdx].round} (${dateNoLong(ROUND_SEQ[viewIdx].end)})`;
-  } else if(ownMatch){
-    const targetDate = rundeSlutt(ownMatch.round) || ownMatch.date;
-    document.getElementById('tblInfo').textContent = `etter runde ${ownMatch.round} (${dateNoLong(targetDate)})`;
+  } else if(egenRunde){
+    // Runden til den siste kampen fylt inn blant rundenes egne: en flyttet
+    // kamp (Sogndal-Raufoss) gir aldri "etter runde 24".
+    document.getElementById('tblInfo').textContent = `etter runde ${egenRunde} (${dateNoLong(rundeSlutt(egenRunde))})`;
   } else {
     // Før første serierunde er det ingen kamp å regne "etter".
     document.getElementById('tblInfo').textContent = played? `${played} kamper lagt inn`
@@ -8277,35 +8361,55 @@ async function boot(){
   // når oddsen sist ble hentet.
   const last = [...MATCHES].sort((x,y)=>x.date.localeCompare(y.date)).at(-1);
 
-  // "Forrige runde": runden til den ferskeste spilte kampen. Er runden fortsatt
-  // i FIXTURES_IN har den minst én kamp igjen å spille (se merknaden ved
-  // dayComplete under) — da vises bare de spilte kampene i den, med "X av Y
-  // spilt" i overskriften. Er runden IKKE i FIXTURES_IN er den 100 %
-  // ferdigspilt, og alle kampene hentes fra MATCHES i stedet, uten det tallet.
+  // Kamplisten som data først: de uspilte kampene, med samme id-er som før
+  // (runde og plass i runden etter avspark). Rundene i tidsrekkefølge
+  // (buildRoundSeq) trengs av "Forrige runde" og av rekkefølgen i kamplisten.
+  // Sortert etter avspark, ikke etter rekkefølgen i data/fixtures.json (som
+  // bare er sortert på dato+lagnavn) — ellers havner f.eks. en 14:30-kamp
+  // etter 17:00-kamper bare fordi hjemmelaget kommer seinere alfabetisk.
+  matches = [];
+  const etterAvspark = (a,b)=> a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'') || a.home.localeCompare(b.home,'no');
+  const kampliste = FIXTURES_IN.map(r=>({r, sorted:[...r.matches].sort(etterAvspark).map((m,mi)=>({m, id:`m${r.round}_${mi}`}))}));
+  kampliste.forEach(({r, sorted})=>sorted.forEach(({m, id})=>{
+    if(!m.played) matches.push({id, round:r.round, date:m.date, time:m.time||'', home:m.home, away:m.away, hg:null, ag:null});
+  }));
+  buildRoundSeq();
+  // moved: flyttet ut av runden (flyttetFraRunde), samme regel overalt.
+  matches.forEach(m=>{ m.moved = flyttetFraRunde(m)!=null; });
+
+  // "Forrige runde": den siste runden (i tidsrekkefølge) med spilte kamper
+  // blant rundens egne, med de flyttede kampene som er spilt i rundens
+  // tidsrom (fra rundens første kamp til neste rundes første), merket
+  // "Utsatt kamp fra runde N" eller "Kamp fra runde N". En flyttet kamp drar
+  // aldri "Forrige runde" tilbake: før ble Sogndal-Raufoss (runde 24) spilt
+  // 21.10. vist som "Runde 24", etter at runde 25 til 27 var spilt (4.10.2026).
   (function renderLastRound(){
     const info = document.getElementById('lastRoundInfo');
     const box = document.getElementById('lastRound');
-    if(!last){ info.textContent=''; box.innerHTML=''; return; }
-    const liveRound = FIXTURES_IN.find(r=>r.round===last.round);
-    let roundMatches, total;
-    if(liveRound){
-      roundMatches = liveRound.matches.filter(m=>m.played);
-      total = liveRound.matches.length;
-    } else {
-      roundMatches = MATCHES.filter(m=>m.round===last.round);
-      total = roundMatches.length;
-    }
-    roundMatches = [...roundMatches].sort((a,b)=>
-      a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'') || a.home.localeCompare(b.home,'no'));
-    info.textContent = roundMatches.length<total ? `Runde ${last.round}, ${roundMatches.length} av ${total} spilt` : `Runde ${last.round}`;
+    let idx = -1;
+    ROUND_SEQ.forEach((r,i)=>{ if(MATCHES.some(m=>m.round===r.round && !flyttetFraRunde(m))) idx = i; });
+    if(idx<0){ info.textContent=''; box.innerHTML=''; return; }
+    const R = ROUND_SEQ[idx].round;
+    const egne = MATCHES.filter(m=>m.round===R && !flyttetFraRunde(m));
+    const total = egne.length + matches.filter(m=>m.round===R && !m.moved).length;
+    const flyttet = MATCHES.filter(m=>flyttetFraRunde(m)!=null && rundeIdxForDato(m.date)===idx);
+    info.textContent = `Runde ${R}` + (egne.length<total ? `, ${egne.length} av ${total} spilt` : '')
+      + (flyttet.length ? `, og ${flyttet.length===1 ? 'én flyttet kamp' : flyttet.length+' flyttede kamper'}` : '');
     const d = document.createElement('div'); d.className='round';
-    roundMatches.forEach(m=>{
+    const rad = m=>{
       const row=document.createElement('div');
       row.className='match played';
       row.dataset.home=m.home; row.dataset.away=m.away;
       row.title=`Spilt ${formatDateNo(m.date)}, ligger i tabellen`;
-      row.innerHTML=`<span class="when">${m.time?`<span class="t">${m.time}</span>`:''}${m.moved?'<span class="ut" title="Utsatt kamp, flyttet til denne datoen">utsatt</span>':''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">${shortDateNo(m.date)}</span>`;
+      row.innerHTML=`<span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">${shortDateNo(m.date)}</span>`;
       d.appendChild(row);
+    };
+    egne.sort(etterAvspark).forEach(rad);
+    // De flyttede kampene etter rundens egne, hver med sin merkelapp.
+    flyttet.sort(etterAvspark).forEach(m=>{
+      const dh = document.createElement('div'); dh.className='dayhead flyttet';
+      dh.textContent = capFirst(flyttetTekst(m));
+      d.appendChild(dh); rad(m);
     });
     box.innerHTML=''; box.appendChild(d);
   })();
@@ -8336,29 +8440,47 @@ async function boot(){
   document.getElementById('howP1').textContent = `Ratingen oppdateres som beskrevet over, med læringsrate k = ${String(ELO.k).replace('.', ',')}, låst fra innkjøringen 2012–2013. Det finnes ingen halveringstid.`;
   document.getElementById('howP2').textContent = `Sjansen for hjemmeseier, uavgjort og borteseier regnes av ratingforskjellen mellom lagene, med én hjemmefordel som gjelder hele ligaen (${Math.round(ELO.hjemmefordel_rating)} ratingpoeng). Der spillselskapene har lagt ut odds for en kommende kamp, blandes de inn med ${Math.round(ELO.blend_w*100)} prosent vekt. Modellen har ikke egne angreps- og forsvarstall, så tabellen under viser ratingen i stedet. Resultater du fyller inn, og resultater fra simuleringsknappene, behandles som spilte kamper og oppdaterer ratingen etter samme regel: med markedets odds der de finnes, ellers med resultatet alene og Elo-Goals sin læringsrate k = 10. Den nye ratingen brukes for alle kamper som ikke er fylt inn, også dem som spilles før et resultat du har fylt inn. Inne i simuleringen holdes ratingen foreløpig fast; dynamisk rating der avventer testing.`;
 
-  // Gjenstående kamper, gruppert per runde. Kamper som allerede er spilt innad i en runde
-  // som ikke er ferdig, vises gråtonet og legges ikke i den redigerbare listen.
-  // De to neste rundene vises åpent, resten legges bak "Vis alle runder".
-  matches = [];
+  // Gjenstående kamper i FAKTISK TIDSREKKEFØLGE (4.10.2026). Hver runde er en
+  // gruppe med sine egne kamper; kamper som allerede er spilt i en runde som
+  // ikke er ferdig, vises gråtonet. En flyttet enkeltkamp står i en egen
+  // gruppe der den spilles, merket "Utsatt kamp fra runde N" eller "Kamp fra
+  // runde N", ikke i rundens gruppe: før sto runde 24 øverst i tre uker bare
+  // for Sogndal-Raufoss (21.10.), foran rundene 25 til 27. En runde med bare
+  // spilte egne kamper igjen vises ikke. En hel flyttet runde (Eliteseriens
+  // runde 12) er en vanlig runde der den spilles, med etiketten fra
+  // LEAGUE.movedRounds. De to første gruppene vises åpent, resten bak "Vis
+  // alle runder".
   const hiddenRounds = document.createElement('div'); hiddenRounds.hidden = true; hiddenRounds.id = 'hiddenRounds';
-  FIXTURES_IN.forEach((r,ri)=>{
+  const grupper = [];
+  kampliste.forEach(({r, sorted})=>{
+    const gruppe = ({m}) => kampGruppe({...m, round:r.round});
+    const egne = sorted.filter(x=>gruppe(x)===`r${r.round}`);
+    if(egne.some(({m})=>!m.played)) grupper.push({r, nokkel:`r${r.round}`, kamper:egne, dato:(ROUND_BY[r.round]||{}).start || egne[0].m.date});
+    sorted.filter(x=>!x.m.played && gruppe(x)!==`r${r.round}`).forEach(x=>{
+      const g = grupper.find(g=>g.nokkel===gruppe(x));
+      if(g) g.kamper.push(x); else grupper.push({r, nokkel:gruppe(x), kamper:[x], dato:x.m.date, flyttet:flyttetTekst({...x.m, round:r.round})});
+    });
+  });
+  grupper.sort((a,b)=> a.dato.localeCompare(b.dato) || (a.flyttet?1:0)-(b.flyttet?1:0) || a.r.round-b.r.round);
+  grupper.forEach((g,gi)=>{
+    const r = g.r;
     const d = document.createElement('div'); d.className='round'; d.dataset.round = r.round;
-    // En flyttet runde havner et annet sted i den kronologiske rekkefølgen enn
-    // nummeret tilsier, og merkes tydelig så det ikke ser ut som en feil for
-    // de som ikke vet den ble utsatt. Hvilke runder det gjelder, og hva som
-    // står der, kommer BARE fra LEAGUE.movedRounds -- ligaene har ulike
-    // flyttinger, og OBOS har ingen.
-    const moved = (LEAGUE.movedRounds || {})[r.round] || null;
+    // En hel flyttet runde havner et annet sted i den kronologiske
+    // rekkefølgen enn nummeret tilsier, og merkes tydelig så det ikke ser ut
+    // som en feil. Hvor den står, kommer av datoene; etiketten og merknaden
+    // kommer BARE fra LEAGUE.movedRounds -- ligaene har ulike flyttinger.
+    const moved = g.flyttet ? null : ((LEAGUE.movedRounds || {})[r.round] || null);
     if(moved) d.className += ' moved';
-    d.innerHTML = `<h3><span>Runde ${r.round}${moved?' '+moved.label:''}</span><span class="when-row"><span class="when">${r.when}</span><button class="round-sim" data-round="${r.round}" hidden></button></span></h3>`
-      + (moved && moved.note ? `<p class="moved-note">${moved.note}</p>` : '');
-    // Sortert etter avspark, ikke etter rekkefølgen i data/fixtures.json (som
-    // bare er sortert på dato+lagnavn) — ellers havner f.eks. en 14:30-kamp
-    // etter 17:00-kamper bare fordi hjemmelaget kommer seinere alfabetisk.
-    const sorted = [...r.matches].sort((a,b)=>
-      a.date.localeCompare(b.date) || (a.time||'').localeCompare(b.time||'') || a.home.localeCompare(b.home,'no'));
+    if(g.flyttet){
+      d.className += ' flyttet'; d.dataset.flyttet = '1';
+      const n = g.kamper.length, tekst = n===1 ? capFirst(g.flyttet) : capFirst(g.flyttet).replace(/^(Utsatt kamp|Kamp)/, x=>x==='Kamp' ? 'Kamper' : 'Utsatte kamper');
+      d.innerHTML = `<h3><span>${tekst}</span><span class="when-row"><span class="when">${shortDateNo(g.dato)}</span></span></h3>`;
+    } else {
+      d.innerHTML = `<h3><span>Runde ${r.round}${moved?' '+moved.label:''}</span><span class="when-row"><span class="when">${r.when}</span><button class="round-sim" data-round="${r.round}" hidden></button></span></h3>`
+        + (moved && moved.note ? `<p class="moved-note">${moved.note}</p>` : '');
+    }
     let lastDate = null;
-    sorted.forEach((m,mi)=>{
+    g.kamper.forEach(({m, id})=>{
       if(m.date !== lastDate){
         lastDate = m.date;
         const dh = document.createElement('div'); dh.className='dayhead';
@@ -8370,16 +8492,14 @@ async function boot(){
         row.className='match played';
         row.dataset.home=m.home; row.dataset.away=m.away;
         row.title=`Spilt ${formatDateNo(m.date)}, ligger i tabellen`;
-        row.innerHTML=`<span class="when">${m.time?`<span class="t">${m.time}</span>`:''}${m.moved?'<span class="ut" title="Utsatt kamp, flyttet til denne datoen">utsatt</span>':''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">Spilt ${shortDateNo(m.date)}</span>`;
+        row.innerHTML=`<span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span><span class="home">${shortTeam(m.home)}</span><span class="score">${m.hg}</span><span class="colon">-</span><span class="score">${m.ag}</span><span class="away">${shortTeam(m.away)}</span><span class="done">Spilt ${shortDateNo(m.date)}</span>`;
         d.appendChild(row);
         return;
       }
-      const id = `m${r.round}_${mi}`;
-      matches.push({id, round:r.round, date:m.date, time:m.time||'', home:m.home, away:m.away, hg:null, ag:null, moved:!!m.moved});
       const row = document.createElement('div'); row.className='match'; row.dataset.id=id;
       row.dataset.home=m.home; row.dataset.away=m.away;
       row.innerHTML = `
-        <span class="when">${m.time?`<span class="t">${m.time}</span>`:''}${m.moved?'<span class="ut" title="Utsatt kamp, flyttet til denne datoen">utsatt</span>':''}</span>
+        <span class="when">${m.time?`<span class="t">${m.time}</span>`:''}</span>
         <span class="home">${shortTeam(m.home)}</span>
         <input inputmode="numeric" data-side="h" aria-label="${m.home} mål">
         <span class="colon">-</span>
@@ -8388,9 +8508,8 @@ async function boot(){
         <span class="quick"><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct" data-o="H"></i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U"></i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct" data-o="B"></i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src"></i></span></span>`;
       d.appendChild(row);
     });
-    (ri<2 ? roundsEl : hiddenRounds).appendChild(d);
+    (gi<2 ? roundsEl : hiddenRounds).appendChild(d);
   });
-  buildRoundSeq(); // etter at kamplisten (matches) er bygd
   const showAllBtn = document.getElementById('showAllRounds');
   if(hiddenRounds.children.length){
     // Må være INNI #rounds (ikke bare etter), ellers bobler ikke input/klikk-
