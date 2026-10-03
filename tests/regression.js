@@ -2464,10 +2464,18 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           await new Promise(x => setTimeout(x, 200));
           const boks = (document.querySelector('#odds .lastmatch') || {}).textContent || '';
           const tall = t => { const m = t.match(/med (\d+) prosentpoeng/); return m ? +m[1] : /endret lite/.test(t) ? 'lite' : null; };
-          return {ferdigFoer, kall: __kall[lag], svar: svar.slice(0, 200), boks: boks.slice(0, 200), svarTall: tall(svar), boksTall: tall(boks)};
+          // Tabellens tall flyttes 5 prosentpoeng uten ny tabellversjon: linja
+          // skal stå som før (sonens tall fra utregningen, som svaret), ikke
+          // regnes om med tabellen slik den er når den tegnes (16 mot 17 for
+          // Molde 3.10.2026).
+          const z = qaTargetZone(lag), d = lastMC[lag], gml = d.slice();
+          d[z.lo - 1] = Math.max(0, d[z.lo - 1] + (d[z.lo - 1] > 0.5 ? -0.05 : 0.05));
+          const l = qaLastMatchLine(lag, lastMatchEntry(lag)), etter = l ? l.html.replace(/<[^>]+>/g, '') : '';
+          gml.forEach((v, i) => { d[i] = v; });
+          return {ferdigFoer, kall: __kall[lag], svar: svar.slice(0, 200), boks: boks.slice(0, 200), svarTall: tall(svar), boksTall: tall(boks), etterTall: tall(etter)};
         }, R, lag);
         check(`${liga}, ${lag}: svaret bedt om før tabellen var ferdig; én utregning, og boksen og svaret sier det samme (${r.boksTall})`,
-          !r.ferdigFoer && r.kall === 1 && r.boksTall !== null && r.boksTall === r.svarTall, JSON.stringify(r));
+          !r.ferdigFoer && r.kall === 1 && r.boksTall !== null && r.boksTall === r.svarTall && r.etterTall === r.boksTall, JSON.stringify(r));
       }
       await pg.close();
     }

@@ -5004,7 +5004,10 @@ function preKickProbs(home, away){
 function qaLastMatchLine(team, e){
   if(!e) return null;
   const res = `${e.iScen ? 'Simulert forrige kamp' : 'Forrige kamp'}: ${e.gf}-${e.ga} mot ${e.opp}.`;
-  const r = e.zone ? forrigeEndring(qaZoneByKey(team, e.zone), e.expected) : null;
+  // Med naa (linja regnet på siden, forrigeKampData) bruker den sonens tall
+  // fra den samme utregningen som svaret, så de ikke kan bli uenige.
+  const z = e.zone ? qaZoneByKey(team, e.zone) : null;
+  const r = z ? forrigeEndring(e.naa!=null ? {...z, pct:e.naa} : z, e.expected) : null;
   if(!r) return {html:res};
   const hvem = lagSone(team, e.zone);
   if(r.lite) return {html:`${res} Resultatet endret lite på ${hvem}.`};
@@ -5107,7 +5110,10 @@ function forrigeLinjeOppdater(){
     // Forventningen uavrundet, som svaret bruker (qaLastMatch). forrigeKampRad
     // runder til fire desimaler for lastmatch.json, og ved en kant (0,13498
     // -> 0,1350) ga linja da 14 % før kampen og svaret 13 % (3.10.2026).
-    forrigeLinje = {key:forrigeLinjeKey(team, scen, d.zone.key), e:{...forrigeKampRad(d), expected:d.expected, iScen:matches.includes(d.m)}};
+    // naa: sonens tall da utregningen ble gjort (d.tableP), som svaret bruker.
+    // Linja regnet før med tabellens tall NÅR den tegnes, og ga 16 mot svarets
+    // 17 prosentpoeng for Molde (3.10.2026) da tabellen var byttet imellom.
+    forrigeLinje = {key:forrigeLinjeKey(team, scen, d.zone.key), e:{...forrigeKampRad(d), expected:d.expected, naa:d.tableP, iScen:matches.includes(d.m)}};
     const el = document.querySelector('#odds .lastmatch'), l = qaLastMatchLine(team, forrigeLinje.e);
     if(el && l && SELECTED_TEAM===team && qaScenarioKey()===scen) el.innerHTML = l.html;
   }).catch(()=>{ if(forrigeLinjeVenter===key) forrigeLinjeVenter = null; });
