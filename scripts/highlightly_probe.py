@@ -3,7 +3,8 @@
 manuelt gjennom .github/workflows/highlightly-probe.yml, der nøkkelen ligger
 som secret (HIGHLIGHTLY_API_KEY) -- ikke lokalt, og nøkkelen skrives aldri ut.
 
-Høyst 8 kall (av 100 i døgnet):
+Høyst 8 kall (av 100 i døgnet). Med --datoer (eller DATOER) hentes bare de
+dagene, ett kall per dag, til testdataene. Ellers:
   1  /matches?date=2026-10-03&countryName=Norway   dagens OBOS-kamper og ligaens id
   2  /matches?date=2026-10-21&countryName=Norway   Sogndal-Raufoss, flyttet til 21.10.
   3-5  OBOS-sesongen 2026 (leagueId, limit 100, offset 0/100/200)
@@ -135,6 +136,8 @@ def sammenlign(liga, kamper):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--ut", default="highlightly-svar")
+    ap.add_argument("--datoer", default=os.environ.get("DATOER", ""),
+                    help="bare disse dagene (YYYY-MM-DD, kommaskilt), ett kall per dag, til testdataene")
     a = ap.parse_args()
     nokkel = os.environ.get("HIGHLIGHTLY_API_KEY", "").strip()
     if not nokkel:
@@ -143,6 +146,17 @@ def main():
     ut = Path(a.ut)
     ut.mkdir(parents=True, exist_ok=True)
     lagre = lambda navn, d: (ut / f"{navn}.json").write_text(json.dumps(d, ensure_ascii=False, indent=1), encoding="utf-8")
+
+    if a.datoer.strip():
+        for dato in [x.strip() for x in a.datoer.split(",") if x.strip()]:
+            d = hent("/matches", {"date": dato, "countryName": "Norway", "limit": 100}, nokkel)
+            dk = [kort(m) for m in (d or {}).get("data", [])]
+            lagre(f"dag_{dato}", dk)
+            for m in dk:
+                print(f"  {m['league']['name']} (id {m['league']['id']}): {m['homeTeam']['name']} - {m['awayTeam']['name']} "
+                      f"{m['date']} {m['round']!r} {m['state']['description']} {m['state']['score']['current']}")
+        print(f"\nKall brukt: {kall} av høyst {MAKS_KALL}.")
+        return 0
 
     print("== Én dag, alle norske kamper ==")
     d1 = hent("/matches", {"date": "2026-10-03", "countryName": "Norway", "limit": 100}, nokkel)

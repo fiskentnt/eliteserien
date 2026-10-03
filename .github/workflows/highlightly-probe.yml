@@ -7,6 +7,11 @@ name: Highlightly-kartlegging (manuell)
 # artefakt, til testene med lagrede svar. Ingenting committes.
 on:
   workflow_dispatch:
+    inputs:
+      datoer:
+        description: "Bare disse dagene, kommaskilt (YYYY-MM-DD), ett kall per dag. Tomt: hele kartleggingen."
+        type: string
+        default: ""
 
 permissions:
   contents: read
@@ -22,6 +27,7 @@ jobs:
       - name: Hent og sammenlign (høyst 8 kall)
         env:
           HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
+          DATOER: ${{ inputs.datoer }}
         run: python3 scripts/highlightly_probe.py --ut highlightly-svar
       - uses: actions/upload-artifact@v4
         if: always()
