@@ -1,0 +1,31 @@
+name: Highlightly-kartlegging (manuell)
+
+# Kjøres bare manuelt, før Highlightly tas i bruk som kilde: lagnavn, ligaenes
+# id, runde-feltet, de flyttede kampene og avvik mot dataene våre. Høyst 8
+# kall av 100 i døgnet. Nøkkelen ligger som secret og skrives aldri ut -- se
+# scripts/highlightly_probe.py. Svarene (bare feltene vi bruker) lagres som
+# artefakt, til testene med lagrede svar. Ingenting committes.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  kartlegg:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Hent og sammenlign (høyst 8 kall)
+        env:
+          HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
+        run: python3 scripts/highlightly_probe.py --ut highlightly-svar
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: highlightly-svar
+          path: highlightly-svar/
+          retention-days: 7
