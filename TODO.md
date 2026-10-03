@@ -3,6 +3,36 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Del bilde av tabellen (3.10.2026)
+
+Knappen "Del bilde" (aria-label "Del bilde av tabellen") står i tabellhodet
+ved rundevelgeren, i begge ligaene, også uten scenario. På telefon bare
+ikonet. Det finnes ingen "Del"-meny øverst: "Del"-knappen i tabellhodet
+vises bare med et scenario og kopierer lenken direkte. Bildeknappen står
+rett ved siden av den.
+
+Bildet er et eget eksportformat på canvas (tegnTabellBilde), ikke et
+skjermbilde: BILDE_BREDDE 900 px tegnet i BILDE_SKALA 2 (1800 px), alltid
+lyst tema (BILDE_FARGER, testet mot :root), Barlow og Barlow Condensed som
+siden. Øverst logoen og "Tabellkalkulator.no · <liga> · per <kopiDato()>",
+for en eldre runde "· etter runde N (<dato>)" som overskriften på siden.
+Med scenario: "Scenario, ikke dagens tabell" under tittelen. Alle kolonnene
+som på stor skjerm (også Form), merkene, flyttepilene, fulgt lag,
+fargeforklaringen, poengtrekket og ligaens merknad. Bildet har alltid
+vanlig tabellrekkefølge, også når tabellen på siden er sortert.
+
+Verdiene kommer fra tabellVisning(), som bruker de samme dataene og
+hjelperne som tabellen (styrkeKlasse, sjanseCelle og justeringOrd er nå
+felles med render, fillOdds og visJusteringer). PC: kopierer (ClipboardItem
+med løftet, så Safari godtar det), "Kopiert" og "Last ned" i 8 sekunder.
+Berøringsskjerm (delMedSystemet): delingsarket med filen. Ellers lastes
+bildet ned (tabell-<liga>-runde-N[-scenario].png).
+
+Samtidig: overskriften Form står nå også i rundetabellen for en eldre
+runde (form5Header hadde klassen hh, så rutene sto uten overskrift).
+
+Test: `node tests/regression.js --bare tabellbilde` (48 kontroller).
+
 ## Rundens sluttdato: kampene som ligger samlet (3.10.2026)
 
 Overskriften over tabellen sto "etter runde 24 (21. oktober)" i OBOS

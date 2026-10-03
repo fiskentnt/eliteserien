@@ -329,6 +329,8 @@
   .head-reset:hover{border-color:var(--ink)}
   .head-reset:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .head-reset svg{width:14px;height:14px;flex:none;display:block}
+  /* "Del bilde" etter kopiering: "Kopiert" i grønt, og "Last ned" ved siden av. */
+  .head-reset.done{color:var(--eu-text);border-color:var(--eu)}
   .reset-said{margin:-2px 16px 8px;color:var(--muted);font-size:12.5px;font-weight:600}
   @media (max-width:499px){
     /* For trangt til tekst: bare ikonet. Forklaringen kommer ved trykk, i
@@ -337,6 +339,9 @@
     .head-reset{width:30px;padding:0}
   }
   .roundnav{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted)}
+  /* Nullstill, Del, Del bilde og rundevelgeren på én linje også på 320 px
+     (262 px ledig; med 10 og 8 px luft trengte de 281). */
+  @media (max-width:339px){.head-tools{gap:5px}.roundnav{gap:5px}}
   .roundnav button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:18px;line-height:1;padding:0}
   .roundnav button:hover{border-color:var(--ink)}
   .roundnav .head-link{width:auto;height:auto;border:none;background:none;font-size:12.5px;margin-left:4px}
@@ -346,7 +351,9 @@
   .sort-note[hidden]{display:none}
   .sort-note .head-link{font-size:13px}
   #tbl.sorted tr.cut td{border-bottom:1px solid var(--line-soft)}
-  /* Tabell for en annen runde enn den gjeldende: modellkolonnene (Form og prosentene) gjelder bare nå-situasjonen. */
+  /* Tabell for en annen runde enn den gjeldende: modellkolonnene (Styrke og
+     prosentene) gjelder bare nå-situasjonen. Form (de fem siste) vises, med
+     overskriften: før sto rutene uten overskrift (3.10.2026). */
   #tbl.asof .hh,#tbl.asof .badge{display:none}
   #tbl th .sm{display:none}
   @media (max-width:760px),(min-width:1100px) and (max-width:1219px){#tbl th .lg{display:none}#tbl th .sm{display:inline}}

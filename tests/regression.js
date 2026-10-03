@@ -2091,6 +2091,213 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
   // (telles) og ett mellom den og den flyttede kampen (telles ikke før neste
   // runde). Kjøres med resten av suiten, eller alene:
   //   node tests/regression.js --bare rundeslutt
+  // Del bilde av tabellen (3.10.2026): et eget eksportformat tegnet på canvas
+  // (tabellVisning gir verdiene, tegnTabellBilde tegner). Bildet lages uten
+  // feil, er BILDE_BREDDE x BILDE_SKALA bredt og likt uansett skjermbredde og
+  // tema (lyst, fargene er stilarkets lyse). Verdiene i eksporten er de samme
+  // som dataene tabellen tegnes fra (compute/computeAt, LIVE, femSiste,
+  // lastMC, badgeFor) og cellene på siden, rad for rad, og tegningen bruker
+  // nettopp dem (fillText fanges, bildet leses ikke). Dagens tabell, et
+  // scenario med fulgt lag og en eldre runde, i begge ligaene. Knappen: PC
+  // kopierer (Kopiert, Last ned), berøringsskjerm åpner delingsarket, og uten
+  // noen av delene lastes bildet ned. Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare tabellbilde
+  const tabellbilde = async () => {
+    setGroup('Del bilde av tabellen: eget eksportformat, samme tall som tabellen');
+    const {KnownDevices} = require('puppeteer-core');
+    // Verdiene: eksporten mot dataene og mot cellene på siden, og det som tegnes.
+    const kontroller = pg => pg.evaluate(async () => {
+      const vis = tabellVisning(), idx = viewRoundIdx(), naa = idx === currentRoundIdx(), feil = [];
+      const f1_ = x => x.toFixed(1).replace('.', ',');
+      // (a) Dataene tabellen tegnes fra.
+      let data;
+      if (naa) {
+        const {rows} = compute(), form = formScores(Array.from(LIVE.att), Array.from(LIVE.con));
+        data = rows.map((r, i) => { const liste = femSiste(r.name), f5 = form5AvListe(liste), d = lastMC[r.name], b = badgeFor(r.name);
+          return {pos: i + 1, lag: r.name, k: r.p, v: r.w, u: r.d, t: r.l, maal: `${r.gf}-${r.ga}`, diff: `${r.gd > 0 ? '+' : ''}${r.gd}`, p: r.pts, just: !!r.just,
+            styrke: f1_(form[TI[r.name]]), ruter: liste.slice(-5).map(x => x.res + (x.scen ? 's' : '')).join(''), f5: f5 == null ? '' : f1_(f5),
+            sjanser: LEAGUE.cols.map(c => { const v = zoneSum(d, c.key); return v === 0 ? '–' : pctTxt(v); }).join(' '),
+            merke: b ? b.text : '', flytt: basePos[r.name] - (i + 1)}; });
+      } else {
+        data = computeAt(idx).map(r => { const liste = somListe(r.results), f5 = form5AvListe(liste);
+          return {pos: r.pos, lag: r.name, k: r.p, v: r.w, u: r.d, t: r.l, maal: `${r.gf}-${r.ga}`, diff: `${r.gd > 0 ? '+' : ''}${r.gd}`, p: r.pts, just: !!r.just,
+            styrke: '', ruter: liste.slice(-5).map(x => x.res).join(''), f5: f5 == null ? '' : f1_(f5), sjanser: '', merke: '', flytt: 0}; });
+      }
+      const fraVis = r => ({pos: r.pos, lag: r.lag, k: r.k, v: r.v, u: r.u, t: r.t, maal: r.maal, diff: r.diff, p: r.p, just: r.just,
+        styrke: r.styrke ? r.styrke.tekst : '', ruter: r.form.ruter.map(x => x.res + (x.scen ? 's' : '')).join(''), f5: r.form.tall,
+        sjanser: r.sjanser ? r.sjanser.map(s => s.tekst).join(' ') : '', merke: r.merke ? r.merke.tekst : '', flytt: r.flytt});
+      vis.rader.forEach((r, i) => { const a = JSON.stringify(fraVis(r)), b = JSON.stringify(data[i]); if (a !== b) feil.push(`data rad ${i + 1}: ${a} mot ${b}`); });
+      // (b) Cellene på siden (tabellen i vanlig rekkefølge).
+      const txt = el => el ? el.textContent.trim() : '';
+      const dom = [...document.querySelectorAll('#tbl tbody tr')].map(tr => { const td = tr.children, fb = tr.querySelector('.formbox');
+        return {pos: +txt(tr.querySelector('td.pos')), lag: txt(tr.querySelector('.teamname .lg')), k: +txt(tr.querySelector('td.spilt')),
+          v: +txt(td[3]), u: +txt(td[4]), t: +txt(td[5]), maal: txt(td[6]), diff: txt(tr.querySelector('td.gd')),
+          p: +txt(tr.querySelector('td.pts')).replace('*', ''), just: !!tr.querySelector('td.pts .just'),
+          styrke: txt(fb), ruter: [...tr.querySelectorAll('.form b')].map(b => b.classList[0] + (b.classList.contains('scen') ? 's' : '')).join(''),
+          f5: txt(tr.querySelector('.form5')), sjanser: naa ? ['gull', 'p3', 'ned'].map(k => txt(tr.querySelector('td.odds.' + k))).join(' ') : '',
+          merke: (bd => bd && getComputedStyle(bd).display !== 'none' ? txt(bd.querySelector('.bt')) : '')(tr.querySelector('.badge')), flytt: (t => t ? (t[0] === '▲' ? 1 : -1) * +t.slice(1) : 0)(txt(tr.querySelector('.diff'))),
+          ekstra: {styrkeCls: fb ? ['red', 'yellow', 'lightgreen', 'green'].find(c => fb.classList.contains(c)) : null,
+            sjanseCls: naa ? ['gull', 'p3', 'ned'].map(k => ['pc-zero', 'pc-hi', 'pc-mid'].find(c => tr.querySelector('td.odds.' + k).classList.contains(c))).join(' ') : '',
+            cut: tr.classList.contains('cut'), sone: ['cl', 'eu', 'playoff', 'ned'].find(c => tr.classList.contains(c)) || '', fulgt: tr.classList.contains('followed')}}; });
+      if (dom.length !== vis.rader.length) feil.push(`siden har ${dom.length} rader, bildet ${vis.rader.length}`);
+      vis.rader.forEach((r, i) => { const d = dom[i] || {}, e = d.ekstra || {}; const {ekstra, ...uten} = d;
+        const a = JSON.stringify(fraVis(r)), b = JSON.stringify(uten);
+        if (a !== b) feil.push(`siden rad ${i + 1}: ${a} mot ${b}`);
+        const x = JSON.stringify({styrkeCls: r.styrke ? r.styrke.cls : null, sjanseCls: r.sjanser ? r.sjanser.map(s => s.cls).join(' ') : '', cut: r.cut, sone: r.sone, fulgt: r.fulgt});
+        if (x !== JSON.stringify(e)) feil.push(`siden rad ${i + 1} (farger): ${x} mot ${JSON.stringify(e)}`); });
+      // (c) Det som tegnes: hver rads verdier i rekkefølge, tittelen, scenariolinja og merknadene.
+      // Teksten fanges med plassering, så den også kan sjekkes mot kantene.
+      const fang = async v => { const tekster = [], utenfor = [], o = CanvasRenderingContext2D.prototype.fillText;
+        CanvasRenderingContext2D.prototype.fillText = function (t, x, ...a) { t = String(t); tekster.push(t);
+          const w = this.measureText(t).width, v0 = this.textAlign === 'right' ? x - w : this.textAlign === 'center' ? x - w / 2 : x;
+          if (v0 < 24 - 0.5 || v0 + w > BILDE_BREDDE - 24 + 0.5) utenfor.push(`${t} (${Math.round(v0)}-${Math.round(v0 + w)})`);
+          return o.call(this, t, x, ...a); };
+        let cv; try { cv = await tegnTabellBilde(v); } finally { CanvasRenderingContext2D.prototype.fillText = o; }
+        return {cv, tekster, utenfor}; };
+      const {cv, tekster, utenfor} = await fang(vis);
+      if (utenfor.length) feil.push(`tekst utenfor kantene: ${utenfor.join(', ')}`);
+      // Fargeforklaringen brytes når den er for lang (her dobbelt så lang).
+      const lang = await fang({...vis, forklaring: [...vis.forklaring, ...vis.forklaring]});
+      if (lang.utenfor.length || lang.cv.height <= cv.height) feil.push(`lang fargeforklaring: ${lang.cv.height} mot ${cv.height}, utenfor: ${lang.utenfor.join(', ')}`);
+      let j = tekster.indexOf('Lag');
+      vis.rader.forEach((r, i) => {
+        const forvent = [r.pos, r.lag, ...(r.merke ? [r.merke.tekst] : []), ...(r.flytt ? [`${r.flytt > 0 ? '▲' : '▼'}${Math.abs(r.flytt)}`] : []),
+          r.k, r.v, r.u, r.t, r.maal, r.diff, r.p, ...(r.just ? ['*'] : []), ...(r.styrke ? [r.styrke.tekst] : []), ...(r.form.tall ? [r.form.tall] : []),
+          ...(r.sjanser ? r.sjanser.map(s => s.tekst) : [])].map(String);
+        const tegnet = [];
+        forvent.forEach(f => { const k = tekster.indexOf(f, j + 1); if (k < 0) tegnet.push(`mangler ${f}`); else j = k; });
+        if (tegnet.length) feil.push(`tegnet rad ${i + 1}: ${tegnet.join(', ')}`); });
+      const tittel = tekster.slice(0, 2).join('');
+      const ventetTittel = naa ? `Tabellkalkulator.no · ${LEAGUE.name} · per ${kopiDato()}` : `Tabellkalkulator.no · ${LEAGUE.name} · ${document.getElementById('tblInfo').textContent}`;
+      const notater = vis.notater.every(n => tekster.join(' ').includes(n.split(' ').slice(0, 3).join(' ')));
+      const blob = await tabellBildeBlob(), bm = await createImageBitmap(blob);
+      return {feil, n: vis.rader.length, tittel, ventetTittel, scenario: vis.scenario, scenarioTegnet: tekster.includes('Scenario, ikke dagens tabell'),
+        harScenario: matches.some(m => m.hg != null && m.ag != null), naa, notater, notatTekst: vis.notater, just: vis.rader.filter(r => r.just).map(r => r.lag),
+        w: cv.width, h: cv.height, blobW: bm.width, blobH: bm.height, type: blob.type, forventetW: BILDE_BREDDE * BILDE_SKALA};
+    });
+    // Fargene: stilarkets lyse farger.
+    {
+      const pg = await open(1400, 900, base + '#team=');
+      const f = await pg.evaluate(() => { const el = document.documentElement, for0 = el.dataset.theme; el.dataset.theme = 'light';
+        const cs = getComputedStyle(el), ulike = Object.entries(BILDE_FARGER).filter(([k, v]) => cs.getPropertyValue(k).trim().toLowerCase() !== v);
+        const css = [...document.querySelectorAll('style')].map(s => s.textContent).join('');
+        const mangler = Object.values(BILDE_FASTE).filter(v => !css.includes(v));
+        if (for0) el.dataset.theme = for0; else delete el.dataset.theme;
+        return {n: Object.keys(BILDE_FARGER).length, ulike, mangler}; });
+      check(`fargene i bildet er stilarkets lyse (${f.n} variabler og de faste fargene)`, f.n >= 20 && !f.ulike.length && !f.mangler.length, JSON.stringify(f));
+      await pg.close();
+    }
+    for (const [sti, liga, lag] of [['/obos/', 'OBOS', 'Haugesund'], ['/eliteserien/', 'Eliteserien', 'Brann']]) {
+      const url = base.replace('/eliteserien/', sti);
+      const pg = await open(1400, 900, url + '#team=');
+      await settle(pg);
+      const rolig = async () => { await new Promise(r => setTimeout(r, 200));
+        await pg.waitForFunction(() => typicalResolvers.size === 0 && lastMCFinal === true && lastMCScenarioKey === qaScenarioKey(), {timeout: 120000});
+        await new Promise(r => setTimeout(r, 1200)); };   // merkene kommer fra en egen Worker
+      const sjekkAlt = async navn => {
+        const r = await kontroller(pg);
+        check(`${liga}, ${navn}: bildet lages uten feil, ${r.forventetW} px bredt (${r.w}x${r.h}), PNG med samme størrelse`,
+          r.w === r.forventetW && r.blobW === r.w && r.blobH === r.h && r.h > 1000 && r.h < 1800 && r.type === 'image/png', JSON.stringify({w: r.w, h: r.h, blobW: r.blobW, blobH: r.blobH, type: r.type}));
+        check(`${liga}, ${navn}: alle ${r.n} rader har de samme verdiene som dataene og cellene på siden, og tegnes`, r.n === 16 && !r.feil.length, r.feil.slice(0, 4).join(' | '));
+        check(`${liga}, ${navn}: tittelen "${r.tittel}"`, r.tittel === r.ventetTittel, JSON.stringify({tittel: r.tittel, ventet: r.ventetTittel}));
+        check(`${liga}, ${navn}: "Scenario, ikke dagens tabell" ${r.harScenario ? 'står' : 'står ikke'} under tittelen`,
+          r.scenario === r.harScenario && r.scenarioTegnet === r.harScenario, JSON.stringify(r));
+        check(`${liga}, ${navn}: fargeforklaringen og merknadene (${r.notatTekst.join(' ') || 'ingen'}) er med`, r.notater, JSON.stringify(r.notatTekst));
+        return r;
+      };
+      // Dagens tabell.
+      const r0 = await sjekkAlt('dagens tabell');
+      if (liga === 'OBOS') check('OBOS: poengtrekket (Åsane) er med i bildet, med stjerne og merknad', r0.just.includes('Åsane') && r0.notatTekst.includes('* Åsane trukket et poeng.'), JSON.stringify(r0.just));
+      // Et scenario med fulgt lag: "Simuler runden" og H på lagets kamp.
+      await pg.select('#teamSelect', lag); await rolig();
+      await pg.evaluate(() => { const b = document.getElementById('showAllRounds'); if (!b.hidden) b.click(); });
+      const R = await pg.evaluate(lag => matches.find(m => m.hg == null && (m.home === lag || m.away === lag)).round, lag);
+      await klikk(pg, `.round-sim[data-round="${R}"]`); await rolig();
+      const id = await pg.evaluate((lag, R) => matches.find(m => m.round === R && (m.home === lag || m.away === lag)).id, lag, R);
+      await klikk(pg, `.match[data-id="${id}"] .quick button[data-q="H"]`); await rolig();
+      await sjekkAlt(`scenario med ${lag} fulgt`);
+      // Fast bredde og lyst tema uansett skjerm og tema: samme bilde, piksel for piksel.
+      const a = await pg.evaluate(async () => (await tegnTabellBilde(tabellVisning())).toDataURL());
+      await pg.evaluate(() => { document.documentElement.dataset.theme = 'dark'; });
+      await pg.setViewport({width: 390, height: 844}); await new Promise(r => setTimeout(r, 400));
+      const b = await pg.evaluate(async () => { const u = (await tegnTabellBilde(tabellVisning())).toDataURL(); delete document.documentElement.dataset.theme; return u; });
+      await pg.setViewport({width: 1400, height: 900}); await new Promise(r => setTimeout(r, 400));
+      check(`${liga}: bildet er det samme på 1400 px i lyst tema og 390 px i mørkt tema`, a === b && a.length > 10000, `${a.length} mot ${b.length}`);
+      // En eldre runde: bildet gjelder den runden, med runden i tittelen.
+      await pg.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); selRoundIdx = null; render(); }); await rolig();
+      for (let i = 0; i < 3; i++) await klikk(pg, '#roundPrev');
+      await new Promise(r => setTimeout(r, 300));
+      const r2 = await sjekkAlt('eldre runde');
+      check(`${liga}: en eldre runde har runden i tittelen og ingen modellkolonner`, !r2.naa && /etter runde \d+ \(/.test(r2.tittel), r2.tittel);
+      // Form-overskriften står over rutene i rundetabellen.
+      const fh = await pg.evaluate(() => { const th = document.getElementById('form5Header'); return {vist: getComputedStyle(th).display !== 'none', tekst: th.textContent.trim()}; });
+      check(`${liga}: rundetabellen viser overskriften Form over rutene`, fh.vist && fh.tekst === 'Form', JSON.stringify(fh));
+      await pg.close();
+    }
+    // Knappen. PC: kopierer bildet, viser "Kopiert" og "Last ned" ved siden av.
+    for (const [sti, liga] of [['/obos/', 'OBOS'], ['/eliteserien/', 'Eliteserien']]) {
+      const url = base.replace('/eliteserien/', sti);
+      const ny = async (telefon, oppsett) => { const pg = await browser.newPage();
+        pg.on('pageerror', e => errors.push(`${url} (bilde): ${e.message}`));
+        if (telefon) await pg.emulate(KnownDevices['iPhone 13']); else await pg.setViewport({width: 1280, height: 900});
+        await pg.evaluateOnNewDocument(oppsett);
+        await pg.goto(url + '#team=', {waitUntil: 'networkidle0'});
+        await pg.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 120000});
+        await pg.evaluate(() => { window.__lastet = []; const o = HTMLAnchorElement.prototype.click;
+          HTMLAnchorElement.prototype.click = function () { if (this.download) { window.__lastet.push({navn: this.download, blob: this.href.startsWith('blob:')}); return; } return o.call(this); }; });
+        return pg; };
+      const navn = async pg => pg.evaluate(() => `tabell-${LEAGUE.id}-runde-${ROUND_SEQ[viewRoundIdx()].round}.png`);
+      // PC.
+      let pg = await ny(false, () => { window.__kopiert = [];
+        Object.defineProperty(navigator, 'clipboard', {configurable: true, value: {write: async items => { for (const it of items) window.__kopiert.push({typer: it.types, blob: await it.getType('image/png')}); }}}); });
+      const knapp = await pg.evaluate(() => { const b = document.getElementById('headImage'), r = b.getBoundingClientRect(), nav = document.getElementById('roundNav').getBoundingClientRect();
+        return {label: b.getAttribute('aria-label'), tekst: b.textContent.trim(), synlig: r.width > 0 && getComputedStyle(b).visibility === 'visible', vedRunde: Math.abs(r.top - nav.top) < 20 && nav.left - r.right < 140}; });
+      // Knappene og rundevelgeren på én linje også på smale telefoner, med og uten scenario.
+      for (const w of [320, 360, 390]) {
+        await pg.setViewport({width: w, height: 800}); await new Promise(r => setTimeout(r, 300));
+        const linje = await pg.evaluate(async () => { const les = () => [...document.querySelectorAll('#tabell .head-tools > *')]
+          .filter(e => getComputedStyle(e).display !== 'none' && !e.hidden || e.classList.contains('head-reset')).map(e => Math.round(e.getBoundingClientRect().top + e.getBoundingClientRect().height / 2));
+          const uten = les(); setMatch(matches[0], 2, 1); render(); await new Promise(r => setTimeout(r, 300)); const med = les();
+          setMatch(matches[0], null, null); render();
+          return {uten, med, scroll: document.documentElement.scrollWidth - document.documentElement.clientWidth}; });
+        check(`${liga}, ${w} px: Nullstill, Del, Del bilde og rundevelgeren står på én linje, uten og med scenario`,
+          new Set(linje.uten).size === 1 && new Set(linje.med).size === 1 && linje.uten.length >= 4 && linje.scroll <= 0, JSON.stringify(linje));
+      }
+      await pg.setViewport({width: 1280, height: 900}); await new Promise(r => setTimeout(r, 300));
+      check(`${liga}, PC: "Del bilde" står ved rundevelgeren, også uten scenario (aria-label "Del bilde av tabellen")`,
+        knapp.label === 'Del bilde av tabellen' && knapp.tekst === 'Del bilde' && knapp.synlig && knapp.vedRunde, JSON.stringify(knapp));
+      await klikk(pg, '#headImage');
+      await pg.waitForFunction(() => window.__kopiert.length > 0 && !document.getElementById('imageDownload').hidden, {timeout: 30000});
+      const k = await pg.evaluate(async () => { const it = window.__kopiert[0], bm = await createImageBitmap(it.blob);
+        return {typer: it.typer, w: bm.width, tekst: document.querySelector('#headImage span').textContent, lastNed: !document.getElementById('imageDownload').hidden, lastet: window.__lastet.length}; });
+      check(`${liga}, PC: knappen kopierer bildet (image/png, ${k.w} px) og viser "Kopiert" med "Last ned" ved siden av`,
+        k.typer.join() === 'image/png' && k.w === 1800 && k.tekst === 'Kopiert' && k.lastNed && k.lastet === 0, JSON.stringify(k));
+      await klikk(pg, '#imageDownload');
+      const ln = await pg.evaluate(() => window.__lastet);
+      const forventetNavn = await navn(pg);
+      check(`${liga}, PC: "Last ned" laster ned ${forventetNavn}`, ln.length === 1 && ln[0].navn === forventetNavn && ln[0].blob, JSON.stringify(ln));
+      await pg.close();
+      // Telefon: delingsarket, ingen kopiering.
+      pg = await ny(true, () => { window.__delt = []; window.__kopiert = [];
+        navigator.canShare = d => !!(d && d.files && d.files.length);
+        navigator.share = async d => { window.__delt.push((d.files || []).map(f => ({navn: f.name, type: f.type, str: f.size}))); };
+        Object.defineProperty(navigator, 'clipboard', {configurable: true, value: {write: async () => { window.__kopiert.push(1); }}}); });
+      await pg.$eval('#headImage', el => el.scrollIntoView({block: 'center'})); await pg.tap('#headImage');
+      await pg.waitForFunction(() => window.__delt.length > 0, {timeout: 30000});
+      const d = await pg.evaluate(() => ({delt: window.__delt, kopiert: window.__kopiert.length, lastet: window.__lastet.length}));
+      const tn = await navn(pg);
+      check(`${liga}, telefon: knappen åpner delingsarket med bildet (${tn}), uten å kopiere`,
+        d.delt.length === 1 && d.delt[0].length === 1 && d.delt[0][0].type === 'image/png' && d.delt[0][0].navn === tn && d.delt[0][0].str > 10000 && !d.kopiert && !d.lastet, JSON.stringify(d));
+      await pg.close();
+      // Verken kopiering eller deling: bildet lastes ned.
+      pg = await ny(false, () => { Object.defineProperty(navigator, 'clipboard', {configurable: true, value: undefined}); });
+      await klikk(pg, '#headImage');
+      await pg.waitForFunction(() => window.__lastet.length > 0, {timeout: 30000});
+      const l = await pg.evaluate(() => window.__lastet);
+      check(`${liga}: uten kopiering og deling lastes bildet ned`, l.length === 1 && l[0].navn === await navn(pg) && l[0].blob, JSON.stringify(l));
+      await pg.close();
+    }
+  };
   const rundeslutt = async () => {
     setGroup('Rundens sluttdato: datoen runden ble spilt, ikke en kamp flyttet langt ut');
     for (const [sti, liga, R, dato, tekst, trekk, mellom] of [
@@ -2323,9 +2530,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'tidsrekkefolge') await tidsrekkefolge();
       else if (BARE === 'fyllrunden') await fyllrunden();
       else if (BARE === 'rundeslutt') await rundeslutt();
+      else if (BARE === 'tabellbilde') await tabellbilde();
       else if (BARE === 'nederst') await nederstPaaSiden();
       else if (BARE === 'justering') await poengjusteringer();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, justering)`);
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, justering)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -3172,6 +3380,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await tidsrekkefolge();
     await fyllrunden();
     await rundeslutt();
+    await tabellbilde();
     await page.bringToFront();
 
     // ---- 18. rulling til svaret på iPad-bredder ----

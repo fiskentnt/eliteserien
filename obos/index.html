@@ -378,6 +378,8 @@
   .head-reset:hover{border-color:var(--ink)}
   .head-reset:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   .head-reset svg{width:14px;height:14px;flex:none;display:block}
+  /* "Del bilde" etter kopiering: "Kopiert" i grønt, og "Last ned" ved siden av. */
+  .head-reset.done{color:var(--eu-text);border-color:var(--eu)}
   .reset-said{margin:-2px 16px 8px;color:var(--muted);font-size:12.5px;font-weight:600}
   @media (max-width:499px){
     /* For trangt til tekst: bare ikonet. Forklaringen kommer ved trykk, i
@@ -386,6 +388,9 @@
     .head-reset{width:30px;padding:0}
   }
   .roundnav{display:inline-flex;align-items:center;gap:8px;font-size:13px;font-weight:600;color:var(--muted)}
+  /* Nullstill, Del, Del bilde og rundevelgeren på én linje også på 320 px
+     (262 px ledig; med 10 og 8 px luft trengte de 281). */
+  @media (max-width:339px){.head-tools{gap:5px}.roundnav{gap:5px}}
   .roundnav button{width:30px;height:30px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);font-size:18px;line-height:1;padding:0}
   .roundnav button:hover{border-color:var(--ink)}
   .roundnav .head-link{width:auto;height:auto;border:none;background:none;font-size:12.5px;margin-left:4px}
@@ -395,7 +400,9 @@
   .sort-note[hidden]{display:none}
   .sort-note .head-link{font-size:13px}
   #tbl.sorted tr.cut td{border-bottom:1px solid var(--line-soft)}
-  /* Tabell for en annen runde enn den gjeldende: modellkolonnene (Form og prosentene) gjelder bare nå-situasjonen. */
+  /* Tabell for en annen runde enn den gjeldende: modellkolonnene (Styrke og
+     prosentene) gjelder bare nå-situasjonen. Form (de fem siste) vises, med
+     overskriften: før sto rutene uten overskrift (3.10.2026). */
   #tbl.asof .hh,#tbl.asof .badge{display:none}
   #tbl th .sm{display:none}
   @media (max-width:760px),(min-width:1100px) and (max-width:1219px){#tbl th .lg{display:none}#tbl th .sm{display:inline}}
@@ -1137,6 +1144,14 @@
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                 stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4"/></svg>
               <span>Del</span></button>
+            <!-- Del bilde av tabellen (tegnBildeKnapp i JS): PC kopierer bildet
+                 og viser "Last ned" ved siden av, telefon åpner delingsarket. -->
+            <button type="button" id="headImage" class="head-reset"
+              aria-label="Del bilde av tabellen" title="Del bilde av tabellen">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="4" width="18" height="16" rx="2"/><circle cx="8.5" cy="9.5" r="1.5"/><path d="M21 16l-5-5-9 9"/></svg>
+              <span>Del bilde</span></button>
+            <button type="button" id="imageDownload" class="head-link" hidden>Last ned</button>
             <div class="roundnav" id="roundNav" aria-label="Velg runde">
               <button type="button" id="roundPrev" aria-label="Forrige runde">‹</button>
               <span id="roundLabel">Runde av 30</span>
@@ -1157,7 +1172,7 @@
           <th class="hide-s">V</th><th class="hide-s">U</th><th class="hide-s">T</th><th class="hide-s">Mål</th>
           <th class="hide-diff">Diff</th><th class="pts">P</th>
           <th class="sortable hh formcol" id="formHeader" title="Styrke: modellens vurdering av hvor sterkt laget er, over hele sesongen. 5 er et gjennomsnittslag. Klikk for å sortere.">Styrke</th>
-          <th class="sortable hide-s hh" id="form5Header" data-sort="form5" title="Formen nå: vanlige poeng i de fem siste seriekampene (3 for seier, 1 for uavgjort), regnet om til skalaen 0 til 10. Fem seirer gir 15 av 15 poeng, altså 10,0. Resultatene står til høyre, eldst først. Klikk for å sortere.">Form</th>
+          <th class="sortable hide-s" id="form5Header" data-sort="form5" title="Formen nå: vanlige poeng i de fem siste seriekampene (3 for seier, 1 for uavgjort), regnet om til skalaen 0 til 10. Fem seirer gir 15 av 15 poeng, altså 10,0. Resultatene står til høyre, eldst først. Klikk for å sortere.">Form</th>
           <th class="sortable hide-xs hh" id="gullHeader" data-sort="gull" ></th>
           <th class="sortable hh" id="europaHeader" data-sort="europa" ></th>
           <th class="sortable hh" id="nedHeader" data-sort="ned" ></th>
@@ -1658,6 +1673,8 @@ function poengOrd(n){ n=Math.abs(n); return n===1?'et poeng':n===2?'to poeng':`$
 function poengMedMerke(pts, just){
   return just ? `<span class="pjust"><span class="just" aria-hidden="true">*</span>${pts}</span>` : `${pts}`;
 }
+// "trukket et poeng", "gitt to poeng": i fargeforklaringen og delingsbildet.
+function justeringOrd(j){ return `${j.poeng<0?'trukket':'gitt'} ${poengOrd(j.poeng)}`; }
 function justTittel(pts, just){ return `${pts} poeng, ${just<0?'etter trekk på':'med tillegg på'} ${poengOrd(just)} fra NFF.`; }
 // Forklaringen på stjernen, i tegnforklaringen under tabellen (foran
 // LEAGUE.legendNote): "* Åsane trukket et poeng.", med lenke til vedtaket når
@@ -1668,7 +1685,7 @@ function visJusteringer(){
   const foran = lg.querySelector('.lnote');
   JUSTERINGER.forEach(j=>{
     const el = document.createElement('span'); el.className = 'jnote';
-    const tekst = `${j.poeng<0?'trukket':'gitt'} ${poengOrd(j.poeng)}`;
+    const tekst = justeringOrd(j);
     // Lenke bare til vedtaket (lenke). Et trekk tabellkontrollen har lagt inn
     // automatisk, har ingen lenke før vedtaket er lagt inn for hånd.
     el.innerHTML = `* ${j.lag} ${/^https:\/\//.test(j.lenke||'')?`<a href="${j.lenke}" target="_blank" rel="noopener" title="NFFs vedtak">${tekst}</a>`:tekst}.`;
@@ -3433,6 +3450,12 @@ function runMCAsync(N){
   if(scenarioKey!=='' && (navigator.hardwareConcurrency||0) >= INNSIKT_SAMTIDIG_KJERNER) innsiktData();
 }
 const pctTxt=x=> x===0?'0 %': x<0.005?'<1 %': x>0.995&&x<1?'>99 %': Math.round(x*100)+' %';
+// Prosentcellene i tabellen (fillOdds) og delingsbildet: nøyaktig 0 vises
+// som en svak strek, ikke "0 %". Grønt for høy sjanse, rødt for nedrykk,
+// grått under 1 % (klassene pc-hi, pc-mid og pc-zero).
+// Fargen på Styrke-boksen (formbox red/yellow/lightgreen/green), i tabellen og bildet.
+function styrkeKlasse(form){ return form<4.0?'red':form<5.5?'yellow':form<6.5?'lightgreen':'green'; }
+function sjanseCelle(v){ return {tekst:v===0 ? '–' : pctTxt(v), cls:v<0.005 ? 'pc-zero' : v>=0.5 ? 'pc-hi' : 'pc-mid'}; }
 function fillOdds(){
   if(!lastMC) return;
   renderQaButtons(); // spørsmål 1/2 sine knappetekster trenger lastMC (se qaTargetZone) -- oppdater så snart det er klart, ikke bare på neste fulle render()
@@ -3446,14 +3469,10 @@ function fillOdds(){
     const d=lastMC[tr.dataset.team]; if(!d) return;
     const gull=zoneSum(d,'gull'), top=zoneSum(d,'europa'), ned=zoneSum(d,'ned');
     const g=tr.querySelector('td.gull'), a=tr.querySelector('td.p3'), b=tr.querySelector('td.ned');
-    // Nøyaktig 0 vises som en svak strek, ikke "0 %".
-    const cellTxt = v => v===0 ? '–' : pctTxt(v);
-    g.textContent=cellTxt(gull); a.textContent=cellTxt(top); b.textContent=cellTxt(ned);
-    // Grønt for høy sjanse, rødt for nedrykk, grått under 1 %.
     [[g,gull],[a,top],[b,ned]].forEach(([cell,v])=>{
-      cell.classList.toggle('pc-zero', v<0.005);
-      cell.classList.toggle('pc-hi', v>=0.5);
-      cell.classList.toggle('pc-mid', v>=0.005 && v<0.5);
+      const s = sjanseCelle(v);
+      cell.textContent = s.tekst;
+      ['pc-zero','pc-hi','pc-mid'].forEach(k=>cell.classList.toggle(k, k===s.cls));
     });
   });
   if(tableSort && PROB_KEYS.includes(tableSort.key)){
@@ -6997,7 +7016,7 @@ function render(){
     const mv=basePos[r.name]-pos;
     const diff = mv===0?'':`<span class="diff ${mv>0?'up':'down'}">${mv>0?'▲':'▼'}${Math.abs(mv)}</span>`;
     const posTitle = EURO_TITLES[pos]||'';
-    const formCls = r.form<4.0?'red':r.form<5.5?'yellow':r.form<6.5?'lightgreen':'green';
+    const formCls = styrkeKlasse(r.form);
     const changeTxt = r.formChange>=0.05?`Opp ${f1(r.formChange)} siden forrige modelloppdatering.`
       : r.formChange<=-0.05?`Ned ${f1(Math.abs(r.formChange))} siden forrige modelloppdatering.`
       : 'Uendret siden forrige modelloppdatering.';
@@ -7439,6 +7458,287 @@ document.getElementById('shareBB').addEventListener('click',async e=>{
   e.stopPropagation();
   const url=scenarioUrl(); history.replaceState(null,'',url);
   await kopier(e.currentTarget, deleBBKode(), 'BB-kode kopiert');
+});
+
+// ---- Del bilde av tabellen ----
+// Et eget eksportformat tegnet på canvas, ikke et skjermbilde av siden:
+// alltid lyst tema og fast bredde (BILDE_BREDDE CSS-piksler, tegnet i
+// BILDE_SKALA ganger), uansett skjerm og tema. Verdiene kommer fra
+// tabellVisning(), som bygger på de samme dataene og hjelperne som tabellen
+// på siden (compute/computeAt, LIVE, femSiste, lastMC, badgeFor).
+const BILDE_BREDDE = 900, BILDE_SKALA = 2;
+// Fargene i lyst tema, nøyaktig som :root i stilarket (testen sammenligner).
+const BILDE_FARGER = {'--panel':'#ffffff', '--ink':'#0f1b2d', '--muted':'#56667d', '--line':'#d8e0ec',
+  '--line-soft':'#e8edf5', '--cl':'#1d5fb4', '--cl-text':'#1d5fb4', '--eu':'#1d7a63', '--eu-text':'#1d7a63',
+  '--eu-soft':'#e2f1ec', '--q':'#cf951a', '--q-text':'#9a6c08', '--q-soft':'#fbf1dc', '--q-border':'#d9b872',
+  '--ned':'#6c7479', '--accent-text':'#c4111d', '--accent-soft':'#fdecee', '--formbox-red-bg':'#c4111d',
+  '--cut-line':'#b4bfd0', '--ned-row-a':'#f5f7fb', '--ned-row-b':'#fafbfd', '--sim-border':'#c5d0e0'};
+// Faste farger som står direkte i stilarket (formboksene, uavgjort-ruten, merkene).
+const BILDE_FASTE = {formLysGronn:'#7fb9a8', formLysGronnTekst:'#0d3327', gulTekst:'#3a2c05', uavgjort:'#b3babd'};
+
+function tabellVisning(){
+  const viewIdx = viewRoundIdx(), naa = viewIdx===currentRoundIdx();
+  const kol = LEAGUE.cols.map(c=>({key:c.key, navn:c.head}));
+  let rader, scenario;
+  if(naa){
+    const {rows} = compute();
+    const liveForm = formScores(Array.from(LIVE.att), Array.from(LIVE.con));
+    rader = rows.map((r,i)=>{
+      const pos = i+1, form = liveForm[TI[r.name]], liste = femSiste(r.name), f5 = form5AvListe(liste);
+      const d = lastMC && lastMC[r.name], b = badgeFor(r.name);
+      return {pos, lag:r.name, sone:bandClass(pos), cut:LEAGUE.cuts.includes(pos), fulgt:r.name===SELECTED_TEAM,
+        flytt:basePos[r.name]-pos, merke:b ? {cls:b.cls, tekst:b.text} : null,
+        k:r.p, v:r.w, u:r.d, t:r.l, maal:`${r.gf}-${r.ga}`, diff:`${r.gd>0?'+':''}${r.gd}`, p:r.pts, just:!!r.just,
+        styrke:{tekst:f1(form), cls:styrkeKlasse(form)},
+        form:{ruter:liste.slice(-5).map(x=>({res:x.res, scen:!!x.scen})), tall:f5==null ? '' : f1(f5)},
+        sjanser:d ? kol.map(c=>sjanseCelle(zoneSum(d, c.key))) : null};
+    });
+    scenario = matches.some(m=>m.hg!=null && m.ag!=null);
+  } else {
+    const inc = new Set(ROUND_SEQ.slice(0, viewIdx+1).map(x=>x.round));
+    rader = computeAt(viewIdx).map(r=>{
+      const liste = somListe(r.results), f5 = form5AvListe(liste);
+      return {pos:r.pos, lag:r.name, sone:bandClass(r.pos), cut:LEAGUE.cuts.includes(r.pos), fulgt:r.name===SELECTED_TEAM,
+        flytt:0, merke:null, k:r.p, v:r.w, u:r.d, t:r.l, maal:`${r.gf}-${r.ga}`, diff:`${r.gd>0?'+':''}${r.gd}`,
+        p:r.pts, just:!!r.just, styrke:null,
+        form:{ruter:liste.slice(-5).map(x=>({res:x.res, scen:false})), tall:f5==null ? '' : f1(f5)}, sjanser:null};
+    });
+    scenario = matches.some(m=>inc.has(m.round) && m.hg!=null && m.ag!=null);
+  }
+  const R = ROUND_SEQ[viewIdx];
+  return {
+    tittel:`Tabellkalkulator.no · ${LEAGUE.name} · ${naa ? `per ${kopiDato()}` : `etter runde ${R.round} (${dateNoLong(R.end)})`}`,
+    scenario, runde:naa ? null : R.round, merknad:roundGapNote(viewIdx),
+    modell:naa, kolonner:kol, rader,
+    forklaring:LEAGUE.bands.map(b=>({cls:b.cls, tekst:b.legend})),
+    notater:[...JUSTERINGER.map(justeringTekst), ...(LEAGUE.legendNote ? [LEAGUE.legendNote] : [])]
+  };
+}
+// Merknaden om poengtrekk under fargeforklaringen, som på siden (visJusteringer).
+function justeringTekst(j){ return `* ${j.lag} ${justeringOrd(j)}.`; }
+
+const BILDE_SKRIFTER = ['800 22px "Barlow Condensed"', '700 17px "Barlow Condensed"', '800 19px "Barlow Condensed"',
+  '700 15px "Barlow Condensed"', '700 13px "Barlow Condensed"', '400 15px Barlow', '500 15px Barlow', '600 15px Barlow',
+  '700 15px Barlow', '600 12.5px Barlow', '700 10px Barlow'];
+async function tegnTabellBilde(vis){
+  try{ await Promise.all(BILDE_SKRIFTER.map(f=>document.fonts.load(f))); } catch(_){}
+  const F = BILDE_FARGER, W = BILDE_BREDDE, PAD = 24;
+  const rot = getComputedStyle(document.documentElement);
+  const lagTekst = (rot.getPropertyValue('--team-text-light')||'').trim() || '#1f5fd6';
+  const lagVask = (rot.getPropertyValue('--team-soft-light')||'').trim() || 'rgba(47,111,237,.08)';
+  const mål = document.createElement('canvas').getContext('2d');
+  const bredde = (font, t) => { mål.font = font; return mål.measureText(String(t)).width; };
+  const FN = {tall:'400 15px Barlow', lag:'500 15px Barlow', lagF:'700 15px Barlow', hode:'600 12.5px Barlow',
+    pos:'700 17px "Barlow Condensed"', p:'800 19px "Barlow Condensed"', boks:'700 13px "Barlow Condensed"',
+    f5:'700 15px "Barlow Condensed"', odds:'600 13px Barlow', oddsSterk:'800 13px Barlow', oddsSvak:'500 13px Barlow',
+    merke:'700 10px Barlow', flytt:'600 11.5px Barlow', forkl:'400 13px Barlow', tittel:'800 22px "Barlow Condensed"',
+    tittel2:'600 22px "Barlow Condensed"', scen:'700 14px Barlow', merkn:'400 13px Barlow'};
+  // Kolonnene: bredden er det bredeste innholdet pluss 7 px luft på hver
+  // side, som cellene på siden. Lag tar resten.
+  const kolonner = [
+    {id:'k', navn:'K', f:FN.tall, v:r=>r.k}, {id:'v', navn:'V', f:FN.tall, v:r=>r.v}, {id:'u', navn:'U', f:FN.tall, v:r=>r.u},
+    {id:'t', navn:'T', f:FN.tall, v:r=>r.t}, {id:'maal', navn:'Mål', f:FN.tall, v:r=>r.maal},
+    {id:'diff', navn:'Diff', f:FN.tall, v:r=>r.diff}, {id:'p', navn:'P', f:FN.p, v:r=>r.p, hoyre:12},
+    ...(vis.modell ? [{id:'styrke', navn:'Styrke', f:FN.boks, v:r=>r.styrke.tekst, boks:true, hoyre:10}] : []),
+    {id:'form', navn:'Form', f:FN.f5, v:r=>r.form.tall, form:true},
+    ...(vis.modell ? vis.kolonner.map((c,i)=>({id:c.key, navn:c.navn, f:FN.oddsSterk, v:r=>r.sjanser ? r.sjanser[i].tekst : '', odds:i})) : [])];
+  kolonner.forEach(c=>{
+    let w = bredde(FN.hode, c.navn);
+    vis.rader.forEach(r=>{ let x = bredde(c.f, c.v(r)); if(c.boks) x = Math.max(30, x+14); if(c.form) x += 5*11+6; w = Math.max(w, x); });
+    c.b = Math.ceil(w) + 7 + (c.hoyre || 7);
+  });
+  const POS = 40, x0 = PAD, x1 = W-PAD;
+  const lagB = x1 - x0 - POS - kolonner.reduce((s,c)=>s+c.b, 0);
+  let x = x0 + POS + lagB; kolonner.forEach(c=>{ c.x = x; x += c.b; });   // c.x = venstre kant
+  // Høyden.
+  const RAD = 31, HODE = 30;
+  let y = PAD;
+  const tittelY = y; y += 30;
+  const scenY = vis.scenario ? (y += 4, y) : null; if(vis.scenario) y += 28;
+  const merknY = vis.merknad ? (y += 6, y) : null;
+  // Merknaden brytes på bredden.
+  const merknLinjer = vis.merknad ? brytLinjer(FN.merkn, vis.merknad, x1-x0-24, bredde) : [];
+  if(vis.merknad) y += merknLinjer.length*18 + 16;
+  y += 10;
+  const hodeY = y; y += HODE;
+  const raderY = y; y += vis.rader.length*RAD;
+  const forklY = y; y += 1 + 14;
+  // Fargeforklaringen brytes på bredden, som på siden (flex-wrap).
+  const forklLinjer = [];
+  { let l = [], w = 0;
+    vis.forklaring.forEach(f=>{ const b = 18 + bredde(FN.forkl, f.tekst);
+      if(l.length && w + b > x1-x0){ forklLinjer.push(l); l = []; w = 0; }
+      l.push(f); w += b + 16; });
+    if(l.length) forklLinjer.push(l); }
+  y += 18 + (forklLinjer.length-1)*22;
+  const notatLinjer = vis.notater.flatMap(t=>brytLinjer(FN.forkl, t, x1-x0, bredde));
+  if(notatLinjer.length) y += 8 + notatLinjer.length*19;
+  const H = Math.ceil(y + PAD - 4);
+
+  const cv = document.createElement('canvas');
+  cv.width = W*BILDE_SKALA; cv.height = H*BILDE_SKALA;
+  const c = cv.getContext('2d');
+  c.scale(BILDE_SKALA, BILDE_SKALA);
+  c.fillStyle = F['--panel']; c.fillRect(0, 0, W, H);
+  c.textBaseline = 'middle';
+  const tekst = (t, x, y, font, farge, just='left') => { c.font = font; c.fillStyle = farge; c.textAlign = just; c.fillText(String(t), x, y); };
+  const rrect = (x, y, w, h, r) => { c.beginPath(); c.moveTo(x+r, y); c.arcTo(x+w, y, x+w, y+h, r); c.arcTo(x+w, y+h, x, y+h, r); c.arcTo(x, y+h, x, y, r); c.arcTo(x, y, x+w, y, r); c.closePath(); };
+  // Skrå striper som repeating-linear-gradient(135deg, a 0 steg, b steg 2*steg).
+  const striper = (a, b, steg) => { const s = document.createElement('canvas'), n = Math.round(2*steg*Math.SQRT2*BILDE_SKALA); s.width = s.height = n;
+    const g = s.getContext('2d'); if(b){ g.fillStyle = b; g.fillRect(0, 0, n, n); } g.strokeStyle = a; g.lineWidth = steg*BILDE_SKALA;
+    for(let k=-1;k<=1;k++){ g.beginPath(); g.moveTo(k*n, n); g.lineTo(k*n+n, 0); g.stroke(); }
+    const p = c.createPattern(s, 'repeat'); p.setTransform(new DOMMatrix().scale(1/BILDE_SKALA)); return p; };
+
+  // Tittelen: logoen og "Tabellkalkulator.no · liga · per dato".
+  { const s = 28/16, lx = x0, ly = tittelY + 1;
+    c.save(); c.translate(lx, ly); c.scale(s, s);
+    rrect(.5, .5, 15, 15, 3.5); c.fillStyle = '#13305f'; c.fill(); c.strokeStyle = 'rgba(79,127,196,.6)'; c.lineWidth = 1; c.stroke();
+    c.fillStyle = '#34d399'; rrect(3, 4, 10, 2, 1); c.fill();
+    c.fillStyle = '#e8f0fc'; rrect(3, 7, 7, 2, 1); c.fill(); rrect(3, 10, 5, 2, 1); c.fill();
+    c.restore();
+    const [navn, ...rest] = vis.tittel.split(' · ');
+    let tx = lx + 28 + 10; const ty = tittelY + 15;
+    tekst(navn, tx, ty, FN.tittel, F['--ink']); tx += bredde(FN.tittel, navn);
+    tekst(' · ' + rest.join(' · '), tx, ty, FN.tittel2, F['--muted']); }
+  if(vis.scenario){
+    const t = 'Scenario, ikke dagens tabell', w = bredde(FN.scen, t) + 20;
+    c.fillStyle = F['--accent-soft']; rrect(x0, scenY, w, 26, 6); c.fill();
+    tekst(t, x0+10, scenY+13.5, FN.scen, F['--accent-text']); }
+  if(vis.merknad){
+    const h = merknLinjer.length*18 + 14;
+    c.fillStyle = F['--q-soft']; rrect(x0, merknY, x1-x0, h, 8); c.fill();
+    c.strokeStyle = F['--q-border']; c.lineWidth = 1; rrect(x0+.5, merknY+.5, x1-x0-1, h-1, 8); c.stroke();
+    merknLinjer.forEach((l,i)=>tekst(l, x0+12, merknY+7+9+i*18, FN.merkn, F['--ink'])); }
+
+  // Overskriftsraden.
+  const hy = hodeY + HODE/2 + 1;
+  tekst('Lag', x0+POS+7, hy, FN.hode, F['--muted']);
+  kolonner.forEach(k=>tekst(k.navn, k.x+k.b-(k.hoyre||7), hy, FN.hode, F['--muted'], 'right'));
+  c.fillStyle = F['--ink']; c.fillRect(x0, hodeY+HODE-2, x1-x0, 2);
+
+  const nedStripe = striper(F['--ned-row-b'], F['--ned-row-a'], 6), nedKant = striper(F['--ned'], null, 3);
+  const SONE = {cl:F['--cl'], eu:F['--eu'], playoff:F['--q']}, SONETEKST = {cl:F['--cl-text'], eu:F['--eu-text'], playoff:F['--q-text']};
+  vis.rader.forEach((r,i)=>{
+    const ry = raderY + i*RAD, my = ry + RAD/2 + .5;
+    if(r.sone==='ned'){ c.fillStyle = nedStripe; c.fillRect(x0, ry, x1-x0, RAD); }
+    if(r.fulgt){ c.fillStyle = lagVask; c.fillRect(x0, ry, x1-x0, RAD); }
+    if(SONE[r.sone]){ c.fillStyle = SONE[r.sone]; c.fillRect(x0, ry, 5, RAD); }
+    else if(r.sone==='ned'){ c.fillStyle = nedKant; c.fillRect(x0, ry, 5, RAD); }
+    // Skillelinja under raden: stiplet ved et sonekutt.
+    if(r.cut){ c.strokeStyle = F['--cut-line']; c.lineWidth = 2; c.setLineDash([6, 4]); c.beginPath(); c.moveTo(x0, ry+RAD-1); c.lineTo(x1, ry+RAD-1); c.stroke(); c.setLineDash([]); }
+    else { c.fillStyle = F['--line-soft']; c.fillRect(x0, ry+RAD-1, x1-x0, 1); }
+    tekst(r.pos, x0 + 5 + (POS-5)/2 + 3, my+1, FN.pos, SONETEKST[r.sone] || F['--muted'], 'center');
+    // Laget, med merke og flytting som på siden.
+    let lx = x0 + POS + 7;
+    const lf = r.fulgt ? FN.lagF : FN.lag;
+    tekst(r.lag, lx, my, lf, r.fulgt ? lagTekst : F['--ink']); lx += bredde(lf, r.lag);
+    if(r.merke){
+      const MF = {champ:[F['--q'], BILDE_FASTE.gulTekst], europe:[F['--eu-soft'], F['--eu-text']], safe:[F['--line-soft'], F['--muted']], relegated:[F['--accent-soft'], F['--accent-text']]}[r.merke.cls] || [F['--line-soft'], F['--muted']];
+      const w = bredde(FN.merke, r.merke.tekst) + 14; lx += 6;
+      c.fillStyle = MF[0]; rrect(lx, my-9, w, 18, 9); c.fill();
+      tekst(r.merke.tekst, lx+7, my+.5, FN.merke, MF[1]); lx += w; }
+    if(r.flytt){ lx += 6; tekst(`${r.flytt>0?'▲':'▼'}${Math.abs(r.flytt)}`, lx, my, FN.flytt, r.flytt>0 ? F['--eu-text'] : F['--accent-text']); }
+    kolonner.forEach(k=>{
+      const hx = k.x + k.b - (k.hoyre || 7);
+      if(k.id==='p'){
+        tekst(r.p, hx, my+1, FN.p, r.fulgt ? lagTekst : F['--ink'], 'right');
+        if(r.just) tekst('*', hx - bredde(FN.p, r.p) - 1, my-4, FN.boks, r.fulgt ? lagTekst : F['--ink'], 'right');
+      } else if(k.boks){
+        const t = r.styrke.tekst, w = Math.max(30, bredde(FN.boks, t)+14);
+        const B = {red:[F['--formbox-red-bg'], '#ffffff'], yellow:[F['--q'], BILDE_FASTE.gulTekst], lightgreen:[BILDE_FASTE.formLysGronn, BILDE_FASTE.formLysGronnTekst], green:[F['--eu'], '#ffffff']}[r.styrke.cls];
+        c.fillStyle = B[0]; rrect(hx-w, my-10, w, 20, 5); c.fill();
+        tekst(t, hx-w/2, my+1, FN.boks, B[1], 'center');
+      } else if(k.form){
+        const tw = r.form.tall ? bredde(FN.f5, r.form.tall) : 0, tallX = hx;
+        if(r.form.tall) tekst(r.form.tall, tallX, my+1, FN.f5, F['--ink'], 'right');
+        let sx = tallX - Math.max(tw, 18) - 6 - r.form.ruter.length*11 + 2;
+        r.form.ruter.forEach(q=>{
+          c.globalAlpha = q.scen ? .55 : 1;
+          c.fillStyle = q.res==='W' ? F['--eu'] : q.res==='D' ? BILDE_FASTE.uavgjort : F['--accent-text'];
+          rrect(sx, my-4.5, 9, 9, q.scen ? 3 : 2); c.fill();
+          if(q.scen){ c.strokeStyle = F['--sim-border']; c.lineWidth = 1.5; rrect(sx-.75, my-5.25, 10.5, 10.5, 3); c.stroke(); }
+          c.globalAlpha = 1; sx += 11; });
+      } else if(k.odds!=null){
+        if(!r.sjanser) return;
+        const s = r.sjanser[k.odds], ned = vis.kolonner[k.odds].key==='ned';
+        const font = s.cls==='pc-zero' ? FN.oddsSvak : (s.cls==='pc-hi' ? FN.oddsSterk : FN.odds);
+        const farge = s.cls==='pc-zero' ? F['--muted'] : r.fulgt ? lagTekst : ned ? F['--accent-text'] : F['--eu-text'];
+        tekst(s.tekst, hx, my, font, farge, 'right');
+      } else {
+        tekst(k.v(r), hx, my, FN.tall, k.id==='diff' ? F['--muted'] : F['--ink'], 'right');
+      }
+    });
+  });
+
+  // Fargeforklaringen og merknadene under tabellen.
+  c.fillStyle = F['--line']; c.fillRect(x0, forklY, x1-x0, 1);
+  let fy = forklY + 14 + 9 - 22;
+  forklLinjer.forEach(linje=>{ let fx = x0; fy += 22;
+    linje.forEach(f=>{
+      if(f.cls==='ned'){ c.fillStyle = striper(F['--ned'], null, 2); c.fillRect(fx, fy-6, 12, 12); c.strokeStyle = F['--ned']; c.lineWidth = 1; c.strokeRect(fx+.5, fy-5.5, 11, 11); }
+      else { c.fillStyle = SONE[f.cls] || F['--muted']; rrect(fx, fy-6, 12, 12, 2); c.fill(); }
+      tekst(f.tekst, fx+18, fy, FN.forkl, F['--muted']); fx += 18 + bredde(FN.forkl, f.tekst) + 16; }); });
+  notatLinjer.forEach((l,i)=>tekst(l, x0, fy + 8 + 19*(i+1), FN.forkl, F['--muted']));
+  return cv;
+}
+function brytLinjer(font, t, maks, bredde){
+  const ord = String(t).split(' '), ut = []; let l = '';
+  ord.forEach(o=>{ const p = l ? l+' '+o : o; if(l && bredde(font, p) > maks){ ut.push(l); l = o; } else l = p; });
+  if(l) ut.push(l); return ut;
+}
+
+// Bildet som PNG. Venter til tabellen er ferdig regnet for scenarioet, som
+// kopiteksten (kopiTekstLagboks), så prosentene er de samme som på siden.
+async function tabellBildeBlob(){
+  const t0 = Date.now();
+  while(!(lastMCFinal && lastMC && lastMCScenarioKey===qaScenarioKey()) && Date.now()-t0 < 20000)
+    await new Promise(r=>setTimeout(r, 100));
+  const cv = await tegnTabellBilde(tabellVisning());
+  return await new Promise((ok, feil)=>cv.toBlob(b=>b ? ok(b) : feil(new Error('Bildet kunne ikke lages')), 'image/png'));
+}
+// "tabell-obos-runde-24.png", med "-scenario" når bildet er et scenario.
+function tabellBildeNavn(){
+  const idx = viewRoundIdx(), vis = tabellVisning();
+  return `tabell-${LEAGUE.id}-runde-${ROUND_SEQ[idx].round}${vis.scenario ? '-scenario' : ''}.png`;
+}
+function lastNedBilde(blob, navn){
+  const url = URL.createObjectURL(blob), a = document.createElement('a');
+  a.href = url; a.download = navn; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 30000);
+}
+// "Del bilde" i tabellhodet. Telefon og nettbrett (delMedSystemet, som "Del
+// scenario"): delingsarket, som også har Kopier og Arkiver bilde. PC:
+// bildet kopieres, knappen viser "Kopiert" og "Last ned" står ved siden av
+// en stund. Der ingen av delene virker, lastes bildet ned.
+let sisteTabellBilde = null;   // {blob, navn}: det som ble kopiert, til "Last ned"
+async function delTabellBilde(btn){
+  const navn = tabellBildeNavn(), blobP = tabellBildeBlob();
+  blobP.catch(()=>{});
+  if(delMedSystemet()){
+    try{
+      const fil = new File([await blobP], navn, {type:'image/png'});
+      if(navigator.canShare && navigator.canShare({files:[fil]})){ await navigator.share({files:[fil]}); return 'delt'; }
+    }catch(e){ if(e && e.name==='AbortError') return 'avbrutt'; }
+  } else if(navigator.clipboard && navigator.clipboard.write && window.ClipboardItem){
+    // ClipboardItem får løftet med en gang, i selve trykket: Safari godtar
+    // ikke write() etter en await.
+    try{
+      await navigator.clipboard.write([new ClipboardItem({'image/png': blobP})]);
+      sisteTabellBilde = {blob: await blobP, navn};
+      const span = btn.querySelector('span'), ned = document.getElementById('imageDownload');
+      span.textContent = 'Kopiert'; btn.classList.add('done'); ned.hidden = false;
+      clearTimeout(btn._t);
+      btn._t = setTimeout(()=>{ span.textContent = 'Del bilde'; btn.classList.remove('done'); ned.hidden = true; }, 8000);
+      return 'kopiert';
+    }catch(_){ /* nektet eller ikke støttet: lastes ned under */ }
+  }
+  lastNedBilde(await blobP, navn);
+  return 'lastet ned';
+}
+document.getElementById('headImage').addEventListener('click', e=>{ e.stopPropagation(); delTabellBilde(e.currentTarget); });
+document.getElementById('imageDownload').addEventListener('click', e=>{
+  e.stopPropagation();
+  if(sisteTabellBilde) lastNedBilde(sisteTabellBilde.blob, sisteTabellBilde.navn);
 });
 
 // Finner om noen uspilt kamp allerede har startet (avspark <= nå) og, hvis
