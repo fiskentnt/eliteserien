@@ -3,6 +3,27 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Kamper til gode i svarene (4.10.2026)
+
+Når en tekst på siden sammenligner poengene til to lag som har spilt ulikt
+antall kamper, sies det (kampTilGode/tilGodeTxt i index.html). Kampantallet
+er K i tabellen for scenarioet, med innfylte og simulerte resultater. Med like
+mange kamper sies ingenting. Gjelder "Hvorfor har X Y % sjanse ..." (laget i
+veien og nærmeste konkurrent) og eksempelet i "Om modellen" (Eliteserien).
+
+- "Strømsgodset ligger ett poeng foran Kongsvinger på tredjeplassen.
+  Kongsvinger har en kamp til gode. Strømsgodset er litt sterkere ..."
+  (aldri "som har" etter en plass: tvetydig)
+- Laget foran har kampen til gode: "... Strømsgodset har i tillegg en kamp
+  til gode ..."; fra laget bak: "..., men har en kamp til gode."
+- Konkurrentsvaret: "Sogndal ligger bak Sandnes Ulf 23-25 i poeng, men har en
+  kamp til gode. De har 7 kamper igjen." (til gode og kamper igjen i hver sin
+  setning)
+- Ikke endret: "rett bak/rett foran" (plassering), snittpoeng i simuleringene,
+  "kan ende foran eller likt" (sluttplassering), "taper poeng".
+
+Tester: regression.js, gruppen "Svarene: kamper til gode" (--bare tilgode).
+
 ## OBOS-odds fra OddsPapi: når de kommer, og når det er en feil (4.10.2026)
 
 obos_upcoming_odds.py slår bare opp kampene OddsPapi selv sier har odds

@@ -3174,6 +3174,203 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       }
     }
   };
+  // ---- Svarene: kamper til gode (4.10.2026) ----
+  // Sammenligner et svar poengene til to lag som har spilt ulikt antall
+  // kamper (K i tabellen, med innfylte og simulerte resultater), sies det:
+  // "Kongsvinger har en kamp til gode", "..., men har en kamp til gode",
+  // "... har i tillegg en kamp til gode". Med like mange kamper sies
+  // ingenting. Aldri "som har" etter en plass ("på tredjeplassen, som har"
+  // er tvetydig). Først DETERMINISTISK: tabellen (compute) og laget i veien
+  // eller konkurrenten byttes ut med valgte tall. Så ekte: et innfylt og et
+  // simulert resultat endrer K og skaper og fjerner merknaden.
+  //   node tests/regression.js --bare tilgode
+  const kamperTilGode = async () => {
+    setGroup('Svarene: kamper til gode når lagene har spilt ulikt antall kamper');
+    {
+      // Eliteserien: OBOS-siden har ikke eksempelet i "Om modellen".
+      const ep = await open(1400, 900, base);
+      await settle(ep);
+      const r = await ep.evaluate(async () => {
+        const orig = {compute, qaFieldInWay, qaFindRival, qaSettled, qaTargetZone, modelVsTableExample};
+        const ekte = orig.compute(), N = ekte.rows[0].p + ekte.rows[0].left;
+        const A = ekte.rows[1].name, B = ekte.rows[2].name;
+        const zone = orig.qaTargetZone(A) || qaZoneByKey(A, 'kvalik');
+        const sett = (pA, kA, pB, kB) => {
+          compute = () => ({rows: ekte.rows.map(x => x.name === A ? {...x, pts: pA, p: kA, left: N - kA}
+            : x.name === B ? {...x, pts: pB, p: kB, left: N - kB} : x), played: ekte.played});
+        };
+        qaSettled = () => null; qaTargetZone = () => zone; qaWhyZoneOverride = null;
+        const ut = {A, B, N, felt: {}, konk: {}, eks: {}};
+        try {
+          // Laget i veien (qaFieldInWay): B på tredjeplassen.
+          for (const [navn, pA, kA, pB, kB] of [['like', 51, 24, 50, 24], ['bakFaerre', 51, 24, 50, 23], ['foranFaerre', 51, 23, 50, 24],
+              ['toKamper', 51, 24, 50, 22], ['selvBakFaerre', 50, 23, 51, 24], ['bakAndreFaerre', 50, 24, 51, 23],
+              ['liktSelvFaerre', 50, 23, 50, 24], ['liktAndreFaerre', 50, 24, 50, 23], ['treKamper', 50, 21, 51, 24]]) {
+            sett(pA, kA, pB, kB);
+            qaFieldInWay = () => ({outside: true, zoneBack: false, names: [], shown: [], more: 0, nearest: B, nearestPts: pB,
+              margin: Math.abs(pA - pB), refLabel: 'tredjeplassen'});
+            qaFindRival = () => null;
+            ut.felt[navn] = (await qaWhy(A)).split('\n')[0];
+          }
+          // Nærmeste konkurrent (qaFindRival), ingen lag i veien.
+          for (const [navn, pA, kA, pB, kB] of [['like', 30, 24, 28, 24], ['selvBakFaerre', 23, 23, 25, 24], ['lederAndreFaerre', 30, 24, 28, 23],
+              ['lederSelvFaerre', 30, 23, 28, 24], ['bakAndreFaerre', 23, 24, 25, 23], ['liktAndreFaerre', 25, 24, 25, 23],
+              ['liktSelvFaerre', 25, 23, 25, 24], ['toKamper', 23, 22, 25, 24]]) {
+            sett(pA, kA, pB, kB);
+            qaFieldInWay = () => null; qaFindRival = () => ({t: B});
+            ut.konk[navn] = (await qaWhy(A)).split('\n')[0];
+          }
+          // Eksempelet i "Om modellen".
+          const m = matches.find(x => x.hg == null);
+          for (const [navn, kA, kB] of [['like', 24, 24], ['bakFaerre', 24, 23], ['foranFaerre', 23, 24]]) {
+            sett(40, kA, 34, kB);
+            modelVsTableExample = () => ({m, o: {H: 0.45, U: 0.25, B: 0.30}, fav: A, dog: B, gap: 6, pFav: 0.45, pDog: 0.30, score: 1, favHome: true});
+            renderModelExample();
+            ut.eks[navn] = document.getElementById('modelExample').textContent;
+          }
+        } finally {
+          compute = orig.compute; qaFieldInWay = orig.qaFieldInWay; qaFindRival = orig.qaFindRival; qaSettled = orig.qaSettled;
+          qaTargetZone = orig.qaTargetZone; modelVsTableExample = orig.modelVsTableExample; qaWhyZoneOverride = null;
+          renderModelExample();
+        }
+        return ut;
+      });
+      const {A, B, N, felt, konk, eks} = r;
+      const vis = o => Object.entries(o).map(([k, v]) => `${k}: ${v}`).join(' | ');
+      console.log(`      laget i veien: ${felt.bakFaerre}\n      konkurrenten: ${konk.selvBakFaerre}\n      Om modellen: ${eks.bakFaerre}`);
+      const pa = `${A} ligger ett poeng foran ${B} på tredjeplassen`, pb = `${A} ligger ett poeng bak ${B} på tredjeplassen`;
+      check('laget i veien, like mange kamper: ingen merknad',
+        felt.like.startsWith(`${pa} og er `) && !/til gode/.test(felt.like), felt.like);
+      check('laget i veien, laget bak har én kamp til gode: egen setning, ikke "som har" etter plassen',
+        felt.bakFaerre.startsWith(`${pa}. ${B} har en kamp til gode. `), felt.bakFaerre);
+      check('laget i veien, laget foran har én kamp til gode: "har i tillegg en kamp til gode"',
+        felt.foranFaerre.startsWith(`${pa}. ${A} har i tillegg en kamp til gode`), felt.foranFaerre);
+      check('laget i veien, to kamper: "to kamper til gode"', felt.toKamper.startsWith(`${pa}. ${B} har to kamper til gode. `), felt.toKamper);
+      check('laget i veien, sett fra laget bak med kampen til gode: "..., men har en kamp til gode."',
+        felt.selvBakFaerre.startsWith(`${pb}, men har en kamp til gode. `), felt.selvBakFaerre);
+      check('laget i veien, sett fra laget bak når laget foran har kampen til gode: "har i tillegg"',
+        felt.bakAndreFaerre.startsWith(`${pb}. ${B} har i tillegg en kamp til gode. `), felt.bakAndreFaerre);
+      check('laget i veien, like mange poeng: "men har en kamp til gode" / "B har en kamp til gode"',
+        felt.liktSelvFaerre.startsWith(`${A} har like mange poeng som ${B} på tredjeplassen, men har en kamp til gode. `)
+        && felt.liktAndreFaerre.startsWith(`${A} har like mange poeng som ${B} på tredjeplassen. ${B} har en kamp til gode. `), vis({a: felt.liktSelvFaerre, b: felt.liktAndreFaerre}));
+      check('laget i veien, tre kamper: "tre kamper til gode"', felt.treKamper.startsWith(`${pb}, men har tre kamper til gode. `), felt.treKamper);
+      check('laget i veien: styrken står for seg etter merknaden, med "Lagene er omtrent like sterke" når de er det',
+        Object.entries(felt).filter(([k]) => k !== 'like' && k !== 'foranFaerre').every(([, v]) =>
+          /til gode\. (Lagene er omtrent like sterke|\S.* er (litt|klart) (sterkere|svakere)) ifølge modellen \(\d,\d mot \d,\d\)\./.test(v)), vis(felt));
+      check('ingen "som har" etter en plass, ingen "kamp mer"', Object.values(felt).concat(Object.values(konk)).every(v => !/plassen, som har|plass, som har|kamp(er)? mer/.test(v)), vis(felt));
+      const ig = n => `${n} kamper igjen`;
+      check('konkurrenten, like mange kamper: ingen merknad', konk.like.startsWith(`${A} leder ${B} 30-28 i poeng, med ${ig(N - 24)}.`) && !/til gode/.test(konk.like), konk.like);
+      check('konkurrenten, laget bak har kampen til gode: "Sogndal ligger bak Sandnes Ulf 23-25 i poeng, men har en kamp til gode. De har 7 kamper igjen."',
+        konk.selvBakFaerre.startsWith(`${A} ligger bak ${B} 23-25 i poeng, men har en kamp til gode. De har ${ig(N - 23)}.`), konk.selvBakFaerre);
+      check('konkurrenten, laget leder og konkurrenten har kampen til gode',
+        konk.lederAndreFaerre.startsWith(`${A} leder ${B} 30-28 i poeng, med ${ig(N - 24)}. ${B} har en kamp til gode.`), konk.lederAndreFaerre);
+      check('konkurrenten, laget leder og har selv kampen til gode',
+        konk.lederSelvFaerre.startsWith(`${A} leder ${B} 30-28 i poeng og har i tillegg en kamp til gode. De har ${ig(N - 23)}.`), konk.lederSelvFaerre);
+      check('konkurrenten, laget ligger bak og konkurrenten har kampen til gode',
+        konk.bakAndreFaerre.startsWith(`${A} ligger bak ${B} 23-25 i poeng, med ${ig(N - 24)}. ${B} har i tillegg en kamp til gode.`), konk.bakAndreFaerre);
+      check('konkurrenten, likt på poeng, begge veier',
+        konk.liktAndreFaerre.startsWith(`${A} står likt med ${B} på 25 poeng, med ${ig(N - 24)}. ${B} har en kamp til gode.`)
+        && konk.liktSelvFaerre.startsWith(`${A} står likt med ${B} på 25 poeng, men har en kamp til gode. De har ${ig(N - 23)}.`), vis({a: konk.liktAndreFaerre, b: konk.liktSelvFaerre}));
+      check('konkurrenten, to kamper', konk.toKamper.startsWith(`${A} ligger bak ${B} 23-25 i poeng, men har to kamper til gode. De har ${ig(N - 22)}.`), konk.toKamper);
+      check('"kamp til gode" og "kamper igjen" står aldri i samme setning',
+        Object.values(konk).every(v => v.split('. ').every(set => !(/til gode/.test(set) && /igjen/.test(set)))), vis(konk));
+      check('Om modellen, like mange kamper: som før',
+        eks.like.startsWith(`${A} ligger seks poeng foran ${B}, men det betyr ikke at ${A} er stor favoritt i en enkelt kamp. `), eks.like);
+      check('Om modellen, laget bak har kampen til gode',
+        eks.bakFaerre.startsWith(`${A} ligger seks poeng foran ${B}, som har en kamp til gode. Det betyr likevel ikke at ${A} er stor favoritt i en enkelt kamp. `), eks.bakFaerre);
+      check('Om modellen, laget foran har kampen til gode',
+        eks.foranFaerre.startsWith(`${A} ligger seks poeng foran ${B} og har i tillegg en kamp til gode. Det betyr likevel ikke at ${A} er stor favoritt i en enkelt kamp. `), eks.foranFaerre);
+      await ep.close();
+
+      // Ekte K: et innfylt og et simulert resultat. "Fyll ut runden" slås av,
+      // så bare de to kampene endres. Laget i veien er fast (B), resten er
+      // ekte: tabellen, K-kolonnen og simuleringen for scenarioet.
+      const sp = await open(1400, 900, base.replace('/eliteserien/', '/obos/'));
+      await settle(sp);
+      await sp.evaluate(() => { const t = document.getElementById('autoFillToggle'); if (t.checked) t.click(); });
+      await settle(sp);
+      const par = await sp.evaluate(() => {
+        const {rows} = compute();
+        const synlig = m => { const el = document.querySelector(`.match[data-id="${m.id}"] [data-side=h]`); return el && el.offsetParent; };
+        const apne = matches.filter(m => m.hg == null && synlig(m));
+        for (const m1 of apne) for (const m2 of apne) {
+          const A = m1.home, B = m2.home;
+          if (m1 === m2 || [m2.home, m2.away].includes(A) || [m1.home, m1.away].includes(B)) continue;
+          const ra = rows.find(x => x.name === A), rb = rows.find(x => x.name === B);
+          if (ra.p === rb.p) return {A, B, m1: m1.id, m2: m2.id, k: ra.p};
+        }
+        return null;
+      });
+      const svar = (A = par.A, B = par.B) => sp.evaluate(async (A, B) => {
+        const {rows} = compute(), ra = rows.find(x => x.name === A), rb = rows.find(x => x.name === B);
+        const lagre = {qaFieldInWay, qaSettled, qaTargetZone}, zone = qaTargetZone(A) || qaZoneByKey(A, 'kvalik');
+        qaFieldInWay = () => ({outside: true, zoneBack: false, names: [], shown: [], more: 0, nearest: B, nearestPts: rb.pts,
+          margin: Math.abs(ra.pts - rb.pts), refLabel: '7. plass'});
+        qaSettled = () => null; qaTargetZone = () => zone; qaWhyZoneOverride = null;
+        const kKol = t => +document.querySelector(`#tbl .teamname[data-team="${t}"]`).closest('tr').querySelector('td.spilt').textContent;
+        try { return {tekst: (await qaWhy(A)).split('\n')[0], kA: ra.p, kB: rb.p, kolA: kKol(A), kolB: kKol(B)}; }
+        finally { qaFieldInWay = lagre.qaFieldInWay; qaSettled = lagre.qaSettled; qaTargetZone = lagre.qaTargetZone; }
+      }, A, B);
+      const rad = id => `.match[data-id="${id}"]`;
+      check(`ekte: fant to lag med like mange kamper og hver sin åpne kamp (${par && `${par.A} og ${par.B}, K ${par.k}`})`, !!par, 'ingen');
+      const s0 = await svar();
+      check('ekte, like mange kamper: ingen merknad', s0.kA === s0.kB && !/til gode/.test(s0.tekst), JSON.stringify(s0));
+      // Innfylt resultat for A: A har spilt én kamp mer, B har en kamp til gode.
+      await sp.evaluate(r => document.querySelector(r).scrollIntoView({block: 'center'}), rad(par.m1));
+      await sp.click(`${rad(par.m1)} [data-side=h]`); await sp.keyboard.type('2');
+      await sp.click(`${rad(par.m1)} [data-side=a]`); await sp.keyboard.type('1'); await sp.keyboard.press('Tab');
+      await sp.waitForFunction(i => { const m = matches.find(x => x.id === i); return m.hg === 2 && m.ag === 1 && !m.sim; }, {timeout: 20000}, par.m1);
+      await settle(sp);
+      const s1 = await svar();
+      check(`ekte, innfylt resultat for ${par.A}: K og K-kolonnen ${par.k + 1} mot ${par.k}, og ${par.B} har en kamp til gode`,
+        s1.kA === par.k + 1 && s1.kB === par.k && s1.kolA === s1.kA && s1.kolB === s1.kB
+        && new RegExp(`\\. ${par.B} har (i tillegg )?en kamp til gode\\. `).test(s1.tekst), JSON.stringify(s1));
+      // Trukket resultat for B (H-knappen, et eget resultat): like mange igjen,
+      // merknaden er borte.
+      await klikk(sp, `${rad(par.m2)} .quick button[data-q="H"]`);
+      await sp.waitForFunction(i => matches.find(x => x.id === i).hg != null, {timeout: 20000}, par.m2);
+      await settle(sp);
+      const s2 = await svar();
+      check('ekte, trukket resultat (H) for laget som lå bak i kamper: like mange, merknaden er borte',
+        s2.kA === par.k + 1 && s2.kB === par.k + 1 && s2.kolB === s2.kB && !/til gode/.test(s2.tekst), JSON.stringify(s2));
+      // Det innfylte resultatet tømmes: nå har A kampen til gode.
+      await klikk(sp, `${rad(par.m1)} .quick button[data-q="X"]`);
+      await sp.waitForFunction(i => matches.find(x => x.id === i).hg == null, {timeout: 20000}, par.m1);
+      await settle(sp);
+      const s3 = await svar();
+      check(`ekte, innfylt resultat fjernet: ${par.A} har kampen til gode`,
+        s3.kA === par.k && s3.kB === par.k + 1 && s3.kolA === s3.kA
+        && new RegExp(`(, men har en kamp til gode\\. |\\. ${par.A} har i tillegg en kamp til gode)`).test(s3.tekst), JSON.stringify(s3));
+      await klikk(sp, `${rad(par.m2)} .quick button[data-q="X"]`);
+      await sp.waitForFunction(i => matches.find(x => x.id === i).hg == null, {timeout: 20000}, par.m2);
+      await settle(sp);
+      const s4 = await svar();
+      check('ekte, begge tømt: like mange, ingen merknad', s4.kA === par.k && s4.kB === par.k && !/til gode/.test(s4.tekst), JSON.stringify(s4));
+      // Simulert (Simuler runden, grå resultater): lagene i runden får én kamp
+      // mer, og et lag uten kamp i runden har en kamp til gode (OBOS 1.10.:
+      // Sogndal og Raufoss, Sogndal-Raufoss er utsatt). Nullstill fjerner det.
+      const R = await sp.evaluate(i => matches.find(x => x.id === i).round, par.m1);
+      const foer = await sp.evaluate(() => Object.fromEntries(compute().rows.map(x => [x.name, x.p])));
+      await klikk(sp, `.round-sim[data-round="${R}"]`);
+      await sp.waitForFunction(i => matches.find(x => x.id === i).sim === true, {timeout: 30000}, par.m1);
+      await settle(sp);
+      const C = await sp.evaluate((foer, A) => { const c = compute().rows.find(x => x.p === foer[x.name] && foer[x.name] === foer[A]);
+        return c ? c.name : null; }, foer, par.A);
+      check(`ekte, Simuler runden ${R}: et lag uten kamp i runden finnes (${C})`, !!C, JSON.stringify(foer));
+      if (C) {
+        const s5 = await svar(par.A, C);
+        check(`ekte, simulert runde: ${par.A} ${par.k + 1} kamper, ${C} ${par.k}, og ${C} har en kamp til gode`,
+          s5.kA === par.k + 1 && s5.kB === par.k && s5.kolA === s5.kA && s5.kolB === s5.kB
+          && new RegExp(`\\. ${C} har (i tillegg )?en kamp til gode\\. `).test(s5.tekst), JSON.stringify(s5));
+        await klikk(sp, '#reset');
+        await sp.waitForFunction(() => matches.every(m => m.hg == null), {timeout: 20000});
+        await settle(sp);
+        const s6 = await svar(par.A, C);
+        check('ekte, nullstilt: like mange, ingen merknad', s6.kA === s6.kB && !/til gode/.test(s6.tekst), JSON.stringify(s6));
+      }
+      await sp.close();
+    }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -3201,7 +3398,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'flyttede') await flyttede();
       else if (BARE === 'nederst') await nederstPaaSiden();
       else if (BARE === 'justering') await poengjusteringer();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering)`);
+      else if (BARE === 'tilgode') await kamperTilGode();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -6690,6 +6888,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     }
 
     await hvaMaaTekst();
+
+    await kamperTilGode();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen

@@ -5423,10 +5423,20 @@ function renderModelExample(){
   const påstand = edge < 0.20
     ? `men det betyr ikke at ${fav} er stor favoritt i en enkelt kamp`
     : `og modellen gir ${fav} et klart forsprang også i denne kampen`;
+  // Ulikt antall kamper (K, også innfylte og simulerte) sies, som i svarene
+  // (kampTilGode, 4.10.2026). Påstanden står da i egen setning.
+  const {rows} = compute(), rad = n => rows.find(r=>r.name===n);
+  const tg = kampTilGode(rad(fav), rad(dog));
+  const alene = edge < 0.20
+    ? `Det betyr likevel ikke at ${fav} er stor favoritt i en enkelt kamp`
+    : `Modellen gir ${fav} et klart forsprang også i denne kampen`;
+  const forsprang = !tg ? `${fav} ligger ${poengTxt(gap)} foran ${dog}, ${påstand}.`
+    : tg.lag===dog ? `${fav} ligger ${poengTxt(gap)} foran ${dog}, som har ${tilGodeTxt(tg.n)}. ${alene}.`
+    : `${fav} ligger ${poengTxt(gap)} foran ${dog} og har i tillegg ${tilGodeTxt(tg.n)}. ${alene}.`;
   // "prosent" skrives ut her, ikke "%": avsnittet over i samme seksjon sier
   // "rundt 20 prosent", og de to skal lese likt. Resten av siden bruker %.
   const pTxt = x => pctTxt(x).replace(' %', ' prosent');
-  el.textContent = `${fav} ligger ${poengTxt(gap)} foran ${dog}, ${påstand}. `+
+  el.textContent = `${forsprang} `+
     `Hjemme mot ${m.away} ${formatDateNo(m.date)} gir modellen ${m.home} `+
     `${pTxt(o.H)} sjanse til seier, ${pTxt(o.U)} for uavgjort og ${m.away} ${pTxt(o.B)}.`;
 }
@@ -6347,6 +6357,17 @@ const qaGen = n => /[sxz]$/i.test(n) ? `${n}'` : `${n}s`;
 // "opprykkssjanse", "nedrykksfaren" -> "nedrykksfare".
 const qaSjanseUbest = zone => qaSjanse(zone).replace(/n$/, '');
 function poengTxt(n){ return `${qaAntall(n)} poeng`; }
+// Kamper til gode (4.10.2026): sammenligner en tekst poengene til to lag som
+// har spilt ulikt antall kamper, sies det. Kampantallet er K i tabellen
+// (compute(): spilte, innfylte og simulerte resultater). Med like mange
+// kamper sies ingenting. "en kamp til gode", "to kamper til gode".
+const QA_KAMP_ORD = ['null','en','to','tre','fire','fem','seks','sju','åtte','ni'];
+function tilGodeTxt(n){ return `${n<10 ? QA_KAMP_ORD[n] : n} ${n===1 ? 'kamp' : 'kamper'} til gode`; }
+// Laget med færre kamper og hvor mange færre, eller null ved like mange.
+function kampTilGode(a, b){
+  if(!a || !b || a.p===b.p) return null;
+  return a.p<b.p ? {lag:a.name, n:b.p-a.p} : {lag:b.name, n:a.p-b.p};
+}
 // Tallet alene, med ord under ti ("fem", "14"), til "14 mer enn de har nå".
 function qaAntall(n){ n = Math.round(n); return `${n>=0 && n<10 ? QA_POENG_ORD[n] : n}`; }
 function qaUtfallTxt(zone){
@@ -6418,13 +6439,41 @@ async function qaWhy(team){
     // sies derfor som det: "er litt sterkere ifølge modellen".
     const formPart = Math.abs(diff)<0.3 ? 'omtrent like sterke ifølge modellen'
       : `${Math.abs(diff)>=1.5?'klart':'litt'} ${diff>0?'sterkere':'svakere'} ifølge modellen`;
-    part1 = `${team} ${rel}${hvor} og er ${formPart} (${fmtForm(form)} mot ${fmtForm(rivalForm)}).`;
+    const tall = `(${fmtForm(form)} mot ${fmtForm(rivalForm)})`, like = Math.abs(diff)<0.3;
+    // Ulikt antall kamper sies rett etter poengene, i egen setning når det
+    // gjelder det andre laget: "som har en kamp til gode" etter "på
+    // tredjeplassen" ville vært tvetydig. Da står styrken for seg, og "like
+    // sterke" sies om begge lagene.
+    const tg = kampTilGode(row, rows.find(r=>r.name===field.nearest)), tgTxt = tg && tilGodeTxt(tg.n);
+    const styrke = like ? `Lagene er omtrent like sterke ifølge modellen ${tall}.` : `${team} er ${formPart} ${tall}.`;
+    if(!tg) part1 = `${team} ${rel}${hvor} og er ${formPart} ${tall}.`;
+    else if(tg.lag===team && row.pts>field.nearestPts)
+      part1 = like ? `${team} ${rel}${hvor}. ${team} har i tillegg ${tgTxt}. ${styrke}`
+        : `${team} ${rel}${hvor}. ${team} har i tillegg ${tgTxt} og er ${formPart} ${tall}.`;
+    else if(tg.lag===team)            // bak eller likt: "..., men har en kamp til gode."
+      part1 = `${team} ${rel}${hvor}, men har ${tgTxt}. ${styrke}`;
+    else
+      part1 = `${team} ${rel}${hvor}. ${field.nearest} har ${row.pts<field.nearestPts ? 'i tillegg ' : ''}${tgTxt}. ${styrke}`;
   } else if(rival){
-    part1 = row.pts===rivalRow.pts
-      ? `${team} og ${rival.t} står likt på ${poengTxt(row.pts)}, med ${kampTxt(row.left)} igjen.`
+    // Ulikt antall kamper: "kamp til gode" og "kamper igjen" i hver sin
+    // setning (4.10.2026).
+    const tg = kampTilGode(row, rivalRow), igjen = kampTxt(row.left), tgTxt = tg && tilGodeTxt(tg.n);
+    const st = `${row.pts}-${rivalRow.pts} i poeng`;
+    if(!tg) part1 = row.pts===rivalRow.pts
+      ? `${team} og ${rival.t} står likt på ${poengTxt(row.pts)}, med ${igjen} igjen.`
       : row.pts>rivalRow.pts
-        ? `${team} leder ${rival.t} ${row.pts}-${rivalRow.pts} i poeng, med ${kampTxt(row.left)} igjen.`
-        : `${team} ligger bak ${rival.t} ${row.pts}-${rivalRow.pts} i poeng, med ${kampTxt(row.left)} igjen.`;
+        ? `${team} leder ${rival.t} ${st}, med ${igjen} igjen.`
+        : `${team} ligger bak ${rival.t} ${st}, med ${igjen} igjen.`;
+    else if(tg.lag===team) part1 = row.pts===rivalRow.pts
+      ? `${team} står likt med ${rival.t} på ${poengTxt(row.pts)}, men har ${tgTxt}. De har ${igjen} igjen.`
+      : row.pts>rivalRow.pts
+        ? `${team} leder ${rival.t} ${st} og har i tillegg ${tgTxt}. De har ${igjen} igjen.`
+        : `${team} ligger bak ${rival.t} ${st}, men har ${tgTxt}. De har ${igjen} igjen.`;
+    else part1 = row.pts===rivalRow.pts
+      ? `${team} står likt med ${rival.t} på ${poengTxt(row.pts)}, med ${igjen} igjen. ${rival.t} har ${tgTxt}.`
+      : row.pts>rivalRow.pts
+        ? `${team} leder ${rival.t} ${st}, med ${igjen} igjen. ${rival.t} har ${tgTxt}.`
+        : `${team} ligger bak ${rival.t} ${st}, med ${igjen} igjen. ${rival.t} har i tillegg ${tgTxt}.`;
   } else {
     part1 = qaIngenSpilt() ? `Ingen kamper er spilt ennå, og ${team} har ${kampTxt(row.left)} igjen.`
       : `${team} ligger på ${pos}. plass med ${poengTxt(row.pts)} og ${kampTxt(row.left)} igjen.`;
