@@ -465,7 +465,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # 4.10.2026) er flettet inn uendret, også rettelsen "Sogndal har 7 kamper
 # igjen" i stedet for "De har". Den nye visningen av "Hvilke kamper betyr
 # mest" (rader med faste kolonner, "Seier" og "Tap" over tallene, 4.10.2026) er
-# flettet inn uendret.
+# flettet inn uendret. Det samme er holdPlass (det som ble trykket, står på
+# samme sted) og fordelingsstripen som ikke går av og på (4.10.2026).
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -481,7 +482,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "58b0e79678064307035c0992037d398a26277b0c72903a8d23046c322487e8cd"
+BASE_SHA = "3132ae231e1ae624d9286c44ec96d06b960c39d88e09e8f0822fd22f9691694a"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

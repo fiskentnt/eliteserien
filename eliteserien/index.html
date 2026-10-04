@@ -3606,7 +3606,14 @@ function fillOdds(){
   // nedrykk alle er fjerne — 12 nesten like små stolper mellom to knapt synlige.
   // Vis den bare når noe av det faktisk er i spill (over 5 %), ellers holder
   // posisjon, poeng og de tre tallene over.
-  const showHist = ['europa','kvalik','nedrykk'].some(k=>zoneVal(k)>=0.05);
+  // Den skal heller ikke forsvinne og komme tilbake uten grunn (4.10.2026:
+  // Brann rundt 5 % topp 4-sjanse, og stripen kom og gikk fra trykk til
+  // trykk på "Simuler på nytt"). Vist fra 5 %; er den vist for laget, står
+  // den til alt er under 1 %. Mens tallene regnes, står den som den sto.
+  const over = t => ['europa','kvalik','nedrykk'].some(k=>zoneVal(k)>=t);
+  const sammeLag = stripeVist.lag===SELECTED_TEAM;
+  const showHist = sammeLag && !lastMCFinal ? stripeVist.vist : over(sammeLag && stripeVist.vist ? 0.01 : 0.05);
+  stripeVist = {lag:SELECTED_TEAM, vist:showHist};
   // Forrige kamp: kort linje nederst i boksen, med lagets egen resultatside og
   // hva kampen betydde. Klikk åpner hele svaret i "Spør om tabellen".
   const lm = qaLastMatchLine(SELECTED_TEAM, lastMatchEntry(SELECTED_TEAM));
@@ -3641,6 +3648,7 @@ function fillOdds(){
     + (lm ? `<button class="lastmatch" title="Se hva kampen betydde">${lm.html}</button>` : '');
   forrigeLinjeOppdater();
 }
+let stripeVist = {lag:null, vist:false};
 // Sonene lagboksen viser for en fordeling. boxAlways: vises uansett verdi
 // (Topp 4, Kvalik, Nedrykk). De andre bare når de er i spill: Gull over 1
 // prosent, Champions League mellom 1 og 99. Brukes også av "Kopier tekst".
@@ -3851,9 +3859,72 @@ roundsEl.addEventListener('click', async e=>{
   const nokkel=knappGruppe(btn), state=gruppeButtonState(nokkel);
   if(state===null) return;
   tableSort=null;
+  holdPlass(btn);
   await simulateGroup(nokkel, state==='resimulate');
   render();
 });
+// ---- Det som ble trykket, står på samme sted på skjermen (4.10.2026) ----
+// Et trykk i kamplisten ("Simuler runden", "Simuler på nytt", H/U/B/×, et
+// resultat skrevet inn) tegner siden på nytt, og delene over kamplisten kan
+// endre høyde: linja under "Neste kamp", fordelingsstripen og setningen om
+// forrige kamp i lagboksen. Brann (Eliteserien) byttet sone mellom topp 4 og
+// kvalikfare fra trykk til trykk, og knappen flyttet seg 71 piksler hver gang;
+// nettleserens egen ankring holdt ikke, og Safari har den ikke. Derfor:
+// husk hvor elementet sto på skjermen, og rull tilbake dit når noe har endret
+// seg, til siden er ferdig regnet (simuleringen, linja under "Neste kamp" og
+// et åpent svar). Ruller brukeren selv, slippes det: hjul, berøring, taster,
+// et nytt trykk, og rulling som ikke kommer herfra (rullefeltet: elementet
+// flytter seg da nøyaktig like mye som rulleposisjonen).
+let plassHold = null, plassAnker = null;
+const PLASS_SLIPP = ['wheel','touchstart','keydown','mousedown'];
+function holdPlass(el){
+  slippPlass();
+  if(!el || !el.isConnected) return;
+  const rad = el.closest('.match');
+  const velger = el.matches('.round-sim')
+    ? (el.dataset.gruppe ? `.round-sim[data-gruppe="${el.dataset.gruppe}"]` : `.round-sim[data-round="${el.dataset.round}"]`)
+    : rad && el.dataset.q ? `.match[data-id="${rad.dataset.id}"] button[data-q="${el.dataset.q}"]`
+    : rad && el.dataset.side ? `.match[data-id="${rad.dataset.id}"] [data-side="${el.dataset.side}"]` : null;
+  const finn = () => el.isConnected ? el : (velger ? document.querySelector(velger) : null);
+  // Trykkes samme knapp igjen uten at brukeren har rullet, gjelder plassen fra
+  // første trykk: rulleposisjonen er hele piksler, og ellers kunne en halv
+  // piksel per trykk hope seg opp (5 piksler etter 20 trykk).
+  const a = plassAnker, igjen = a && a.velger===velger && velger && Math.abs(window.scrollY-a.y)<1;
+  const naaTopp = el.getBoundingClientRect().top;
+  // y og sisteTopp: rulleposisjonen og elementets plass slik grepet sist
+  // satte dem. Har noe annet rullet siden, er det brukeren.
+  const h = {velger, topp: igjen ? a.topp : naaTopp, y: window.scrollY, sisteTopp: naaTopp,
+             start: performance.now(), rolig: 0, raf: 0, slipp: ()=>slippPlass()};
+  PLASS_SLIPP.forEach(t=>addEventListener(t, h.slipp, {capture:true, passive:true}));
+  const steg = () => {
+    if(plassHold!==h) return;
+    const e = finn(), naa = performance.now();
+    if(e){
+      const y = window.scrollY, topp = e.getBoundingClientRect().top;
+      if(Math.abs(y-h.y)>=1 && Math.abs((topp-h.sisteTopp)+(y-h.y))<1){ slippPlass(); return; }
+      const d = topp - h.topp;
+      if(Math.abs(d)>=0.5) window.scrollBy({top:d, behavior:'instant'});
+      h.y = window.scrollY; h.sisteTopp = e.getBoundingClientRect().top;
+    }
+    const ferdig = lastMCFinal && lastMCScenarioKey===qaScenarioKey()
+      && !document.querySelector('#nmImpact.venter, #qaAnswer.loading');
+    h.rolig = ferdig ? (h.rolig || naa) : 0;
+    if(naa - h.start > 12000 || (h.rolig && naa - h.rolig > 800)){ slippPlass(); return; }
+    h.raf = requestAnimationFrame(steg);
+  };
+  plassHold = h;
+  h.raf = requestAnimationFrame(steg);
+}
+function slippPlass(){
+  const h = plassHold; if(!h) return;
+  plassHold = null;
+  // Plassen gjelder for neste trykk på samme knapp bare om ingen har rullet
+  // siden (se holdPlass): y er der grepet sist satte rulleposisjonen, så
+  // rulling fra brukeren gjør den ugyldig.
+  plassAnker = {velger:h.velger, topp:h.topp, y:h.y};
+  cancelAnimationFrame(h.raf);
+  PLASS_SLIPP.forEach(t=>removeEventListener(t, h.slipp, {capture:true}));
+}
 // Nullstill må også rydde adressen. Har man trykket "Del scenario", ligger
 // scenarioet i hashen, og en oppfriskning etter nullstilling leste det inn
 // igjen -- tabellen fylte seg selv på nytt. Bare s=-delen fjernes; team= og
@@ -3907,10 +3978,12 @@ async function onRoundsEvent(e){
   if(!m) return;
   if(e.type==='input'){
     if(e.target.tagName!=='INPUT') return;
+    holdPlass(e.target);
     setMatch(m, parse(row.querySelector('[data-side=h]').value), parse(row.querySelector('[data-side=a]').value), false);
   } else if(e.type==='click'){
     const b=e.target.closest('button'); if(!b) return;
-    if(!drawQuick(m, b.dataset.q)) return;
+    holdPlass(b);
+    if(!drawQuick(m, b.dataset.q)){ slippPlass(); return; }
   } else return;
   // Utfylling bare når kampen er ferdig utfylt (begge tall inne): en halvferdig
   // kamp (ett tall skrevet) eller en tømt kamp (×, eller begge felt slettet)
@@ -4000,7 +4073,10 @@ async function oppdaterNesteKampLinje(m){
   if(key===nmImpactKey) return;          // alt vist for dette scenarioet
   nmImpactKey = key;
   // Tallene som står, gjelder et annet lag, en annen kamp eller et annet
-  // scenario: skjul dem (plassen står) til de nye er regnet.
+  // scenario: skjul dem (plassen står) til de nye er regnet. Var linja borte
+  // (sonen avgjort eller en annen kamp), får den plassen sin nå, mens den
+  // regnes, ikke først når tallene kommer (4.10.2026).
+  el.hidden = false;
   el.classList.add('venter');
   try{
     const data = await runMatchImpactAsync(lag, zone, [{idx, match:m, needsDraw:true}], scenarioKey,

@@ -3479,6 +3479,105 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await pg.close();
     }
   };
+  // ---- Det som ble trykket, står på samme sted på skjermen (4.10.2026) ----
+  // Avviket: Eliteserien, Brann fulgt, "Fyll ut runden" av, åtte kamper lagt
+  // inn, "Simuler på nytt" i runde 23 mange ganger. Siden rullet av seg selv,
+  // fordi delene over kamplisten endret høyde når Brann byttet sone mellom
+  // topp 4 og kvalikfare: linja under "Neste kamp" (avgjort kvalikfare har
+  // ingen linje) og fordelingsstripen (vist fra 5 %). Knappen flyttet seg 71
+  // piksler. Her: 20 trykk på PC og mobil, knappen flytter seg ikke mer enn
+  // én piksel. Testen krever at noe over knappen faktisk endret høyde
+  // underveis, ellers sier den ingenting. Fordelingsstripen forsvinner ikke
+  // så lenge noe er over 1 %, og rulling brukeren gjør selv, tas ikke tilbake.
+  //   node tests/regression.js --bare rulling
+  const knappenStaar = async () => {
+    setGroup('Det som ble trykket, står på samme sted på skjermen');
+    for (const [form, vp] of [['PC', {width: 1400, height: 900}],
+                              ['mobil', {width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true}]]) {
+      const pg = await browser.newPage();
+      pg.on('pageerror', e => errors.push(`rulling ${form}: ${e.message}`));
+      await pg.setViewport(vp);
+      await pg.goto(base + '#team=Brann', {waitUntil: 'networkidle0'});
+      // Safari (iPhone) har ikke nettleserens egen rulleankring, og i Chrome
+      // holdt den på mobil, men ikke på PC. Den slås av, så testen gjelder
+      // siden selv, slik Safari ser den.
+      await pg.addStyleTag({content: '*{overflow-anchor:none !important}'});
+      const rolig = () => pg.waitForFunction(() => typeof lastMCFinal !== 'undefined' && lastMCFinal && lastMCScenarioKey === qaScenarioKey()
+        && !document.getElementById('nmImpact').classList.contains('venter') && !plassHold, {timeout: 120000, polling: 50});
+      await rolig();
+      // Åtte kamper lagt inn for hånd: Brann taper noen, rivalene om topp 4
+      // vinner noen, resten uavgjort. Oppsettet velges slik at Brann ligger
+      // rundt 5 % topp 4-sjanse når runde 23 er simulert.
+      await pg.evaluate(() => { const t = document.getElementById('autoFillToggle'); if (t.checked) t.click(); });
+      let valgt = null;
+      for (const [tap, vinn] of [[0, 4], [0, 2], [1, 1], [0, 6], [1, 3], [0, 0], [2, 2], [1, 5]]) {
+        await pg.evaluate((tap, vinn) => {
+          matches.forEach(m => setMatch(m, null, null));
+          const fri = m => m.hg == null && m.round !== 23;
+          const brann = matches.filter(m => fri(m) && (m.home === 'Brann' || m.away === 'Brann')).slice(0, tap);
+          brann.forEach(m => m.home === 'Brann' ? setMatch(m, 0, 2) : setMatch(m, 2, 0));
+          const riv = ['Molde', 'Rosenborg', 'Lillestrøm', 'Tromsø', 'Fredrikstad'];
+          const vinner = matches.filter(m => fri(m) && !brann.includes(m) && m.home !== 'Brann' && m.away !== 'Brann'
+            && (riv.includes(m.home) || riv.includes(m.away))).slice(0, vinn);
+          vinner.forEach(m => riv.includes(m.home) ? setMatch(m, 2, 0) : setMatch(m, 0, 2));
+          matches.filter(m => fri(m) && !brann.includes(m) && !vinner.includes(m) && m.home !== 'Brann' && m.away !== 'Brann')
+            .slice(0, 8 - brann.length - vinner.length).forEach(m => setMatch(m, 1, 1));
+          mcStraks = true; render();
+        }, tap, vinn);
+        await rolig();
+        await pg.evaluate(async () => { await simulateGroup('r23', false); render(); });
+        await rolig();
+        const p = await pg.evaluate(() => (qaZoneByKey('Brann', 'europa') || {}).pct || 0);
+        if (p >= 0.02 && p <= 0.10) { valgt = {tap, vinn, p}; break; }
+      }
+      check(`${form}: fant et oppsett med åtte kamper der Brann ligger rundt 5 % topp 4-sjanse (${valgt ? `Brann taper ${valgt.tap}, rivaler vinner ${valgt.vinn}: ${Math.round(valgt.p * 100)} %` : 'ingen'})`, !!valgt, '');
+      if (!valgt) { await pg.close(); continue; }
+      const sel = '.round-sim[data-round="23"]';
+      await pg.evaluate(s => { const b = document.querySelector(s); window.scrollTo(0, b.getBoundingClientRect().top + scrollY - 200); }, sel);
+      await new Promise(r => setTimeout(r, 300));
+      const maal = () => pg.evaluate(s => {
+        const b = document.querySelector(s), h = id => { const e = document.getElementById(id); return e && !e.hidden ? e.getBoundingClientRect().height : 0; };
+        const d = lastMC.Brann, sone = k => { const z = LEAGUE.zones[k]; let v = 0; for (let i = z.lo; i <= z.hi; i++) v += d[i - 1]; return v; };
+        const bv = matches.find(m => m.home === 'Brann' && m.away === 'Viking');
+        return {topp: b.getBoundingClientRect().top, y: scrollY, tekst: b.textContent, over: h('verdict') + h('nextMatch'),
+          stripe: !!document.querySelector('#odds .hist'), maks: Math.max(sone('europa'), sone('kvalik'), sone('nedrykk')), bv: bv ? `${bv.hg}-${bv.ag}` : '?'};
+      }, sel);
+      const trykk = async () => { const box = await (await pg.$(sel)).boundingBox();
+        if (form === 'mobil') await pg.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+        else await pg.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        await new Promise(r => setTimeout(r, 30)); await rolig(); };
+      // 20 trykk; ga trekningene færre enn to høydeendringer over knappen,
+      // trykkes det videre (høyst 40), så testen ikke blir tom av tilfeldighet.
+      const rader = [], endretI = r => Math.abs(r.e.over - r.f.over) >= 1;
+      for (let i = 0; i < 20 || (rader.filter(endretI).length < 2 && i < 40); i++) {
+        const f = await maal(); await trykk(); const e = await maal(); rader.push({f, e, flytt: e.topp - f.topp}); }
+      const maks = Math.max(...rader.map(r => Math.abs(r.flytt)));
+      const endret = rader.filter(endretI).length;
+      console.log(`      ${form}: flytt per trykk ${rader.map(r => r.flytt.toFixed(1)).join(' ')}; høyden over knappen endret i ${endret} av ${rader.length}; Brann-Viking ${rader.map(r => r.e.bv).join(' ')}`);
+      check(`${form}: ${rader.length} trykk på "Simuler på nytt": knappen flytter seg ikke mer enn én piksel (største ${maks.toFixed(1)})`,
+        maks <= 1 && rader.every(r => r.e.tekst === 'Simuler på nytt'), rader.map(r => r.flytt.toFixed(1)).join(' '));
+      check(`${form}: og ikke mer enn én piksel til sammen etter ${rader.length} trykk`, Math.abs(rader.at(-1).e.topp - rader[0].f.topp) <= 1,
+        `${rader[0].f.topp} -> ${rader.at(-1).e.topp}`);
+      check(`${form}: noe over knappen endret faktisk høyde underveis (${endret} av ${rader.length} trykk), og runden ble simulert på nytt`,
+        endret >= 2 && new Set(rader.map(r => r.e.bv)).size >= 3, '');
+      check(`${form}: fordelingsstripen forsvinner ikke så lenge noe er over 1 %`,
+        rader.every(r => !(r.f.stripe && !r.e.stripe) || r.e.maks < 0.01), JSON.stringify(rader.map(r => [r.f.stripe, r.e.stripe, Math.round(r.e.maks * 100)])));
+      // Brukeren ruller selv mens siden regner: det tas ikke tilbake.
+      const f = await maal();
+      const box = await (await pg.$(sel)).boundingBox();
+      await pg.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+      await new Promise(r => setTimeout(r, 20));
+      // På telefonen begynner rulling med en berøring (touchstart), på PC med hjulet.
+      if (form === 'mobil') { await pg.touchscreen.touchStart(box.x + 5, box.y + 300); await pg.evaluate(() => window.scrollBy(0, 300));
+        await pg.touchscreen.touchEnd(); }
+      else await pg.mouse.wheel({deltaY: 300});
+      await rolig();
+      const e = await maal();
+      check(`${form}: rulling brukeren gjør selv mens siden regner, tas ikke tilbake (knappen ${f.topp.toFixed(0)} -> ${e.topp.toFixed(0)})`,
+        e.topp < f.topp - 200, `${f.topp} -> ${e.topp}, y ${f.y} -> ${e.y}`);
+      await pg.close();
+    }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -3508,7 +3607,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'justering') await poengjusteringer();
       else if (BARE === 'tilgode') await kamperTilGode();
       else if (BARE === 'betyrmest') await kamperBetyrMest();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest)`);
+      else if (BARE === 'rulling') await knappenStaar();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -7000,6 +7100,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
 
     await kamperTilGode();
     await kamperBetyrMest();
+    await knappenStaar();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen

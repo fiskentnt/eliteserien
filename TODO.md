@@ -3,6 +3,32 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Det som ble trykket, står på samme sted på skjermen (4.10.2026)
+
+Avvik: Eliteserien, Brann fulgt, "Fyll ut runden" av, åtte kamper lagt inn,
+"Simuler på nytt" i runde 23 mange ganger: siden rullet av seg selv.
+Årsak: Brann lå rundt 5 % topp 4-sjanse, og sonen byttet mellom topp 4 og
+kvalikfare fra trykk til trykk (qaTargetZone: topp 4 over 5 %). Da forsvant
+og kom linja under "Neste kamp" (kvalikfaren er avgjort, ingen linje; 45
+piksler) og fordelingsstripen i lagboksen (vist fra 5 %; 26 piksler).
+Knappen flyttet seg 71 piksler. Ingenting kalte scrollIntoView eller
+scrollUnderNav (svarene regnes om med noScroll); nettleserens egen ankring
+holdt ikke i Chrome på PC, og Safari har den ikke.
+
+- holdPlass(): elementet som ble trykket (Simuler runden / på nytt, H/U/B/×,
+  et resultat skrevet inn) holdes på samme sted på skjermen til siden er
+  ferdig regnet. Slippes når brukeren ruller selv (hjul, berøring, taster,
+  nytt trykk, rullefeltet). Gjentatte trykk bruker plassen fra første trykk,
+  så halve piksler ikke hoper seg opp.
+- Fordelingsstripen: vist fra 5 %, står til alt er under 1 % for samme lag,
+  og bytter ikke mens tallene regnes.
+- Linja under "Neste kamp" får plassen når utregningen starter.
+- Test: regression.js, gruppen "Det som ble trykket, står på samme sted"
+  (--bare rulling): 20 trykk på PC og mobil, nettleserens ankring slått av
+  (som i Safari), knappen flytter seg høyst én piksel; testen krever at noe
+  over knappen faktisk endret høyde. Uten holdPlass feiler den (45 og 22
+  piksler).
+
 ## "Hvilke kamper betyr mest": rader og faste kolonner (4.10.2026)
 
 Svaret vises som én rad per kamp: kampnavnet i halvfet, "Runde 26, onsdag
