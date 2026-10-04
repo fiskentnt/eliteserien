@@ -441,10 +441,46 @@ _r = ntf_source.parse_side(RANHEIM_RAD.replace("2026</span> 17:00", "2026</span>
                            naa=_dt(2026, 10, 2, 21, 30, tzinfo=_OSLO), log=_logg.append, kjent_avspark=_kjent)
 sjekk("resultatsiden viser norsk tid (19:00): uendret, ingen omregning",
       _r[0]["time"] == "19:00" and not any(l.startswith("MERK") for l in _logg), f"{_r[0]} {_logg}")
+sjekk("og ikke noe avvik", not any("AVVIK" in l for l in _logg), str(_logg))
+_logg = []
+ntf_source.parse_side(RANHEIM_RAD, "resultater", "obos", naa=_dt(2026, 10, 2, 21, 30, tzinfo=_OSLO),
+                      log=_logg.append, kjent_avspark=_kjent)
+sjekk("vist i UTC (17:00) er heller ikke et avvik", not any("AVVIK" in l for l in _logg), str(_logg))
 # En tid som verken er det kjente avsparket eller det i UTC: ingen gjetning.
-_r = ntf_source.parse_side(RANHEIM_RAD.replace("2026</span> 17:00", "2026</span> 16:00"), "resultater", "obos",
-                           naa=_dt(2026, 10, 2, 21, 30, tzinfo=_OSLO), log=lambda _s: None, kjent_avspark=_kjent)
-sjekk("en annen tid (16:00): står som den er", _r[0]["time"] == "16:00", str(_r[0]))
+# Ligasiden er hovedkilden, så tiden derfra brukes, men det logges som avvik
+# (4.10.2026), og i GitHub Actions også som advarsel.
+import io as _iou, contextlib as _ctxu, os as _osu
+_logg, _ut = [], _iou.StringIO()
+_gha_u = _osu.environ.get("GITHUB_ACTIONS")
+_osu.environ["GITHUB_ACTIONS"] = "true"
+try:
+    with _ctxu.redirect_stdout(_ut):
+        _r = ntf_source.parse_side(RANHEIM_RAD.replace("2026</span> 17:00", "2026</span> 16:00"), "resultater", "obos",
+                                   naa=_dt(2026, 10, 2, 21, 30, tzinfo=_OSLO), log=_logg.append, kjent_avspark=_kjent)
+finally:
+    if _gha_u is None:
+        _osu.environ.pop("GITHUB_ACTIONS", None)
+    else:
+        _osu.environ["GITHUB_ACTIONS"] = _gha_u
+sjekk("en annen tid (16:00): sidens tid brukes", _r[0]["time"] == "16:00", str(_r[0]))
+sjekk("og det logges som avvik: «Kamp Ranheim-Egersund: ligasiden viser 16:00, vi hadde 19:00, bruker 16:00»",
+      "AVVIK: Kamp Ranheim-Egersund: ligasiden viser 16:00, vi hadde 19:00, bruker 16:00" in _logg, str(_logg))
+sjekk("med advarsel i GitHub Actions",
+      "::warning title=Ligasiden: annet avspark::Kamp Ranheim-Egersund: ligasiden viser 16:00" in _ut.getvalue(), _ut.getvalue())
+sjekk("og ingen MERK om omregning", not any(l.startswith("MERK") for l in _logg), str(_logg))
+# Annen dato: datoen er med i linjen.
+_logg = []
+_r = ntf_source.parse_side(RANHEIM_RAD.replace("02.10.<span", "03.10.<span"), "resultater", "obos",
+                           naa=_dt(2026, 10, 3, 21, 30, tzinfo=_OSLO), log=_logg.append, kjent_avspark=_kjent)
+sjekk("annen dato: «ligasiden viser 3.10. 17:00, vi hadde 2.10. 19:00, bruker 3.10. 17:00»",
+      _r[0]["date"] == "2026-10-03" and
+      "AVVIK: Kamp Ranheim-Egersund: ligasiden viser 3.10. 17:00, vi hadde 2.10. 19:00, bruker 3.10. 17:00" in _logg, str(_logg))
+# Uten kjent avspark for kampen: ingenting å sammenligne med.
+_logg = []
+ntf_source.parse_side(RANHEIM_RAD.replace("2026</span> 17:00", "2026</span> 16:00"), "resultater", "obos",
+                      naa=_dt(2026, 10, 2, 21, 30, tzinfo=_OSLO), log=_logg.append,
+                      kjent_avspark={("Bryne", "Lyn"): ("2026-10-04", "14:30")})
+sjekk("ukjent kamp: ikke noe avvik", not any("AVVIK" in l for l in _logg), str(_logg))
 # Vintertid: én time. 7.11.2026 kl. 18:00 norsk tid er 17:00 UTC.
 _r = ntf_source.parse_side(RANHEIM_RAD.replace("02.10.<span", "07.11.<span"), "resultater", "obos",
                            naa=_dt(2026, 11, 7, 21, 30, tzinfo=_OSLO), log=lambda _s: None,
@@ -2769,6 +2805,183 @@ _r24 = next(r for r in _fx_ob if r["round"] == 24)
 sjekk("OBOS: i runde 24 er bare Sogndal-Raufoss merket flyttet, og datospennet regnes uten den (2. til 5. okt)",
       [f"{m['home']}-{m['away']}" for m in _r24["matches"] if m.get("moved")] == ["Sogndal-Raufoss"] and _r24["when"] == "2. til 5. okt",
       str((_r24["when"], [m for m in _r24["matches"] if m.get("moved")])))
+
+print("\n=== OBOS-odds fra OddsPapi: når oddsen bør være kommet (leaguedata.odds_forventet, 4.10.2026) ===")
+# Oddsen for en runde kommer når de ordinære kampene i runden før er spilt;
+# flyttede kamper teller ikke. Alarmgrensen er et døgn etter kampslutt
+# (avspark + 2 t) i den siste av dem. Bildet fra 1.10.
+_OSLO_O = ZoneInfo("Europe/Oslo")
+_fv = leaguedata.odds_forventet(_alle_kamper("obos"))
+_eh = _fv[("Egersund", "Hødd")]
+sjekk("runde 25 (Egersund-Hødd): runden før er 24, siste ordinære kamp Moss-Kongsvinger, alarm tirsdag 6.10. kl. 21.00",
+      (_eh["forrige"], _eh["kamp"]) == (24, "Moss-Kongsvinger")
+      and _eh["slutt"] == _dt(2026, 10, 5, 21, 0, tzinfo=_OSLO_O) and _eh["alarm"] == _dt(2026, 10, 6, 21, 0, tzinfo=_OSLO_O)
+      and _eh["alarm"].utcoffset().total_seconds() == 0, str(_eh))
+_sr = _fv[("Sogndal", "Raufoss")]
+sjekk("Sogndal-Raufoss (runde 24, utsatt til 21.10.): runden før er 27 (Hødd-Raufoss 18.10.), ikke 23",
+      (_sr["forrige"], _sr["kamp"]) == (27, "Hødd-Raufoss") and _sr["alarm"] == _dt(2026, 10, 19, 19, 0, tzinfo=_OSLO_O), str(_sr))
+_sa = _fv[("Strømmen", "Åsane")]
+sjekk("runde 26 (Strømmen-Åsane 14.10.): runden før er 25 (Egersund-Hødd 11.10.), alarm 12.10. kl. 19.00",
+      (_sa["forrige"], _sa["kamp"]) == (25, "Egersund-Hødd") and _sa["alarm"] == _dt(2026, 10, 12, 19, 0, tzinfo=_OSLO_O), str(_sa))
+# Runde 25 regnes ikke fra Sogndal-Raufoss (runde 24, men spilt 21.10.).
+sjekk("ingen kamp i runde 25 har Sogndal-Raufoss som referanse",
+      all(v["kamp"] != "Sogndal-Raufoss" for (h, b), v in _fv.items()), "")
+_r1 = [m for m in _alle_kamper("obos") if m["round"] == 1 and m["date"] <= "2026-04-07"]
+sjekk("de seks kampene i første runde (5. til 7.4.) har ingen runde før seg",
+      len(_r1) == 6 and not any((m["home"], m["away"]) in _fv for m in _r1), str(len(_r1)))
+
+print("\n=== OBOS-odds: når OddsPapi fikk odds, per runde (obos_upcoming_odds.oddsaapning) ===")
+import obos_upcoming_odds as _ouo
+_r25 = [m for m in _alle_kamper("obos") if m["round"] == 25]
+def _fxo(m, har):
+    return {"fixtureId": f"id-{m['home']}-{m['away']}", "participant1Name": m["home"], "participant2Name": m["away"],
+            "hasOdds": har, "startTime": m["date"] + "T15:00:00.000Z"}
+_t1 = _dt(2026, 10, 5, 8, 0, tzinfo=_tz.utc)
+_st1, _l1 = _ouo.oddsaapning([(m, _fxo(m, False)) for m in _r25], _fv, _t1, {})
+sjekk("ingen odds ennå: «Runde 25: odds for 0 av 8 kamper ennå; alarm et døgn etter at runde 24 var spilt (Moss-Kongsvinger, ferdig 5.10. kl. 21.00)»",
+      _l1 == ["Runde 25: odds for 0 av 8 kamper ennå; alarm et døgn etter at runde 24 var spilt (Moss-Kongsvinger, ferdig 5.10. kl. 21.00)"], str(_l1))
+sjekk("tilstanden husker at kampene ble sett uten odds", len(_st1["kamper"]) == 8 and all(
+      k.get("sett_uten") == _t1.isoformat(timespec="seconds") and "odds_fra" not in k for k in _st1["kamper"].values())
+      and _st1["sesong"] == 2026, str(_st1)[:300])
+# Neste liste, tirsdag 6.10. kl. 06.30 UTC: seks av åtte har odds.
+_t2 = _dt(2026, 10, 6, 6, 30, tzinfo=_tz.utc)
+_st2, _l2 = _ouo.oddsaapning([(m, _fxo(m, i < 6)) for i, m in enumerate(_r25)], _fv, _t2, _st1)
+sjekk("seks av åtte: «odds for 6 av 8 kamper, 11 t 30 min etter at runde 24 var spilt»",
+      _l2 == ["Runde 25: odds for 6 av 8 kamper, den første 11 t 30 min og den siste 11 t 30 min etter at runde 24 var spilt "
+              "(Moss-Kongsvinger, ferdig 5.10. kl. 21.00)"], str(_l2))
+_k0 = _st2["kamper"][f"{_r25[0]['home']}|{_r25[0]['away']}"]
+sjekk("tilstanden: odds_fra er når listen ble hentet, med runden før og når den var ferdig",
+      _k0["odds_fra"] == "2026-10-06T06:30:00+00:00" and _k0["alt_ved_forste"] is False and _k0["forrige"] == 24
+      and _k0["forrige_kamp"] == "Moss-Kongsvinger" and _k0["forrige_slutt"] == "2026-10-05T19:00:00+00:00", str(_k0))
+# Tredje liste: de to siste kommer; de første beholder sitt tidspunkt.
+_t3 = _dt(2026, 10, 7, 6, 0, tzinfo=_tz.utc)
+_st3, _l3 = _ouo.oddsaapning([(m, _fxo(m, True)) for m in _r25], _fv, _t3, _st2)
+sjekk("alle åtte: den første etter 11 t 30 min, den siste etter 35 t 0 min",
+      _l3 == ["Runde 25: odds for alle 8 kamper, den første 11 t 30 min og den siste 35 t 0 min etter at runde 24 var spilt "
+              "(Moss-Kongsvinger, ferdig 5.10. kl. 21.00)"]
+      and _st3["kamper"][f"{_r25[0]['home']}|{_r25[0]['away']}"]["odds_fra"] == "2026-10-06T06:30:00+00:00", str(_l3))
+# Odds alt første gang vi så kampen: ikke en måling.
+_st4, _l4 = _ouo.oddsaapning([(m, _fxo(m, True)) for m in _r25[:2]], _fv, _t3, {})
+sjekk("odds alt første gang vi så kamplisten: ingen tid, men sagt",
+      _l4 == ["Runde 25: odds for alle 2 kamper (2 hadde odds alt første gang vi så kamplisten)"]
+      and all(k["alt_ved_forste"] for k in _st4["kamper"].values()), str(_l4))
+# Ny sesong: samme lagpar neste år er en ny kamp.
+_st5, _ = _ouo.oddsaapning([(m, _fxo(m, False)) for m in _r25[:1]], _fv, _t3, dict(_st3, sesong=2025))
+sjekk("tilstand fra en annen sesong glemmes", list(_st5["kamper"]) == [f"{_r25[0]['home']}|{_r25[0]['away']}"]
+      and "odds_fra" not in _st5["kamper"][f"{_r25[0]['home']}|{_r25[0]['away']}"], str(_st5))
+# Den utsatte kampen får egen linje, med sin egen runde før.
+_srm = next(m for m in _alle_kamper("obos") if (m["home"], m["away"]) == ("Sogndal", "Raufoss"))
+_, _l6 = _ouo.oddsaapning([(m, _fxo(m, False)) for m in _r25[:2]] + [(_srm, _fxo(_srm, False))], _fv, _t3, {})
+sjekk("utsatt kamp: «Utsatt kamp fra runde 24: ingen odds ennå; alarm et døgn etter at runde 27 var spilt (Hødd-Raufoss, ...)»",
+      _l6 == ["Runde 25: odds for 0 av 2 kamper ennå; alarm et døgn etter at runde 24 var spilt (Moss-Kongsvinger, ferdig 5.10. kl. 21.00)",
+              "Utsatt kamp fra runde 24: ingen odds ennå; alarm et døgn etter at runde 27 var spilt (Hødd-Raufoss, ferdig 18.10. kl. 19.00)"], str(_l6))
+
+print("\n=== OBOS-odds: hele skriptet med OddsPapi i en sandkasse (obos_upcoming_odds.main) ===")
+# hasOdds false: ikke slått opp, én samlelinje. Mangler en kamp odds et døgn
+# etter at runden før var spilt: ADVARSEL (men bare når kamplisten er hentet
+# etter grensen). 404 for en kamp med hasOdds true: egen ADVARSEL. Andre
+# feil: FEIL som før.
+_sbo2 = Path(_tf2.mkdtemp())
+for _f in ("matches.json", "fixtures.json"):
+    _shr.copy(ROT / "tests" / "data" / "2026-10-01" / "obos" / "data" / _f, _sbo2 / _f)
+_alle_o = _alle_kamper("obos")
+_ekte_ou = {n: getattr(_ouo, n) for n in ("ROOT", "DATA", "OUT_PATH", "SEASON_CACHE", "AAPNING_PATH", "COOLDOWN", "LISTE_TID",
+                                           "csv_2026", "fetch_markets", "find_1x2", "datetime")}
+_ekte_op = {n: getattr(_ouo.oddspapi, n) for n in ("call", "call_retry", "usage")}
+_ekte_argv_o, _gha_o = sys.argv, _osu.environ.get("GITHUB_ACTIONS")
+_op_oppslag = []
+def _kjor_o(naa, liste_tid, har_odds, spilt=(), svar_feil="HTTP 404: No historical odds found"):
+    class _D(_dt):
+        @classmethod
+        def now(cls, tz=None):
+            return naa if tz is None else naa.astimezone(tz)
+    _sett = set(spilt)
+    _ouo.csv_2026 = lambda: [dict(m, hg=m.get("hg") if m.get("hg") is not None else (1 if (m["home"], m["away"]) in _sett else None))
+                             for m in _alle_o]
+    (_sbo2 / "oddspapi_fixtures_2026.json").write_text(json.dumps({"fetched_at": liste_tid.isoformat(timespec="seconds"), "fixtures": [
+        {"fixtureId": f"id-{m['home']}-{m['away']}", "participant1Name": m["home"], "participant2Name": m["away"],
+         "hasOdds": (m["home"], m["away"]) in har_odds,
+         "startTime": _dt.fromisoformat(f"{m['date']}T{m['time']}:00").replace(tzinfo=_OSLO_O).astimezone(_tz.utc).strftime("%Y-%m-%dT%H:%M:%S.000Z")}
+        for m in _alle_o]}), encoding="utf-8")
+    _op_oppslag.clear()
+    def _ikke_tellende(*a, **k):
+        raise AssertionError("tellende kall til OddsPapi i testen")
+    _ouo.oddspapi.call = _ikke_tellende
+    _ouo.oddspapi.call_retry = lambda sti, param, key, **k: (_op_oppslag.append(param["fixtureId"]) or (None, svar_feil))
+    _ouo.oddspapi.usage = lambda: (7, 250)
+    _ouo.fetch_markets = lambda key: [{"marketId": 101}]
+    _ouo.find_1x2 = lambda mk: {"marketId": 101}
+    _ouo.datetime = _D
+    _ouo.ROOT, _ouo.DATA, _ouo.OUT_PATH = _sbo2.parent, _sbo2, _sbo2 / "odds_upcoming.json"
+    _ouo.SEASON_CACHE, _ouo.AAPNING_PATH = _sbo2 / "oddspapi_fixtures_2026.json", _sbo2 / "odds_aapning.json"
+    _ouo.COOLDOWN, _ouo.LISTE_TID = 0, None
+    sys.argv = ["obos_upcoming_odds.py"]
+    _osu.environ["GITHUB_ACTIONS"] = "true"
+    _osu.environ["ODDSPAPI_KEY"] = _osu.environ.get("ODDSPAPI_KEY") or "test"
+    _buf = _iou.StringIO()
+    try:
+        with _ctxu.redirect_stdout(_buf):
+            _kode = _ouo.main()
+    finally:
+        for _n, _v in _ekte_ou.items():
+            setattr(_ouo, _n, _v)
+        for _n, _v in _ekte_op.items():
+            setattr(_ouo.oddspapi, _n, _v)
+        sys.argv = _ekte_argv_o
+        if _gha_o is None:
+            _osu.environ.pop("GITHUB_ACTIONS", None)
+        else:
+            _osu.environ["GITHUB_ACTIONS"] = _gha_o
+    return _kode, _buf.getvalue()
+_mk = ("Moss", "Kongsvinger")
+_ekte_nokkel = _osu.environ.get("ODDSPAPI_KEY")
+try:
+    # Søndag 4.10. kl. 16.00 UTC, kamplisten hentet 11.40: bare Moss-Kongsvinger
+    # har odds, og oppslaget gir 404.
+    _r24_spilt = [(m["home"], m["away"]) for m in _alle_o if m["round"] == 24 and m["date"] <= "2026-10-04"]
+    _k, _u = _kjor_o(_dt(2026, 10, 4, 16, 0, tzinfo=_tz.utc), _dt(2026, 10, 4, 11, 40, tzinfo=_tz.utc), {_mk}, spilt=_r24_spilt)
+    _uten = [m for m in _alle_o if m["date"] > "2026-10-05" and m["date"] <= "2026-10-18"]
+    sjekk(f"hasOdds false: én samlelinje «OddsPapi har ikke odds ennå for {len(_uten)} kamper, 11. til 18.10.»",
+          f"  OddsPapi har ikke odds ennå for {len(_uten)} kamper, 11. til 18.10.\n" in _u and len(_uten) == 24, _u)
+    sjekk("og de slås ikke opp: ett oppslag, for kampen med hasOdds", _op_oppslag == ["id-Moss-Kongsvinger"], str(_op_oppslag))
+    sjekk("404 for en kamp med hasOdds true: egen advarsel, ikke FEIL",
+          "ADVARSEL: Moss mot Kongsvinger: OddsPapi sier at kampen har odds (hasOdds), men oppslaget gir 404" in _u
+          and "::warning title=OddsPapi: 404 med hasOdds::Moss mot Kongsvinger" in _u and "FEIL" not in _u, _u)
+    sjekk("ingen alarm før grensen (tirsdag 21.00)", "fortsatt ikke odds" not in _u and _k == 0, _u)
+    sjekk("målingen per runde står i loggen",
+          "  Runde 25: odds for 0 av 8 kamper ennå; alarm et døgn etter at runde 24 var spilt (Moss-Kongsvinger, ferdig 5.10. kl. 21.00)" in _u, _u)
+    _aap = json.loads((_sbo2 / "odds_aapning.json").read_text("utf-8"))
+    sjekk("odds_aapning.json: Moss-Kongsvinger hadde odds første gang, runde 25 sett uten",
+          _aap["kamper"]["Moss|Kongsvinger"]["alt_ved_forste"] is True
+          and _aap["kamper"]["Egersund|Hødd"]["sett_uten"] == "2026-10-04T11:40:00+00:00", str(_aap)[:400])
+    # Onsdag 7.10. kl. 08.00, listen hentet 07.00 (etter grensen): én kamp i
+    # runde 25 mangler fortsatt odds.
+    _r25p = [(m["home"], m["away"]) for m in _r25]
+    _k, _u = _kjor_o(_dt(2026, 10, 7, 8, 0, tzinfo=_tz.utc), _dt(2026, 10, 7, 7, 0, tzinfo=_tz.utc), set(_r25p[1:]),
+                     spilt=_r24_spilt + [_mk])
+    _h0, _b0 = _r25p[0]
+    sjekk(f"etter grensen: ADVARSEL for {_h0} mot {_b0}, med runden før og når den var ferdig",
+          f"  ADVARSEL: OddsPapi har fortsatt ikke odds for {_h0} mot {_b0}, mer enn et døgn etter at runde 24 var spilt "
+          f"(Moss-Kongsvinger, ferdig 5.10. kl. 21.00)" in _u and f"::warning title=OddsPapi: odds mangler::" in _u, _u)
+    sjekk("bare den ene: kampene i runde 26 og 27 er innenfor grensen", _u.count("fortsatt ikke odds") == 2, _u)  # linjen + ::warning
+    sjekk("de sju andre slås opp", sorted(_op_oppslag) == sorted(f"id-{h}-{b}" for h, b in _r25p[1:]), str(_op_oppslag))
+    sjekk("målingen: sju av åtte, fra listen 7.10. kl. 07.00 (36 t etter at Moss-Kongsvinger var ferdig)",
+          "  Runde 25: odds for 7 av 8 kamper, den første 36 t 0 min og den siste 36 t 0 min etter at runde 24 var spilt" in _u, _u)
+    # Samme tid, men kamplisten er fra 6.10. kl. 18.00 UTC, før grensen (19.00 UTC):
+    # vi vet ikke, så ingen advarsel.
+    _k, _u = _kjor_o(_dt(2026, 10, 7, 8, 0, tzinfo=_tz.utc), _dt(2026, 10, 6, 18, 0, tzinfo=_tz.utc), set(_r25p[1:]),
+                     spilt=_r24_spilt + [_mk])
+    sjekk("kamplisten er fra før grensen: ingen ADVARSEL, men sagt at det avgjøres ved neste liste",
+          "fortsatt ikke odds" not in _u and "1 kamp(er) uten odds etter alarmgrensen, men kamplisten er fra 6.10. kl. 20.00" in _u, _u)
+    # En annen feil enn 404: FEIL som før.
+    _k, _u = _kjor_o(_dt(2026, 10, 4, 16, 0, tzinfo=_tz.utc), _dt(2026, 10, 4, 11, 40, tzinfo=_tz.utc), {_mk},
+                     spilt=_r24_spilt, svar_feil="HTTP 500: Internal Server Error")
+    sjekk("annen feilkode: «Moss mot Kongsvinger: FEIL HTTP 500 ...», ingen 404-advarsel",
+          "  Moss mot Kongsvinger: FEIL HTTP 500: Internal Server Error" in _u and "404" not in _u, _u)
+finally:
+    if _ekte_nokkel is None:
+        _osu.environ.pop("ODDSPAPI_KEY", None)
+    _shr.rmtree(_sbo2, ignore_errors=True)
 
 print("\n=== Kort eller full kontroll før push (tests/for_push_valg.py, 4.10.2026) ===")
 # Kort kontroll bare når full for_push var grønn på samme kode før rebasen og

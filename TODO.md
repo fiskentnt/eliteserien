@@ -3,6 +3,34 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## OBOS-odds fra OddsPapi: når de kommer, og når det er en feil (4.10.2026)
+
+obos_upcoming_odds.py slår bare opp kampene OddsPapi selv sier har odds
+(hasOdds i kamplisten). De andre samles i én linje: "OddsPapi har ikke odds
+ennå for 24 kamper, 11. til 18.10." Før ga de 404 "No historical odds found"
+for hver kamp.
+
+- Grensen: oddsen for en runde kommer når de ordinære kampene i runden før er
+  spilt; utsatte kamper teller ikke (leaguedata.odds_forventet). Mangler en
+  kamp fortsatt odds et døgn etter kampslutt (avspark + 2 t) i den siste av
+  dem: ADVARSEL. For runde 25: tirsdag 6.10. kl. 21.00, et døgn etter
+  Moss-Kongsvinger. Sogndal-Raufoss (runde 24, spilt 21.10.) regnes fra
+  runde 27. Advarselen kommer bare når kamplisten er hentet etter grensen;
+  ellers en linje om at det avgjøres ved neste liste.
+- 404 for en kamp med hasOdds true: egen ADVARSEL. Andre feilkoder: FEIL.
+- Målingen: obos/data/odds_aapning.json og en linje per runde i loggen, for
+  eksempel "Runde 25: odds for alle 8 kamper, den første 11 t 30 min og den
+  siste 35 t 0 min etter at runde 24 var spilt (Moss-Kongsvinger, ferdig
+  5.10. kl. 21.00)". Tidspunktet er når kamplisten ble hentet (omtrent én
+  gang i døgnet, 1 tellende kall), så målingen er ikke mer nøyaktig enn det.
+  En kamp som hadde odds alt første gang vi så listen, er ikke en måling.
+
+**Tirsdag 6.10.:** vis når oddsen for runde 25 kom (odds_aapning.json og
+loggen fra OBOS-resultatjobben).
+
+**Etter tre runder (25, 26, 27, rundt 19.10.):** foreslå en grense ut fra
+det som er målt, i stedet for et døgn.
+
 ## Resultatloggen: én linje per resultat og hvem som hadde det først (4.10.2026)
 
 Begge resultatjobbene (obos_results.py og update_data.py) skriver én linje
@@ -441,6 +469,11 @@ kalenderfeeden ga bare en advarsel.
   Tester i test_kilder.py ("Resultatsiden viser avsparket i UTC").
 - Følg med: om lørdagskampene (3.10.) også vises i UTC etter kampen, og at
   omregningen da logges ("MERK: ... regnet om til norsk tid").
+- Viser resultatsiden en tid som verken er vårt avspark eller det i UTC,
+  brukes sidens tid (ligasiden er hovedkilden), men det logges som avvik
+  (4.10.2026): "AVVIK: Kamp A-B: ligasiden viser 16:00, vi hadde 14:30,
+  bruker 16:00", med advarsel i GitHub Actions. 4.10. ga ingen kamp i noen
+  av ligaene et slikt avvik (Bryne-Lyn er UTC og regnes om).
 
 ## K (kamper spilt) på telefon (2.10.2026 kveld)
 

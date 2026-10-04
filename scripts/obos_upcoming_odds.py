@@ -34,6 +34,11 @@ ROOT = Path(__file__).parent.parent
 DATA = ROOT / "obos" / "data"
 OUT_PATH = DATA / "odds_upcoming.json"
 SEASON_CACHE = DATA / "oddspapi_fixtures_2026.json"
+# Når OddsPapi først hadde odds for hver kamp (hasOdds), og hvor lenge etter
+# at runden før var spilt (4.10.2026). Se oddsaapning().
+AAPNING_PATH = DATA / "odds_aapning.json"
+# Når kamplisten (med hasOdds) ble hentet: fetch_upcoming_fixtures setter den.
+LISTE_TID = None
 SEASON_CACHE_HOURS = 30   # obos_results.py oppdaterer den hver dag
 COOLDOWN = 4.5
 
@@ -49,16 +54,19 @@ def fetch_upcoming_fixtures(key, frm, to, force=False):
 
     Er sesonglisten borte eller for gammel, hentes vinduet som før.
     """
+    global LISTE_TID
     if SEASON_CACHE.exists() and not force:
         d = json.loads(SEASON_CACHE.read_text(encoding="utf-8"))
         alder = datetime.now(timezone.utc) - datetime.fromisoformat(d["fetched_at"])
         if alder < timedelta(hours=SEASON_CACHE_HOURS):
+            LISTE_TID = datetime.fromisoformat(d["fetched_at"])
             i_vinduet = [f for f in (d.get("fixtures") or [])
                          if frm <= (f.get("startTime") or "")[:10] <= to]
             print(f"  terminliste fra sesonglisten ({len(i_vinduet)} kamper i vinduet, "
                   f"{int(alder.total_seconds()/3600)} t gammel, 0 tellende kall)")
             return i_vinduet
     print("  sesonglisten mangler eller er for gammel -- henter vinduet (1 tellende kall)")
+    LISTE_TID = datetime.now(timezone.utc)
     d, err = oddspapi.call("/v4/fixtures", {"tournamentId": OBOS_TOURNAMENT,
                                             "from": frm, "to": to}, key)
     if err and "FIXTURE_NOT_FOUND" in str(err):
@@ -91,6 +99,94 @@ def skriv(matches, fetched_at):
     DATA.mkdir(parents=True, exist_ok=True)
     OUT_PATH.write_text(json.dumps({"fetched_at": fetched_at, "matches": matches},
                                    ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def _dagspenn(datoer):
+    """"11. til 18.10.", "28.9. til 2.10.", "11.10."."""
+    a, b = min(datoer), max(datoer)
+    d = lambda x, mnd=True: f"{int(x[8:10])}." + (f"{int(x[5:7])}." if mnd else "")
+    if a == b:
+        return d(a)
+    return f"{d(a, a[5:7] != b[5:7])} til {d(b)}"
+
+
+def _klokke(t):
+    from zoneinfo import ZoneInfo
+    t = t.astimezone(ZoneInfo("Europe/Oslo"))
+    return f"{t.day}.{t.month}. kl. {t.strftime('%H.%M')}"
+
+
+def _varighet(sek):
+    t, m = int(sek // 3600), int(sek % 3600 // 60)
+    return f"{t} t {m} min" if t else f"{m} min"
+
+
+def alle_kamper():
+    """Hele sesongen med dagens datoer (matches.json og fixtures.json), ikke
+    CSV-en: den har de opprinnelige datoene, også for flyttede kamper."""
+    spilt = json.loads((DATA / "matches.json").read_text(encoding="utf-8"))
+    fx = json.loads((DATA / "fixtures.json").read_text(encoding="utf-8"))
+    sett = {(m["home"], m["away"]) for m in spilt}
+    return [dict(m) for m in spilt] + [dict(m, round=r["round"]) for r in fx for m in r["matches"]
+                                       if (m["home"], m["away"]) not in sett]
+
+
+def oddsaapning(koblet, forventet, liste_tid, gml):
+    """Når OddsPapi først hadde odds (hasOdds) for hver kamp, og hvor lenge
+    etter at runden før var spilt (4.10.2026). Tidspunktet er når kamplisten
+    ble hentet (liste_tid), så målingen er ikke mer nøyaktig enn hvor ofte
+    listen hentes (omtrent én gang i døgnet). En kamp som hadde odds alt
+    første gang vi så den, får "alt_ved_forste".
+
+    koblet: [(rad, fixture)] for de uspilte kampene; gml: forrige tilstand,
+    som glemmes ved ny sesong (samme lag møtes igjen neste år).
+    Returnerer (ny tilstand, linjer per runde)."""
+    gml = gml if (gml or {}).get("sesong") == liste_tid.year else {}
+    kamper = dict(gml.get("kamper") or {})
+    for r, f in koblet:
+        n = f"{r['home']}|{r['away']}"
+        fv = forventet.get((r["home"], r["away"]))
+        k = kamper.setdefault(n, {"runde": r["round"]})
+        if fv:
+            k.update(forrige=fv["forrige"], forrige_kamp=fv["kamp"], forrige_slutt=fv["slutt"].isoformat(timespec="seconds"))
+        if f.get("hasOdds") and not k.get("odds_fra"):
+            k["odds_fra"] = liste_tid.isoformat(timespec="seconds")
+            k["alt_ved_forste"] = "sett_uten" not in k
+        elif not f.get("hasOdds"):
+            k["sett_uten"] = liste_tid.isoformat(timespec="seconds")
+    linjer = []
+    per, foerst = {}, {}
+    for r, f in koblet:
+        k = kamper[f"{r['home']}|{r['away']}"]
+        # En utsatt kamp har en senere runde før seg enn sin egen: egen gruppe.
+        utsatt = bool(k.get("forrige") and k["forrige"] > r["round"])
+        per.setdefault((r["round"], utsatt), []).append(k)
+        a = f"{r.get('date') or ''} {r.get('time') or ''}"
+        foerst[(r["round"], utsatt)] = min(foerst.get((r["round"], utsatt), a), a)
+    # I den rekkefølgen de spilles: den utsatte kampen der den nå ligger.
+    for (runde, utsatt) in sorted(per, key=lambda g: (foerst[g], g)):
+        ks = per[(runde, utsatt)]
+        med = [k for k in ks if k.get("odds_fra")]
+        k0 = ks[0]
+        navn = (f"Utsatt{'e' if len(ks) > 1 else ''} kamp{'er' if len(ks) > 1 else ''} fra runde {runde}" if utsatt else f"Runde {runde}")
+        ref = (f"runde {k0['forrige']} var spilt ({k0['forrige_kamp']}, ferdig {_klokke(datetime.fromisoformat(k0['forrige_slutt']))})"
+               if k0.get("forrige_slutt") else "runden før var spilt")
+        if not med:
+            hvor_mange = "ingen odds ennå" if len(ks) == 1 else f"odds for 0 av {len(ks)} kamper ennå"
+            linjer.append(f"{navn}: {hvor_mange}; alarm et døgn etter at {ref}")
+            continue
+        maalt = [k for k in med if not k.get("alt_ved_forste") and k.get("forrige_slutt")]
+        tekst = (f"{navn}: odds for kampen" if len(ks) == 1 else
+                 f"{navn}: odds for {'alle' if len(med) == len(ks) else str(len(med)) + ' av'} {len(ks)} kamper")
+        if maalt:
+            tider = sorted((datetime.fromisoformat(k["odds_fra"]) - datetime.fromisoformat(k["forrige_slutt"])).total_seconds() for k in maalt)
+            tekst += (f", {_varighet(tider[0])} etter at {ref}" if len(tider) == 1 else
+                      f", den første {_varighet(tider[0])} og den siste {_varighet(tider[-1])} etter at {ref}")
+        if len(maalt) < len(med):
+            tekst += (" (hadde odds alt første gang vi så kamplisten)" if len(med) == 1
+                      else f" ({len(med) - len(maalt)} hadde odds alt første gang vi så kamplisten)")
+        linjer.append(tekst)
+    return {"sesong": liste_tid.year, "oppdatert": liste_tid.isoformat(timespec="seconds"), "kamper": kamper}, linjer
 
 
 def main():
@@ -137,6 +233,54 @@ def main():
     kommende = [(r, f) for r, f in links if (r["home"], r["away"]) not in played
                 and (f.get("startTime") or "")[:19] > naa]
     print(f"  {len(fixtures)} kamper hos OddsPapi, {len(kommende)} uspilte og koblet til terminlisten")
+    # hasOdds (4.10.2026): OddsPapi sier selv om de har odds for kampen. Uten
+    # slås den ikke opp (svaret er 404 "No historical odds found"); de samles
+    # i én linje. Oddsen for en runde kommer når de ordinære kampene i runden
+    # før er spilt (leaguedata.odds_forventet). Mangler en kamp fortsatt odds
+    # et døgn etter det, er det en advarsel -- men bare når kamplisten er
+    # hentet etter grensen, ellers vet vi ikke.
+    import leaguedata
+    liste_tid = LISTE_TID or datetime.now(timezone.utc)
+    try:
+        forventet = leaguedata.odds_forventet(alle_kamper())
+        dagens = {(m["home"], m["away"]): m for m in alle_kamper()}
+    except Exception as e:
+        print(f"  (runde-tidslinjen kunne ikke leses: {type(e).__name__}: {e})")
+        forventet, dagens = {}, {}
+    uten = [(r, f) for r, f in kommende if f.get("hasOdds") is False]
+    kommende = [(r, f) for r, f in kommende if f.get("hasOdds") is not False]
+    if uten:
+        datoer = [(dagens.get((r["home"], r["away"])) or r)["date"] for r, _ in uten]
+        print(f"  OddsPapi har ikke odds ennå for {len(uten)} kamper, {_dagspenn(datoer)}")
+    for_gammel = []
+    for r, f in uten:
+        fv = forventet.get((r["home"], r["away"]))
+        if not fv or now < fv["alarm"]:
+            continue
+        if liste_tid >= fv["alarm"]:
+            melding = (f"OddsPapi har fortsatt ikke odds for {r['home']} mot {r['away']}, mer enn et døgn etter at "
+                       f"runde {fv['forrige']} var spilt ({fv['kamp']}, ferdig {_klokke(fv['slutt'])})")
+            print(f"  ADVARSEL: {melding}")
+            if os.environ.get("GITHUB_ACTIONS"):
+                print(f"::warning title=OddsPapi: odds mangler::{melding}")
+        else:
+            for_gammel.append(f"{r['home']} mot {r['away']}")
+    if for_gammel:
+        print(f"  {len(for_gammel)} kamp(er) uten odds etter alarmgrensen, men kamplisten er fra {_klokke(liste_tid)}, "
+              f"før grensen -- avgjøres når den er hentet på nytt: {', '.join(for_gammel[:4])}")
+    # Når oddsen kom, per runde, for kampene i vinduet.
+    try:
+        gml_aapning = json.loads(AAPNING_PATH.read_text(encoding="utf-8")) if AAPNING_PATH.exists() else {}
+    except Exception:
+        gml_aapning = {}
+    # Runde, dato og avspark fra terminlisten slik den er nå (CSV-en har de
+    # opprinnelige datoene).
+    koblet = [(dict(r, **{n: v for n, v in (dagens.get((r["home"], r["away"])) or {}).items() if n in ("round", "date", "time")}), f)
+              for r, f in kommende + uten]
+    aapning, aapning_linjer = oddsaapning(koblet, forventet, liste_tid, gml_aapning)
+    for l in aapning_linjer:
+        print(f"  {l}")
+    AAPNING_PATH.write_text(json.dumps(aapning, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     for x in only_odds:
         print(f"  BARE HOS ODDSPAPI: {x}")
 
@@ -167,7 +311,13 @@ def main():
         svar, err = oddspapi.call_retry("/v4/historical-odds", params, key,
                                         ikke_funnet_er_hoppet=True)
         if err:
-            print(f"  {r['home']} mot {r['away']}: FEIL {err}")
+            if str(err).startswith("HTTP 404") and "No historical odds found" in str(err):
+                melding = f"{r['home']} mot {r['away']}: OddsPapi sier at kampen har odds (hasOdds), men oppslaget gir 404"
+                print(f"  ADVARSEL: {melding}")
+                if os.environ.get("GITHUB_ACTIONS"):
+                    print(f"::warning title=OddsPapi: 404 med hasOdds::{melding}")
+            else:
+                print(f"  {r['home']} mot {r['away']}: FEIL {err}")
             time.sleep(COOLDOWN)
             continue
         bm, odds, stamp = closing_from(svar or {},

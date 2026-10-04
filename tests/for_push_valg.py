@@ -29,6 +29,8 @@ GENERERTE = {
     "eliteserien/data/keymatch.json", "obos/data/keymatch.json", "elo-test/emodell/keymatch.json",
     # Panelfilene på testsiden (elo-test.yml).
     "elo-test/emodell/prekick.json", "elo-test/emodell/accuracy.json", "elo-test/emodell/paneler_grunnlag.json",
+    # Når OddsPapi fikk odds for OBOS-kampene (obos_upcoming_odds.py); bare en logg.
+    "obos/data/odds_aapning.json",
 }
 GENERERTE_MAPPER = ("data/hentelogg/", "data/highlightly-bruk/", "data/oddspapi-bruk/")
 

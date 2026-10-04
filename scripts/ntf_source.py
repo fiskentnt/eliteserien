@@ -148,7 +148,9 @@ def _navn(rått, cfg):
 # videre: det ville flyttet dem en eller to timer. Regelen: viser
 # resultatsiden det avsparket vi alt kjenner for kampen (fra terminlisten,
 # lagret i fixtures.json), men i UTC, regnes den om til norsk tid. Ellers
-# staar den som den er. Omregningen skjer foer klokkeregelen.
+# staar den som den er. Omregningen skjer foer klokkeregelen. Viser den en
+# tid som verken er vaart avspark eller det i UTC, brukes sidens tid, men
+# det logges som AVVIK (4.10.2026).
 def _utc_til_oslo(dato, tid):
     """(dato, tid) lest som UTC -> (dato, tid) i norsk tid."""
     d = datetime.fromisoformat(f"{dato}T{tid}:00").replace(tzinfo=timezone.utc).astimezone(OSLO)
@@ -273,6 +275,15 @@ def parse_rad(rad, kilde, cfg, klasser="", naa=None, log=lambda s: None,
             log(f"MERK: {hjemme} - {borte} ({kilde}) viser avspark {dato} {tid}, som er det "
                 f"kjente avsparket {kjent[0]} {kjent[1]} norsk tid i UTC -- regnet om til norsk tid")
             dato, tid = kjent
+        elif kjent and (dato, tid) != kjent:
+            # Verken vårt avspark eller det samme i UTC (4.10.2026): ligasiden
+            # er hovedkilden, så tiden derfra brukes, men det sies fra om.
+            vis = lambda d, t: t if d == kjent[0] == dato else f"{int(d[8:10])}.{int(d[5:7])}. {t}"
+            melding = (f"Kamp {hjemme}-{borte}: ligasiden viser {vis(dato, tid)}, vi hadde "
+                       f"{vis(*kjent)}, bruker {vis(dato, tid)}")
+            log(f"AVVIK: {melding}")
+            if os.environ.get("GITHUB_ACTIONS"):
+                print(f"::warning title=Ligasiden: annet avspark::{melding}")
 
     # Runde står normalt i egen celle. "Neste kamp" har den i datocellen.
     runde_celle = _finn(celler, "--round")
