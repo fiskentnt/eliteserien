@@ -3,6 +3,26 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Resultatloggen: én linje per resultat og hvem som hadde det først (4.10.2026)
+
+Begge resultatjobbene (obos_results.py og update_data.py) skriver én linje
+per nytt resultat, også når det holdes tilbake eller venter
+(resultatregel.resultatlinje): "Bryne-Lyn 1-0: ligasiden og highlightly
+enige, publisert", "Bryne-Lyn: ligasiden 2-1, highlightly 1-1, holdt
+tilbake", "Bryne-Lyn: ligasiden har ikke resultatet ennå (highlightly 1-0),
+venter". I tillegg når hver kilde først hadde resultatet, i kjøringen som så
+det (resultatregel.forst_sett, lagret i results_state.json under
+"forst_sett"): "Bryne-Lyn: highlightly 16.21, ligasiden 16.31".
+
+For det siste spørres Highlightly (ett kall per dato) i hver kjøring etter
+kampslutt (105 minutter etter avspark), også før ligasiden har resultatet,
+men bare under highlightly_source.LOGG_TAK (40) kall i døgnet, så
+resultatkontrollen alltid har kall igjen under DAGSTAK (60). Regelen for
+publisering er uendret.
+
+Følg med etter de første kampdagene: hvilken kilde er først, og hvor mange
+Highlightly-kall går med (x-ratelimit-requests-remaining står i loggen).
+
 ## Flyttede kamper følger tidslinjen (4.10.2026)
 
 OBOS fikk en reell test: Sogndal-Raufoss i runde 24 spilles 21.10., etter

@@ -451,6 +451,21 @@ _r = ntf_source.parse_side(RANHEIM_RAD.replace("02.10.<span", "07.11.<span"), "r
                            kjent_avspark={("Ranheim", "Egersund"): ("2026-11-07", "18:00")})
 sjekk("vintertid: 17:00 på resultatsiden er 18:00 norsk tid",
       (_r[0]["date"], _r[0]["time"]) == ("2026-11-07", "18:00"), str(_r[0]))
+# Bryne - Lyn 4.10.2026: resultatsiden viste 12:30, avsparket var 14:30.
+_r = ntf_source.parse_side(RANHEIM_RAD.replace("02.10.<span", "04.10.<span").replace("2026</span> 17:00", "2026</span> 12:30"),
+                           "resultater", "obos", naa=_dt(2026, 10, 4, 16, 35, tzinfo=_OSLO), log=lambda _s: None,
+                           kjent_avspark={("Ranheim", "Egersund"): ("2026-10-04", "14:30")})
+sjekk("Bryne - Lyn-tilfellet 4.10.: 12:30 på resultatsiden er 14:30 norsk tid (to timer, sommertid)",
+      (_r[0]["date"], _r[0]["time"]) == ("2026-10-04", "14:30"), str(_r[0]))
+# Overgangen til vintertid natt til 25.10.2026: dagen før er UTC to timer bak,
+# fra 25.10. én time.
+for _dag, _vist, _kjent_t in (("24.10.", "12:00", "14:00"), ("25.10.", "16:00", "17:00")):
+    _iso = f"2026-10-{_dag[:2]}"
+    _r = ntf_source.parse_side(RANHEIM_RAD.replace("02.10.<span", f"{_dag}<span").replace("2026</span> 17:00", f"2026</span> {_vist}"),
+                               "resultater", "obos", naa=_dt(2026, 10, int(_dag[:2]), 22, 0, tzinfo=_OSLO), log=lambda _s: None,
+                               kjent_avspark={("Ranheim", "Egersund"): (_iso, _kjent_t)})
+    sjekk(f"{_dag} ({'sommertid, to timer' if _dag == '24.10.' else 'vintertid, én time'}): {_vist} på resultatsiden er {_kjent_t} norsk tid",
+          (_r[0]["date"], _r[0]["time"]) == (_iso, _kjent_t), str(_r[0]))
 
 # Hele veien: fetch_all leser det kjente avsparket fra fixtures.json og
 # bruker det bare paa resultatsiden. Sandkasse for repoet og hentingsloggen.
@@ -2328,6 +2343,35 @@ try:
 finally:
     _hls._http = _hl_ekte_http
 
+print("\n=== Én linje per resultat, og hvilken kilde som hadde det først (resultatregel, 4.10.2026) ===")
+_kB = ("Bryne", "Lyn")
+_L = lambda liga, svar, oppe, **kw: _regel.resultatlinje(liga, _kB, _regel.avgjor(liga, svar, oppe, **kw), svar)
+_O2 = {"ligasiden", "highlightly"}
+sjekk('enige: "Bryne-Lyn 1-0: ligasiden og highlightly enige, publisert"',
+      _L("obos", {"ligasiden": (1, 0), "highlightly": (1, 0)}, _O2) == "Bryne-Lyn 1-0: ligasiden og highlightly enige, publisert")
+sjekk('uenige: "Bryne-Lyn: ligasiden 2-1, highlightly 1-1, holdt tilbake"',
+      _L("obos", {"ligasiden": (2, 1), "highlightly": (1, 1)}, _O2) == "Bryne-Lyn: ligasiden 2-1, highlightly 1-1, holdt tilbake")
+_l = _L("eliteserien", {"ligasiden": (3, 1), "espn": (0, 0), "highlightly": (3, 1)}, {"ligasiden", "espn", "highlightly"})
+sjekk("publisert selv om én kilde er uenig: den uenige står i parentes", _l == "Bryne-Lyn 3-1: ligasiden og highlightly enige, publisert (espn 0-0 uenig)", _l)
+sjekk('bare ligasiden: "venter på en uavhengig kilde"',
+      _L("obos", {"ligasiden": (1, 0)}, _O2) == "Bryne-Lyn 1-0: bare ligasiden, venter på en uavhengig kilde")
+_l = _L("obos", {"highlightly": (1, 0)}, _O2)
+sjekk('Highlightly før ligasiden: "ligasiden har ikke resultatet ennå (highlightly 1-0), venter"',
+      _l == "Bryne-Lyn: ligasiden har ikke resultatet ennå (highlightly 1-0), venter", _l)
+_avs = _dt(2026, 10, 4, 12, 30, tzinfo=_tz.utc)
+_l = _L("obos", {"ligasiden": (1, 0)}, _O2, avspark=_avs, naa=_avs + _td(hours=25))
+sjekk("etter 24 timer uten uavhengig kilde: publisert uten kontroll", _l == "Bryne-Lyn 1-0: bare ligasiden etter 24 timer, publisert uten kontroll", _l)
+_t1, _t2 = _dt(2026, 10, 4, 14, 21, tzinfo=_tz.utc), _dt(2026, 10, 4, 14, 31, tzinfo=_tz.utc)
+_f1, _fl1 = _regel.forst_sett({}, {_kB: {"highlightly": (1, 0), "ligasiden": None}}, _t1, set())
+_f2, _fl2 = _regel.forst_sett(_f1, {_kB: {"highlightly": (1, 0), "ligasiden": (1, 0)}}, _t2, set())
+sjekk('først hos kilden: "Bryne-Lyn: highlightly 16.21, ligasiden 16.31" (norsk tid), Highlightly beholder sin første tid',
+      _fl1 == ["Bryne-Lyn: highlightly 16.21"] and _fl2 == ["Bryne-Lyn: highlightly 16.21, ligasiden 16.31"]
+      and _f2["Bryne|Lyn"]["highlightly"] == _t1.isoformat(timespec="seconds"), f"{_fl1} {_fl2} {_f2}")
+_f3, _fl3 = _regel.forst_sett(_f2, {}, _t2 + _td(minutes=10), {_kB})
+sjekk("publisert før kjøringen: tatt ut av tilstanden, ingen linje", _f3 == {} and _fl3 == [], f"{_f3} {_fl3}")
+_f4, _fl4 = _regel.forst_sett(_f1, {}, _t1 + _td(days=1), set())
+sjekk("fra en annen dag: med dato (4.10. 16.21)", _fl4 == ["Bryne-Lyn: highlightly 4.10. 16.21"], str(_fl4))
+
 print("\n=== OBOS-resultatkjeden med regelen, hele veien (main) ===")
 # obos_results.main() i en sandkasse med terminlisten fra 1.10. og fast
 # klokke. Ligasiden har fem resultater fra 2.-3.10.; Highlightly svarer med
@@ -2415,6 +2459,41 @@ try:
     _shr.copy(_sbo / "results_state.json", _ok_rr / "obos" / "data" / "results_state.json")
     sjekk("en time senere bekrefter Highlightly 5-0: ikke lenger uten kontroll, og kjøringen er grønn",
           _st["ukontrollert"] == {} and _regel.sjekk("obos", rot=_ok_rr) == 0, str(_st))
+    # Én linje per resultat og hvem som hadde det først (4.10.2026). Ligasiden
+    # har ingen av rundens resultater ennå 3.10. kl. 20.43; Highlightly har fire.
+    import io as _io7, contextlib as _cl7
+    def _kjor_ut(naa, lig):
+        b = _io7.StringIO()
+        with _cl7.redirect_stdout(b):
+            r = _kjor(naa, lig=lig)
+        return (*r, b.getvalue())
+    _shr.copy(ROT / "tests" / "data" / "2026-10-01" / "obos" / "data" / "matches.json", _sbo / "matches.json")
+    (_sbo / "results_state.json").unlink()
+    _obr.oddspapi_score = lambda key, fid: (_op_kall.append(fid), {"Ranheim|Egersund": (5, 0)}.get(fid))[1]
+    _kode, _st, _pub, _ut = _kjor_ut(_dt(2026, 10, 3, 18, 43, tzinfo=_tz.utc), {})
+    sjekk("kampene er over, ligasiden har dem ikke ennå: Highlightly spørres likevel (ett kall per dato), bare til loggen",
+          sorted(k["date"] for k in _hl_kall) == ["2026-10-02", "2026-10-03"] and len(_pub) == _n0, f"{_hl_kall} {len(_pub)}")
+    sjekk('linjen: "Haugesund-Stabæk: ligasiden har ikke resultatet ennå (highlightly 2-0), venter", og ingenting publiseres',
+          "Haugesund-Stabæk: ligasiden har ikke resultatet ennå (highlightly 2-0), venter" in _ut, _ut[-900:])
+    sjekk("tilstanden husker når Highlightly først hadde Haugesund-Stabæk",
+          _st.get("forst_sett", {}).get("Haugesund|Stabæk") == {"highlightly": "2026-10-03T18:43:00+00:00"}, str(_st.get("forst_sett")))
+    _kode, _st, _pub, _ut = _kjor_ut(_dt(2026, 10, 3, 18, 53, tzinfo=_tz.utc), _lig)
+    sjekk('ti minutter senere har ligasiden det: "Haugesund-Stabæk 2-0: ligasiden og highlightly enige, publisert"',
+          "Haugesund-Stabæk 2-0: ligasiden og highlightly enige, publisert" in _ut and _pub.get(("Haugesund", "Stabæk")) == (2, 0), _ut[-900:])
+    sjekk('og "Haugesund-Stabæk: highlightly 20.43, ligasiden 20.53"', "Haugesund-Stabæk: highlightly 20.43, ligasiden 20.53" in _ut, _ut[-900:])
+    _kode, _st, _pub, _ut = _kjor_ut(_dt(2026, 10, 3, 19, 3, tzinfo=_tz.utc), _lig)
+    sjekk("kjøringen etter publiseringen: kampen er tatt ut av tilstanden", "Haugesund|Stabæk" not in _st.get("forst_sett", {}), str(_st.get("forst_sett")))
+    # Over LOGG_TAK (40) i døgnet: ingen kall bare for loggen.
+    _shr.copy(ROT / "tests" / "data" / "2026-10-01" / "obos" / "data" / "matches.json", _sbo / "matches.json")
+    (_sbo / "results_state.json").unlink()
+    _ekte_bruk = _hls.dagsbruk
+    _hls.dagsbruk = lambda dag=None: 45
+    try:
+        _kode, _st, _pub, _ut = _kjor_ut(_dt(2026, 10, 3, 18, 43, tzinfo=_tz.utc), {})
+    finally:
+        _hls.dagsbruk = _ekte_bruk
+    sjekk("45 kall i dag (over 40): Highlightly spørres ikke bare for loggen, og det står i loggen",
+          _hl_kall == [] and "over 40" in _ut, f"{_hl_kall} {_ut[-400:]}")
 finally:
     for _n, _v in _ekte.items():
         setattr(_obr, _n, _v)
@@ -2486,6 +2565,39 @@ finally:
     _tidl = _tidl_lagret
 sjekk("en time senere bekrefter Highlightly 3-1: ikke lenger uten kontroll",
       _s["ukontrollert"] == {}, str(_s))
+# Én linje per resultat og hvem som hadde det først (4.10.2026): Brann-Sarpsborg
+# 08 (29.5.) er over, men ligasiden har det ikke ennå; ESPN og Highlightly har.
+_kBS = ("Brann", "Sarpsborg 08")
+_bs = next(m for m in _es_m if (m["home"], m["away"]) == _kBS)
+_tidl_bs = [m for m in _es_m if (m["home"], m["away"]) != _kBS]
+_hl_tell = []
+def _hl_telle(d):
+    _hl_tell.append(d)
+    return _hl_es(d)
+def _kjor_es_bs(naa, har_liga, bruk=0, behold=False):
+    _st = _sbs / "results_state_bs.json"
+    if not behold and _st.exists():
+        _st.unlink()
+    merged = [dict(r, src="ntf") if (r["home"], r["away"]) != _kBS or har_liga else {**r, "hg": None, "ag": None, "src": None} for r in _es_m]
+    liga = [r for r in _es_m if (r["home"], r["away"]) != _kBS or har_liga]
+    logg = []
+    _hl_tell.clear()
+    _ut, _s = _udr.kontroller_nye_resultater(merged, _tidl_bs, liga, [], [], naa, log=logg.append, hl_dag=_hl_telle,
+                                             espn_sesong=_espn_ses, state_sti=_st, hl_bruk=lambda: bruk)
+    _udr.skriv_state(_s, naa, state_sti=_st)
+    return {(r["home"], r["away"]): (r["hg"], r["ag"]) for r in _ut}, _s, "\n".join(logg)
+_t_bs = _kickoff_utc_bs = __import__("datetime").datetime.fromisoformat(f"{_bs['date']}T{_bs['time']}:00").replace(tzinfo=ZoneInfo("Europe/Oslo"))
+_r, _s, _lg = _kjor_es_bs(_t_bs + _td(minutes=120), har_liga=False)
+sjekk(f"Brann-Sarpsborg 08 over, ligasiden har det ikke: Highlightly spørres for {_bs['date']}, og linjen sier hvem som har det",
+      _hl_tell == [_bs["date"]] and _r[_kBS] == (None, None)
+      and "Brann-Sarpsborg 08: ligasiden har ikke resultatet ennå (espn 1-2, highlightly 1-2), venter" in _lg, f"{_hl_tell} {_lg}")
+_r, _s, _lg = _kjor_es_bs(_t_bs + _td(minutes=130), har_liga=True, behold=True)
+_tid = lambda m: (_t_bs + _td(minutes=m)).strftime("%H.%M")
+sjekk("ti minutter senere har ligasiden det: publisert, og hvem som hadde det først",
+      _r[_kBS] == (1, 2) and "Brann-Sarpsborg 08 1-2: ligasiden og espn enige, publisert" in _lg
+      and f"Brann-Sarpsborg 08: espn {_tid(120)}, highlightly {_tid(120)}, ligasiden {_tid(130)}" in _lg, _lg)
+_r, _s, _lg = _kjor_es_bs(_t_bs + _td(minutes=120), har_liga=False, bruk=45)
+sjekk("45 kall i dag (over 40): Highlightly spørres ikke bare for loggen", _hl_tell == [] and "over LOGG_TAK" in _lg, f"{_hl_tell} {_lg}")
 
 print("\n=== Reservekjeden for terminlisten (terminliste_reserve.py) ===")
 # Ligasiden kan ikke brukes: kalenderfeeden, (ESPN i Eliteserien),

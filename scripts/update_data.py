@@ -176,7 +176,7 @@ STATE = LEAGUE / "data" / "results_state.json"
 
 
 def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rader, now, log=lambda s: None,
-                              hl_dag=None, espn_sesong=None, state_sti=None):
+                              hl_dag=None, espn_sesong=None, state_sti=None, hl_bruk=None):
     """Regelen i resultatregel.py (3.10.2026) for resultatene som er NYE i
     denne kjøringen: et resultat publiseres når hovedkilden og minst én kilde
     fra en annen leverandør er enige. Ellers står kampen som uspilt (vent)
@@ -188,7 +188,14 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
     Kildene: ligasiden (eller fotball.no, LIGAKILDE), ESPN (hele sesongen i
     ett kall, siden dagens rundetavle ikke ser en kamp fra i går), Highlightly
     (per dato, ett kall per kampdag), ffksupporter. hl_dag og espn_sesong kan
-    byttes ut i testene. Returnerer (merged, state)."""
+    byttes ut i testene. Returnerer (merged, state).
+
+    Loggen (4.10.2026): én linje per nytt resultat, også når det holdes
+    tilbake (resultatregel.resultatlinje), og når hver kilde først hadde
+    resultatet (resultatregel.forst_sett). For det siste spørres Highlightly
+    også for kamper som er over, men ikke har resultat ennå, bare under
+    highlightly_source.LOGG_TAK kall i døgnet (hl_bruk teller dem; byttes i
+    testene). Regelen for publisering endres ikke."""
     import resultatregel
     hl_dag = hl_dag or (lambda d: __import__("highlightly_source").hent_dag(d, ligaer=("eliteserien",))["eliteserien"])
     espn_sesong = espn_sesong or (lambda aar: espn_source.fetch_season(aar, log=log))
@@ -205,8 +212,20 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
     nye = [r for r in merged if r.get("hg") is not None and (r["home"], r["away"]) not in publisert]
     resultat = lambda rader: {(r["home"], r["away"]): (r["hg"], r["ag"]) for r in rader
                               if r.get("hg") is not None and not r.get("suspect")}
-    if not nye and not sjekk_ukontr:
-        return merged, {"conflicts": [], "waiting": [], "ukontrollert": ukontr, "ukontrollert_sjekket": sist}
+
+    def _avspark(r):
+        try:
+            return _kickoff_utc(r["date"], r["time"]) if r.get("time") else None
+        except Exception:
+            return None
+    # Kamper som er over (105 minutter etter avspark, som porten) uten
+    # publisert resultat: til loggen over hvilken kilde som har det først.
+    ventende = [r for r in merged if (r["home"], r["away"]) not in publisert and _avspark(r)
+                and now - timedelta(days=3) <= _avspark(r) <= now - timedelta(minutes=105)]
+    forst_gml = {n: v for n, v in (gml.get("forst_sett") or {}).items() if tuple(n.split("|")) not in publisert}
+    if not nye and not sjekk_ukontr and not ventende:
+        return merged, {"conflicts": [], "waiting": [], "ukontrollert": ukontr, "ukontrollert_sjekket": sist,
+                        "forst_sett": forst_gml}
 
     kilder = {LIGAKILDE: resultat(liga_rader), "ffksupporter": resultat(ffk_rader) if ffk_rader else None}
     try:
@@ -215,8 +234,19 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
     except Exception as e:
         log(f"  ESPN (sesongen) feilet ({type(e).__name__}: {e}) -- fortsetter uten")
         kilder["espn"] = resultat(espn_rader) if espn_rader else None
-    datoer = sorted({r["date"] for r in nye} | ({m["date"] for m in tidligere if (m["home"], m["away"]) in ukontr}
-                                                if sjekk_ukontr else set()))
+    datoer = {r["date"] for r in nye} | ({m["date"] for m in tidligere if (m["home"], m["away"]) in ukontr}
+                                         if sjekk_ukontr else set())
+    ekstra = {r["date"] for r in ventende} - datoer
+    if ekstra:
+        try:
+            bruk = (hl_bruk or __import__("highlightly_source").dagsbruk)()
+            if bruk < __import__("highlightly_source").LOGG_TAK:
+                datoer |= ekstra
+            else:
+                log(f"  Highlightly: {bruk} kall i dag, over LOGG_TAK: spør ikke bare for loggen")
+        except Exception:
+            pass
+    datoer = sorted(datoer)
     hl, svarte = {}, False
     for d in datoer:
         try:
@@ -227,19 +257,24 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
     kilder["highlightly"] = hl if svarte else None
     oppe = {k for k, v in kilder.items() if v is not None}
 
-    waiting, conflicts, nye_ukontr = [], [], {}
+    waiting, conflicts, nye_ukontr, linjer = [], [], {}, []
     ut = []
+    nye_k = {(r["home"], r["away"]) for r in nye}
     for r in merged:
         k = (r["home"], r["away"])
         if r.get("hg") is None or k in publisert:
             ut.append(r)
+            # Over, men ingen resultat her ennå: bare linjen (regelen venter).
+            if k not in publisert and r in ventende:
+                svar = {kilde: v[k] for kilde, v in kilder.items() if v and k in v}
+                if svar:
+                    linjer.append(resultatregel.resultatlinje("eliteserien", k, resultatregel.avgjor(
+                        "eliteserien", svar, oppe, avspark=_avspark(r), naa=now), svar))
             continue
-        try:
-            avspark = _kickoff_utc(r["date"], r["time"]) if r.get("time") else None
-        except Exception:
-            avspark = None
+        avspark = _avspark(r)
         svar = {kilde: v[k] for kilde, v in kilder.items() if v and k in v}
         u = resultatregel.avgjor("eliteserien", svar, oppe, avspark=avspark, naa=now)
+        linjer.append(resultatregel.resultatlinje("eliteserien", k, u, svar))
         hvem = f"{k[0]}-{k[1]}"
         if u["utfall"] == "publiser":
             ut.append({**r, "hg": u["resultat"][0], "ag": u["resultat"][1]})
@@ -263,8 +298,21 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
         log(f"  KONFLIKT {c}")
     for w in waiting:
         log(f"  venter: {w}")
+    # Én linje per nytt resultat, og når hver kilde først hadde det (4.10.2026).
+    if linjer:
+        log("  Resultatene:")
+        for l2 in linjer:
+            log(f"    {l2}")
+    aktuelle = nye_k | {(r["home"], r["away"]) for r in ventende}
+    forst, forst_linjer = resultatregel.forst_sett(
+        forst_gml, {k: {kilde: (v or {}).get(k) for kilde, v in kilder.items()} for k in aktuelle}, now, publisert)
+    if forst_linjer:
+        log("  Først hos kilden (kjøringen som så det):")
+        for l2 in forst_linjer:
+            log(f"    {l2}")
     return ut, {"conflicts": conflicts, "waiting": waiting, "ukontrollert": ukontr,
-                "ukontrollert_sjekket": now.isoformat(timespec="seconds") if sjekk_ukontr else sist}
+                "ukontrollert_sjekket": now.isoformat(timespec="seconds") if sjekk_ukontr else sist,
+                "forst_sett": forst}
 
 
 def skriv_state(state, now, state_sti=None):
@@ -273,6 +321,7 @@ def skriv_state(state, now, state_sti=None):
         "conflicts": state["conflicts"], "waiting": state["waiting"],
         "ukontrollert": {f"{k[0]}|{k[1]}": list(v) for k, v in state["ukontrollert"].items()},
         "ukontrollert_sjekket": state["ukontrollert_sjekket"],
+        "forst_sett": state.get("forst_sett") or {},
     }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 

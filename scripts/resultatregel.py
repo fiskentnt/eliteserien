@@ -29,7 +29,7 @@ Ingen nettkall her: kalleren henter kildene og gir svarene inn.
 """
 import json
 import sys
-from datetime import timedelta
+from datetime import datetime, timedelta
 from pathlib import Path
 
 ROT = Path(__file__).resolve().parent.parent
@@ -90,6 +90,60 @@ def avgjor(liga, svar, oppe, avspark=None, naa=None):
         return ut
     ut["grunn"] = f"bare {hoved} har resultatet -- venter på en uavhengig kilde"
     return ut
+
+
+def resultatlinje(liga, k, u, svar):
+    """Én linje per nytt resultat i loggen (4.10.2026), også når det holdes
+    tilbake eller venter: "Bryne-Lyn 1-0: ligasiden og highlightly enige,
+    publisert", "Bryne-Lyn: ligasiden 2-1, highlightly 1-1, holdt tilbake".
+    u er svaret fra avgjor, svar kildenes resultater for kampen."""
+    hvem = f"{k[0]}-{k[1]}"
+    rekke = [kilde for kilde in KILDER[liga] if svar.get(kilde) is not None]
+    alle = ", ".join(f"{kilde} {svar[kilde][0]}-{svar[kilde][1]}" for kilde in rekke)
+    if u["utfall"] == "publiser":
+        r = u["resultat"]
+        if u["ukontrollert"]:
+            return f"{hvem} {r[0]}-{r[1]}: bare {u['hoved']} etter {VENT_TIMER} timer, publisert uten kontroll"
+        tekst = f"{hvem} {r[0]}-{r[1]}: {u['hoved']} og {u['enig']} enige, publisert"
+        if u["uenige"]:
+            tekst += " (" + ", ".join(f"{kilde} {svar[kilde][0]}-{svar[kilde][1]} uenig" for kilde in u["uenige"]) + ")"
+        return tekst
+    if u["utfall"] == "konflikt":
+        return f"{hvem}: {alle}, holdt tilbake"
+    hoved = u["hoved"]
+    if hoved and svar.get(hoved) is not None:
+        r = svar[hoved]
+        return f"{hvem} {r[0]}-{r[1]}: bare {hoved}, venter på en uavhengig kilde"
+    return f"{hvem}: {hoved or 'ingen kilde'} har ikke resultatet ennå" + (f" ({alle})" if alle else "") + ", venter"
+
+
+def forst_sett(gml, svar_per_kamp, naa, publisert_foer):
+    """Når hver kilde FØRST hadde resultatet (4.10.2026), bare til loggen:
+    "Bryne-Lyn: highlightly 16.21, ligasiden 16.31". Tidspunktet er kjøringen
+    som så det, så det er nøyaktig til nærmeste kjøring (hvert tiende minutt).
+
+    gml: {"Bryne|Lyn": {kilde: iso-tid}} fra forrige kjøring.
+    svar_per_kamp: {(hjemme, borte): {kilde: (hg, ag) eller None}} denne
+    kjøringen, for kampene som er nye eller venter.
+    publisert_foer: kampene som var publisert før denne kjøringen; de er
+    ferdig logget og tas ut av tilstanden.
+    Returnerer (ny tilstand, linjer)."""
+    from zoneinfo import ZoneInfo
+    oslo = ZoneInfo("Europe/Oslo")
+    ut = {n: dict(v) for n, v in (gml or {}).items() if tuple(n.split("|")) not in publisert_foer}
+    for k, svar in svar_per_kamp.items():
+        d = ut.setdefault(f"{k[0]}|{k[1]}", {})
+        for kilde, v in svar.items():
+            if v is not None and kilde not in d:
+                d[kilde] = naa.isoformat(timespec="seconds")
+    idag = naa.astimezone(oslo).date()
+
+    def klokke(iso):
+        t = datetime.fromisoformat(iso).astimezone(oslo)
+        return t.strftime("%H.%M") if t.date() == idag else f"{t.day}.{t.month}. {t.strftime('%H.%M')}"
+    linjer = [f"{n.replace('|', '-')}: " + ", ".join(f"{kilde} {klokke(t)}" for kilde, t in sorted(d.items(), key=lambda x: x[1]))
+              for n, d in ut.items() if d]
+    return {n: d for n, d in ut.items() if d}, linjer
 
 
 def kontroller_ukontrollerte(liga, ukontrollerte, svar_per_kamp):

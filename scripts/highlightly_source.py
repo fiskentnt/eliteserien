@@ -40,6 +40,10 @@ ROT = Path(__file__).resolve().parent.parent
 ANTALL_KAMPER = 240
 DAGSTAK = 60          # av 100 i døgnet hos Highlightly
 KVOTE_ADVARSEL = 20   # advarsel når Highlightly selv sier at færre kall er igjen
+# Kall som bare er til loggen (hvilken kilde har resultatet først, 4.10.2026),
+# gjøres bare under så mange kall i døgnet, så resultatkontrollen og den
+# daglige kontrollen alltid har kall igjen under DAGSTAK.
+LOGG_TAK = 40
 TIMEOUT = 30
 
 # Ligaenes id hos Highlightly (kartleggingen 3.10.2026).

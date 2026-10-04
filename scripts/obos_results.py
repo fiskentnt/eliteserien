@@ -177,7 +177,7 @@ def finished_without_result(fixtures, prev, names, teams):
     return out
 
 
-def decide(off, op_scores, wiki, sched, prev, now, hl=None, nff=None):
+def decide(off, op_scores, wiki, sched, prev, now, hl=None, nff=None, linjer=None):
     """Avgjør hva som kan publiseres, med regelen i resultatregel.py (3.10.2026):
     et resultat publiseres når hovedkilden og minst én kilde fra en annen
     leverandør er enige. Hovedkilden er den første som svarte i rekkefølgen
@@ -188,7 +188,9 @@ def decide(off, op_scores, wiki, sched, prev, now, hl=None, nff=None):
 
     off (ligasiden), hl (Highlightly), op_scores (OddsPapi), wiki (Wikipedia),
     nff (fotball.no): {(hjemme, borte): (hg, ag)}, eller None når kilden ikke
-    svarte. Returnerer (publiser, konflikter, venter, ukontrollert)."""
+    svarte. Returnerer (publiser, konflikter, venter, ukontrollert).
+    linjer (en liste): får én linje per kamp som er ny eller venter
+    (resultatregel.resultatlinje), også når den holdes tilbake."""
     import resultatregel
     kilder = {"ligasiden": off, "highlightly": hl, "oddspapi": op_scores, "wikipedia": wiki, "fotball.no": nff}
     oppe = {k for k, v in kilder.items() if v is not None}
@@ -207,6 +209,8 @@ def decide(off, op_scores, wiki, sched, prev, now, hl=None, nff=None):
             kickoff = None
         svar = {kilde: v[k] for kilde, v in kilder.items() if v and k in v and v[k] is not None}
         u = resultatregel.avgjor("obos", svar, oppe, avspark=kickoff, naa=now)
+        if linjer is not None:
+            linjer.append(resultatregel.resultatlinje("obos", k, u, svar))
         hvem = f"{k[0]} mot {k[1]}"
         if u["utfall"] == "publiser":
             publish[k] = u["resultat"]
@@ -495,11 +499,28 @@ def main():
         sjekket_naa = True
     else:
         sjekket_naa = False
-    hl = None if args.break_all else highlightly_resultater(sorted({sched[k2]["date"] for k2 in trenger}))
+    # Kamper som er over (105 minutter etter avspark, som porten), men ikke
+    # publisert: Highlightly spørres for datoen også før ligasiden har
+    # resultatet, bare for å logge hvilken kilde som har det først. Regelen
+    # for publisering endres ikke. Slike kall bare under LOGG_TAK i døgnet.
+    ventende = [k2 for k2 in sched if k2 not in prev and avspark(k2)
+                and now - timedelta(days=3) <= avspark(k2) <= now - timedelta(minutes=105)]
+    datoer = {sched[k2]["date"] for k2 in trenger}
+    if ventende and not args.break_all:
+        try:
+            import highlightly_source as _H
+            if _H.dagsbruk() < _H.LOGG_TAK:
+                datoer |= {sched[k2]["date"] for k2 in ventende}
+            elif {sched[k2]["date"] for k2 in ventende} - datoer:
+                log(f"  Highlightly: {_H.dagsbruk()} kall i dag, over {_H.LOGG_TAK}: spør ikke bare for loggen")
+        except Exception:
+            pass
+    hl = None if args.break_all else highlightly_resultater(sorted(datoer))
 
     # Første runde uten OddsPapi. Det som ikke kan publiseres, får OddsPapi
     # som reserve (ett tellende kall per kamp), og avgjøres på nytt.
-    publish, conflicts, waiting, ukontrollert = decide(off, None, wiki, sched, prev, now, hl=hl, nff=nff)
+    linjer = []
+    publish, conflicts, waiting, ukontrollert = decide(off, None, wiki, sched, prev, now, hl=hl, nff=nff, linjer=linjer)
     # Også det regelen ville publisert uten kontroll: OddsPapi er en
     # uavhengig kilde og skal prøves før ligasiden får stå alene.
     uavgjort = [k2 for k2 in trenger if (k2 not in publish or k2 in ukontrollert) and k2 not in ukontr_for]
@@ -518,7 +539,8 @@ def main():
                 op_scores[k2] = sc
                 log(f"    {k2[0]} mot {k2[1]}: {sc[0]}-{sc[1]} (tellende kall)")
             time.sleep(1.2)
-        publish, conflicts, waiting, ukontrollert = decide(off, op_scores, wiki, sched, prev, now, hl=hl, nff=nff)
+        linjer = []
+        publish, conflicts, waiting, ukontrollert = decide(off, op_scores, wiki, sched, prev, now, hl=hl, nff=nff, linjer=linjer)
     elif key is None and not args.no_oddspapi and uavgjort:
         log("  ODDSPAPI_KEY mangler: OddsPapi brukes ikke som reserve")
 
@@ -558,6 +580,20 @@ def main():
         log(f"  venter: {w2}")
     for k2, r in ukontr_for.items():
         log(f"  UTEN KONTROLL {k2[0]} mot {k2[1]} {r[0]}-{r[1]} (bare ligasiden)")
+    # Én linje per nytt resultat (4.10.2026), og når hver kilde først hadde det.
+    if linjer:
+        log("  Resultatene:")
+        for l2 in linjer:
+            log(f"    {l2}")
+    kilder_naa = {"ligasiden": off, "highlightly": hl, "oddspapi": op_scores, "wikipedia": wiki, "fotball.no": nff}
+    aktuelle = set(ventende) | {k2 for v in kilder_naa.values() if v for k2 in v if k2 not in prev and k2 in sched}
+    forst, forst_linjer = resultatregel.forst_sett(
+        gml_state.get("forst_sett"), {k2: {kilde: (v or {}).get(k2) for kilde, v in kilder_naa.items()} for k2 in aktuelle},
+        now, set(prev))
+    if forst_linjer:
+        log("  Først hos kilden (kjøringen som så det):")
+        for l2 in forst_linjer:
+            log(f"    {l2}")
 
     rows = []
     for k2, (hg, ag) in publish.items():
@@ -586,6 +622,9 @@ def main():
             "ukontrollert": {f"{k2[0]}|{k2[1]}": list(r) for k2, r in ukontr_for.items()},
             "ukontrollert_sjekket": now.isoformat(timespec="seconds") if sjekket_naa else sist,
             "oddspapi_usage": oddspapi.usage()[0],
+            # Når hver kilde først hadde resultatet, for kampene som venter
+            # (bare til loggen, resultatregel.forst_sett).
+            "forst_sett": forst,
         }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
     if args.dry_run:
