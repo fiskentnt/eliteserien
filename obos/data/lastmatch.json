@@ -3,21 +3,21 @@
  "note": "Hva forrige kamp betydde per lag, regnet ut av scripts/snapshot_probs.js. Siden bygger linja i lagboksen av feltene her.",
  "teams": {
   "Bryne": {
-   "date": "2026-09-19",
-   "home": "Åsane",
-   "away": "Bryne",
-   "hg": 0,
-   "ag": 4,
-   "opp": "Åsane",
-   "gf": 4,
+   "date": "2026-10-04",
+   "home": "Bryne",
+   "away": "Lyn",
+   "hg": 1,
+   "ag": 0,
+   "opp": "Lyn",
+   "gf": 1,
    "ga": 0,
    "actual": "win",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": 9,
+   "pp": 8,
    "good": true,
    "basis": "forventning",
-   "expected": 0.6652
+   "expected": 0.7755
   },
   "Egersund": {
    "date": "2026-10-02",
@@ -34,7 +34,7 @@
    "pp": 0,
    "good": false,
    "basis": "forventning",
-   "expected": 0.0069
+   "expected": 0.0066
   },
   "Haugesund": {
    "date": "2026-10-03",
@@ -51,7 +51,7 @@
    "pp": 7,
    "good": true,
    "basis": "forventning",
-   "expected": 0.8368
+   "expected": 0.8358
   },
   "Hødd": {
    "date": "2026-10-03",
@@ -68,7 +68,7 @@
    "pp": -9,
    "good": false,
    "basis": "forventning",
-   "expected": 0.2107
+   "expected": 0.1754
   },
   "Kongsvinger": {
    "date": "2026-09-20",
@@ -82,27 +82,27 @@
    "actual": "win",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": 6,
+   "pp": 5,
    "good": true,
    "basis": "forventning",
-   "expected": 0.5136
+   "expected": 0.5078
   },
   "Lyn": {
-   "date": "2026-09-20",
-   "home": "Lyn",
-   "away": "Ranheim",
+   "date": "2026-10-04",
+   "home": "Bryne",
+   "away": "Lyn",
    "hg": 1,
-   "ag": 4,
-   "opp": "Ranheim",
-   "gf": 1,
-   "ga": 4,
+   "ag": 0,
+   "opp": "Bryne",
+   "gf": 0,
+   "ga": 1,
    "actual": "loss",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": 2,
+   "pp": 1,
    "good": false,
    "basis": "forventning",
-   "expected": 0.012
+   "expected": 0.0275
   },
   "Moss": {
    "date": "2026-09-20",
@@ -119,7 +119,7 @@
    "pp": -9,
    "good": true,
    "basis": "forventning",
-   "expected": 0.205
+   "expected": 0.1997
   },
   "Odd": {
    "date": "2026-10-03",
@@ -133,10 +133,10 @@
    "actual": "win",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": 8,
+   "pp": 9,
    "good": true,
    "basis": "forventning",
-   "expected": 0.8586
+   "expected": 0.8527
   },
   "Ranheim": {
    "date": "2026-10-02",
@@ -150,10 +150,10 @@
    "actual": "win",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": 4,
+   "pp": 3,
    "good": true,
    "basis": "forventning",
-   "expected": 0.0605
+   "expected": 0.0421
   },
   "Raufoss": {
    "date": "2026-09-20",
@@ -167,10 +167,10 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 4,
+   "pp": 3,
    "good": false,
    "basis": "forventning",
-   "expected": 0.7747
+   "expected": 0.7693
   },
   "Sandnes Ulf": {
    "date": "2026-10-03",
@@ -184,10 +184,10 @@
    "actual": "draw",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 0,
-   "good": false,
+   "pp": -1,
+   "good": true,
    "basis": "forventning",
-   "expected": 0.1144
+   "expected": 0.1163
   },
   "Sogndal": {
    "date": "2026-09-20",
@@ -201,10 +201,10 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 1,
+   "pp": 2,
    "good": false,
    "basis": "forventning",
-   "expected": 0.0761
+   "expected": 0.0746
   },
   "Stabæk": {
    "date": "2026-10-03",
@@ -221,7 +221,7 @@
    "pp": 0,
    "good": false,
    "basis": "forventning",
-   "expected": 0.9998
+   "expected": 0.9999
   },
   "Strømmen": {
    "date": "2026-10-03",
@@ -238,7 +238,7 @@
    "pp": 0,
    "good": false,
    "basis": "forventning",
-   "expected": 0.0678
+   "expected": 0.0694
   },
   "Strømsgodset": {
    "date": "2026-10-03",
@@ -255,7 +255,7 @@
    "pp": 3,
    "good": true,
    "basis": "forventning",
-   "expected": 0.4503
+   "expected": 0.4535
   },
   "Åsane": {
    "date": "2026-10-03",
@@ -272,8 +272,8 @@
    "pp": 1,
    "good": false,
    "basis": "forventning",
-   "expected": 0.858
+   "expected": 0.8558
   }
  },
- "updated": "2026-10-04T12:54:03Z"
+ "updated": "2026-10-04T14:34:08Z"
 }
