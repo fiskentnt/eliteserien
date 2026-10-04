@@ -916,8 +916,13 @@
     #showAllRounds{display:none}
   }
   .round{margin-top:14px}
-  .round h3{margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;font:700 17px/1.2 var(--cond);border-bottom:2px solid var(--ink);padding-bottom:4px}
-  .round h3 .when-row{display:flex;align-items:baseline;gap:10px}
+  /* Får ikke dato og knapp plass ved siden av tittelen ("Utsatt kamp fra
+     runde 24" på telefon), legger de seg på egen linje, til høyre, i stedet
+     for at tittelen og knappen brytes inni seg. */
+  .round h3{margin:0 0 4px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 10px;font:700 17px/1.2 var(--cond);border-bottom:2px solid var(--ink);padding-bottom:4px}
+  .round h3 > span:first-child{flex:0 0 auto;max-width:100%}
+  .round h3 .when-row{display:flex;align-items:baseline;gap:10px;margin-left:auto}
+  .round h3 .round-sim{white-space:nowrap}
   .round h3 .when{font:500 13px var(--body);color:var(--muted)}
   .round h3 .round-sim{font:600 12px var(--body);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:3px 11px;cursor:pointer}
   .round h3 .round-sim[hidden]{display:none}
@@ -934,10 +939,11 @@
   .match .home,.match .away{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:12.5px}
   .match .when{text-align:center;font-size:10.5px;line-height:1;white-space:nowrap}
   .match .when .t{font-weight:700;color:var(--ink)}
-  /* En flyttet enkeltkamp står der den spilles, i en egen gruppe ("Utsatt
-     kamp fra runde 24"), og i "Forrige runde" med en egen merkelapp. */
-  .round.flyttet{border-left:3px solid var(--q-border);padding-left:8px;margin-top:14px}
+  /* En flyttet enkeltkamp står der den spilles, i en egen gruppe med samme
+     utforming som en hel flyttet runde (.round.moved: "Utsatt kamp fra runde
+     24"), og i "Forrige runde" med en egen merkelapp. */
   .dayhead.flyttet{color:var(--q-note)}
+  .fra-runde{margin:6px 0 0 4px;font:600 11.5px/1.2 var(--body);color:var(--q-note)}
   .match.played .when .t{color:var(--played-fg)}
   .match .followed-name{color:var(--team-text);font-weight:700}
   .match input{width:40px;height:34px;text-align:center;font:700 19px/1 var(--cond);border:1px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--ink);padding:0}

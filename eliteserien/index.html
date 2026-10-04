@@ -949,8 +949,13 @@
     #showAllRounds{display:none}
   }
   .round{margin-top:14px}
-  .round h3{margin:0 0 4px;display:flex;justify-content:space-between;align-items:baseline;font:700 17px/1.2 var(--cond);border-bottom:2px solid var(--ink);padding-bottom:4px}
-  .round h3 .when-row{display:flex;align-items:baseline;gap:10px}
+  /* Får ikke dato og knapp plass ved siden av tittelen ("Utsatt kamp fra
+     runde 24" på telefon), legger de seg på egen linje, til høyre, i stedet
+     for at tittelen og knappen brytes inni seg. */
+  .round h3{margin:0 0 4px;display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:4px 10px;font:700 17px/1.2 var(--cond);border-bottom:2px solid var(--ink);padding-bottom:4px}
+  .round h3 > span:first-child{flex:0 0 auto;max-width:100%}
+  .round h3 .when-row{display:flex;align-items:baseline;gap:10px;margin-left:auto}
+  .round h3 .round-sim{white-space:nowrap}
   .round h3 .when{font:500 13px var(--body);color:var(--muted)}
   .round h3 .round-sim{font:600 12px var(--body);border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:3px 11px;cursor:pointer}
   .round h3 .round-sim[hidden]{display:none}
@@ -967,10 +972,11 @@
   .match .home,.match .away{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0;font-size:12.5px}
   .match .when{text-align:center;font-size:10.5px;line-height:1;white-space:nowrap}
   .match .when .t{font-weight:700;color:var(--ink)}
-  /* En flyttet enkeltkamp står der den spilles, i en egen gruppe ("Utsatt
-     kamp fra runde 24"), og i "Forrige runde" med en egen merkelapp. */
-  .round.flyttet{border-left:3px solid var(--q-border);padding-left:8px;margin-top:14px}
+  /* En flyttet enkeltkamp står der den spilles, i en egen gruppe med samme
+     utforming som en hel flyttet runde (.round.moved: "Utsatt kamp fra runde
+     24"), og i "Forrige runde" med en egen merkelapp. */
   .dayhead.flyttet{color:var(--q-note)}
+  .fra-runde{margin:6px 0 0 4px;font:600 11.5px/1.2 var(--body);color:var(--q-note)}
   .match.played .when .t{color:var(--played-fg)}
   .match .followed-name{color:var(--team-text);font-weight:700}
   .match input{width:40px;height:34px;text-align:center;font:700 19px/1 var(--cond);border:1px solid var(--line);border-radius:6px;background:var(--input-bg);color:var(--ink);padding:0}
@@ -3716,26 +3722,30 @@ async function simulateEmpty(){
 // fylt med simulerte (grå) resultater -- ingen egne -- så et nytt klikk gir
 // en fersk sesong for hele runden. Alt annet (spilt i virkeligheten, eller
 // fylt inn av brukeren selv) får ingen knapp.
-function roundButtonState(roundNum){
-  // Rundens egne kamper, som gruppen i kamplisten (kampGruppe): en flyttet
-  // kamp står i en egen gruppe og simuleres ikke med runden.
-  const roundMatches = matches.filter(m=>kampGruppe(m)===`r${roundNum}`);
-  if(!roundMatches.length) return null; // ingen redigerbare kamper igjen i runden -- spilt
-  if(roundMatches.some(isEmpty)) return 'simulate';
-  if(roundMatches.every(m=>m.sim)) return 'resimulate';
+// Samme for en gruppe i kamplisten (kampGruppe): rundens egne kamper, eller
+// flyttede kamper samme dag ("Simuler kampen"/"Simuler kampene"). En flyttet
+// kamp står i en egen gruppe og simuleres ikke med runden.
+function gruppeButtonState(nokkel){
+  const ms = matches.filter(m=>kampGruppe(m)===nokkel);
+  if(!ms.length) return null; // ingen redigerbare kamper igjen i gruppen -- spilt
+  if(ms.some(isEmpty)) return 'simulate';
+  if(ms.every(m=>m.sim)) return 'resimulate';
   return null; // alt satt, og minst én er fylt inn av brukeren selv
 }
-async function simulateRound(roundNum, resim){
-  const iRunden = m => kampGruppe(m)===`r${roundNum}`;
-  if(resim) matches.filter(m=>iRunden(m) && m.sim).forEach(m=>setMatch(m,null,null));
-  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && iRunden(m)));
+const roundButtonState = roundNum => gruppeButtonState(`r${roundNum}`);
+async function simulateGroup(nokkel, resim){
+  const iGruppen = m => kampGruppe(m)===nokkel;
+  if(resim) matches.filter(m=>iGruppen(m) && m.sim).forEach(m=>setMatch(m,null,null));
+  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && iGruppen(m)));
 }
+const simulateRound = (roundNum, resim) => simulateGroup(`r${roundNum}`, resim);
+const knappGruppe = btn => btn.dataset.gruppe || `r${btn.dataset.round}`;
 function updateRoundSimButtons(){
   document.querySelectorAll('.round-sim').forEach(btn=>{
-    const round = +btn.dataset.round;
-    const state = roundButtonState(round);
+    const nokkel = knappGruppe(btn), state = gruppeButtonState(nokkel);
     btn.hidden = state===null;
-    if(state==='simulate') btn.textContent = 'Simuler runden';
+    const n = matches.filter(m=>kampGruppe(m)===nokkel).length;
+    if(state==='simulate') btn.textContent = btn.dataset.gruppe ? (n===1 ? 'Simuler kampen' : 'Simuler kampene') : 'Simuler runden';
     else if(state==='resimulate') btn.textContent = 'Simuler på nytt';
   });
 }
@@ -3810,10 +3820,10 @@ document.getElementById('followWin').onclick=async ()=>{ tableSort=null; matches
 document.getElementById('simRest').onclick=async ()=>{ tableSort=null; await simulateEmpty(); render(); };
 roundsEl.addEventListener('click', async e=>{
   const btn=e.target.closest('.round-sim'); if(!btn) return;
-  const round=+btn.dataset.round, state=roundButtonState(round);
+  const nokkel=knappGruppe(btn), state=gruppeButtonState(nokkel);
   if(state===null) return;
   tableSort=null;
-  await simulateRound(round, state==='resimulate');
+  await simulateGroup(nokkel, state==='resimulate');
   render();
 });
 // Nullstill må også rydde adressen. Har man trykket "Del scenario", ligger
@@ -4093,10 +4103,44 @@ function flyttetFraRunde(m){
   const r = ROUND_BY[m.round];
   return r && (m.date < r.fra || m.date > r.til) ? m.round : null;
 }
-// Gruppen kampen står i i kamplisten, og som "Simuler runden" og "Fyll ut
-// runden" fyller: rundens egne kamper ('r24'), eller de flyttede kampene fra
-// samme runde samme dag ('f24|2026-10-21').
-function kampGruppe(m){ return flyttetFraRunde(m)==null ? `r${m.round}` : `f${m.round}|${m.date}`; }
+// Gruppen kampen står i i kamplisten, og som "Simuler runden"/"Simuler
+// kampen" og "Fyll ut runden" fyller: rundens egne kamper ('r24'), eller alle
+// flyttede kamper samme dag, uansett runde ('f2026-05-20': Lillestrøm-
+// Kristiansund fra runde 2 og to kamper fra runde 8 i Eliteserien).
+function kampGruppe(m){ return flyttetFraRunde(m)==null ? `r${m.round}` : `f${m.date}`; }
+// Datospennet i tekst: "11. oktober", "2. til 5. oktober", "28. september
+// til 2. oktober".
+function datoSpennTekst(a, b){
+  if(!a || !b || a===b) return dateNoLong(a || b);
+  return a.slice(0,7)===b.slice(0,7) ? `${+a.slice(8,10)}. til ${dateNoLong(b)}` : `${dateNoLong(a)} til ${dateNoLong(b)}`;
+}
+// Overskriften og merknaden for en gruppe flyttede kamper (samme dag). Én
+// runde: "Utsatt kamp fra runde 24" / "Utsatte kamper fra runde 8" / "Kamp
+// fra runde 15"; flere runder: "Utsatte kamper" med "fra runde N" på hver
+// kamp (perKamp). Merknaden sier når rundene ble spilt, av rundens egne
+// kamper: "Runde 24 ble spilt 2. til 5. oktober." Datoen kampen opprinnelig
+// skulle spilles, har vi ikke, men tidsrommet til resten av runden holder
+// som forklaring.
+function flyttetGruppeTekst(kamper){
+  const runder = [...new Set(kamper.map(m=>m.round))].sort((a,b)=>a-b);
+  const utsatt = kamper.map(m=>m.date > ROUND_BY[m.round].til);
+  const n = kamper.length, en = runder.length===1;
+  let tittel;
+  if(utsatt.every(x=>x)) tittel = (n===1 ? 'Utsatt kamp' : 'Utsatte kamper') + (en ? ` fra runde ${runder[0]}` : '');
+  else if(utsatt.every(x=>!x)) tittel = (n===1 ? 'Kamp' : 'Kamper') + (en ? ` fra runde ${runder[0]}` : ' flyttet fram');
+  else tittel = 'Flyttede kamper';
+  // "ble spilt" når alle rundens egne kamper er spilt i virkeligheten
+  // (ingen igjen i kamplisten), ellers "spilles".
+  const merknad = runder.map(R=>{
+    const r = ROUND_BY[R], igjen = matches.some(m=>m.round===R && flyttetFraRunde(m)==null);
+    return `Runde ${R} ${igjen ? 'spilles' : 'ble spilt'} ${datoSpennTekst(r.start, r.end)}.`;
+  }).join(' ');
+  // Merkelappen på hver kamp: "Fra runde N" når kampene er fra flere runder,
+  // og "Utsatt fra runde N"/"Flyttet fram fra runde N" når retningen også er ulik.
+  const blandet = !utsatt.every(x=>x) && !utsatt.every(x=>!x);
+  const perKamp = (!en || blandet) ? (m => (blandet ? (m.date > ROUND_BY[m.round].til ? 'Utsatt fra' : 'Flyttet fram fra') : 'Fra') + ` runde ${m.round}`) : null;
+  return {tittel, merknad, perKamp};
+}
 // "utsatt kamp fra runde 24" / "kamp fra runde 15" (flyttet fram), ellers ''.
 function flyttetTekst(m){
   const R = flyttetFraRunde(m);
@@ -8481,11 +8525,13 @@ async function boot(){
     const egne = sorted.filter(x=>gruppe(x)===`r${r.round}`);
     if(egne.some(({m})=>!m.played)) grupper.push({r, nokkel:`r${r.round}`, kamper:egne, dato:(ROUND_BY[r.round]||{}).start || egne[0].m.date});
     sorted.filter(x=>!x.m.played && gruppe(x)!==`r${r.round}`).forEach(x=>{
-      const g = grupper.find(g=>g.nokkel===gruppe(x));
-      if(g) g.kamper.push(x); else grupper.push({r, nokkel:gruppe(x), kamper:[x], dato:x.m.date, flyttet:flyttetTekst({...x.m, round:r.round})});
+      const k = {...x, round:r.round}, g = grupper.find(g=>g.nokkel===gruppe(x));
+      if(g) g.kamper.push(k); else grupper.push({r, nokkel:gruppe(x), kamper:[k], dato:x.m.date, flyttet:true});
     });
   });
   grupper.sort((a,b)=> a.dato.localeCompare(b.dato) || (a.flyttet?1:0)-(b.flyttet?1:0) || a.r.round-b.r.round);
+  // Kampene i en gruppe med flyttede kamper fra flere runder: etter avspark.
+  grupper.forEach(g=>{ if(g.flyttet) g.kamper.sort((a,b)=>etterAvspark(a.m, b.m)); });
   grupper.forEach((g,gi)=>{
     const r = g.r;
     const d = document.createElement('div'); d.className='round'; d.dataset.round = r.round;
@@ -8495,21 +8541,33 @@ async function boot(){
     // kommer BARE fra LEAGUE.movedRounds -- ligaene har ulike flyttinger.
     const moved = g.flyttet ? null : ((LEAGUE.movedRounds || {})[r.round] || null);
     if(moved) d.className += ' moved';
+    let perKamp = null;
     if(g.flyttet){
-      d.className += ' flyttet'; d.dataset.flyttet = '1';
-      const n = g.kamper.length, tekst = n===1 ? capFirst(g.flyttet) : capFirst(g.flyttet).replace(/^(Utsatt kamp|Kamp)/, x=>x==='Kamp' ? 'Kamper' : 'Utsatte kamper');
-      d.innerHTML = `<h3><span>${tekst}</span><span class="when-row"><span class="when">${shortDateNo(g.dato)}</span></span></h3>`;
+      // Samme utforming som en hel flyttet runde (gul, stiplet boks, merknad
+      // og knapp), så en utsatt kamp kjennes igjen uansett om det er én kamp
+      // eller en hel runde (4.10.2026).
+      const t = flyttetGruppeTekst(g.kamper.map(({m, round})=>({...m, round})));
+      perKamp = t.perKamp;
+      d.className += ' moved flyttet'; d.dataset.flyttet = '1'; d.dataset.gruppe = g.nokkel; delete d.dataset.round;
+      d.innerHTML = `<h3><span>${t.tittel}</span><span class="when-row"><span class="when">${shortDateNo(g.dato)}</span><button class="round-sim" data-gruppe="${g.nokkel}" hidden></button></span></h3>`
+        + `<p class="moved-note">${t.merknad}</p>`;
     } else {
       d.innerHTML = `<h3><span>Runde ${r.round}${moved?' '+moved.label:''}</span><span class="when-row"><span class="when">${r.when}</span><button class="round-sim" data-round="${r.round}" hidden></button></span></h3>`
         + (moved && moved.note ? `<p class="moved-note">${moved.note}</p>` : '');
     }
     let lastDate = null;
-    g.kamper.forEach(({m, id})=>{
+    g.kamper.forEach(({m, id, round})=>{
       if(m.date !== lastDate){
         lastDate = m.date;
         const dh = document.createElement('div'); dh.className='dayhead';
         dh.textContent = capFirst(formatDateNo(m.date));
         d.appendChild(dh);
+      }
+      // Flyttede kamper fra flere runder: runden står på hver kamp.
+      if(perKamp){
+        const fr = document.createElement('div'); fr.className='fra-runde';
+        fr.textContent = perKamp({...m, round});
+        d.appendChild(fr);
       }
       if(m.played){
         const row=document.createElement('div');

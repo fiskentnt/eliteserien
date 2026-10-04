@@ -2991,7 +2991,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           linjer: [...document.querySelectorAll('#lastRound .round > *')].map(e => e.classList.contains('dayhead') ? `# ${txt(e)}` : `${e.dataset.home}-${e.dataset.away}`)},
         grupper: [...document.querySelectorAll('#rounds > .round, #hiddenRounds > .round')].map(g => {
           const ids = [...g.querySelectorAll('.match[data-id]')].map(r => matches.find(m => m.id === r.dataset.id));
-          return {tittel: txt(g.querySelector('h3 > span')), flyttet: !!g.dataset.flyttet,
+          return {tittel: txt(g.querySelector('h3 > span')), flyttet: !!g.dataset.flyttet, nokkel: g.dataset.gruppe || null,
+            gul: g.classList.contains('moved'), merknad: txt(g.querySelector('.moved-note')), knapp: g.querySelector('.round-sim') ? txt(g.querySelector('.round-sim')) : null,
+            fra: [...g.querySelectorAll('.fra-runde')].map(txt),
             dato: ids.length ? ids.map(m => m.date).sort()[0] : '', kamper: ids.map(m => `${m.home}-${m.away}`)}; }),
         neste: {runde: nr.round, kamper: nr.list.map(m => `${m.home}-${m.away}`)},
         kort,
@@ -3012,6 +3014,16 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       return brudd;
     };
     const plass = (r, tittel) => r.grupper.findIndex(g => g.tittel === tittel);
+    const gruppe = (r, tittel) => r.grupper.find(g => g.tittel === tittel) || {};
+    // Knappen i en gruppe, og H på én kamp med "Fyll ut runden" på: hvilke
+    // kamper som fylles (fra tom).
+    const fylt = pg => pg.evaluate(() => matches.filter(m => m.hg != null).map(m => `${m.home}-${m.away}`).sort().join(', '));
+    const tomt = pg => pg.evaluate(() => { matches.forEach(m => setMatch(m, null, null)); document.getElementById('autoFillToggle').checked = true; render(); });
+    const rolig = pg => pg.waitForFunction(() => typicalResolvers.size === 0, {timeout: 60000}).then(() => new Promise(r => setTimeout(r, 200)));
+    const knappIGruppe = async (pg, nokkel) => { await tomt(pg); await klikk(pg, `.round-sim[data-gruppe="${nokkel}"]`); await rolig(pg); return fylt(pg); };
+    const hPaa = async (pg, kamp) => { await tomt(pg);
+      const id = await pg.evaluate(k => matches.find(m => `${m.home}-${m.away}` === k).id, kamp);
+      await klikk(pg, `.match[data-id="${id}"] .quick button[data-q="H"]`); await rolig(pg); return fylt(pg); };
     const kronologisk = r => r.grupper.every((g, i) => i === 0 || !g.dato || !r.grupper[i - 1].dato || r.grupper[i - 1].dato <= g.dato);
 
     // ---- OBOS, med en kamp fra runde 29 flyttet fram til 20.10. kl. 19 ----
@@ -3030,6 +3042,17 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       const T = Date.parse(iso), d = data('obos', T, endre), framLag = fram.split('-')[0];
       const pg = await aapne('obos', T, d);
       const r = await les(pg, ['Sogndal', framLag]);
+      // Utformingen: gul, stiplet boks, merknad og knapp, som runde 12.
+      const ut = gruppe(r, UT24), fr = gruppe(r, FRA29);
+      if (ut.tittel) check(`OBOS ${navn}: "${UT24}" har samme utforming som en flyttet runde: merknad "${ut.merknad}" og knappen "${ut.knapp}"`,
+        ut.gul && /^Runde 24 (ble spilt|spilles) 2\. til 5\. oktober\.$/.test(ut.merknad) && ut.knapp === 'Simuler kampen' && ut.fra.length === 0, JSON.stringify(ut));
+      if (fr.tittel) check(`OBOS ${navn}: "${FRA29}" (flyttet fram) har samme utforming: "${fr.merknad}"`,
+        fr.gul && fr.merknad === 'Runde 29 spilles 1. til 2. november.' && fr.knapp === 'Simuler kampen', JSON.stringify(fr));
+      if (navn.startsWith('19.10')) {
+        const a = await knappIGruppe(pg, ut.nokkel), b = await knappIGruppe(pg, fr.nokkel), c = await hPaa(pg, SR);
+        check(`OBOS 19.10.: "Simuler kampen" og H med "Fyll ut runden" fyller bare gruppen (${SR}; ${fram})`,
+          a === SR && b === fram && c === SR, JSON.stringify([a, b, c]));
+      }
       await pg.close();
       const tb = tabellBrudd(r, d.spilte);
       check(`OBOS ${navn}: kamplisten i tidsrekkefølge (${r.grupper.map(g => g.tittel).join(', ')})`, kronologisk(r) && r.grupper.length > 0, JSON.stringify(r.grupper.map(g => [g.tittel, g.dato])));
@@ -3093,6 +3116,26 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         JSON.stringify([r.aktiv, r.neste, r.grupper[0], r.kort]));
       if (navn === '25.10.') check('Eliteserien 25.10.: aktiv runde og "Forrige runde" er runde 12; tabellen etter runde 24 er uten runde 12',
         r.aktiv === 12 && r.forrige.info === 'Runde 12' && r.tabeller.find(t => t.runde === 24).K.Viking === 23, JSON.stringify([r.aktiv, r.forrige.info, r.tabeller.find(t => t.runde === 24).K.Viking]));
+    }
+    // Eliteserien 19.5.: tre utsatte kamper 20.5. fra runde 2 og 8 i én gruppe,
+    // med runden på hver kamp, og to 22.7. fra runde 2 og 11.
+    {
+      const T = Date.parse('2026-05-19T12:00:00+02:00'), d = data('eliteserien', T);
+      const pg = await aapne('eliteserien', T, d);
+      const r = await les(pg, []);
+      const g20 = r.grupper.find(g => g.flyttet && g.dato === '2026-05-20') || {}, g22 = r.grupper.find(g => g.flyttet && g.dato === '2026-07-22') || {};
+      check('Eliteserien 19.5.: de tre utsatte kampene 20.5. står i én gruppe "Utsatte kamper", i avsparksrekkefølge med runden på hver kamp',
+        g20.tittel === 'Utsatte kamper' && g20.kamper.join(', ') === 'Start-Bodø/Glimt, Lillestrøm-Kristiansund, Aalesund-Brann'
+        && g20.fra.join(', ') === 'Fra runde 8, Fra runde 2, Fra runde 8' && g20.gul, JSON.stringify(g20));
+      check(`Eliteserien 19.5.: merknaden "${g20.merknad}" og knappen "${g20.knapp}"`,
+        g20.merknad === 'Runde 2 ble spilt 21. til 22. mars. Runde 8 ble spilt 8. til 10. mai.' && g20.knapp === 'Simuler kampene', JSON.stringify(g20));
+      check('Eliteserien 19.5.: 22.7. er Bodø/Glimt-HamKam (runde 2) og Lillestrøm-Viking (runde 11) én gruppe "Utsatte kamper"',
+        g22.tittel === 'Utsatte kamper' && g22.fra.length === 2 && g22.kamper.length === 2 && kronologisk(r), JSON.stringify(g22));
+      const tre = 'Aalesund-Brann, Lillestrøm-Kristiansund, Start-Bodø/Glimt';
+      const a = await knappIGruppe(pg, g20.nokkel), b = await hPaa(pg, 'Lillestrøm-Kristiansund');
+      check('Eliteserien 19.5.: "Simuler kampene" og H med "Fyll ut runden" fyller de tre kampene, ikke flere',
+        a === tre && b === tre, JSON.stringify([a, b]));
+      await pg.close();
     }
     // Eliteserien 16.4.: Tromsø-Lillestrøm fra runde 15 (spilt 15.4.) drar ikke aktiv runde fram.
     {
@@ -3736,7 +3779,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         spilte: [...document.querySelectorAll('#rounds .match.played')].length,
         igjen: [...document.querySelectorAll('#rounds .match')].length,
         // Merkede runder skal bare finnes der ligaen sier at en runde er flyttet.
-        flyttet: [...document.querySelectorAll('#rounds .round.moved')].map(d => +d.dataset.round),
+        // Gruppene med flyttede enkeltkamper har samme utforming (4.10.2026),
+        // men er ikke runder: de telles ikke her.
+        flyttet: [...document.querySelectorAll('#rounds .round.moved:not([data-flyttet])')].map(d => +d.dataset.round),
         sierFlyttet: Object.keys(LEAGUE.movedRounds || {}).map(Number),
       }));
       check(`${liga}: kamplisten har ingen spilte kamper`, f.spilte === 0, `fant ${f.spilte}`);

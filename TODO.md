@@ -25,7 +25,14 @@ runden, utsatt eller flyttet fram. Rundenummeret i dataene endres aldri.
   * kamplisten følger tidsrekkefølgen; en flyttet kamp står i egen gruppe,
     "Utsatt kamp fra runde N" eller "Kamp fra runde N"
   * "Simuler runden" og "Fyll ut runden" følger gruppen i kamplisten
-    (kampGruppe): rundens egne kamper, eller den flyttede kampen alene
+    (kampGruppe): rundens egne kamper, eller de flyttede kampene samme dag
+  * flyttede kamper har samme utforming som en hel flyttet runde: gul,
+    stiplet boks, merknad ("Runde 24 ble spilt 2. til 5. oktober.", av
+    rundens egne kamper) og knappen "Simuler kampen"/"Simuler kampene" (H, U
+    og B tvinger fram et utfall; "Simuler" trekker et realistisk resultat).
+    Alle flyttede kamper samme dag står i én gruppe: "Utsatte kamper" med
+    "Fra runde N" på hver kamp når de er fra flere runder (Eliteserien 20.5.:
+    én fra runde 2 og to fra runde 8)
   * en hel flyttet runde (Eliteseriens runde 12) gjenkjennes av datoene;
     LEAGUE.movedRounds gir bare etiketten (hardkodingen av runde 12 er borte)
 
