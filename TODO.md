@@ -3,6 +3,28 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Svarene i "Spør om tabellen": samme visuelle språk (5.10.2026)
+
+Lister med kamper eller lag og tall har én kompakt radstil (qaRaderHtml, .qr):
+navnet i halvfet, en dempet linje under, faste kolonner til høyre med en
+liten etikett over tallet og endringen dempet på samme linje ("53 %  +31").
+Kolonnene passer innholdet: Seier/Tap ("Hvilke kamper betyr mest"),
+Seier/Uavgjort/Tap ("Hva betyr neste kamp", "Rundens viktigste kamp"),
+utfallet som hjelper ("Heie på", "43 %  +21"), vanskeligst og lettest, lag og
+ett tall (restprogrammet, "kamper igjen" bare når tallet er ulikt), Poeng /
+Forventet / Forskjell (heldig eller uheldig, tre på hver side). På smal
+skjerm korte lagnavn i lange etiketter ("KBK vinner"), og med tre kolonner
+står tallene på egen linje under kampen og datoen.
+
+De forklarende svarene er avsnitt (qaTekstHtml, .qt) med samme avstander og
+bare nøkkeltallet som svarer på spørsmålet i halvfet (QA_NOKKEL: 22 % i
+"Hvorfor", "22 av de 27 poengene", "runde 29" ...). Hardt mellomrom mellom tall
+og enhet og etter "Nå:". "Kopier tekst" kopierer den naturlige teksten
+(run() gir den; HTML-en ligger i QA_HTML).
+
+Tester: regression.js, gruppene "Hvilke kamper betyr mest" (--bare
+betyrmest) og "Svarene i Spør om tabellen" (--bare svarstil).
+
 ## Det som ble trykket, står på samme sted på skjermen (4.10.2026)
 
 Avvik: Eliteserien, Brann fulgt, "Fyll ut runden" av, åtte kamper lagt inn,

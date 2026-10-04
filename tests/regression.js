@@ -1118,7 +1118,8 @@ async function main() {
       await pg.click('#odds .lastmatch');
       await pg.waitForFunction(`(()=>{const a=document.getElementById('qaAnswer');return a&&!a.classList.contains('loading')&&a.textContent.length>20})()`, {timeout: 60000});
       // Selve svarteksten, uten merkelappen "Simulert" og kopiknappene.
-      const klikk = await pg.evaluate(() => [...document.getElementById('qaAnswer').childNodes].filter(n => n.nodeType === 3).map(n => n.nodeValue).join(''));
+      // Svarteksten slik "Kopier tekst" gir den (svaret vises som avsnitt, 5.10.2026).
+      const klikk = await pg.evaluate(() => document.querySelector('#qaAnswer .qt') && qaKopi ? qaKopi.svar : '');
       check(`${liga}: trykk på boksen viser svaret om samme kamp`, klikk.startsWith(m.svar), klikk.slice(0, 120));
       // 3) Et scenario uten lagets egne kamper: forrige kamp er fortsatt den
       // spilte, men tallene er scenarioets.
@@ -3407,25 +3408,27 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         }
         try {
           await runQaQuestion('keymatches', false, true);
-          const a = document.getElementById('qaAnswer'), km = a.querySelector('.km');
+          const a = document.getElementById('qaAnswer'), km = a.querySelector('.qr');
           if (!km) return {feil: a.textContent.slice(0, 200)};
           const farge = v => { const d = document.createElement('span'); d.style.color = `var(${v})`; document.body.appendChild(d);
             const c = getComputedStyle(d).color; d.remove(); return c; };
-          const rader = [...km.querySelectorAll('.km-rad')].map(li => {
-            const kamp = li.querySelector('.km-kamp').getBoundingClientRect();
-            return {kamp: li.querySelector('.km-kamp').textContent, kampBunn: Math.round(kamp.bottom), kampHoyre: Math.round(kamp.right),
-              naar: li.querySelector('.km-naar').textContent, linje: getComputedStyle(li).borderBottomStyle,
-              celler: [...li.querySelectorAll('.km-utfall')].map(c => { const b = c.getBoundingClientRect(), p = c.querySelector('.km-p');
+          const rader = [...km.querySelectorAll('.qr-rad')].map(li => {
+            const kamp = li.querySelector('.qr-navn').getBoundingClientRect();
+            return {kamp: li.querySelector('.qr-navn').textContent, kampBunn: Math.round(kamp.bottom), kampHoyre: Math.round(kamp.right),
+              naar: li.querySelector('.qr-meta').textContent, linje: getComputedStyle(li).borderBottomStyle,
+              celler: [...li.querySelectorAll('.qr-celle')].map(c => { const b = c.getBoundingClientRect(), p = c.querySelector('.qr-p');
                 return {hoyre: Math.round(b.right), venstre: Math.round(b.left), topp: Math.round(b.top), klasse: c.className,
-                  hva: (c.querySelector('.km-hva') || {}).textContent || null, p: p.textContent, pp: c.querySelector('.km-pp').textContent,
-                  hvaOver: !!c.querySelector('.km-hva') && c.querySelector('.km-hva').getBoundingClientRect().bottom <= p.getBoundingClientRect().top + 1,
-                  farge: getComputedStyle(p).color, pStr: parseFloat(getComputedStyle(p).fontSize), ppStr: parseFloat(getComputedStyle(c.querySelector('.km-pp')).fontSize),
+                  hva: (c.querySelector('.qr-l') || c.querySelector('.qr-hva') || {}).textContent || null, hvaSynlig: (c.querySelector('.qr-hva') || {}).innerText || null,
+                  p: p.textContent, pp: c.querySelector('.qr-pp').textContent,
+                  ppSammeLinje: Math.abs(c.querySelector('.qr-pp').getBoundingClientRect().bottom - p.getBoundingClientRect().bottom) < 5,
+                  hvaOver: !!c.querySelector('.qr-hva') && c.querySelector('.qr-hva').getBoundingClientRect().bottom <= p.getBoundingClientRect().top + 1,
+                  farge: getComputedStyle(p).color, pStr: parseFloat(getComputedStyle(p).fontSize), ppStr: parseFloat(getComputedStyle(c.querySelector('.qr-pp')).fontSize),
                   tall: getComputedStyle(c).fontVariantNumeric}; })};
           });
           const kopi = a.querySelector('[data-kopi="tekst"]'); const n = window.__kopi.length; kopi.click();
           await new Promise(r => setTimeout(r, 200));
-          return {rader, hode: [...km.querySelectorAll('.km-hode span')].map(x => x.textContent), intro: km.querySelector('.km-intro').textContent,
-            synlig: a.textContent, tekst: qaKopi && qaKopi.svar, kopiert: window.__kopi[n] || '', gronn: farge('--eu-text'), rod: farge('--accent-text')};
+          return {rader, hode: [...km.querySelectorAll('.qr-hode span')].map(x => x.textContent), intro: km.querySelector('.qr-intro').textContent,
+            synlig: a.textContent, tekst: qaKopi && qaKopi.svar, kort: Object.fromEntries(TEAMS.map(t => [t, shortTeam(t)])), kopiert: window.__kopi[n] || '', gronn: farge('--eu-text'), rod: farge('--accent-text')};
         } finally { runMatchImpactAsync = orig; }
       }, blandet);
       for (const [navn, blandet] of [['ekte', false], ['blandet', true]]) {
@@ -3437,7 +3440,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         check(`${form}, ${navn}: én rad per kamp, like mange som i teksten (${r.rader.length})`,
           r.rader.length >= 1 && r.rader.length <= 3 && r.rader.length === kamper.length && r.rader.every(x => x.celler.length === 2), JSON.stringify(r.rader).slice(0, 300));
         check(`${form}, ${navn}: innledningen "Disse kampene påvirker ... mest. Nå: N %"`,
-          /^Disse kampene påvirker .+ mest\. Nå: (\d+|<1|>99)\u00a0%$/.test(r.intro) && blokker[0] === r.intro.replace(/\u00a0/g, ' '), r.intro);
+          /^Disse kampene påvirker .+ mest\. Nå:\u00a0(\d+|<1|>99)\u00a0%$/.test(r.intro) && blokker[0] === r.intro.replace(/\u00a0/g, ' '), r.intro);
         check(`${form}, ${navn}: kolonnene står rett under hverandre (samme høyrekant i alle radene)`,
           [0, 1].every(k => new Set(r.rader.map(x => x.celler[k].hoyre)).size === 1) && r.rader[0].celler[0].hoyre < r.rader[0].celler[1].venstre, JSON.stringify(r.rader.map(x => x.celler.map(c => [c.venstre, c.hoyre]))));
         check(`${form}, ${navn}: tynn linje mellom radene`, r.rader.slice(0, -1).every(x => x.linje === 'solid'), r.rader.map(x => x.linje).join(','));
@@ -3455,12 +3458,15 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         check(`${form}, ${navn}: teksten sier "(+31 prosentpoeng)", aldri bare "poeng"`,
           /\([+−]\d+ prosentpoeng\)/.test(r.tekst) && !/(?<!prosent)poeng/.test(r.tekst) && !/\bpp\b/.test(r.tekst), r.tekst);
         check(`${form}, ${navn}: endringen er bare tallet ("+31", "−13"), hardt mellomrom mellom tall og %, tabular-nums`,
-          r.rader.every(x => x.celler.every(c => /^(\d+|<1|>99) %$/.test(c.p) && (c.pp === 'endrer lite' || /^[+−]\d+$/.test(c.pp)) && /tabular-nums/.test(c.tall))), JSON.stringify(r.rader.map(x => x.celler.map(c => [c.p, c.pp, c.tall]))));
+          r.rader.every(x => x.celler.every(c => /^(\d+|<1|>99)\u00a0%$/.test(c.p) && (c.pp === 'endrer lite' || /^[+−]\d+$/.test(c.pp)) && /tabular-nums/.test(c.tall))), JSON.stringify(r.rader.map(x => x.celler.map(c => [c.p, c.pp, c.tall]))));
         check(`${form}, ${navn}: ingen kolonneoverskrift; "Seier" og "Tap" (eller "X vinner") står over tallene i hver celle`,
           r.hode.length === 0 && r.rader.every(x => x.celler.every(c => c.hva && c.hvaOver))
           && r.rader.every(x => { const h = x.celler.map(c => c.hva); return h.join() === 'Seier,Tap' || h.every(t => / vinner$/.test(t)); }),
           JSON.stringify(r.rader.map(x => x.celler.map(c => [c.hva, c.hvaOver]))));
-        check(`${form}, ${navn}: sannsynligheten større enn endringen under`, r.rader.every(x => x.celler.every(c => c.pStr >= c.ppStr + 3)), '');
+        check(`${form}, ${navn}: sannsynligheten større enn endringen, og endringen på samme linje ("53 %  +31")`,
+          // Unntak: "endrer lite" er ord, ikke et tall, og får brytes under prosenten på smal skjerm.
+          r.rader.every(x => x.celler.every(c => c.pStr >= c.ppStr + 3 && (c.ppSammeLinje || (form === 'mobil' && c.pp === 'endrer lite')))),
+          JSON.stringify(r.rader.map(x => x.celler.map(c => [c.pp, c.ppSammeLinje]))));
         check(`${form}, ${navn}: grønn tone på det gode utfallet, rød på det dårlige, ingen farge på "endrer lite"`,
           r.rader.every(x => x.celler.every(c => /godt/.test(c.klasse) ? c.farge === r.gronn : /darlig/.test(c.klasse) ? c.farge === r.rod
             : c.pp === 'endrer lite' && c.farge !== r.gronn && c.farge !== r.rod)) && r.rader.every(x => /godt/.test(x.celler[0].klasse) || x.celler[0].pp === 'endrer lite'),
@@ -3472,10 +3478,106 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           check(`${form}: lagets egen kamp med "Seier" og "Tap", andre lags kamper med "X vinner", i samme kolonner`,
             egne.length === 1 && andre.length === 2
             && andre.every(x => x.celler.map(c => c.hva.replace(/ vinner$/, '')).sort().join() === x.kamp.split(' mot ').sort().join()), JSON.stringify(r.rader.map(x => [x.kamp, x.celler.map(c => c.hva)])));
+          check(`${form}: ${form === 'mobil' ? 'korte lagnavn i etiketten ("KBK vinner"), som i kamplisten' : 'hele lagnavnet i etiketten ("Kristiansund vinner")'}`,
+            andre.every(x => x.celler.every(c => c.hvaSynlig === (form === 'mobil' ? `${r.kort[c.hva.replace(/ vinner$/, '')]} vinner` : c.hva))),
+            JSON.stringify(andre.map(x => x.celler.map(c => c.hvaSynlig))));
           check(`${form}: et utfall under to prosentpoeng står som "endrer lite", uten farge`,
             andre.every(x => x.celler.some(c => c.pp === 'endrer lite' && !/godt|darlig/.test(c.klasse))) && /\(endrer lite\)/.test(r.tekst), r.tekst);
         }
       }
+      await pg.close();
+    }
+  };
+  // ---- Svarene i "Spør om tabellen": samme visuelle språk (5.10.2026) ----
+  // Lister med kamper eller lag og tall får kompakte rader (.qr), de
+  // forklarende svarene er avsnitt (.qt) med bare nøkkeltallet i halvfet.
+  // Hardt mellomrom mellom tall og enhet, ingen stor luke før "Kopier tekst",
+  // og "Kopier tekst" kopierer ren tekst (ingen HTML, ingen harde mellomrom).
+  //   node tests/regression.js --bare svarstil
+  const svarstil = async () => {
+    setGroup('Svarene i "Spør om tabellen": samme visuelle språk');
+    for (const [form, vp] of [['PC', {width: 1400, height: 900}],
+                              ['mobil', {width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true}]]) {
+      const pg = await browser.newPage();
+      pg.on('pageerror', e => errors.push(`svarstil ${form}: ${e.message}`));
+      await pg.setViewport(vp);
+      await pg.goto(base + '#team=Viking', {waitUntil: 'networkidle0'});
+      await settle(pg);
+      const r = await pg.evaluate(async () => {
+        qaSetOpen(true);
+        const ut = {};
+        const NB = '\u00a0';
+        for (const q of QA_QUESTIONS) {
+          await runQaQuestion(q.id, false, true);
+          const a = document.getElementById('qaAnswer'), kopi = a.querySelector('.qa-kopi');
+          const innhold = [...a.children].filter(e => !e.classList.contains('qa-kopi') && !e.classList.contains('qa-merke'));
+          const bunn = Math.max(...innhold.map(e => e.getBoundingClientRect().bottom));
+          const rad = el => { const b = el.getBoundingClientRect(); return {topp: b.top, bunn: b.bottom, h: b.height, v: b.left, h2: b.right}; };
+          const rader = [...a.querySelectorAll('.qr-rad')].map(li => ({navn: li.querySelector('.qr-navn').textContent, rad: rad(li),
+            navnR: rad(li.querySelector('.qr-navn')), meta: li.querySelector('.qr-meta') ? {tekst: li.querySelector('.qr-meta').textContent, ...rad(li.querySelector('.qr-meta')),
+              linjeH: parseFloat(getComputedStyle(li.querySelector('.qr-meta')).lineHeight)} : null,
+            celler: [...li.querySelectorAll('.qr-celle')].map(c => ({hva: (c.querySelector('.qr-l') || c.querySelector('.qr-hva') || {}).textContent || null,
+              synlig: (c.querySelector('.qr-hva') || {}).innerText || null, p: c.querySelector('.qr-p').textContent,
+              pp: (c.querySelector('.qr-pp') || {}).textContent || null, ...rad(c)}))}));
+          ut[q.id] = {tekst: qaKopi ? qaKopi.svar : '', kopiert: kopi ? 'ja' : 'nei', luke: kopi ? kopi.getBoundingClientRect().top - bunn : null,
+            qt: !!a.querySelector('.qt'), qr: !!a.querySelector('.qr'), deler: innhold.map(e => e.className).join(' '),
+            fet: [...a.querySelectorAll('.qn')].map(e => e.textContent), hode: [...a.querySelectorAll('.qr-hode span')].map(e => e.textContent),
+            grupper: [...a.querySelectorAll('.qr-gruppe')].map(e => e.textContent), rader,
+            intro: (a.querySelector('.qr-intro') || {}).textContent || '', synlig: a.textContent,
+            sporsmal: q.label('Viking'), kort: Object.fromEntries(TEAMS.map(t => [t, shortTeam(t)]))};
+        }
+        return ut;
+      });
+      const nb = /(\d|<1|>99) %|\d poeng/;
+      const alle = Object.entries(r);
+      check(`${form}: alle svarene vises som avsnitt (.qt) eller rader (.qr), ingen rå tekst`, alle.every(([, x]) => x.qt || x.qr), alle.filter(([, x]) => !x.qt && !x.qr).map(([k]) => k).join(', '));
+      check(`${form}: hardt mellomrom mellom tall og % og mellom tall og poeng i alle svarene`,
+        alle.every(([, x]) => !nb.test(x.synlig)), alle.filter(([, x]) => nb.test(x.synlig)).map(([k, x]) => `${k}: ${x.synlig.match(nb)[0]}`).join('; '));
+      check(`${form}: ingen stor luke før "Kopier tekst" (høyst 14 piksler)`, alle.every(([, x]) => x.luke != null && x.luke <= 14),
+        alle.map(([k, x]) => `${k} ${x.luke && x.luke.toFixed(0)}`).join(', '));
+      check(`${form}: "Kopier tekst" er ren tekst: ingen HTML og ingen harde mellomrom`, alle.every(([, x]) => x.tekst && !/[<>]/.test(x.tekst) && !/\u00a0/.test(x.tekst)), '');
+      // Hva betyr neste kamp: én rad, Seier/Uavgjort/Tap, "gullsjanse", "Nå: 22 %" samlet.
+      const nm = r.nextmatch;
+      check(`${form}: neste kamp: én rad med Seier, Uavgjort og Tap, og "Nå:" med hardt mellomrom`,
+        nm.rader.length === 1 && nm.rader[0].celler.map(c => c.hva).join() === 'Seier,Uavgjort,Tap' && /sjanse\. Nå:\u00a0(\d+|<1|>99)\u00a0%$/.test(nm.intro)
+        && !/sjansen\. Nå/.test(nm.intro), `${nm.intro} | ${JSON.stringify(nm.rader.map(x => x.celler.map(c => c.hva)))}`);
+      if (form === 'mobil') {
+        const x = nm.rader[0];
+        check('mobil: neste kamp: navnet og datoen har full bredde, datoen på én linje, Seier/Uavgjort/Tap på linja under',
+          x.meta && x.meta.h <= x.meta.linjeH * 1.5 && x.celler.every(c => c.topp >= x.meta.bunn - 1), JSON.stringify(x.meta) + ' ' + JSON.stringify(x.celler.map(c => c.topp)));
+      }
+      // Heie på: sjansen etter utfallet og endringen.
+      const ch = r.cheer;
+      check(`${form}: heie på: sjansen etter utfallet og endringen ("43 %  +21"), også i teksten`,
+        ch.rader.length >= 1 && ch.rader.every(x => x.celler.length === 1 && /^(\d+|<1|>99)\u00a0%$/.test(x.celler[0].p) && /^[+−]\d+$/.test(x.celler[0].pp))
+        && /: (\d+|<1|>99) % \([+−]\d+ prosentpoeng\)/.test(ch.tekst), `${ch.tekst} | ${JSON.stringify(ch.rader.map(x => x.celler))}`);
+      const lagEtiketter = [...ch.rader, ...r.keymatches.rader].flatMap(x => x.celler).filter(c => / vinner$/.test(c.hva || ''));
+      check(`${form}: ${form === 'mobil' ? 'korte lagnavn i lange utfallsetiketter ("KBK vinner")' : 'hele lagnavnet i utfallsetikettene'} (${lagEtiketter.length})`,
+        lagEtiketter.length >= 1 && lagEtiketter.every(c => c.synlig === (form === 'mobil' ? `${ch.kort[c.hva.replace(/ vinner$/, '')]} vinner` : c.hva)),
+        JSON.stringify(lagEtiketter.map(c => c.synlig)));
+      // Vanskeligst: to kompakte rader.
+      check(`${form}: vanskeligst: to rader, vanskeligst og lettest`,
+        r.hardest.rader.length === 2 && r.hardest.rader.map(x => x.celler[0].hva).join() === 'Vanskeligst,Lettest', JSON.stringify(r.hardest.rader.map(x => x.celler)));
+      // Restprogrammet: lag og ett tall, ingen overskrift, tette rader.
+      const ri = r.runin;
+      check(`${form}: restprogram: lag og ett tall, ingen kolonneoverskrift, "kamper igjen" ikke vist når tallet er likt for alle`,
+        ri.rader.length === 6 && ri.rader.every(x => x.celler.length === 1 && !x.meta) && ri.hode.length === 0 && ri.grupper.join() === 'Tøffest,Lettest',
+        JSON.stringify({hode: ri.hode, grupper: ri.grupper, rader: ri.rader.map(x => [x.navn, x.celler.length, !!x.meta])}));
+      check(`${form}: restprogram: tette rader (høyst 30 piksler)`, ri.rader.every(x => x.rad.h <= 30), ri.rader.map(x => x.rad.h.toFixed(0)).join(' '));
+      // Heldig eller uheldig: tre på hver side, poeng minus forventet er forskjellen.
+      const lu = r.luck, tall = t => parseFloat(t.replace(',', '.').replace('−', '-'));
+      check(`${form}: heldig/uheldig: tre lag på hver side med Poeng, Forventet og Forskjell, og tallene går opp`,
+        lu.rader.length === 6 && lu.hode.join() === 'Poeng,Forventet,Forskjell' && lu.rader.every(x => Math.abs(tall(x.celler[0].p) - tall(x.celler[1].p) - tall(x.celler[2].p)) < 0.06)
+        && lu.rader.slice(0, 3).every(x => tall(x.celler[2].p) > 0) && lu.rader.slice(3).every(x => tall(x.celler[2].p) < 0),
+        JSON.stringify(lu.rader.map(x => [x.navn, ...x.celler.map(c => c.p)])));
+      // Rundens viktigste kamp: tekst, én rad med de tre utfallene, tekst.
+      const kr = r.keyround;
+      check(`${form}: rundens viktigste kamp: tekst, så kampen som én rad med tre utfall`,
+        kr.qt && kr.qr && kr.rader.length === 1 && kr.rader[0].celler.length === 3 && /^qt qr/.test(kr.deler), kr.deler);
+      // Hvorfor: bare nøkkeltallet i halvfet.
+      const w = r.why, q = (w.sporsmal.match(/(\d+|<1|>99) %/) || [])[0];
+      check(`${form}: hvorfor: bare nøkkeltallet som svarer på spørsmålet er i halvfet (${q})`,
+        !!q && w.fet.length === 1 && w.fet[0] === q.replace(' ', '\u00a0'), JSON.stringify(w.fet));
       await pg.close();
     }
   };
@@ -3608,7 +3710,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'tilgode') await kamperTilGode();
       else if (BARE === 'betyrmest') await kamperBetyrMest();
       else if (BARE === 'rulling') await knappenStaar();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling)`);
+      else if (BARE === 'svarstil') await svarstil();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -4710,7 +4813,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await pg.waitForSelector('#qaAnswer .qa-kopi [data-kopi="tekst"]', {timeout: 60000});
       return pg.evaluate(() => { const a = document.getElementById('qaAnswer');
         return {sporsmal: document.querySelector('.qa-item.active > button').textContent,
-          svar: [...a.childNodes].filter(n => n.nodeType === 3).map(n => n.nodeValue).join(''),
+          // Svaret vises som avsnitt eller rader (5.10.2026); teksten er qaKopi.svar.
+          svar: a.querySelector('.qt, .qr') && qaKopi ? qaKopi.svar : '',
           knapper: [...a.querySelectorAll('.qa-kopi > button')].map(b => ({hva: b.dataset.kopi, tekst: b.textContent.trim(), type: b.type,
             ikon: (b.querySelector('svg path') || {}).outerHTML || ''})),
           lenkeknapp: document.querySelectorAll('[data-kopi="lenke"]').length,
@@ -7062,12 +7166,18 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           await vent(() => GRUNNLAG_STATUS !== 'venter');
           await vent(() => { const el = document.getElementById('qaAnswer'); return el && !el.className.includes('loading') && qaAnswerKey === qaStateKey(); });
           await new Promise(r => setTimeout(r, 300));
-          return {foer, etter: {status: GRUNNLAG_STATUS, N: lastMCN}, svarFoer, svarEtter: svarTekst(), fraFil: await qaCheerFor(lag)};
+          // Svaret vises som rader (5.10.2026): teksten er den "Kopier tekst"
+          // gir, og visningen er HTML-en for akkurat den teksten.
+          const svarEtter = qaKopi ? qaKopi.svar : null, h = QA_HTML.get(svarEtter);
+          // Gjennom nettleseren, så de harde mellomrommene skrives likt (&nbsp;).
+          const lest = document.createElement('div'); if (h) lest.innerHTML = h;
+          const visEtter = !!h && document.getElementById('qaAnswer').innerHTML.includes(lest.innerHTML);
+          return {foer, etter: {status: GRUNNLAG_STATUS, N: lastMCN}, svarFoer, svarEtter, visEtter, fraFil: await qaCheerFor(lag)};
         }, lagMedSone);
         await ps.close();
         check(`${liga}: kommer filen sent, regner siden selv først, og bytter tabellen og svaret som står til filens når den kommer`,
           sen.foer.status === 'venter' && sen.foer.N === 10000 && sen.etter.status === 'i bruk' && sen.etter.N === 100000
-            && sen.svarEtter === sen.fraFil, JSON.stringify(sen).slice(0, 800));
+            && sen.svarEtter === sen.fraFil && sen.visEtter, JSON.stringify(sen).slice(0, 800));
       }
 
       // Tid til første prosenter i tabellen: ikke lengre med filen enn uten,
@@ -7101,6 +7211,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await kamperTilGode();
     await kamperBetyrMest();
     await knappenStaar();
+    await svarstil();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen
@@ -7149,18 +7260,17 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
                 if (tall(m[1]) - tall(naa2[1]) !== parseInt(m[2].replace('−', '-'), 10)) brudd.push(`kamper som betyr mest (${key}): ${m[1]} − ${naa2[1]} ≠ ${m[2]}`);
                 if (key === bakre && !eks.kmBakre && tall(naa2[1]) !== tall(m[1])) eks.kmBakre = km.split('\n').filter(Boolean).slice(0, 2).join(' | ');
               }
-              // Heie på: differansen står alene. Fremre: "+N prosentpoeng",
-              // bakre: "reduserer ... med N prosentpoeng". N skal være
-              // forskjellen mellom de viste tallene for det beste utfallet.
+              // Heie på: sjansen etter utfallet og endringen, "43 % (+21
+              // prosentpoeng)" (5.10.2026). Endringen er vist nivå minus vist
+              // nå, og den er ett av de tre utfallene.
               const ch = await qaCheerFor(t);
               const kand = [d, d / 3, -d / 2].map(dd => vis(P + dd) - vis(P));
-              for (const m of ch.matchAll(/: ([+−]\d+|±0) prosentpoeng|reduserer [^\n]*? med (\d+) prosentpoeng/g)) {
-                n++;
-                if (m[1]) { const v = m[1] === '±0' ? 0 : parseInt(m[1].replace('−', '-'), 10);
-                  if (!kand.includes(v)) brudd.push(`heie på (${key}, nå ${vis(P)}): ${m[1]} er ikke vist nivå minus vist nå (${kand.join('/')})`); }
-                else { nBakre++; const v = parseInt(m[2], 10);
-                  if (!kand.map(x => -x).includes(v)) brudd.push(`heie på (${key}, nå ${vis(P)}): «reduserer med ${v}» er ikke forskjellen mellom de viste tallene (${kand.join('/')})`);
-                  if (!eks.cheerBakre) eks.cheerBakre = `nå ${P < 0.005 ? '<1' : P > 0.995 ? '>99' : Math.round(P * 100)} %: ` + ch.split('\n')[1]; }
+              for (const m of ch.matchAll(new RegExp(`: ${PCT} \\(([+−]\\d+) prosentpoeng\\)`, 'g'))) {
+                n++; if (key === bakre) nBakre++;
+                const v = parseInt(m[2].replace('−', '-'), 10);
+                if (tall(m[1]) - vis(P) !== v) brudd.push(`heie på (${key}, nå ${vis(P)}): ${m[1]} − ${vis(P)} ≠ ${m[2]}`);
+                if (!kand.includes(v)) brudd.push(`heie på (${key}, nå ${vis(P)}): ${m[2]} er ikke ett av utfallene (${kand.join('/')})`);
+                if (key === bakre && !eks.cheerBakre) eks.cheerBakre = `nå ${P < 0.005 ? '<1' : P > 0.995 ? '>99' : Math.round(P * 100)} %: ` + ch.split('\n')[1];
               }
             }
           }
@@ -7175,7 +7285,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         r.n > 100 && r.brudd.length === 0, `${r.brudd.length} brudd: ${r.brudd.slice(0, 4).join('; ')}`);
       check(`${liga}: overgangene er med: <1 % -> lite tall, lite tall -> <1 %, >99 % og ned`,
         r.eks.fraUnder1 && r.eks.tilUnder1 && r.eks.fraOver99, JSON.stringify(r.eks));
-      check(`${liga}: bakre sone (${r.soner[1]}): "reduserer ... med N" og differansene i kamper som betyr mest går opp (${r.nBakre} tall)`,
+      check(`${liga}: bakre sone (${r.soner[1]}): differansene i heie på og i kamper som betyr mest går opp (${r.nBakre} tall)`,
         r.nBakre > 10 && r.eks.cheerBakre && r.eks.kmBakre && r.bruddBakre.length === 0,
         `${r.bruddBakre.length} brudd: ${r.bruddBakre.slice(0, 3).join('; ')}`);
       // Og uten utbytting: ekte simulering for to lag.

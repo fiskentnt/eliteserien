@@ -904,33 +904,59 @@
   @media (pointer:coarse){.kopi{padding:8px 10px}}
   .qa-answer{scroll-margin-bottom:16px;margin:0 0 12px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-line;overflow-wrap:break-word}
   .qa-more{display:flex;align-items:center;gap:9px;margin-top:8px;color:var(--muted)}
-  /* "Hvilke kamper betyr mest" (4.10.2026): én rad per kamp, tynn linje
-     mellom, to faste kolonner til høyre (Seier og Tap) så tallene står rett
-     under hverandre. Sannsynligheten først, endringen mindre under. Diskret
-     grønn og rød tekst, ingen flater. På smal skjerm får kampnavnet hele
-     bredden, og runde og dato står til venstre for tallene på linja under. */
-  .qa-answer.rik{white-space:normal}
-  .km{--km-kol:7.5em}
-  .km-intro{margin:0 0 10px}
-  .km-rad{display:grid;grid-template-columns:minmax(0,1fr) var(--km-kol) var(--km-kol);column-gap:12px}
-  .km-liste{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
-  .km-rad{grid-template-areas:"kamp seier tap" "naar seier tap";grid-template-rows:auto 1fr;align-items:start;padding:9px 0;border-bottom:1px solid var(--line-soft)}
-  .km-rad:last-child{border-bottom:none}
-  .km-kamp{grid-area:kamp;font-weight:700;line-height:1.35}
-  .km-naar{grid-area:naar;font-size:12px;color:var(--muted);line-height:1.35;margin-top:2px}
-  .km-utfall{display:flex;flex-direction:column;align-items:flex-end;text-align:right;font-variant-numeric:tabular-nums;line-height:1.2}
-  .km-utfall:nth-of-type(1){grid-area:seier}
-  .km-utfall:nth-of-type(2){grid-area:tap}
-  .km-hva{font-size:11px;color:var(--muted);line-height:1.25;margin-bottom:2px}
-  .km-p{font-size:17px;font-weight:700;white-space:nowrap}
-  .km-pp{font-size:12px;font-weight:600;white-space:nowrap;margin-top:2px;color:var(--muted)}
-  .km-utfall.godt .km-p,.km-utfall.godt .km-pp{color:var(--eu-text)}
-  .km-utfall.darlig .km-p,.km-utfall.darlig .km-pp{color:var(--accent-text)}
-  .km-utfall.godt .km-pp,.km-utfall.darlig .km-pp{opacity:.85}
+  /* Svarene med samme visuelle språk (5.10.2026). Lister med kamper eller
+     lag og tall (.qr): én kompakt rad per kamp eller lag, tynn linje mellom,
+     navnet i halvfet og en dempet linje under, faste kolonner til høyre så
+     tallene står rett under hverandre (bredden passer innholdet: --qr-kol,
+     antallet: --qr-n). I hver celle en liten, dempet etikett over tallet
+     ("Seier", "Kristiansund vinner"), eller en overskrift over kolonnene når
+     den gjelder alle radene; tallet, og endringen dempet på samme linje
+     ("53 %  +31"). Diskret grønn og rød på tallet, ingen flater. På smal
+     skjerm får et langt navn (en kamp) hele linja, og cellene står på linja
+     under, til høyre for den dempede linja. Forklarende svar (.qt): avsnitt
+     med samme avstander, nøkkeltallene i halvfet. Begge med tabular-nums. */
+  .qa-answer.rik{white-space:normal;padding-bottom:8px;font-variant-numeric:tabular-nums}
+  .qa-answer.rik .qa-kopi{margin-top:2px}
+  .qr{--qr-kol:6em;--qr-n:2}
+  .qr-intro,.qt p{margin:0 0 6px}
+  .qt p:last-child{margin-bottom:0}
+  .qt + .qr,.qr + .qt{margin-top:8px}
+  .qn,.nw{white-space:nowrap}.qn{font-weight:700}
+  .qr-liste{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+  .qr-rad,.qr-hode{display:grid;grid-template-columns:minmax(0,1fr) repeat(var(--qr-n),var(--qr-kol));grid-template-rows:auto 1fr;column-gap:12px;align-items:start}
+  .qr-rad{padding:6px 0;border-bottom:1px solid var(--line-soft)}
+  .qr-rad:last-child{border-bottom:none;padding-bottom:2px}
+  .qr-navn{grid-column:1;grid-row:1;font-weight:700;line-height:1.3;overflow-wrap:normal}
+  .qr-meta{grid-column:1;grid-row:2;font-size:12px;color:var(--muted);line-height:1.3;margin-top:1px;overflow-wrap:normal}
+  .qr-celle{grid-row:1 / span 2;display:flex;flex-direction:column;align-items:flex-end;text-align:right;line-height:1.2}
+  .qr-celle:nth-of-type(1){grid-column:2}.qr-celle:nth-of-type(2){grid-column:3}.qr-celle:nth-of-type(3){grid-column:4}
+  .qr-hva{font-size:11px;color:var(--muted);line-height:1.2;margin-bottom:1px}
+  .qr-tall{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:baseline;column-gap:6px}
+  .qr-p{font-size:16px;font-weight:700;white-space:nowrap}
+  .qr-pp{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+  .qr-celle.godt .qr-p{color:var(--eu-text)}
+  .qr-celle.darlig .qr-p{color:var(--accent-text)}
+  .qr-hode{font-size:11px;color:var(--muted);padding:0 0 3px}
+  .qr-hode span{text-align:right;overflow-wrap:normal}
+  .qr-hode span:nth-child(1){grid-column:2}.qr-hode span:nth-child(2){grid-column:3}.qr-hode span:nth-child(3){grid-column:4}
+  .qr-gruppe{font:600 11px/1.2 var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:8px 0 3px;border-bottom:1px solid var(--line-soft)}
+  .qr-gruppe:first-child{padding-top:4px}
+  .qr-rad.valgt .qr-navn{color:var(--team-text,var(--ink))}
+  .qr.tett .qr-rad{padding:3px 0}
+  .qr.tett .qr-gruppe{padding:6px 0 2px}
+  .qr.tett .qr-p{font-size:15px}
+  .qr-k{display:none}
+  .qr-etter{margin:6px 0 0;font-size:12.5px;color:var(--muted)}
   @media (max-width:520px){
-    .km{--km-kol:5em}
-    .km-rad{grid-template-areas:"kamp kamp kamp" "naar seier tap";grid-template-rows:auto auto;row-gap:2px}
-    .km-naar{margin-top:3px}
+    .qr-rad,.qr-hode{grid-template-columns:minmax(0,1fr) repeat(var(--qr-n),var(--qr-kol-m,var(--qr-kol)));column-gap:10px}
+    .qr.lange .qr-navn{grid-column:1 / -1}
+    .qr.lange .qr-rad{grid-template-rows:auto auto;row-gap:1px}
+    .qr.lange .qr-celle{grid-row:2}
+    .qr.lange .qr-meta{margin-top:2px}
+    .qr.stablet .qr-meta{grid-column:1 / -1}
+    .qr.stablet .qr-celle{grid-row:3;margin-top:3px}
+    .qr.stablet .qr-rad{grid-template-rows:auto auto auto}
+    .qr-l{display:none}.qr-k{display:inline}
   }
   .qa-answer.loading{color:var(--muted);display:flex;align-items:center;gap:9px}
   .qa-spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--muted);animation:qa-spin .7s linear infinite;flex:none}

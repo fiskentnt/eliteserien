@@ -953,33 +953,59 @@
   @media (pointer:coarse){.kopi{padding:8px 10px}}
   .qa-answer{scroll-margin-bottom:16px;margin:0 0 12px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-line;overflow-wrap:break-word}
   .qa-more{display:flex;align-items:center;gap:9px;margin-top:8px;color:var(--muted)}
-  /* "Hvilke kamper betyr mest" (4.10.2026): én rad per kamp, tynn linje
-     mellom, to faste kolonner til høyre (Seier og Tap) så tallene står rett
-     under hverandre. Sannsynligheten først, endringen mindre under. Diskret
-     grønn og rød tekst, ingen flater. På smal skjerm får kampnavnet hele
-     bredden, og runde og dato står til venstre for tallene på linja under. */
-  .qa-answer.rik{white-space:normal}
-  .km{--km-kol:7.5em}
-  .km-intro{margin:0 0 10px}
-  .km-rad{display:grid;grid-template-columns:minmax(0,1fr) var(--km-kol) var(--km-kol);column-gap:12px}
-  .km-liste{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
-  .km-rad{grid-template-areas:"kamp seier tap" "naar seier tap";grid-template-rows:auto 1fr;align-items:start;padding:9px 0;border-bottom:1px solid var(--line-soft)}
-  .km-rad:last-child{border-bottom:none}
-  .km-kamp{grid-area:kamp;font-weight:700;line-height:1.35}
-  .km-naar{grid-area:naar;font-size:12px;color:var(--muted);line-height:1.35;margin-top:2px}
-  .km-utfall{display:flex;flex-direction:column;align-items:flex-end;text-align:right;font-variant-numeric:tabular-nums;line-height:1.2}
-  .km-utfall:nth-of-type(1){grid-area:seier}
-  .km-utfall:nth-of-type(2){grid-area:tap}
-  .km-hva{font-size:11px;color:var(--muted);line-height:1.25;margin-bottom:2px}
-  .km-p{font-size:17px;font-weight:700;white-space:nowrap}
-  .km-pp{font-size:12px;font-weight:600;white-space:nowrap;margin-top:2px;color:var(--muted)}
-  .km-utfall.godt .km-p,.km-utfall.godt .km-pp{color:var(--eu-text)}
-  .km-utfall.darlig .km-p,.km-utfall.darlig .km-pp{color:var(--accent-text)}
-  .km-utfall.godt .km-pp,.km-utfall.darlig .km-pp{opacity:.85}
+  /* Svarene med samme visuelle språk (5.10.2026). Lister med kamper eller
+     lag og tall (.qr): én kompakt rad per kamp eller lag, tynn linje mellom,
+     navnet i halvfet og en dempet linje under, faste kolonner til høyre så
+     tallene står rett under hverandre (bredden passer innholdet: --qr-kol,
+     antallet: --qr-n). I hver celle en liten, dempet etikett over tallet
+     ("Seier", "Kristiansund vinner"), eller en overskrift over kolonnene når
+     den gjelder alle radene; tallet, og endringen dempet på samme linje
+     ("53 %  +31"). Diskret grønn og rød på tallet, ingen flater. På smal
+     skjerm får et langt navn (en kamp) hele linja, og cellene står på linja
+     under, til høyre for den dempede linja. Forklarende svar (.qt): avsnitt
+     med samme avstander, nøkkeltallene i halvfet. Begge med tabular-nums. */
+  .qa-answer.rik{white-space:normal;padding-bottom:8px;font-variant-numeric:tabular-nums}
+  .qa-answer.rik .qa-kopi{margin-top:2px}
+  .qr{--qr-kol:6em;--qr-n:2}
+  .qr-intro,.qt p{margin:0 0 6px}
+  .qt p:last-child{margin-bottom:0}
+  .qt + .qr,.qr + .qt{margin-top:8px}
+  .qn,.nw{white-space:nowrap}.qn{font-weight:700}
+  .qr-liste{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+  .qr-rad,.qr-hode{display:grid;grid-template-columns:minmax(0,1fr) repeat(var(--qr-n),var(--qr-kol));grid-template-rows:auto 1fr;column-gap:12px;align-items:start}
+  .qr-rad{padding:6px 0;border-bottom:1px solid var(--line-soft)}
+  .qr-rad:last-child{border-bottom:none;padding-bottom:2px}
+  .qr-navn{grid-column:1;grid-row:1;font-weight:700;line-height:1.3;overflow-wrap:normal}
+  .qr-meta{grid-column:1;grid-row:2;font-size:12px;color:var(--muted);line-height:1.3;margin-top:1px;overflow-wrap:normal}
+  .qr-celle{grid-row:1 / span 2;display:flex;flex-direction:column;align-items:flex-end;text-align:right;line-height:1.2}
+  .qr-celle:nth-of-type(1){grid-column:2}.qr-celle:nth-of-type(2){grid-column:3}.qr-celle:nth-of-type(3){grid-column:4}
+  .qr-hva{font-size:11px;color:var(--muted);line-height:1.2;margin-bottom:1px}
+  .qr-tall{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:baseline;column-gap:6px}
+  .qr-p{font-size:16px;font-weight:700;white-space:nowrap}
+  .qr-pp{font-size:12px;font-weight:600;color:var(--muted);white-space:nowrap}
+  .qr-celle.godt .qr-p{color:var(--eu-text)}
+  .qr-celle.darlig .qr-p{color:var(--accent-text)}
+  .qr-hode{font-size:11px;color:var(--muted);padding:0 0 3px}
+  .qr-hode span{text-align:right;overflow-wrap:normal}
+  .qr-hode span:nth-child(1){grid-column:2}.qr-hode span:nth-child(2){grid-column:3}.qr-hode span:nth-child(3){grid-column:4}
+  .qr-gruppe{font:600 11px/1.2 var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:8px 0 3px;border-bottom:1px solid var(--line-soft)}
+  .qr-gruppe:first-child{padding-top:4px}
+  .qr-rad.valgt .qr-navn{color:var(--team-text,var(--ink))}
+  .qr.tett .qr-rad{padding:3px 0}
+  .qr.tett .qr-gruppe{padding:6px 0 2px}
+  .qr.tett .qr-p{font-size:15px}
+  .qr-k{display:none}
+  .qr-etter{margin:6px 0 0;font-size:12.5px;color:var(--muted)}
   @media (max-width:520px){
-    .km{--km-kol:5em}
-    .km-rad{grid-template-areas:"kamp kamp kamp" "naar seier tap";grid-template-rows:auto auto;row-gap:2px}
-    .km-naar{margin-top:3px}
+    .qr-rad,.qr-hode{grid-template-columns:minmax(0,1fr) repeat(var(--qr-n),var(--qr-kol-m,var(--qr-kol)));column-gap:10px}
+    .qr.lange .qr-navn{grid-column:1 / -1}
+    .qr.lange .qr-rad{grid-template-rows:auto auto;row-gap:1px}
+    .qr.lange .qr-celle{grid-row:2}
+    .qr.lange .qr-meta{margin-top:2px}
+    .qr.stablet .qr-meta{grid-column:1 / -1}
+    .qr.stablet .qr-celle{grid-row:3;margin-top:3px}
+    .qr.stablet .qr-rad{grid-template-rows:auto auto auto}
+    .qr-l{display:none}.qr-k{display:inline}
   }
   .qa-answer.loading{color:var(--muted);display:flex;align-items:center;gap:9px}
   .qa-spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--muted);animation:qa-spin .7s linear infinite;flex:none}
@@ -4898,8 +4924,14 @@ function qaHardestMatch(team){
   if(med.length===1)
     return `${team} har bare én kamp igjen: ${beskriv(verst)}, der modellen gir `+
       `${pctTxt(verst.p)} sjanse for seier.`;
-  return `Vanskeligst blir ${beskriv(verst)}, der modellen gir ${pctTxt(verst.p)} sjanse for seier. `+
+  const tekst = `Vanskeligst blir ${beskriv(verst)}, der modellen gir ${pctTxt(verst.p)} sjanse for seier. `+
     `Lettest blir ${beskriv(best)}, med ${pctTxt(best.p)}.`;
+  // Visningen (5.10.2026): to kompakte rader, vanskeligst og lettest, med
+  // sjansen for seier i kampen.
+  const rad = (x, hva) => ({navn:`${x.m.home} mot ${x.m.away}`, meta:`${qaKampNaar(x.m)}, ${x.hjemme?'hjemme':'borte'}`,
+    celler:[{hva, p:pctTxt(x.p)}]});
+  return qaMedHtml(tekst, qaRaderHtml({intro:`Sjansen for ${team}-seier i kampene som gjenstår, ifølge modellen.`, n:1, kol:'6.5em',
+    lange:true, rader:[rad(verst, 'Vanskeligst'), rad(best, 'Lettest')]}));
 }
 function qaToughestRunIn(){
   const rows = restprogram();
@@ -4913,11 +4945,22 @@ function qaToughestRunIn(){
   const [t0, ...tRest] = toughest;
   const neste = tRest.length ? ` Deretter følger ${joinNames(tRest.map(fmt))}.` : '';
   // Tre avsnitt: de tøffeste, de letteste, og forbeholdet.
-  return [
+  const tekst = [
     `${t0.team} har det tøffeste restprogrammet: motstanderne har i snitt ${pctTxt(t0.avg)} vinnersjanse i kampene som gjenstår.${neste}`,
     `Det letteste restprogrammet har ${joinNames(easiest.map(fmt))}.`,
     `Vinnersjansene bygger på dagens lagstyrker.`,
   ].join('\n\n');
+  // Visningen (5.10.2026): lag og tall, de tøffeste og de letteste for seg,
+  // med overskrift over kolonnene (de gjelder alle radene). Laget man følger
+  // i lagets farge.
+  // Har alle lagene like mange kamper igjen, sies ikke tallet; ellers står
+  // det under navnet. Innledningen forklarer tallet, så ingen overskrift.
+  const vist = [...toughest, ...easiest], likeMange = vist.every(r=>r.n===vist[0].n);
+  const rad = r => ({navn:r.team, valgt:r.team===SELECTED_TEAM, meta: likeMange ? null : `${kampTxt(r.n)} igjen`, celler:[{p:pctTxt(r.avg)}]});
+  const html = qaRaderHtml({intro:'Motstandernes vinnersjanse i snitt, i kampene som gjenstår.', n:1, kol:'5em',
+    rader:[{gruppe:'Tøffest'}, ...toughest.map(rad), {gruppe:'Lettest'}, ...easiest.map(rad)],
+    etter:'Vinnersjansene bygger på dagens lagstyrker.'});
+  return qaMedHtml(tekst, html);
 }
 
 // ---- Spørsmål 5: IKKE kampens egen H/U/B (den står allerede i kamplisten,
@@ -4970,7 +5013,17 @@ async function qaNextMatch(team){
     : `Seier ${kamp} ${vWin>0?'øker':'senker'} ${navn} til ${p(dWin)} (${ppHelTxt(vWin)} prosentpoeng).`;
   const tap = Math.abs(vLose)<2 ? 'mens tap endrer den lite'
     : `mens tap ${vLose<0?'senker':'øker'} den til ${p(dLose)}`;
-  return `${seier} Uavgjort gir ${p(dDraw)}, ${tap}. ${qaStor(navn)} er ${pctTxt(tableP, zone.mat)} nå. ${naar}`;
+  const tekst = `${seier} Uavgjort gir ${p(dDraw)}, ${tap}. ${qaStor(navn)} er ${pctTxt(tableP, zone.mat)} nå. ${naar}`;
+  // Visningen (5.10.2026): én rad med kampen og tre kolonner, Seier,
+  // Uavgjort og Tap, som "Hvilke kamper betyr mest". Det gode utfallet for
+  // laget i grønt, det dårlige i rødt, under to prosentpoeng uten farge.
+  const godt = v => zone.dir==='back' ? v<0 : v>0;
+  const celle = (hva, d, v) => ({hva, p:p(d), pp: Math.abs(v)<2 ? 'endrer lite' : qaPpKort(v),
+    tone: Math.abs(v)<2 ? '' : godt(v) ? 'godt' : 'darlig'});
+  const html = qaRaderHtml({intro:`Slik endrer neste kamp ${qaGen(team)} ${qaSjanseUbest(zone)}. Nå: ${pctTxt(tableP, zone.mat)}`,
+    n:3, kol:'5.6em', kolMobil:'4.6em', lange:true, rader:[{navn:`${next.home} mot ${next.away}`, meta:`${qaKampNaar(next)}, ${isHome?'hjemme':'borte'}`,
+      celler:[celle('Seier', dWin, vWin), celle('Uavgjort', dDraw, vDraw), celle('Tap', dLose, vLose)]}]});
+  return qaMedHtml(tekst, html);
 }
 
 // ---- Hvem bør laget heie på denne runden? Neste runde = runden med flest
@@ -5120,9 +5173,9 @@ async function qaCheerFor(team, onPartial){
       const idx = openMatches.indexOf(m), h=res[idx+':H'], u=res[idx+':U'], a=res[idx+':B'];
       if(!h || !u || !a) return;
       const outs = [
-        {d:h.prob-res.base.prob, txt:`${m.home} slår ${m.away}`},
-        {d:u.prob-res.base.prob, txt:`Uavgjort mellom ${m.home} og ${m.away}`},
-        {d:a.prob-res.base.prob, txt:`${m.away} slår ${m.home}`},
+        {d:h.prob-res.base.prob, txt:`${m.home} slår ${m.away}`, hva:`${m.home} vinner`, hvaKort:`${shortTeam(m.home)} vinner`},
+        {d:u.prob-res.base.prob, txt:`Uavgjort mellom ${m.home} og ${m.away}`, hva:'Uavgjort'},
+        {d:a.prob-res.base.prob, txt:`${m.away} slår ${m.home}`, hva:`${m.away} vinner`, hvaKort:`${shortTeam(m.away)} vinner`},
       ];
       let best = outs[0];
       outs.forEach(o=>{ if(good(o.d)>good(best.d)) best = o; });
@@ -5132,19 +5185,28 @@ async function qaCheerFor(team, onPartial){
     });
     return rows.sort((x,y)=>y.effect-x.effect || x.m.date.localeCompare(y.m.date));
   };
-  const effekt = v => zone.dir==='front'
-    ? `${ppHelTxt(v)} prosentpoeng`
-    : `reduserer ${navn} med ${Math.abs(v)} prosentpoeng`;
-  const textFor = rows=>head+rows.map(x=>`${x.best.txt}: ${effekt(x.best.v)}`).join('\n');
+  // Sjansen etter utfallet og endringen (5.10.2026): "Kristiansund slår
+  // Bodø/Glimt: 43 % (+21 prosentpoeng)". I visningen én rad per kamp med
+  // utfallet som etikett ("Kristiansund vinner") og "43 %  +21".
+  const etter = d => pctTxt(Math.min(1,Math.max(0,tableP+d)), zone.mat);
+  // Sjansen nå står også i teksten (som i "Hva betyr neste kamp"): visningen
+  // hentes på teksten (QA_HTML), og uten den kunne en eldre utregning med
+  // samme utfall gi visningen et utdatert "Nå:" (5.10.2026).
+  const textFor = rows=>head+rows.map(x=>`${x.best.txt}: ${etter(x.best.d)} (${qaPpKort(x.best.v)} prosentpoeng)`).join('\n')
+    +`\n${qaStor(navn)} er ${pctTxt(tableP, zone.mat)} nå.`;
+  const htmlFor = rows=>qaMedHtml(textFor(rows), qaRaderHtml({
+    intro:`${head.replace(/:\n$/, '.')} Nå: ${pctTxt(tableP, zone.mat)}`, n:1, kol:'8.5em', kolMobil:'6.4em', lange:true,
+    rader: rows.map(x=>({navn:`${x.m.home} mot ${x.m.away}`, meta:qaKampNaar(x.m),
+      celler:[{hva:x.best.hva, hvaKort:x.best.hvaKort, p:etter(x.best.d), pp:qaPpKort(x.best.v), tone:'godt'}]}))}));
   const results = await runZoneTasks(payload, tasks, (id, res)=>{
     const rows = rowsFrom(res);
-    if(onPartial && rows.length) onPartial(textFor(rows));
+    if(onPartial && rows.length) onPartial(htmlFor(rows));
   }, 'heie');
   const rows = rowsFrom(results);
   if(!rows.length){
     return `Ingen av de andre kampene i runde ${nr.round} endrer ${navn} med minst to prosentpoeng, uansett hvordan de ender. Den er ${pctTxt(tableP, zone.mat)} nå.`;
   }
-  return textFor(rows);
+  return htmlFor(rows);
 }
 
 // ---- Hva betydde forrige kamp for laget? Tar lagets siste kamp med
@@ -5997,10 +6059,25 @@ async function qaKeyRound(){
   // Fire avsnitt: kampen, hva den betyr for laget det står mest på spill for
   // (med utfallslinjene), de andre lagene, og de like viktige kampene. Sju
   // setninger i én blokk var tungt.
-  return `Rundens viktigste kamp er ${navn(b)} ${formatDateNo(m.date)}. Den påvirker ${b.topZone.strid} mest.\n\n`+
+  const forst = `Rundens viktigste kamp er ${navn(b)} ${formatDateNo(m.date)}. Den påvirker ${b.topZone.strid} mest.`;
+  const tekst = `${forst}\n\n`+
     `Kampen betyr mest for ${hoved.team}${spiller?'':', som ikke spiller selv'}:\n`+
     `${rader}\n`+
     `${qaStor(hz.chance)} er ${pctTxt(hoved.now, hoved.mat)} før kampen.`+andreTxt+tett;
+  // Visningen (5.10.2026): teksten, så kampen som én rad med de tre
+  // utfallene for laget den betyr mest for (som "Hva betyr neste kamp"),
+  // så resten av teksten.
+  const rekke = spiller ? (m.home===hoved.team ? ['H','U','B'] : ['B','U','H']) : ['H','U','B'];
+  const kortEtikett = {H: spiller ? etikett.H : `${shortTeam(m.home)}-seier`, U:'Uavgjort', B: spiller ? etikett.B : `${shortTeam(m.away)}-seier`};
+  const celle = key => { const d = hoved.d[key]||0, v = vistPp(hoved.now, hoved.now+d), bra = hz.dir==='front' ? v>0 : v<0;
+    return {hva:etikett[key], hvaKort:kortEtikett[key], p:pctTxt(clamp(hoved.now+d), hoved.mat),
+      pp: Math.abs(v)<2 ? 'endrer lite' : qaPpKort(v), tone: Math.abs(v)<2 ? '' : bra ? 'godt' : 'darlig'}; };
+  const html = qaTekstHtml(forst)+qaRaderHtml({
+    intro:`Kampen betyr mest for ${hoved.team}${spiller?'':', som ikke spiller selv'}. ${qaStor(hz.chance)} nå: ${pctTxt(hoved.now, hoved.mat)}`,
+    n:3, kol:'5.6em', kolMobil:'4.6em', lange:true,
+    rader:[{navn:`${m.home} mot ${m.away}`, meta:qaKampNaar(m), celler:rekke.map(celle)}]})+
+    ((andreTxt+tett).trim() ? qaTekstHtml((andreTxt+tett).trim()) : '');
+  return qaMedHtml(tekst, html);
 }
 
 // ---- Hvor kan laget realistisk ende? Bare fordelingen over sluttplasser fra
@@ -6115,17 +6192,25 @@ function qaLuck(){
     const [lh,la]=baseRate(m.home,m.away), o=outcome(lh,la);
     expected[m.home]+=3*o.H+o.U; expected[m.away]+=3*o.B+o.U;
   });
-  const rows = TEAMS.map(t=>({team:t, diff: actual[t]-expected[t]}));
+  const rows = TEAMS.map(t=>({team:t, faktisk:actual[t], forventet:expected[t], diff: actual[t]-expected[t]}));
   rows.sort((a,b)=>b.diff-a.diff);
   const lucky=rows.slice(0,3), unlucky=rows.slice(-3).reverse();
-  const fmt = r => `${r.team} ${fmtSigned(r.diff)}`;
+  const tall = v => Math.abs(v).toFixed(1).replace('.',',');
   // Forbeholdet -- at modellen er tilpasset på de samme kampene, og at
   // avvikene derfor trolig er litt for SMÅ -- står i "Om modellen". Her ville
   // det gjentatt "de samme kampene" to ganger og tynget svaret.
   const over = lucky[0], under = unlucky[0];
-  return `${over.team} har tatt ${fmtSigned(over.diff).replace('+','')} poeng mer enn modellen forventet, mest i ligaen. `+
-    `${under.team} ligger ${fmtSigned(-under.diff).replace('+','')} poeng under forventning. `+
+  const flere = (xs, tegn) => xs.length ? ` Deretter følger ${joinNames(xs.map(r=>`${r.team} (${tegn}${tall(r.diff)})`))}.` : '';
+  const tekst = `${over.team} har tatt ${tall(over.diff)} poeng mer enn modellen forventet, mest i ligaen.${flere(lucky.slice(1), '+')} `+
+    `${under.team} ligger ${tall(under.diff)} poeng under forventning.${flere(unlucky.slice(1), '−')} `+
     `Det er forskjellen mellom faktiske og forventede poeng.`;
+  // Visningen (5.10.2026): tre lag på hver side, med poeng, forventede poeng
+  // og forskjellen i faste kolonner, så de er lette å sammenligne.
+  const rad = r => ({navn:r.team, valgt:r.team===SELECTED_TEAM, celler:[{p:String(r.faktisk)}, {p:tall(r.forventet)},
+    {p:`${r.diff>=0?'+':'−'}${tall(r.diff)}`}]});
+  return qaMedHtml(tekst, qaRaderHtml({intro:'Poeng mot det modellen forventet ut fra kampene som er spilt.', n:3, kol:'5.4em', kolMobil:'4.4em',
+    hode:['Poeng', 'Forventet', 'Forskjell'],
+    rader:[{gruppe:'Flere poeng enn forventet'}, ...lucky.map(rad), {gruppe:'Færre poeng enn forventet'}, ...unlucky.map(rad)]}));
 }
 
 // ---- Spørsmål 1, 2, 3, 6, 7: krever simulering, kjøres i Workeren (se
@@ -6471,6 +6556,59 @@ const qaEsc = t => String(t).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>
 // fortsatt ren tekst, som "Kopier tekst" kopierer, og HTML-en for akkurat den
 // teksten legges her. runQaQuestion viser HTML-en når teksten er den samme.
 const QA_HTML = new Map();
+// Hardt mellomrom mellom tall og enhet, og etter "Nå:", så de aldri brytes.
+const qaNb = h => h.replace(/(&lt;1|&gt;99|\d+) %/g, '$1\u00a0%').replace(/\b(\d+) (poeng\w*)/g, '$1\u00a0$2').replace(/([Nn]å): /g, '$1:\u00a0').replace(/\b(topp|Topp) (\d)/g, '$1\u00a0$2');
+// Tekst til HTML: hardt mellomrom, tallet etter "Nå:" i halvfet, og
+// nøkkeltallet (første gang det står) i halvfet. Bare nøkkeltallet som svarer
+// på spørsmålet uthevers, ikke alle tall (5.10.2026).
+function qaTekstInline(t, nokkel){
+  let h = qaNb(qaEsc(t)).replace(/\b([Tt]opp)\u00a0(\d+)-([a-zæøå]+)/g, '<span class="nw">$1\u00a0$2-$3</span>').replace(/([Nn]å):\u00a0((?:&lt;1|&gt;99|\d+)\u00a0%)/, '$1:\u00a0<b class="qn">$2</b>');
+  if(nokkel){
+    const k = qaNb(qaEsc(nokkel)), i = h.indexOf(k);
+    if(i>=0) h = h.slice(0,i)+`<b class="qn">${k}</b>`+h.slice(i+k.length);
+  }
+  return h;
+}
+// Et svar som tekst: avsnitt (tom linje), linjeskift der teksten har dem.
+const qaTekstHtml = (t, nokkel) => `<div class="qt">${qaTekstInline(t, nokkel).split(/\n\n+/).map(a=>`<p>${a.replace(/\n/g,'<br>')}</p>`).join('')}</div>`;
+// Nøkkeltallet i de forklarende svarene: det som svarer på spørsmålet.
+const QA_NOKKEL = {
+  why: (t, sporsmal) => (sporsmal.match(/(?:<1|>99|\d+) %/) || [])[0],
+  howto: t => (t.match(/\d+ av de \d+ poengene|alle de \d+ poengene/) || [])[0],
+  lastmatch: t => (t.match(/\d+ prosentpoeng/) || [])[0],
+  range: t => (t.match(/mellom \d+\. og \d+\. plass|på \d+\. plass/) || [])[0],
+  decided: t => (t.match(/runde \d+/) || [])[0],
+};
+// En liste med rader: {intro, hode (kolonneoverskrifter, når de gjelder alle
+// radene), rader: [{navn, meta, valgt, celler: [{hva, p, pp, tone}]} eller
+// {gruppe}], n (antall kolonner), kol og kolMobil (bredden på PC og på smal
+// skjerm), lange (navnet får egen linje på smal skjerm; med tre kolonner også
+// den dempede linja, og tallene står på linja under), etter}. Cellen kan ha
+// hvaKort, etiketten med korte lagnavn på smal skjerm.
+function qaRaderHtml({intro, hode, rader, n=2, kol, kolMobil, lange=false, etter}){
+  // Etiketten med lagnavn har en kort form på smal skjerm ("KBK vinner"), som kamplisten.
+  const hva = c => c.hvaKort && c.hvaKort!==c.hva
+    ? `<span class="qr-l">${qaEsc(c.hva)}</span><span class="qr-k">${qaEsc(c.hvaKort)}</span>` : qaEsc(c.hva);
+  // Rader med bare navn og tall (ingen dempet linje, ingen etiketter) står tettere.
+  const ekte = rader.filter(r=>!r.gruppe);
+  const tett = ekte.every(r=>!r.meta && r.celler.every(c=>!c.hva));
+  const celle = c => `<div class="qr-celle${c.tone ? ' '+c.tone : ''}">`+
+    (c.hva ? `<span class="qr-hva">${hva(c)}</span>` : '')+
+    `<span class="qr-tall"><span class="qr-p">${qaEsc(c.p).replace(/ %/g,'\u00a0%')}</span>`+
+    (c.pp!=null ? `<span class="qr-pp">${qaEsc(c.pp)}</span>` : '')+`</span></div>`;
+  const rad = r => r.gruppe ? `<li class="qr-gruppe">${qaEsc(r.gruppe)}</li>`
+    : `<li class="qr-rad${r.valgt ? ' valgt' : ''}"><b class="qr-navn">${qaEsc(r.navn)}</b>`+
+      (r.meta ? `<span class="qr-meta">${qaEsc(r.meta)}</span>` : '')+r.celler.map(celle).join('')+'</li>';
+  return `<div class="qr${lange ? ' lange' : ''}${lange && n>=3 ? ' stablet' : ''}${tett ? ' tett' : ''}" style="--qr-n:${n}${kol ? `;--qr-kol:${kol}` : ''}${kolMobil ? `;--qr-kol-m:${kolMobil}` : ''}">`+
+    (intro ? `<p class="qr-intro">${qaTekstInline(intro)}</p>` : '')+
+    (hode ? `<div class="qr-hode" aria-hidden="true">${hode.map(h=>`<span>${qaEsc(h)}</span>`).join('')}</div>` : '')+
+    `<ul class="qr-liste">${rader.map(rad).join('')}</ul>`+
+    (etter ? `<p class="qr-etter">${qaTekstInline(etter)}</p>` : '')+'</div>';
+}
+// Endringen i prosentpoeng som den står i en celle: "+31", "−13".
+const qaPpKort = v => `${v>0?'+':'−'}${Math.abs(v)}`;
+// "Runde 26, onsdag 14. okt"
+const qaKampNaar = m => { const d = new Date(m.date+'T12:00:00Z'); return `Runde ${m.round}, ${NO_WEEKDAY[d.getUTCDay()]} ${shortDateNo(m.date)}`; };
 function qaMedHtml(tekst, html){
   QA_HTML.set(tekst, html);
   if(QA_HTML.size>40) QA_HTML.delete(QA_HTML.keys().next().value);
@@ -6948,26 +7086,19 @@ async function qaKeyMatches(team){
     const egen = x.m.home===team || x.m.away===team;
     const celler = x.outs.map(o=>{
       const v = vistPp(tableP, tableP+o.d);
-      return {hva: egen ? (o.who===team ? 'Seier' : 'Tap') : `${o.who} vinner`,
+      return {hva: egen ? (o.who===team ? 'Seier' : 'Tap') : `${o.who} vinner`, hvaKort: egen ? null : `${shortTeam(o.who)} vinner`,
               p: pctTxt(Math.min(1,Math.max(0,tableP+o.d)), zone.mat), v, lite: Math.abs(v)<2,
               godt: egen ? o.who===team : (iSone ? o.d>0 : o.d<0)};
     }).sort((a,b)=>(b.godt?1:0)-(a.godt?1:0));
-    const d = new Date(x.m.date+'T12:00:00Z');
-    return {kamp:`${x.m.home} mot ${x.m.away}`, egen, celler,
-            naar:`runde ${x.m.round}, ${NO_WEEKDAY[d.getUTCDay()]} ${shortDateNo(x.m.date)}`};
+    return {kamp:`${x.m.home} mot ${x.m.away}`, egen, celler, naar:qaKampNaar(x.m).replace(/^R/, 'r')};
   });
   const ppTekst = v => `${v>0?'+':'−'}${Math.abs(v)}`;
   const intro = `Disse kampene påvirker ${qaGen(team)} ${qaSjanseUbest(zone)} mest. Nå: ${pctTxt(tableP, zone.mat)}`;
   // Teksten er det "Kopier tekst" kopierer (og det testene leser).
   const tekst = intro+'\n\n'+rader.map(r=>`${r.kamp}, ${r.naar}\n`+
     r.celler.map(c=>`${c.hva}: ${c.p} (${c.lite ? 'endrer lite' : ppTekst(c.v)+' prosentpoeng'})`).join('\n')).join('\n\n');
-  const nb = t => qaEsc(t).replace(/ %/g, '\u00a0%');
-  const celle = c => `<div class="km-utfall${c.lite ? '' : c.godt ? ' godt' : ' darlig'}">`+
-    `<span class="km-hva">${qaEsc(c.hva)}</span><span class="km-p">${nb(c.p)}</span>`+
-    `<span class="km-pp">${c.lite ? 'endrer lite' : ppTekst(c.v)}</span></div>`;
-  const html = `<div class="km"><p class="km-intro">${nb(intro)}</p><ul class="km-liste">`+
-    rader.map(r=>`<li class="km-rad"><b class="km-kamp">${qaEsc(r.kamp)}</b><span class="km-naar">${qaEsc(qaStor(r.naar))}</span>`+
-      r.celler.map(celle).join('')+'</li>').join('')+'</ul></div>';
+  const html = qaRaderHtml({intro, n:2, kol:'7.5em', kolMobil:'5.6em', lange:true, rader: rader.map(r=>({navn:r.kamp, meta:qaStor(r.naar),
+    celler: r.celler.map(c=>({hva:c.hva, hvaKort:c.hvaKort, p:c.p, pp: c.lite ? 'endrer lite' : qaPpKort(c.v), tone: c.lite ? '' : c.godt ? 'godt' : 'darlig'}))}))});
   return qaMedHtml(tekst, html);
 }
 
@@ -7219,8 +7350,8 @@ async function runQaQuestion(id, keepZoneOverride, noScroll){
       if(myRequestId !== qaRequestSeq || qaAnswerKey!==qaStateKey()) return;
       const el = document.getElementById('qaAnswer');
       if(!el) return;
-      el.className = 'qa-answer';
-      el.textContent = partial;
+      el.className = 'qa-answer rik';
+      el.innerHTML = QA_HTML.get(partial) || qaTekstHtml(partial);
       const more = document.createElement('div');
       more.className = 'qa-more';
       more.innerHTML = '<span class="qa-spinner"></span> Regner resten…';
@@ -7238,7 +7369,9 @@ async function runQaQuestion(id, keepZoneOverride, noScroll){
   if(!doneEl) return;
   doneEl.className = 'qa-answer';
   doneEl.textContent = text;
-  const html = QA_HTML.get(text);
+  // Svar med egen visning (QA_HTML), ellers teksten som avsnitt med samme
+  // typografi og nøkkeltallet i halvfet (5.10.2026).
+  const html = QA_HTML.get(text) || (text!==QA_FEIL ? qaTekstHtml(text, (QA_NOKKEL[id] || (()=>null))(text, q.label(SELECTED_TEAM))) : null);
   if(html){ doneEl.innerHTML = html; doneEl.classList.add('rik'); }
   // "Kopier tekst" nederst i svaret (se kopiTekstSvar). Et feilsvar får ingen
   // knapp.
