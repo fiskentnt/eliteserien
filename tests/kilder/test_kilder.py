@@ -2658,6 +2658,69 @@ sjekk("OBOS: i runde 24 er bare Sogndal-Raufoss merket flyttet, og datospennet r
       [f"{m['home']}-{m['away']}" for m in _r24["matches"] if m.get("moved")] == ["Sogndal-Raufoss"] and _r24["when"] == "2. til 5. okt",
       str((_r24["when"], [m for m in _r24["matches"] if m.get("moved")])))
 
+print("\n=== Kort eller full kontroll før push (tests/for_push_valg.py, 4.10.2026) ===")
+# Kort kontroll bare når full for_push var grønn på samme kode før rebasen og
+# origin bare endret filer på den eksplisitte listen over genererte filer.
+sys.path.insert(0, str(ROT / "tests"))
+import for_push_valg as _fpv
+_gen = ["obos/data/grunnlag.json", "elo-test/emodell/lastmatch.json", "data/hentelogg/2026-10/x.jsonl", "data/highlightly-bruk/2026-10-04/1.json"]
+sjekk("listen: grunnlag, lastmatch, panelfilene og logg-/tellermappene er genererte",
+      all(_fpv.generert(f) for f in _gen + ["elo-test/emodell/paneler_grunnlag.json", "data/oddspapi-bruk/2026-10/x.json"]))
+sjekk("listen: matches.json, fixtures.json, prekick.json, odds, kode og nesten-like stier er ikke på den (ingen mønstre)",
+      not any(_fpv.generert(f) for f in ["obos/data/matches.json", "eliteserien/data/fixtures.json", "obos/data/prekick.json",
+              "obos/data/odds_upcoming.json", "scripts/update_data.py", "eliteserien/index.html", "data/hentelogg",
+              "eliteserien/data/grunnlag.json.bak", "x/eliteserien/data/grunnlag.json", "elo-test/emodell/model.json"]))
+_B = _fpv.beslutt
+sjekk("bare genererte filer fra origin og ingen egne endringer: kort", _B(True, True, True, _gen[:2], _gen)[0] == "kort")
+sjekk("ingenting endret siden den grønne kjøringen: kort", _B(True, True, True, [], [])[0] == "kort")
+for _navn, _a, _ventet_ord in [
+        ("ingen lagret grønn kjøring", (False, True, True, [], []), "ingen grønn"),
+        ("endringer som ikke er committet", (True, False, True, [], []), "ikke er committet"),
+        ("ikke rebasert på origin/main", (True, True, False, [], []), "ikke rebasert"),
+        ("egen endring siden den grønne kjøringen", (True, True, True, ["eliteserien/index.html"], []), "ikke fra origin: eliteserien/index.html"),
+        ("matches.json fra origin", (True, True, True, ["obos/data/matches.json"], ["obos/data/matches.json"]), "obos/data/matches.json"),
+        ("fixtures.json fra origin", (True, True, True, [], ["eliteserien/data/fixtures.json", "obos/data/grunnlag.json"]), "fixtures.json"),
+        ("ukjent fil fra origin", (True, True, True, [], ["noe/nytt.txt"]), "noe/nytt.txt")]:
+    _v, _g = _B(*_a)
+    sjekk(f"{_navn}: full ({_g[:70]})", _v == "full" and _ventet_ord in _g, _g)
+# Et ekte forløp i et midlertidig repo: grønn kjøring, origin endrer en
+# generert fil, rebase: kort. Origin endrer matches.json: full.
+import tempfile as _tf6, subprocess as _sp6, shutil as _sh6
+_rot6 = Path(_tf6.mkdtemp())
+def _g6(cwd, *a):
+    return _sp6.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=cwd, capture_output=True, text=True, check=True).stdout.strip()
+try:
+    _g6(_rot6, "init", "-q", "--bare", "-b", "main", "origin.git")
+    _g6(_rot6, "clone", "-q", "origin.git", "her"); _her = _rot6 / "her"
+    (_her / "obos" / "data").mkdir(parents=True)
+    for _f in ("grunnlag.json", "matches.json"):
+        (_her / "obos" / "data" / _f).write_text("{}\n")
+    _g6(_her, "add", "-A"); _g6(_her, "commit", "-qm", "start"); _g6(_her, "branch", "-M", "main"); _g6(_her, "push", "-q", "origin", "main")
+    (_her / "kode.js").write_text("// min endring\n"); _g6(_her, "add", "-A"); _g6(_her, "commit", "-qm", "min")
+    _g6(_her, "fetch", "-q")
+    (Path(_g6(_her, "rev-parse", "--absolute-git-dir")) / "for-push-gronn").write_text(json.dumps({"commit": _g6(_her, "rev-parse", "HEAD"), "tid": "nå"}))
+    _g6(_rot6, "clone", "-q", "origin.git", "bot"); _bot = _rot6 / "bot"
+    def _bot_endrer(f, innhold):
+        (_bot / f).write_text(innhold); _g6(_bot, "add", "-A"); _g6(_bot, "commit", "-qm", f"bot {f}"); _g6(_bot, "push", "-q", "origin", "HEAD:main")
+    def _kjor6():
+        _g6(_her, "fetch", "-q"); _g6(_her, "rebase", "-q", "origin/main")
+        r = _sp6.run([sys.executable, str(ROT / "tests" / "for_push_valg.py")], cwd=_her, capture_output=True, text=True)
+        return r.stdout
+    _bot_endrer("obos/data/grunnlag.json", '{"ny": 1}\n')
+    _u1 = _kjor6()
+    sjekk("ekte rebase: origin endret bare obos/data/grunnlag.json, koden er den samme: VALG=kort, og utskriften sier hvorfor",
+          _u1.strip().endswith("VALG=kort") and "full for_push sist grønn på" in _u1 and "bot obos/data/grunnlag.json" in _u1
+          and "generert  obos/data/grunnlag.json" in _u1, _u1)
+    _bot_endrer("obos/data/matches.json", '{"ny": 2}\n')
+    _u2 = _kjor6()
+    sjekk("ekte rebase: origin endret obos/data/matches.json: VALG=full, med filen som grunn",
+          _u2.strip().endswith("VALG=full") and "IKKE PÅ LISTEN  obos/data/matches.json" in _u2, _u2)
+    (_her / "kode.js").write_text("// endret igjen\n")
+    _u3 = _sp6.run([sys.executable, str(ROT / "tests" / "for_push_valg.py")], cwd=_her, capture_output=True, text=True).stdout
+    sjekk("endring som ikke er committet: VALG=full", _u3.strip().endswith("VALG=full") and "ikke er committet" in _u3, _u3)
+finally:
+    _sh6.rmtree(_rot6, ignore_errors=True)
+
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.
 _vern.sjekk_urort(sjekk)

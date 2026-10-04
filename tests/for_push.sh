@@ -14,6 +14,12 @@
 #      (etter regresjonen, ikke samtidig: begge bruker nettleseren)
 # Til slutt: commitene som pushes (git log origin/main..HEAD).
 #
+# KORT KONTROLL (4.10.2026): failsafe, kontroll.py, kontroll_paneler.py og
+# regression.js --bare del, bare når full for_push var grønn på samme kode
+# før rebasen og origin bare endret filer på listen over genererte filer
+# (tests/for_push_valg.py, som skriver ut hvorfor). Ellers full. En grønn full
+# kjøring lagrer commiten i .git/for-push-gronn. FOR_PUSH_FULL=1 gir alltid full.
+#
 # Python: .venv/bin/python3 hvis den finnes (numpy og scipy), ellers python3.
 # puppeteer-core: NODE_PATH hvis satt, ellers hentes den til en midlertidig
 # mappe, som i tests/run.sh.
@@ -36,6 +42,7 @@ fi
 LOGG="${TMPDIR:-/tmp}/tabellkalkulator-for-push"
 mkdir -p "$LOGG"
 start=$(date +%s)
+git fetch -q 2>/dev/null || true
 steg() {
   local navn="$1"; shift
   local fil="$LOGG/$(echo "$navn" | tr ' /' '__').log"
@@ -53,6 +60,22 @@ steg() {
   fi
 }
 
+# Kort eller full (se over).
+VALG_UT=$("$PY" tests/for_push_valg.py)
+echo "$VALG_UT" | grep -v '^VALG='
+echo
+VALG=$(echo "$VALG_UT" | grep '^VALG=' | cut -d= -f2)
+if [ "$VALG" = "kort" ] && [ -z "${FOR_PUSH_FULL:-}" ]; then
+  steg "failsafe"                 "$PY" tests/failsafe.py
+  steg "kontroll.py (ELO)"        "$PY" elo-test/scripts/kontroll.py
+  steg "kontroll_paneler.py"      "$PY" elo-test/scripts/kontroll_paneler.py
+  steg "regression.js --bare del" node tests/regression.js --bare del
+  echo
+  echo "Kort kontroll grønn på $(( ($(date +%s) - start) / 60 )) min. Dette pushes:"
+  git log --oneline origin/main..HEAD
+  exit 0
+fi
+
 steg "failsafe"                 "$PY" tests/failsafe.py
 steg "kildetestene"             "$PY" tests/kilder/test_kilder.py
 steg "sesongskiftetestene"      "$PY" tests/kilder/test_sesongskifte.py
@@ -66,3 +89,11 @@ echo
 echo "Alt grønt på $(( ($(date +%s) - start) / 60 )) min. Dette pushes:"
 git fetch -q 2>/dev/null || true
 git log --oneline origin/main..HEAD
+# Den grønne kjøringen gjelder commiten bare når alt var committet.
+if [ -z "$(git status --porcelain --untracked-files=no)" ]; then
+  printf '{"commit": "%s", "origin": "%s", "tid": "%s"}\n' "$(git rev-parse HEAD)" "$(git rev-parse origin/main)" "$(date '+%Y-%m-%d %H:%M')" \
+    > "$(git rev-parse --git-dir)/for-push-gronn"
+  echo "(lagret: full for_push grønn på $(git rev-parse --short HEAD))"
+else
+  echo "(ikke lagret som grønn: endringer som ikke er committet)"
+fi
