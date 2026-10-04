@@ -3,6 +3,23 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## "Hvilke kamper betyr mest": rader og faste kolonner (4.10.2026)
+
+Svaret vises som én rad per kamp: kampnavnet i halvfet, "Runde 26, onsdag
+14. okt" dempet under, og to faste kolonner til høyre. Over tallene står
+"Seier" og "Tap" i liten, dempet tekst (eller "Kristiansund vinner" når laget
+ikke spiller selv; det gode utfallet til venstre). Ingen kolonneoverskrift:
+den ble feil over "Kristiansund vinner". Sannsynligheten stor, endringen
+mindre under, bare tallet ("+27"); i "Kopier tekst": "Seier: 83 % (+27
+prosentpoeng)", aldri bare "poeng". Diskret grønn og rød tekst,
+tabular-nums, hardt mellomrom. Under to prosentpoeng: "endrer lite", uten
+farge. Ingen stolpe foreløpig.
+
+run() gir fortsatt ren tekst (det "Kopier tekst" kopierer og testene leser);
+HTML-en for samme tekst ligger i QA_HTML (qaMedHtml), og runQaQuestion viser
+den. Tester: regression.js, gruppen "Hvilke kamper betyr mest" (--bare
+betyrmest).
+
 ## Kamper til gode i svarene (4.10.2026)
 
 Når en tekst på siden sammenligner poengene til to lag som har spilt ulikt

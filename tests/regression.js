@@ -3374,6 +3374,111 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await sp.close();
     }
   };
+  // ---- "Hvilke kamper betyr mest": visningen (4.10.2026) ----
+  // Én rad per kamp med tynn linje mellom, to faste kolonner til høyre (Seier
+  // og Tap, eller "X vinner" når laget ikke spiller), sannsynligheten først og
+  // endringen i pp under, tabular-nums og hardt mellomrom, diskret grønn og
+  // rød. Ingen parentesform, ingen "Tallet i parentes", aldri "poeng".
+  // "Kopier tekst" kopierer ren tekst med de samme tallene. På mobil får
+  // kampnavnet hele bredden, og kolonnene står fortsatt rett under hverandre.
+  //   node tests/regression.js --bare betyrmest
+  const kamperBetyrMest = async () => {
+    setGroup('Hvilke kamper betyr mest: rader og faste kolonner');
+    for (const [w, h, form] of [[1400, 900, 'PC'], [390, 844, 'mobil']]) {
+      const pg = await open(w, h, base);
+      await settle(pg);
+      await pg.evaluate(() => { window.__kopi = []; navigator.clipboard.writeText = async t => { window.__kopi.push(t); };
+        const sel = document.getElementById('teamSelect'); sel.value = 'Viking'; sel.dispatchEvent(new Event('change')); qaSetOpen(true); });
+      await settle(pg);
+      const svar = async blandet => pg.evaluate(async blandet => {
+        const orig = runMatchImpactAsync;
+        if (blandet) {
+          // Lagets egen kamp størst, så to kamper der andre lag spiller, med
+          // ett utfall under to prosentpoeng ("endrer lite").
+          const {openMatches} = buildQaOpen();
+          runMatchImpactAsync = async (team, zone, specs) => {
+            let egne = 0, andre = 0;
+            return {results: specs.map(c => { const m = openMatches[c.idx], egen = m.home === team || m.away === team;
+              const d = egen ? (egne++ === 0 ? 0.15 : 0.01) : (andre++ < 2 ? 0.12 : 0.005);
+              const hjemme = !egen || m.home === team;   // lagets egen seier gir +d
+              return {idx: c.idx, baseProb: 0.4, homeProb: 0.4 + (hjemme ? d : -d), awayProb: egen ? 0.4 + (hjemme ? -d : d) : 0.398,
+                drawProb: 0.4, diff: 2 * d}; })};
+          };
+        }
+        try {
+          await runQaQuestion('keymatches', false, true);
+          const a = document.getElementById('qaAnswer'), km = a.querySelector('.km');
+          if (!km) return {feil: a.textContent.slice(0, 200)};
+          const farge = v => { const d = document.createElement('span'); d.style.color = `var(${v})`; document.body.appendChild(d);
+            const c = getComputedStyle(d).color; d.remove(); return c; };
+          const rader = [...km.querySelectorAll('.km-rad')].map(li => {
+            const kamp = li.querySelector('.km-kamp').getBoundingClientRect();
+            return {kamp: li.querySelector('.km-kamp').textContent, kampBunn: Math.round(kamp.bottom), kampHoyre: Math.round(kamp.right),
+              naar: li.querySelector('.km-naar').textContent, linje: getComputedStyle(li).borderBottomStyle,
+              celler: [...li.querySelectorAll('.km-utfall')].map(c => { const b = c.getBoundingClientRect(), p = c.querySelector('.km-p');
+                return {hoyre: Math.round(b.right), venstre: Math.round(b.left), topp: Math.round(b.top), klasse: c.className,
+                  hva: (c.querySelector('.km-hva') || {}).textContent || null, p: p.textContent, pp: c.querySelector('.km-pp').textContent,
+                  hvaOver: !!c.querySelector('.km-hva') && c.querySelector('.km-hva').getBoundingClientRect().bottom <= p.getBoundingClientRect().top + 1,
+                  farge: getComputedStyle(p).color, pStr: parseFloat(getComputedStyle(p).fontSize), ppStr: parseFloat(getComputedStyle(c.querySelector('.km-pp')).fontSize),
+                  tall: getComputedStyle(c).fontVariantNumeric}; })};
+          });
+          const kopi = a.querySelector('[data-kopi="tekst"]'); const n = window.__kopi.length; kopi.click();
+          await new Promise(r => setTimeout(r, 200));
+          return {rader, hode: [...km.querySelectorAll('.km-hode span')].map(x => x.textContent), intro: km.querySelector('.km-intro').textContent,
+            synlig: a.textContent, tekst: qaKopi && qaKopi.svar, kopiert: window.__kopi[n] || '', gronn: farge('--eu-text'), rod: farge('--accent-text')};
+        } finally { runMatchImpactAsync = orig; }
+      }, blandet);
+      for (const [navn, blandet] of [['ekte', false], ['blandet', true]]) {
+        const r = await svar(blandet);
+        if (r.feil) { check(`${form}, ${navn}: svaret har radvisningen`, false, r.feil); continue; }
+        const blokker = r.tekst.split('\n\n'), kamper = blokker.slice(1);
+        const NB = '\u00a0';
+        console.log(`      ${form}, ${navn}: ${r.rader.map(x => `${x.kamp} | ${x.celler.map(c => `${c.hva || ''} ${c.p} ${c.pp}`).join(' | ')}`).join(' ; ')}`);
+        check(`${form}, ${navn}: én rad per kamp, like mange som i teksten (${r.rader.length})`,
+          r.rader.length >= 1 && r.rader.length <= 3 && r.rader.length === kamper.length && r.rader.every(x => x.celler.length === 2), JSON.stringify(r.rader).slice(0, 300));
+        check(`${form}, ${navn}: innledningen "Disse kampene påvirker ... mest. Nå: N %"`,
+          /^Disse kampene påvirker .+ mest\. Nå: (\d+|<1|>99)\u00a0%$/.test(r.intro) && blokker[0] === r.intro.replace(/\u00a0/g, ' '), r.intro);
+        check(`${form}, ${navn}: kolonnene står rett under hverandre (samme høyrekant i alle radene)`,
+          [0, 1].every(k => new Set(r.rader.map(x => x.celler[k].hoyre)).size === 1) && r.rader[0].celler[0].hoyre < r.rader[0].celler[1].venstre, JSON.stringify(r.rader.map(x => x.celler.map(c => [c.venstre, c.hoyre]))));
+        check(`${form}, ${navn}: tynn linje mellom radene`, r.rader.slice(0, -1).every(x => x.linje === 'solid'), r.rader.map(x => x.linje).join(','));
+        check(`${form}, ${navn}: kampnavnet får plassen (${form === 'PC' ? 'til venstre for tallene' : 'egen linje over tallene'})`,
+          r.rader.every(x => form === 'PC' ? x.kampHoyre <= x.celler[0].venstre : x.kampBunn <= Math.min(...x.celler.map(c => c.topp)) + 1), JSON.stringify(r.rader.map(x => [x.kampHoyre, x.kampBunn, x.celler[0].venstre, x.celler[0].topp])));
+        check(`${form}, ${navn}: runde og dato under navnet ("Runde 26, onsdag 14. okt")`,
+          r.rader.every(x => /^Runde \d+, (mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag) \d{1,2}\. [a-zæøå]{3}$/.test(x.naar)), r.rader.map(x => x.naar).join(' | '));
+        // Samme tall i visningen og i teksten.
+        const like = r.rader.every((x, i) => { const linjer = kamper[i].split('\n');
+          return linjer[0] === `${x.kamp}, ${x.naar.charAt(0).toLowerCase()}${x.naar.slice(1)}` && x.celler.every((c, k) => {
+            return linjer[k + 1] === `${c.hva}: ${c.p.replace(NB, ' ')} (${c.pp === 'endrer lite' ? 'endrer lite' : c.pp + ' prosentpoeng'})`; }); });
+        check(`${form}, ${navn}: samme tall i visningen og i teksten "Kopier tekst" gir`, like, `${r.tekst} || ${JSON.stringify(r.rader.map(x => x.celler.map(c => [c.hva, c.p, c.pp])))}`);
+        check(`${form}, ${navn}: ingen parentesform, ingen "Tallet i parentes", verken "poeng" eller "pp" i visningen`,
+          !/\(\s*[+−-]?\d/.test(r.synlig) && !/parentes/.test(r.synlig + r.tekst) && !/poeng|\bpp\b/i.test(r.synlig), r.synlig.slice(0, 300));
+        check(`${form}, ${navn}: teksten sier "(+31 prosentpoeng)", aldri bare "poeng"`,
+          /\([+−]\d+ prosentpoeng\)/.test(r.tekst) && !/(?<!prosent)poeng/.test(r.tekst) && !/\bpp\b/.test(r.tekst), r.tekst);
+        check(`${form}, ${navn}: endringen er bare tallet ("+31", "−13"), hardt mellomrom mellom tall og %, tabular-nums`,
+          r.rader.every(x => x.celler.every(c => /^(\d+|<1|>99) %$/.test(c.p) && (c.pp === 'endrer lite' || /^[+−]\d+$/.test(c.pp)) && /tabular-nums/.test(c.tall))), JSON.stringify(r.rader.map(x => x.celler.map(c => [c.p, c.pp, c.tall]))));
+        check(`${form}, ${navn}: ingen kolonneoverskrift; "Seier" og "Tap" (eller "X vinner") står over tallene i hver celle`,
+          r.hode.length === 0 && r.rader.every(x => x.celler.every(c => c.hva && c.hvaOver))
+          && r.rader.every(x => { const h = x.celler.map(c => c.hva); return h.join() === 'Seier,Tap' || h.every(t => / vinner$/.test(t)); }),
+          JSON.stringify(r.rader.map(x => x.celler.map(c => [c.hva, c.hvaOver]))));
+        check(`${form}, ${navn}: sannsynligheten større enn endringen under`, r.rader.every(x => x.celler.every(c => c.pStr >= c.ppStr + 3)), '');
+        check(`${form}, ${navn}: grønn tone på det gode utfallet, rød på det dårlige, ingen farge på "endrer lite"`,
+          r.rader.every(x => x.celler.every(c => /godt/.test(c.klasse) ? c.farge === r.gronn : /darlig/.test(c.klasse) ? c.farge === r.rod
+            : c.pp === 'endrer lite' && c.farge !== r.gronn && c.farge !== r.rod)) && r.rader.every(x => /godt/.test(x.celler[0].klasse) || x.celler[0].pp === 'endrer lite'),
+          JSON.stringify(r.rader.map(x => x.celler.map(c => [c.klasse, c.farge]))));
+        check(`${form}, ${navn}: "Kopier tekst" kopierer ren tekst med de samme tallene`,
+          r.kopiert.includes(r.tekst) && !/[<>]/.test(r.kopiert) && !/\u00a0/.test(r.tekst), r.kopiert.slice(0, 200));
+        if (blandet) {
+          const egne = r.rader.filter(x => x.celler.map(c => c.hva).join() === 'Seier,Tap'), andre = r.rader.filter(x => x.celler.every(c => / vinner$/.test(c.hva || '')));
+          check(`${form}: lagets egen kamp med "Seier" og "Tap", andre lags kamper med "X vinner", i samme kolonner`,
+            egne.length === 1 && andre.length === 2
+            && andre.every(x => x.celler.map(c => c.hva.replace(/ vinner$/, '')).sort().join() === x.kamp.split(' mot ').sort().join()), JSON.stringify(r.rader.map(x => [x.kamp, x.celler.map(c => c.hva)])));
+          check(`${form}: et utfall under to prosentpoeng står som "endrer lite", uten farge`,
+            andre.every(x => x.celler.some(c => c.pp === 'endrer lite' && !/godt|darlig/.test(c.klasse))) && /\(endrer lite\)/.test(r.tekst), r.tekst);
+        }
+      }
+      await pg.close();
+    }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -3402,7 +3507,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'nederst') await nederstPaaSiden();
       else if (BARE === 'justering') await poengjusteringer();
       else if (BARE === 'tilgode') await kamperTilGode();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode)`);
+      else if (BARE === 'betyrmest') await kamperBetyrMest();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -6893,6 +6999,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await hvaMaaTekst();
 
     await kamperTilGode();
+    await kamperBetyrMest();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen
@@ -6934,10 +7041,11 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
                 if (m[1] === '<1 %' && N > 0 && !eks.tilUnder1) eks.tilUnder1 = s;
                 if (naa[1] === '>99 %' && a < 100 && !eks.fraOver99) eks.fraOver99 = s;
               }
-              const km = await qaKeyMatches(t), naa2 = km.match(new RegExp(`Den er ${PCT} nå`));
-              if (naa2) for (const m of km.matchAll(new RegExp(`${PCT} \\(([+-]?\\d+)\\)`, 'g'))) {
+              // Teksten (det "Kopier tekst" gir): "Nå: 56 %" og "Seier: 83 % (+27 prosentpoeng)".
+              const km = await qaKeyMatches(t), naa2 = km.match(new RegExp(`Nå: ${PCT}`));
+              if (naa2) for (const m of km.matchAll(new RegExp(`${PCT} \\(([+−]\\d+) prosentpoeng\\)`, 'g'))) {
                 n++; if (key === bakre) nBakre++;
-                if (tall(m[1]) - tall(naa2[1]) !== parseInt(m[2], 10)) brudd.push(`kamper som betyr mest (${key}): ${m[1]} − ${naa2[1]} ≠ ${m[2]}`);
+                if (tall(m[1]) - tall(naa2[1]) !== parseInt(m[2].replace('−', '-'), 10)) brudd.push(`kamper som betyr mest (${key}): ${m[1]} − ${naa2[1]} ≠ ${m[2]}`);
                 if (key === bakre && !eks.kmBakre && tall(naa2[1]) !== tall(m[1])) eks.kmBakre = km.split('\n').filter(Boolean).slice(0, 2).join(' | ');
               }
               // Heie på: differansen står alene. Fremre: "+N prosentpoeng",

@@ -904,6 +904,34 @@
   @media (pointer:coarse){.kopi{padding:8px 10px}}
   .qa-answer{scroll-margin-bottom:16px;margin:0 0 12px;padding:12px 14px;background:var(--input-bg);border-radius:8px;font-size:14px;line-height:1.55;color:var(--ink);white-space:pre-line;overflow-wrap:break-word}
   .qa-more{display:flex;align-items:center;gap:9px;margin-top:8px;color:var(--muted)}
+  /* "Hvilke kamper betyr mest" (4.10.2026): én rad per kamp, tynn linje
+     mellom, to faste kolonner til høyre (Seier og Tap) så tallene står rett
+     under hverandre. Sannsynligheten først, endringen mindre under. Diskret
+     grønn og rød tekst, ingen flater. På smal skjerm får kampnavnet hele
+     bredden, og runde og dato står til venstre for tallene på linja under. */
+  .qa-answer.rik{white-space:normal}
+  .km{--km-kol:7.5em}
+  .km-intro{margin:0 0 10px}
+  .km-rad{display:grid;grid-template-columns:minmax(0,1fr) var(--km-kol) var(--km-kol);column-gap:12px}
+  .km-liste{list-style:none;margin:0;padding:0;border-top:1px solid var(--line)}
+  .km-rad{grid-template-areas:"kamp seier tap" "naar seier tap";grid-template-rows:auto 1fr;align-items:start;padding:9px 0;border-bottom:1px solid var(--line-soft)}
+  .km-rad:last-child{border-bottom:none}
+  .km-kamp{grid-area:kamp;font-weight:700;line-height:1.35}
+  .km-naar{grid-area:naar;font-size:12px;color:var(--muted);line-height:1.35;margin-top:2px}
+  .km-utfall{display:flex;flex-direction:column;align-items:flex-end;text-align:right;font-variant-numeric:tabular-nums;line-height:1.2}
+  .km-utfall:nth-of-type(1){grid-area:seier}
+  .km-utfall:nth-of-type(2){grid-area:tap}
+  .km-hva{font-size:11px;color:var(--muted);line-height:1.25;margin-bottom:2px}
+  .km-p{font-size:17px;font-weight:700;white-space:nowrap}
+  .km-pp{font-size:12px;font-weight:600;white-space:nowrap;margin-top:2px;color:var(--muted)}
+  .km-utfall.godt .km-p,.km-utfall.godt .km-pp{color:var(--eu-text)}
+  .km-utfall.darlig .km-p,.km-utfall.darlig .km-pp{color:var(--accent-text)}
+  .km-utfall.godt .km-pp,.km-utfall.darlig .km-pp{opacity:.85}
+  @media (max-width:520px){
+    .km{--km-kol:5em}
+    .km-rad{grid-template-areas:"kamp kamp kamp" "naar seier tap";grid-template-rows:auto auto;row-gap:2px}
+    .km-naar{margin-top:3px}
+  }
   .qa-answer.loading{color:var(--muted);display:flex;align-items:center;gap:9px}
   .qa-spinner{width:14px;height:14px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--muted);animation:qa-spin .7s linear infinite;flex:none}
   @keyframes qa-spin{to{transform:rotate(360deg)}}
