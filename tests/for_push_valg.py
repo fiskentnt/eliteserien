@@ -58,7 +58,9 @@ def beslutt(har_gronn, ren, rebasert, endret_siden, fra_origin):
 
 
 def git(*a):
-    return subprocess.run(["git", *a], capture_output=True, text=True).stdout.strip()
+    # core.quotepath=off: filnavn med æøå ("Odds_nær_avspark") kommer som de
+    # er, ikke i anførselstegn med oktale koder, så listen kjenner dem igjen.
+    return subprocess.run(["git", "-c", "core.quotepath=off", *a], capture_output=True, text=True).stdout.strip()
 
 
 def main():

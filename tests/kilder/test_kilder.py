@@ -2819,10 +2819,13 @@ try:
         r = _sp6.run([sys.executable, str(ROT / "tests" / "for_push_valg.py")], cwd=_her, capture_output=True, text=True)
         return r.stdout
     _bot_endrer("obos/data/grunnlag.json", '{"ny": 1}\n')
+    # En hentelogg med æ i navnet (jobben «Odds nær avspark»): også generert.
+    (_bot / "data" / "hentelogg" / "2026-10").mkdir(parents=True, exist_ok=True)
+    _bot_endrer("data/hentelogg/2026-10/2026-10-04-Odds_nær_avspark-1-1.jsonl", "{}\n")
     _u1 = _kjor6()
     sjekk("ekte rebase: origin endret bare obos/data/grunnlag.json, koden er den samme: VALG=kort, og utskriften sier hvorfor",
           _u1.strip().endswith("VALG=kort") and "full for_push sist grønn på" in _u1 and "bot obos/data/grunnlag.json" in _u1
-          and "generert  obos/data/grunnlag.json" in _u1, _u1)
+          and "generert  obos/data/grunnlag.json" in _u1 and "generert  data/hentelogg/2026-10/2026-10-04-Odds_nær_avspark-1-1.jsonl" in _u1, _u1)
     _bot_endrer("obos/data/matches.json", '{"ny": 2}\n')
     _u2 = _kjor6()
     sjekk("ekte rebase: origin endret obos/data/matches.json: VALG=full, med filen som grunn",
