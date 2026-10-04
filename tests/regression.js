@@ -3260,18 +3260,21 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       check('ingen "som har" etter en plass, ingen "kamp mer"', Object.values(felt).concat(Object.values(konk)).every(v => !/plassen, som har|plass, som har|kamp(er)? mer/.test(v)), vis(felt));
       const ig = n => `${n} kamper igjen`;
       check('konkurrenten, like mange kamper: ingen merknad', konk.like.startsWith(`${A} leder ${B} 30-28 i poeng, med ${ig(N - 24)}.`) && !/til gode/.test(konk.like), konk.like);
-      check('konkurrenten, laget bak har kampen til gode: "Sogndal ligger bak Sandnes Ulf 23-25 i poeng, men har en kamp til gode. De har 7 kamper igjen."',
-        konk.selvBakFaerre.startsWith(`${A} ligger bak ${B} 23-25 i poeng, men har en kamp til gode. De har ${ig(N - 23)}.`), konk.selvBakFaerre);
+      check('konkurrenten, laget bak har kampen til gode: "Sogndal ligger bak Sandnes Ulf 23-25 i poeng, men har en kamp til gode. Sogndal har 7 kamper igjen."',
+        konk.selvBakFaerre.startsWith(`${A} ligger bak ${B} 23-25 i poeng, men har en kamp til gode. ${A} har ${ig(N - 23)}.`), konk.selvBakFaerre);
       check('konkurrenten, laget leder og konkurrenten har kampen til gode',
         konk.lederAndreFaerre.startsWith(`${A} leder ${B} 30-28 i poeng, med ${ig(N - 24)}. ${B} har en kamp til gode.`), konk.lederAndreFaerre);
       check('konkurrenten, laget leder og har selv kampen til gode',
-        konk.lederSelvFaerre.startsWith(`${A} leder ${B} 30-28 i poeng og har i tillegg en kamp til gode. De har ${ig(N - 23)}.`), konk.lederSelvFaerre);
+        konk.lederSelvFaerre.startsWith(`${A} leder ${B} 30-28 i poeng og har i tillegg en kamp til gode. ${A} har ${ig(N - 23)}.`), konk.lederSelvFaerre);
       check('konkurrenten, laget ligger bak og konkurrenten har kampen til gode',
         konk.bakAndreFaerre.startsWith(`${A} ligger bak ${B} 23-25 i poeng, med ${ig(N - 24)}. ${B} har i tillegg en kamp til gode.`), konk.bakAndreFaerre);
       check('konkurrenten, likt på poeng, begge veier',
         konk.liktAndreFaerre.startsWith(`${A} står likt med ${B} på 25 poeng, med ${ig(N - 24)}. ${B} har en kamp til gode.`)
-        && konk.liktSelvFaerre.startsWith(`${A} står likt med ${B} på 25 poeng, men har en kamp til gode. De har ${ig(N - 23)}.`), vis({a: konk.liktAndreFaerre, b: konk.liktSelvFaerre}));
-      check('konkurrenten, to kamper', konk.toKamper.startsWith(`${A} ligger bak ${B} 23-25 i poeng, men har to kamper til gode. De har ${ig(N - 22)}.`), konk.toKamper);
+        && konk.liktSelvFaerre.startsWith(`${A} står likt med ${B} på 25 poeng, men har en kamp til gode. ${A} har ${ig(N - 23)}.`), vis({a: konk.liktAndreFaerre, b: konk.liktSelvFaerre}));
+      check('konkurrenten, to kamper', konk.toKamper.startsWith(`${A} ligger bak ${B} 23-25 i poeng, men har to kamper til gode. ${A} har ${ig(N - 22)}.`), konk.toKamper);
+      check('"kamper igjen" sies med lagnavnet, aldri "De har" (setningen før nevner begge lagene)',
+        Object.values(konk).every(v => !/\bDe har\b/.test(v)) && Object.entries(konk).filter(([k]) => /SelvFaerre|toKamper/.test(k))
+          .every(([, v]) => new RegExp(`\\. ${A} har \\d+ kamper igjen\\.`).test(v)), vis(konk));
       check('"kamp til gode" og "kamper igjen" står aldri i samme setning',
         Object.values(konk).every(v => v.split('. ').every(set => !(/til gode/.test(set) && /igjen/.test(set)))), vis(konk));
       check('Om modellen, like mange kamper: som før',

@@ -17,8 +17,8 @@ veien og nærmeste konkurrent) og eksempelet i "Om modellen" (Eliteserien).
 - Laget foran har kampen til gode: "... Strømsgodset har i tillegg en kamp
   til gode ..."; fra laget bak: "..., men har en kamp til gode."
 - Konkurrentsvaret: "Sogndal ligger bak Sandnes Ulf 23-25 i poeng, men har en
-  kamp til gode. De har 7 kamper igjen." (til gode og kamper igjen i hver sin
-  setning)
+  kamp til gode. Sogndal har 7 kamper igjen." (til gode og kamper igjen i hver
+  sin setning, med lagnavnet: setningen før nevner begge lagene)
 - Ikke endret: "rett bak/rett foran" (plassering), snittpoeng i simuleringene,
   "kan ende foran eller likt" (sluttplassering), "taper poeng".
 

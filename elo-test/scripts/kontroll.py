@@ -462,7 +462,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # 4.10.2026) er flettet inn uendret, og det samme er utformingen av flyttede
 # kamper (gul, stiplet boks, merknad og "Simuler kampen", samme dag i én gruppe).
 # Kamper til gode i svarene og eksempelet i "Om modellen" (kampTilGode,
-# 4.10.2026) er flettet inn uendret.
+# 4.10.2026) er flettet inn uendret, også rettelsen "Sogndal har 7 kamper
+# igjen" i stedet for "De har".
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -478,7 +479,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "a16496d952d4c6aa1e6cb8814b975cca1a9962d138cbebff45ca62db1f505670"
+BASE_SHA = "75228b0feede56dc204e615e392274fd725ca878e35eedf1ff7311f01640527b"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

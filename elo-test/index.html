@@ -6393,7 +6393,8 @@ async function qaWhy(team){
       part1 = `${team} ${rel}${hvor}. ${field.nearest} har ${row.pts<field.nearestPts ? 'i tillegg ' : ''}${tgTxt}. ${styrke}`;
   } else if(rival){
     // Ulikt antall kamper: "kamp til gode" og "kamper igjen" i hver sin
-    // setning (4.10.2026).
+    // setning (4.10.2026), med lagnavnet, ikke "De": setningen før nevner
+    // begge lagene.
     const tg = kampTilGode(row, rivalRow), igjen = kampTxt(row.left), tgTxt = tg && tilGodeTxt(tg.n);
     const st = `${row.pts}-${rivalRow.pts} i poeng`;
     if(!tg) part1 = row.pts===rivalRow.pts
@@ -6402,10 +6403,10 @@ async function qaWhy(team){
         ? `${team} leder ${rival.t} ${st}, med ${igjen} igjen.`
         : `${team} ligger bak ${rival.t} ${st}, med ${igjen} igjen.`;
     else if(tg.lag===team) part1 = row.pts===rivalRow.pts
-      ? `${team} står likt med ${rival.t} på ${poengTxt(row.pts)}, men har ${tgTxt}. De har ${igjen} igjen.`
+      ? `${team} står likt med ${rival.t} på ${poengTxt(row.pts)}, men har ${tgTxt}. ${team} har ${igjen} igjen.`
       : row.pts>rivalRow.pts
-        ? `${team} leder ${rival.t} ${st} og har i tillegg ${tgTxt}. De har ${igjen} igjen.`
-        : `${team} ligger bak ${rival.t} ${st}, men har ${tgTxt}. De har ${igjen} igjen.`;
+        ? `${team} leder ${rival.t} ${st} og har i tillegg ${tgTxt}. ${team} har ${igjen} igjen.`
+        : `${team} ligger bak ${rival.t} ${st}, men har ${tgTxt}. ${team} har ${igjen} igjen.`;
     else part1 = row.pts===rivalRow.pts
       ? `${team} står likt med ${rival.t} på ${poengTxt(row.pts)}, med ${igjen} igjen. ${rival.t} har ${tgTxt}.`
       : row.pts>rivalRow.pts
