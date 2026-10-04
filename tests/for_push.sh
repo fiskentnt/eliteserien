@@ -73,6 +73,15 @@ if [ "$VALG" = "kort" ] && [ -z "${FOR_PUSH_FULL:-}" ]; then
   echo
   echo "Kort kontroll grønn på $(( ($(date +%s) - start) / 60 )) min. Dette pushes:"
   git log --oneline origin/main..HEAD
+  # Koden er den samme som i den grønne fulle kjøringen, pluss genererte filer
+  # fra origin: den rebaserte commiten lagres som grønn. Ellers sto den gamle
+  # (fra før rebasen) igjen, og neste valg viste den pushede commiten som om
+  # den kom fra origin.
+  if [ -z "$(git status --porcelain --untracked-files=no)" ]; then
+    printf '{"commit": "%s", "origin": "%s", "tid": "%s", "kort": true}\n' "$(git rev-parse HEAD)" "$(git rev-parse origin/main)" "$(date '+%Y-%m-%d %H:%M')" \
+      > "$(git rev-parse --git-dir)/for-push-gronn"
+    echo "(lagret: $(git rev-parse --short HEAD) har samme kode som den grønne kjøringen)"
+  fi
   exit 0
 fi
 
