@@ -3411,7 +3411,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
               const d = egen ? (egne++ === 0 ? 0.15 : 0.01) : (andre++ < 2 ? 0.12 : 0.005);
               const hjemme = !egen || m.home === team;   // lagets egen seier gir +d
               return {idx: c.idx, baseProb: 0.4, homeProb: 0.4 + (hjemme ? d : -d), awayProb: egen ? 0.4 + (hjemme ? -d : d) : 0.398,
-                drawProb: 0.4, diff: 2 * d}; })};
+                drawProb: 0.4 - d / 4, diff: 2 * d}; })};
           };
         }
         try {
@@ -3446,14 +3446,17 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const NB = '\u00a0';
         console.log(`      ${form}, ${navn}: ${r.rader.map(x => `${x.kamp} | ${x.celler.map(c => `${c.hva || ''} ${c.p} ${c.pp}`).join(' | ')}`).join(' ; ')}`);
         check(`${form}, ${navn}: én rad per kamp, like mange som i teksten (${r.rader.length})`,
-          r.rader.length >= 1 && r.rader.length <= 3 && r.rader.length === kamper.length && r.rader.every(x => x.celler.length === 2), JSON.stringify(r.rader).slice(0, 300));
+          r.rader.length >= 1 && r.rader.length <= 3 && r.rader.length === kamper.length && r.rader.every(x => x.celler.length === 3), JSON.stringify(r.rader).slice(0, 300));
         check(`${form}, ${navn}: innledningen "Disse kampene påvirker ... mest. Nå: N %"`,
           /^Disse kampene påvirker .+ mest\. Nå:\u00a0(\d+|<1|>99)\u00a0%$/.test(r.intro) && blokker[0] === r.intro.replace(/\u00a0/g, ' '), r.intro);
         check(`${form}, ${navn}: kolonnene står rett under hverandre (samme høyrekant i alle radene)`,
-          [0, 1].every(k => new Set(r.rader.map(x => x.celler[k].hoyre)).size === 1) && r.rader[0].celler[0].hoyre < r.rader[0].celler[1].venstre, JSON.stringify(r.rader.map(x => x.celler.map(c => [c.venstre, c.hoyre]))));
+          [0, 1, 2].every(k => new Set(r.rader.map(x => x.celler[k].hoyre)).size === 1) && r.rader[0].celler[0].hoyre < r.rader[0].celler[1].venstre
+          && r.rader[0].celler[1].hoyre < r.rader[0].celler[2].venstre, JSON.stringify(r.rader.map(x => x.celler.map(c => [c.venstre, c.hoyre]))));
         check(`${form}, ${navn}: tynn linje mellom radene`, r.rader.slice(0, -1).every(x => x.linje === 'solid'), r.rader.map(x => x.linje).join(','));
-        check(`${form}, ${navn}: kampnavnet får plassen (${form === 'PC' ? 'til venstre for tallene' : 'egen linje over tallene'})`,
-          r.rader.every(x => form === 'PC' ? x.kampHoyre <= x.celler[0].venstre : x.kampBunn <= Math.min(...x.celler.map(c => c.topp)) + 1), JSON.stringify(r.rader.map(x => [x.kampHoyre, x.kampBunn, x.celler[0].venstre, x.celler[0].topp])));
+        // Tre kolonner (5.10.2026): kampen og datoen har full bredde og tallene
+        // står under, også på PC (svaret er rundt 460 piksler bredt der).
+        check(`${form}, ${navn}: kampnavnet får plassen (egen linje over tallene, på én linje)`,
+          r.rader.every(x => x.kampBunn <= Math.min(...x.celler.map(c => c.topp)) + 1), JSON.stringify(r.rader.map(x => [x.kampHoyre, x.kampBunn, x.celler[0].venstre, x.celler[0].topp])));
         check(`${form}, ${navn}: runde og dato under navnet ("Runde 26, onsdag 14. okt")`,
           r.rader.every(x => /^Runde \d+, (mandag|tirsdag|onsdag|torsdag|fredag|lørdag|søndag) \d{1,2}\. [a-zæøå]{3}$/.test(x.naar)), r.rader.map(x => x.naar).join(' | '));
         // Samme tall i visningen og i teksten.
@@ -3471,24 +3474,27 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           r.rader.every(x => x.celler.every(c => /^(\d+|<1|>99)\u00a0%$/.test(c.p) && /^([+−]\d+|±0)$/.test(c.pp) && /tabular-nums/.test(c.tall))), JSON.stringify(r.rader.map(x => x.celler.map(c => [c.p, c.pp, c.tall]))));
         check(`${form}, ${navn}: ingen kolonneoverskrift; "Seier" og "Tap" (eller "X vinner") står over tallene i hver celle`,
           r.hode.length === 0 && r.rader.every(x => x.celler.every(c => c.hva && c.hvaOver))
-          && r.rader.every(x => { const h = x.celler.map(c => c.hva); return h.join() === 'Seier,Tap' || h.every(t => / vinner$/.test(t)); }),
+          && r.rader.every(x => { const h = x.celler.map(c => c.hva); return h.join() === 'Seier,Uavgjort,Tap' || (/ vinner$/.test(h[0]) && h[1] === 'Uavgjort' && / vinner$/.test(h[2])); }),
           JSON.stringify(r.rader.map(x => x.celler.map(c => [c.hva, c.hvaOver]))));
         check(`${form}, ${navn}: sannsynligheten større enn endringen, og endringen på samme linje ("53 %  +31")`,
           r.rader.every(x => x.celler.every(c => c.pStr >= c.ppStr + 3 && c.ppSammeLinje)),
           JSON.stringify(r.rader.map(x => x.celler.map(c => [c.pp, c.ppSammeLinje]))));
         check(`${form}, ${navn}: grønn tone på det gode utfallet, rød på det dårlige, ingen farge under to prosentpoeng`,
           r.rader.every(x => x.celler.every(c => /godt/.test(c.klasse) ? c.farge === r.gronn : /darlig/.test(c.klasse) ? c.farge === r.rod
-            : /^(±0|[+−]1)$/.test(c.pp) && c.farge !== r.gronn && c.farge !== r.rod)) && r.rader.every(x => /godt/.test(x.celler[0].klasse) || /^(±0|[+−]1)$/.test(x.celler[0].pp)),
+            : /^(±0|[+−]1)$/.test(c.pp) && c.farge !== r.gronn && c.farge !== r.rod))
+          && r.rader.filter(x => x.celler[0].hva === 'Seier').every(x => (/godt/.test(x.celler[0].klasse) || /^(±0|[+−]1)$/.test(x.celler[0].pp))
+            && (/darlig/.test(x.celler[2].klasse) || /^(±0|[+−]1)$/.test(x.celler[2].pp))),
           JSON.stringify(r.rader.map(x => x.celler.map(c => [c.klasse, c.farge]))));
         check(`${form}, ${navn}: "Kopier tekst" kopierer ren tekst med de samme tallene`,
           r.kopiert.includes(r.tekst) && !/[<>]/.test(r.kopiert) && !/\u00a0/.test(r.tekst), r.kopiert.slice(0, 200));
         if (blandet) {
-          const egne = r.rader.filter(x => x.celler.map(c => c.hva).join() === 'Seier,Tap'), andre = r.rader.filter(x => x.celler.every(c => / vinner$/.test(c.hva || '')));
-          check(`${form}: lagets egen kamp med "Seier" og "Tap", andre lags kamper med "X vinner", i samme kolonner`,
+          const egne = r.rader.filter(x => x.celler.map(c => c.hva).join() === 'Seier,Uavgjort,Tap');
+          const andre = r.rader.filter(x => / vinner$/.test(x.celler[0].hva || '') && x.celler[1].hva === 'Uavgjort' && / vinner$/.test(x.celler[2].hva || ''));
+          check(`${form}: lagets egen kamp med "Seier", "Uavgjort" og "Tap", andre lags kamper med "A vinner", "Uavgjort", "B vinner" i kampens rekkefølge`,
             egne.length === 1 && andre.length === 2
-            && andre.every(x => x.celler.map(c => c.hva.replace(/ vinner$/, '')).sort().join() === x.kamp.split(' mot ').sort().join()), JSON.stringify(r.rader.map(x => [x.kamp, x.celler.map(c => c.hva)])));
+            && andre.every(x => [x.celler[0].hva, x.celler[2].hva].map(h => h.replace(/ vinner$/, '')).join(' mot ') === x.kamp), JSON.stringify(r.rader.map(x => [x.kamp, x.celler.map(c => c.hva)])));
           check(`${form}: ${form === 'mobil' ? 'korte lagnavn i etiketten ("KBK vinner"), som i kamplisten' : 'hele lagnavnet i etiketten ("Kristiansund vinner")'}`,
-            andre.every(x => x.celler.every(c => c.hvaSynlig === (form === 'mobil' ? `${r.kort[c.hva.replace(/ vinner$/, '')]} vinner` : c.hva))),
+            andre.every(x => x.celler.every(c => c.hvaSynlig === (c.hva === 'Uavgjort' ? 'Uavgjort' : form === 'mobil' ? `${r.kort[c.hva.replace(/ vinner$/, '')]} vinner` : c.hva))),
             JSON.stringify(andre.map(x => x.celler.map(c => c.hvaSynlig))));
           check(`${form}: et utfall under to prosentpoeng står med tallet ("+1", "±0") på samme linje, uten farge, og som "endrer lite" i teksten`,
             andre.every(x => x.celler.some(c => /^(±0|[+−]1)$/.test(c.pp) && c.ppSammeLinje && !/godt|darlig/.test(c.klasse))) && /\(endrer lite\)/.test(r.tekst),
@@ -3497,6 +3503,80 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       }
       await pg.close();
     }
+  };
+  // ---- "Hvilke kamper betyr mest": uavgjort, og tillegget i grunnlagsfilen (5.10.2026) ----
+  // Tre utfall per kamp. Uavgjort er det samme som i "Hva betyr neste kamp"
+  // for samme kamp (samme frø og N), med og uten scenario. Grunnlagsfilen
+  // har uavgjort bare for kampene "Hvilke kamper betyr mest?" velger for
+  // minst ett lag (tillegget), ikke for alle åpne kamper: samme svar, mindre
+  // fil. Det holder fordi en oppgave regnet alene gir nøyaktig det samme som i
+  // den samlede regningen, og med tillegget kommer svaret helt fra filen.
+  //   node tests/regression.js --bare uavgjort
+  const uavgjortBetyrMest = async () => {
+    setGroup('Hvilke kamper betyr mest: uavgjort, og tillegget i grunnlagsfilen');
+    const forrige = GRUNNLAG_MODUS;
+    if (!live) GRUNNLAG_MODUS = {innhold: {eliteserien: await grunnlagFilFor('eliteserien')}};
+    try {
+      const pg = await open(1400, 900, base);
+      await pg.waitForFunction('GRUNNLAG_STATUS!=="venter"', {timeout: 60000});
+      const r = await pg.evaluate(async () => {
+        if (GRUNNLAG_STATUS !== 'i bruk') return {status: GRUNNLAG_STATUS};
+        // Filen uten tillegget (som før 5.10.2026): da kommer svaret ikke helt fra filen.
+        const fil = {...GRUNNLAG.fil, tillegg: undefined}, medU = new Set(fil.oppgaver.filter(o => /:U$/.test(o[0])).map(o => o[1]));
+        await grunnlagMottatt(fil);
+        const ekte0 = grunnlagSvar; let bomUten = 0;
+        grunnlagSvar = (p, ts, g) => { const x = ekte0(p, ts, g); if (!x && !g.startsWith('grunnlag')) bomUten++; return x; };
+        try { for (const lag of TEAMS) await qaKeyMatches(lag); } finally { grunnlagSvar = ekte0; }
+        // En uavgjort-oppgave regnet alene er den samme som i filen.
+        const enU = fil.oppgaver.find(o => /:U$/.test(o[0]));
+        const alene = await grunnlagTilleggRegn([enU[1]]);
+        const likAlene = JSON.stringify(alene.utfall[enU[0]]) === JSON.stringify(fil.utfall[enU[0]]);
+        // Tillegget: kampene svaret velger, uavgjort for dem som mangler det.
+        const valgt = await grunnlagKeymatchKamper(), nye = valgt.filter(i => !medU.has(i));
+        const t = await grunnlagTilleggRegn(nye);
+        await grunnlagMottatt({...fil, tillegg: [...(fil.tillegg || []), ...t.oppgaver], utfall: {...fil.utfall, ...t.utfall}});
+        const status = GRUNNLAG_STATUS;
+        const ekte = grunnlagSvar; let bom = 0;
+        grunnlagSvar = (p, ts, g) => { const x = ekte(p, ts, g); if (!x && !g.startsWith('grunnlag')) bom++; return x; };
+        const svar = {}, t0 = performance.now();
+        try { for (const lag of TEAMS) svar[lag] = await qaKeyMatches(lag); } finally { grunnlagSvar = ekte; }
+        const ms = performance.now() - t0;
+        // Uavgjort i "betyr mest" og i "neste kamp" for samme kamp.
+        const uavgjort = (tekst, kamp) => { const b = tekst.split('\n\n').find(x => x.startsWith(kamp + ','));
+          return b ? (b.split('\n').find(l => l.startsWith('Uavgjort: ')) || '').replace('Uavgjort: ', '') : null; };
+        const sammeSom = async () => { for (const lag of TEAMS) {
+          const nm = await qaNextMatch(lag), km = await qaKeyMatches(lag);
+          const neste = matches.filter(m => m.hg == null && (m.home === lag || m.away === lag)).sort((a, b) => a.date.localeCompare(b.date))[0];
+          const kamp = neste && `${neste.home} mot ${neste.away}`, u = kamp && uavgjort(km, kamp);
+          if (!u) continue;
+          const nmU = (nm.match(/Uavgjort gir ((?:\d+|<1|>99) %)/) || [])[1];
+          return {lag, kamp, km: u, nm: nmU}; } return null; };
+        const fraFil = await sammeSom();
+        // Med et scenario regnes begge på siden, med samme frø og N.
+        const m = matches.filter(x => x.hg == null).at(-1); setMatch(m, 1, 1, false); mcStraks = true; render();
+        const vent = f => new Promise(ok => { const i = setInterval(() => { if (f()) { clearInterval(i); ok(); } }, 50); });
+        await vent(() => lastMCFinal && lastMCScenarioKey === qaScenarioKey());
+        const medScenario = await sammeSom();
+        setMatch(m, null, null, false); render();
+        return {status, likAlene, enU: enU[0], valgt: valgt.length, nye: nye.length, bom, bomUten, ms: Math.round(ms), fraFil, medScenario,
+          tre: Object.values(svar).filter(x => x.startsWith('Disse kampene')).every(x => x.split('\n\n').slice(1).every(b => {
+            const l = b.split('\n'); return l.length === 4 && l[2].startsWith('Uavgjort: '); })),
+          antallSvar: Object.values(svar).filter(x => x.startsWith('Disse kampene')).length};
+      });
+      if (r.status && !r.likAlene && r.likAlene !== false) { check('grunnlagsfilen er i bruk', false, r.status); }
+      else {
+        check(`en uavgjort-oppgave regnet alene gir nøyaktig samme fordeling som i filen (${r.enU})`, r.likAlene === true, JSON.stringify(r));
+        check(`uten tillegget kommer svaret ikke helt fra filen (${r.bomUten} kall regnet på siden)`, r.bomUten > 0, JSON.stringify(r));
+        check(`tillegget: uavgjort for ${r.nye} av ${r.valgt} kamper svaret velger, og siden godtar filen med tillegget`, r.status === 'i bruk' && r.valgt > 0 && r.nye > 0, JSON.stringify(r));
+        check(`med tillegget kommer "Hvilke kamper betyr mest?" helt fra filen for alle lagene (${r.ms} ms for 16 lag)`, r.bom === 0, JSON.stringify(r));
+        check(`tre utfall per kamp i teksten: seier, uavgjort og tap (${r.antallSvar} svar)`, r.tre && r.antallSvar >= 8, JSON.stringify(r));
+        check(`uavgjort er det samme som i "Hva betyr neste kamp" (${r.fraFil && `${r.fraFil.lag}, ${r.fraFil.kamp}: ${r.fraFil.km}`})`,
+          !!r.fraFil && r.fraFil.km.startsWith(r.fraFil.nm + ' '), JSON.stringify(r.fraFil));
+        check(`og med et scenario, regnet på siden (${r.medScenario && `${r.medScenario.lag}: ${r.medScenario.km}`})`,
+          !!r.medScenario && r.medScenario.km.startsWith(r.medScenario.nm + ' '), JSON.stringify(r.medScenario));
+      }
+      await pg.close();
+    } finally { GRUNNLAG_MODUS = forrige; }
   };
   // ---- Svarene i "Spør om tabellen": samme visuelle språk (5.10.2026) ----
   // Lister med kamper eller lag og tall får kompakte rader (.qr), de
@@ -3729,7 +3809,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'betyrmest') await kamperBetyrMest();
       else if (BARE === 'rulling') await knappenStaar();
       else if (BARE === 'svarstil') await svarstil();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil)`);
+      else if (BARE === 'uavgjort') await uavgjortBetyrMest();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -6752,28 +6833,34 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       // filens oppgaver med samme kamp og resultat, og frøet skal være filens.
       // Forrige kamp har sin egen utgangsstilling (over), som også skal være
       // filens. Testsiden har ikke forrige kamp i filen (grunnlagMedForrige):
-      // der skal filen heller ikke ha slike oppgaver.
+      // der skal filen heller ikke ha slike oppgaver. Unntak (5.10.2026):
+      // uavgjort i "Hvilke kamper betyr mest?" ligger i tillegget, som
+      // bestemmes av filens egne tall. Her gir den byttede poolen 0,5 for alt,
+      // så kampene svaret velger er tilfeldige; at tillegget dekker dem, viser
+      // gruppen "uavgjort" med ekte tall.
       const dekn = await s1.evaluate(async () => {
         const {openMatches, scenarioKey} = buildQaOpen();
         const fil = new Map(grunnlagOppgaver(openMatches).map(t => [t.id, t])), seed = hashStr(scenarioKey + '|impact');
         const n = TEAMS.length, sett = [], ekte = runZoneTasks;
+        let iKey = false;
         runZoneTasks = (payload, tasks, onTask, gruppe) => {
-          tasks.forEach(t => sett.push({t, seed: payload.seed, gruppe}));
+          tasks.forEach(t => sett.push({t, seed: payload.seed, gruppe, tillegg: iKey && /:U$/.test(t.id)}));
           const res = {};
           tasks.forEach(t => { res[t.id] = {prob: 0.5, pos: new Array(n * n).fill(1 / n)}; });
           if (onTask) tasks.forEach(t => onTask(t.id, res));
           return Promise.resolve(res);
         };
         try {
-          for (const lag of TEAMS) { await qaCheerFor(lag); await qaNextMatch(lag); await qaKeyMatches(lag); if (grunnlagMedForrige()) await qaLastMatchData(lag); }
+          for (const lag of TEAMS) { await qaCheerFor(lag); await qaNextMatch(lag); iKey = true; await qaKeyMatches(lag); iKey = false; if (grunnlagMedForrige()) await qaLastMatchData(lag); }
           await qaKeyRoundData();
         } finally { runZoneTasks = ekte; }
-        const mangler = sett.filter(x => { const f = fil.get(x.t.id);
+        const mangler = sett.filter(x => { if (x.tillegg) return false; const f = fil.get(x.t.id);
           return !f || f.idx !== x.t.idx || JSON.stringify(f.score) !== JSON.stringify(x.t.score) || JSON.stringify(f.over) !== JSON.stringify(x.t.over); });
         return {antall: sett.length, grupper: [...new Set(sett.map(x => x.gruppe.split(':')[0]))].sort(),
                 mangler: mangler.slice(0, 5).map(x => `${x.gruppe} ${x.t.id} ${JSON.stringify(x.t.score)}`), nMangler: mangler.length,
                 feilFro: sett.filter(x => x.seed !== seed).length, oppgaver: fil.size, medOver: sett.filter(x => x.t.over).length,
-                medForrige: grunnlagMedForrige(), filForrige: [...fil.keys()].filter(id => id.startsWith('f:')).length};
+                medForrige: grunnlagMedForrige(), filForrige: [...fil.keys()].filter(id => id.startsWith('f:')).length,
+                tillegg: sett.filter(x => x.tillegg).length};
       });
       check(`${liga}: filens ${dekn.oppgaver} oppgaver dekker alle ${dekn.antall} oppgavene svarene sender (${dekn.medOver} med egen utgangsstilling), med samme frø`,
         dekn.antall > 100 && dekn.nMangler === 0 && dekn.feilFro === 0 && ['heie', 'impact', 'runde'].every(g => dekn.grupper.includes(g))
@@ -7230,6 +7317,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await kamperBetyrMest();
     await knappenStaar();
     await svarstil();
+    await uavgjortBetyrMest();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen

@@ -3,6 +3,28 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## "Hvilke kamper betyr mest": uavgjort, og tillegget i grunnlagsfilen (5.10.2026)
+
+Tre utfall per kamp: Seier, Uavgjort og Tap (eller "A vinner", "Uavgjort",
+"B vinner"). Uavgjort regnes i finregningen for de tre kampene, med samme frø
+og N som "Hva betyr neste kamp", så samme kamp gir samme tall. Grovsilingen
+er uendret (seier og tap), så de samme kampene velges. Kamp og dato har full
+bredde og utfallene står under, også på PC (svaret er rundt 460 piksler
+bredt).
+
+Grunnlagsfilen har uavgjort for kampene svaret velger for minst ett lag
+("tillegg", regnet av lag_grunnlag.js med filen i bruk), ikke for alle åpne
+kamper: samme svar, mindre fil. Målt 5.10.: Eliteserien 220 kB (gzip 84) mot
+261 kB (gzip 100) med alle, OBOS 166 kB (gzip 56) mot 181 kB (gzip 61).
+Tillegget tar rundt 20 % ekstra tid i grunnlagsjobben. Uten tillegget ville
+svaret uten scenario tatt 0,3 til 1,3 sekunder; med det er det øyeblikkelig.
+Med scenario: 0,1 til 0,5 sekunder mer enn før.
+
+Kopiering ved vanlig markering: mellomrom og linjeskift mellom delene i alle
+radvisningene, så teksten ikke limes sammen i Safari og Firefox.
+
+Tester: regression.js, gruppene "betyrmest", "svarstil" og "uavgjort".
+
 ## "Del bilde" av et scenario (5.10.2026)
 
 Med et scenario står "Scenario" i overskriften i stedet for datoen

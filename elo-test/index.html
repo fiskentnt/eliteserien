@@ -925,6 +925,10 @@
   .qr-gruppe{font:600 11px/1.2 var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.03em;padding:8px 0 3px;border-bottom:1px solid var(--line-soft)}
   .qr-gruppe:first-child{padding-top:4px}
   .qr-rad.valgt .qr-navn{color:var(--team-text,var(--ink))}
+  .qr.stablet-alltid .qr-navn,.qr.stablet-alltid .qr-meta{grid-column:1 / -1}
+  .qr.stablet-alltid .qr-meta{grid-row:2;margin-top:2px}
+  .qr.stablet-alltid .qr-celle{grid-row:3;margin-top:3px}
+  .qr.stablet-alltid .qr-rad{grid-template-rows:auto auto auto;row-gap:1px}
   .qr.tett .qr-rad{padding:3px 0}
   .qr.tett .qr-gruppe{padding:6px 0 2px}
   .qr.tett .qr-p{font-size:15px}
@@ -5613,6 +5617,15 @@ function qaZoneFromPos(pos, n, zone){
 //   '<i>:U'         uavgjort, for kampene i neste runde ("Heie på", "Rundens
 //                   viktigste kamp") og hvert lags neste kamp (kortet "Neste
 //                   kamp", "Hva betyr neste kamp?")
+//   tillegg         uavgjort ('<i>:U') for kampene "Hvilke kamper betyr mest?"
+//                   velger for minst ett lag (5.10.2026). Hvilke det er, står
+//                   først klart når resten av filen er regnet, så tillegget er
+//                   ikke med i avtrykket: lag_grunnlag.js regner det med filen
+//                   i bruk (grunnlagKeymatchKamper, grunnlagTilleggRegn). Det
+//                   er bestemt av de samme dataene, og hver oppgave slås opp
+//                   med id, kamp og resultat som de andre. Bare disse kampene,
+//                   ikke alle åpne: samme svar, mindre fil (Eliteserien 84
+//                   mot 100 kB komprimert).
 // Hver oppgave har hele plasseringsfordelingen for alle lag, som antall
 // sesonger. I tillegg har filen innsiktsblokken ('innsikt'): tellingene fra
 // runInsightsAlle for de samme sesongene som 'base', for alle lag og soner
@@ -5708,16 +5721,18 @@ function grunnlagUtenScenario(fn){
 async function grunnlagMottatt(g){
   if(!g){ GRUNNLAG_STATUS='mangler'; return; }
   const n = TEAMS.length;
+  const tillegg = g.tillegg==null ? [] : g.tillegg;
   const ok = g.versjon===GRUNNLAG_VERSJON && g.sesonger===GRUNNLAG_N && Array.isArray(g.lag) && g.lag.join('|')===TEAMS.join('|')
-    && Array.isArray(g.oppgaver) && g.utfall && Array.isArray(g.utfall.base)
-    && g.oppgaver.every(o=>Array.isArray(o) && Array.isArray(g.utfall[o[0]]) && g.utfall[o[0]].length===n*n);
+    && Array.isArray(g.oppgaver) && g.utfall && Array.isArray(g.utfall.base) && Array.isArray(tillegg)
+    && g.oppgaver.every(o=>Array.isArray(o) && Array.isArray(g.utfall[o[0]]) && g.utfall[o[0]].length===n*n)
+    && tillegg.every(o=>Array.isArray(o) && /^\d+:U$/.test(o[0]) && Array.isArray(g.utfall[o[0]]) && g.utfall[o[0]].length===n*n);
   const innsikt = ok ? grunnlagUtenScenario(()=>innsiktPakkUt(g.innsikt, g.sesonger)) : null;
   if(!ok || !innsikt){ GRUNNLAG_STATUS='ugyldig'; return; }
   const tekst = grunnlagUtenScenario(()=>JSON.stringify(grunnlagInndata(GRUNNLAG_N)));
   const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(tekst));
   const avtrykk = Array.from(new Uint8Array(b), x=>x.toString(16).padStart(2,'0')).join('');
   if(avtrykk!==g.fingeravtrykk){ GRUNNLAG_STATUS='feil avtrykk'; return; }
-  GRUNNLAG = {fil:g, n, N:g.sesonger, oppg:new Map(g.oppgaver.map(o=>[o[0], o])), seed:hashStr('|impact'), innsikt};
+  GRUNNLAG = {fil:g, n, N:g.sesonger, oppg:new Map([...g.oppgaver, ...tillegg].map(o=>[o[0], o])), seed:hashStr('|impact'), innsikt};
   GRUNNLAG_STATUS = 'i bruk';
   BASE_MC = grunnlagFordeling('base');
   if(grunnlagTomtScenario()) grunnlagTilTabell();
@@ -5781,6 +5796,38 @@ async function grunnlagRegn(N = GRUNNLAG_N){
   tasks.forEach(t=>{ utfall[t.id] = res[t.id].pos.map(p=>Math.round(p*N)); });
   return {versjon:GRUNNLAG_VERSJON, sesonger:N, fingeravtrykk:avtrykk, lag:TEAMS.slice(),
           oppgaver:tasks.map(t=>[t.id, t.idx, t.score]), utfall, innsikt};
+}
+// Tillegget i filen (5.10.2026): kampene "Hvilke kamper betyr mest?" velger
+// for hvert lag, med filen i bruk og uten scenario (grovsilingen kommer da fra
+// filen). Finregningen regnes ikke her, bare hvilke kamper den gjelder.
+async function grunnlagKeymatchKamper(){
+  if(!GRUNNLAG || !grunnlagTomtScenario()) throw new Error('grunnlagKeymatchKamper: filen er ikke i bruk');
+  const valgt = new Set(), ekte = runMatchImpactAsync;
+  runMatchImpactAsync = (team, zone, specs, key, base, gruppe) => {
+    if(!base.wantBaseline) return ekte(team, zone, specs, key, base, gruppe);
+    specs.forEach(c=>valgt.add(c.idx));
+    return Promise.resolve({results: specs.map(c=>({idx:c.idx, homeProb:0, awayProb:0, drawProb:0, baseProb:0, diff:0}))});
+  };
+  try{ for(const t of TEAMS) await qaKeyMatches(t); }
+  finally{ runMatchImpactAsync = ekte; }
+  return [...valgt].sort((a,b)=>a-b);
+}
+// Uavgjort for kampene i tillegget, med samme frø, N og utgangsstilling som
+// resten av filen (grunnlagRegn), så tallene er de samme som om de var
+// regnet sammen med resten.
+async function grunnlagTilleggRegn(idxer, N = GRUNNLAG_N){
+  const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
+  const tasks = idxer.map(idx=>({id:idx+':U', idx, score:forcedDrawScoreline(openMatches[idx].home, openMatches[idx].away)}));
+  if(!tasks.length) return {oppgaver:[], utfall:{}};
+  const res = await runZoneTasks({
+    mu:MODEL.mu, H:MODEL.H, k:FORM_K,
+    ...simStilling(open),
+    P0:Array.from(P0), G0:Array.from(G0), F0:Array.from(F0), open, oddsOverride,
+    N, ti:0, zone:QA_KEY_ZONES[0], seed:hashStr(scenarioKey+'|impact'), wantAll:true
+  }, tasks, null, 'grunnlag');
+  const utfall = {};
+  tasks.forEach(t=>{ utfall[t.id] = res[t.id].pos.map(p=>Math.round(p*N)); });
+  return {oppgaver:tasks.map(t=>[t.id, t.idx, t.score]), utfall};
 }
 // Innsiktsblokken i filen: tellingene fra runInsightsAlle, per lag med
 // poengene bare i spennet der laget har sesonger (suksess ligger alltid
@@ -6516,8 +6563,11 @@ const QA_NOKKEL = {
 // {gruppe}], n (antall kolonner), kol og kolMobil (bredden på PC og på smal
 // skjerm), lange (navnet får egen linje på smal skjerm; med tre kolonner også
 // den dempede linja, og tallene står på linja under), etter}. Cellen kan ha
-// hvaKort, etiketten med korte lagnavn på smal skjerm.
-function qaRaderHtml({intro, hode, rader, n=2, kol, kolMobil, lange=false, etter}){
+// hvaKort, etiketten med korte lagnavn på smal skjerm. stablet: kampen og den
+// dempede linja har full bredde og tallene står under, også på PC (svaret er
+// smalt der også, rundt 460 piksler; tre kolonner med "Kristiansund vinner"
+// presset kampnavnet over tre linjer).
+function qaRaderHtml({intro, hode, rader, n=2, kol, kolMobil, lange=false, stablet=false, etter}){
   // Etiketten med lagnavn har en kort form på smal skjerm ("KBK vinner"), som kamplisten.
   const hva = c => c.hvaKort && c.hvaKort!==c.hva
     ? `<span class="qr-l">${qaEsc(c.hva)}</span><span class="qr-k">${qaEsc(c.hvaKort)}</span>` : qaEsc(c.hva);
@@ -6534,7 +6584,7 @@ function qaRaderHtml({intro, hode, rader, n=2, kol, kolMobil, lange=false, etter
   const rad = r => r.gruppe ? `<li class="qr-gruppe">${qaEsc(r.gruppe)}</li>\n`
     : `<li class="qr-rad${r.valgt ? ' valgt' : ''}"><b class="qr-navn">${qaEsc(r.navn)}</b>`+
       (r.meta ? ` <span class="qr-meta">${qaEsc(r.meta)}</span>` : '')+r.celler.map(celle).join('')+'</li>\n';
-  return `<div class="qr${lange ? ' lange' : ''}${lange && n>=3 ? ' stablet' : ''}${tett ? ' tett' : ''}" style="--qr-n:${n}${kol ? `;--qr-kol:${kol}` : ''}${kolMobil ? `;--qr-kol-m:${kolMobil}` : ''}">`+
+  return `<div class="qr${lange ? ' lange' : ''}${lange && n>=3 ? ' stablet' : ''}${stablet ? ' stablet-alltid' : ''}${tett ? ' tett' : ''}" style="--qr-n:${n}${kol ? `;--qr-kol:${kol}` : ''}${kolMobil ? `;--qr-kol-m:${kolMobil}` : ''}">`+
     (intro ? `<p class="qr-intro">${qaTekstInline(intro)}</p>\n` : '')+
     (hode ? `<div class="qr-hode" aria-hidden="true">${hode.map(h=>`<span>${qaEsc(h)}</span>`).join(' ')}</div>\n` : '')+
     `<ul class="qr-liste">\n${rader.map(rad).join('')}</ul>\n`+
@@ -6999,35 +7049,45 @@ async function qaKeyMatches(team){
   // uten låst kamp. Tallene som vises er tabellens tall pluss endringen (utfall
   // minus utgangspunkt), så de alltid henger sammen med tabellen, og endringer
   // under 2 prosentpoeng er støy som ikke vises.
-  const fine = await runMatchImpactAsync(team, zone, top.map(r=>({idx:r.idx, match:openMatches[r.idx]})), scenarioKey, {...base, N:QA_N_BETINGET, wantBaseline:true});
+  // Uavgjort regnes også, her for de tre (5.10.2026): samme frø og N som
+  // "Hva betyr neste kamp", så samme kamp og utfall gir samme tall i begge.
+  // Uten scenario kommer også uavgjort fra grunnlagsfilen (tillegget, se
+  // grunnlagKeymatchKamper). Utvalget av kamper er det samme som før:
+  // grovsilingen og grensen bruker seier og tap.
+  const fine = await runMatchImpactAsync(team, zone, top.map(r=>({idx:r.idx, match:openMatches[r.idx], needsDraw:true})), scenarioKey, {...base, N:QA_N_BETINGET, wantBaseline:true});
   const tableP = zone.pct;
   const shown = fine.results.map(r=>{
     const m = openMatches[r.idx];
-    const outs = [{who:m.home, d:r.homeProb-r.baseProb}, {who:m.away, d:r.awayProb-r.baseProb}];
+    // Hjemmeseier, uavgjort og borteseier, i den rekkefølgen.
+    const outs = [{who:m.home, d:r.homeProb-r.baseProb}, {who:null, d:r.drawProb-r.baseProb}, {who:m.away, d:r.awayProb-r.baseProb}];
+    const hb = [outs[0], outs[2]];
     // Grensen på to prosentpoeng gjelder de VISTE tallene (vistPp), så en
-    // kamp ikke kan stå i lista med "endrer lite" på begge utfallene.
-    return {m, outs, impact:Math.max(Math.abs(outs[0].d), Math.abs(outs[1].d)),
-            vist:Math.max(Math.abs(vistPp(tableP, tableP+outs[0].d)), Math.abs(vistPp(tableP, tableP+outs[1].d)))};
+    // kamp ikke kan stå i lista med "endrer lite" på både seier og tap.
+    return {m, outs, impact:Math.max(...hb.map(o=>Math.abs(o.d))),
+            vist:Math.max(...hb.map(o=>Math.abs(vistPp(tableP, tableP+o.d))))};
   }).sort((a,b)=>b.impact-a.impact).filter(x=>x.vist>=2);
   if(!shown.length){
     return `Ingen enkeltkamp betyr mye for ${team}: ingen utfall endrer ${qaSjanse(zone)} mer enn to prosentpoeng fra dagens ${pctTxt(tableP, zone.mat)}.`;
   }
-  // Én rad per kamp med to faste kolonner (4.10.2026): "Seier" og "Tap" i
-  // liten tekst over tallene når laget spiller selv, ellers vinneren
-  // ("Kristiansund vinner"). Ingen overskrift over kolonnene: den ville vært
-  // feil over "Kristiansund vinner". Det gode utfallet for laget står til
-  // venstre. Sannsynligheten først, endringen under som "+31" (i teksten
-  // "+31 prosentpoeng", aldri bare "poeng": det leses som tabellpoeng).
-  // Under to prosentpoeng er støy: uten farge, og "endrer lite" i teksten.
+  // Én rad per kamp med tre faste kolonner (5.10.2026): "Seier", "Uavgjort"
+  // og "Tap" i liten tekst over tallene når laget spiller selv, ellers "A
+  // vinner", "Uavgjort" og "B vinner" i kampens rekkefølge. Ingen overskrift
+  // over kolonnene: den ville vært feil over "Kristiansund vinner".
+  // Sannsynligheten først, endringen etter som "+31" (i teksten "+31
+  // prosentpoeng", aldri bare "poeng": det leses som tabellpoeng). Grønt når
+  // utfallet er bra for laget, rødt når det er dårlig; under to prosentpoeng
+  // er støy: uten farge, og "endrer lite" i teksten.
   const iSone = zone.dir!=='back';
   const rader = shown.map(x=>{
     const egen = x.m.home===team || x.m.away===team;
-    const celler = x.outs.map(o=>{
-      const v = vistPp(tableP, tableP+o.d);
-      return {hva: egen ? (o.who===team ? 'Seier' : 'Tap') : `${o.who} vinner`, hvaKort: egen ? null : `${shortTeam(o.who)} vinner`,
+    const rekke = egen && x.m.away===team ? [2,1,0] : [0,1,2];
+    const celler = rekke.map(i=>{
+      const o = x.outs[i], v = vistPp(tableP, tableP+o.d);
+      return {hva: o.who==null ? 'Uavgjort' : egen ? (o.who===team ? 'Seier' : 'Tap') : `${o.who} vinner`,
+              hvaKort: egen || o.who==null ? null : `${shortTeam(o.who)} vinner`,
               p: pctTxt(Math.min(1,Math.max(0,tableP+o.d)), zone.mat), v, lite: Math.abs(v)<2,
-              godt: egen ? o.who===team : (iSone ? o.d>0 : o.d<0)};
-    }).sort((a,b)=>(b.godt?1:0)-(a.godt?1:0));
+              godt: iSone ? v>0 : v<0};
+    });
     return {kamp:`${x.m.home} mot ${x.m.away}`, egen, celler, naar:qaKampNaar(x.m).replace(/^R/, 'r')};
   });
   const ppTekst = v => `${v>0?'+':'−'}${Math.abs(v)}`;
@@ -7035,7 +7095,7 @@ async function qaKeyMatches(team){
   // Teksten er det "Kopier tekst" kopierer (og det testene leser).
   const tekst = intro+'\n\n'+rader.map(r=>`${r.kamp}, ${r.naar}\n`+
     r.celler.map(c=>`${c.hva}: ${c.p} (${c.lite ? 'endrer lite' : ppTekst(c.v)+' prosentpoeng'})`).join('\n')).join('\n\n');
-  const html = qaRaderHtml({intro, n:2, kol:'7.5em', kolMobil:'5.6em', lange:true, rader: rader.map(r=>({navn:r.kamp, meta:qaStor(r.naar),
+  const html = qaRaderHtml({intro, n:3, kol:'7em', kolMobil:'4.6em', lange:true, stablet:true, rader: rader.map(r=>({navn:r.kamp, meta:qaStor(r.naar),
     celler: r.celler.map(c=>({hva:c.hva, hvaKort:c.hvaKort, p:c.p, pp: qaPpKort(c.v), tone: c.lite ? '' : c.godt ? 'godt' : 'darlig'}))}))});
   return qaMedHtml(tekst, html);
 }

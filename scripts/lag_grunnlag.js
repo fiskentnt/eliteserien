@@ -18,6 +18,12 @@
  *   - en ny lasting av siden med den NYE filen godtar den (GRUNNLAG_STATUS
  *     "i bruk")
  *
+ * TILLEGGET (5.10.2026): med filen i bruk finner siden kampene "Hvilke kamper
+ * betyr mest?" velger for hvert lag (grunnlagKeymatchKamper), og uavgjort for
+ * dem som ikke alt har det, regnes med samme frø og N (grunnlagTilleggRegn)
+ * og legges i filen som "tillegg". Siden med den ferdige filen skal godta den,
+ * og "Hvilke kamper betyr mest?" skal komme helt fra filen for alle lagene.
+ *
  * BANNERET (keymatch.json i samme mappe) regnes i den samme lastingen, fra
  * filen: rundens viktigste kamp med qaKeyRoundData(), altså akkurat det svaret
  * i "Spør om tabellen" gir med filen, og keymatchFra() på siden. Filen og
@@ -180,18 +186,26 @@ function skrivBanner(key) {
     if (fi.length) throw new Error(`innsiktsblokken går ikke opp mot tabellen: ${fi.slice(0, 3).join('; ')}`);
 
     // Én linje per oppgave, så filen er lesbar og diffen følger oppgavene.
+    const lagTekst = r => {
     const hode = {versjon: r.versjon, side: SIDE, sesonger: r.sesonger, laget: new Date().toISOString().replace(/\.\d+Z$/, 'Z'),
       fingeravtrykk: r.fingeravtrykk, inndata: INNDATA || null, lag: r.lag,
       note: 'Tabellen og svarene med låste utfall for dagens stilling, regnet på forhånd av scripts/lag_grunnlag.js med sidens egen kode. utfall[oppgave][lag*n + plass] = antall sesonger. innsikt: tellingene bak "Hvorfor har ...?", "Hva må ... gjøre?", "Når kan det være avgjort?" og "Hvem kjemper ... mot?" for de samme sesongene som utfall.base, per lag (i samme rekkefølge som lag) og sone. Brukes bare når fingeravtrykket stemmer med det siden selv regner, og ingen resultater er fylt inn.'};
     const linjer = Object.entries(hode).map(([k, v]) => ` ${JSON.stringify(k)}: ${JSON.stringify(v)}`);
     linjer.push(` "oppgaver": [\n${r.oppgaver.map(o => `  ${JSON.stringify(o)}`).join(',\n')}\n ]`);
-    linjer.push(` "utfall": {\n${r.oppgaver.map(([id]) => `  ${JSON.stringify(id)}: ${JSON.stringify(r.utfall[id])}`).join(',\n')}\n }`);
+    if (r.tillegg) linjer.push(` "tillegg": [\n${r.tillegg.map(o => `  ${JSON.stringify(o)}`).join(',\n')}\n ]`);
+    linjer.push(` "utfall": {\n${[...r.oppgaver, ...(r.tillegg || [])].map(([id]) => `  ${JSON.stringify(id)}: ${JSON.stringify(r.utfall[id])}`).join(',\n')}\n }`);
     linjer.push(` "innsikt": {\n  "soner": ${JSON.stringify(r.innsikt.soner)},\n  "runder": ${JSON.stringify(r.innsikt.runder)},\n  "lag": [\n` +
       `${r.innsikt.lag.map(x => `   ${JSON.stringify(x)}`).join(',\n')}\n  ]\n }`);
     const tekst = `{\n${linjer.join(',\n')}\n}\n`;
     JSON.parse(tekst);   // gyldig JSON
+    return tekst;
+    };
+    let tekst = lagTekst(r);
 
-    // Siden med den NYE filen: den skal godta den, og banneret regnes fra den.
+    // Siden med den NYE filen: den skal godta den. Så tillegget (uavgjort for
+    // kampene "Hvilke kamper betyr mest?" velger), og siden med den ferdige
+    // filen: den skal godta den, svaret skal komme helt fra filen, og banneret
+    // regnes fra den.
     let key;
     if (TEST_N == null) {
       const p0 = await browser.newPage();
@@ -200,16 +214,40 @@ function skrivBanner(key) {
       const sti = await p0.evaluate(() => new URL(grunnlagFil(), location.href).pathname);
       await p0.close();
       OVERSTYR.set(sti, tekst);
+      const pt = await aapne(browser, port, feil);
+      await pt.waitForFunction('GRUNNLAG_STATUS!=="venter"', {timeout: 60000, polling: 50});
+      const medU = r.oppgaver.filter(o => /:U$/.test(o[0])).map(o => o[1]);
+      const t1 = Date.now();
+      const t = await pt.evaluate(async medU => {
+        if (GRUNNLAG_STATUS !== 'i bruk') return {status: GRUNNLAG_STATUS};
+        const valgt = await grunnlagKeymatchKamper(), nye = valgt.filter(i => !medU.includes(i));
+        return {status: GRUNNLAG_STATUS, valgt, ...(await grunnlagTilleggRegn(nye))};
+      }, medU);
+      await pt.close();
+      if (t.status !== 'i bruk') throw new Error(`siden godtok ikke den nye filen (${t.status})`);
+      r.tillegg = t.oppgaver;
+      Object.assign(r.utfall, t.utfall);
+      const ft = sjekkFordelinger({...r, oppgaver: r.tillegg});
+      if (ft.length) throw new Error(`fordelingene i tillegget går ikke opp: ${ft.slice(0, 3).join('; ')}`);
+      console.log(`Tillegget: uavgjort for ${r.tillegg.length} kamper "Hvilke kamper betyr mest?" velger (${t.valgt.length} i alt, ` +
+        `${t.valgt.length - r.tillegg.length} hadde det alt) på ${((Date.now() - t1) / 1000).toFixed(1)} s.`);
+      tekst = lagTekst(r);
+      OVERSTYR.set(sti, tekst);
       const pv = await aapne(browser, port, feil);
       await pv.waitForFunction('GRUNNLAG_STATUS!=="venter"', {timeout: 60000, polling: 50});
       const v = await pv.evaluate(async () => {
         const status = GRUNNLAG_STATUS;
         if (status !== 'i bruk') return {status};
-        return {status, N: lastMCN, key: keymatchFra(await qaKeyRoundData())};
+        // "Hvilke kamper betyr mest?" for alle lagene, helt fra filen.
+        const ekte = grunnlagSvar; let bom = 0;
+        grunnlagSvar = (p, t, g) => { const x = ekte(p, t, g); if (!x && !g.startsWith('grunnlag')) bom++; return x; };
+        try { for (const lag of TEAMS) await qaKeyMatches(lag); } finally { grunnlagSvar = ekte; }
+        return {status, N: lastMCN, bom, key: keymatchFra(await qaKeyRoundData())};
       });
       await pv.close();
       OVERSTYR.delete(sti);
-      if (v.status !== 'i bruk') throw new Error(`siden godtok ikke den nye filen (${v.status})`);
+      if (v.status !== 'i bruk') throw new Error(`siden godtok ikke den ferdige filen (${v.status})`);
+      if (v.bom) throw new Error(`"Hvilke kamper betyr mest?" kom ikke helt fra filen (${v.bom} kall regnet på siden)`);
       if (v.N !== r.sesonger) throw new Error(`tabellen på siden bygger på ${v.N} sesonger, ikke filens ${r.sesonger}`);
       if (v.key && v.key.sesonger !== r.sesonger) throw new Error(`banneret bygger på ${v.key.sesonger} sesonger, ikke filens ${r.sesonger}`);
       key = v.key;
