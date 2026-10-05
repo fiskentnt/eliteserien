@@ -3046,8 +3046,9 @@ function runProb(d){
 
 // ---- "Plausibelt scenario" (het "typisk sesong" før -- misvisende: dette
 // er ikke et trekk fra modellens egen fordeling, men et filtrert utvalg som
-// avviser både enkeltutfall under 10% sjanse og sesonger med for mange
-// overraskelser samlet, se navnediskusjonen). Trekker kandidatsesonger én om
+// avviser sesonger med for mange eller for få overraskelser samlet, se
+// navnediskusjonen; til 5.10.2026 også enkeltutfall under 10 % sjanse, se
+// under). Med d.fri er det et vanlig trekk. Trekker kandidatsesonger én om
 // gangen (kronologisk, med "hot" formoppdatering -- se hovedløkken) og
 // GODTAR den første som ser statistisk normal ut: totalt antall
 // overraskelser (<30% sjanse) nær
@@ -3060,8 +3061,15 @@ function runProb(d){
 // (nesten alltid "beste av 3000 forsøk" uten reell garanti). Med bare det
 // totale kravet igjen (samme Z=1,0 som før) godtas over 99 % av forsøkene
 // på første eller andre forsøk -- se scratchpad/test_accept_filter.js fra
-// undersøkelsen. Hver enkeltkamp avvises og trekkes på nytt hvis utfallet
-// (H/U/B) hadde under 10% sjanse, uansett om sesongen til slutt godtas.
+// undersøkelsen.
+// 5.10.2026: regelen som trakk en enkeltkamp på nytt når utfallet (H/U/B)
+// hadde under 10 % sjanse, er borte overalt: et utfall modellen gir 8 %, må
+// kunne skje. Med d.fri godtas første kandidat, uten filteret på samlet
+// antall overraskelser: "Simuler runden", "Simuler kampen/kampene", "Simuler
+// på nytt" og "Fyll ut runden" trekker fritt fra modellen (med én kamp igjen
+// ga filteret ellers alltid det mest sannsynlige utfallet: Moss-Kongsvinger,
+// B 57 %, ble B 200 av 200 ganger). Filteret står foreløpig bare for "Simuler
+// tomme kamper" (hele resten av sesongen), til det er målt.
 function runTypical(d){
   var mu=d.mu, H=d.H, k=d.k, att0=d.att, con0=d.con, ha0=d.ha, hc0=d.hc;
   var open=d.open, runId=d.runId, oddsOverride=d.oddsOverride;
@@ -3095,7 +3103,7 @@ function runTypical(d){
   var Z=1.0; // toleranse i antall "standardavvik" rundt forventet antall overraskelser
   var tolTotal=Z*Math.sqrt(varTotal);
 
-  var MAX_ATTEMPTS=3000;
+  var MAX_ATTEMPTS=d.fri ? 1 : 3000;
   var bestG=null, bestViol=Infinity, bestTotal=0;
   var acceptedAttempt=-1, acceptedTotal=0;
 
@@ -3116,13 +3124,8 @@ function runTypical(d){
         lh=Math.exp(eh); la=Math.exp(ea);
       }
       var probs=outcomeProbs(lh,la);
-      var x,y,cat,catP;
-      for(var rtry=0; rtry<50; rtry++){
-        var xy=sampleScoreDC(lh,la,rnd); x=xy[0]; y=xy[1];
-        cat = x>y?'H':(x===y?'D':'B');
-        catP = probs[cat];
-        if(catP>=0.10) break;
-      }
+      var xy=sampleScoreDC(lh,la,rnd), x=xy[0], y=xy[1];
+      var catP = probs[x>y?'H':(x===y?'D':'B')];
       G[j*2]=x; G[j*2+1]=y;
       if(catP<0.30){ actualTotal++; }
       var rh=x-lh, ra=y-la;
@@ -3134,14 +3137,14 @@ function runTypical(d){
     var diffTotal=Math.abs(actualTotal-expTotal);
     var violation=Math.max(0, diffTotal-tolTotal);
     if(violation<bestViol){ bestViol=violation; bestG=G; bestTotal=actualTotal; }
-    if(diffTotal<=tolTotal){ acceptedAttempt=attempt; acceptedTotal=actualTotal; bestG=G; break; }
+    if(d.fri || diffTotal<=tolTotal){ acceptedAttempt=attempt; acceptedTotal=actualTotal; bestG=G; break; }
   }
 
   var result=[];
   for(var j2=0;j2<m;j2++){ result.push([bestG[j2*2], bestG[j2*2+1]]); }
   postMessage({runId:runId, mode:'typical', result:result, diagnostics:{
     expectedTotal:expTotal, actualTotal:(acceptedAttempt>=0?acceptedTotal:bestTotal), tolTotal:tolTotal,
-    attempts:(acceptedAttempt>=0?acceptedAttempt:MAX_ATTEMPTS)+1, accepted:acceptedAttempt>=0
+    attempts:(acceptedAttempt>=0?acceptedAttempt:MAX_ATTEMPTS)+1, accepted:acceptedAttempt>=0, fri:!!d.fri
   }});
 }
 
@@ -3383,7 +3386,7 @@ let lastTypicalDiagnostics = null; // for feilsøking/verifisering, se console
 // Frøet og settet av kamp-id-er fra SISTE simulateTypicalAsync-kall — lar
 // encodeScenario() ta en snarvei (kort frø i lenken i stedet for hvert
 // resultat) NÅR hele det nåværende grå settet kommer fra akkurat det kallet.
-let lastSimSeed = null, lastSimMatchIds = null;
+let lastSimSeed = null, lastSimMatchIds = null, lastSimFri = false;
 // Tabellsimuleringen (runMCAsync) har sin EGEN Worker, som bare den bruker.
 // "Typisk sesong" (typical) går i hjelpe-Workeren under, innsikten i "Spør
 // om tabellen" (insightsAlle, se getInnsiktWorker) og merkene i hver sin, og
@@ -3745,7 +3748,10 @@ function scheduleMC(){
 // trykker. forcedSeed lar oss spille av ÉN SPESIFIKK sesong på nytt (se
 // applyScenario) når hele det grå settet kommer fra ett samlet kall — se
 // lastSimSeed/lastSimMatchIds og encodeScenario().
-function simulateTypicalAsync(open, forcedSeed){
+// fri: trekk fritt fra modellen, uten filteret på samlet antall
+// overraskelser (se runTypical). Runden og kampene trekkes fritt; bare
+// "Simuler tomme kamper" har filteret.
+function simulateTypicalAsync(open, forcedSeed, fri=false){
   return new Promise(resolve=>{
     if(!open.length){ resolve(); return; }
     refreshLiveState();
@@ -3759,13 +3765,14 @@ function simulateTypicalAsync(open, forcedSeed){
       lastTypicalDiagnostics = data.diagnostics;
       lastSimSeed = seed;
       lastSimMatchIds = new Set(open.map(m=>m.id));
+      lastSimFri = fri;
       resolve();
     });
     getHjelpWorker().postMessage({
       mode:'typical', runId, seed,
       mu:MODEL.mu, H:MODEL.H, k:FORM_K,
       ...simStilling(openData),
-      open: openData, oddsOverride
+      open: openData, oddsOverride, fri
     });
   });
 }
@@ -3807,7 +3814,7 @@ const roundButtonState = roundNum => gruppeButtonState(`r${roundNum}`);
 async function simulateGroup(nokkel, resim){
   const iGruppen = m => kampGruppe(m)===nokkel;
   if(resim) matches.filter(m=>iGruppen(m) && m.sim).forEach(m=>setMatch(m,null,null));
-  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && iGruppen(m)));
+  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && iGruppen(m)), null, true);
 }
 const simulateRound = (roundNum, resim) => simulateGroup(`r${roundNum}`, resim);
 const knappGruppe = btn => btn.dataset.gruppe || `r${btn.dataset.round}`;
@@ -3842,7 +3849,7 @@ function latestOwnMatch(){
 // Gruppene som fylles: gruppene til kampene i `endret`.
 async function fillRounds(endret){
   const grupper = new Set(endret.map(kampGruppe));
-  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && grupper.has(kampGruppe(m))));
+  await simulateTypicalAsync(matches.filter(m=>isEmpty(m) && grupper.has(kampGruppe(m))), null, true);
 }
 // Avkryssingsboksen bestemmer bare om tomme kamper fylles ut når du legger inn
 // et resultat. Av eller på: den sletter ingenting. `m` er kampen du endret.
@@ -7831,7 +7838,11 @@ function encodeScenario(utenFro){
   // frøet. Før ble snarveien bare brukt når lenken passerte 1500 tegn, så en
   // simulert sesong ga en lenke på rundt 1400 tegn helt unødvendig.
   if(!simIds.size) return full;
-  const seedValid = lastSimSeed!=null && lastSimMatchIds && simIds.size===lastSimMatchIds.size &&
+  // Bare for "Simuler tomme kamper" (filteret, alle tomme kamper): lenken
+  // spiller av frøet over alle tomme kamper med filteret (applyScenario). En
+  // simulert runde (fri trekning, bare rundens kamper) ga da en annen sesong
+  // hos den som åpnet lenken; nå står resultatene i lenken (5.10.2026).
+  const seedValid = !lastSimFri && lastSimSeed!=null && lastSimMatchIds && simIds.size===lastSimMatchIds.size &&
     [...simIds].every(id=>lastSimMatchIds.has(id));
   if(!seedValid) return full; // kan ikke bruke frø-snarveien trygt -- lang men riktig lenke
   const own = filled.filter(m=>!m.sim).map(m=>`${TI[m.home]}.${TI[m.away]}.${m.hg}.${m.ag}`).join('_');

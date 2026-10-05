@@ -3,6 +3,28 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Trekningen: fri i "Simuler runden", filteret målt for "Simuler tomme kamper" (5.10.2026)
+
+Avviket: OBOS runde 24 med bare Moss-Kongsvinger igjen (B 57 %) ga B 200
+av 200 ganger på "Simuler på nytt". runTypical hadde to mekanismer: en
+enkeltkamp med under 10 % sjanse ble trukket på nytt, og hele trekningen
+måtte ha et "normalt" antall overraskelser (utfall under 30 %, innenfor ett
+standardavvik av det forventede). Med én kamp er det aldri én.
+
+Nå: 10 %-regelen er borte overalt. "Simuler runden", "Simuler kampen/
+kampene", "Simuler på nytt" og "Fyll ut runden" trekker fritt (d.fri), og en
+slik runde står i lenken med resultatene, ikke frøet. "Simuler tomme kamper"
+og frølenkene har fortsatt filteret.
+
+VENTER PÅ BESLUTNING: filteret i "Simuler tomme kamper". Målt mot fri
+trekning med 10 000 restsesonger per tilfelle, samme frø
+(scratchpad/filtermaal.js, ikke en regresjonstest). Hele resten: avviser
+rundt 31 % av de frie sesongene, ingen målbar endring i sluttabellen. Med 8,
+4, 2 og 1 kamp igjen tvinger det fram 1-2 eller 0 overraskelser og flytter
+sonesjanser med opptil 15 prosentpoeng. Ikke endre før tallene er vurdert.
+
+Tester: regression.js, gruppen "trekning".
+
 ## "Hvilke kamper betyr mest": uavgjort, og tillegget i grunnlagsfilen (5.10.2026)
 
 Tre utfall per kamp: Seier, Uavgjort og Tap (eller "A vinner", "Uavgjort",

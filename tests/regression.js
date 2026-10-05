@@ -3778,6 +3778,103 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await pg.close();
     }
   };
+  // ---- Trekningen i "Simuler runden" og "Simuler tomme kamper" (5.10.2026) ----
+  // Avviket: OBOS, runde 24 med bare Moss-Kongsvinger igjen (B 57 %): "Simuler
+  // på nytt" ga B 200 av 200 ganger. runTypical hadde to filtre: en
+  // enkeltkamp med under 10 % sjanse ble trukket på nytt, og hele trekningen
+  // måtte ha et "normalt" antall overraskelser (med én kamp: aldri én). Nå:
+  // 10 %-regelen er borte overalt, og runden, kampene og "Fyll ut runden"
+  // trekkes fritt. Filteret står bare for "Simuler tomme kamper", til det er
+  // målt. Deterministisk: faste frø, ingen store tellinger (de er analyse).
+  //   node tests/regression.js --bare trekning
+  const trekning = async () => {
+    setGroup('Trekningen i Simuler runden og Simuler tomme kamper');
+    const pg = await open(1400, 900, base.replace('/eliteserien/', '/obos/'));
+    const r = await pg.evaluate(async () => {
+      const ut = {};
+      ut.kildeUten10 = !/catP\s*>=\s*0\.10/.test(WORKER_SRC) && !/rtry/.test(WORKER_SRC);
+      const utfall = m => m.hg > m.ag ? 'H' : m.hg < m.ag ? 'B' : 'U';
+      const sjanser = m => { const [lh, la] = rateFor(m.home, m.away), o = outcome(lh, la); return {H: o.H, U: o.U, B: o.B}; };
+      const alle = matches.filter(isEmpty), p = alle.map(sjanser);
+      ut.aapne = alle.length;
+      ut.under10 = alle.reduce((n, m, j) => n + Object.values(p[j]).filter(x => x < 0.10).length, 0);
+      // Et utfall under 10 % kan trekkes, med et kjent frø (fri trekning):
+      // det minst sannsynlige utfallet blant de åpne kampene.
+      const x = alle.map((m, j) => { const k = Object.keys(p[j]).sort((a, b) => p[j][a] - p[j][b])[0]; return {m, k, p: p[j][k]}; })
+        .sort((a, b) => a.p - b.p)[0];
+      ut.lav = x && x.p < 0.10 ? {kamp: `${x.m.home}-${x.m.away}`, utfall: x.k, p: +(x.p * 100).toFixed(1)} : null;
+      if (ut.lav) {
+        for (let seed = 1; seed <= 4000 && !ut.lav.seed; seed++) {
+          await simulateTypicalAsync([x.m], seed, true);
+          if (utfall(x.m) === x.k) ut.lav.seed = seed, ut.lav.res = `${x.m.hg}-${x.m.ag}`;
+        }
+        if (ut.lav.seed) { await simulateTypicalAsync([x.m], ut.lav.seed, true); ut.lav.igjen = `${x.m.hg}-${x.m.ag}`; }
+        setMatch(x.m, null, null, false);
+      }
+      // Også med filteret ("Simuler tomme kamper"): over resten av sesongen
+      // forekommer utfall under 10 %.
+      let lavFilter = 0, forsok = 0;
+      for (let seed = 1; seed <= 40 && !lavFilter && ut.under10; seed++) {
+        forsok = seed;
+        await simulateTypicalAsync(alle, seed, false);
+        lavFilter = alle.filter((m, j) => p[j][utfall(m)] < 0.10).length;
+      }
+      ut.lavFilter = {antall: lavFilter, frø: forsok, fri: !!(lastTypicalDiagnostics && lastTypicalDiagnostics.fri)};
+      alle.forEach(m => setMatch(m, null, null, false));
+      // Samme frø gir samme scenario, i begge modusene.
+      const scen = () => alle.map(m => `${m.hg}-${m.ag}`).join(',');
+      const likt = async fri => { await simulateTypicalAsync(alle, 777, fri); const a = scen(); await simulateTypicalAsync(alle, 777, fri); const b = scen();
+        await simulateTypicalAsync(alle, 778, fri); const c = scen(); alle.forEach(m => setMatch(m, null, null, false)); return {likt: a === b, ulikt: a !== c}; };
+      ut.sammeFri = await likt(true); ut.sammeFilter = await likt(false);
+      // "Simuler på nytt" for Moss-Kongsvinger (B 57 %), 200 trykk gjennom
+      // knappens egen kode (simulateGroup) med fast frø per trykk. Er kampen
+      // spilt, tas den åpne kampen med størst favoritt. Resten av gruppen
+      // fylles inn som egne resultater, så kampen står alene i trekningen.
+      const mk = alle.find(m => m.home === 'Moss' && m.away === 'Kongsvinger')
+        || alle.slice().sort((a, b) => Math.max(...Object.values(sjanser(b))) - Math.max(...Object.values(sjanser(a))))[0];
+      const gruppe = kampGruppe(mk);
+      const andre = matches.filter(m => kampGruppe(m) === gruppe && m !== mk && isEmpty(m));
+      andre.forEach(m => setMatch(m, 1, 1, false));
+      const ekteRandom = Math.random, tell = {H: 0, U: 0, B: 0}, res = new Set();
+      let frøFeil = 0, friAlle = true;
+      for (let i = 0; i < 200; i++) {
+        const frø = Math.imul(i + 1, 2654435761) >>> 0;
+        // Frøet trekkes med Math.random synkront i simulateTypicalAsync.
+        Math.random = () => frø / 4294967296;
+        let kall; try { kall = simulateGroup(gruppe, i > 0); } finally { Math.random = ekteRandom; }
+        await kall;
+        if (lastSimSeed !== frø) frøFeil++;
+        friAlle = friAlle && !!(lastTypicalDiagnostics && lastTypicalDiagnostics.fri);
+        tell[utfall(mk)]++; res.add(`${mk.hg}-${mk.ag}`);
+      }
+      ut.mk = {kamp: `${mk.home}-${mk.away}`, tell, ulike: res.size, sjanser: sjanser(mk), fri: friAlle, frøFeil};
+      // Lenken: en simulert runde står med resultatene, ikke frøet.
+      ut.lenkeRunde = encodeScenario();
+      andre.forEach(m => setMatch(m, null, null, false));
+      matches.forEach(m => { if (m.sim) setMatch(m, null, null, false); });
+      await simulateEmpty();
+      ut.lenkeTomme = encodeScenario();
+      matches.forEach(m => { if (m.sim) setMatch(m, null, null, false); });
+      return ut;
+    });
+    check('10 %-regelen er borte fra trekningen (Worker-koden)', r.kildeUten10, '');
+    // Ved sesongslutt kan alle åpne utfall ha 10 % eller mer: da sier testen fra.
+    if (!r.lav) check(`ingen åpne utfall under 10 % å trekke (${r.aapne} åpne kamper)`, r.aapne < 16, JSON.stringify(r));
+    else {
+      check(`et utfall under 10 % kan trekkes med et kjent frø: ${r.lav.kamp} ${r.lav.utfall} (${r.lav.p} %) med frø ${r.lav.seed}: ${r.lav.res}`,
+        !!r.lav.seed && r.lav.igjen === r.lav.res, JSON.stringify(r.lav));
+      check(`også med filteret ("Simuler tomme kamper"): ${r.lavFilter.antall} av ${r.under10} mulige utfall under 10 % trukket med frø ${r.lavFilter.frø}`,
+        r.lavFilter.antall > 0 && !r.lavFilter.fri, JSON.stringify(r.lavFilter));
+    }
+    check('samme frø gir samme scenario (fri trekning), et annet frø et annet', r.sammeFri.likt && r.sammeFri.ulikt, JSON.stringify(r.sammeFri));
+    check('samme frø gir samme scenario (med filteret), et annet frø et annet', r.sammeFilter.likt && r.sammeFilter.ulikt, JSON.stringify(r.sammeFilter));
+    const t = r.mk.tell, s = r.mk.sjanser;
+    check(`${r.mk.kamp}, 200 trykk på "Simuler på nytt" (fast frø per trykk): H ${t.H}, U ${t.U}, B ${t.B} (modellen ${Math.round(s.H * 100)}/${Math.round(s.U * 100)}/${Math.round(s.B * 100)} %), ${r.mk.ulike} ulike resultater`,
+      t.H > 0 && t.U > 0 && t.B > 0 && r.mk.fri && !r.mk.frøFeil && r.mk.ulike > 5, JSON.stringify(r.mk));
+    check('en simulert runde står i lenken med resultatene (fri trekning), "Simuler tomme kamper" med frøet',
+      !r.lenkeRunde.includes('~') && r.lenkeTomme.includes('~'), `${r.lenkeRunde.slice(0, 60)} | ${r.lenkeTomme.slice(0, 60)}`);
+    await pg.close();
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -3810,7 +3907,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'rulling') await knappenStaar();
       else if (BARE === 'svarstil') await svarstil();
       else if (BARE === 'uavgjort') await uavgjortBetyrMest();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort)`);
+      else if (BARE === 'trekning') await trekning();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort, trekning)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -7318,6 +7416,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await knappenStaar();
     await svarstil();
     await uavgjortBetyrMest();
+    await trekning();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen

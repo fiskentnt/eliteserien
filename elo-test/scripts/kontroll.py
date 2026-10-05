@@ -473,6 +473,9 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # etter 4. oktober", 5.10.2026) er flettet inn uendret.
 # Uavgjort i "Hvilke kamper betyr mest" og tillegget i grunnlagsfilen
 # (grunnlagKeymatchKamper, grunnlagTilleggRegn, 5.10.2026) er flettet inn uendret.
+# Fri trekning i "Simuler runden"/"Simuler på nytt"/"Fyll ut runden" og
+# 10 %-regelen fjernet fra runTypical (d.fri, lastSimFri, 5.10.2026) er
+# flettet inn uendret.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -488,7 +491,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "39a634039e3799143c32a60f2aafeb259576a59d8d8a54cad74f68e2fc1ed846"
+BASE_SHA = "cda0cc36a831838f9bab82ff24744186f82f976eb0a16b195327cbd64fc9c25e"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
