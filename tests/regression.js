@@ -2207,10 +2207,17 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         forvent.forEach(f => { const k = tekster.indexOf(f, j + 1); if (k < 0) tegnet.push(`mangler ${f}`); else j = k; });
         if (tegnet.length) feil.push(`tegnet rad ${i + 1}: ${tegnet.join(', ')}`); });
       const tittel = tekster.slice(0, 2).join('');
-      const ventetTittel = naa ? `Tabellkalkulator.no · ${LEAGUE.name} · per ${kopiDato()}` : `Tabellkalkulator.no · ${LEAGUE.name} · ${document.getElementById('tblInfo').textContent}`;
+      // Et scenario: "Scenario" i stedet for datoen (bak runden for en eldre
+      // runde), og merkelappen "8 kamper lagt inn etter 4. oktober" (5.10.2026).
+      const inc = new Set(ROUND_SEQ.slice(0, idx + 1).map(x => x.round));
+      const lagtInn = matches.filter(m => (naa || inc.has(m.round)) && m.hg != null && m.ag != null).length;
+      const ventetTittel = naa ? `Tabellkalkulator.no · ${LEAGUE.name} · ${lagtInn ? 'Scenario' : `per ${kopiDato()}`}`
+        : `Tabellkalkulator.no · ${LEAGUE.name} · ${document.getElementById('tblInfo').textContent}${lagtInn ? ' · Scenario' : ''}`;
+      const ventetMerkelapp = lagtInn ? `${lagtInn} ${lagtInn === 1 ? 'kamp' : 'kamper'} lagt inn etter ${kopiDato()}` : null;
       const notater = vis.notater.every(n => tekster.join(' ').includes(n.split(' ').slice(0, 3).join(' ')));
       const blob = await tabellBildeBlob(), bm = await createImageBitmap(blob);
-      return {feil, n: vis.rader.length, tittel, ventetTittel, scenario: vis.scenario, scenarioTegnet: tekster.includes('Scenario, ikke dagens tabell'),
+      return {feil, n: vis.rader.length, tittel, ventetTittel, scenario: vis.scenario, merkelapp: vis.merkelapp, ventetMerkelapp, lagtInn,
+        scenarioTegnet: !!vis.merkelapp && tekster.includes(vis.merkelapp), gammelMerkelapp: tekster.includes('Scenario, ikke dagens tabell'),
         harScenario: matches.some(m => m.hg != null && m.ag != null), naa, notater, notatTekst: vis.notater, just: vis.rader.filter(r => r.just).map(r => r.lag),
         w: cv.width, h: cv.height, blobW: bm.width, blobH: bm.height, type: blob.type, forventetW: BILDE_BREDDE * BILDE_SKALA};
     });
@@ -2239,8 +2246,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           r.w === r.forventetW && r.blobW === r.w && r.blobH === r.h && r.h > 1000 && r.h < 1800 && r.type === 'image/png', JSON.stringify({w: r.w, h: r.h, blobW: r.blobW, blobH: r.blobH, type: r.type}));
         check(`${liga}, ${navn}: alle ${r.n} rader har de samme verdiene som dataene og cellene på siden, og tegnes`, r.n === 16 && !r.feil.length, r.feil.slice(0, 4).join(' | '));
         check(`${liga}, ${navn}: tittelen "${r.tittel}"`, r.tittel === r.ventetTittel, JSON.stringify({tittel: r.tittel, ventet: r.ventetTittel}));
-        check(`${liga}, ${navn}: "Scenario, ikke dagens tabell" ${r.harScenario ? 'står' : 'står ikke'} under tittelen`,
-          r.scenario === r.harScenario && r.scenarioTegnet === r.harScenario, JSON.stringify(r));
+        check(`${liga}, ${navn}: ${r.lagtInn ? `merkelappen "${r.ventetMerkelapp}" står under tittelen` : 'ingen merkelapp uten scenario'}`,
+          r.scenario === (r.lagtInn > 0) && r.merkelapp === r.ventetMerkelapp && r.scenarioTegnet === (r.lagtInn > 0) && !r.gammelMerkelapp,
+          JSON.stringify({merkelapp: r.merkelapp, ventet: r.ventetMerkelapp, tegnet: r.scenarioTegnet, lagtInn: r.lagtInn}));
         check(`${liga}, ${navn}: fargeforklaringen og merknadene (${r.notatTekst.join(' ') || 'ingen'}) er med`, r.notater, JSON.stringify(r.notatTekst));
         return r;
       };

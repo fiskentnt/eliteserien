@@ -469,6 +469,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # samme sted) og fordelingsstripen som ikke går av og på (4.10.2026).
 # Svarene i "Spør om tabellen" med samme visuelle språk (qaRaderHtml,
 # qaTekstHtml, 5.10.2026) er flettet inn uendret.
+# "Del bilde" av et scenario ("Scenario" i overskriften, "8 kamper lagt inn
+# etter 4. oktober", 5.10.2026) er flettet inn uendret.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -484,7 +486,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "cc27118c2548f0b6e52b3eaa4b634d9f6b0d7e6f55a0f1e5b8d9f4aa131bb17b"
+BASE_SHA = "477941350780de2732a0da8094b744b9fdd565de5b83fcebf126dbfbb3ba6e1f"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

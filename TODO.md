@@ -3,6 +3,15 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## "Del bilde" av et scenario (5.10.2026)
+
+Med et scenario står "Scenario" i overskriften i stedet for datoen
+("Tabellkalkulator.no · OBOS-ligaen · Scenario"; en eldre runde: "... etter
+runde 26 (14. oktober) · Scenario"), og den røde merkelappen sier hvor mange
+kamper som er lagt inn etter dataene fra dagen: "8 kamper lagt inn etter
+4. oktober". Simulerte og egne resultater telles likt. Uten scenario som før:
+"per 4. oktober", ingen merkelapp. tabellVisning() (tittel, merkelapp).
+
 ## Svarene i "Spør om tabellen": samme visuelle språk (5.10.2026)
 
 Lister med kamper eller lag og tall har én kompakt radstil (qaRaderHtml, .qr):

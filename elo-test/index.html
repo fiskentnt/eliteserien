@@ -8037,7 +8037,7 @@ const BILDE_FASTE = {formLysGronn:'#7fb9a8', formLysGronnTekst:'#0d3327', gulTek
 function tabellVisning(){
   const viewIdx = viewRoundIdx(), naa = viewIdx===currentRoundIdx();
   const kol = LEAGUE.cols.map(c=>({key:c.key, navn:c.head}));
-  let rader, scenario;
+  let rader, lagtInn;
   if(naa){
     const {rows} = compute();
     const liveForm = formScores(Array.from(LIVE.att), Array.from(LIVE.con));
@@ -8051,7 +8051,7 @@ function tabellVisning(){
         form:{ruter:liste.slice(-5).map(x=>({res:x.res, scen:!!x.scen})), tall:f5==null ? '' : f1(f5)},
         sjanser:d ? kol.map(c=>sjanseCelle(zoneSum(d, c.key), soneStatus(r.name, c.key))) : null};
     });
-    scenario = matches.some(m=>m.hg!=null && m.ag!=null);
+    lagtInn = matches.filter(m=>m.hg!=null && m.ag!=null).length;
   } else {
     const inc = new Set(ROUND_SEQ.slice(0, viewIdx+1).map(x=>x.round));
     rader = computeAt(viewIdx).map(r=>{
@@ -8061,12 +8061,19 @@ function tabellVisning(){
         p:r.pts, just:!!r.just, styrke:null,
         form:{ruter:liste.slice(-5).map(x=>({res:x.res, scen:false})), tall:f5==null ? '' : f1(f5)}, sjanser:null};
     });
-    scenario = matches.some(m=>inc.has(m.round) && m.hg!=null && m.ag!=null);
+    lagtInn = matches.filter(m=>inc.has(m.round) && m.hg!=null && m.ag!=null).length;
   }
+  // Et scenario (5.10.2026): "Scenario" i overskriften i stedet for datoen, og
+  // merkelappen sier hvor mange kamper som er lagt inn etter dataene fra
+  // dagen ("8 kamper lagt inn etter 4. oktober"). Simulerte og egne
+  // resultater telles likt: "lagt inn" gjelder begge.
+  const scenario = lagtInn > 0;
   const R = ROUND_SEQ[viewIdx];
   return {
-    tittel:`Tabellkalkulator.no · ${LEAGUE.name} · ${naa ? `per ${kopiDato()}` : `etter runde ${R.round} (${dateNoLong(R.end)})`}`,
-    scenario, runde:naa ? null : R.round, merknad:roundGapNote(viewIdx),
+    tittel:`Tabellkalkulator.no · ${LEAGUE.name} · ${naa ? (scenario ? 'Scenario' : `per ${kopiDato()}`)
+      : `etter runde ${R.round} (${dateNoLong(R.end)})${scenario ? ' · Scenario' : ''}`}`,
+    scenario, merkelapp: scenario ? `${lagtInn} ${lagtInn===1 ? 'kamp' : 'kamper'} lagt inn etter ${kopiDato()}` : null,
+    runde:naa ? null : R.round, merknad:roundGapNote(viewIdx),
     modell:naa, kolonner:kol, rader,
     forklaring:LEAGUE.bands.map(b=>({cls:b.cls, tekst:b.legend})),
     notater:[...JUSTERINGER.map(justeringTekst), ...(LEAGUE.legendNote ? [LEAGUE.legendNote] : [])]
@@ -8159,7 +8166,7 @@ async function tegnTabellBilde(vis){
     tekst(navn, tx, ty, FN.tittel, F['--ink']); tx += bredde(FN.tittel, navn);
     tekst(' · ' + rest.join(' · '), tx, ty, FN.tittel2, F['--muted']); }
   if(vis.scenario){
-    const t = 'Scenario, ikke dagens tabell', w = bredde(FN.scen, t) + 20;
+    const t = vis.merkelapp, w = bredde(FN.scen, t) + 20;
     c.fillStyle = F['--accent-soft']; rrect(x0, scenY, w, 26, 6); c.fill();
     tekst(t, x0+10, scenY+13.5, FN.scen, F['--accent-text']); }
   if(vis.merknad){
