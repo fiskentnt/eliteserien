@@ -4943,7 +4943,7 @@ async function qaNextMatch(team){
   // Uavgjort og Tap, som "Hvilke kamper betyr mest". Det gode utfallet for
   // laget i grønt, det dårlige i rødt, under to prosentpoeng uten farge.
   const godt = v => zone.dir==='back' ? v<0 : v>0;
-  const celle = (hva, d, v) => ({hva, p:p(d), pp: Math.abs(v)<2 ? 'endrer lite' : qaPpKort(v),
+  const celle = (hva, d, v) => ({hva, p:p(d), pp: qaPpKort(v),
     tone: Math.abs(v)<2 ? '' : godt(v) ? 'godt' : 'darlig'});
   const html = qaRaderHtml({intro:`Slik endrer neste kamp ${qaGen(team)} ${qaSjanseUbest(zone)}. Nå: ${pctTxt(tableP, zone.mat)}`,
     n:3, kol:'5.6em', kolMobil:'4.6em', lange:true, rader:[{navn:`${next.home} mot ${next.away}`, meta:`${qaKampNaar(next)}, ${isHome?'hjemme':'borte'}`,
@@ -6003,7 +6003,7 @@ async function qaKeyRound(){
   const kortEtikett = {H: spiller ? etikett.H : `${shortTeam(m.home)}-seier`, U:'Uavgjort', B: spiller ? etikett.B : `${shortTeam(m.away)}-seier`};
   const celle = key => { const d = hoved.d[key]||0, v = vistPp(hoved.now, hoved.now+d), bra = hz.dir==='front' ? v>0 : v<0;
     return {hva:etikett[key], hvaKort:kortEtikett[key], p:pctTxt(clamp(hoved.now+d), hoved.mat),
-      pp: Math.abs(v)<2 ? 'endrer lite' : qaPpKort(v), tone: Math.abs(v)<2 ? '' : bra ? 'godt' : 'darlig'}; };
+      pp: qaPpKort(v), tone: Math.abs(v)<2 ? '' : bra ? 'godt' : 'darlig'}; };
   const html = qaTekstHtml(forst)+qaRaderHtml({
     intro:`Kampen betyr mest for ${hoved.team}${spiller?'':', som ikke spiller selv'}. ${qaStor(hz.chance)} nå: ${pctTxt(hoved.now, hoved.mat)}`,
     n:3, kol:'5.6em', kolMobil:'4.6em', lange:true,
@@ -6537,8 +6537,11 @@ function qaRaderHtml({intro, hode, rader, n=2, kol, kolMobil, lange=false, etter
     `<ul class="qr-liste">${rader.map(rad).join('')}</ul>`+
     (etter ? `<p class="qr-etter">${qaTekstInline(etter)}</p>` : '')+'</div>';
 }
-// Endringen i prosentpoeng som den står i en celle: "+31", "−13".
-const qaPpKort = v => `${v>0?'+':'−'}${Math.abs(v)}`;
+// Endringen i prosentpoeng som den står i en celle: "+31", "−13", "±0".
+// Under to prosentpoeng står den også som tall, dempet og uten farge, så den
+// aldri brytes på smal skjerm; teksten som kopieres, sier "endrer lite"
+// (5.10.2026).
+const qaPpKort = v => v===0 ? '±0' : `${v>0?'+':'−'}${Math.abs(v)}`;
 // "Runde 26, onsdag 14. okt"
 const qaKampNaar = m => { const d = new Date(m.date+'T12:00:00Z'); return `Runde ${m.round}, ${NO_WEEKDAY[d.getUTCDay()]} ${shortDateNo(m.date)}`; };
 function qaMedHtml(tekst, html){
@@ -7012,7 +7015,7 @@ async function qaKeyMatches(team){
   // feil over "Kristiansund vinner". Det gode utfallet for laget står til
   // venstre. Sannsynligheten først, endringen under som "+31" (i teksten
   // "+31 prosentpoeng", aldri bare "poeng": det leses som tabellpoeng).
-  // Under to prosentpoeng er støy: "endrer lite", uten farge.
+  // Under to prosentpoeng er støy: uten farge, og "endrer lite" i teksten.
   const iSone = zone.dir!=='back';
   const rader = shown.map(x=>{
     const egen = x.m.home===team || x.m.away===team;
@@ -7030,7 +7033,7 @@ async function qaKeyMatches(team){
   const tekst = intro+'\n\n'+rader.map(r=>`${r.kamp}, ${r.naar}\n`+
     r.celler.map(c=>`${c.hva}: ${c.p} (${c.lite ? 'endrer lite' : ppTekst(c.v)+' prosentpoeng'})`).join('\n')).join('\n\n');
   const html = qaRaderHtml({intro, n:2, kol:'7.5em', kolMobil:'5.6em', lange:true, rader: rader.map(r=>({navn:r.kamp, meta:qaStor(r.naar),
-    celler: r.celler.map(c=>({hva:c.hva, hvaKort:c.hvaKort, p:c.p, pp: c.lite ? 'endrer lite' : qaPpKort(c.v), tone: c.lite ? '' : c.godt ? 'godt' : 'darlig'}))}))});
+    celler: r.celler.map(c=>({hva:c.hva, hvaKort:c.hvaKort, p:c.p, pp: qaPpKort(c.v), tone: c.lite ? '' : c.godt ? 'godt' : 'darlig'}))}))});
   return qaMedHtml(tekst, html);
 }
 

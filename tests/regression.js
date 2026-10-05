@@ -3451,25 +3451,26 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         // Samme tall i visningen og i teksten.
         const like = r.rader.every((x, i) => { const linjer = kamper[i].split('\n');
           return linjer[0] === `${x.kamp}, ${x.naar.charAt(0).toLowerCase()}${x.naar.slice(1)}` && x.celler.every((c, k) => {
-            return linjer[k + 1] === `${c.hva}: ${c.p.replace(NB, ' ')} (${c.pp === 'endrer lite' ? 'endrer lite' : c.pp + ' prosentpoeng'})`; }); });
+            // Under to prosentpoeng: tallet i visningen ("+1", "±0"), "endrer lite" i teksten.
+            const lite = /^(±0|[+−]1)$/.test(c.pp);
+            return linjer[k + 1] === `${c.hva}: ${c.p.replace(NB, ' ')} (${lite ? 'endrer lite' : c.pp + ' prosentpoeng'})`; }); });
         check(`${form}, ${navn}: samme tall i visningen og i teksten "Kopier tekst" gir`, like, `${r.tekst} || ${JSON.stringify(r.rader.map(x => x.celler.map(c => [c.hva, c.p, c.pp])))}`);
         check(`${form}, ${navn}: ingen parentesform, ingen "Tallet i parentes", verken "poeng" eller "pp" i visningen`,
           !/\(\s*[+−-]?\d/.test(r.synlig) && !/parentes/.test(r.synlig + r.tekst) && !/poeng|\bpp\b/i.test(r.synlig), r.synlig.slice(0, 300));
         check(`${form}, ${navn}: teksten sier "(+31 prosentpoeng)", aldri bare "poeng"`,
           /\([+−]\d+ prosentpoeng\)/.test(r.tekst) && !/(?<!prosent)poeng/.test(r.tekst) && !/\bpp\b/.test(r.tekst), r.tekst);
         check(`${form}, ${navn}: endringen er bare tallet ("+31", "−13"), hardt mellomrom mellom tall og %, tabular-nums`,
-          r.rader.every(x => x.celler.every(c => /^(\d+|<1|>99)\u00a0%$/.test(c.p) && (c.pp === 'endrer lite' || /^[+−]\d+$/.test(c.pp)) && /tabular-nums/.test(c.tall))), JSON.stringify(r.rader.map(x => x.celler.map(c => [c.p, c.pp, c.tall]))));
+          r.rader.every(x => x.celler.every(c => /^(\d+|<1|>99)\u00a0%$/.test(c.p) && /^([+−]\d+|±0)$/.test(c.pp) && /tabular-nums/.test(c.tall))), JSON.stringify(r.rader.map(x => x.celler.map(c => [c.p, c.pp, c.tall]))));
         check(`${form}, ${navn}: ingen kolonneoverskrift; "Seier" og "Tap" (eller "X vinner") står over tallene i hver celle`,
           r.hode.length === 0 && r.rader.every(x => x.celler.every(c => c.hva && c.hvaOver))
           && r.rader.every(x => { const h = x.celler.map(c => c.hva); return h.join() === 'Seier,Tap' || h.every(t => / vinner$/.test(t)); }),
           JSON.stringify(r.rader.map(x => x.celler.map(c => [c.hva, c.hvaOver]))));
         check(`${form}, ${navn}: sannsynligheten større enn endringen, og endringen på samme linje ("53 %  +31")`,
-          // Unntak: "endrer lite" er ord, ikke et tall, og får brytes under prosenten på smal skjerm.
-          r.rader.every(x => x.celler.every(c => c.pStr >= c.ppStr + 3 && (c.ppSammeLinje || (form === 'mobil' && c.pp === 'endrer lite')))),
+          r.rader.every(x => x.celler.every(c => c.pStr >= c.ppStr + 3 && c.ppSammeLinje)),
           JSON.stringify(r.rader.map(x => x.celler.map(c => [c.pp, c.ppSammeLinje]))));
-        check(`${form}, ${navn}: grønn tone på det gode utfallet, rød på det dårlige, ingen farge på "endrer lite"`,
+        check(`${form}, ${navn}: grønn tone på det gode utfallet, rød på det dårlige, ingen farge under to prosentpoeng`,
           r.rader.every(x => x.celler.every(c => /godt/.test(c.klasse) ? c.farge === r.gronn : /darlig/.test(c.klasse) ? c.farge === r.rod
-            : c.pp === 'endrer lite' && c.farge !== r.gronn && c.farge !== r.rod)) && r.rader.every(x => /godt/.test(x.celler[0].klasse) || x.celler[0].pp === 'endrer lite'),
+            : /^(±0|[+−]1)$/.test(c.pp) && c.farge !== r.gronn && c.farge !== r.rod)) && r.rader.every(x => /godt/.test(x.celler[0].klasse) || /^(±0|[+−]1)$/.test(x.celler[0].pp)),
           JSON.stringify(r.rader.map(x => x.celler.map(c => [c.klasse, c.farge]))));
         check(`${form}, ${navn}: "Kopier tekst" kopierer ren tekst med de samme tallene`,
           r.kopiert.includes(r.tekst) && !/[<>]/.test(r.kopiert) && !/\u00a0/.test(r.tekst), r.kopiert.slice(0, 200));
@@ -3481,8 +3482,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           check(`${form}: ${form === 'mobil' ? 'korte lagnavn i etiketten ("KBK vinner"), som i kamplisten' : 'hele lagnavnet i etiketten ("Kristiansund vinner")'}`,
             andre.every(x => x.celler.every(c => c.hvaSynlig === (form === 'mobil' ? `${r.kort[c.hva.replace(/ vinner$/, '')]} vinner` : c.hva))),
             JSON.stringify(andre.map(x => x.celler.map(c => c.hvaSynlig))));
-          check(`${form}: et utfall under to prosentpoeng står som "endrer lite", uten farge`,
-            andre.every(x => x.celler.some(c => c.pp === 'endrer lite' && !/godt|darlig/.test(c.klasse))) && /\(endrer lite\)/.test(r.tekst), r.tekst);
+          check(`${form}: et utfall under to prosentpoeng står med tallet ("+1", "±0") på samme linje, uten farge, og som "endrer lite" i teksten`,
+            andre.every(x => x.celler.some(c => /^(±0|[+−]1)$/.test(c.pp) && c.ppSammeLinje && !/godt|darlig/.test(c.klasse))) && /\(endrer lite\)/.test(r.tekst),
+            `${r.tekst} | ${JSON.stringify(andre.map(x => x.celler.map(c => [c.pp, c.ppSammeLinje, c.klasse])))}`);
         }
       }
       await pg.close();
