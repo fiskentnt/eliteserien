@@ -156,13 +156,8 @@ else:
             print(f"     lastmatch.json mot siden hoppes over lokalt: {_hvorfor}")
     else:
         import socket as _so
-        _s = _so.socket(); _s.bind(("127.0.0.1", 0)); _port = _s.getsockname()[1]; _s.close()
-        _srv = subprocess.Popen([sys.executable, "-m", "http.server", str(_port), "--bind", "127.0.0.1"],
-                                cwd=ROT, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-        try:
-            import time as _tm
-            _tm.sleep(1.0)
-            _jsw = r"""
+        import time as _tm
+        _jsw = r"""
 const puppeteer = require('puppeteer-core');
 (async () => {
   const b = await puppeteer.launch({executablePath: process.argv[2], headless: 'new', args: ['--no-sandbox']});
@@ -176,19 +171,62 @@ const puppeteer = require('puppeteer-core');
       r.push({lag: t, expected: d.expected == null ? null : +d.expected.toFixed(4), pp: d.pp,
               regnetOm: tx.includes('Ratingen er regnet om'), fast: tx.includes('Lagstyrkene holdes som i dag')});
     }
-    return r;
+    return {status: GRUNNLAG_STATUS, lag: r};
   });
   console.log(JSON.stringify(ut)); await b.close();
 })().catch(e => { console.error(e); process.exit(1); });
 """
-            _rw = subprocess.run(["node", "-e", _jsw, f"http://127.0.0.1:{_port}/elo-test/", _chrome],
-                                 capture_output=True, text=True, timeout=600)
-        finally:
-            _srv.terminate()
+
+        def _side(rot):
+            _s = _so.socket(); _s.bind(("127.0.0.1", 0)); _port = _s.getsockname()[1]; _s.close()
+            _srv = subprocess.Popen([sys.executable, "-m", "http.server", str(_port), "--bind", "127.0.0.1"],
+                                    cwd=rot, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                _tm.sleep(1.0)
+                return subprocess.run(["node", "-e", _jsw, f"http://127.0.0.1:{_port}/elo-test/", _chrome],
+                                      capture_output=True, text=True, timeout=600)
+            finally:
+                _srv.terminate()
+
+        _rw = _side(ROT)
+        # Lokalt etter en endring i sidens kode (5.10.2026): grunnlagsfilen i
+        # repoet er regnet av CI med den forrige koden, og avtrykket tar med
+        # Worker-koden, så siden avviser filen ("feil avtrykk") og regner forrige
+        # kamp live. Da får den litt andre tall enn lastmatch.json, som CI regnet
+        # med filen i bruk. Som i regresjonen (grunnlagFilFor i
+        # tests/regression.js): filen regnes på nytt med lag_grunnlag.js i en
+        # kopi av arbeidstreet, og siden sammenlignes der. Etter push regner CI
+        # filen og panelene på nytt. I CI sammenlignes alltid direkte.
+        if not _rw.returncode and not os.environ.get("GITHUB_ACTIONS") and (UT / "grunnlag.json").exists():
+            _st = json.loads(_rw.stdout.strip().splitlines()[-1])["status"]
+            if _st != "i bruk":
+                import shutil as _sh
+                import tempfile as _tf
+                _kopi = _tf.mkdtemp(prefix="grunnlag-paneler-")
+                try:
+                    _filer = subprocess.run(["git", "ls-files", "-co", "--exclude-standard", "-z"], cwd=ROT,
+                                            capture_output=True, check=True).stdout.decode().split("\0")
+                    for _f in filter(None, _filer):
+                        _fra = ROT / _f
+                        if _fra.is_file():
+                            (Path(_kopi) / _f).parent.mkdir(parents=True, exist_ok=True)
+                            _sh.copyfile(_fra, Path(_kopi) / _f)
+                    _lg = subprocess.run(["node", "scripts/lag_grunnlag.js", "elo-test", "--ut", "elo-test/emodell"],
+                                         cwd=_kopi, capture_output=True, text=True, timeout=900)
+                    krev(f"grunnlagsfilen regnet på nytt i en kopi (siden avviste filen i repoet: {_st})",
+                         _lg.returncode == 0, (_lg.stderr.strip().splitlines() or ["?"])[-1][:160] if _lg.returncode else
+                         (_lg.stdout.strip().splitlines() or [""])[0][:160])
+                    if _lg.returncode == 0:
+                        _rw = _side(_kopi)
+                        if not _rw.returncode:
+                            _st2 = json.loads(_rw.stdout.strip().splitlines()[-1])["status"]
+                            krev("siden i kopien godtar den nye grunnlagsfilen", _st2 == "i bruk", _st2)
+                finally:
+                    _sh.rmtree(_kopi, ignore_errors=True)
         if _rw.returncode:
             krev("lastmatch.json mot siden (Chrome) kjører", False, (_rw.stderr.strip().splitlines() or ["?"])[-1][:160])
         else:
-            _sd = json.loads(_rw.stdout.strip().splitlines()[-1])
+            _sd = json.loads(_rw.stdout.strip().splitlines()[-1])["lag"]
             _lmd = json.loads(_lm.read_text(encoding="utf-8"))["teams"]
             _ulik = [f"{x['lag']}: fil {_lmd[x['lag']].get('expected')}/{_lmd[x['lag']].get('pp')}, side {x['expected']}/{x['pp']}"
                      for x in _sd if _lmd[x["lag"]].get("expected") != x["expected"] or _lmd[x["lag"]].get("pp") != x["pp"]]
