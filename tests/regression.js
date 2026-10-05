@@ -3534,6 +3534,11 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
             fet: [...a.querySelectorAll('.qn')].map(e => e.textContent), hode: [...a.querySelectorAll('.qr-hode span')].map(e => e.textContent),
             grupper: [...a.querySelectorAll('.qr-gruppe')].map(e => e.textContent), rader,
             intro: (a.querySelector('.qr-intro') || {}).textContent || '', synlig: a.textContent,
+            // Teksten slik den står i dokumentet, uten det som er skjult: det
+            // Safari og Firefox kopierer ved en vanlig markering.
+            ren: (() => { const deler = []; const gaa = n => { if (n.nodeType === 3) deler.push(n.nodeValue);
+              else if (n.nodeType === 1 && getComputedStyle(n).display !== 'none') n.childNodes.forEach(gaa); };
+              a.querySelectorAll('.qr').forEach(gaa); return deler.join(''); })(),
             sporsmal: q.label('Viking'), kort: Object.fromEntries(TEAMS.map(t => [t, shortTeam(t)]))};
         }
         return ut;
@@ -3545,6 +3550,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         alle.every(([, x]) => !nb.test(x.synlig)), alle.filter(([, x]) => nb.test(x.synlig)).map(([k, x]) => `${k}: ${x.synlig.match(nb)[0]}`).join('; '));
       check(`${form}: ingen stor luke før "Kopier tekst" (høyst 14 piksler)`, alle.every(([, x]) => x.luke != null && x.luke <= 14),
         alle.map(([k, x]) => `${k} ${x.luke && x.luke.toFixed(0)}`).join(', '));
+      const lim = /\S(Runde \d)|(Seier|Tap|Uavgjort|vinner|Vanskeligst|Lettest)(\d|<|>)|%[+−±]|[a-zæøå]\d|[%.][A-ZÆØÅ]|(Tøffest|Lettest|Forskjell|forventet)[A-ZÆØÅ]/;
+      check(`${form}: en vanlig markering limer ikke teksten sammen i radene ("KongsvingerRunde 26", "Seier83 %+27")`,
+        alle.every(([, x]) => !lim.test(x.ren)), alle.filter(([, x]) => lim.test(x.ren)).map(([k, x]) => `${k}: ...${x.ren.match(lim)[0]}...`).join('; '));
       check(`${form}: "Kopier tekst" er ren tekst: ingen HTML og ingen harde mellomrom`, alle.every(([, x]) => x.tekst && !/[<>]/.test(x.tekst) && !/\u00a0/.test(x.tekst)), '');
       // Hva betyr neste kamp: én rad, Seier/Uavgjort/Tap, "gullsjanse", "Nå: 22 %" samlet.
       const nm = r.nextmatch;

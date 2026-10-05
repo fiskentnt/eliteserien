@@ -6524,17 +6524,20 @@ function qaRaderHtml({intro, hode, rader, n=2, kol, kolMobil, lange=false, etter
   // Rader med bare navn og tall (ingen dempet linje, ingen etiketter) står tettere.
   const ekte = rader.filter(r=>!r.gruppe);
   const tett = ekte.every(r=>!r.meta && r.celler.every(c=>!c.hva));
-  const celle = c => `<div class="qr-celle${c.tone ? ' '+c.tone : ''}">`+
-    (c.hva ? `<span class="qr-hva">${hva(c)}</span>` : '')+
+  // Mellomrom mellom alle delene (5.10.2026): de påvirker ikke oppsettet (grid
+  // og flex), men en vanlig markering og kopiering i Safari og Firefox limte
+  // ellers teksten sammen ("KongsvingerRunde 26", "Seier83 %+27").
+  const celle = c => ` <div class="qr-celle${c.tone ? ' '+c.tone : ''}">`+
+    (c.hva ? `<span class="qr-hva">${hva(c)}</span> ` : '')+
     `<span class="qr-tall"><span class="qr-p">${qaEsc(c.p).replace(/ %/g,'\u00a0%')}</span>`+
-    (c.pp!=null ? `<span class="qr-pp">${qaEsc(c.pp)}</span>` : '')+`</span></div>`;
-  const rad = r => r.gruppe ? `<li class="qr-gruppe">${qaEsc(r.gruppe)}</li>`
+    (c.pp!=null ? ` <span class="qr-pp">${qaEsc(c.pp)}</span>` : '')+`</span></div>`;
+  const rad = r => r.gruppe ? `<li class="qr-gruppe">${qaEsc(r.gruppe)}</li>\n`
     : `<li class="qr-rad${r.valgt ? ' valgt' : ''}"><b class="qr-navn">${qaEsc(r.navn)}</b>`+
-      (r.meta ? `<span class="qr-meta">${qaEsc(r.meta)}</span>` : '')+r.celler.map(celle).join('')+'</li>';
+      (r.meta ? ` <span class="qr-meta">${qaEsc(r.meta)}</span>` : '')+r.celler.map(celle).join('')+'</li>\n';
   return `<div class="qr${lange ? ' lange' : ''}${lange && n>=3 ? ' stablet' : ''}${tett ? ' tett' : ''}" style="--qr-n:${n}${kol ? `;--qr-kol:${kol}` : ''}${kolMobil ? `;--qr-kol-m:${kolMobil}` : ''}">`+
-    (intro ? `<p class="qr-intro">${qaTekstInline(intro)}</p>` : '')+
-    (hode ? `<div class="qr-hode" aria-hidden="true">${hode.map(h=>`<span>${qaEsc(h)}</span>`).join('')}</div>` : '')+
-    `<ul class="qr-liste">${rader.map(rad).join('')}</ul>`+
+    (intro ? `<p class="qr-intro">${qaTekstInline(intro)}</p>\n` : '')+
+    (hode ? `<div class="qr-hode" aria-hidden="true">${hode.map(h=>`<span>${qaEsc(h)}</span>`).join(' ')}</div>\n` : '')+
+    `<ul class="qr-liste">\n${rader.map(rad).join('')}</ul>\n`+
     (etter ? `<p class="qr-etter">${qaTekstInline(etter)}</p>` : '')+'</div>';
 }
 // Endringen i prosentpoeng som den står i en celle: "+31", "−13", "±0".
