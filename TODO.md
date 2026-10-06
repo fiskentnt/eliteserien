@@ -3,7 +3,7 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
-## Trekningen: fri i "Simuler runden", filteret målt for "Simuler tomme kamper" (5.10.2026)
+## Trekningen: fri i "Simuler runden", to standardavvik i "Simuler tomme kamper" (5.10. og 7.10.2026)
 
 Avviket: OBOS runde 24 med bare Moss-Kongsvinger igjen (B 57 %) ga B 200
 av 200 ganger på "Simuler på nytt". runTypical hadde to mekanismer: en
@@ -16,12 +16,14 @@ kampene", "Simuler på nytt" og "Fyll ut runden" trekker fritt (d.fri), og en
 slik runde står i lenken med resultatene, ikke frøet. "Simuler tomme kamper"
 og frølenkene har fortsatt filteret.
 
-VENTER PÅ BESLUTNING: filteret i "Simuler tomme kamper". Målt mot fri
-trekning med 10 000 restsesonger per tilfelle, samme frø
-(scratchpad/filtermaal.js, ikke en regresjonstest). Hele resten: avviser
-rundt 31 % av de frie sesongene, ingen målbar endring i sluttabellen. Med 8,
-4, 2 og 1 kamp igjen tvinger det fram 1-2 eller 0 overraskelser og flytter
-sonesjanser med opptil 15 prosentpoeng. Ikke endre før tallene er vurdert.
+Filteret i "Simuler tomme kamper" (bestemt 7.10.2026): to standardavvik i
+stedet for ett, og fri trekning med én runde eller mindre igjen (høyst 8
+kamper). Målt 5.10. mot fri trekning med 10 000 restsesonger per tilfelle,
+samme frø (scratchpad/filtermaal.js, ikke en regresjonstest): med ett
+standardavvik ble rundt 31 % av helt vanlige sesonger avvist, uten målbar
+endring i sluttabellen; to standardavvik avviser rundt 6 %, bare halene. Med
+8, 4, 2 og 1 kamp igjen tvang filteret fram et bestemt antall overraskelser
+og flyttet sonesjanser med opptil 15 prosentpoeng.
 
 Tester: regression.js, gruppen "trekning".
 
@@ -142,33 +144,28 @@ veien og nærmeste konkurrent) og eksempelet i "Om modellen" (Eliteserien).
 
 Tester: regression.js, gruppen "Svarene: kamper til gode" (--bare tilgode).
 
-## OBOS-odds fra OddsPapi: når de kommer, og når det er en feil (4.10.2026)
+## OBOS-odds fra OddsPapi: varsel et døgn før avspark (4.10. og 7.10.2026)
 
 obos_upcoming_odds.py slår bare opp kampene OddsPapi selv sier har odds
-(hasOdds i kamplisten). De andre samles i én linje: "OddsPapi har ikke odds
-ennå for 24 kamper, 11. til 18.10." Før ga de 404 "No historical odds found"
-for hver kamp.
+(hasOdds i kamplisten). De andre gir ingen linje: at kamper langt fram
+mangler odds, er normalt. Før ga de 404 "No historical odds found" for hver
+kamp.
 
-- Grensen: oddsen for en runde kommer når de ordinære kampene i runden før er
-  spilt; utsatte kamper teller ikke (leaguedata.odds_forventet). Mangler en
-  kamp fortsatt odds et døgn etter kampslutt (avspark + 2 t) i den siste av
-  dem: ADVARSEL. For runde 25: tirsdag 6.10. kl. 21.00, et døgn etter
-  Moss-Kongsvinger. Sogndal-Raufoss (runde 24, spilt 21.10.) regnes fra
-  runde 27. Advarselen kommer bare når kamplisten er hentet etter grensen;
-  ellers en linje om at det avgjøres ved neste liste.
+- Varselet (7.10.): mangler en uspilt kamp odds i odds_upcoming.json (det
+  siden bruker) når det er under et døgn til avspark, er det en ADVARSEL og
+  en ::warning, med grunnen når kjøringen vet den (hasOdds false, 404,
+  annen feil, ingen av bookmakerne, ikke i kamplisten, ikke hentet). Ingen
+  linje når alt er i orden. Da spiller det ingen rolle hvor lenge det er
+  mellom rundene.
 - 404 for en kamp med hasOdds true: egen ADVARSEL. Andre feilkoder: FEIL.
-- Målingen: obos/data/odds_aapning.json og en linje per runde i loggen, for
-  eksempel "Runde 25: odds for alle 8 kamper, den første 11 t 30 min og den
-  siste 35 t 0 min etter at runde 24 var spilt (Moss-Kongsvinger, ferdig
-  5.10. kl. 21.00)". Tidspunktet er når kamplisten ble hentet (omtrent én
-  gang i døgnet, 1 tellende kall), så målingen er ikke mer nøyaktig enn det.
-  En kamp som hadde odds alt første gang vi så listen, er ikke en måling.
+- Borte (7.10.): målingen av når OddsPapi fikk oddsen i forhold til når
+  runden før var spilt (obos/data/odds_aapning.json, linjene per runde og
+  leaguedata.odds_forventet). Runde 25: oddsen kom en gang mellom 4.10. kl.
+  13.40 og 5.10. kl. 18.01, før Moss-Kongsvinger var spilt.
 
-**Tirsdag 6.10.:** vis når oddsen for runde 25 kom (odds_aapning.json og
-loggen fra OBOS-resultatjobben).
-
-**Etter tre runder (25, 26, 27, rundt 19.10.):** foreslå en grense ut fra
-det som er målt, i stedet for et døgn.
+**Venter på svar:** obos-results.yml har fortsatt odds_aapning.json i
+commit-listen (beskyttet med [ -e ], så den gjør ingen skade). Tas ut sammen
+med de andre workflow-endringene.
 
 ## Resultatloggen: én linje per resultat og hvem som hadde det først (4.10.2026)
 

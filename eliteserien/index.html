@@ -3048,7 +3048,8 @@ function runProb(d){
 // GODTAR den første som ser statistisk normal ut: totalt antall
 // overraskelser (<30% sjanse) nær
 // forventet, innenfor en toleranse basert på hvor mye det tallet naturlig
-// svinger (kvadratroten av summen av Bernoulli-varians p*(1-p) per kamp).
+// svinger (kvadratroten av summen av Bernoulli-varians p*(1-p) per kamp),
+// ganger Z.
 // Hadde TIDLIGERE også et eget krav PER RUNDE (samme toleranse, men på hver
 // av de ~30 rundenes egne overraskelsestall) -- droppet: 31 samtidige krav
 // (ett totalt + 30 per runde) ga en praktisk talt umulig kombinasjon uansett
@@ -3057,6 +3058,12 @@ function runProb(d){
 // totale kravet igjen (samme Z=1,0 som før) godtas over 99 % av forsøkene
 // på første eller andre forsøk -- se scratchpad/test_accept_filter.js fra
 // undersøkelsen.
+// 7.10.2026: Z=2,0. Målt mot fri trekning med 10 000 restsesonger (5.10.,
+// samme frø): med Z=1 ble rundt 31 % av helt vanlige sesonger avvist (de
+// mest og minst begivenhetsrike), uten målbar endring i sluttabellen. Z=2
+// avviser bare halene, rundt 6 %. Med én runde eller mindre igjen trekkes
+// det fritt (simulateEmpty): på så få kamper tvang filteret fram et bestemt
+// antall overraskelser (med én kamp aldri en, med fire aldri null).
 // 5.10.2026: regelen som trakk en enkeltkamp på nytt når utfallet (H/U/B)
 // hadde under 10 % sjanse, er borte overalt: et utfall modellen gir 8 %, må
 // kunne skje. Med d.fri godtas første kandidat, uten filteret på samlet
@@ -3095,7 +3102,7 @@ function runTypical(d){
     expTotal+=sp;
     var vv=sp*(1-sp); varTotal+=vv;
   }
-  var Z=1.0; // toleranse i antall "standardavvik" rundt forventet antall overraskelser
+  var Z=2.0; // toleranse i antall "standardavvik" rundt forventet antall overraskelser
   var tolTotal=Z*Math.sqrt(varTotal);
 
   var MAX_ATTEMPTS=d.fri ? 1 : 3000;
@@ -3775,9 +3782,15 @@ function simulateTypicalAsync(open, forcedSeed, fri=false){
 // satt) — en kamp der bare det ene feltet er fylt ut er midt i redigering (du
 // har nettopp skrevet det ene tallet) og skal aldri overskrives automatisk.
 const isEmpty = m => m.hg==null && m.ag==null;
+// "Simuler tomme kamper": filteret på samlet antall overraskelser (runTypical,
+// Z=2) bare når det er mer enn én runde igjen. Med én runde eller mindre
+// (høyst en rundes kamper, TEAMS.length/2) trekkes det fritt, som "Simuler
+// runden" (7.10.2026). Frølenken (encodeScenario) brukes bare med filteret.
+const tommeFritt = n => n <= Math.floor(TEAMS.length/2);
 async function simulateEmpty(){
   matches.filter(m=>m.sim).forEach(m=>setMatch(m,null,null));
-  await simulateTypicalAsync(matches.filter(isEmpty));
+  const tomme = matches.filter(isEmpty);
+  await simulateTypicalAsync(tomme, null, tommeFritt(tomme.length));
 }
 
 // "Simuler runden": samme trekk-mekanikk som "Simuler tomme kamper", men

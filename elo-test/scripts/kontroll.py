@@ -476,6 +476,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # Fri trekning i "Simuler runden"/"Simuler på nytt"/"Fyll ut runden" og
 # 10 %-regelen fjernet fra runTypical (d.fri, lastSimFri, 5.10.2026) er
 # flettet inn uendret.
+# To standardavvik i filteret og fri trekning i "Simuler tomme kamper" med én
+# runde eller mindre igjen (Z=2, tommeFritt, 7.10.2026) er flettet inn uendret.
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -491,7 +493,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "cda0cc36a831838f9bab82ff24744186f82f976eb0a16b195327cbd64fc9c25e"
+BASE_SHA = "72fb8070c6424675e99243f00e6ce3806de052ba543c918b22c58c7dbeaffbd0"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

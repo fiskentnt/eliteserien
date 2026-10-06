@@ -118,51 +118,6 @@ def flyttede(group):
     return {id(r) for r in group if r["date"] < fra or r["date"] > til}
 
 
-def odds_forventet(alle):
-    """Når oddsen for hver kamp bør være kommet (4.10.2026), for kontrollen
-    av OddsPapi i obos_upcoming_odds.py.
-
-    Oddsen for en runde kommer når de ordinære kampene i runden før er
-    spilt; flyttede kamper (flyttede()) teller ikke. Runden før en kamp er
-    den runden (ikke kampens egen) som har den siste ordinære kampen før
-    kampens avspark: for runde 25 er det runde 24 (Moss-Kongsvinger 5.10.),
-    ikke Sogndal-Raufoss (runde 24, utsatt til 21.10.); for Sogndal-Raufoss
-    er det runde 27. Alarmgrensen er et døgn etter kampslutt (avspark + 2 t)
-    i den siste ordinære kampen.
-
-    alle: hele sesongen, [{home, away, date, time, round}] med dagens datoer.
-    Returnerer {(hjemme, borte): {"forrige": runde, "kamp": "Moss-Kongsvinger",
-    "slutt": datetime, "alarm": datetime}} (UTC) for kampene som har en runde
-    før seg."""
-    from datetime import datetime, timedelta
-    from zoneinfo import ZoneInfo
-    oslo = ZoneInfo("Europe/Oslo")
-
-    def avspark(m):
-        return datetime.fromisoformat(f"{m['date']}T{m.get('time') or '18:00'}:00").replace(tzinfo=oslo)
-    per_runde = {}
-    for m in alle:
-        per_runde.setdefault(m["round"], []).append(m)
-    # Den siste ordinære kampen i hver runde.
-    siste = {}
-    for r, g in per_runde.items():
-        ut = flyttede(g)
-        egne = [m for m in g if id(m) not in ut] or g
-        siste[r] = max(egne, key=avspark)
-    svar = {}
-    for m in alle:
-        a = avspark(m)
-        foer = [(avspark(s), r, s) for r, s in siste.items() if r != m["round"] and avspark(s) < a]
-        if not foer:
-            continue
-        t, r, s = max(foer, key=lambda x: x[0])
-        slutt = t + timedelta(hours=2)
-        svar[(m["home"], m["away"])] = {"forrige": r, "kamp": f"{s['home']}-{s['away']}",
-                                        "slutt": slutt.astimezone(ZoneInfo("UTC")),
-                                        "alarm": (slutt + timedelta(hours=24)).astimezone(ZoneInfo("UTC"))}
-    return svar
-
-
 def forrige_terminliste(data_dir, sesong, forventet_par=None, log=lambda s: None):
     """Den siste gyldige terminlisten vi selv har skrevet: de spilte kampene
     fra matches.json og de uspilte fra fixtures.json, paa radformen

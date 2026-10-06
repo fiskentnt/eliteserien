@@ -3873,6 +3873,64 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       t.H > 0 && t.U > 0 && t.B > 0 && r.mk.fri && !r.mk.frøFeil && r.mk.ulike > 5, JSON.stringify(r.mk));
     check('en simulert runde står i lenken med resultatene (fri trekning), "Simuler tomme kamper" med frøet',
       !r.lenkeRunde.includes('~') && r.lenkeTomme.includes('~'), `${r.lenkeRunde.slice(0, 60)} | ${r.lenkeTomme.slice(0, 60)}`);
+    // "Simuler tomme kamper" (7.10.2026): filteret med to standardavvik når det
+    // er mer enn én runde igjen, fri trekning med én runde eller mindre.
+    const t2 = await pg.evaluate(async () => {
+      const ut = {}, ekteRandom = Math.random, utfall = m => m.hg > m.ag ? 'H' : m.hg < m.ag ? 'B' : 'U';
+      const tom = () => matches.forEach(m => { if (m.hg != null) setMatch(m, null, null, false); });
+      // Hele resten: toleransen er to standardavvik (regnet uavhengig her), og
+      // en sesong mellom ett og to standardavvik fra det forventede godtas på
+      // første forsøk. Med Z=1 ble den avvist.
+      const alle = matches.filter(isEmpty);
+      const sd = Math.sqrt(alle.reduce((v, m) => { const [lh, la] = rateFor(m.home, m.away), o = outcome(lh, la);
+        const sp = [o.H, o.U, o.B].filter(x => x < 0.30).reduce((a, b) => a + b, 0); return v + sp * (1 - sp); }, 0));
+      ut.hele = {n: alle.length, sd: +sd.toFixed(3)};
+      for (let seed = 1; seed <= 200 && !ut.hele.seed; seed++) {
+        Math.random = () => seed / 4294967296;
+        let kall; try { kall = simulateEmpty(); } finally { Math.random = ekteRandom; }
+        await kall;
+        const d = lastTypicalDiagnostics, avvik = Math.abs(d.actualTotal - d.expectedTotal);
+        ut.hele.tol = +d.tolTotal.toFixed(3); ut.hele.fri = d.fri;
+        if (d.attempts === 1 && avvik > d.tolTotal / 2 && avvik <= d.tolTotal)
+          Object.assign(ut.hele, {seed, avvik: +avvik.toFixed(2), forventet: +d.expectedTotal.toFixed(2), faktisk: d.actualTotal});
+      }
+      ut.hele.lenke = encodeScenario().includes('~');
+      tom();
+      // Én runde igjen (TEAMS.length/2 kamper): fri trekning; én kamp til: filteret.
+      const rekke = matches.filter(isEmpty).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+      const runde = Math.floor(TEAMS.length / 2);
+      const fyllTil = k => { tom(); rekke.slice(0, rekke.length - k).forEach(m => setMatch(m, 1, 1, false)); };
+      fyllTil(runde); await simulateEmpty();
+      ut.enRunde = {n: runde, fri: lastTypicalDiagnostics.fri, lenke: encodeScenario().includes('~')};
+      fyllTil(runde + 1); await simulateEmpty();
+      ut.merEnn = {n: runde + 1, fri: lastTypicalDiagnostics.fri};
+      // Én kamp igjen (Moss-Kongsvinger i bildet fra 1.10., ellers den siste
+      // kampen): 200 trykk med fast frø per trykk gir alle tre utfallene.
+      const mk = rekke.find(m => m.home === 'Moss' && m.away === 'Kongsvinger') || rekke[rekke.length - 1];
+      tom(); rekke.filter(m => m !== mk).forEach(m => setMatch(m, 1, 1, false));
+      const tell = {H: 0, U: 0, B: 0}; let friAlle = true;
+      for (let i = 0; i < 200; i++) {
+        const frø = Math.imul(i + 1, 2654435761) >>> 0;
+        Math.random = () => frø / 4294967296;
+        let kall; try { kall = simulateEmpty(); } finally { Math.random = ekteRandom; }
+        await kall;
+        friAlle = friAlle && lastTypicalDiagnostics.fri;
+        tell[utfall(mk)]++;
+      }
+      ut.enKamp = {kamp: `${mk.home}-${mk.away}`, tell, fri: friAlle};
+      tom();
+      return ut;
+    });
+    const h = t2.hele;
+    check(`"Simuler tomme kamper", hele resten (${h.n} kamper): toleransen er to standardavvik (${h.tol} mot 2 x ${h.sd})`,
+      !h.fri && Math.abs(h.tol / (2 * h.sd) - 1) < 0.03, JSON.stringify(h));
+    check(`og en sesong mellom ett og to standardavvik godtas på første forsøk: frø ${h.seed}, ${h.faktisk} overraskelser mot ${h.forventet} forventet`,
+      !!h.seed && h.lenke, JSON.stringify(h));
+    check(`én runde igjen (${t2.enRunde.n} kamper): fri trekning, og lenken har resultatene`, t2.enRunde.fri === true && !t2.enRunde.lenke, JSON.stringify(t2.enRunde));
+    check(`${t2.merEnn.n} kamper igjen: filteret`, t2.merEnn.fri === false, JSON.stringify(t2.merEnn));
+    const tk = t2.enKamp.tell;
+    check(`én kamp igjen (${t2.enKamp.kamp}), 200 trykk på "Simuler tomme kamper": H ${tk.H}, U ${tk.U}, B ${tk.B}`,
+      tk.H > 0 && tk.U > 0 && tk.B > 0 && t2.enKamp.fri, JSON.stringify(t2.enKamp));
     await pg.close();
   };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
