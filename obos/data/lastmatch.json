@@ -16,8 +16,9 @@
    "chance": "topp 6-sjansen",
    "pp": 9,
    "good": true,
-   "basis": "forventning",
-   "expected": 0.7807
+   "basis": "tabell",
+   "foer": 0.7675,
+   "expected": 0.7785
   },
   "Egersund": {
    "date": "2026-10-02",
@@ -33,8 +34,9 @@
    "chance": "kvaliksjansen",
    "pp": 0,
    "good": false,
-   "basis": "forventning",
-   "expected": 0.0063
+   "basis": "tabell",
+   "foer": 0.0059,
+   "expected": 0.0062
   },
   "Haugesund": {
    "date": "2026-10-03",
@@ -48,10 +50,11 @@
    "actual": "win",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": 8,
+   "pp": 9,
    "good": true,
-   "basis": "forventning",
-   "expected": 0.8335
+   "basis": "tabell",
+   "foer": 0.8216,
+   "expected": 0.8322
   },
   "Hødd": {
    "date": "2026-10-03",
@@ -65,10 +68,11 @@
    "actual": "loss",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": -8,
+   "pp": -14,
    "good": false,
-   "basis": "forventning",
-   "expected": 0.1638
+   "basis": "tabell",
+   "foer": 0.2236,
+   "expected": 0.1621
   },
   "Kongsvinger": {
    "date": "2026-10-05",
@@ -82,10 +86,11 @@
    "actual": "win",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": 10,
+   "pp": 6,
    "good": true,
-   "basis": "forventning",
-   "expected": 0.5238
+   "basis": "tabell",
+   "foer": 0.5616,
+   "expected": 0.5237
   },
   "Lyn": {
    "date": "2026-10-04",
@@ -99,10 +104,11 @@
    "actual": "loss",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": 2,
+   "pp": 1,
    "good": false,
-   "basis": "forventning",
-   "expected": 0.0323
+   "basis": "tabell",
+   "foer": 0.0272,
+   "expected": 0.0295
   },
   "Moss": {
    "date": "2026-10-05",
@@ -118,8 +124,9 @@
    "chance": "nedrykkssjansen",
    "pp": 1,
    "good": false,
-   "basis": "forventning",
-   "expected": 0.0379
+   "basis": "tabell",
+   "foer": 0.0417,
+   "expected": 0.0364
   },
   "Odd": {
    "date": "2026-10-03",
@@ -133,10 +140,11 @@
    "actual": "win",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": 9,
+   "pp": 10,
    "good": true,
-   "basis": "forventning",
-   "expected": 0.8518
+   "basis": "tabell",
+   "foer": 0.8388,
+   "expected": 0.8543
   },
   "Ranheim": {
    "date": "2026-10-02",
@@ -150,10 +158,11 @@
    "actual": "win",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": 3,
+   "pp": 2,
    "good": true,
-   "basis": "forventning",
-   "expected": 0.0464
+   "basis": "tabell",
+   "foer": 0.0627,
+   "expected": 0.0474
   },
   "Raufoss": {
    "date": "2026-09-20",
@@ -167,10 +176,11 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 3,
+   "pp": 4,
    "good": false,
    "basis": "forventning",
-   "expected": 0.7876
+   "foer": 0.7828,
+   "expected": 0.7828
   },
   "Sandnes Ulf": {
    "date": "2026-10-03",
@@ -184,10 +194,11 @@
    "actual": "draw",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": -1,
+   "pp": -2,
    "good": true,
-   "basis": "forventning",
-   "expected": 0.0967
+   "basis": "tabell",
+   "foer": 0.1198,
+   "expected": 0.0999
   },
   "Sogndal": {
    "date": "2026-09-20",
@@ -204,7 +215,8 @@
    "pp": 1,
    "good": false,
    "basis": "forventning",
-   "expected": 0.0698
+   "foer": 0.0705,
+   "expected": 0.0705
   },
   "Stabæk": {
    "date": "2026-10-03",
@@ -220,8 +232,9 @@
    "chance": "topp 6-sjansen",
    "pp": 0,
    "good": false,
-   "basis": "forventning",
-   "expected": 0.9998
+   "basis": "tabell",
+   "foer": 1,
+   "expected": 0.9999
   },
   "Strømmen": {
    "date": "2026-10-03",
@@ -235,10 +248,11 @@
    "actual": "draw",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 1,
-   "good": false,
-   "basis": "forventning",
-   "expected": 0.0624
+   "pp": -1,
+   "good": true,
+   "basis": "tabell",
+   "foer": 0.0758,
+   "expected": 0.0623
   },
   "Strømsgodset": {
    "date": "2026-10-03",
@@ -252,10 +266,11 @@
    "actual": "win",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": 2,
-   "good": true,
-   "basis": "forventning",
-   "expected": 0.4176
+   "pp": -5,
+   "good": false,
+   "basis": "tabell",
+   "foer": 0.4853,
+   "expected": 0.4174
   },
   "Åsane": {
    "date": "2026-10-03",
@@ -269,11 +284,12 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 1,
+   "pp": 3,
    "good": false,
-   "basis": "forventning",
-   "expected": 0.859
+   "basis": "tabell",
+   "foer": 0.8508,
+   "expected": 0.8611
   }
  },
- "updated": "2026-10-06T15:12:13Z"
+ "updated": "2026-10-07T11:22:14Z"
 }
