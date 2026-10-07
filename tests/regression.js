@@ -3981,9 +3981,28 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         HISTORIKK = [bilde(start - 5 * 86400e3, 0.01), bilde(start - 3600e3, (foerPct + 0.2) / 100), bilde(start - 3 * 86400e3, 0.99)];
         a = await svar();
         ut.siste = {pp: a.d.pp, foerP: a.d.foer};
+        const ekteLm = LASTMATCH;
+        // 5b. Sjansen lagret i prekick-raden ved avspark går foran bildet i
+        // history.json (7.10.2026), og svaret sier "Før kampen ga siden".
+        const ekteP = PREKICK, pk = `${LEAGUE.season}|${m.home}|${m.away}`;
+        const foerPk = naaPct >= 20 ? naaPct - 12 : naaPct + 12;
+        PREKICK = Object.assign({}, ekteP || {}, {[pk]: {...((ekteP || {})[pk] || {H: 0.4, U: 0.3, B: 0.3, kilde: 'odds+modell'}), frosset: true, stamp: iso(start - 30 * 60e3),
+          sjanser: {[t]: {[z.key]: (foerPk + 0.2) / 100}}}});
+        a = await svar();
+        ut.avspark = {basis: a.d.basis, pp: a.d.pp, foerP: a.d.foer, foerPk, tekst: a.tekst};
+        GRUNNLAG = null;
+        LASTMATCH = {teams: {[t]: forrigeKampRad(a.d)}};
+        ut.avspark.lagret = !!lagretForrige(t, m, z.key);
+        LASTMATCH = {teams: {[t]: {...forrigeKampRad(a.d), basis: 'tabell', foer: 0.5}}};
+        ut.avspark.lagretTabell = !!lagretForrige(t, m, z.key);
+        LASTMATCH = ekteLm; GRUNNLAG = ekteGrunnlag;
+        // Uten sjanser i raden: history.json som reserve.
+        PREKICK = Object.assign({}, ekteP || {}, {[pk]: {...((ekteP || {})[pk] || {H: 0.4, U: 0.3, B: 0.3, kilde: 'odds+modell'}), frosset: true}});
+        a = await svar();
+        ut.avspark.utenSjanser = a.d.basis;
+        PREKICK = ekteP;
         // 5. Lagrede rader: med et bilde før kampen gjelder bare en rad målt mot
         // tabellen; en eldre rad målt mot forventningen gjelder ikke.
-        const ekteLm = LASTMATCH;
         GRUNNLAG = null;
         const rad = forrigeKampRad(a.d);
         LASTMATCH = {teams: {[t]: rad}};
@@ -4023,6 +4042,13 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     check('lagret rad: målt mot tabellen gjelder; en eldre rad målt mot forventningen gjelder ikke når bildet finnes, men gjør det uten historikk',
       r.lagret.tabell && !r.lagret.gammel && r.lagret.gammelUtenHistorikk, JSON.stringify(r.lagret));
     check('med et scenario fylt inn: forventningen, også når bildet finnes', r.scenario.basis === 'forventning', JSON.stringify(r.scenario));
+    const av = r.avspark, nA = Math.abs(r.naa - av.foerPk);
+    check(`sjansen lagret ved avspark (prekick.json) går foran history.json: «Før kampen var den ${av.foerPk} %», ${nA} prosentpoeng`,
+      av.basis === 'avspark' && Math.abs(av.pp) === nA && av.tekst.includes(`Før kampen var den ${av.foerPk} %.`), JSON.stringify(av).slice(0, 400));
+    check('svaret sier «Før kampen ga siden <lag> N % sjanse», ikke «Modellen ga»',
+      new RegExp(`Før kampen ga siden ${r.lag} \\d+ % sjanse`).test(av.tekst) && !/Modellen ga/.test(av.tekst), av.tekst.split('\n\n')[1]);
+    check('lagret rad målt mot sjansen ved avspark gjelder; en rad målt mot history.json gjelder ikke da', av.lagret && !av.lagretTabell, JSON.stringify(av));
+    check('uten sjanser i prekick-raden: history.json som reserve', av.utenSjanser === 'tabell', JSON.stringify(av));
     await pg.close();
     // Eliteserien henter også history.json; testsiden har ingen (historyFile
     // null) og bruker forventningen.
@@ -4034,8 +4060,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const d = t ? await qaLastMatchData(t) : null;
         return {fil: LEAGUE.historyFile, historikk: Array.isArray(HISTORIKK), basis: d && d.basis, lag: t};
       });
-      check(`${navn}: historyFile ${fil}${fil ? ', lastet' : ', ingen historikk, forventningen'} (${x.lag}: ${x.basis})`,
-        x.fil === fil && x.historikk === !!fil && x.basis === 'forventning', JSON.stringify(x));
+      // Testsiden bruker aldri history.json (sjansen ved avspark fra sin egen
+      // prekick.json, ellers forventningen).
+      check(`${navn}: historyFile ${fil}${fil ? ', lastet' : ', ingen historikk'} (${x.lag}: ${x.basis})`,
+        x.fil === fil && x.historikk === !!fil && (fil || x.basis !== 'tabell') && ['forventning', 'avspark', 'tabell'].includes(x.basis), JSON.stringify(x));
       await p2.close();
     }
   };
@@ -7056,12 +7084,19 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
             const lh = Math.exp(Math.min(MAX_LAMBDA_LOG, mf.mu + mf.H + mf.att[ih] + mf.ha[ih] + mf.con[ib] - mf.hc[ib]));
             const lb = Math.exp(Math.min(MAX_LAMBDA_LOG, mf.mu + mf.att[ib] - mf.ha[ib] + mf.con[ih] + mf.hc[ih]));
             const md = outcome(lh, lb), o = outcome(...rateFor(h, b));
-            return {md: {H: md.H, U: md.U, B: md.B}, o: {H: o.H, U: o.U, B: o.B}};
+            // Lagenes sjanser slik tabellen viser dem (7.10.2026).
+            const soner = Object.keys(LEAGUE.zones).filter(z => LEAGUE.zones[z]);
+            const sj = t => Object.fromEntries(soner.map(z => [z, zoneSum(lastMC[t], z)]));
+            return {md: {H: md.H, U: md.U, B: md.B}, o: {H: o.H, U: o.U, B: o.B}, sj: {[h]: sj(h), [b]: sj(b)}};
           }, S.home, S.away);
           await pg.close();
           return r;
         };
         const likt = (rad, tall) => rad && ['H', 'U', 'B'].every(x => Math.abs(rad[x] - tall[x]) <= 0.00005 + 1e-12);
+        // Sjansene i raden (sjanser) mot tabellen: samme lag, samme soner, samme tall.
+        const likeSjanser = (rad, side) => !!(rad && rad.sjanser) && Object.keys(side.sj).every(t => rad.sjanser[t]
+          && Object.keys(side.sj[t]).length === Object.keys(rad.sjanser[t]).length
+          && Object.keys(side.sj[t]).every(z => Math.abs(rad.sjanser[t][z] - side.sj[t][z]) <= 0.00005 + 1e-12));
 
         // 1) 18.20: E er ferdig, men resultatet er ikke inne ennå.
         const A = kjor(40, 40), sideA = await sidenNaa();
@@ -7070,6 +7105,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           `kode ${A.kode}, rad ${JSON.stringify(A.rad)}\n${A.ut.slice(-600)}`);
         check('modelldelen er modellen fra model.json, og prognosen er den siden viser',
           likt(A.rad && A.rad.modell, sideA.md) && likt(A.rad, sideA.o), `rad ${JSON.stringify(A.rad)}, siden ${JSON.stringify(sideA)}`);
+        check(`raden har lagenes sjanser slik tabellen viste dem, per sone (sjanser, 7.10.2026): ${S.home} ${JSON.stringify(A.rad && A.rad.sjanser && A.rad.sjanser[S.home])}`,
+          likeSjanser(A.rad, sideA), `rad ${JSON.stringify(A.rad && A.rad.sjanser)}, tabellen ${JSON.stringify(sideA.sj)}`);
         check('raden har prisens tidspunkt og minutter før avspark fra «Odds nær avspark» (priced_at, minutter_for)',
           A.rad && A.rad.odds && A.rad.odds.priced_at === iso(a - 45 * M) && A.rad.odds.minutter_for === 45,
           JSON.stringify(A.rad && A.rad.odds));
@@ -7091,6 +7128,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         check('... med modellen fra den nye model.json, og prognosen siden viser nå',
           likt(B.rad && B.rad.modell, sideB.md) && likt(B.rad, sideB.o) && !likt(B.rad && B.rad.modell, sideA.md) && avvik(modellA, modellB) > 0,
           `rad ${JSON.stringify(B.rad)}, siden ${JSON.stringify(sideB)}`);
+        check('... og sjansene er tabellens etter resultatet (sjanser oppdatert med raden)',
+          likeSjanser(B.rad, sideB) && JSON.stringify(B.rad.sjanser) !== JSON.stringify(A.rad && A.rad.sjanser),
+          `rad ${JSON.stringify(B.rad && B.rad.sjanser)}, tabellen ${JSON.stringify(sideB.sj)}`);
         check('... selv om prisen for kampen er den samme (odds_upcoming.json uendret, samme odds i raden)',
           tekst('odds_upcoming.json') === oddsTekst && A.rad && B.rad && JSON.stringify(A.rad.odds) === JSON.stringify(B.rad.odds),
           `${JSON.stringify(A.rad && A.rad.odds)} mot ${JSON.stringify(B.rad && B.rad.odds)}`);
@@ -7775,7 +7815,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     // ---- Forrige kamp: kildeordet i svaret følger kilden ----
     // Sjansen for resultatet før kampen er en frosset prognose eller, som
     // reserve, sluttoddsen. Svaret sier hvilken: "Sluttoddsen ga ..." eller
-    // "Modellen ga ...", i avsnittet etter endringen. Linja i lagboksen nevner
+    // "Før kampen ga siden ..." (7.10.2026; før "Modellen ga ..."), i
+    // avsnittet etter endringen. Linja i lagboksen nevner
     // ingen kilde (29.9.2026; før sto "enn markedet/modellen ventet" begge
     // steder).
     setGroup('Forrige kamp: kildeordet følger kilden');
@@ -7783,22 +7824,24 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       const sp = await open(1400, 900, url);
       const r = await sp.evaluate(async () => {
         const ut = {odds: 0, modell: 0, feil: []};
-        const ordet = pk => pk && pk.kilde === 'sluttoddsen' ? 'Sluttoddsen' : 'Modellen';
+        const ordet = pk => pk && pk.kilde === 'sluttoddsen' ? 'Sluttoddsen ga' : 'Før kampen ga siden';
+        const kildeOrd = tx => (tx.split('\n\n')[1] || '').match(/^(Sluttoddsen ga|Før kampen ga siden) /);
         const gml = PREKICK;
         for (const t of TEAMS.slice(0, 6)) {
           const d = await qaLastMatchData(t);
           if (!d || d.noMatch || !d.preKick) continue;
           // 1) Som dataene står (i dag: sluttoddsen).
           let txt = await qaLastMatch(t);
-          let m = txt.split('\n\n')[1].match(/^(\S+) ga /);
+          let m = kildeOrd(txt);
           const f = ordet(d.preKick);
-          if (!m || m[1] !== f) ut.feil.push(`${t}: «${m && m[1]}» med kilde ${d.preKick.kilde}`); else ut[f === 'Sluttoddsen' ? 'odds' : 'modell']++;
+          if (!m || m[1] !== f) ut.feil.push(`${t}: «${m && m[1]}» med kilde ${d.preKick.kilde}`); else ut[f === 'Sluttoddsen ga' ? 'odds' : 'modell']++;
+          if (/Modellen ga/.test(txt)) ut.feil.push(`${t}: «Modellen ga» står fortsatt`);
           // 2) Med en frosset prognose for kampen: da er det modellen.
           const k = `${LEAGUE.season}|${d.m.home}|${d.m.away}`;
           PREKICK = Object.assign({}, gml || {}, {[k]: {H: 0.2, U: 0.3, B: 0.5, kilde: 'odds+modell', frosset: true}});
           txt = await qaLastMatch(t);
-          m = txt.split('\n\n')[1].match(/^(\S+) ga /);
-          if (!m || m[1] !== 'Modellen') ut.feil.push(`${t} med frosset prognose: «${m && m[1]}»`); else ut.modell++;
+          m = kildeOrd(txt);
+          if (!m || m[1] !== 'Før kampen ga siden' || !txt.includes(`Før kampen ga siden ${t} `)) ut.feil.push(`${t} med frosset prognose: «${m && m[1]}»`); else ut.modell++;
           PREKICK = gml;
         }
         // Linja i lagboksen: ingen kilde, for alle lagene.
@@ -7808,7 +7851,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         }
         return ut;
       });
-      check(`${liga}: sluttodds gir «Sluttoddsen ga», frosset prognose «Modellen ga», lagboksen ingen kilde (${r.odds} sluttodds, ${r.modell} modell)`,
+      check(`${liga}: sluttodds gir «Sluttoddsen ga», frosset prognose «Før kampen ga siden <lag>», aldri «Modellen ga», lagboksen ingen kilde (${r.odds} sluttodds, ${r.modell} prognose)`,
         r.feil.length === 0 && r.odds > 0 && r.modell > 0, r.feil.slice(0, 4).join('; ') || `sluttodds ${r.odds}, modell ${r.modell}`);
       await sp.close();
     }

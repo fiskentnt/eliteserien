@@ -5377,13 +5377,14 @@ async function qaLastMatchData(team, gruppe='forrige'){
     const sjanse = o => o===actual ? tableP : Math.min(1, Math.max(0, tableP + alts.find(x=>x.o===o).d));
     expected = ['win','draw','loss'].reduce((sum,o)=> sum + (qP(o)||0)*sjanse(o), 0);
   }
-  // "Før kampen" (7.10.2026): det tabellen viste før avspark, det siste
-  // bildet i history.json før kampstart, for en kamp spilt i virkeligheten
-  // uten scenario. Forventningen over (regnet med dagens lagstyrker) ga
-  // Kongsvinger 52 % før Moss-Kongsvinger, mens tabellen viste 56 %; svaret
-  // sa +10 der tabellen gikk +6. Uten bilde (simulert kamp, scenario, eller
-  // ingen historikk, som på testsiden) brukes forventningen som før.
-  const fraTabell = !matches.includes(m) && !qaScenarioKey() ? tabellFoerAvspark(team, m, zone.key) : null;
+  // "Før kampen" (7.10.2026): det tabellen viste før avspark, for en kamp
+  // spilt i virkeligheten uten scenario (tabellFoerKampen): lagets sjanse i
+  // prekick-raden, lagret ved avspark, ellers det siste bildet i
+  // history.json før kampstart. Forventningen over (regnet med dagens
+  // lagstyrker) ga Kongsvinger 52 % før Moss-Kongsvinger, mens tabellen
+  // viste 56 %; svaret sa +10 der tabellen gikk +6. Uten noen av dem
+  // (simulert kamp, scenario) brukes forventningen som før.
+  const fraTabell = !matches.includes(m) && !qaScenarioKey() ? tabellFoerKampen(team, m, zone.key) : null;
   const foer = fraTabell ? fraTabell.p : expected;
   // Regnet fra de VISTE (avrundede) prosentene, så tallet stemmer med
   // prosentene i setningen.
@@ -5391,9 +5392,9 @@ async function qaLastMatchData(team, gruppe='forrige'){
   return {team, m, opp, isHome, gf, ga, actual, zone, tableP, alts, shown, bestAlt,
     // pp: hvor mye sjansen ble flyttet fra det den var før kampen (foer), med
     // fortegn. Om det er bra eller dårlig avhenger av sonen. null = vi har
-    // ingenting fra før kampen å måle mot. basis: 'tabell' (history.json)
-    // eller 'forventning'.
-    pp, expected, foer, basis: fraTabell ? 'tabell' : (expected!=null ? 'forventning' : null),
+    // ingenting fra før kampen å måle mot. basis: 'avspark' (prekick.json),
+    // 'tabell' (history.json) eller 'forventning'.
+    pp, expected, foer, basis: fraTabell ? fraTabell.basis : (expected!=null ? 'forventning' : null),
     foerTid: fraTabell ? fraTabell.tid : null, preKick: pk, good: pp==null ? null : good(pp)>0};
 }
 async function qaLastMatch(team){
@@ -5415,14 +5416,16 @@ async function qaLastMatch(team){
   const others = ['win','draw','loss'].filter(o=>o!==actual);
   // Hvor sannsynlig selve resultatet var før avspark (prekick.json eller
   // sluttoddsen). Står i avsnittet etter endringen, som forklaring.
-  // Si hva tallet er: "Modellen ga Kongsvinger 72 % sjanse til å vinne kampen."
-  // Kommer tallet fra sluttoddsen (ingen lagret modellverdi), sies det.
+  // Si hva tallet er: "Før kampen ga siden Kongsvinger 55 % sjanse til å
+  // vinne kampen." (7.10.2026; før "Modellen ga", men tallet i prekick.json
+  // er det siden viste, odds og modell sammen). Kommer tallet fra sluttoddsen
+  // (ingen lagret rad), sies det: "Sluttoddsen ga ...".
   const pk = data.preKick;
   const pRes = pk ? pk[m.hg>m.ag ? 'H' : (m.hg===m.ag ? 'U' : 'B')] : null;
-  const kilde = pk && pk.kilde==='sluttoddsen' ? 'Sluttoddsen' : 'Modellen';
+  const kilde = pk && pk.kilde==='sluttoddsen' ? 'Sluttoddsen ga' : 'Før kampen ga siden';
   const hva = actual==='win' ? 'til å vinne kampen' : actual==='loss' ? 'for tap' : 'for uavgjort';
   // Ingen "bare" foran tallet: siden oppgir sannsynligheten, den vurderer den ikke.
-  const overrask = pRes==null ? '' : `${kilde} ga ${team} ${pctTxt(pRes)} sjanse ${hva}.`;
+  const overrask = pRes==null ? '' : `${kilde} ${team} ${pctTxt(pRes)} sjanse ${hva}.`;
   // Alternativene, i rekkefølgen seier, uavgjort, tap (det faktiske er utelatt).
   // Under to prosentpoeng fra dagens tall er støy og vises ikke.
   const order = others.filter(o=>shown.some(x=>x.o===o));
@@ -5500,6 +5503,17 @@ function tabellFoerAvspark(team, m, zoneKey){
   const p = siste && siste.b.teams && siste.b.teams[team] ? siste.b.teams[team][zoneKey] : null;
   return p==null ? null : {p, tid: siste.b.updated};
 }
+// Det tabellen viste før kampen, for laget og sonen (7.10.2026): sjansen
+// prognosejobben lagret i prekick-raden ved avspark (sjanser, fryses med
+// raden), ellers det siste bildet i history.json før kampstart (som kan være
+// uker gammelt), ellers null. {p, basis: 'avspark' | 'tabell', tid}.
+function tabellFoerKampen(team, m, zoneKey){
+  const r = m && PREKICK && PREKICK[`${LEAGUE.season}|${m.home}|${m.away}`];
+  const p = r && r.sjanser && r.sjanser[team] ? r.sjanser[team][zoneKey] : null;
+  if(p!=null) return {p, basis:'avspark', tid:r.stamp || null};
+  const h = tabellFoerAvspark(team, m, zoneKey);
+  return h ? {...h, basis:'tabell'} : null;
+}
 // Tallet fra før kampen i en lagret rad (data/lastmatch.json): foer fra
 // 7.10.2026, expected i eldre rader (målt mot forventningen).
 const lagretFoer = e => e.foer!=null ? e.foer : e.expected;
@@ -5542,10 +5556,10 @@ function lagretForrige(team, m, zoneKey){
   // bruk; da er den regnet med sidens egen simulering, som siden ville gjort.
   if(!m || qaScenarioKey() || (GRUNNLAG && GRUNNLAG_STATUS==='i bruk' && grunnlagMedForrige())) return null;
   const e = LASTMATCH && LASTMATCH.teams && LASTMATCH.teams[team];
-  // Raden må være målt på samme måte som siden ville målt nå: mot tabellen
-  // før avspark når history.json har et bilde (7.10.2026), ellers mot
-  // forventningen. En eldre rad målt mot forventningen gjelder ikke da.
-  const basis = tabellFoerAvspark(team, m, zoneKey) ? 'tabell' : 'forventning';
+  // Raden må være målt på samme måte som siden ville målt nå (7.10.2026):
+  // mot sjansen ved avspark (prekick.json), mot bildet i history.json, eller
+  // mot forventningen. En eldre rad målt på en annen måte gjelder ikke.
+  const fk = tabellFoerKampen(team, m, zoneKey), basis = fk ? fk.basis : 'forventning';
   return e && e.date===m.date && e.home===m.home && e.away===m.away && e.hg===m.hg && e.ag===m.ag
     && e.zone===zoneKey && e.basis===basis && lagretFoer(e)!=null ? e : null;
 }
@@ -5574,8 +5588,9 @@ function forrigeKampRad(d){
     opp: d.opp, gf: d.gf, ga: d.ga, actual: d.actual,
     zone: d.zone.key, chance: QA_CHANCE[d.zone.key],
     // pp er endringen fra det den var før kampen (foer): det tabellen viste
-    // før avspark (basis 'tabell', history.json, 7.10.2026) eller
-    // forventningen (basis 'forventning'). basis-feltet gjør at siden kan se
+    // før avspark (basis 'avspark', prekick.json, eller 'tabell',
+    // history.json, 7.10.2026) eller forventningen (basis 'forventning').
+    // basis-feltet gjør at siden kan se
     // forskjell på radene, og på de eldste, der pp ble målt mot det beste
     // alternative utfallet.
     pp: d.pp, good: d.good, basis: d.basis || 'forventning',

@@ -7,32 +7,41 @@ huskes fram til en dato eller en hendelse.
 
 6.10. hang publiseringen i deploy fra 15:17Z i over sju timer, og siden viste
 commiten før uten at noen så det. pages-vakt.yml (etter hver «Oppdater
-kampdata») sjekker at alt på main er publisert: den eldste upubliserte
+kampdata», etter hver publisering, og om natten én gang i timen fra
+planleggeren, med GitHub sin cron som reserve) sjekker at alt på main er
+publisert: den eldste upubliserte
 commiten under 30 minutter gammel gir livstegn til healthchecks-sjekken
 tabellkalkulator-pages; eldre gir /fail og e-post med en gang. Svarer ikke
 GitHub, sendes ingenting (dødmannsknappen tar det). Se scripts/pages_vakt.py
 og planlegger/README.md.
 
 **Må gjøres av deg:** opprett sjekken tabellkalkulator-pages hos
-healthchecks.io (cron `*/10 9-21 * * *`, UTC, grace 60 min, som de andre) og
-legg ping-adressen i GitHub med `gh secret set HEALTHCHECK_PAGES`. Uten den
-skriver vakten bare en ::warning.
+healthchecks.io (cron `*/10 9-21 * * *`, UTC, grace 60 min, som de andre: om
+natten ventes ingen livstegn, men /fail varsler) og legg ping-adressen i
+GitHub med `gh secret set HEALTHCHECK_PAGES`. Uten den skriver vakten bare en
+::warning. Nattkjøringene fra planleggeren krever at workeren publiseres på
+nytt (`cd planlegger && npx wrangler deploy`).
 
 Tester: tests/kilder/test_kilder.py, «Pages-vakt».
 
 ## "Før kampen var den": det tabellen viste før avspark (7.10.2026)
 
 "Hva betydde forrige kamp" og linja i lagboksen regner endringen fra det
-siste bildet i history.json skrevet før kampstart (tabellFoerAvspark), ikke
-fra forventningen regnet med dagens lagstyrker. Kongsvinger etter
+tabellen viste før kampen (tabellFoerKampen), ikke fra forventningen regnet
+med dagens lagstyrker: lagets sjanse i prekick-raden (sjanser, skrevet av
+prognosejobben før avspark og frosset med raden), ellers det siste bildet i
+history.json skrevet før kampstart (tabellFoerAvspark). Kongsvinger etter
 Moss-Kongsvinger: 56 % før, +6 (bildet 4.10. kl. 14:34Z), ikke 52 % og +10.
 Uten bilde (simulert kamp, scenario, eller testsiden, som ikke har
 historikk) brukes forventningen som før. lastmatch.json-radene har basis
 «tabell» og foer; en eldre rad målt mot forventningen gjelder ikke når
 bildet finnes.
 
-Bildene skrives bare når det kommer nye resultater, så det siste før en kamp
-kan være gammelt: før Brann-Viking 9.10. er det fra 25.9.
+Bildene i history.json skrives bare når det kommer nye resultater, så det
+siste før en kamp kan være gammelt (25.9. før Brann-Viking 9.10.); derfor går
+sjansen ved avspark foran. Kamper som ble frosset før 7.10. har ikke
+sjanser i raden og bruker history.json. Svaret sier "Før kampen ga siden
+Kongsvinger 55 % sjanse til å vinne kampen" (før "Modellen ga").
 
 Tester: regression.js, gruppen «forkampen».
 

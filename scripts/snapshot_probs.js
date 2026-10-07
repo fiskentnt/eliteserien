@@ -152,6 +152,13 @@ function chromePath() {
     // sannsynligheten med lagstyrker som alt hadde sett resultatet.
     const pre = await page.evaluate(() => {
       const ut = {};
+      // Lagenes sjanser slik tabellen viser dem nå, per sone (7.10.2026). De
+      // fryses med raden ved avspark og er "Før kampen var den" i "Hva
+      // betydde forrige kamp" (tabellFoerKampen på siden). history.json kan
+      // være flere uker gammel før en kamp; denne er fra siste kjøring før
+      // avspark (prekick-odds.yml, 70 til 15 minutter før).
+      const soner = Object.keys(LEAGUE.zones).filter(k => LEAGUE.zones[k]);
+      const sjanser = t => Object.fromEntries(soner.map(k => [k, +zoneSum(lastMC[t], k).toFixed(4)]));
       for (const m of matches) {
         if (m.hg != null) continue;              // spilt, eller fylt inn av noen
         const [lh, la] = rateFor(m.home, m.away);
@@ -174,6 +181,7 @@ function chromePath() {
           modell: {H: +(info.md ? info.md.H : o.H).toFixed(4),
                    U: +(info.md ? info.md.U : o.U).toFixed(4),
                    B: +(info.md ? info.md.B : o.B).toFixed(4)},
+          sjanser: {[m.home]: sjanser(m.home), [m.away]: sjanser(m.away)},
         };
       }
       return ut;

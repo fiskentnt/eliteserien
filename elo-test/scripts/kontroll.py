@@ -482,6 +482,8 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # LEAGUE.historyFile) er flettet inn med historyFile: null her (ingen bilder
 # av tabellen for testsiden), og "Simuler på nytt" i blandede runder og
 # reserven i holdPlass uendret (7.10.2026).
+# Sjansen ved avspark fra prekick.json (tabellFoerKampen, sjanser) og "Før
+# kampen ga siden" er flettet inn uendret (7.10.2026).
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -497,7 +499,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "491a9adeeafa304816e7f9e363c47129339e210d5bc893bc5041b82e3fb648b3"
+BASE_SHA = "3cb4a59764a6e81f5d367c82856294933ec0c73e55a83a7065d82d76b8fdd22b"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:
@@ -1258,11 +1260,12 @@ console.log(JSON.stringify({saker, alt}));
 # reserve, sluttoddsen. Før sto "enn markedet/modellen ventet" både i svaret og
 # i linja i lagboksen (ventetAv, bf623aa). Fra 29.9.2026 sier linja bare
 # resultatet og endringen i lagets sjanse, og kilden står i svaret: "Sluttoddsen
-# ga ..." eller "Modellen ga ...". Produksjonens regel, tatt inn med patchen.
+# ga ..." eller (fra 7.10.2026) "Før kampen ga siden ...", før "Modellen ga
+# ...". Produksjonens regel, tatt inn med patchen.
 print("\nV   forrige kamp: kildeordet i svaret, ingen kilde i lagboksen")
-krev("svaret sier \"Sluttoddsen ga\" ved sluttodds, ellers \"Modellen ga\" (produksjonens)",
-     "const kilde = pk && pk.kilde==='sluttoddsen' ? 'Sluttoddsen' : 'Modellen';" in _h
-     and "`${kilde} ga ${team} ${pctTxt(pRes)} sjanse ${hva}.`" in _h)
+krev("svaret sier \"Sluttoddsen ga\" ved sluttodds, ellers \"Før kampen ga siden\" (produksjonens)",
+     "const kilde = pk && pk.kilde==='sluttoddsen' ? 'Sluttoddsen ga' : 'Før kampen ga siden';" in _h
+     and "`${kilde} ${team} ${pctTxt(pRes)} sjanse ${hva}.`" in _h and "Modellen ga" not in _h.replace("før \"Modellen ga\"", ""))
 _ml = _r2.search(r"\nfunction qaLastMatchLine\(.*?\n\}\n", _h, _r2.S)
 krev("lagbokslinja nevner ingen kilde og ingen forventning",
      bool(_ml) and not any(o in _ml.group(0) for o in ("ventet", "markedet", "modellen", "odds", "preKickProbs")),
