@@ -3933,6 +3933,196 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       tk.H > 0 && tk.U > 0 && tk.B > 0 && t2.enKamp.fri, JSON.stringify(t2.enKamp));
     await pg.close();
   };
+  // ---- "Før kampen var den" fra tabellen før avspark (7.10.2026) ----
+  // Det siste bildet i history.json før kampstart, og endringen regnet fra
+  // det. Kongsvinger etter Moss-Kongsvinger: 56 % før, +6 (ikke forventningen
+  // 52 % og +10). Bildet fra 1.10. har bare ett bilde, tatt etter lagenes
+  // siste kamp, så testen legger inn bilder med kjente tall.
+  //   node tests/regression.js --bare forkampen
+  const forKampen = async () => {
+    setGroup('Forrige kamp: "Før kampen var den" er tabellen før avspark');
+    const obosUrl = base.replace('/eliteserien/', '/obos/');
+    const pg = await open(1400, 900, obosUrl);
+    await settle(pg);
+    const r = await pg.evaluate(async () => {
+      const ut = {fil: LEAGUE.historyFile, lastet: Array.isArray(HISTORIKK) ? HISTORIKK.length : null};
+      const ekte = HISTORIKK, ekteGrunnlag = GRUNNLAG;
+      // Et lag med en spilt kamp, en sone og tall fra før avspark.
+      let t = null, m = null, z = null;
+      for (const lag of TEAMS) {
+        const k = sisteKampFor(lag), sone = qaTargetZone(lag);
+        if (k && !matches.includes(k) && k.time && sone && preKickProbs(k.home, k.away)) { t = lag; m = k; z = sone; break; }
+      }
+      if (!t) return {...ut, feil: 'fant ikke et lag'};
+      const start = osloDateTimeToMs(m.date, m.time);
+      const iso = ms => new Date(ms).toISOString().replace(/\.\d+Z$/, 'Z');
+      const naaPct = Math.round(z.pct * 100);
+      // Før kampen 6 prosentpoeng under tallet nå (eller over, nær 100 %).
+      const foerPct = naaPct >= 10 ? naaPct - 6 : naaPct + 6;
+      const bilde = (tid, p) => ({date: m.date, updated: iso(tid), teams: {[t]: {[z.key]: p}}});
+      const svar = async () => { FORRIGE_DATA.clear(); const d = await qaLastMatchData(t); return {d, tekst: await qaLastMatch(t)}; };
+      ut.lag = t; ut.kamp = `${m.home}-${m.away} ${m.date} ${m.time}`; ut.naa = naaPct; ut.foer = foerPct;
+      try {
+        // 1. Et bilde to timer før avspark og ett etter: det før gjelder.
+        HISTORIKK = [bilde(start - 2 * 3600e3, (foerPct + 0.2) / 100), bilde(start + 2 * 3600e3, 0.999)];
+        let a = await svar();
+        ut.tabell = {basis: a.d.basis, pp: a.d.pp, foerP: a.d.foer, tekst: a.tekst.split('\n')[0]};
+        ut.tabell.linje = qaLastMatchLine(t, {...forrigeKampRad(a.d), naa: a.d.tableP}).html;
+        ut.tabell.rad = forrigeKampRad(a.d);
+        // 2. Bare et bilde ETTER avspark: ingen bilde før kampen, forventningen.
+        HISTORIKK = [bilde(start + 60e3, (foerPct + 0.2) / 100)];
+        a = await svar();
+        ut.etter = {basis: a.d.basis, pp: a.d.pp, ventet: a.d.expected == null ? null : naaPct - Math.round(a.d.expected * 100)};
+        // 3. Bildet ett minutt før avspark gjelder.
+        HISTORIKK = [bilde(start - 60e3, (foerPct + 0.2) / 100)];
+        a = await svar();
+        ut.minuttFoer = {basis: a.d.basis, pp: a.d.pp};
+        // 4. Det SISTE bildet før avspark, ikke det første.
+        HISTORIKK = [bilde(start - 5 * 86400e3, 0.01), bilde(start - 3600e3, (foerPct + 0.2) / 100), bilde(start - 3 * 86400e3, 0.99)];
+        a = await svar();
+        ut.siste = {pp: a.d.pp, foerP: a.d.foer};
+        // 5. Lagrede rader: med et bilde før kampen gjelder bare en rad målt mot
+        // tabellen; en eldre rad målt mot forventningen gjelder ikke.
+        const ekteLm = LASTMATCH;
+        GRUNNLAG = null;
+        const rad = forrigeKampRad(a.d);
+        LASTMATCH = {teams: {[t]: rad}};
+        ut.lagret = {tabell: !!lagretForrige(t, m, z.key)};
+        LASTMATCH = {teams: {[t]: {...rad, basis: 'forventning', foer: null, expected: 0.5}}};
+        ut.lagret.gammel = !!lagretForrige(t, m, z.key);
+        HISTORIKK = null;
+        ut.lagret.gammelUtenHistorikk = !!lagretForrige(t, m, z.key);
+        LASTMATCH = ekteLm; GRUNNLAG = ekteGrunnlag;
+        // 6. Med et scenario fylt inn: forventningen, også når bildet finnes.
+        HISTORIKK = [bilde(start - 3600e3, (foerPct + 0.2) / 100)];
+        const annen = matches.find(k => isEmpty(k) && k.home !== t && k.away !== t);
+        setMatch(annen, 1, 0, false);
+        mcStraks = true; render();
+        await new Promise(res => { const v = () => (lastMCFinal && lastMCScenarioKey === qaScenarioKey()) ? res() : setTimeout(v, 50); v(); });
+        a = await svar();
+        ut.scenario = {basis: a.d.basis};
+        setMatch(annen, null, null, false);
+        mcStraks = true; render();
+        await new Promise(res => { const v = () => (lastMCFinal && lastMCScenarioKey === qaScenarioKey()) ? res() : setTimeout(v, 50); v(); });
+      } finally { HISTORIKK = ekte; GRUNNLAG = ekteGrunnlag; FORRIGE_DATA.clear(); }
+      return ut;
+    });
+    check(`OBOS: history.json hentes (${r.fil}, ${r.lastet} bilde(r) i bildet fra 1.10.)`, r.fil === 'data/history.json' && r.lastet >= 1, JSON.stringify(r).slice(0, 200));
+    const n = Math.abs(r.naa - r.foer), verb = r.naa > r.foer ? 'økte' : 'senket';
+    check(`${r.lag} (${r.kamp}): «… ${verb} … med ${n} prosentpoeng, til ${r.naa} %. Før kampen var den ${r.foer} %.» fra bildet før avspark`,
+      r.tabell && r.tabell.basis === 'tabell' && Math.abs(r.tabell.pp) === n
+      && r.tabell.tekst.includes(`${verb} `) && r.tabell.tekst.includes(` med ${n} prosentpoeng, til ${r.naa} %. Før kampen var den ${r.foer} %.`),
+      JSON.stringify(r.tabell));
+    check('lagboks-linja sier det samme tallet', r.tabell && r.tabell.linje.includes(`>${n}</b> prosentpoeng`), r.tabell && r.tabell.linje);
+    check('raden til lastmatch.json: basis «tabell», foer fra bildet, pp som svaret',
+      r.tabell && r.tabell.rad.basis === 'tabell' && Math.abs(r.tabell.rad.foer - (r.foer + 0.2) / 100) < 1e-6 && r.tabell.rad.pp === r.tabell.pp,
+      JSON.stringify(r.tabell && r.tabell.rad));
+    check('bare et bilde etter avspark: forventningen, som før', r.etter.basis === 'forventning' && r.etter.pp === r.etter.ventet, JSON.stringify(r.etter));
+    check('et bilde ett minutt før avspark gjelder', r.minuttFoer.basis === 'tabell' && Math.abs(r.minuttFoer.pp) === n, JSON.stringify(r.minuttFoer));
+    check('det siste bildet før avspark gjelder, ikke et eldre eller et etter', Math.abs(r.siste.pp) === n && Math.abs(r.siste.foerP - (r.foer + 0.2) / 100) < 1e-6, JSON.stringify(r.siste));
+    check('lagret rad: målt mot tabellen gjelder; en eldre rad målt mot forventningen gjelder ikke når bildet finnes, men gjør det uten historikk',
+      r.lagret.tabell && !r.lagret.gammel && r.lagret.gammelUtenHistorikk, JSON.stringify(r.lagret));
+    check('med et scenario fylt inn: forventningen, også når bildet finnes', r.scenario.basis === 'forventning', JSON.stringify(r.scenario));
+    await pg.close();
+    // Eliteserien henter også history.json; testsiden har ingen (historyFile
+    // null) og bruker forventningen.
+    for (const [url, navn, fil] of [[base, 'Eliteserien', 'data/history.json'], [base.replace('/eliteserien/', '/elo-test/'), 'Testsiden', null]]) {
+      const p2 = await open(1400, 900, url);
+      await settle(p2);
+      const x = await p2.evaluate(async () => {
+        const t = TEAMS.find(l => { const k = sisteKampFor(l); return k && !matches.includes(k) && qaTargetZone(l) && preKickProbs(k.home, k.away); });
+        const d = t ? await qaLastMatchData(t) : null;
+        return {fil: LEAGUE.historyFile, historikk: Array.isArray(HISTORIKK), basis: d && d.basis, lag: t};
+      });
+      check(`${navn}: historyFile ${fil}${fil ? ', lastet' : ', ingen historikk, forventningen'} (${x.lag}: ${x.basis})`,
+        x.fil === fil && x.historikk === !!fil && x.basis === 'forventning', JSON.stringify(x));
+      await p2.close();
+    }
+  };
+  // ---- "Simuler på nytt" i en blandet runde (7.10.2026) ----
+  // Knappen vises når ingen kamper i runden er tomme og minst én er simulert,
+  // også når noen er fylt inn for hånd; bare de simulerte trekkes på nytt.
+  // Og forsvinner (eller skjules) det trykkede elementet, holder siden plassen
+  // for blokken det sto i.
+  //   node tests/regression.js --bare blandet
+  const blandetRunde = async () => {
+    setGroup('"Simuler på nytt" i en blandet runde, og plassen når knappen forsvinner');
+    for (const [form, vp] of [['PC', {width: 1400, height: 900}],
+                              ['mobil', {width: 390, height: 844, deviceScaleFactor: 2, isMobile: true, hasTouch: true}]]) {
+      const pg = await browser.newPage();
+      pg.on('pageerror', e => errors.push(`blandet ${form}: ${e.message}`));
+      await pg.setViewport(vp);
+      await pg.goto(base, {waitUntil: 'networkidle0'});
+      await pg.addStyleTag({content: '*{overflow-anchor:none !important}'});
+      const rolig = () => pg.waitForFunction(() => typeof lastMCFinal !== 'undefined' && lastMCFinal && lastMCScenarioKey === qaScenarioKey()
+        && !document.getElementById('nmImpact').classList.contains('venter') && !plassHold, {timeout: 120000, polling: 50});
+      await rolig();
+      // En vanlig runde med minst fire åpne kamper: to fylles inn for hånd.
+      const oppsett = await pg.evaluate(() => {
+        const t = document.getElementById('autoFillToggle'); if (t.checked) t.click();
+        const R = [...new Set(matches.filter(isEmpty).map(m => m.round))].find(r => {
+          const g = matches.filter(m => kampGruppe(m) === `r${r}`); return g.length >= 4 && g.every(isEmpty); });
+        const g = matches.filter(m => kampGruppe(m) === `r${R}`);
+        setMatch(g[0], 3, 1); setMatch(g[1], 0, 0);
+        mcStraks = true; render();
+        return {R, n: g.length, egne: [g[0].id, g[1].id]};
+      });
+      await rolig();
+      const sel = `.round-sim[data-round="${oppsett.R}"]`;
+      const tilstand = () => pg.evaluate((s, R, egne) => {
+        const b = document.querySelector(s), g = matches.filter(m => kampGruppe(m) === `r${R}`);
+        return {tekst: b.textContent, vist: !b.hidden && b.getClientRects().length > 0, topp: b.getBoundingClientRect().top,
+          egne: egne.map(id => { const m = matches.find(x => x.id === id); return `${m.hg}-${m.ag}${m.sim ? 's' : ''}`; }),
+          sim: g.filter(m => m.sim).map(m => `${m.hg}-${m.ag}`).join(','), tomme: g.filter(isEmpty).length};
+      }, sel, oppsett.R, oppsett.egne);
+      await pg.evaluate(s => { const b = document.querySelector(s); window.scrollTo(0, b.getBoundingClientRect().top + scrollY - 250); }, sel);
+      await new Promise(r => setTimeout(r, 300));
+      const trykk = async () => { const box = await (await pg.$(sel)).boundingBox();
+        if (form === 'mobil') await pg.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+        else await pg.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        await new Promise(r => setTimeout(r, 30)); await rolig(); };
+      const t0 = await tilstand();
+      check(`${form}: runde ${oppsett.R} med to egne og ${oppsett.n - 2} tomme: «Simuler runden»`, t0.vist && t0.tekst === 'Simuler runden', JSON.stringify(t0));
+      await trykk();
+      const t1 = await tilstand();
+      check(`${form}: etter trykket er runden blandet (egne og simulerte, ingen tomme): «Simuler på nytt» står, og knappen flyttet seg ikke (${(t1.topp - t0.topp).toFixed(1)} px)`,
+        t1.vist && t1.tekst === 'Simuler på nytt' && t1.tomme === 0 && t1.egne.join() === '3-1,0-0' && Math.abs(t1.topp - t0.topp) <= 1, JSON.stringify(t1));
+      const rader = []; let forrige = t1;
+      for (let i = 0; i < 10; i++) { await trykk(); const t = await tilstand(); rader.push({flytt: t.topp - forrige.topp, t}); forrige = t; }
+      const maks = Math.max(...rader.map(r => Math.abs(r.flytt)));
+      check(`${form}: 10 trykk på «Simuler på nytt» i den blandede runden: de egne står (3-1, 0-0), de simulerte trekkes på nytt, knappen står og flytter seg høyst én piksel (største ${maks.toFixed(1)})`,
+        rader.every(r => r.t.vist && r.t.tekst === 'Simuler på nytt' && r.t.egne.join() === '3-1,0-0' && r.t.tomme === 0) && maks <= 1
+        && new Set(rader.map(r => r.t.sim)).size > 1, rader.map(r => `${r.flytt.toFixed(1)}:${r.t.sim}`).join(' '));
+      // Alt fylt inn for hånd: ingen knapp.
+      const alleEgne = await pg.evaluate((s, R) => { matches.filter(m => kampGruppe(m) === `r${R}` && m.sim).forEach(m => setMatch(m, 1, 1));
+        updateRoundSimButtons(); const b = document.querySelector(s); return b.hidden; }, sel, oppsett.R);
+      check(`${form}: alt i runden fylt inn for hånd: ingen knapp`, alleEgne === true);
+      // Det trykkede elementet forsvinner mens innholdet over vokser med 150
+      // piksler: blokken (runden) står på samme sted. Skjult (hidden, fortsatt
+      // på siden) og fjernet.
+      for (const maate of ['skjult', 'fjernet']) {
+        const r = await pg.evaluate(async (s, R, maate) => {
+          matches.filter(m => kampGruppe(m) === `r${R}`).slice(2).forEach(m => setMatch(m, null, null));
+          updateRoundSimButtons();
+          const b = document.querySelector(s), blokk = b.closest('.round');
+          b.hidden = false;
+          // Et nytt trykk, ikke samme knapp igjen uten rulling (plassAnker).
+          plassAnker = null;
+          const foer = blokk.getBoundingClientRect().top;
+          holdPlass(b);
+          if (maate === 'skjult') b.hidden = true; else b.remove();
+          const fyll = document.createElement('div'); fyll.style.height = '150px'; fyll.id = 'testFyll';
+          roundsEl.parentNode.insertBefore(fyll, roundsEl);
+          await new Promise(res => setTimeout(res, 400));
+          const etter = blokk.getBoundingClientRect().top;
+          slippPlass(); fyll.remove();
+          return {foer, etter};
+        }, sel, oppsett.R, maate);
+        check(`${form}: knappen ${maate} og 150 px mer over: runden står (${(r.etter - r.foer).toFixed(1)} px)`, Math.abs(r.etter - r.foer) <= 1, JSON.stringify(r));
+        if (maate === 'fjernet') { await pg.close(); break; }
+      }
+    }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -3966,7 +4156,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'svarstil') await svarstil();
       else if (BARE === 'uavgjort') await uavgjortBetyrMest();
       else if (BARE === 'trekning') await trekning();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort, trekning)`);
+      else if (BARE === 'forkampen') await forKampen();
+      else if (BARE === 'blandet') await blandetRunde();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort, trekning, forkampen, blandet)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -7475,6 +7667,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await svarstil();
     await uavgjortBetyrMest();
     await trekning();
+    await forKampen();
+    await blandetRunde();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen

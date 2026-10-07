@@ -478,6 +478,10 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # flettet inn uendret.
 # To standardavvik i filteret og fri trekning i "Simuler tomme kamper" med én
 # runde eller mindre igjen (Z=2, tommeFritt, 7.10.2026) er flettet inn uendret.
+# "Før kampen var den" fra tabellen før avspark (tabellFoerAvspark, HISTORIKK,
+# LEAGUE.historyFile) er flettet inn med historyFile: null her (ingen bilder
+# av tabellen for testsiden), og "Simuler på nytt" i blandede runder og
+# reserven i holdPlass uendret (7.10.2026).
 #
 # BASISEN ER INNHOLDET, ikke en commit: BASE_SHA er sha256 av
 # eliteserien/index.html slik kopien ble tatt. Commiten slås opp i historikken
@@ -493,7 +497,7 @@ krev("kontrollen finner ligaknappen i produksjonens index.html (ikke tom)",
 # uten aa roere produksjonssiden.
 print("\nI   drift mot produksjonssiden (advarsel, ikke feil)")
 import os as _os
-BASE_SHA = "72fb8070c6424675e99243f00e6ce3806de052ba543c918b22c58c7dbeaffbd0"
+BASE_SHA = "491a9adeeafa304816e7f9e363c47129339e210d5bc893bc5041b82e3fb648b3"
 _prod = Path(_os.environ.get("ELOTEST_PROD_INDEX") or (ROT / "eliteserien/index.html"))
 _naa = hashlib.sha256(_prod.read_bytes()).hexdigest()
 if _naa == BASE_SHA:

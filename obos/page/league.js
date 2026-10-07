@@ -84,6 +84,10 @@ const LEAGUE = {
   oddsSource: 'OddsPapi',
   // Sluttodds for spilte kamper, reserve når prekick.json ikke har kampen.
   closingOddsFile: 'data/odds_closing.json',
+  // Det tabellen viste etter hver oppdatering med nye resultater
+  // (scripts/snapshot_probs.js). "Før kampen var den" i "Hva betydde forrige
+  // kamp" er det siste bildet før avspark (tabellFoerAvspark, 7.10.2026).
+  historyFile: 'data/history.json',
   // Klubbfarger, én per lag i DENNE ligaen. Draktfargen (trøyens hovedfarge)
   // fra draktboksen på Wikipedia, krysssjekket mot NFFs lagsider. Tre valg
   // som ikke kommer rett fra kilden, alle etter samme regel som Eliteserien:

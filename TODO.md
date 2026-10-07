@@ -3,6 +3,49 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Pages-vakt: varsel når publiseringen henger (7.10.2026)
+
+6.10. hang publiseringen i deploy fra 15:17Z i over sju timer, og siden viste
+commiten før uten at noen så det. pages-vakt.yml (etter hver «Oppdater
+kampdata») sjekker at alt på main er publisert: den eldste upubliserte
+commiten under 30 minutter gammel gir livstegn til healthchecks-sjekken
+tabellkalkulator-pages; eldre gir /fail og e-post med en gang. Svarer ikke
+GitHub, sendes ingenting (dødmannsknappen tar det). Se scripts/pages_vakt.py
+og planlegger/README.md.
+
+**Må gjøres av deg:** opprett sjekken tabellkalkulator-pages hos
+healthchecks.io (cron `*/10 9-21 * * *`, UTC, grace 60 min, som de andre) og
+legg ping-adressen i GitHub med `gh secret set HEALTHCHECK_PAGES`. Uten den
+skriver vakten bare en ::warning.
+
+Tester: tests/kilder/test_kilder.py, «Pages-vakt».
+
+## "Før kampen var den": det tabellen viste før avspark (7.10.2026)
+
+"Hva betydde forrige kamp" og linja i lagboksen regner endringen fra det
+siste bildet i history.json skrevet før kampstart (tabellFoerAvspark), ikke
+fra forventningen regnet med dagens lagstyrker. Kongsvinger etter
+Moss-Kongsvinger: 56 % før, +6 (bildet 4.10. kl. 14:34Z), ikke 52 % og +10.
+Uten bilde (simulert kamp, scenario, eller testsiden, som ikke har
+historikk) brukes forventningen som før. lastmatch.json-radene har basis
+«tabell» og foer; en eldre rad målt mot forventningen gjelder ikke når
+bildet finnes.
+
+Bildene skrives bare når det kommer nye resultater, så det siste før en kamp
+kan være gammelt: før Brann-Viking 9.10. er det fra 25.9.
+
+Tester: regression.js, gruppen «forkampen».
+
+## "Simuler på nytt" i blandede runder (7.10.2026)
+
+Knappen vises når ingen kamper i runden er tomme og minst én er simulert,
+også når noen er fylt inn for hånd. Bare de simulerte trekkes på nytt. Før
+forsvant knappen etter «Simuler runden» i en blandet runde, og siden hoppet
+(249,9 px i testen). holdPlass holder nå plassen for runden når det trykkede
+elementet skjules eller fjernes (en skjult knapp ble lest som toppen 0).
+
+Tester: regression.js, gruppen «blandet».
+
 ## Trekningen: fri i "Simuler runden", to standardavvik i "Simuler tomme kamper" (5.10. og 7.10.2026)
 
 Avviket: OBOS runde 24 med bare Moss-Kongsvinger igjen (B 57 %) ga B 200
