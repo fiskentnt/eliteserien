@@ -47,6 +47,11 @@ const WORKFLOWS = [
 const FRA_TIME = 9;
 const TIL_TIME = 21;
 
+// Om natten (utenfor vinduet) bare disse, én gang i timen: i det første
+// tiende minuttet av hver time (7.10.2026). Pages-vakten skal se en
+// publisering som henger også om natten (6.10. hang den i over sju timer).
+const NATT_WORKFLOWS = ["pages-vakt.yml"];
+
 async function dispatch(workflow, gren, token) {
   const svar = await fetch(
     `https://api.github.com/repos/${EIER}/${REPO}/actions/workflows/${workflow}/dispatches`,
@@ -118,13 +123,14 @@ async function kjor(env, { ping = false } = {}) {
   const gren = env.GREN || "main";
   const naa = new Date();
   const time = naa.getUTCHours();
-  if (time < FRA_TIME || time > TIL_TIME) {
+  const natt = time < FRA_TIME || time > TIL_TIME;
+  if (natt && naa.getUTCMinutes() >= 10) {
     console.log(`Utenfor vinduet ${FRA_TIME}-${TIL_TIME} UTC (nå ${time}) -- sender ingenting.`);
     return [];
   }
 
   const resultater = [];
-  for (const w of WORKFLOWS) {
+  for (const w of natt ? NATT_WORKFLOWS : WORKFLOWS) {
     try {
       resultater.push(await dispatch(w, gren, token));
     } catch (e) {
@@ -134,7 +140,8 @@ async function kjor(env, { ping = false } = {}) {
   for (const r of resultater) {
     console.log(r.ok ? `OK  ${r.workflow}` : `FEIL ${r.workflow}: ${r.status} ${r.tekst}`);
   }
-  if (ping) await livstegn(env, resultater);
+  // Om natten intet livstegn: sjekken til planleggeren venter ingen da.
+  if (ping && !natt) await livstegn(env, resultater);
   return resultater;
 }
 

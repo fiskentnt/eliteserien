@@ -6773,8 +6773,18 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       check('planleggeren: planlagt runde, alle 204: ett livstegn', r1.utlost === antall && r1.ping.length === 1 && r1.ping[0] === 'https://hc-ping.com/test', JSON.stringify(r1));
       const r2 = await kjor({utc: inne, status: u => u.includes('update-data') ? 500 : 204});
       check('planleggeren: én utløsning feilet: ingen livstegn, ingen /fail', r2.utlost === antall && r2.ping.length === 0 && r2.fail === 0, JSON.stringify(r2));
-      const r3 = await kjor({utc: ute});
-      check('planleggeren: utenfor vinduet 09-21 UTC: ingen utløsning, ingen livstegn', r3.utlost === 0 && r3.ping.length === 0, JSON.stringify(r3));
+      // Om natten (7.10.2026): bare pages-vakten, i det første tiende
+      // minuttet av hver time, og uten livstegn.
+      const nattKall = [];
+      const kjorNatt = async utc => { const r = await kjor({utc, status: u => { nattKall.push(u); return 204; }}); return r; };
+      const r3 = await kjorNatt(ute);
+      check('planleggeren: om natten, første tiende minutt: bare pages-vakt.yml, intet livstegn',
+        r3.utlost === 1 && r3.ping.length === 0 && nattKall.length === 1 && nattKall[0].includes('/workflows/pages-vakt.yml/dispatches'), JSON.stringify({r3, nattKall}));
+      const r3b = await kjor({utc: '2026-10-02T23:10:00Z'}), r3c = await kjor({utc: '2026-10-03T08:59:00Z'});
+      check('planleggeren: om natten ellers i timen: ingen utløsning, intet livstegn', r3b.utlost === 0 && r3b.ping.length === 0 && r3c.utlost === 0, JSON.stringify({r3b, r3c}));
+      check('planleggeren: NATT_WORKFLOWS er bare pages-vakt.yml, og den tar inputen planlagt',
+        /const NATT_WORKFLOWS = \["pages-vakt\.yml"\];/.test(kilde)
+        && /workflow_dispatch:\s*\n\s*inputs:\s*\n\s*planlagt:/.test(fs.readFileSync(path.join(ROOT, '.github', 'workflows', 'pages-vakt.yml'), 'utf8')), '');
       const r4 = await kjor({utc: inne, manuell: true});
       check('planleggeren: manuell utløsning teller ikke som livstegn', r4.utlost === antall && r4.ping.length === 0, JSON.stringify(r4));
       const r5 = await kjor({utc: inne, env: {HEALTHCHECK_URL: ''}});

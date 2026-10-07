@@ -7,14 +7,28 @@ name: "Pages-vakt: er alt publisert?"
 # tabellkalkulator-pages (livstegn når alt er i orden, /fail når det henger).
 # Se scripts/pages_vakt.py og planlegger/README.md («Dødmannsknapp»).
 #
-# UTLØSES etter hver kjøring av «Oppdater kampdata», som planleggeren starter
-# hvert tiende minutt 09-21 UTC, uansett hvordan den gikk. Planleggeren og de
-# andre workflowene er ikke endret.
+# UTLØSES (7.10.2026):
+#   - etter hver kjøring av «Oppdater kampdata», som planleggeren starter
+#     hvert tiende minutt 09-21 UTC, uansett hvordan den gikk
+#   - etter hver publisering: page_build (byggingen er ferdig) og når
+#     «pages build and deployment» er ferdig
+#   - om natten én gang i timen av planleggeren (planlegger/worker.js,
+#     NATT_WORKFLOWS), med GitHub sin egen cron som reserve (den er sterkt
+#     strupet for dette repoet, se workeren)
+#   - manuelt
 on:
   workflow_run:
-    workflows: ["Oppdater kampdata"]
+    workflows: ["Oppdater kampdata", "pages build and deployment"]
     types: [completed]
+  page_build:
+  schedule:
+    - cron: "7 * * * *"
   workflow_dispatch:
+    inputs:
+      planlagt:
+        description: "Utløst av den eksterne planleggeren (ingen betydning for vakten)"
+        type: boolean
+        default: false
 
 # Bare lesing: deployments (publiseringene) og compare (commitene).
 permissions:

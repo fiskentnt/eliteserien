@@ -132,7 +132,17 @@ slingringsmonnet, sender healthchecks e-post.
 | `tabellkalkulator-planlegger` | workeren fikk 204 fra GitHub for alle utløsningene i en planlagt runde | `HEALTHCHECK_URL` i Cloudflare |
 | `tabellkalkulator-update-data` | en kjøring av `update-data.yml` er grønn (siste steg) | `HEALTHCHECK_UPDATE_DATA` i GitHub |
 | `tabellkalkulator-obos-results` | en kjøring av `obos-results.yml` er grønn (siste steg) | `HEALTHCHECK_OBOS` i GitHub |
-| `tabellkalkulator-pages` | `pages-vakt.yml` (etter hver «Oppdater kampdata») finner alt på main publisert, eller den eldste upubliserte commiten under 30 minutter gammel. Eldre enn det: `/fail`, og e-post med en gang (7.10.2026) | `HEALTHCHECK_PAGES` i GitHub |
+| `tabellkalkulator-pages` | `pages-vakt.yml` finner alt på main publisert, eller den eldste upubliserte commiten under 30 minutter gammel. Eldre enn det: `/fail`, og e-post med en gang, også om natten (7.10.2026) | `HEALTHCHECK_PAGES` i GitHub |
+
+Pages-vakten (`pages-vakt.yml`) kjøres etter hver «Oppdater kampdata», etter
+hver publisering (`page_build` og «pages build and deployment») og om natten
+én gang i timen: workeren sender da bare den (`NATT_WORKFLOWS`, i det første
+tiende minuttet av hver time), uten livstegn for planleggeren selv. GitHub sin
+egen cron (`7 * * * *`) er reserve. Sjekken `tabellkalkulator-pages` får
+samme tidsplan som de andre (`*/10 9-21 * * *`, UTC, grace 60 minutter): om
+natten venter den ingen livstegn og varsler derfor ikke når de uteblir, men
+en `/fail` (publiseringen henger) gir e-post med en gang, også om natten.
+Etter en endring i `worker.js` må workeren publiseres på nytt (under).
 
 Adressene er hemmeligheter: den som har dem, kan sende falske livstegn og
 skjule et stopp. De skal aldri i koden, `wrangler.toml`, git eller en chat.

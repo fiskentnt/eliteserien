@@ -3021,8 +3021,9 @@ sjekk("GitHub svarer ikke: ingenting sendes (dødmannsknappen tar det), grønn",
       _p == [] and _k == 0 and "sender ingenting" in _ut, _ut)
 _wf = (ROT / ".github" / "workflows" / "pages-vakt.yml").read_text("utf-8")
 _wf_kode = "\n".join(l for l in _wf.splitlines() if not l.strip().startswith("#"))
-sjekk("pages-vakt.yml: etter «Oppdater kampdata» (alle utfall) og manuelt, bare lesing, ingen concurrency, hemmeligheten fra secrets",
-      'workflows: ["Oppdater kampdata"]' in _wf_kode and "types: [completed]" in _wf_kode and "workflow_dispatch:" in _wf_kode
+sjekk("pages-vakt.yml: etter «Oppdater kampdata» og hver publisering (alle utfall), hver time og manuelt, bare lesing, ingen concurrency, hemmeligheten fra secrets",
+      'workflows: ["Oppdater kampdata", "pages build and deployment"]' in _wf_kode and "types: [completed]" in _wf_kode
+      and "  page_build:" in _wf_kode and 'cron: "7 * * * *"' in _wf_kode and "workflow_dispatch:" in _wf_kode and "planlagt:" in _wf_kode
       and "contents: read" in _wf_kode and "deployments: read" in _wf_kode and "write" not in _wf_kode
       and "concurrency" not in _wf_kode and "if:" not in _wf_kode
       and "HC_URL: ${{ secrets.HEALTHCHECK_PAGES }}" in _wf_kode and "python3 scripts/pages_vakt.py" in _wf_kode)
