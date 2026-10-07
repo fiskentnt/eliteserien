@@ -19,8 +19,11 @@ gjør aldri kjøringen rød.
 
 Publisert betyr at commiten er med i den nyeste publiseringen (deployment til
 miljøet github-pages) som har status success. Commitene etter den (GitHub
-compare mot main) er upubliserte, og alderen er committer-tiden til den
-eldste av dem.
+compare mot main) er upubliserte. Alderen regnes fra da den første av dem kom
+til main: den eldste pushen (GitHubs aktivitetslogg) med en av dem som nytt
+hode. Tiden commiten ble laget, gjelder bare når loggen ikke har den: en
+commit laget lokalt en time før pushen, ville ellers gitt varsel med en gang
+(7.10.2026).
 
   GITHUB_TOKEN=... GITHUB_REPOSITORY=eier/repo python3 scripts/pages_vakt.py
 """
@@ -80,16 +83,27 @@ def upubliserte(sha):
                    for c in d.get("commits") or []), key=lambda c: c[1])
 
 
-def vurder(upub, publisert, naa, grense=GRENSE):
-    """("ok" | "henger", tekst)."""
+def ankomst(upub):
+    """Da den første av de upubliserte commitene kom til main: den eldste
+    pushen med en av dem som nytt hode, eller None (ikke i loggen)."""
+    shaer = {c[0] for c in upub}
+    tider = [_tid(a["timestamp"]) for a in api("activity?ref=refs/heads/main&activity_type=push&per_page=100")
+             if a.get("after") in shaer]
+    return min(tider) if tider else None
+
+
+def vurder(upub, publisert, naa, grense=GRENSE, kom=None):
+    """("ok" | "henger", tekst). kom: da den første upubliserte commiten kom
+    til main (ankomst); uten den tiden commiten ble laget."""
     if not upub:
         return "ok", f"alt på main er publisert ({publisert[:7]})"
     sha, tid, tittel = upub[0]
+    tid = kom or tid
     alder = naa - tid
     minutter = int(alder.total_seconds() // 60)
     if alder <= grense:
-        return "ok", (f"{len(upub)} commit(er) venter på publisering, den eldste ({sha[:7]}) er {minutter} min gammel")
-    return "henger", (f"Publiseringen henger: {sha[:7]} ({tittel[:60]}) fra {_klokke(tid)} er ikke publisert etter "
+        return "ok", (f"{len(upub)} commit(er) venter på publisering, den eldste ({sha[:7]}) kom til main for {minutter} min siden")
+    return "henger", (f"Publiseringen henger: {sha[:7]} ({tittel[:60]}) kom til main {_klokke(tid)} og er ikke publisert etter "
                       f"{minutter} min, og {len(upub)} commit(er) venter. Siden viser {publisert[:7]}.")
 
 
@@ -98,7 +112,13 @@ def main():
     hc = os.environ.get("HC_URL", "").strip()
     try:
         publisert, _ = siste_publiserte()
-        tilstand, tekst = vurder(upubliserte(publisert), publisert, naa)
+        upub = upubliserte(publisert)
+        try:
+            kom = ankomst(upub) if upub else None
+        except Exception as e:
+            print(f"  (aktivitetsloggen svarte ikke: {type(e).__name__}; regner fra da commiten ble laget)")
+            kom = None
+        tilstand, tekst = vurder(upub, publisert, naa, kom=kom)
     except Exception as e:
         # Uten svar fra GitHub vet vi ikke: ingenting sendes, og
         # dødmannsknappen sier fra hvis det varer.

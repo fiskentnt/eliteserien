@@ -7,9 +7,11 @@ huskes fram til en dato eller en hendelse.
 
 6.10. hang publiseringen i deploy fra 15:17Z i over sju timer, og siden viste
 commiten før uten at noen så det. pages-vakt.yml (etter hver «Oppdater
-kampdata», etter hver publisering, og om natten én gang i timen fra
+kampdata», etter en publisering fra en person (page_build; jobbenes egne
+pusher starter ingen workflows), og om natten én gang i timen fra
 planleggeren, med GitHub sin cron som reserve) sjekker at alt på main er
-publisert: den eldste upubliserte
+publisert. Alderen regnes fra pushen (aktivitetsloggen), ikke fra da commiten
+ble laget: den eldste upubliserte
 commiten under 30 minutter gammel gir livstegn til healthchecks-sjekken
 tabellkalkulator-pages; eldre gir /fail og e-post med en gang. Svarer ikke
 GitHub, sendes ingenting (dødmannsknappen tar det). Se scripts/pages_vakt.py

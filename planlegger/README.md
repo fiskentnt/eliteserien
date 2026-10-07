@@ -135,7 +135,8 @@ slingringsmonnet, sender healthchecks e-post.
 | `tabellkalkulator-pages` | `pages-vakt.yml` finner alt på main publisert, eller den eldste upubliserte commiten under 30 minutter gammel. Eldre enn det: `/fail`, og e-post med en gang, også om natten (7.10.2026) | `HEALTHCHECK_PAGES` i GitHub |
 
 Pages-vakten (`pages-vakt.yml`) kjøres etter hver «Oppdater kampdata», etter
-hver publisering (`page_build` og «pages build and deployment») og om natten
+en publisering (`page_build`, bare for pusher fra en person: jobbenes egne
+pusher med `GITHUB_TOKEN` starter ingen workflows) og om natten
 én gang i timen: workeren sender da bare den (`NATT_WORKFLOWS`, i det første
 tiende minuttet av hver time), uten livstegn for planleggeren selv. GitHub sin
 egen cron (`7 * * * *`) er reserve. Sjekken `tabellkalkulator-pages` får

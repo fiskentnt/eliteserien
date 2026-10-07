@@ -2962,8 +2962,15 @@ sjekk("upublisert i 29 min: ok (publiseringen kan være i gang)", _pv.vurder(_c,
 sjekk("nøyaktig 30 min: fortsatt ok", _pv.vurder(_c, "5f9a7440", _u("2026-10-06T15:47:03Z"))[0] == "ok")
 _t, _tx = _pv.vurder(_c, "5f9a7440", _u("2026-10-06T15:50:00Z"))
 sjekk("32 min: henger, med commit, tid, alder og det siden viser",
-      _t == "henger" and _tx == "Publiseringen henger: f3fe1df (Grunnlag (obos) 2026-10-06T15:17Z) fra 6.10. kl. 17.17 er ikke "
+      _t == "henger" and _tx == "Publiseringen henger: f3fe1df (Grunnlag (obos) 2026-10-06T15:17Z) kom til main 6.10. kl. 17.17 og er ikke "
       "publisert etter 32 min, og 1 commit(er) venter. Siden viser 5f9a744.", _tx)
+# Alderen regnes fra pushen, ikke fra da commiten ble laget (7.10.2026): en
+# commit laget lokalt 40 min før pushen gir ikke varsel rett etter pushen.
+_lokal = [("abc12340", _u("2026-10-07T09:10:00Z"), "Laget lokalt")]
+sjekk("commit laget 40 min før, pushet for 5 min siden: ok (regnet fra pushen)",
+      _pv.vurder(_lokal, "def56780", _u("2026-10-07T09:50:00Z"), kom=_u("2026-10-07T09:45:00Z"))[0] == "ok")
+sjekk("uten pushtid (ikke i aktivitetsloggen): fra da commiten ble laget",
+      _pv.vurder(_lokal, "def56780", _u("2026-10-07T09:50:00Z"))[0] == "henger")
 # Hele skriptet med GitHub-API-et byttet ut: 6.10., publiseringen av f3fe1df
 # står på waiting, den forrige (5f9a744) er success.
 _dep = [{"id": 2, "sha": "f3fe1df0"}, {"id": 1, "sha": "5f9a7440"}]
@@ -2973,7 +2980,7 @@ _cmp = {"status": "ahead", "commits": [{"sha": "f3fe1df0", "commit": {"committer
                                                                         "message": "Grunnlag (obos) 2026-10-06T15:17Z\n\nmer"}}]}
 _ekte_pv = {n: getattr(_pv, n) for n in ("api", "ping", "datetime")}
 _pv_ping = []
-def _kjor_pv(naa, hc="https://hc-ping.com/test-uuid", feil=None):
+def _kjor_pv(naa, hc="https://hc-ping.com/test-uuid", feil=None, aktivitet=()):
     class _D(_dt):
         @classmethod
         def now(cls, tz=None):
@@ -2987,6 +2994,10 @@ def _kjor_pv(naa, hc="https://hc-ping.com/test-uuid", feil=None):
             return _stat[int(sti.split("/")[1])]
         if sti == "compare/5f9a7440...main":
             return _cmp
+        if sti.startswith("activity?ref=refs/heads/main&activity_type=push"):
+            if aktivitet is None:
+                raise OSError("HTTP 403")
+            return aktivitet
         raise AssertionError(sti)
     _pv.api, _pv.datetime = _api, _D
     _pv.ping = lambda url: _pv_ping.append(url) or True
@@ -3008,7 +3019,18 @@ def _kjor_pv(naa, hc="https://hc-ping.com/test-uuid", feil=None):
     return _kode, _buf.getvalue(), list(_pv_ping)
 _k, _ut, _p = _kjor_pv(_u("2026-10-06T15:40:00Z"))
 sjekk("6.10. kl. 15:40Z (23 min): livstegn, ikke /fail", _p == ["https://hc-ping.com/test-uuid"] and _k == 0
-      and "1 commit(er) venter på publisering, den eldste (f3fe1df) er 22 min gammel" in _ut, _ut)
+      and "1 commit(er) venter på publisering, den eldste (f3fe1df) kom til main for 22 min siden" in _ut, _ut)
+# Pushen 20 min etter at commiten ble laget: kl. 15:50Z er den 13 min gammel på main.
+_akt = [{"timestamp": "2026-10-06T15:37:00Z", "after": "f3fe1df0"}, {"timestamp": "2026-10-06T15:12:20Z", "after": "5f9a7440"}]
+_k, _ut, _p = _kjor_pv(_u("2026-10-06T15:50:00Z"), aktivitet=_akt)
+sjekk("pushet 20 min etter at commiten ble laget: kl. 15:50Z regnes 13 min fra pushen, livstegn",
+      _p == ["https://hc-ping.com/test-uuid"] and "kom til main for 13 min siden" in _ut, _ut)
+_k, _ut, _p = _kjor_pv(_u("2026-10-06T16:10:00Z"), aktivitet=_akt)
+sjekk("... og kl. 16:10Z (33 min etter pushen): /fail, med pushtiden i teksten",
+      _p == ["https://hc-ping.com/test-uuid/fail"] and "kom til main 6.10. kl. 17.37" in _ut, _ut)
+_k, _ut, _p = _kjor_pv(_u("2026-10-06T15:50:00Z"), aktivitet=None)
+sjekk("aktivitetsloggen svarer ikke: regnet fra da commiten ble laget (32 min, /fail), sagt i loggen",
+      _p == ["https://hc-ping.com/test-uuid/fail"] and "aktivitetsloggen svarte ikke" in _ut, _ut)
 _k, _ut, _p = _kjor_pv(_u("2026-10-06T15:50:00Z"))
 sjekk("6.10. kl. 15:50Z (32 min): /fail til healthchecks og ::warning, men kjøringen er grønn",
       _p == ["https://hc-ping.com/test-uuid/fail"] and _k == 0 and "::warning title=Publiseringen henger::Publiseringen henger: f3fe1df" in _ut
@@ -3021,8 +3043,8 @@ sjekk("GitHub svarer ikke: ingenting sendes (dødmannsknappen tar det), grønn",
       _p == [] and _k == 0 and "sender ingenting" in _ut, _ut)
 _wf = (ROT / ".github" / "workflows" / "pages-vakt.yml").read_text("utf-8")
 _wf_kode = "\n".join(l for l in _wf.splitlines() if not l.strip().startswith("#"))
-sjekk("pages-vakt.yml: etter «Oppdater kampdata» og hver publisering (alle utfall), hver time og manuelt, bare lesing, ingen concurrency, hemmeligheten fra secrets",
-      'workflows: ["Oppdater kampdata", "pages build and deployment"]' in _wf_kode and "types: [completed]" in _wf_kode
+sjekk("pages-vakt.yml: etter «Oppdater kampdata» (alle utfall), etter publisering (page_build), hver time og manuelt, bare lesing, ingen concurrency, hemmeligheten fra secrets",
+      'workflows: ["Oppdater kampdata"]' in _wf_kode and "types: [completed]" in _wf_kode
       and "  page_build:" in _wf_kode and 'cron: "7 * * * *"' in _wf_kode and "workflow_dispatch:" in _wf_kode and "planlagt:" in _wf_kode
       and "contents: read" in _wf_kode and "deployments: read" in _wf_kode and "write" not in _wf_kode
       and "concurrency" not in _wf_kode and "if:" not in _wf_kode

@@ -10,15 +10,18 @@ name: "Pages-vakt: er alt publisert?"
 # UTLØSES (7.10.2026):
 #   - etter hver kjøring av «Oppdater kampdata», som planleggeren starter
 #     hvert tiende minutt 09-21 UTC, uansett hvordan den gikk
-#   - etter hver publisering: page_build (byggingen er ferdig) og når
-#     «pages build and deployment» er ferdig
+#   - etter en publisering: page_build (byggingen er ferdig). GitHub starter
+#     den bare for pusher fra en person, ikke for jobbenes egne pusher med
+#     GITHUB_TOKEN; dem fanger kjøringen hvert tiende minutt. workflow_run på
+#     «pages build and deployment» (GitHub sin egen) ble prøvd 7.10.2026 og
+#     startet ingenting.
 #   - om natten én gang i timen av planleggeren (planlegger/worker.js,
 #     NATT_WORKFLOWS), med GitHub sin egen cron som reserve (den er sterkt
 #     strupet for dette repoet, se workeren)
 #   - manuelt
 on:
   workflow_run:
-    workflows: ["Oppdater kampdata", "pages build and deployment"]
+    workflows: ["Oppdater kampdata"]
     types: [completed]
   page_build:
   schedule:
