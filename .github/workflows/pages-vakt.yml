@@ -1,0 +1,42 @@
+name: "Pages-vakt: er alt publisert?"
+
+# 6.10.2026 hang publiseringen (pages build and deployment) i deploy fra
+# kl. 15:17Z, og siden viste commiten før i over sju timer uten at noen
+# merket det. Vakten sjekker at alt på main er publisert, med 30 minutter
+# slingringsmonn, og varsler samme vei som de andre: healthchecks.io-sjekken
+# tabellkalkulator-pages (livstegn når alt er i orden, /fail når det henger).
+# Se scripts/pages_vakt.py og planlegger/README.md («Dødmannsknapp»).
+#
+# UTLØSES etter hver kjøring av «Oppdater kampdata», som planleggeren starter
+# hvert tiende minutt 09-21 UTC, uansett hvordan den gikk. Planleggeren og de
+# andre workflowene er ikke endret.
+on:
+  workflow_run:
+    workflows: ["Oppdater kampdata"]
+    types: [completed]
+  workflow_dispatch:
+
+# Bare lesing: deployments (publiseringene) og compare (commitene).
+permissions:
+  contents: read
+  deployments: read
+
+# Ingen concurrency-gruppe: vakten bare leser, og to samtidige kjøringer gjør
+# ingen skade. En gruppe ville gitt avbrutte kjøringer (GitHub holder bare én
+# ventende), og dermed e-post.
+
+jobs:
+  vakt:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/pages_vakt.py
+          sparse-checkout-cone-mode: false
+
+      - name: Er alt på main publisert?
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HC_URL: ${{ secrets.HEALTHCHECK_PAGES }}
+        run: python3 scripts/pages_vakt.py

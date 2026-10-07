@@ -2949,6 +2949,87 @@ finally:
         _osu.environ["ODDSPAPI_KEY"] = _ekte_nokkel
     _shr.rmtree(_sbo2, ignore_errors=True)
 
+print("\n=== Pages-vakt: varsel når publiseringen henger (scripts/pages_vakt.py, 7.10.2026) ===")
+# 6.10.: publiseringen av f3fe1df hang i deploy fra 15:17Z. Vakten gir
+# livstegn til healthchecks når alt er publisert eller den eldste
+# upubliserte commiten er under 30 min gammel, /fail når den er eldre, og
+# ingenting når GitHub ikke svarer.
+import pages_vakt as _pv
+_u = lambda t: _dt.fromisoformat(t.replace("Z", "+00:00"))
+_c = [("f3fe1df0", _u("2026-10-06T15:17:03Z"), "Grunnlag (obos) 2026-10-06T15:17Z")]
+sjekk("ingen upubliserte commiter: ok", _pv.vurder([], "e36d60c0", _u("2026-10-06T16:00:00Z"))[0] == "ok")
+sjekk("upublisert i 29 min: ok (publiseringen kan være i gang)", _pv.vurder(_c, "5f9a7440", _u("2026-10-06T15:46:03Z"))[0] == "ok")
+sjekk("nøyaktig 30 min: fortsatt ok", _pv.vurder(_c, "5f9a7440", _u("2026-10-06T15:47:03Z"))[0] == "ok")
+_t, _tx = _pv.vurder(_c, "5f9a7440", _u("2026-10-06T15:50:00Z"))
+sjekk("32 min: henger, med commit, tid, alder og det siden viser",
+      _t == "henger" and _tx == "Publiseringen henger: f3fe1df (Grunnlag (obos) 2026-10-06T15:17Z) fra 6.10. kl. 17.17 er ikke "
+      "publisert etter 32 min, og 1 commit(er) venter. Siden viser 5f9a744.", _tx)
+# Hele skriptet med GitHub-API-et byttet ut: 6.10., publiseringen av f3fe1df
+# står på waiting, den forrige (5f9a744) er success.
+_dep = [{"id": 2, "sha": "f3fe1df0"}, {"id": 1, "sha": "5f9a7440"}]
+_stat = {2: [{"state": "waiting", "created_at": "2026-10-06T15:17:39Z"}],
+         1: [{"state": "success", "created_at": "2026-10-06T15:13:16Z"}, {"state": "in_progress", "created_at": "2026-10-06T15:12:55Z"}]}
+_cmp = {"status": "ahead", "commits": [{"sha": "f3fe1df0", "commit": {"committer": {"date": "2026-10-06T15:17:03Z"},
+                                                                        "message": "Grunnlag (obos) 2026-10-06T15:17Z\n\nmer"}}]}
+_ekte_pv = {n: getattr(_pv, n) for n in ("api", "ping", "datetime")}
+_pv_ping = []
+def _kjor_pv(naa, hc="https://hc-ping.com/test-uuid", feil=None):
+    class _D(_dt):
+        @classmethod
+        def now(cls, tz=None):
+            return naa if tz is None else naa.astimezone(tz)
+    def _api(sti):
+        if feil:
+            raise OSError(feil)
+        if sti.startswith("deployments?environment=github-pages"):
+            return _dep
+        if sti.startswith("deployments/"):
+            return _stat[int(sti.split("/")[1])]
+        if sti == "compare/5f9a7440...main":
+            return _cmp
+        raise AssertionError(sti)
+    _pv.api, _pv.datetime = _api, _D
+    _pv.ping = lambda url: _pv_ping.append(url) or True
+    _pv_ping.clear()
+    _gml = {k: _osu.environ.get(k) for k in ("HC_URL", "GITHUB_ACTIONS")}
+    _osu.environ["HC_URL"], _osu.environ["GITHUB_ACTIONS"] = hc, "true"
+    _buf = _iou.StringIO()
+    try:
+        with _ctxu.redirect_stdout(_buf):
+            _kode = _pv.main()
+    finally:
+        for _n, _v in _ekte_pv.items():
+            setattr(_pv, _n, _v)
+        for _k, _v in _gml.items():
+            if _v is None:
+                _osu.environ.pop(_k, None)
+            else:
+                _osu.environ[_k] = _v
+    return _kode, _buf.getvalue(), list(_pv_ping)
+_k, _ut, _p = _kjor_pv(_u("2026-10-06T15:40:00Z"))
+sjekk("6.10. kl. 15:40Z (23 min): livstegn, ikke /fail", _p == ["https://hc-ping.com/test-uuid"] and _k == 0
+      and "1 commit(er) venter på publisering, den eldste (f3fe1df) er 22 min gammel" in _ut, _ut)
+_k, _ut, _p = _kjor_pv(_u("2026-10-06T15:50:00Z"))
+sjekk("6.10. kl. 15:50Z (32 min): /fail til healthchecks og ::warning, men kjøringen er grønn",
+      _p == ["https://hc-ping.com/test-uuid/fail"] and _k == 0 and "::warning title=Publiseringen henger::Publiseringen henger: f3fe1df" in _ut
+      and "Siden viser 5f9a744." in _ut, _ut)
+_k, _ut, _p = _kjor_pv(_u("2026-10-06T15:50:00Z"), hc="")
+sjekk("uten HEALTHCHECK_PAGES: ingen ping, en ::warning om at vakten ikke kan varsle, grønn",
+      _p == [] and _k == 0 and "HEALTHCHECK_PAGES er ikke satt" in _ut and "Publiseringen henger" in _ut, _ut)
+_k, _ut, _p = _kjor_pv(_u("2026-10-06T15:50:00Z"), feil="HTTP 502")
+sjekk("GitHub svarer ikke: ingenting sendes (dødmannsknappen tar det), grønn",
+      _p == [] and _k == 0 and "sender ingenting" in _ut, _ut)
+_wf = (ROT / ".github" / "workflows" / "pages-vakt.yml").read_text("utf-8")
+_wf_kode = "\n".join(l for l in _wf.splitlines() if not l.strip().startswith("#"))
+sjekk("pages-vakt.yml: etter «Oppdater kampdata» (alle utfall) og manuelt, bare lesing, ingen concurrency, hemmeligheten fra secrets",
+      'workflows: ["Oppdater kampdata"]' in _wf_kode and "types: [completed]" in _wf_kode and "workflow_dispatch:" in _wf_kode
+      and "contents: read" in _wf_kode and "deployments: read" in _wf_kode and "write" not in _wf_kode
+      and "concurrency" not in _wf_kode and "if:" not in _wf_kode
+      and "HC_URL: ${{ secrets.HEALTHCHECK_PAGES }}" in _wf_kode and "python3 scripts/pages_vakt.py" in _wf_kode)
+sjekk("planlegger/README.md har sjekken tabellkalkulator-pages og hemmeligheten",
+      "`tabellkalkulator-pages`" in (ROT / "planlegger" / "README.md").read_text("utf-8")
+      and "gh secret set HEALTHCHECK_PAGES" in (ROT / "planlegger" / "README.md").read_text("utf-8"))
+
 print("\n=== Kort eller full kontroll før push (tests/for_push_valg.py, 4.10.2026) ===")
 # Kort kontroll bare når full for_push var grønn på samme kode før rebasen og
 # origin bare endret filer på den eksplisitte listen over genererte filer.

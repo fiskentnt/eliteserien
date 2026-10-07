@@ -122,7 +122,7 @@ og at portene stopper dem når det ikke er noe å gjøre.
 ## Dødmannsknapp (healthchecks.io)
 
 Varsel når noe har vært galt en stund, uten åpen økt, Mac eller GitHub sin
-cron. Tre sjekker hos healthchecks.io, hver med sin hemmelige ping-adresse.
+cron. Fire sjekker hos healthchecks.io, hver med sin hemmelige ping-adresse.
 Hver av dem får et livstegn bare når alt gikk bra; feiler en runde eller en
 kjøring, sendes ingenting. Kommer det ikke livstegn innenfor tidsplanen pluss
 slingringsmonnet, sender healthchecks e-post.
@@ -132,6 +132,7 @@ slingringsmonnet, sender healthchecks e-post.
 | `tabellkalkulator-planlegger` | workeren fikk 204 fra GitHub for alle utløsningene i en planlagt runde | `HEALTHCHECK_URL` i Cloudflare |
 | `tabellkalkulator-update-data` | en kjøring av `update-data.yml` er grønn (siste steg) | `HEALTHCHECK_UPDATE_DATA` i GitHub |
 | `tabellkalkulator-obos-results` | en kjøring av `obos-results.yml` er grønn (siste steg) | `HEALTHCHECK_OBOS` i GitHub |
+| `tabellkalkulator-pages` | `pages-vakt.yml` (etter hver «Oppdater kampdata») finner alt på main publisert, eller den eldste upubliserte commiten under 30 minutter gammel. Eldre enn det: `/fail`, og e-post med en gang (7.10.2026) | `HEALTHCHECK_PAGES` i GitHub |
 
 Adressene er hemmeligheter: den som har dem, kan sende falske livstegn og
 skjule et stopp. De skal aldri i koden, `wrangler.toml`, git eller en chat.
@@ -141,7 +142,7 @@ Et livstegn som ikke kommer fram, kan aldri gjøre en kjøring rød.
 ### Oppsett hos healthchecks.io
 
 1. Gratis konto på healthchecks.io (20 sjekker og e-post er gratis).
-2. For HVER av de tre sjekkene over: **Add Check**, navn som i tabellen,
+2. For HVER av de fire sjekkene over: **Add Check**, navn som i tabellen,
    **Schedule → Cron**, uttrykket `*/10 9-21 * * *`, tidssone **UTC**,
    **Grace time 60 minutter**. Utenfor 09-21 UTC venter den ingen livstegn,
    så natten gir ikke varsel.
@@ -160,6 +161,7 @@ Et livstegn som ikke kommer fram, kan aldri gjøre en kjøring rød.
     # GitHub (jobbene), fra repo-roten:
     gh secret set HEALTHCHECK_UPDATE_DATA
     gh secret set HEALTHCHECK_OBOS
+    gh secret set HEALTHCHECK_PAGES
     # hver av dem spør om verdien og leser den uten å vise den
 
 Eller på github.com: **Settings → Secrets and variables → Actions → New
@@ -170,7 +172,7 @@ repository secret**. Gi aldri verdien som argument på kommandolinjen.
     cd planlegger && npx wrangler deploy
 
 Koden i repoet og den publiserte workeren skal være like. Etter 10-20
-minutter (innenfor vinduet) skal alle tre sjekkene stå som «up» med livstegn
+minutter (innenfor vinduet) skal alle fire sjekkene stå som «up» med livstegn
 hvert tiende minutt. «Send test notification» i healthchecks viser at
 e-posten kommer fram.
 
