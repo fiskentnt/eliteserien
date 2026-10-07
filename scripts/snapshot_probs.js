@@ -32,6 +32,8 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const {avsparkFraTerminliste, oppdaterPrekick, kamperIVinduet} = require('./prekick_frys');
+// Chrome med 90 sekunder og ett nytt forsøk (8.10.2026), se chrome_start.js.
+const {startChrome} = require('./chrome_start');
 
 const ROOT = path.join(__dirname, '..');
 // Hvilken liga. Alt som skiller ligaene ligger i LEAGUE på selve siden, så
@@ -113,7 +115,7 @@ function chromePath() {
   const puppeteer = require('puppeteer-core');
   const server = await serve();
   const port = server.address().port;
-  const browser = await puppeteer.launch({executablePath: chromePath(), headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox']});
+  const browser = await startChrome(puppeteer, {executablePath: chromePath(), headless: 'new', args: ['--no-sandbox', '--disable-setuid-sandbox']});
   try {
     const page = await browser.newPage();
     const errs = [];

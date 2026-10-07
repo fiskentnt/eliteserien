@@ -3,6 +3,29 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Bare ekte feil gir «Run failed» (8.10.2026)
+
+GitHub holder bare én ventende kjøring per concurrency-gruppe, så
+cancel-in-progress: false hjalp ikke: den tredje starten i en runde avbrøt
+den som ventet. Siste døgn før (7.10. 22:10Z): ELO-test 78 avbrutte og 2
+feilede av 238, grunnlag 4 avbrutte av 560, Pages (GitHubs egen, kan ikke
+endres) 3 av 22, alle andre 0.
+
+- ELO-test: jobben port (scripts/puljeport.py elo) lar bare den siste i
+  runden bygge; køen elo-test-bygg står på byggejobben. Loggen sier
+  "bygg=false: nyere kjøring ..." eller "bygg=false: aktiv utløser ...".
+- Grunnlag: steget "Regner en nyere kjøring dem alt?" (puljeport.py
+  grunnlag) tar bort en liga en nyere kjøring regner: "regn (obos): hoppet
+  over -- den nyere grunnlagskjøringen #... regner den".
+- Chrome: 90 sekunder og ett nytt forsøk (scripts/chrome_start.js) i
+  snapshot_probs.js og kontroll_paneler.py; de to ekte feilene 7.10. var
+  begge at Chrome ikke startet innen 30 sekunder.
+
+**Etter et døgn:** tell avbrutte og feilede per workflow igjen og vis før og
+etter.
+
+Tester: tests/kilder/test_kilder.py, «Porten for runder» og «Chrome-start».
+
 ## Pages-vakt: varsel når publiseringen henger (7.10.2026)
 
 6.10. hang publiseringen i deploy fra 15:17Z i over sju timer, og siden viste

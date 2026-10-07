@@ -58,13 +58,14 @@ on:
 
 permissions:
   contents: write
+  actions: read          # porten leser kjøringslisten (scripts/puljeport.py)
 
 jobs:
   port:
     runs-on: ubuntu-latest
     timeout-minutes: 5
     outputs:
-      ligaer: ${{ steps.port.outputs.ligaer }}
+      ligaer: ${{ steps.puljen.outputs.ligaer }}
     steps:
       - uses: actions/checkout@v4
         with:
@@ -85,6 +86,19 @@ jobs:
             *) sider="eliteserien obos" ;;
           esac
           python3 scripts/grunnlag_port.py $sider
+
+      # Bare den nyeste i en runde regner en liga (8.10.2026): har en nyere
+      # grunnlagskjøring jobben "regn (<liga>)", tas ligaen bort her, og
+      # loggen sier hvilken kjøring som regner den. Ellers sto flere
+      # regnejobber for samme liga i kø, og GitHub avbrøt den som ventet (bare
+      # én ventende per gruppe; 4 siste døgn 7.10., med e-post). Manuelt: alle.
+      # Se scripts/puljeport.py.
+      - name: Regner en nyere kjøring dem alt?
+        id: puljen
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          LIGAER: ${{ steps.port.outputs.ligaer }}
+        run: python3 scripts/puljeport.py grunnlag
 
   regn:
     needs: port

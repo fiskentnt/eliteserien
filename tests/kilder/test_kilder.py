@@ -3053,6 +3053,140 @@ sjekk("planlegger/README.md har sjekken tabellkalkulator-pages og hemmeligheten"
       "`tabellkalkulator-pages`" in (ROT / "planlegger" / "README.md").read_text("utf-8")
       and "gh secret set HEALTHCHECK_PAGES" in (ROT / "planlegger" / "README.md").read_text("utf-8"))
 
+print("\n=== Porten for runder av utløsninger: ELO-test og grunnlag (scripts/puljeport.py, 8.10.2026) ===")
+# GitHub holder bare én ventende kjøring per concurrency-gruppe, så den
+# midterste av tre ELO-test-starter i en runde ble avbrutt (78 av 238 siste
+# døgn 7.10.). Porten lar bare den siste i runden bygge, og sier hvorfor.
+import puljeport as _pj
+def _pj_api(svar):
+    def api(sti):
+        for k, v in svar.items():
+            if sti.startswith(k):
+                if isinstance(v, Exception):
+                    raise v
+                return v() if callable(v) else v
+        raise AssertionError(sti)
+    return api
+_ekte_pj = _pj.api
+def _kjor(wf, *rader):
+    return {f"actions/workflows/{wf}/runs": {"workflow_runs": [dict(id=i, status=st, conclusion=c, created_at=t) for i, st, c, t in rader]}}
+_sov = []
+try:
+    _ingen = {**_kjor("update-data.yml", (1, "completed", "success", "2026-10-07T10:00:30Z")),
+              **_kjor("update-odds.yml", (2, "completed", "success", "2026-10-07T10:00:31Z")),
+              **_kjor("prekick-odds.yml", (3, "completed", "success", "2026-10-07T10:00:32Z"))}
+    _pj.api = _pj_api({**_ingen, **_kjor("elo-test.yml", (101, "in_progress", None, "2026-10-07T10:00:48Z"),
+                                          (102, "in_progress", None, "2026-10-07T10:00:55Z"))})
+    _b, _h = _pj.elo(101, "workflow_run", sov=_sov.append)
+    sjekk("ELO-test: en nyere kjøring finnes: bygg=false, og loggen sier «nyere kjøring» med nummer og tid",
+          _b is False and _h == "bygg=false: nyere kjøring -- ELO-test #102 (startet 10:00:55Z) er nyere og bygger i stedet" and _sov == [20], _h)
+    _b, _h = _pj.elo(102, "workflow_run", sov=lambda s: None)
+    sjekk("den nyeste, ingen utløser kjører: bygg=true", _b is True and "ingen nyere" in _h, _h)
+    _pj.api = _pj_api({**_ingen, **_kjor("update-odds.yml", (2, "in_progress", None, "2026-10-07T10:00:31Z")),
+                       **_kjor("elo-test.yml", (102, "in_progress", None, "2026-10-07T10:00:55Z"))})
+    _b, _h = _pj.elo(102, "workflow_run", sov=lambda s: None)
+    sjekk("en utløser kjører fortsatt: bygg=false, og loggen sier «aktiv utløser» med navnet",
+          _b is False and _h.startswith("bygg=false: aktiv utløser -- «Oppdater odds for kommende kamper» (#2) kjører fortsatt"), _h)
+    _sov.clear()
+    _b, _h = _pj.elo(100, "workflow_dispatch", sov=_sov.append)
+    sjekk("manuelt: bygger alltid, uten å vente", _b is True and _sov == [], _h)
+
+    # Grunnlag: en nyere kjøring har "regn (obos)" i kø: obos tas bort.
+    _jobb = lambda *j: {"jobs": [dict(name=n, status=st, conclusion=c) for n, st, c in j]}
+    _pj.api = _pj_api({**_kjor("grunnlag.yml", (201, "in_progress", None, "t"), (202, "queued", None, "t"), (203, "completed", "cancelled", "t")),
+                       "actions/runs/202/jobs": _jobb(("port", "completed", "success"), ("regn (obos)", "queued", None)),
+                       "actions/runs/203/jobs": _jobb(("port", "completed", "success"), ("regn (eliteserien)", "completed", "cancelled"))})
+    _l, _borte = _pj.grunnlag(201, "workflow_run", ["eliteserien", "obos"], sov=lambda s: None)
+    sjekk("grunnlag: en nyere kjøring regner obos: obos tas bort, eliteserien beholdes (den avbrutte teller ikke)",
+          _l == ["eliteserien"] and _borte == [("obos", 202)], f"{_l} {_borte}")
+    # Den nyere kjøringens port er ikke ferdig ennå: porten venter på den.
+    _tilstand = {"n": 0}
+    def _jobber_202():
+        _tilstand["n"] += 1
+        return _jobb(("port", "in_progress", None)) if _tilstand["n"] < 3 else _jobb(("port", "completed", "success"), ("regn (eliteserien)", "queued", None), ("regn (obos)", "queued", None))
+    _pj.api = _pj_api({**_kjor("grunnlag.yml", (201, "in_progress", None, "t"), (202, "in_progress", None, "t")), "actions/runs/202/jobs": _jobber_202})
+    _sov2 = []
+    _l, _borte = _pj.grunnlag(201, "workflow_run", ["eliteserien", "obos"], sov=_sov2.append)
+    sjekk("grunnlag: venter til den nyere kjøringens port er ferdig, og tar så bort begge",
+          _l == [] and [x for x, _ in _borte] == ["eliteserien", "obos"] and _sov2 == [20, 5, 5], f"{_l} {_borte} {_sov2}")
+    # Den nyere regner ingenting (porten sa []): alt beholdes.
+    _pj.api = _pj_api({**_kjor("grunnlag.yml", (201, "in_progress", None, "t"), (202, "completed", "success", "t")),
+                       "actions/runs/202/jobs": _jobb(("port", "completed", "success"), ("regn", "completed", "skipped"))})
+    _l, _borte = _pj.grunnlag(201, "workflow_run", ["eliteserien"], sov=lambda s: None)
+    sjekk("grunnlag: den nyere regner ingenting: alt beholdes", _l == ["eliteserien"] and _borte == [], f"{_l} {_borte}")
+    _l, _borte = _pj.grunnlag(201, "workflow_dispatch", ["eliteserien", "obos"], sov=lambda s: (_ for _ in ()).throw(AssertionError("sov")))
+    sjekk("grunnlag manuelt: alle, uten å vente", _l == ["eliteserien", "obos"])
+
+    # Hele skriptet: GITHUB_OUTPUT og loggen, og GitHub som ikke svarer.
+    _ut = Path(_tf2.mkdtemp()) / "output"
+    _gml_env = {k: _osu.environ.get(k) for k in ("GITHUB_OUTPUT", "GITHUB_RUN_ID", "GITHUB_EVENT_NAME", "LIGAER")}
+    _osu.environ.update(GITHUB_OUTPUT=str(_ut), GITHUB_RUN_ID="201", GITHUB_EVENT_NAME="workflow_run", LIGAER='["eliteserien", "obos"]')
+    _pj.api = _pj_api({"actions/workflows": OSError("HTTP 502")})
+    _ekte_sov = _pj.time.sleep
+    _pj.time.sleep = lambda s: None
+    try:
+        _buf = _iou.StringIO()
+        with _ctxu.redirect_stdout(_buf):
+            sys.argv = ["puljeport.py", "elo"]; _k1 = _pj.main()
+            sys.argv = ["puljeport.py", "grunnlag"]; _k2 = _pj.main()
+    finally:
+        _pj.time.sleep = _ekte_sov
+        sys.argv = _ekte_argv_o
+        for _k, _v in _gml_env.items():
+            if _v is None:
+                _osu.environ.pop(_k, None)
+            else:
+                _osu.environ[_k] = _v
+    _o = _ut.read_text("utf-8")
+    sjekk("GitHub svarer ikke: ELO-test bygger og grunnlag regner alle, og loggen sier hvorfor",
+          _k1 == 0 and _k2 == 0 and _o == 'bygg=true\nligaer=["eliteserien", "obos"]\n' and "GitHub svarte ikke" in _buf.getvalue(), _o + _buf.getvalue())
+finally:
+    _pj.api = _ekte_pj
+
+_ew = (ROT / ".github" / "workflows" / "elo-test.yml").read_text("utf-8")
+_ewk = "\n".join(l for l in _ew.splitlines() if not l.strip().startswith("#"))
+_gw = (ROT / ".github" / "workflows" / "grunnlag.yml").read_text("utf-8")
+_gwk = "\n".join(l for l in _gw.splitlines() if not l.strip().startswith("#"))
+sjekk("elo-test.yml: ingen kø på hele workflowen, byggejobben trenger porten og står i kø elo-test-bygg uten å avbryte",
+      "\nconcurrency:" not in _ewk and "    needs: port\n    if: needs.port.outputs.bygg == 'true'\n" in _ewk
+      and "    concurrency:\n      group: elo-test-bygg" in _ewk and "cancel-in-progress: false" in _ewk and "cancel-in-progress: true" not in _ewk)
+sjekk("elo-test.yml: porten kjører puljeport.py elo med GITHUB_TOKEN og har actions: read; ingen gammel betingelse på utløserens utfall",
+      "  port:\n" in _ewk and "python3 scripts/puljeport.py elo" in _ewk and "GITHUB_TOKEN: ${{ github.token }}" in _ewk
+      and "actions: read" in _ewk and "workflow_run.conclusion" not in _ewk and _ewk.index("  bygg:") < _ewk.index("  port:"))
+sjekk("grunnlag.yml: steget puljen etter porten, ligaene fra det, med actions: read",
+      "python3 scripts/grunnlag_port.py $sider" in _gwk and "LIGAER: ${{ steps.port.outputs.ligaer }}" in _gwk
+      and "python3 scripts/puljeport.py grunnlag" in _gwk and "ligaer: ${{ steps.puljen.outputs.ligaer }}" in _gwk
+      and _gwk.index("grunnlag_port.py $sider") < _gwk.index("puljeport.py grunnlag") and "actions: read" in _gwk)
+
+print("\n=== Chrome-start: 90 sekunder og ett nytt forsøk (scripts/chrome_start.js, 8.10.2026) ===")
+_cs = r"""
+const {startChrome} = require(process.argv[1]);
+(async () => {
+  const kall = [], logg = [];
+  const lag = utfall => ({launch: async o => { kall.push(o.timeout); const u = utfall.shift(); if (u instanceof Error) throw u; return u; }});
+  const tidsavbrudd = () => Object.assign(new Error('Timed out after 30000 ms while waiting for the WS endpoint URL to appear in stdout!'), {name: 'TimeoutError'});
+  const a = await startChrome(lag([tidsavbrudd(), 'nettleser']), {headless: 'new'}, {logg: m => logg.push(m)});
+  let feil = null;
+  try { await startChrome(lag([tidsavbrudd(), tidsavbrudd()]), {headless: 'new'}, {logg: m => logg.push(m)}); } catch (e) { feil = e.name; }
+  const b = await startChrome(lag(['rett']), {}, {logg: m => logg.push(m)});
+  console.log(JSON.stringify({a, b, feil, kall, logg}));
+})();
+"""
+import subprocess as _sub_cs
+_r = _sub_cs.run(["node", "-e", _cs, str(ROT / "scripts" / "chrome_start.js")], capture_output=True, text=True)
+_cr = json.loads(_r.stdout.strip() or "{}") if _r.returncode == 0 else {}
+sjekk("Chrome startet ikke første gang: nytt forsøk, og loggen sier det",
+      _cr.get("a") == "nettleser" and len(_cr.get("logg", [])) == 2 and "prøver igjen (forsøk 2 av 2)" in (_cr.get("logg") or [""])[0], _r.stdout + _r.stderr)
+sjekk("feiler begge forsøkene: feilen kastes (kjøringen blir rød som før); går det første, bare ett forsøk",
+      _cr.get("feil") == "TimeoutError" and _cr.get("b") == "rett", str(_cr))
+sjekk("90 sekunder i hvert forsøk", _cr.get("kall") == [90000] * 5, str(_cr.get("kall")))
+_sp = (ROT / "scripts" / "snapshot_probs.js").read_text("utf-8")
+_kp = (ROT / "elo-test" / "scripts" / "kontroll_paneler.py").read_text("utf-8")
+sjekk("snapshot_probs.js og kontroll_paneler.py starter Chrome med startChrome, ikke puppeteer.launch",
+      "await startChrome(puppeteer, {executablePath: chromePath()" in _sp and "puppeteer.launch(" not in _sp
+      and "const {startChrome} = require(process.argv[3]);" in _kp and "await startChrome(puppeteer, {executablePath: process.argv[2]" in _kp
+      and 'str(ROT / "scripts" / "chrome_start.js")' in _kp and "puppeteer.launch(" not in _kp)
+
 print("\n=== Kort eller full kontroll før push (tests/for_push_valg.py, 4.10.2026) ===")
 # Kort kontroll bare når full for_push var grønn på samme kode før rebasen og
 # origin bare endret filer på den eksplisitte listen over genererte filer.

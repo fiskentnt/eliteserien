@@ -159,8 +159,10 @@ else:
         import time as _tm
         _jsw = r"""
 const puppeteer = require('puppeteer-core');
+// Chrome med 90 sekunder og ett nytt forsøk (scripts/chrome_start.js, 8.10.2026).
+const {startChrome} = require(process.argv[3]);
 (async () => {
-  const b = await puppeteer.launch({executablePath: process.argv[2], headless: 'new', args: ['--no-sandbox']});
+  const b = await startChrome(puppeteer, {executablePath: process.argv[2], headless: 'new', args: ['--no-sandbox']});
   const p = await b.newPage();
   await p.goto(process.argv[1], {waitUntil: 'networkidle0'});
   await p.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC && ELO_ODDS_SPILT', {timeout: 180000});
@@ -183,7 +185,8 @@ const puppeteer = require('puppeteer-core');
                                     cwd=rot, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             try:
                 _tm.sleep(1.0)
-                return subprocess.run(["node", "-e", _jsw, f"http://127.0.0.1:{_port}/elo-test/", _chrome],
+                return subprocess.run(["node", "-e", _jsw, f"http://127.0.0.1:{_port}/elo-test/", _chrome,
+                                       str(ROT / "scripts" / "chrome_start.js")],
                                       capture_output=True, text=True, timeout=600)
             finally:
                 _srv.terminate()

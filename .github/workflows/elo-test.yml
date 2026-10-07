@@ -25,18 +25,25 @@ on:
 
 permissions:
   contents: write
-
-concurrency:
-  group: elo-test-bygg          # egen gruppe; køer testsidens jobber
-  cancel-in-progress: false
+  actions: read                 # porten leser kjøringslisten (scripts/puljeport.py)
 
 jobs:
   bygg:
-    # Ogsaa naar den utlosende jobben er ROD. "Oppdater kampdata" kan ha
-    # committet data foer et senere steg gjor den rod (kildevakten), og da skal
-    # testsiden bygges paa dem. Byggingen gjor ingenting naar ingenting er
-    # endret. En avbrutt kjoring (cancelled) hoppes fortsatt over.
-    if: github.event_name == 'workflow_dispatch' || contains(fromJSON('["success","failure"]'), github.event.workflow_run.conclusion)
+    # Bare når porten (jobben port, nederst) sier at denne er den siste i
+    # runden (8.10.2026). De tre utløserne startes samtidig hvert tiende
+    # minutt, og hver av dem som blir ferdig, starter en kjøring: før bygde
+    # den første og den siste, og den midterste ble avbrutt av GitHub (bare
+    # én ventende per gruppe), 78 av 238 siste døgn 7.10., hver med e-posten
+    # «Run failed». Uansett hvordan utløseren gikk, også avbrutt: den kan ha
+    # committet data før den stoppet, og byggingen gjør ingenting når
+    # ingenting er endret.
+    needs: port
+    if: needs.port.outputs.bygg == 'true'
+    # Køen er her, ikke på hele workflowen: portene skal aldri stå i kø eller
+    # bli avbrutt.
+    concurrency:
+      group: elo-test-bygg          # egen gruppe; køer testsidens jobber
+      cancel-in-progress: false
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -127,3 +134,25 @@ jobs:
             git commit -m "ELO-test: panelene regnet $(date -u +%Y-%m-%dT%H:%MZ)"
             bash scripts/push_med_rebase.sh
           fi
+
+  # PORTEN (8.10.2026): bygger bare når ingen av de tre utløserne kjører
+  # fortsatt og det ikke finnes en nyere ELO-test-kjøring; ellers ender
+  # kjøringen grønn uten å bygge, og loggen sier hvorfor (nyere kjøring eller
+  # aktiv utløser). Manuelt: bygger alltid. Se scripts/puljeport.py. Står
+  # nederst, så stegene over leses i rekkefølge (kontroll.py, O).
+  port:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      bygg: ${{ steps.port.outputs.bygg }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: scripts/puljeport.py
+          sparse-checkout-cone-mode: false
+
+      - name: Er dette den siste i runden?
+        id: port
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: python3 scripts/puljeport.py elo
