@@ -1462,13 +1462,14 @@ async function main() {
       const svar = await qaNextMatch(t), d = await qaLastMatchData(t), forrigeSvar = await qaLastMatch(t);
       const bx = document.querySelector('#odds .lastmatch'), boks = bx ? bx.textContent.replace(/\s+/g, ' ').trim() : '';
       // Linja svarets tall gir, med de samme feltene som boksen (forrigeLinjeOppdater):
-      // forventningen UAVRUNDET og sonens tall fra utregningen. forrigeKampRad
+      // tallet fra før kampen (foer) og forventningen UAVRUNDET, og sonens tall
+      // fra utregningen. forrigeKampRad
       // alene runder forventningen til fire desimaler (for lastmatch.json), og
       // ved en kant ga det 3 mot boksens 4 prosentpoeng (Moss, 3.10.2026).
       // Gjelder lastmatch.json, bruker boksen og svaret den.
       const lagretRad = d && !d.noMatch && z && lagretForrige(t, d.m, z.key);
       const l = !d || d.noMatch ? null : lagretRad ? qaLastMatchLine(t, lastMatchEntry(t))
-        : qaLastMatchLine(t, {...forrigeKampRad(d), expected: d.expected, naa: d.tableP, iScen: matches.includes(d.m)});
+        : qaLastMatchLine(t, {...forrigeKampRad(d), expected: d.expected, foer: d.foer, naa: d.tableP, iScen: matches.includes(d.m)});
       const tmp = document.createElement('div');
       if (l) tmp.innerHTML = l.html;
       let fil = null;
@@ -3967,7 +3968,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         HISTORIKK = [bilde(start - 2 * 3600e3, (foerPct + 0.2) / 100), bilde(start + 2 * 3600e3, 0.999)];
         let a = await svar();
         ut.tabell = {basis: a.d.basis, pp: a.d.pp, foerP: a.d.foer, tekst: a.tekst.split('\n')[0]};
-        ut.tabell.linje = qaLastMatchLine(t, {...forrigeKampRad(a.d), naa: a.d.tableP}).html;
+        ut.tabell.linje = qaLastMatchLine(t, {...forrigeKampRad(a.d), foer: a.d.foer, naa: a.d.tableP}).html;
         ut.tabell.rad = forrigeKampRad(a.d);
         // 2. Bare et bilde ETTER avspark: ingen bilde før kampen, forventningen.
         HISTORIKK = [bilde(start + 60e3, (foerPct + 0.2) / 100)];
