@@ -17,6 +17,7 @@
    "pp": -8,
    "good": false,
    "basis": "forventning",
+   "foer": 0.8616,
    "expected": 0.8616
   },
   "Brann": {
@@ -34,7 +35,8 @@
    "pp": 5,
    "good": true,
    "basis": "forventning",
-   "expected": 0.0472
+   "foer": 0.0466,
+   "expected": 0.0466
   },
   "Fredrikstad": {
    "date": "2026-09-20",
@@ -51,7 +53,8 @@
    "pp": 0,
    "good": false,
    "basis": "forventning",
-   "expected": 0.0233
+   "foer": 0.023,
+   "expected": 0.023
   },
   "HamKam": {
    "date": "2026-09-20",
@@ -65,10 +68,11 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 3,
+   "pp": 4,
    "good": false,
    "basis": "forventning",
-   "expected": 0.1657
+   "foer": 0.1645,
+   "expected": 0.1645
   },
   "KFUM Oslo": {
    "date": "2026-09-18",
@@ -85,7 +89,8 @@
    "pp": -14,
    "good": true,
    "basis": "forventning",
-   "expected": 0.2172
+   "foer": 0.2179,
+   "expected": 0.2179
   },
   "Kristiansund": {
    "date": "2026-09-19",
@@ -102,7 +107,8 @@
    "pp": 6,
    "good": false,
    "basis": "forventning",
-   "expected": 0.516
+   "foer": 0.5168,
+   "expected": 0.5168
   },
   "Lillestrøm": {
    "date": "2026-09-20",
@@ -116,10 +122,11 @@
    "actual": "loss",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": -3,
+   "pp": -2,
    "good": false,
    "basis": "forventning",
-   "expected": 0.1825
+   "foer": 0.1839,
+   "expected": 0.1839
   },
   "Molde": {
    "date": "2026-09-19",
@@ -136,7 +143,8 @@
    "pp": -15,
    "good": false,
    "basis": "forventning",
-   "expected": 0.7136
+   "foer": 0.7129,
+   "expected": 0.7129
   },
   "Rosenborg": {
    "date": "2026-09-19",
@@ -153,7 +161,8 @@
    "pp": 8,
    "good": true,
    "basis": "forventning",
-   "expected": 0.4986
+   "foer": 0.4998,
+   "expected": 0.4998
   },
   "Sandefjord": {
    "date": "2026-09-20",
@@ -170,7 +179,8 @@
    "pp": -8,
    "good": true,
    "basis": "forventning",
-   "expected": 0.1647
+   "foer": 0.1648,
+   "expected": 0.1648
   },
   "Sarpsborg 08": {
    "date": "2026-09-18",
@@ -187,7 +197,8 @@
    "pp": 1,
    "good": false,
    "basis": "forventning",
-   "expected": 0.0071
+   "foer": 0.0069,
+   "expected": 0.0069
   },
   "Start": {
    "date": "2026-09-20",
@@ -204,7 +215,8 @@
    "pp": 12,
    "good": false,
    "basis": "forventning",
-   "expected": 0.5723
+   "foer": 0.5722,
+   "expected": 0.5722
   },
   "Tromsø": {
    "date": "2026-09-20",
@@ -221,7 +233,8 @@
    "pp": 6,
    "good": true,
    "basis": "forventning",
-   "expected": 0.537
+   "foer": 0.5359,
+   "expected": 0.5359
   },
   "Viking": {
    "date": "2026-09-20",
@@ -238,6 +251,7 @@
    "pp": 3,
    "good": true,
    "basis": "forventning",
+   "foer": 0.1931,
    "expected": 0.1931
   },
   "Vålerenga": {
@@ -255,6 +269,7 @@
    "pp": 1,
    "good": false,
    "basis": "forventning",
+   "foer": 0.0597,
    "expected": 0.0597
   },
   "Aalesund": {
@@ -272,8 +287,9 @@
    "pp": -20,
    "good": true,
    "basis": "forventning",
-   "expected": 0.4799
+   "foer": 0.4796,
+   "expected": 0.4796
   }
  },
- "updated": "2026-10-06T09:01:30Z"
+ "updated": "2026-10-08T08:49:05Z"
 }
