@@ -634,6 +634,81 @@ ix2 = {(r["home"], r["away"]): r for r in sent}
 sjekk("fotball.no: samme kamp er ferdig etter tre timer",
       (ix2[("Brann", "Bodø/Glimt")]["hg"], ix2[("Brann", "Bodø/Glimt")]["ag"]) == (2, 1))
 
+print("\n=== En spilt kamp beholder dato, avspark og runde (frys_spilte, 8.10.2026) ===")
+# eliteserien.no viste 7.10. Start-Tromsø (spilt 3.5.) som 05.01.2026,
+# Tromsø-Vålerenga (11.7.) som 18.11.2026 og Brann-Rosenborg (2.8.) som
+# 19.02.2026. Bare datovinduet stoppet dem, og 18.11. ville sluppet gjennom
+# når vinduet vokste etter runde 23.
+from reconcile_ny import frys_spilte as _frys, rimelige_datoer as _rd_f
+_spilt = lambda h, a, d, t, rn, hg, ag: {"date": d, "time": t, "round": rn, "home": h, "away": a, "hg": hg, "ag": ag, "src": "ntf"}
+_vaare = [_spilt("Start", "Tromsø", "2026-05-03", "17:00", 7, 1, 1), _spilt("Tromsø", "Vålerenga", "2026-07-11", "18:00", 13, 4, 0),
+          _spilt("Brann", "Rosenborg", "2026-08-02", "19:15", 16, 3, 2)]
+_fra_siden = [{**_vaare[0], "date": "2026-01-05"}, {**_vaare[1], "date": "2026-11-18"}, {**_vaare[2], "date": "2026-02-19"},
+              {"date": "2026-11-01", "time": "17:00", "round": 25, "home": "Start", "away": "Lillestrøm", "hg": None, "ag": None, "src": None}]
+_lf = []
+_ut_f = _frys(_fra_siden, _vaare + [{"date": "2026-10-31", "time": "17:00", "round": 25, "home": "Start", "away": "Lillestrøm", "hg": None, "ag": None}], log=_lf.append)
+sjekk("de tre spilte kampene beholder 3.5., 11.7. og 2.8.",
+      [r["date"] for r in _ut_f[:3]] == ["2026-05-03", "2026-07-11", "2026-08-02"], str(_ut_f[:3]))
+sjekk("og loggen sier det: «Tromsø-Vålerenga er spilt 11.7. 18:00; ligasiden viser nå 18.11. 18:00 -- beholder 11.7. 18:00»",
+      "AVVIK: Tromsø-Vålerenga er spilt 11.7. 18:00; ligasiden viser nå 18.11. 18:00 -- beholder 11.7. 18:00" in _lf and len(_lf) == 3, str(_lf))
+sjekk("en uspilt kamp flyttes som før (frys_spilte rører den ikke)", _ut_f[3]["date"] == "2026-11-01", str(_ut_f[3]))
+_lr = []
+_rn = _frys([{**_vaare[0], "round": 8}], _vaare, log=_lr.append)
+sjekk("annen runde for en spilt kamp: beholdes, og loggen sier begge rundene",
+      _rn[0]["round"] == 7 and "(runde 8 der, 7 hos oss)" in _lr[0], str(_lr))
+_gha_f = _osu.environ.get("GITHUB_ACTIONS"); _osu.environ["GITHUB_ACTIONS"] = "true"
+_bf = _iou.StringIO()
+try:
+    with _ctxu.redirect_stdout(_bf):
+        _frys(_fra_siden[:1], _vaare, log=lambda s: None)
+finally:
+    if _gha_f is None: _osu.environ.pop("GITHUB_ACTIONS", None)
+    else: _osu.environ["GITHUB_ACTIONS"] = _gha_f
+sjekk("med advarsel i GitHub Actions", "::warning title=Spilt kamp: annen dato hos kilden::Start-Tromsø er spilt 3.5. 17:00" in _bf.getvalue(), _bf.getvalue())
+# Neste sesong: de samme lagene møtes igjen. En 2027-rad er en annen kamp og
+# skal IKKE få 2026-datoen (da ville sesonggrensen ikke sett at kilden viser
+# 2027).
+_n27 = _frys([{**_vaare[0], "date": "2027-04-11", "hg": None, "ag": None}], _vaare, log=lambda s: None)
+sjekk("neste sesong (2027-rad for Start-Tromsø): røres ikke", _n27[0]["date"] == "2027-04-11", str(_n27))
+# Vinduet etter runde 23 (Brann-Viking spilt 9.10.): 18.11. ligger da inne i
+# det. Datovakten alene slipper den gjennom; med frys_spilte (via
+# behold_eksisterende, som update_data.py bruker) står 11.7.
+_tidl = [_spilt(f"H{i}", f"B{i}", f"2026-03-{15 + (i % 2):02d}", "18:00", 1, 1, 0) for i in range(8)] \
+      + [_spilt(f"H{i}", f"B{i}", "2026-10-09", "19:00", 23, 1, 0) for i in range(8, 16)] \
+      + [_spilt(f"H{i}", f"B{i}", "2026-06-01", "18:00", 10, 1, 0) for i in range(16, 30)] + _vaare
+_bare_vakt, _, _ = _rd_f([{**_vaare[1], "date": "2026-11-18"}], _tidl, 2026, log=lambda s: None)
+_med_frys = behold_eksisterende([{**_vaare[1], "date": "2026-11-18"}], _tidl, log=lambda s: None)
+_med_frys, _, _ = _rd_f(_med_frys, _tidl, 2026, log=lambda s: None)
+_tv = next(r for r in _med_frys if r["home"] == "Tromsø")
+sjekk("vinduet etter runde 23: datovakten alene slipper 18.11. gjennom, med frys_spilte står 11.7.",
+      _bare_vakt[0]["date"] == "2026-11-18" and _tv["date"] == "2026-07-11", f"{_bare_vakt[0]['date']} {_tv['date']}")
+# Resultatsiden (parse_rad): en rad for en kamp vi har resultatet for, med en
+# annen dato, beholder vår; en kamp som er spilt hos NTF, men ikke publisert
+# hos oss, får sidens dato som før.
+_lp = []
+_rp = ntf_source.parse_side(RANHEIM_RAD.replace("02.10.<span", "05.01.<span"), "resultater", "obos",
+                            naa=_dt(2026, 10, 3, 21, 30, tzinfo=_OSLO), log=_lp.append, kjent_avspark=_kjent,
+                            har_resultat=lambda h, b: True)
+sjekk("resultatsiden, spilt hos oss: vår dato og vårt avspark beholdes, «er spilt ... beholder»",
+      (_rp[0]["date"], _rp[0]["time"]) == ("2026-10-02", "19:00")
+      and "AVVIK: Kamp Ranheim-Egersund er spilt: ligasiden viser 5.1. 17:00, vi har 2.10. 19:00, beholder 2.10. 19:00" in _lp, f"{_rp[0]} {_lp}")
+_lp = []
+_rp = ntf_source.parse_side(RANHEIM_RAD.replace("02.10.<span", "03.10.<span"), "resultater", "obos",
+                            naa=_dt(2026, 10, 3, 21, 30, tzinfo=_OSLO), log=_lp.append, kjent_avspark=_kjent,
+                            har_resultat=lambda h, b: False)
+_lp27 = []
+_rp27 = ntf_source.parse_side(RANHEIM_RAD.replace("02.10.<span class=\"schedule__match__item--date__year\">2026", "02.10.<span class=\"schedule__match__item--date__year\">2027"),
+                              "resultater", "obos", naa=_dt(2027, 10, 3, 21, 30, tzinfo=_OSLO), log=_lp27.append,
+                              kjent_avspark=_kjent, har_resultat=lambda h, b: True)
+sjekk("resultatsiden, rad fra 2027 for et lagpar vi har 2026-resultat for: sidens 2027-dato (sesonggrensen tar den)",
+      _rp27[0]["date"] == "2027-10-02" and not any("er spilt" in l for l in _lp27), f"{_rp27[0]} {_lp27}")
+sjekk("spilt hos NTF, men ikke publisert hos oss: sidens dato brukes som før («bruker»)",
+      _rp[0]["date"] == "2026-10-03" and any(", bruker 3.10. 17:00" in l for l in _lp), f"{_rp[0]} {_lp}")
+_ob = (ROT / "scripts" / "obos_build_data.py").read_text("utf-8")
+sjekk("OBOS (obos_build_data.py): frys_spilte etter sammenslåingen og før datovakten",
+      "offisiell = frys_spilte(offisiell, forrige or fra_csv, log=log)" in _ob
+      and _ob.index("frys_spilte(offisiell") < _ob.index("rimelige_datoer(offisiell"))
+
 print("\n=== Et publisert resultat skal aldri forsvinne ===")
 ntf_es2, nff_es2 = KILDER["eliteserien"]
 alle2 = reconcile(ntf_es2, nff_es2, log=lambda s: None)
@@ -648,11 +723,15 @@ sjekk("resultatet beholdes når kildene slutter å melde kampen ferdig",
       (mål["hg"], mål["ag"]) == (ferdige[0]["hg"], ferdige[0]["ag"]), str(mål))
 sjekk("og det logges tydelig", any("beholder resultatet" in m for m in logg), str(logg[:1]))
 
+# En spilt kamp beholder også dato og avspark (8.10.2026, frys_spilte):
+# før ble de oppdatert fra kilden.
+_logg_fb = []
 flyttet_beholdt = behold_eksisterende(
-    [{**r, "date": "2026-12-01", "time": "20:00"} for r in glemt], ferdige, log=lambda s: None)
+    [{**r, "date": "2026-12-01", "time": "20:00"} for r in glemt], ferdige, log=_logg_fb.append)
 mål2 = next(r for r in flyttet_beholdt if (r["home"], r["away"]) == GLEMT)
-sjekk("men dato og avspark oppdateres fortsatt",
-      (mål2["date"], mål2["time"]) == ("2026-12-01", "20:00"), str(mål2))
+sjekk("og dato og avspark beholdes for en spilt kamp, med AVVIK",
+      (mål2["date"], mål2["time"]) == (ferdige[0]["date"], ferdige[0]["time"])
+      and any(l.startswith(f"AVVIK: {GLEMT[0]}-{GLEMT[1]} er spilt") for l in _logg_fb), f"{mål2} {_logg_fb[:2]}")
 
 print("\n=== Ukjent status skal ALDRI gjøre en ferdig kamp uspilt ===")
 # Dette er den farlige retningen. At en uspilt kamp forblir uspilt når vi ikke

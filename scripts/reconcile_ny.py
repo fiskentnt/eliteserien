@@ -24,6 +24,7 @@ serie og uavhengig av dato og runde. Når en kamp eller en hel runde flyttes,
 endres dato og avspark, men kampen er den samme og skal oppdateres -- ikke
 dukke opp som en ny kamp ved siden av den gamle.
 """
+import os
 
 
 def _nøkkel(r):
@@ -125,8 +126,11 @@ def behold_eksisterende(merged, eksisterende, log=lambda s: None):
     beholde resultatet sitt. Alternativet er at en ferdigspilt kamp blir
     uspilt igjen, og at tabellen går bakover.
 
-    Dato, avspark og runde oppdateres likevel. De er entydige
-    terminlistedata, og en kamp som flyttes skal flytte seg hos oss også.
+    Dato, avspark og runde for en SPILT kamp beholdes også (8.10.2026, se
+    frys_spilte()): eliteserien.no viste 7.10. Start-Tromsø (spilt 3.5.) som
+    5.1., Tromsø-Vålerenga (spilt 11.7.) som 18.11. og Brann-Rosenborg (spilt
+    2.8.) som 19.2. Bare datovinduet stoppet dem, og 18.11. ville sluppet
+    gjennom når vinduet vokste etter runde 23.
     """
     gamle = {_nøkkel(r): r for r in (eksisterende or [])}
     ut = []
@@ -156,6 +160,46 @@ def behold_eksisterende(merged, eksisterende, log=lambda s: None):
             f"beholder kampen uendret")
         ut.append(dict(g))
 
+    return frys_spilte(ut, eksisterende, log=log)
+
+
+def frys_spilte(rader, eksisterende, kilde="ligasiden", log=lambda s: None):
+    """En spilt kamp beholder dato, avspark og runde (8.10.2026).
+
+    Datoen hører til resultatet: den var bekreftet av to kilder da resultatet
+    ble publisert, og modellen (tidsvektingen), formen, "forrige kamp" og
+    treffsikkerhetsloggen bygger på den. Ligasiden kan bare flytte uspilte
+    kamper. Viser kilden noe annet for en spilt kamp, beholdes våre verdier,
+    og det sies fra (AVVIK, og ::warning i GitHub Actions). Trengs en
+    rettelse av en spilt kamp, gjøres den for hånd.
+
+    Bare i samme sesong: en rad fra et annet år for de samme lagene er neste
+    (eller forrige) sesongs kamp, og den røres ikke her.
+
+    eksisterende: våre rader; de med resultat (hg) er de spilte. Gjelder
+    begge ligaene (update_data.py via behold_eksisterende, obos_build_data.py
+    direkte)."""
+    spilte = {_nøkkel(g): g for g in (eksisterende or []) if g.get("hg") is not None and g.get("date")}
+
+    def vis(x):
+        d = x.get("date") or ""
+        return f"{int(d[8:10])}.{int(d[5:7])}." + (f" {x['time']}" if x.get("time") else "") if len(d) == 10 else str(d)
+    ut = []
+    for r in rader:
+        g = spilte.get(_nøkkel(r))
+        # Bare i samme sesong (år): de samme lagene møtes igjen neste år, og
+        # en rad fra et annet år er en annen kamp (sesonggrensen tar den).
+        if (g and (r.get("date") or "")[:4] == g["date"][:4]
+                and (r.get("date"), r.get("time"), r.get("round")) != (g.get("date"), g.get("time"), g.get("round"))):
+            runde = (f" (runde {r.get('round')} der, {g.get('round')} hos oss)"
+                     if r.get("round") != g.get("round") else "")
+            melding = (f"{r['home']}-{r['away']} er spilt {vis(g)}; {kilde} viser nå {vis(r)}{runde} "
+                       f"-- beholder {vis(g)}")
+            log(f"AVVIK: {melding}")
+            if os.environ.get("GITHUB_ACTIONS"):
+                print(f"::warning title=Spilt kamp: annen dato hos kilden::{melding}")
+            r = {**r, "date": g["date"], "time": g.get("time"), "round": g.get("round")}
+        ut.append(r)
     return ut
 
 

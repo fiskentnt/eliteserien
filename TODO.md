@@ -3,6 +3,25 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Spilte kamper beholder dato, avspark og runde (8.10.2026)
+
+eliteserien.no/resultater viste 7.10. Start-Tromsø (spilt 3.5.) som
+05.01.2026, Tromsø-Vålerenga (11.7.) som 18.11.2026, Brann-Rosenborg (2.8.)
+som 19.02.2026 og Lillestrøm-Fredrikstad som «Invalid date» (4 av 168;
+fotball.no og vi har de riktige). Vi leste siden riktig, men tok datoen i
+bruk ("bruker"), og bare datovinduet stoppet dem; 18.11. ville sluppet
+gjennom etter runde 23. Nå: en kamp med publisert resultat beholder dato,
+avspark og runde (reconcile_ny.frys_spilte, i behold_eksisterende for
+Eliteserien og i obos_build_data.py for OBOS, og i parse_rad på
+resultatsiden), med AVVIK og ::warning. Bare innen samme sesong: neste års
+kamp for de samme lagene røres ikke.
+
+**Venter på svar:** uspilte kamper flyttes bare når en annen kilde viser den
+samme nye datoen og tiden. fotball.no (nff-cache, fra 30.9.) hentes etter
+regelen fra 1.10. bare som reserve (robots.txt), så kilden må bestemmes.
+
+Tester: tests/kilder/test_kilder.py, «En spilt kamp beholder dato».
+
 ## Bare ekte feil gir «Run failed» (8.10.2026)
 
 GitHub holder bare én ventende kjøring per concurrency-gruppe, så

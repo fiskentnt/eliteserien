@@ -129,6 +129,10 @@ def rows_for(season=SEASON, log=print):
     # uten den).
     reserve = ("forrige terminliste", forrige) if forrige else ("csv", fra_csv)
     offisiell = reconcile(ntf, [], reserver=[reserve], log=log)
+    # En spilt kamp beholder dato, avspark og runde (8.10.2026, se
+    # reconcile_ny.frys_spilte): ligasiden kan bare flytte uspilte kamper.
+    from reconcile_ny import frys_spilte
+    offisiell = frys_spilte(offisiell, forrige or fra_csv, log=log)
     # En dato utenfor sesongvinduet er alltid feil hos kilden. Den rettes til
     # datoen i den forrige terminlisten (CSV-en bare uten den).
     from reconcile_ny import rimelige_datoer
