@@ -27,9 +27,9 @@ concurrency:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # låst 8.10.2026: ubuntu-latest blir Ubuntu 26 fra 19.10.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       # PORTEN FØRST. Planleggeren (planlegger/worker.js) starter workflowen
       # hvert tiende minutt i 09-21 UTC; porten avgjør om det hentes: kamper
@@ -69,7 +69,7 @@ jobs:
           ARKIV_TVING_FEIL: ${{ inputs.feil_arkivering && '1' || '' }}
         run: bash scripts/arkiver_til_lab.sh for-henting eliteserien
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: steps.gate.outputs.should_fetch == 'true'
         with:
           python-version: "3.12"

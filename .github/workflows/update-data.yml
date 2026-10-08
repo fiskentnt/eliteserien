@@ -33,9 +33,9 @@ concurrency:
 
 jobs:
   update:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # låst 8.10.2026: ubuntu-latest blir Ubuntu 26 fra 19.10.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Sjekk om noe faktisk trenger henting (ingen avhengigheter, raskt)
         id: gate
@@ -46,7 +46,7 @@ jobs:
           FORCE_FETCH: ${{ github.event_name == 'workflow_dispatch' && !inputs.planlagt && 'true' || 'false' }}
         run: python3 scripts/should_fetch.py
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         if: steps.gate.outputs.should_fetch == 'true'
         with:
           python-version: "3.12"
@@ -67,7 +67,7 @@ jobs:
           HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
         run: python3 scripts/update_data.py
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.gate.outputs.should_fetch == 'true'
         with:
           node-version: "22"

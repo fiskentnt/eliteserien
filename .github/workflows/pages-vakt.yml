@@ -44,10 +44,10 @@ permissions:
 
 jobs:
   vakt:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # låst 8.10.2026: ubuntu-latest blir Ubuntu 26 fra 19.10.
     timeout-minutes: 5
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: scripts/pages_vakt.py
           sparse-checkout-cone-mode: false

@@ -44,12 +44,12 @@ concurrency:
 
 jobs:
   hent:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # låst 8.10.2026: ubuntu-latest blir Ubuntu 26 fra 19.10.
     timeout-minutes: 15
     steps:
       # En tørrkjøring (dry_run) sjekker ut grenen den startes fra, så en gren
       # kan prøves i CI før den går til main. Den skriver ingenting.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.dry_run && github.ref_name || 'main' }}
 
@@ -116,7 +116,7 @@ jobs:
       # Blir pushen avvist, fjernes bare DENNE commiten, main hentes på nytt og
       # radene regnes igjen oppå den (deterministisk ut fra filene), høyst tre
       # ganger. Oddscommiten over røres aldri.
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: ${{ always() && steps.gate.outputs.should_fetch == 'true' }}
         with:
           node-version: "22"

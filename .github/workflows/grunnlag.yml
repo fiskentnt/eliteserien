@@ -62,12 +62,12 @@ permissions:
 
 jobs:
   port:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # låst 8.10.2026: ubuntu-latest blir Ubuntu 26 fra 19.10.
     timeout-minutes: 5
     outputs:
       ligaer: ${{ steps.puljen.outputs.ligaer }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
 
@@ -110,13 +110,13 @@ jobs:
     concurrency:
       group: grunnlag-${{ matrix.liga }}
       cancel-in-progress: false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # låst 8.10.2026: ubuntu-latest blir Ubuntu 26 fra 19.10.
     # Regnetiden er proporsjonal med oppgaver x åpne kamper x N: 5,5 min for
     # Eliteserien i september 2026 (72 åpne kamper), men om lag en time ved
     # sesongstart (om lag 240 åpne kamper). Se TODO.md om parallelle jobber.
     timeout-minutes: 120
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
 
@@ -128,7 +128,7 @@ jobs:
           TVING: ${{ inputs.tving && 'true' || 'false' }}
         run: python3 scripts/grunnlag_port.py "${{ matrix.liga }}"
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         if: steps.port.outputs.ligaer != '[]'
         with:
           node-version: "22"

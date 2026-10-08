@@ -3187,6 +3187,20 @@ sjekk("snapshot_probs.js og kontroll_paneler.py starter Chrome med startChrome, 
       and "const {startChrome} = require(process.argv[3]);" in _kp and "await startChrome(puppeteer, {executablePath: process.argv[2]" in _kp
       and 'str(ROT / "scripts" / "chrome_start.js")' in _kp and "puppeteer.launch(" not in _kp)
 
+print("\n=== Runnerne er låst, og actions kjører på Node 24 (8.10.2026) ===")
+# GitHub bytter ubuntu-latest til Ubuntu 26 fra 19.10.2026. Alle jobbene står
+# på ubuntu-24.04, så ingenting endrer seg midt i en runde; checkout,
+# setup-python og setup-node er versjonene laget for Node 24 (v7).
+import re as _re_r
+_wfs = sorted((ROT / ".github" / "workflows").glob("*.yml"))
+_runs = [(f.name, l.strip()) for f in _wfs for l in f.read_text("utf-8").splitlines() if l.strip().startswith("runs-on:")]
+sjekk(f"alle {len(_runs)} jobbene i {len(_wfs)} workflows kjører på ubuntu-24.04, ingen på ubuntu-latest",
+      len(_runs) >= 19 and all(_re_r.match(r"runs-on: ubuntu-24\.04(\s|$)", l) for _, l in _runs),
+      str([x for x in _runs if not x[1].startswith("runs-on: ubuntu-24.04")][:4]))
+_bruk = [(f.name, m) for f in _wfs for m in _re_r.findall(r"uses: (actions/(?:checkout|setup-python|setup-node)@\S+)", f.read_text("utf-8"))]
+sjekk(f"checkout, setup-python og setup-node er v7 (Node 24) alle {len(_bruk)} steder",
+      len(_bruk) >= 29 and all(m.endswith("@v7") for _, m in _bruk), str([x for x in _bruk if not x[1].endswith("@v7")][:4]))
+
 print("\n=== Kort eller full kontroll før push (tests/for_push_valg.py, 4.10.2026) ===")
 # Kort kontroll bare når full for_push var grønn på samme kode før rebasen og
 # origin bare endret filer på den eksplisitte listen over genererte filer.

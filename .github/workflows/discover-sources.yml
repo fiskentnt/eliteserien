@@ -16,9 +16,9 @@ on:
 
 jobs:
   discover:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # låst 8.10.2026: ubuntu-latest blir Ubuntu 26 fra 19.10.
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Slå opp turneringer hos OddsPapi
         env:
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}

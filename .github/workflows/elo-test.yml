@@ -44,14 +44,14 @@ jobs:
     concurrency:
       group: elo-test-bygg          # egen gruppe; køer testsidens jobber
       cancel-in-progress: false
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # låst 8.10.2026: ubuntu-latest blir Ubuntu 26 fra 19.10.
     timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: main
 
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
           cache: pip
@@ -62,7 +62,7 @@ jobs:
       - name: Installer avhengigheter (numpy, scipy, laast)
         run: pip install -r elo-test/requirements.txt
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: "22"      # kontroll D kjører sidens egen JS
 
@@ -141,12 +141,12 @@ jobs:
   # aktiv utløser). Manuelt: bygger alltid. Se scripts/puljeport.py. Står
   # nederst, så stegene over leses i rekkefølge (kontroll.py, O).
   port:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04   # låst 8.10.2026: ubuntu-latest blir Ubuntu 26 fra 19.10.
     timeout-minutes: 5
     outputs:
       bygg: ${{ steps.port.outputs.bygg }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           sparse-checkout: scripts/puljeport.py
           sparse-checkout-cone-mode: false
