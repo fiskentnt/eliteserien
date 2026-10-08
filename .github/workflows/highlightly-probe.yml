@@ -29,7 +29,7 @@ jobs:
           HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
           DATOER: ${{ inputs.datoer }}
         run: python3 scripts/highlightly_probe.py --ut highlightly-svar
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         if: always()
         with:
           name: highlightly-svar

@@ -29,7 +29,13 @@ jobs:
   update:
     runs-on: ubuntu-24.04   # låst 8.10.2026: ubuntu-latest blir Ubuntu 26 fra 19.10.
     steps:
+      # Nyeste main, ikke commiten fra da kjøringen ble startet (8.10.2026):
+      # den venter i køen update-data bak «Oppdater kampdata», som kan ha
+      # pushet en ny model.json i mellomtiden, og da ga pushen herfra konflikt
+      # i model.json (prøvekjøringen på Ubuntu 26.04).
       - uses: actions/checkout@v7
+        with:
+          ref: main
 
       # PORTEN FØRST. Planleggeren (planlegger/worker.js) starter workflowen
       # hvert tiende minutt i 09-21 UTC; porten avgjør om det hentes: kamper
