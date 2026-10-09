@@ -592,7 +592,13 @@ def main(cache_dir=None):
         # nodvendig. Sesongen kommer fra registeret, ikke fra dataene.
         import sesong as _sesong
         _aktiv = _sesong.aktiv_sesong(ROOT, LIGA, log=log)
-        merged, utenfor, _datofeil = rimelige_datoer(merged, tidligere, _aktiv, log=log)
+        # Forrige verdi er HELE terminlisten vi sist skrev (spilte fra
+        # matches.json, uspilte fra fixtures.json), som i OBOS. Med bare
+        # matches.json hadde ingen uspilt kamp en forrige dato, og vinduet sluttet
+        # 45 dager etter siste SPILTE runde. 9.10.2026 viste ligasiden
+        # Rosenborg-Start (runde 26, 7.11.) som 7.1., og det slapp gjennom.
+        _forrige_liste = leaguedata.forrige_terminliste(LEAGUE / "data", _aktiv, log=log) if _aktiv else None
+        merged, utenfor, _datofeil = rimelige_datoer(merged, _forrige_liste or tidligere, _aktiv, log=log)
         # Regelen for nye resultater (resultatregel.py): hovedkilden og en
         # annen leverandør må være enige. Publiserte resultater røres ikke.
         merged, _resstate = kontroller_nye_resultater(merged, tidligere, ntf_rows, espn_rows, ffk_rows, now, log=log)

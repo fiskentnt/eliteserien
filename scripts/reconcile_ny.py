@@ -373,9 +373,16 @@ def rimelige_datoer(merged, eksisterende, sesong, log=lambda s: None):
             utenfor.append(f"{r['home']}-{r['away']} ({r['date']})")
             g = gamle.get(_nøkkel(r))
             forrige = g.get("date") if g else None
+            # Den forrige datoen maa selv ligge i vinduet. Ellers ville en feil
+            # vi alt har lagret bli holdt fast for alltid.
+            df = _dato(forrige)
+            ogsaa_utenfor = bool(forrige) and not (df and fra <= df <= til)
+            if ogsaa_utenfor:
+                forrige = None
             log(f"ADVARSEL: {r['home']}-{r['away']} oppgis med {r['date']}, "
                 f"utenfor {fra}–{til} i sesongen {aar}. "
                 + (f"Beholder {forrige}." if forrige
+                   else f"Tidligere dato {g.get('date')} er også utenfor, slipper gjennom." if ogsaa_utenfor
                    else "Ingen tidligere dato i denne sesongen, slipper gjennom."))
             if forrige:
                 r = {**r, "date": forrige, "time": (g.get("time") or r.get("time"))}

@@ -1777,6 +1777,45 @@ sjekk("den slipper gjennom med sin egen dato",
       next(r for r in _ut7 if r["home"] == "Helt")["date"] == "2026-01-02")
 sjekk("og det logges", any("slipper gjennom" in m for m in _l7), str(_l7))
 
+# 5) USPILT kamp (9.10.2026): ligasiden viste Rosenborg-Start (runde 26,
+#    7.11.) som 7.1. Med hele terminlisten som forrige verdi rettes den, og
+#    vinduet går til siste runde i terminlisten, ikke siste spilte.
+_terminliste = [{"home": f"T{i}", "away": f"U{i}", "round": i // 8 + 1,
+                 "date": (_dt(2026, 3, 14) + _td(days=7 * (i // 8))).strftime("%Y-%m-%d"),
+                 "time": "18:00", "hg": (1 if i < 21 * 8 else None), "ag": (0 if i < 21 * 8 else None)}
+                for i in range(240)]
+_r26 = next(r for r in _terminliste if r["round"] == 26)
+_kilde = [dict(r) for r in _terminliste]
+_feil = next(r for r in _kilde if r["home"] == _r26["home"])
+_feil["date"] = "2026-01-07"
+_l10 = []
+_ut10, _utenfor10, _ = _rd(_kilde, _terminliste, "2026", log=_l10.append)
+sjekk("uspilt kamp i runde 26 med 7.1. rettes til terminlistens dato",
+      next(r for r in _ut10 if r["home"] == _r26["home"])["date"] == _r26["date"],
+      f'{next(r for r in _ut10 if r["home"] == _r26["home"])} {_l10}')
+sjekk("og bare den ene meldes utenfor -- rundene etter siste spilte er innenfor vinduet",
+      _utenfor10 == [f'{_r26["home"]}-{_r26["away"]} (2026-01-07)'], str(_utenfor10))
+_bare_spilte = [r for r in _terminliste if r["hg"] is not None]
+_l10b = []
+_, _utenfor10b, _ = _rd(_kilde, _bare_spilte, "2026", log=_l10b.append)
+sjekk("motprøve: med bare spilte kamper som forrige verdi slipper 7.1. gjennom (feilen 9.10.)",
+      any("Ingen tidligere dato" in m and "2026-01-07" in m for m in _l10b)
+      and len(_utenfor10b) > 1, f"{len(_utenfor10b)} {_l10b[:2]}")
+
+# 6) Forrige verdi er selv utenfor vinduet: den holdes ikke fast
+_lagret_feil = [dict(r) for r in _terminliste]
+next(r for r in _lagret_feil if r["home"] == _r26["home"])["date"] = "2026-01-07"
+_l11 = []
+_ut11, _, _ = _rd(_kilde, _lagret_feil, "2026", log=_l11.append)
+sjekk("en lagret feildato brukes ikke som forrige verdi",
+      any("er også utenfor" in m for m in _l11), str(_l11))
+sjekk("og kampen utelates ikke", len(_ut11) == len(_kilde))
+
+_ud = (ROT / "scripts" / "update_data.py").read_text("utf-8")
+sjekk("Eliteserien (update_data.py): datovakten får hele terminlisten som forrige verdi",
+      "rimelige_datoer(merged, _forrige_liste or tidligere," in _ud
+      and "_forrige_liste = leaguedata.forrige_terminliste(" in _ud)
+
 print("\n=== Uten sesongautoritet står vakten over ===")
 _l8 = []
 _ut8, _utenfor8, _kode8 = _rd(_ny, _eks, None, log=_l8.append)
