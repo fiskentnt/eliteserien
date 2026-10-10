@@ -94,22 +94,20 @@ jobs:
       # (scripts/prekick_frys.js). Se elo-test/scripts/paneler.py. Banneret
       # (keymatch.json) regnes av grunnlag.yml fra grunnlagsfilen, som i
       # produksjonen.
+      # I HVER byggende kjøring (10.10.2026), uten egen port. Porten så bare
+      # model.json og oddsen, men sidens tall for forrige kamp avhenger også av
+      # om grunnlagsfilen passer: den regnes av grunnlag.yml ETTER denne
+      # jobben, så panelene ble alltid regnet mens den var foreldet. Når den
+      # nye filen kom, flyttet sidens tall seg litt, porten så ingen endring,
+      # og kontroll W ble rød i hver kjøring (ca. 40 ganger 9.10.).
       # Feiler et steg herfra og ned, hoppes resten over: panelfilene lagres
       # ikke (de forrige committede står), og jobben blir rød.
-      - name: Paneler -- skal de regnes?
-        id: paneler
-        env:
-          UTLOSER: ${{ github.event.workflow_run.name }}
-          HENDELSE: ${{ github.event_name }}
-        run: python3 elo-test/scripts/paneler.py port
-
       # Chrome-oppsett i hver kjøring: panelene trenger det, og kontroll W
       # sammenligner lastmatch.json med det siden selv regner.
       - name: Installer puppeteer-core
         run: npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pp" puppeteer-core@25.11.0
 
       - name: Paneler -- regn dem med /elo-test/
-        if: steps.paneler.outputs.kjor == 'true'
         run: |
           CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
           NODE_PATH="$RUNNER_TEMP/pp/node_modules" \
@@ -126,8 +124,7 @@ jobs:
       - name: Lagre panelene
         run: |
           git add elo-test/emodell/lastmatch.json \
-                  elo-test/emodell/prekick.json elo-test/emodell/accuracy.json \
-                  elo-test/emodell/paneler_grunnlag.json
+                  elo-test/emodell/prekick.json elo-test/emodell/accuracy.json
           if git diff --cached --quiet; then
             echo "Panelene er uendret -- ingen commit."
           else

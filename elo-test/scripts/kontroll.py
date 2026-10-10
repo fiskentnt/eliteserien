@@ -694,7 +694,7 @@ _MODELLFILER = ("elo-test/emodell/model.json", "elo-test/emodell/meta.json", "el
 # Banneret (keymatch.json) er ikke med: det regnes av grunnlag.yml fra
 # grunnlagsfilen (scripts/lag_grunnlag.js), som i produksjonen.
 _PANELFILER = tuple(f"elo-test/emodell/{f}" for f in
-                    ("lastmatch.json", "prekick.json", "accuracy.json", "paneler_grunnlag.json"))
+                    ("lastmatch.json", "prekick.json", "accuracy.json"))
 def _adds(tekst):
     """Stiene i git add-linjene i et steg (med linjeskift-fortsettelser)."""
     t = tekst.replace("\\\n", " ")
@@ -714,8 +714,18 @@ if -1 not in (_iK, _iKP, _iLM, _iLP):
     _am, _ap = _adds(_steg[_iLM][1]), _adds(_steg[_iLP][1])
     krev("modellcommiten tar model.json, meta.json og prognoseloggen -- og ingen panelfil",
          sorted(_am) == sorted(_MODELLFILER), str(_am))
-    krev("panelcommiten tar de fire panelfilene -- ikke banneret (grunnlag.yml), modellen eller loggen",
+    krev("panelcommiten tar de tre panelfilene -- ikke banneret (grunnlag.yml), modellen eller loggen",
          sorted(_ap) == sorted(_PANELFILER), str(_ap))
+if _iP != -1:
+    # Panelene regnes i hver byggende kjøring (10.10.2026). En port som bare så
+    # model.json og oddsen, lot lastmatch.json bli staaende fra foer
+    # grunnlagsfilen passet, og kontroll W ble roed i hver kjoering etterpaa.
+    _pst = _steg[_iP][1]
+    krev("panelene regnes i hver byggende kjøring: panelsteget har ingen if-betingelse, og det finnes ingen panelport",
+         not any(l.strip().startswith("if:") for l in _pst.splitlines())
+         and "paneler.py port" not in "".join(b for _, b in _steg)
+         and "def port(" not in (ROT / "elo-test" / "scripts" / "paneler.py").read_text(encoding="utf-8"),
+         _pst.splitlines()[1][:80] if len(_pst.splitlines()) > 1 else _pst[:80])
     krev("ingen git add av hele elo-test/emodell (da ville panelene følge med modellen)",
          "git add elo-test/emodell\n" not in _wft and not _re.search(r"git add elo-test/emodell/?\s*$", _wft, _re.M))
     krev("ingen continue-on-error eller if: always() som slipper panelfiler gjennom etter feil",

@@ -3326,7 +3326,7 @@ sys.path.insert(0, str(ROT / "tests"))
 import for_push_valg as _fpv
 _gen = ["obos/data/grunnlag.json", "elo-test/emodell/lastmatch.json", "data/hentelogg/2026-10/x.jsonl", "data/highlightly-bruk/2026-10-04/1.json"]
 sjekk("listen: grunnlag, lastmatch, panelfilene og logg-/tellermappene er genererte",
-      all(_fpv.generert(f) for f in _gen + ["elo-test/emodell/paneler_grunnlag.json", "data/oddspapi-bruk/2026-10/x.json"]))
+      all(_fpv.generert(f) for f in _gen + ["elo-test/emodell/prekick.json", "data/oddspapi-bruk/2026-10/x.json"]))
 sjekk("listen: matches.json, fixtures.json, prekick.json, odds, kode og nesten-like stier er ikke på den (ingen mønstre)",
       not any(_fpv.generert(f) for f in ["obos/data/matches.json", "eliteserien/data/fixtures.json", "obos/data/prekick.json",
               "obos/data/odds_upcoming.json", "scripts/update_data.py", "eliteserien/index.html", "data/hentelogg",

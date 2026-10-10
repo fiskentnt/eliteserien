@@ -28,10 +28,14 @@ treffsikkerhet) regnes av testsiden selv, med ELO90, i `elo-test.yml` --
 parallelt med produksjonen og med de samme skriptene. Produksjonens filer
 leses ikke. `history.json` skrives ikke og vises ikke.
 
-- **Når:** når `model.json` eller oddsene i `odds_upcoming.json` er endret
-  (sha256 i `emodell/paneler_grunnlag.json`), og alltid når utløseren er
-  «Odds nær avspark» eller workflow_dispatch, så prognosen før avspark lagres
-  (`elo-test/scripts/paneler.py`).
+- **Når:** i hver byggende kjøring av `elo-test.yml` (10.10.2026). Før regnet
+  en port dem bare når `model.json` eller oddsene var endret. Men sidens tall
+  for forrige kamp avhenger også av om grunnlagsfilen (`emodell/grunnlag.json`)
+  passer, og den regnes av `grunnlag.yml` etter ELO-test. Panelene ble derfor
+  regnet mens filen var foreldet, og når den nye kom, flyttet sidens tall seg
+  uten at porten så det: kontroll W ble rød i hver kjøring (ca. 40 ganger
+  9.10.). Fra en ny grunnlagsfil kommer til neste ELO-test-kjøring kan linja i
+  lagboksen avvike litt fra svaret; det er godtatt.
 - **Frysregelen** er produksjonens egen modul, `scripts/prekick_frys.js`: en
   rad oppdateres bare før avspark fra terminlisten, og fryses med siste stempel
   fra før avspark når resultatet kommer.
@@ -192,8 +196,8 @@ Definisjonen over tåler det, siden bare linjer med `logget` < avspark teller.
   og `model.json`, `meta.json` og `prognoselogg/` lagres og pushes. Feiler
   `kontroll.py`, stopper alt der, som før. Deretter regnes panelene,
   `kontroll_paneler.py` (W, R og panelfilenes tekst i L) kjøres, og først når
-  begge har bestått, lagres de fire panelfilene (`lastmatch`, `prekick`,
-  `accuracy`, `paneler_grunnlag`) i en egen commit. Banneret (`keymatch`)
+  begge har bestått, lagres de tre panelfilene (`lastmatch`, `prekick`,
+  `accuracy`) i en egen commit. Banneret (`keymatch`)
   lagres av `grunnlag.yml`, sammen med grunnlagsfilen. Feiler
   panelsteget eller kontrollen, blir de forrige committede panelfilene stående,
   og jobben blir rød. Kontroll **O** i `kontroll.py` krever denne rekkefølgen,
