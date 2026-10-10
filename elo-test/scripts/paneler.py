@@ -43,6 +43,41 @@ def uten_stempler(navn, d):
     return d
 
 
+def avspark_fra_terminliste(fixtures_sti):
+    """({"hjemme|borte": avspark i ms UTC}, klokka nå i ms) regnet av
+    scripts/prekick_frys.js (avsparkFraTerminliste og Date.now) -- samme
+    avsparkregel som frysingen, ikke en egen utregning i Python."""
+    js = ("const f=require(process.argv[1]),fs=require('fs');"
+          "process.stdout.write(JSON.stringify({avspark:f.avsparkFraTerminliste("
+          "JSON.parse(fs.readFileSync(process.argv[2],'utf8'))),naa:Date.now()}))")
+    r = subprocess.run(["node", "-e", js, str(ROT / "scripts" / "prekick_frys.js"), str(fixtures_sti)],
+                       capture_output=True, text=True, check=True)
+    d = json.loads(r.stdout)
+    return d["avspark"], d["naa"]
+
+
+def prekick_til_kontroll(rader, avspark, naa_ms):
+    """Deler prekick-radene slik oppdaterPrekick() i scripts/prekick_frys.js
+    gjør (10.10.2026): en frosset rad røres aldri, og en rad røres ikke etter
+    avspark (naa >= avspark) før resultatet fryser den. Bare de andre skal ha
+    tallene fra dagens model.json. Før ble også en kamp som pågikk sammenlignet,
+    og når et annet resultat kom inn under kampen (Glimt-Kristiansund mens
+    Rosenborg-Sandefjord pågikk), var modellen ny og raden ikke: kontroll W rød
+    hvert tiende minutt til kampen var ferdig.
+    Returnerer (sammenlign, etter_avspark, frosne) som lister av nøkler."""
+    sammenlign, etter_avspark, frosne = [], [], []
+    for k, v in rader.items():
+        if v.get("frosset"):
+            frosne.append(k)
+            continue
+        a = avspark.get(f"{v['home']}|{v['away']}")
+        if a is not None and naa_ms >= a:
+            etter_avspark.append(k)
+            continue
+        sammenlign.append(k)
+    return sammenlign, etter_avspark, frosne
+
+
 def etter():
     for navn in FILER:
         f = EM / navn

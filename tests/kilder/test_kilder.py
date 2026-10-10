@@ -1930,6 +1930,55 @@ sjekk("Eliteserien (update_data.py): bekreft_flytting kjøres etter datovakten, 
       and "espn_source.fetch_season(_aktiv" in _ud and "ntf_source.parse_kalender(ntf_source.hent_kalender(LIGA" in _ud
       and _ud.index("rimelige_datoer(merged, _forrige_liste") < _ud.index("bekreft_flytting(merged"))
 
+print("\n=== Testsidens prekick-kontroll bruker frysingens avsparkregel (10.10.2026) ===")
+# Rosenborg-Sandefjord pagikk da Glimt-Kristiansund kom inn: modellen ble ny,
+# raden for kampen som pagikk ble staaende fra avspark (frysregelen), og
+# kontroll W i kontroll_paneler.py var roed hvert tiende minutt.
+import json as _json_pk, subprocess as _sp_pk, tempfile as _tf_pk
+from datetime import datetime as _dt_pk, timezone as _tz_pk
+sys.path.insert(0, str(ROT / "elo-test" / "scripts"))
+import paneler as _pn_t
+_fx_pk = [{"round": 23, "matches": [
+    {"home": "Rosenborg", "away": "Sandefjord", "date": "2026-10-10", "time": "18:00", "played": False},
+    {"home": "Lillestrøm", "away": "Molde", "date": "2026-10-11", "time": "19:15", "played": False},
+    {"home": "Bodø/Glimt", "away": "Kristiansund", "date": "2026-10-10", "time": "16:00", "played": True}]},
+    {"round": 26, "matches": [{"home": "Rosenborg", "away": "Start", "date": "2026-11-07", "time": "18:00", "played": False}]}]
+with _tf_pk.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as _fh:
+    _json_pk.dump(_fx_pk, _fh, ensure_ascii=False); _fx_sti = _fh.name
+_avsp_pk, _naa_pk = _pn_t.avspark_fra_terminliste(_fx_sti)
+_ms = lambda *a: int(_dt_pk(*a, tzinfo=_tz_pk.utc).timestamp() * 1000)
+sjekk("avsparket regnes av prekick_frys.js: 10.10. 18:00 norsk tid = 16:00 UTC, 7.11. 18:00 = 17:00 UTC (vintertid)",
+      _avsp_pk["Rosenborg|Sandefjord"] == _ms(2026, 10, 10, 16, 0) and _avsp_pk["Rosenborg|Start"] == _ms(2026, 11, 7, 17, 0),
+      str(_avsp_pk))
+sjekk("og klokka kommer fra samme node-kall", abs(_naa_pk - _dt_pk.now(_tz_pk.utc).timestamp() * 1000) < 60000)
+_rader_pk = {
+    "2026|Rosenborg|Sandefjord": {"home": "Rosenborg", "away": "Sandefjord", "H": 0.5},   # pågår, uten resultat
+    "2026|Lillestrøm|Molde": {"home": "Lillestrøm", "away": "Molde", "H": 0.4},          # før avspark
+    "2026|Bodø/Glimt|Kristiansund": {"home": "Bodø/Glimt", "away": "Kristiansund", "H": 0.7, "frosset": True}}
+_naa_kamp = _ms(2026, 10, 10, 16, 42)          # 18:42 norsk tid, mens Rosenborg-Sandefjord pågår
+_sml, _etter, _fros = _pn_t.prekick_til_kontroll(_rader_pk, _avsp_pk, _naa_kamp)
+sjekk("en rad etter avspark uten resultat hoppes over", _etter == ["2026|Rosenborg|Sandefjord"], str(_etter))
+sjekk("en rad før avspark sammenlignes som før", _sml == ["2026|Lillestrøm|Molde"], str(_sml))
+sjekk("en frosset rad sammenlignes ikke her, som før (den har sin egen kontroll)", _fros == ["2026|Bodø/Glimt|Kristiansund"], str(_fros))
+_sml2, _etter2, _ = _pn_t.prekick_til_kontroll(_rader_pk, _avsp_pk, _ms(2026, 10, 10, 15, 59))
+sjekk("ett minutt før avspark sammenlignes raden", "2026|Rosenborg|Sandefjord" in _sml2 and not _etter2, f"{_sml2} {_etter2}")
+_sml3, _etter3, _ = _pn_t.prekick_til_kontroll(_rader_pk, _avsp_pk, _ms(2026, 10, 10, 16, 0))
+sjekk("i avsparksminuttet hoppes den over (>=, som i prekick_frys.js)", _etter3 == ["2026|Rosenborg|Sandefjord"], str(_etter3))
+# Samme deling som oppdaterPrekick() i JS: radene den skriver = de som sammenlignes.
+_js_pk = ("const f=require(process.argv[1]);const d=JSON.parse(process.argv[2]);"
+          "const g={matches:JSON.parse(JSON.stringify(d.rader))};"
+          "const pre=Object.fromEntries(Object.entries(d.rader).map(([k,v])=>[k,{...v}]));"
+          "f.oppdaterPrekick(g,pre,[],d.avspark,d.naa,'NY','alle');"
+          "process.stdout.write(JSON.stringify(Object.keys(g.matches).filter(k=>g.matches[k].stamp==='NY')))")
+_skrevet = _json_pk.loads(_sp_pk.run(["node", "-e", _js_pk, str(ROT / "scripts" / "prekick_frys.js"),
+                                      _json_pk.dumps({"rader": _rader_pk, "avspark": _avsp_pk, "naa": _naa_kamp})],
+                                     capture_output=True, text=True, check=True).stdout)
+sjekk("samme deling som oppdaterPrekick(): radene frysingen skriver, er nøyaktig de som sammenlignes",
+      sorted(_skrevet) == sorted(_sml), f"JS {_skrevet}, kontrollen {_sml}")
+_kp_src = (ROT / "elo-test" / "scripts" / "kontroll_paneler.py").read_text("utf-8")
+sjekk("kontroll_paneler.py deler prekick-radene med paneler.prekick_til_kontroll og avspark_fra_terminliste",
+      "_pn_w.prekick_til_kontroll(" in _kp_src and "_pn_w.avspark_fra_terminliste(" in _kp_src)
+
 print("\n=== Uten sesongautoritet står vakten over ===")
 _l8 = []
 _ut8, _utenfor8, _kode8 = _rd(_ny, _eks, None, log=_l8.append)

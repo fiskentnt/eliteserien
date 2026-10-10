@@ -94,9 +94,17 @@ else:
     _prodpk = json.loads((PROD / "prekick.json").read_text(encoding="utf-8"))["matches"]
     _kr = {(r["home"], r["away"]): r for r in M["kamper"]}
     _avv, _n, _ulik_prod, _mangler = 0.0, 0, 0, []
-    for k, v in _pkd.items():
-        if v.get("frosset"):
-            continue
+    # Samme regel som frysingen (scripts/prekick_frys.js, via paneler.py):
+    # frosne rader og rader etter avspark uten resultat er ikke regnet med
+    # dagens modell, og sammenlignes ikke her (10.10.2026).
+    sys.path.insert(0, str(HER))
+    import paneler as _pn_w
+    _avsp, _naa = _pn_w.avspark_fra_terminliste(PROD / "fixtures.json")
+    _sml, _etter_avsp, _ = _pn_w.prekick_til_kontroll(_pkd, _avsp, _naa)
+    if _etter_avsp:
+        print(f"     {len(_etter_avsp)} rad(er) etter avspark uten resultat sammenlignes ikke: {', '.join(_etter_avsp)}")
+    for k in _sml:
+        v = _pkd[k]
         r = _kr.get((v["home"], v["away"]))
         if r is None:
             _mangler.append(k); continue
