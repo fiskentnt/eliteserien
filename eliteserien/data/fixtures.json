@@ -17,9 +17,9 @@
         "away": "Kristiansund",
         "date": "2026-10-10",
         "time": "16:00",
-        "played": false,
-        "hg": null,
-        "ag": null
+        "played": true,
+        "hg": 3,
+        "ag": 1
       },
       {
         "home": "Rosenborg",
@@ -325,15 +325,6 @@
         "ag": null
       },
       {
-        "home": "Rosenborg",
-        "away": "Start",
-        "date": "2026-11-07",
-        "time": "18:00",
-        "played": false,
-        "hg": null,
-        "ag": null
-      },
-      {
         "home": "Tromsø",
         "away": "Bodø/Glimt",
         "date": "2026-11-08",
@@ -386,6 +377,16 @@
         "played": false,
         "hg": null,
         "ag": null
+      },
+      {
+        "home": "Rosenborg",
+        "away": "Start",
+        "date": "2026-11-18",
+        "time": "18:00",
+        "played": false,
+        "hg": null,
+        "ag": null,
+        "moved": true
       }
     ]
   },
