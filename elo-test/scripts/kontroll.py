@@ -1022,16 +1022,25 @@ console.log(JSON.stringify({steg, rekkefolge, direkte, hva:ELO_HVA, halv, R_ette
         krev(f"rateFor lagrer og viser den normaliserte (\"Blandet 70 % odds\"), {len(_d['visMk'])} kamper",
              len(_d["visMk"]) > 0 and _ulv == 0, f"{_ulv} ulike")
         _ask = 0.0
-        for o in _oj["matches"]:
+        # Bare kamper som ikke er spilt. odds_upcoming.json beholder en kamp til
+        # neste oddshenting, ogsaa etter at den er spilt (Brann-Viking 9.10.2026,
+        # spilt kl. 19, i filen til neste dag), og en spilt kamp kan ikke fylles
+        # inn -- siden bruker ikke oddsen for den heller.
+        _uspilte = {(m["home"], m["away"]): m for m in _terminliste}
+        _oj_uspilte = [o for o in _oj["matches"] if (o["home"], o["away"]) in _uspilte]
+        for o in _oj_uspilte:
             h_, d_, a_ = o["H"] * 1.03, o["D"] * 1.03, o["A"] * 1.03
             s_ = h_ + d_ + a_
-            m_ = next(m for m in _terminliste if m["home"] == o["home"] and m["away"] == o["away"])
+            m_ = _uspilte[(o["home"], o["away"])]
             R_ = E.hva_mix_lap(dict(_R0), [{"date": m_["date"], "home": o["home"], "away": o["away"],
                                             "hg": 3, "ag": 0, "odds": [h_ / s_, d_ / s_, a_ / s_]}], _p, _hr, _w)
             J_ = _d["skal"][o["home"] + "|" + o["away"]]
             _ask = max(_ask, max(abs(J_[t] - R_[t]) for t in R_))
-        krev(f"innfylt odds-kamp fra raadata med paaslag 1,03 ({len(_oj['matches'])} kamper): "
-             "JS-rating = Python innenfor 1e-12", _ask <= 1e-12, f"storste avvik {_ask:.2e}")
+        _spilte_i_fila = len(_oj["matches"]) - len(_oj_uspilte)
+        krev(f"innfylt odds-kamp fra raadata med paaslag 1,03 ({len(_oj_uspilte)} kamper"
+             + (f", {_spilte_i_fila} spilt og hoppet over" if _spilte_i_fila else "") + "): "
+             "JS-rating = Python innenfor 1e-12", len(_oj_uspilte) > 0 and _ask <= 1e-12,
+             f"storste avvik {_ask:.2e}, {len(_oj_uspilte)} uspilte kamper med odds")
         _flytt = max(abs(_py_hel[t] - _R0.get(t, 0.0)) for t in _py_hel)
         krev("kontrollen maaler noe: ratingen flytter seg", _flytt > 1.0,
              f"storste flytting {_flytt:.1f} ratingpoeng")
@@ -1169,11 +1178,19 @@ for(const a of INN.alt){ alt[a.key]=eloRatingMedAlternativ(a); }
 console.log(JSON.stringify({saker, alt}));
 """)
     # Brann - Viking, alle tre utfall, pluss andre kamper og med noe utfylt fra før.
-    _saker = [[[], "Brann", "Viking", 2, 1], [[], "Brann", "Viking", 1, 1], [[], "Brann", "Viking", 0, 1]]
-    _ekstra = [m for m in _terminu if not (m["home"] == "Brann" and m["away"] == "Viking")]
+    # Hovedsaken er den forste uspilte kampen med odds, saa oddsgreina ogsaa
+    # kontrolleres. Den var Brann-Viking skrevet inn fast, og kontrollen krasjet
+    # da kampen var spilt (9.10.2026). Uten odds: den forste uspilte.
+    _med_odds = {(o["home"], o["away"])
+                 for o in json.loads((PROD / "odds_upcoming.json").read_text(encoding="utf-8"))["matches"]}
+    _iorden = sorted(_terminu, key=lambda m: (m["date"], m["home"], m["away"]))
+    _sak0 = next((m for m in _iorden if (m["home"], m["away"]) in _med_odds), _iorden[0])
+    _h0, _a0 = _sak0["home"], _sak0["away"]
+    _saker = [[[], _h0, _a0, 2, 1], [[], _h0, _a0, 1, 1], [[], _h0, _a0, 0, 1]]
+    _ekstra = [m for m in _terminu if not (m["home"] == _h0 and m["away"] == _a0)]
     for m in _ekstra[::9][:6]:
         _saker.append([[], m["home"], m["away"], 3, 0])
-    _saker.append([[[_ekstra[0]["home"], _ekstra[0]["away"], 0, 2]], "Brann", "Viking", 2, 1])
+    _saker.append([[[_ekstra[0]["home"], _ekstra[0]["away"], 0, 2]], _h0, _a0, 2, 1])
     # Forrige kamp: et lags siste spilte kamp, med faktisk og alternativt resultat.
     _sisteu = sorted(_spilteu, key=lambda m: (m["date"], m["home"], m["away"]))[-1]
     _alt = [{"key": "faktisk", "home": _sisteu["home"], "away": _sisteu["away"], "hg": _sisteu["hg"], "ag": _sisteu["ag"]},
