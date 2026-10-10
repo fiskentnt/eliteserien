@@ -1031,6 +1031,13 @@ print("\n=== Et kritisk revisjonsavvik skal stå til det er løst ===")
 _st_dir = Path(_tf2.mkdtemp())
 _ud.AUDIT_STATE_PATH = _st_dir / "audit_state.json"
 _ud.STATUS_PATH = _st_dir / "status.json"
+# Tabellkontrollens tilstand ogsaa i den tomme katalogen (0 avvik). Ellers
+# leser write_status() den ekte eliteserien/data/audit_tabell.json, og et ekte
+# avvik der (2 fra 9.10.2026 19:00Z) ga 4 i stedet for 2 og roede tester.
+import tabellkontroll as _tko_iso
+_ekte_tk_avvik = _tko_iso.avvik
+_tko_iso.avvik = lambda liga, data_dir=None: _ekte_tk_avvik(liga, data_dir=data_dir or _st_dir)
+sjekk("isolert: tabellkontrollen gir 0 avvik i den tomme katalogen", _tko_iso.avvik("eliteserien") == 0)
 _naa4 = _dt.now(_tz.utc)
 _dag = _naa4.astimezone(_ud.OSLO).strftime("%Y-%m-%d")
 
@@ -1093,6 +1100,7 @@ sjekk("gårsdagens avvik holder ikke stempelet rødt", _status()["ok"] is True)
 _ud.write_status(ok=False, now=_naa4, error="noe annet gikk galt")
 sjekk("en vanlig feil gjør det fortsatt rødt", _status()["ok"] is False)
 _ud.AUDIT_STATE_PATH = _ekte
+_tko_iso.avvik = _ekte_tk_avvik
 
 print("\n=== Klokkeregelen paa ligasiden (110 min), ogsaa uten radklasse ===")
 # Da fotball.no falt ut av hver kjoring, mistet vernet mot paagaaende kamper
