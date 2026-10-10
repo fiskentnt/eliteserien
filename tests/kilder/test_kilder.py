@@ -1038,6 +1038,13 @@ import tabellkontroll as _tko_iso
 _ekte_tk_avvik = _tko_iso.avvik
 _tko_iso.avvik = lambda liga, data_dir=None: _ekte_tk_avvik(liga, data_dir=data_dir or _st_dir)
 sjekk("isolert: tabellkontrollen gir 0 avvik i den tomme katalogen", _tko_iso.avvik("eliteserien") == 0)
+# Terminlisterevisjonen likedan (10.10.2026: 1 ekte avvik i
+# eliteserien/data/audit_fixtures.json ga 3 i stedet for 2).
+import daglig_revisjon as _dr_iso
+_ekte_dr_katalog = _dr_iso.data_katalog
+_dr_iso.data_katalog = lambda liga, sesong=None: _st_dir
+sjekk("isolert: terminlisterevisjonen gir 0 avvik i den tomme katalogen",
+      _dr_iso.dagens_avvik("eliteserien", _dt.now(_tz.utc)) == 0)
 _naa4 = _dt.now(_tz.utc)
 _dag = _naa4.astimezone(_ud.OSLO).strftime("%Y-%m-%d")
 
@@ -1101,6 +1108,7 @@ _ud.write_status(ok=False, now=_naa4, error="noe annet gikk galt")
 sjekk("en vanlig feil gjør det fortsatt rødt", _status()["ok"] is False)
 _ud.AUDIT_STATE_PATH = _ekte
 _tko_iso.avvik = _ekte_tk_avvik
+_dr_iso.data_katalog = _ekte_dr_katalog
 
 print("\n=== Klokkeregelen paa ligasiden (110 min), ogsaa uten radklasse ===")
 # Da fotball.no falt ut av hver kjoring, mistet vernet mot paagaaende kamper
@@ -1823,6 +1831,104 @@ _ud = (ROT / "scripts" / "update_data.py").read_text("utf-8")
 sjekk("Eliteserien (update_data.py): datovakten får hele terminlisten som forrige verdi",
       "rimelige_datoer(merged, _forrige_liste or tidligere," in _ud
       and "_forrige_liste = leaguedata.forrige_terminliste(" in _ud)
+
+print("\n=== Ingen enkeltkilde flytter en uspilt kamp (bekreft_flytting, 10.10.2026) ===")
+# eliteserien.no viste Rosenborg-Start (runde 26, 7.11. 18:00) som 18.11. den
+# 10.10., innenfor sesongvinduet. Kampen flyttes bare naar ESPN viser samme
+# nye dato og tid; svarer ikke ESPN, avgjoer kalenderfeeden.
+from reconcile_ny import bekreft_flytting as _bf
+_forr = [{"home": "Rosenborg", "away": "Start", "round": 26, "date": "2026-11-07", "time": "18:00", "hg": None, "ag": None},
+         {"home": "Molde", "away": "Brann", "round": 26, "date": "2026-11-08", "time": "17:00", "hg": None, "ag": None},
+         {"home": "Brann", "away": "Viking", "round": 23, "date": "2026-10-09", "time": "19:00", "hg": 0, "ag": 2}]
+_flyttet_kilde = [dict(r) for r in _forr]
+_flyttet_kilde[0]["date"] = "2026-11-18"          # det ligasiden viste 10.10.
+_RS = ("Rosenborg", "Start")
+
+
+def _kilde(svar, kall, navn):
+    def hent():
+        kall.append(navn)
+        if isinstance(svar, Exception):
+            raise svar
+        return svar
+    return hent
+
+
+def _kjor_bf(kilde, espn, kalender):
+    kall, logg = [], []
+    ut, utfall = _bf(kilde, _forr, _kilde(espn, kall, "espn"), _kilde(kalender, kall, "kalender"), log=logg.append)
+    rs = next(r for r in ut if (r["home"], r["away"]) == _RS)
+    return rs, utfall, kall, logg
+
+
+_espn_gml = {_RS: ("2026-11-07", "18:00")}
+_espn_ny = {_RS: ("2026-11-18", "18:00")}
+
+# 0) Ingen flytting: ingen kilde spørres
+_rs, _utf, _kall, _ = _kjor_bf([dict(r) for r in _forr], _espn_ny, _espn_ny)
+sjekk("ingen flytting: verken ESPN eller kalenderfeeden spørres, ingenting endres",
+      _kall == [] and _utf == [] and _rs["date"] == "2026-11-07", f"{_kall} {_utf}")
+
+# 1) Ligasiden flytter alene: ESPN viser den gamle datoen -> beholdes
+_rs, _utf, _kall, _logg = _kjor_bf(_flyttet_kilde, _espn_gml, _espn_ny)
+sjekk("ligasiden flytter alene (ESPN viser 7.11.): kampen beholder 7.11. 18:00",
+      (_rs["date"], _rs["time"]) == ("2026-11-07", "18:00") and _utf == [("Rosenborg-Start", "beholdt", "ESPN")], f"{_rs} {_utf}")
+sjekk("og det står ADVARSEL med hva ligasiden og ESPN viser, og kalenderfeeden spørres ikke",
+      any("ADVARSEL" in m and "ligasiden viser 18.11. 18:00" in m and "ESPN viser 7.11. 18:00" in m
+          and "beholder 7.11. 18:00" in m for m in _logg) and _kall == ["espn"], f"{_logg} {_kall}")
+
+# 2) ESPN er enig -> flyttes
+_rs, _utf, _kall, _logg = _kjor_bf(_flyttet_kilde, _espn_ny, _espn_gml)
+sjekk("ESPN er enig (18.11. 18:00): kampen flyttes, og kalenderfeeden spørres ikke",
+      _rs["date"] == "2026-11-18" and _utf == [("Rosenborg-Start", "flyttet", "ESPN")] and _kall == ["espn"], f"{_rs} {_utf} {_kall}")
+sjekk("og det står at flyttingen er bekreftet av ESPN",
+      any("flyttet fra 7.11. 18:00 til 18.11. 18:00, bekreftet av ESPN" in m for m in _logg), str(_logg))
+
+# 3) ESPN svarer ikke -> kalenderfeeden avgjør, begge veier
+_rs, _utf, _kall, _logg = _kjor_bf(_flyttet_kilde, ConnectionError("timeout"), _espn_ny)
+sjekk("ESPN svarer ikke, kalenderfeeden viser 18.11.: kampen flyttes, avgjort av kalenderfeeden",
+      _rs["date"] == "2026-11-18" and _utf == [("Rosenborg-Start", "flyttet", "kalenderfeeden")]
+      and _kall == ["espn", "kalender"] and any("ESPN svarte ikke" in m for m in _logg), f"{_rs} {_utf} {_kall}")
+_rs, _utf, _kall, _logg = _kjor_bf(_flyttet_kilde, ConnectionError("timeout"), _espn_gml)
+sjekk("ESPN svarer ikke, kalenderfeeden viser 7.11.: kampen beholder 7.11., med ADVARSEL",
+      _rs["date"] == "2026-11-07" and _utf == [("Rosenborg-Start", "beholdt", "kalenderfeeden")]
+      and any("ADVARSEL" in m and "kalenderfeeden viser 7.11. 18:00" in m for m in _logg), f"{_rs} {_logg}")
+
+# 4) Kildene er uenige -> beholdes med ADVARSEL
+_rs, _utf, _kall, _logg = _kjor_bf(_flyttet_kilde, {_RS: ("2026-11-08", "18:00")}, _espn_ny)
+sjekk("kildene er uenige (ligasiden 18.11., ESPN 8.11.): kampen beholder 7.11., med ADVARSEL",
+      _rs["date"] == "2026-11-07" and _utf == [("Rosenborg-Start", "beholdt", "ESPN")]
+      and any("ADVARSEL" in m and "ESPN viser 8.11. 18:00" in m for m in _logg), f"{_rs} {_logg}")
+_rs, _utf, _kall, _logg = _kjor_bf(_flyttet_kilde, {_RS: ("2026-11-18", "16:00")}, _espn_ny)
+sjekk("samme nye dato, men annen tid hos ESPN: uenige, kampen beholder 7.11. 18:00",
+      (_rs["date"], _rs["time"]) == ("2026-11-07", "18:00"), str(_rs))
+_rs, _utf, _kall, _logg = _kjor_bf(_flyttet_kilde, {}, _espn_ny)
+sjekk("ESPN mangler kampen: beholdes, og det står at ESPN ikke har kampen",
+      _rs["date"] == "2026-11-07" and any("ESPN har ikke kampen" in m for m in _logg), str(_logg))
+_rs, _utf, _kall, _logg = _kjor_bf(_flyttet_kilde, ConnectionError("x"), OSError("y"))
+sjekk("verken ESPN eller kalenderfeeden svarer: beholdes, med ADVARSEL",
+      _rs["date"] == "2026-11-07" and _utf == [("Rosenborg-Start", "beholdt", None)]
+      and any("verken ESPN eller kalenderfeeden svarte" in m for m in _logg), str(_logg))
+
+# 5) Det regelen ikke skal røre
+_spilt_kilde = [dict(r) for r in _forr]
+_spilt_kilde[2]["date"] = "2026-01-09"           # spilt kamp: frys_spilte sin sak
+_ut5, _utf5 = _bf(_spilt_kilde, _forr, _kilde({}, [], "espn"), _kilde({}, [], "kalender"))
+sjekk("en spilt kamp er ikke en flytting her (frys_spilte tar den)", _utf5 == [] and _ut5 == _spilt_kilde)
+_ny_kamp = [dict(r) for r in _forr] + [{"home": "Helt", "away": "Ny", "round": 27, "date": "2026-11-21",
+                                         "time": "17:00", "hg": None, "ag": None}]
+_ut6, _utf6 = _bf(_ny_kamp, _forr, _kilde({}, [], "espn"), _kilde({}, [], "kalender"))
+sjekk("en kamp uten forrige verdi slipper gjennom uten oppslag", _utf6 == [] and _ut6 == _ny_kamp)
+_neste_aar = [dict(r) for r in _forr]
+_neste_aar[0]["date"] = "2027-04-10"
+_ut7, _utf7 = _bf(_neste_aar, _forr, _kilde({}, [], "espn"), _kilde({}, [], "kalender"))
+sjekk("en rad fra neste sesong for samme lagpar er ikke en flytting", _utf7 == [] and _ut7 == _neste_aar)
+
+_ud = (ROT / "scripts" / "update_data.py").read_text("utf-8")
+sjekk("Eliteserien (update_data.py): bekreft_flytting kjøres etter datovakten, med ESPN-sesongkallet og kalenderfeeden",
+      "bekreft_flytting(merged, _forrige_liste, _espn_fasit, _kalender_fasit" in _ud
+      and "espn_source.fetch_season(_aktiv" in _ud and "ntf_source.parse_kalender(ntf_source.hent_kalender(LIGA" in _ud
+      and _ud.index("rimelige_datoer(merged, _forrige_liste") < _ud.index("bekreft_flytting(merged"))
 
 print("\n=== Uten sesongautoritet står vakten over ===")
 _l8 = []

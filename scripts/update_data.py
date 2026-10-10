@@ -25,7 +25,7 @@ import espn_source
 import should_fetch
 import ntf_source
 import nff_source
-from reconcile_ny import (bare_aktiv_sesong, behold_eksisterende,
+from reconcile_ny import (bare_aktiv_sesong, behold_eksisterende, bekreft_flytting,
                           reconcile as reconcile_kilder, rimelige_datoer)
 import fetch_odds_history
 import merge_odds
@@ -599,6 +599,19 @@ def main(cache_dir=None):
         # Rosenborg-Start (runde 26, 7.11.) som 7.1., og det slapp gjennom.
         _forrige_liste = leaguedata.forrige_terminliste(LEAGUE / "data", _aktiv, log=log) if _aktiv else None
         merged, utenfor, _datofeil = rimelige_datoer(merged, _forrige_liste or tidligere, _aktiv, log=log)
+        # Ingen enkeltkilde flytter en uspilt kamp (10.10.2026): ligasiden viste
+        # Rosenborg-Start (7.11.) som 18.11., innenfor sesongvinduet. Kampen
+        # flyttes bare når ESPN (sesongkallet, gratis) viser samme nye dato og
+        # tid; svarer ikke ESPN, avgjør kalenderfeeden. Se bekreft_flytting().
+        if _forrige_liste:
+            def _espn_fasit():
+                return {(r["home"], r["away"]): (r["date"], r.get("time"))
+                        for r in espn_source.fetch_season(_aktiv, log=log)}
+
+            def _kalender_fasit():
+                return {(r["home"], r["away"]): (r["date"], r.get("time"))
+                        for r in ntf_source.parse_kalender(ntf_source.hent_kalender(LIGA, log=log), LIGA)}
+            merged, _flytting = bekreft_flytting(merged, _forrige_liste, _espn_fasit, _kalender_fasit, log=log)
         # Regelen for nye resultater (resultatregel.py): hovedkilden og en
         # annen leverandør må være enige. Publiserte resultater røres ikke.
         merged, _resstate = kontroller_nye_resultater(merged, tidligere, ntf_rows, espn_rows, ffk_rows, now, log=log)

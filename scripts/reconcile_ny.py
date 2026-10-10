@@ -203,6 +203,77 @@ def frys_spilte(rader, eksisterende, kilde="ligasiden", log=lambda s: None):
     return ut
 
 
+def bekreft_flytting(rader, forrige, hent_espn, hent_kalender, log=lambda s: None):
+    """En uspilt kamp flyttes bare når ESPN viser samme nye dato og tid (10.10.2026).
+
+    eliteserien.no viste Rosenborg-Start (runde 26, 7.11. 18:00) som 7.1. den
+    9.10. og som 18.11. den 10.10. Datovakten (rimelige_datoer) stopper bare
+    datoer utenfor sesongen, så 18.11. kom på siden. Feilene flytter seg
+    mellom kampene fra dag til dag, så ingen enkeltkilde får flytte en kamp:
+
+      * Ligasiden viser en annen dato eller tid enn vi har for en uspilt kamp:
+        ESPN (sesongkallet, gratis) spørres. Viser ESPN den samme nye datoen
+        og tiden, flyttes kampen.
+      * Svarer ikke ESPN, avgjør kalenderfeeden på samme måte.
+      * Ellers (ESPN viser noe annet, mangler kampen, eller ingen svarer):
+        vi beholder datoen og tiden vi har, med ADVARSEL.
+
+    forrige: terminlisten vi sist skrev (leaguedata.forrige_terminliste).
+    hent_espn / hent_kalender: kalles bare når minst én kamp er flyttet, og gir
+    {(hjemme, borte): (dato, tid)} eller kaster unntak når kilden ikke svarer.
+    Returnerer (rader, utfall), utfall = [(kamp, "flyttet"|"beholdt", kilde)]."""
+    gamle = {_nøkkel(g): g for g in (forrige or []) if g.get("hg") is None and g.get("date")}
+
+    def flyttet(r):
+        g = gamle.get(_nøkkel(r))
+        return (g is not None and r.get("hg") is None and r.get("date")
+                and r["date"][:4] == g["date"][:4]     # samme sesong
+                and (r.get("date"), r.get("time")) != (g.get("date"), g.get("time")))
+
+    if not any(flyttet(r) for r in rader):
+        return rader, []
+
+    def vis(d, t):
+        return (f"{int(d[8:10])}.{int(d[5:7])}." if d and len(d) == 10 else str(d)) + (f" {t}" if t else "")
+
+    fasit, kilde = None, None
+    try:
+        fasit, kilde = hent_espn(), "ESPN"
+    except Exception as e:
+        log(f"Flytting: ESPN svarte ikke ({type(e).__name__}: {e}) -- kalenderfeeden avgjør.")
+        try:
+            fasit, kilde = hent_kalender(), "kalenderfeeden"
+        except Exception as e2:
+            log(f"Flytting: kalenderfeeden svarte heller ikke ({type(e2).__name__}: {e2}).")
+
+    ut, utfall = [], []
+    for r in rader:
+        if not flyttet(r):
+            ut.append(r)
+            continue
+        g = gamle[_nøkkel(r)]
+        ny, har = (r["date"], r.get("time")), (g["date"], g.get("time"))
+        kamp = f"{r['home']}-{r['away']}"
+        if fasit is not None and fasit.get(_nøkkel(r)) == ny:
+            log(f"Flytting: {kamp} flyttet fra {vis(*har)} til {vis(*ny)}, bekreftet av {kilde}.")
+            utfall.append((kamp, "flyttet", kilde))
+            ut.append(r)
+            continue
+        if fasit is None:
+            hva = "verken ESPN eller kalenderfeeden svarte"
+        elif _nøkkel(r) in fasit:
+            hva = f"{kilde} viser {vis(*fasit[_nøkkel(r)])}"
+        else:
+            hva = f"{kilde} har ikke kampen"
+        melding = f"{kamp}: ligasiden viser {vis(*ny)}, vi har {vis(*har)}; {hva} -- beholder {vis(*har)}"
+        log(f"ADVARSEL: {melding}")
+        if os.environ.get("GITHUB_ACTIONS"):
+            print(f"::warning title=Flytting ikke bekreftet::{melding}")
+        utfall.append((kamp, "beholdt", kilde))
+        ut.append({**r, "date": g["date"], "time": g.get("time")})
+    return ut, utfall
+
+
 # Hvor langt utenfor sesongens egne kamper en dato faar ligge for vi
 # forkaster den. En utsatt kamp kan flyttes bakover i kalenderen, sjelden
 # framover forbi sesongstart.
