@@ -8573,22 +8573,19 @@ async function updateCheckStamp(fixturesIn){
     if(!res.ok) return;
     const status = await res.json();
     const t = new Date(status.last_checked);
-    const failed = status.ok === false;
-    let clause;
-    if(failed){
-      clause = `Siste automatiske sjekk feilet ${formatOsloDT(t)}.`;
-    } else {
-      const {anyStarted, next} = findPendingAndNext(fixturesIn);
-      clause = (!anyStarted && next)
-        ? `Neste sjekk etter kampen ${shortTeam(next.home)}-${shortTeam(next.away)} ${formatDateNo(next.date)} kl. ${next.time.replace(':','.')}.`
-        : `Sist sjekket ${formatOsloDT(t)}.`;
-    }
-    // Rødt bare ved en faktisk feil. En gammel sjekk er ikke en feil: vises
-    // som vanlig tekst, med forklaring i tooltipen.
-    const stale = !failed && checkIsStale(t);
-    const html = failed ? `<span class="warn">${clause}</span>`
-      : stale ? `<span class="stale" title="Siste sjekk er noen timer gammel.">${clause}</span>`
-      : clause;
+    // En feilet sjekk vises ALDRI for besøkende (10.10.2026). Den står i
+    // status.json og går til varslingen; siden viser da bare datoen og siste
+    // resultat, som når status.json mangler. Før sto "Siste automatiske sjekk
+    // feilet" i rødt, også når feilen var vår egen kontroll mot en kilde.
+    if(status.ok === false) return;
+    const {anyStarted, next} = findPendingAndNext(fixturesIn);
+    const clause = (!anyStarted && next)
+      ? `Neste sjekk etter kampen ${shortTeam(next.home)}-${shortTeam(next.away)} ${formatDateNo(next.date)} kl. ${next.time.replace(':','.')}.`
+      : `Sist sjekket ${formatOsloDT(t)}.`;
+    // En gammel sjekk er ikke en feil: vises som vanlig tekst, med forklaring
+    // i tooltipen.
+    const stale = checkIsStale(t);
+    const html = stale ? `<span class="stale" title="Siste sjekk er noen timer gammel.">${clause}</span>` : clause;
     document.querySelector('.stamp').insertAdjacentHTML('beforeend', ` ${html}`);
   }catch(_){ /* status.json ikke tilgjengelig — stempelet viser bare datoen, som før */ }
 }

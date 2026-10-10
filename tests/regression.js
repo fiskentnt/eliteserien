@@ -4074,6 +4074,40 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
   // Og forsvinner (eller skjules) det trykkede elementet, holder siden plassen
   // for blokken det sto i.
   //   node tests/regression.js --bare blandet
+  // Stempelet (10.10.2026): en feilet sjekk vises aldri for besøkende. Den
+  // står i status.json og går til varslingen. Før sto "Siste automatiske
+  // sjekk feilet" i rødt på alle tre sidene.
+  const stempel = async () => {
+    setGroup('Stempelet: en feilet sjekk vises aldri for besøkende');
+    for (const side of ['eliteserien', 'obos', 'elo-test']) {
+      const url = base.replace('/eliteserien/', `/${side}/`);
+      for (const ok of [false, true]) {
+        const status = {last_checked: '2026-10-10T16:00:29+00:00', ok,
+          ...(ok ? {} : {error: '1 kritisk(e) avvik mellom terminlisten og kalenderfeeden: Rosenborg-Start', revisjon_avvik: 1})};
+        const pg = await browser.newPage();
+        pg.on('pageerror', e => errors.push(`${url} (status ok=${ok}): ${e.message}`));
+        let spurt = 0;
+        await pg.setRequestInterception(true);
+        pg.on('request', req => {
+          if (/\/data\/status\.json(?:\?|$)/.test(req.url())) { spurt++;
+            return req.respond({status: 200, contentType: 'application/json', body: JSON.stringify(status)}); }
+          req.continue();
+        });
+        await pg.setViewport({width: 1400, height: 900});
+        await pg.goto(url, {waitUntil: 'networkidle0'});
+        await pg.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true', {timeout: 120000});
+        if (ok) await pg.waitForFunction(() => /sjekk/i.test(document.querySelector('.stamp').textContent), {timeout: 20000}).catch(() => {});
+        else await new Promise(r => setTimeout(r, 1500));
+        const s = await pg.evaluate(() => { const el = document.querySelector('.stamp');
+          return {tekst: el.textContent, warn: !!el.querySelector('.warn'), html: el.innerHTML}; });
+        if (ok) check(`${side}: ok=true gir sjekkteksten i stempelet (status.json hentet ${spurt} gang)`,
+          spurt > 0 && /Sist sjekket|Neste sjekk/.test(s.tekst), s.tekst);
+        else check(`${side}: ok=false gir ingen "feilet", ingen rød tekst og ingen sjekktekst (status.json hentet ${spurt} gang)`,
+          spurt > 0 && !/feilet/i.test(s.tekst) && !s.warn && !/sjekk/i.test(s.tekst), s.tekst);
+        await pg.close();
+      }
+    }
+  };
   const blandetRunde = async () => {
     setGroup('"Simuler på nytt" i en blandet runde, og plassen når knappen forsvinner');
     for (const [form, vp] of [['PC', {width: 1400, height: 900}],
@@ -4187,7 +4221,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'trekning') await trekning();
       else if (BARE === 'forkampen') await forKampen();
       else if (BARE === 'blandet') await blandetRunde();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort, trekning, forkampen, blandet)`);
+      else if (BARE === 'stempel') await stempel();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort, trekning, forkampen, blandet, stempel)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -7720,6 +7755,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await trekning();
     await forKampen();
     await blandetRunde();
+    await stempel();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen
