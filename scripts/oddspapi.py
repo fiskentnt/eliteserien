@@ -109,6 +109,15 @@ def dagsbruk(dag=None):
     return sum(d.get("dager", {}).get(dag, 0) for d in _les_alle())
 
 
+UTEN_TELLENDE_GRUNN = "tellende kall er slått av i denne kjøringen (UTEN_TELLENDE)"
+
+
+def uten_tellende():
+    """True når jobben har satt UTEN_TELLENDE=true (should_fetch.py: nytt
+    forsøk fordi status.json er rød). Da går ingen tellende forespørsel ut."""
+    return os.environ.get("UTEN_TELLENDE", "").strip().lower() == "true"
+
+
 def budsjett_stopp():
     """(stopp?, begrunnelse) -- kalles FOR ethvert tellende kall."""
     brukt, _ = usage()
@@ -198,6 +207,12 @@ def call(path, params=None, key=None, timeout=TIMEOUT, ikke_funnet_er_hoppet=Fal
         return None, "ODDSPAPI_KEY er ikke satt"
     billable = path not in FREE_ENDPOINTS
     if billable:
+        # UTEN_TELLENDE=true (12.10.2026): kjøringen er et nytt forsøk fordi
+        # status.json er rød (should_fetch.py), og slike forsøk skal ikke
+        # bruke tellende kall. Gratisoppslaget (/v4/historical-odds) går som før.
+        if uten_tellende():
+            _logg(path, "hoppet", UTEN_TELLENDE_GRUNN)
+            return None, f"stopper: {UTEN_TELLENDE_GRUNN}"
         # Sperren ligger FOR alt som koster. Ingen tellende forespoersel skal
         # kunne gaa ut naar et av takene er naadd.
         stopp, hvorfor = budsjett_stopp()

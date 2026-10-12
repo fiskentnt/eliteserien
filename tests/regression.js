@@ -6859,11 +6859,16 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const t = fs.readFileSync(path.join(ROOT, '.github', 'workflows', wf), 'utf8');
         const steg = t.split('\n      - ').slice(1), siste = steg[steg.length - 1] || '', nest = steg[steg.length - 2] || '';
         const kode = siste.split('\n').filter(l => !l.trim().startsWith('#')).join('\n');
-        check(`${wf}: livstegnet er siste steg, etter kildevakten, bare når jobben er grønn`,
-          /healthchecks/i.test(siste.split('\n')[0]) && nest.includes('hentelogg.py sjekk') && !/\n\s*if:/.test(kode) && !kode.includes('continue-on-error'),
+        // 12.10.2026: scripts/livstegn.py avgjør (livstegn, eller /fail når
+        // kjøringen er rød eller status.json har ok: false). Reglene og at
+        // skriptet aldri gjør jobben rød testes i tests/kilder/test_kilder.py.
+        const liga = wf === 'update-data.yml' ? 'eliteserien' : 'obos';
+        check(`${wf}: livstegnet/varselet er siste steg, etter kildevakten, og kjøres også når jobben er rød`,
+          /healthchecks/i.test(siste.split('\n')[0]) && nest.includes('hentelogg.py sjekk') && kode.includes('if: ${{ !cancelled() }}') && !kode.includes('continue-on-error'),
           siste.split('\n')[0]);
-        check(`${wf}: livstegnet bruker hemmeligheten ${navn} og kan aldri gjøre jobben rød`,
-          kode.includes(`HC_URL: \${{ secrets.${navn} }}`) && kode.includes('exit 0') && /if curl .*; then .*; else .*; fi/.test(kode) && !kode.includes('/fail'),
+        check(`${wf}: steget bruker hemmeligheten ${navn} og kjører scripts/livstegn.py ${liga} (ingen curl i workflowen)`,
+          kode.includes(`HC_URL: \${{ secrets.${navn} }}`) && kode.includes(`python3 scripts/livstegn.py ${liga}`) && !kode.includes('curl')
+          && kode.includes('JOBB_STATUS: ${{ job.status }}') && kode.includes('STEG: ${{ toJSON(steps) }}'),
           '');
       }
     }

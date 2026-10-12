@@ -161,6 +161,11 @@ def _kvote(liga, sti, param, log=print):
 
 def kall(sti, param, liga="alle"):
     """Ett tellende kall, med tak og hentelogg."""
+    # UTEN_TELLENDE=true (12.10.2026): et nytt forsøk fordi status.json er rød
+    # (should_fetch.py) skal ikke bruke tellende kall. Som ved dagstaket:
+    # ingen forespørsel, ingen telling, og kalleren får Budsjett.
+    if os.environ.get("UTEN_TELLENDE", "").strip().lower() == "true":
+        raise Budsjett("tellende kall er slått av i denne kjøringen (UTEN_TELLENDE)")
     if dagsbruk() >= DAGSTAK:
         raise Budsjett(f"dagstaket er nådd ({DAGSTAK} kall i dag)")
     _tell()

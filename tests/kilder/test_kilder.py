@@ -942,6 +942,94 @@ ok6, hvorfor6 = sf.should_fetch(now=_naa + _td(hours=5), liga="test")
 sjekk("etter fullført vedlikehold er porten lukket i 20 timer", not ok6, hvorfor6)
 ok7, hvorfor7 = sf.should_fetch(now=_naa + _td(hours=22), liga="test")  # 20 t etter merk_ok på +70 min
 sjekk("og åpen igjen etter 20 timer", ok7, hvorfor7)
+
+print("\n=== Porten: nytt forsøk hver time når status.json er rød, uten tellende kall (12.10.2026) ===")
+# 9.10.2026 sto en feil i fire timer; i en landskampspause kunne den stått i
+# 20. Med rød status åpner porten når det er minst 55 minutter siden siste
+# sjekk -- regnet fra tidspunktet, ikke fra minuttet i timen.
+_T = _naa + _td(hours=6, minutes=37)             # vedlikeholdet er gjort, ingen kamp venter; minutt 37
+
+
+def _status(ok, minutter_siden=None, felt="last_checked", feil=None):
+    d = {"ok": ok}
+    if minutter_siden is not None:
+        d[felt] = (_T - _td(minutes=minutter_siden)).isoformat(timespec="seconds")
+    if feil:
+        d["error"] = feil
+    (_sb2 / "data" / "status.json").write_text(_json.dumps(d), encoding="utf-8")
+
+
+def _uten_rodt_merke():
+    d = _tilstand()
+    d.pop("siste_rodt_forsok", None)
+    (_sb2 / "data" / "daglig_state.json").write_text(_json.dumps(d), encoding="utf-8")
+
+
+_fixtures([{"round": 24, "matches": [{"home": "Ranheim", "away": "Egersund", "date": "2026-10-20",
+                                      "time": "18:00", "played": False}]}])
+_status(True, 300)
+sjekk("grønn status: porten er lukket som før, og ingen sperre",
+      sf.vurder(now=_T, liga="test") == (False, sf.vurder(now=_T, liga="test")[1], False)
+      and "rød" not in sf.vurder(now=_T, liga="test")[1], str(sf.vurder(now=_T, liga="test")))
+_status(False, 30, feil="1 kritisk(e) avvik")
+_r = sf.vurder(now=_T, liga="test")
+sjekk("rød status, 30 minutter siden siste sjekk: lukket, og begrunnelsen sier det",
+      _r[0] is False and _r[2] is False and "status.json er rød" in _r[1] and "30 min" in _r[1], str(_r))
+sjekk("og ingenting er skrevet i daglig_state.json", "siste_rodt_forsok" not in _tilstand(), str(_tilstand()))
+_status(False, 54, feil="1 kritisk(e) avvik")
+sjekk("54 minutter: fortsatt lukket", sf.vurder(now=_T, liga="test")[0] is False)
+_status(False, 55, feil="1 kritisk(e) avvik")
+_r = sf.vurder(now=_T, liga="test")
+sjekk("55 minutter (minutt 37 i timen): porten åpner, med uten_tellende",
+      _r[0] is True and _r[2] is True and "nytt forsøk uten tellende kall" in _r[1], str(_r))
+sjekk("og forsøket er merket i daglig_state.json", _tilstand().get("siste_rodt_forsok") == _T.isoformat(timespec="seconds"),
+      str(_tilstand()))
+sjekk("should_fetch() gir fortsatt (kjør, begrunnelse)", len(sf.should_fetch(now=_T + _td(hours=2), liga="test")) == 2)
+_uten_rodt_merke()
+sf.merk_rodt_forsok("test", _T)
+# Forsøket feilet før status.json ble skrevet på nytt: last_checked er like gammel.
+_r = sf.vurder(now=_T + _td(minutes=10), liga="test")
+sjekk("ti minutter etter et forsøk som ikke skrev status på nytt: lukket (forsøket teller)",
+      _r[0] is False and "10 min" in _r[1], str(_r))
+_r = sf.vurder(now=_T + _td(minutes=56), liga="test")
+sjekk("56 minutter etter forsøket: åpner igjen, fortsatt uten tellende kall", _r[0] is True and _r[2] is True, str(_r))
+_uten_rodt_merke()
+_status(False, 30, felt="built_at")
+sjekk("OBOS (built_at i status.json): 30 minutter er lukket", sf.vurder(now=_T, liga="test")[0] is False)
+_status(False, 70, felt="built_at")
+_r = sf.vurder(now=_T, liga="test")
+sjekk("OBOS (built_at): 70 minutter åpner uten tellende kall", _r[0] is True and _r[2] is True, str(_r))
+_uten_rodt_merke()
+# En vanlig grunn går foran: da er det en vanlig kjøring, med tellende kall som før.
+_fixtures([{"round": 24, "matches": [{"home": "Ranheim", "away": "Egersund", "date": _T.astimezone(sf.OSLO).strftime("%Y-%m-%d"),
+                                      "time": (_T.astimezone(sf.OSLO) - _td(minutes=110)).strftime("%H:%M"), "played": False}]}])
+_status(False, 300, feil="1 kritisk(e) avvik")
+_r = sf.vurder(now=_T, liga="test")
+sjekk("rød status OG en kamp som venter på resultat: vanlig kjøring, ikke uten_tellende",
+      _r[0] is True and _r[2] is False and "venter på resultat" in _r[1], str(_r))
+sjekk("og da merkes ikke noe rødt forsøk", "siste_rodt_forsok" not in _tilstand(), str(_tilstand()))
+_fixtures([{"round": 24, "matches": [{"home": "Ranheim", "away": "Egersund", "date": "2026-10-20",
+                                      "time": "18:00", "played": False}]}])
+with _vern.miljo(FORCE_FETCH="true"):
+    _r = sf.vurder(now=_T, liga="test")
+sjekk("manuell kjøring (FORCE_FETCH): vanlig kjøring, ikke uten_tellende", _r[0] is True and _r[2] is False, str(_r))
+# Utskriften: begge utfallene til GITHUB_OUTPUT, og UTEN_TELLENDE til resten av jobben.
+import io as _io_p, contextlib as _cl_p
+_gho, _ghe = _sb2 / "gh_output", _sb2 / "gh_env"
+for _f in (_gho, _ghe):
+    _f.write_text("", encoding="utf-8")
+with _cl_p.redirect_stdout(_io_p.StringIO()), _cl_p.redirect_stderr(_io_p.StringIO()):
+    sf.meld("test", True, "x", True, miljo={"GITHUB_OUTPUT": str(_gho), "GITHUB_ENV": str(_ghe)})
+sjekk("rødt forsøk: should_fetch=true og uten_tellende=true til GITHUB_OUTPUT, UTEN_TELLENDE=true til GITHUB_ENV",
+      _gho.read_text() == "should_fetch=true\nuten_tellende=true\n" and _ghe.read_text() == "UTEN_TELLENDE=true\n",
+      f"{_gho.read_text()!r} {_ghe.read_text()!r}")
+for _f in (_gho, _ghe):
+    _f.write_text("", encoding="utf-8")
+with _cl_p.redirect_stdout(_io_p.StringIO()), _cl_p.redirect_stderr(_io_p.StringIO()):
+    sf.meld("test", True, "x", False, miljo={"GITHUB_OUTPUT": str(_gho), "GITHUB_ENV": str(_ghe)})
+sjekk("vanlig kjøring: uten_tellende=false, og ingenting i GITHUB_ENV",
+      _gho.read_text() == "should_fetch=true\nuten_tellende=false\n" and _ghe.read_text() == "", f"{_gho.read_text()!r} {_ghe.read_text()!r}")
+(_sb2 / "data" / "status.json").unlink()
 del sf.LIGAER["test"]
 
 print("\n=== OBOS: publiseringsregelen ===")
@@ -3547,6 +3635,197 @@ try:
     sjekk("endring som ikke er committet: VALG=full", _u3.strip().endswith("VALG=full") and "ikke er committet" in _u3, _u3)
 finally:
     _sh6.rmtree(_rot6, ignore_errors=True)
+
+print("\n=== Livstegn eller varsel til healthchecks (scripts/livstegn.py, 12.10.2026) ===")
+# Regelen: er kjøringen rød, eller har status.json ok: false, sendes /fail med
+# teksten. Ellers livstegn. 9.10.2026 kom det aldri noe varsel: kjøringene med
+# lukket port var grønne og sendte livstegn mellom de røde.
+import io as _io_l, contextlib as _cl_l, tempfile as _tf_l, urllib.request as _ur_l
+import livstegn as _lt
+_lt_dir = Path(_tf_l.mkdtemp())
+_lt_ekte = (_lt.LIGAER, _lt.urllib.request.urlopen)
+_lt.LIGAER = {"eliteserien": ("Eliteserien", _lt_dir / "e"), "obos": ("OBOS-ligaen", _lt_dir / "o")}
+for _d in ("e", "o"):
+    (_lt_dir / _d).mkdir()
+_HC = "https://hc.example/ping/hemmelig-uuid"
+_lt_ping = []
+
+
+class _LtSvar:
+    def read(self):
+        return b"OK"
+
+
+def _lt_aapne(req, timeout=None):
+    _lt_ping.append((req.full_url, req.data.decode("utf-8") if req.data else None))
+    return _LtSvar()
+
+
+def _lt_kjor(liga="eliteserien", jobb="success", steg=None, status=None, hc=_HC, aapne=_lt_aapne, test=False):
+    """(pingene, utskriften, exit-koden) for én kjøring av livstegn.main."""
+    sti = _lt.LIGAER[liga][1] / "status.json"
+    if status is None:
+        sti.unlink(missing_ok=True)
+    else:
+        sti.write_text(_json.dumps(status), encoding="utf-8")
+    _lt_ping.clear()
+    _lt.urllib.request.urlopen = aapne
+    ut = _io_l.StringIO()
+    with _cl_l.redirect_stdout(ut):
+        kode = _lt.main([liga], {"HC_URL": hc, "JOBB_STATUS": jobb, "STEG": _json.dumps(steg or {}),
+                                 "TESTVARSEL": "true" if test else "false", "GITHUB_SERVER_URL": "https://github.com",
+                                 "GITHUB_REPOSITORY": "fiskentnt/eliteserien", "GITHUB_RUN_ID": "123"})
+    return list(_lt_ping), ut.getvalue(), kode
+
+
+_GATE_AAPEN = {"gate": {"outputs": {"should_fetch": "true"}, "outcome": "success"}}
+_GATE_LUKKET = {"gate": {"outputs": {"should_fetch": "false"}, "outcome": "success"}}
+_feiler = lambda sid, port=_GATE_AAPEN: {**port, sid: {"outcome": "failure"}}
+_GRONN = {"last_checked": "2026-10-12T10:00:00+00:00", "ok": True}
+_TAB = "2 kritisk(e) avvik mellom tabellen vår og tabellen på ligasiden: Tabell, Brann: 2 uavgjort hos oss, 3 hos eliteserien.no"
+_REV = "1 kritisk(e) avvik mellom terminlisten og kalenderfeeden: Rosenborg-Start: dato 2026-11-18 hos oss, 2026-11-07 i kalenderfeeden"
+_DAT = "1 kamp(er) mangler sluttresultat mer enn 3 timer etter avspark:\nRosenborg-Start (2026-01-07 18:00): 6591.9 timer siden avspark"
+
+_p, _ut, _k = _lt_kjor(steg=_GATE_AAPEN, status=_GRONN)
+sjekk("grønn kjøring og grønn status: livstegn (GET til adressen, ikke /fail)", _p == [(_HC, None)] and _k == 0 and "Livstegn sendt" in _ut, f"{_p} {_ut}")
+_p, _ut, _k = _lt_kjor(steg=_GATE_LUKKET, status=_GRONN)
+sjekk("grønn kjøring med lukket port og grønn status: livstegn", _p == [(_HC, None)], str(_p))
+# Tilfelle 1 fra brukeren: grønn kjøring med LUKKET port, status rød.
+_p, _ut, _k = _lt_kjor(steg=_GATE_LUKKET, status={"ok": False, "error": _REV, "revisjon_avvik": 1})
+sjekk("grønn kjøring, lukket port, status.json ok: false: /fail, ikke livstegn",
+      len(_p) == 1 and _p[0][0] == _HC + "/fail" and _k == 0, str(_p))
+sjekk("og teksten sier revisjon, feilen, at porten var lukket, og har lenke til kjøringen",
+      _p[0][1].startswith("Eliteserien: revisjon\n" + _REV) and "Porten var lukket" in _p[0][1]
+      and "https://github.com/fiskentnt/eliteserien/actions/runs/123" in _p[0][1], _p[0][1])
+# Tilfelle 2: grønn kjøring med ÅPEN port, men revisjonen holder status rød.
+_p, _ut, _k = _lt_kjor(steg=_GATE_AAPEN, status={"ok": False, "error": _REV, "revisjon_avvik": 1})
+sjekk("grønn kjøring, åpen port, status.json ok: false (avvik i revisjonen): /fail, ikke livstegn",
+      len(_p) == 1 and _p[0][0] == _HC + "/fail" and "Eliteserien: revisjon" in _p[0][1] and "Kjøringen hentet data" in _p[0][1], str(_p))
+sjekk("og i en grønn kjøring er det en ::warning, ikke ::error", "::warning title=Eliteserien: revisjon::" in _ut and "::error" not in _ut, _ut)
+# Røde kjøringer: /fail med kategorien.
+_p, _ut, _k = _lt_kjor(jobb="failure", steg=_feiler("oppdater"), status={"ok": False, "error": _TAB})
+sjekk("rød kjøring, tabellkontrollen: /fail med «tabellkontroll» og feilen",
+      _p[0][0] == _HC + "/fail" and _p[0][1].startswith("Eliteserien: tabellkontroll\n" + _TAB) and "::error title=Eliteserien: tabellkontroll::" in _ut, f"{_p} {_ut}")
+_p, _ut, _k = _lt_kjor(jobb="failure", steg=_feiler("oppdater"), status={"ok": False, "error": _DAT})
+sjekk("rød kjøring, kamp uten sluttresultat: «datafeil», bare første linje av feilen",
+      _p[0][1].startswith("Eliteserien: datafeil\n1 kamp(er) mangler sluttresultat mer enn 3 timer etter avspark:\nKjøringen hentet data."), _p[0][1])
+_p, _ut, _k = _lt_kjor(jobb="failure", steg=_feiler("revisjon"), status={"ok": False, "error": _REV})
+sjekk("rød kjøring, revisjonssteget: «revisjon» med feilen fra status.json", _p[0][1].startswith("Eliteserien: revisjon\n" + _REV), _p[0][1])
+_p, _ut, _k = _lt_kjor(jobb="failure", steg=_feiler("resultatregel", _GATE_LUKKET), status=_GRONN)
+sjekk("rød kjøring, resultat uten kontroll (lukket port, grønn status): /fail med kategorien",
+      _p[0][0] == _HC + "/fail" and _p[0][1].startswith("Eliteserien: resultat uten kontroll eller i konflikt\nsteget «resultatregel» feilet"), _p[0][1])
+_p, _ut, _k = _lt_kjor(jobb="failure", steg=_feiler("kildevakt", _GATE_LUKKET), status=_GRONN)
+sjekk("rød kjøring, kildevakten: «kilde ute»", _p[0][1].startswith("Eliteserien: kilde ute\n"), _p[0][1])
+_p, _ut, _k = _lt_kjor(jobb="failure", steg=_feiler("sesongskifte"), status=_GRONN)
+sjekk("rød kjøring, sesongskiftet: «sesongskifte»", _p[0][1].startswith("Eliteserien: sesongskifte\n"), _p[0][1])
+_p, _ut, _k = _lt_kjor(jobb="failure", steg=_GATE_AAPEN, status=_GRONN)
+sjekk("rød kjøring uten kjent steg: «annet», fortsatt /fail", _p[0][0] == _HC + "/fail" and _p[0][1].startswith("Eliteserien: annet\n"), _p[0][1])
+_p, _ut, _k = _lt_kjor(liga="obos", jobb="failure", steg=_feiler("bygg"),
+                       status={"ok": False, "error": "2 kritisk(e) avvik mellom terminlisten eller tabellen og kalenderfeeden: x"})
+sjekk("OBOS: egen status.json, og «terminlisten eller tabellen» får sin egen kategori",
+      _p[0][1].startswith("OBOS-ligaen: revisjon eller tabellkontroll\n"), _p[0][1])
+# Et steg med continue-on-error (outcome failure) gjør ikke en grønn kjøring til en feil.
+_p, _ut, _k = _lt_kjor(jobb="success", steg={**_GATE_AAPEN, "frys": {"outcome": "failure", "conclusion": "success"}}, status=_GRONN)
+sjekk("grønn kjøring der et steg med continue-on-error feilet, grønn status: livstegn", _p == [(_HC, None)], str(_p))
+_p, _ut, _k = _lt_kjor(jobb="cancelled", steg=_GATE_AAPEN, status={"ok": False, "error": _REV})
+sjekk("avbrutt kjøring: verken livstegn eller varsel", _p == [] and _k == 0, f"{_p} {_ut}")
+_p, _ut, _k = _lt_kjor(steg=_GATE_LUKKET, status=None)
+sjekk("status.json mangler og kjøringen er grønn: livstegn", _p == [(_HC, None)], str(_p))
+# Skriptet kan aldri gjøre kjøringen rød, og skriver aldri ut adressen.
+_p, _ut, _k = _lt_kjor(jobb="failure", steg=_feiler("oppdater"), status={"ok": False, "error": _TAB}, hc="")
+sjekk("uten hemmeligheten: ingen ping, exit 0, og feilen står som ::warning", _p == [] and _k == 0 and "ikke satt" in _ut and "::warning" in _ut, _ut)
+
+
+def _lt_nede(req, timeout=None):
+    raise _ue.URLError("nede")
+
+
+_p, _ut, _k = _lt_kjor(jobb="failure", steg=_feiler("oppdater"), status={"ok": False, "error": _TAB}, aapne=_lt_nede)
+sjekk("healthchecks svarer ikke: exit 0 likevel, og det sies", _k == 0 and "feilet" in _ut and "ble ikke sendt" in _ut, _ut)
+_alle_ut = "".join(_lt_kjor(jobb=j, steg=s, status=st)[1] for j, s, st in
+                   [("success", _GATE_AAPEN, _GRONN), ("failure", _feiler("oppdater"), {"ok": False, "error": _TAB}),
+                    ("success", _GATE_LUKKET, {"ok": False, "error": _REV})])
+sjekk("adressen (hemmeligheten) skrives aldri ut", "hemmelig-uuid" not in _alle_ut and "hc.example" not in _alle_ut, _alle_ut[:200])
+_p, _ut, _k = _lt_kjor(steg=_GATE_LUKKET, status=_GRONN, test=True)
+sjekk("testvarsel: først /fail merket TEST, så et livstegn rett etter",
+      [u for u, _ in _p] == [_HC + "/fail", _HC] and _p[0][1].startswith("TEST av varslingen") and _k == 0, str(_p))
+_lt.LIGAER, _lt.urllib.request.urlopen = _lt_ekte
+
+print("\n=== Ingen tellende kall når UTEN_TELLENDE=true (nytt forsøk ved rød status) ===")
+import oddspapi as _op_u, highlightly_source as _hls_u, hentelogg as _hl_u
+_u_dir = Path(_tf_l.mkdtemp())
+_u_ekte = (_op_u.urllib.request.urlopen, _op_u.budsjett_stopp, _op_u.BRUK_KATALOG, _hls_u._http, _hls_u.BRUK_KATALOG, _hl_u.KATALOG)
+_op_u.BRUK_KATALOG, _hls_u.BRUK_KATALOG, _hl_u.KATALOG = _u_dir / "op", _u_dir / "hl", _u_dir / "logg"
+_op_u.budsjett_stopp = lambda *a, **k: (False, "")
+_u_http = []
+
+
+class _USvar:
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *a):
+        return False
+
+    def read(self):
+        return b'{"data": []}'
+
+    headers = {}
+
+
+def _u_aapne(req, timeout=None):
+    _u_http.append(req.full_url.split("?")[0])
+    return _USvar()
+
+
+_op_u.urllib.request.urlopen = _u_aapne
+_hls_u._http = lambda sti, param: (_u_http.append("highlightly" + sti) or {"data": []})
+_for_op, _for_hl = _op_u.dagsbruk(), _hls_u.dagsbruk()
+with _vern.miljo(UTEN_TELLENDE="true"):
+    _svar = _op_u.call("/v4/fixtures", {"tournamentId": 20}, "nokkel")
+    sjekk("OddsPapi, tellende endepunkt (/v4/fixtures): ingen forespørsel, og svaret sier hvorfor",
+          _u_http == [] and _svar[0] is None and "tellende kall er slått av" in _svar[1], f"{_u_http} {_svar}")
+    sjekk("og kallet er ikke talt", _op_u.dagsbruk() == _for_op, f"{_for_op} -> {_op_u.dagsbruk()}")
+    sjekk("og det logges som «hoppet», ikke feil (gjør ikke kildevakten rød)",
+          [r["utfall"] for r in _hl_u.les() if r["kilde"] == "oddspapi-fixtures"] == ["hoppet"], str(_hl_u.les()))
+    _op_u.call("/v4/historical-odds", {"fixtureId": "x"}, "nokkel")
+    sjekk("OddsPapi, gratisoppslaget (/v4/historical-odds) går som før", len(_u_http) == 1 and "historical-odds" in _u_http[0], str(_u_http))
+    _u_http.clear()
+    try:
+        _hls_u.kall("/matches", {"date": "2026-10-12"}); _kast = None
+    except _hls_u.Budsjett as e:
+        _kast = str(e)
+    sjekk("Highlightly: ingen forespørsel, Budsjett med begrunnelsen", _u_http == [] and _kast is not None and "tellende kall er slått av" in _kast, f"{_u_http} {_kast}")
+    sjekk("og kallet er ikke talt", _hls_u.dagsbruk() == _for_hl, f"{_for_hl} -> {_hls_u.dagsbruk()}")
+# Motprøve: uten flagget går begge kallene ut og telles.
+_u_http.clear()
+_op_u.call("/v4/fixtures", {"tournamentId": 20}, "nokkel")
+_hls_u.kall("/matches", {"date": "2026-10-12"})
+sjekk("motprøve uten UTEN_TELLENDE: begge kallene går ut og telles",
+      len(_u_http) == 2 and _op_u.dagsbruk() == _for_op + 1 and _hls_u.dagsbruk() == _for_hl + 1,
+      f"{_u_http} {_op_u.dagsbruk()} {_hls_u.dagsbruk()}")
+(_op_u.urllib.request.urlopen, _op_u.budsjett_stopp, _op_u.BRUK_KATALOG, _hls_u._http, _hls_u.BRUK_KATALOG, _hl_u.KATALOG) = _u_ekte
+
+print("\n=== Workflowene: siste steg er livstegn.py, og porten sender sperren videre ===")
+for _wf_navn, _liga_l, _hem in (("update-data.yml", "eliteserien", "HEALTHCHECK_UPDATE_DATA"), ("obos-results.yml", "obos", "HEALTHCHECK_OBOS")):
+    _wt = (ROT / ".github" / "workflows" / _wf_navn).read_text("utf-8")
+    _stegene = _wt.split("\n      - ")[1:]
+    _siste = "\n".join(l for l in _stegene[-1].splitlines() if not l.strip().startswith("#"))
+    sjekk(f"{_wf_navn}: siste steg kjører scripts/livstegn.py {_liga_l}, også når kjøringen er rød (ikke ved avbrutt)",
+          f"python3 scripts/livstegn.py {_liga_l}" in _siste and "if: ${{ !cancelled() }}" in _siste
+          and "hentelogg.py sjekk" in _stegene[-2], _siste[:200])
+    sjekk(f"{_wf_navn}: steget får hemmeligheten {_hem}, job.status og stegenes utfall, og har ingen curl eller continue-on-error",
+          f"HC_URL: ${{{{ secrets.{_hem} }}}}" in _siste and "JOBB_STATUS: ${{ job.status }}" in _siste
+          and "STEG: ${{ toJSON(steps) }}" in _siste and "curl" not in _siste and "continue-on-error" not in _siste, _siste)
+    _ider = set(_re_u.findall(r"\n        id: (\w+)", _wt))
+    sjekk(f"{_wf_navn}: stegene som kan gjøre kjøringen rød har id-ene livstegn.py kjenner",
+          {"gate", "revisjon", "sesongskifte", "resultatregel", "kildevakt"} <= _ider
+          and ("oppdater" in _ider if _liga_l == "eliteserien" else {"resultater", "bygg"} <= _ider), str(sorted(_ider)))
+    sjekk(f"{_wf_navn}: porten kjører should_fetch.py, som skriver UTEN_TELLENDE til resten av jobben",
+          "python3 scripts/should_fetch.py" in _wt and 'f.write("UTEN_TELLENDE=true\\n")' in (ROT / "scripts" / "should_fetch.py").read_text("utf-8"))
+sjekk("alle steg-id-ene i livstegn.py finnes i minst én av de to workflowene",
+      all(any(f"\n        id: {sid}\n" in (ROT / ".github" / "workflows" / w).read_text("utf-8") for w in ("update-data.yml", "obos-results.yml"))
+          for sid, _ in _lt.STEG_KATEGORI), str([s for s, _ in _lt.STEG_KATEGORI]))
 
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.

@@ -16,7 +16,14 @@ Kjører videre hvis:
   - klokka er rundt 06 norsk tid (den daglige football-data.co.uk-sjekken,
     se fetch_odds_history.py — den trenger et vertskap selv på stille dager
     uten kamper), ELLER
-  - FORCE_FETCH=true (manuell workflow_dispatch skal alltid kjøre).
+  - FORCE_FETCH=true (manuell workflow_dispatch skal alltid kjøre), ELLER
+  - status.json har ok: false, og det er minst 55 minutter siden siste sjekk
+    (12.10.2026). Da er kjøringen et NYTT FORSØK UTEN TELLENDE KALL
+    (uten_tellende=true, og UTEN_TELLENDE=true til resten av jobben): bare
+    gratiskildene brukes. Uten dette åpnet porten først ved neste kamp eller
+    etter 20 timer, og en feil kunne stå i et døgn i en landskampspause.
+    Tiden regnes fra siste sjekk, ikke fra klokkeslettet: GitHub forsinker
+    planlagte kjøringer, så et minuttvindu treffer tilfeldig.
 """
 import json
 import os
@@ -122,10 +129,70 @@ def pending_elapsed_minutes(fixtures, now):
     return out
 
 
+# Nytt forsøk når status.json er rød: tidligst så lenge etter siste sjekk.
+ROD_FORSOK_MIN = 55
+
+
+def _siste_sjekk(liga):
+    """Siste tidspunkt vi vet om for en sjekk eller et forsøk: last_checked
+    (Eliteserien) eller built_at (OBOS) i status.json, og forrige forsøk på
+    grunn av rød status (daglig_state.json, så et forsøk som feiler før
+    status.json er skrevet på nytt, også teller)."""
+    try:
+        st = json.loads((LIGAER[liga] / "data" / "status.json").read_text(encoding="utf-8"))
+    except Exception:
+        st = {}
+    tider = [_tid(st.get(k)) for k in ("last_checked", "built_at")]
+    tider.append(_tid(les_daglig(liga).get("siste_rodt_forsok")))
+    tider = [x if x.tzinfo else x.replace(tzinfo=timezone.utc) for x in tider if x]
+    return st, (max(tider) if tider else None)
+
+
+def rodt_forsok(liga, now):
+    """(nytt forsøk?, begrunnelse). Bare når status.json har ok: false."""
+    st, sist = _siste_sjekk(liga)
+    if st.get("ok") is not False:
+        return False, ""
+    if sist is None:
+        return True, "status.json er rød (ingen tidligere sjekk registrert): nytt forsøk uten tellende kall"
+    minutter = (now - sist).total_seconds() / 60
+    if minutter >= ROD_FORSOK_MIN:
+        return True, f"status.json er rød, og siste sjekk var for {minutter:.0f} min siden: nytt forsøk uten tellende kall"
+    return False, f"status.json er rød, men siste sjekk var for {minutter:.0f} min siden (nytt forsøk etter {ROD_FORSOK_MIN})"
+
+
+def merk_rodt_forsok(liga, now):
+    d = les_daglig(liga)
+    d["siste_rodt_forsok"] = now.isoformat(timespec="seconds")
+    p = daglig_sti(liga)
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
+
+
+def vurder(now=None, liga="eliteserien"):
+    """(kjør?, begrunnelse, uten_tellende). De vanlige reglene først, uendret;
+    åpner ingen av dem, og status.json er rød, åpner porten for et nytt forsøk
+    uten tellende kall."""
+    now = now or datetime.now(timezone.utc)
+    ok, grunn = _vanlig(now, liga)
+    if ok:
+        return True, grunn, False
+    nytt, hvorfor = rodt_forsok(liga, now)
+    if nytt:
+        merk_rodt_forsok(liga, now)
+        return True, hvorfor, True
+    return False, grunn + (f"; {hvorfor}" if hvorfor else ""), False
+
+
 def should_fetch(now=None, liga="eliteserien"):
+    """(kjør?, begrunnelse), som før. Se vurder() for uten_tellende."""
+    ok, grunn, _ = vurder(now, liga)
+    return ok, grunn
+
+
+def _vanlig(now, liga):
     if os.environ.get("FORCE_FETCH") == "true":
         return True, "manuelt trigget (workflow_dispatch uten planlagt=true)"
-    now = now or datetime.now(timezone.utc)
 
     path = LIGAER[liga] / "data" / "fixtures.json"
     if not path.exists():
@@ -155,12 +222,24 @@ def should_fetch(now=None, liga="eliteserien"):
     return False, f"ingen kamper har startet for over 105 minutter siden uten resultat ({hvorfor})"
 
 
+def meld(liga, ok, reason, uten_tellende, miljo=None):
+    """Skriver utfallet: begrunnelsen til stderr, should_fetch og uten_tellende
+    til GITHUB_OUTPUT, og UTEN_TELLENDE=true til GITHUB_ENV, altså til ALLE
+    senere steg i jobben. Sperren ligger i oddspapi.call og
+    highlightly_source.kall, så ingen kodevei kan gjøre et tellende kall."""
+    miljo = os.environ if miljo is None else miljo
+    print(f"[{liga}] {reason}", file=sys.stderr)
+    if miljo.get("GITHUB_OUTPUT"):
+        with open(miljo["GITHUB_OUTPUT"], "a", encoding="utf-8") as f:
+            f.write(f"should_fetch={'true' if ok else 'false'}\n")
+            f.write(f"uten_tellende={'true' if uten_tellende else 'false'}\n")
+    if miljo.get("GITHUB_ENV") and uten_tellende:
+        with open(miljo["GITHUB_ENV"], "a", encoding="utf-8") as f:
+            f.write("UTEN_TELLENDE=true\n")
+    print(f"should_fetch={ok}")
+    print(f"uten_tellende={uten_tellende}")
+
+
 if __name__ == "__main__":
     liga = sys.argv[1] if len(sys.argv) > 1 else "eliteserien"
-    ok, reason = should_fetch(liga=liga)
-    print(f"[{liga}] {reason}", file=sys.stderr)
-    gh_output = os.environ.get("GITHUB_OUTPUT")
-    if gh_output:
-        with open(gh_output, "a", encoding="utf-8") as f:
-            f.write(f"should_fetch={'true' if ok else 'false'}\n")
-    print(f"should_fetch={ok}")
+    meld(liga, *vurder(liga=liga))

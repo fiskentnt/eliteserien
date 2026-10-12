@@ -123,15 +123,28 @@ og at portene stopper dem når det ikke er noe å gjøre.
 
 Varsel når noe har vært galt en stund, uten åpen økt, Mac eller GitHub sin
 cron. Fire sjekker hos healthchecks.io, hver med sin hemmelige ping-adresse.
-Hver av dem får et livstegn bare når alt gikk bra; feiler en runde eller en
-kjøring, sendes ingenting. Kommer det ikke livstegn innenfor tidsplanen pluss
-slingringsmonnet, sender healthchecks e-post.
+Hver av dem får et livstegn bare når alt gikk bra. Kommer det ikke livstegn
+innenfor tidsplanen pluss slingringsmonnet, sender healthchecks e-post.
+
+De to datajobbene og Pages-vakten sier dessuten fra med en gang
+(`/fail`, e-post straks). For datajobbene (12.10.2026, `scripts/livstegn.py`,
+siste steg): er kjøringen rød, eller har `status.json` `ok: false`, sendes
+`/fail` med en tekst om hva som feilet (datafeil, revisjon, tabellkontroll,
+resultat uten kontroll, kilde ute, sesongskifte). Det gjelder også grønne
+kjøringer, med åpen eller lukket port: en feil som står, holder sjekken nede
+til en ekte kjøring har rettet den. Gjentatte `/fail` gir ingen ny e-post.
+Så lenge `status.json` er rød, åpner porten (`scripts/should_fetch.py`) for et
+nytt forsøk når det er minst 55 minutter siden siste sjekk. Slike forsøk bruker
+ingen tellende kall: `UTEN_TELLENDE=true` settes for hele jobben, og sperren
+ligger i `oddspapi.call` og `highlightly_source.kall`. Et testvarsel sendes med
+`gh workflow run update-data.yml -f planlagt=true -f testvarsel=true` (et
+`/fail` merket TEST, og et livstegn rett etter).
 
 | Sjekk | Livstegn når | Hemmelighet |
 |---|---|---|
 | `tabellkalkulator-planlegger` | workeren fikk 204 fra GitHub for alle utløsningene i en planlagt runde | `HEALTHCHECK_URL` i Cloudflare |
-| `tabellkalkulator-update-data` | en kjøring av `update-data.yml` er grønn (siste steg) | `HEALTHCHECK_UPDATE_DATA` i GitHub |
-| `tabellkalkulator-obos-results` | en kjøring av `obos-results.yml` er grønn (siste steg) | `HEALTHCHECK_OBOS` i GitHub |
+| `tabellkalkulator-update-data` | en kjøring av `update-data.yml` er grønn og `eliteserien/data/status.json` er grønn (siste steg). Ellers `/fail` med en gang | `HEALTHCHECK_UPDATE_DATA` i GitHub |
+| `tabellkalkulator-obos-results` | en kjøring av `obos-results.yml` er grønn og `obos/data/status.json` er grønn (siste steg). Ellers `/fail` med en gang | `HEALTHCHECK_OBOS` i GitHub |
 | `tabellkalkulator-pages` | `pages-vakt.yml` finner alt på main publisert, eller den eldste upubliserte commiten under 30 minutter gammel. Eldre enn det: `/fail`, og e-post med en gang, også om natten (7.10.2026) | `HEALTHCHECK_PAGES` i GitHub |
 
 Pages-vakten (`pages-vakt.yml`) kjøres etter hver «Oppdater kampdata», etter

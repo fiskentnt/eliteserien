@@ -22,6 +22,10 @@ on:
         description: "Bare vis hva som ville skjedd"
         type: boolean
         default: false
+      testvarsel:
+        description: "Send et testvarsel (/fail merket TEST) til healthchecks og et livstegn rett etter"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -87,9 +91,15 @@ jobs:
           # Den eksterne planleggeren kaller hvert 10. minutt, saa uten denne
           # porten ville kvoten vaert brukt opp paa tre dager.
           FORCE_FETCH: ${{ github.event_name == 'workflow_dispatch' && !inputs.planlagt && 'true' || 'false' }}
+        # Har status.json ok: false, og det er minst 55 minutter siden siste
+        # sjekk, åpner porten for et NYTT FORSØK UTEN TELLENDE KALL
+        # (12.10.2026): should_fetch.py setter da UTEN_TELLENDE=true for
+        # resten av jobben, og oddspapi.call og highlightly_source.kall slipper
+        # ingen tellende forespørsel ut.
         run: python3 scripts/should_fetch.py obos
 
       - name: Hent og valider resultater
+        id: resultater
         if: steps.gate.outputs.should_fetch == 'true'
         env:
           ODDSPAPI_KEY: ${{ secrets.ODDSPAPI_KEY }}
@@ -328,6 +338,7 @@ jobs:
           exit 1
 
       - name: Gjør kjøringen rød hvis et resultat står uten kontroll eller i konflikt
+        id: resultatregel
         # Også sist, av samme grunn: resultatene og tabellen er lagret.
         # Ligasiden alene publiseres etter 24 timer uten uavhengig kilde, og
         # står da som ukontrollert til en annen leverandør bekrefter det
@@ -336,6 +347,7 @@ jobs:
         run: python3 scripts/resultatregel.py sjekk obos
 
       - name: Gjør kjøringen rød hvis en kilde er ute
+        id: kildevakt
         # SIST, og etter at data er lagret: en kilde som har feilet flere
         # ganger paa rad skal gjore kjoringen rod, men den skal ikke hindre
         # at dagens data blir skrevet. Derfor staar dette etter committeren,
@@ -347,16 +359,18 @@ jobs:
         if: always()
         run: python3 scripts/hentelogg.py sjekk
 
-      - name: Livstegn til healthchecks.io (bare når hele kjøringen er grønn)
-        # SIST, etter kildevakten. Dødmannsknappen (planlegger/README.md):
-        # livstegnet sendes bare når alle stegene over gikk bra (standard-
-        # vilkåret success()). En rød kjøring sender ingenting, og kommer det
-        # ikke livstegn innenfor tidsplanen (09-21 UTC, 60 minutter
-        # slingringsmonn), får eieren e-post. Livstegnet kan aldri gjøre
-        # kjøringen rød: mangler hemmeligheten eller svarer ikke healthchecks,
-        # avsluttes steget med 0.
+      - name: Livstegn eller varsel til healthchecks.io
+        # SIST, etter kildevakten (12.10.2026, scripts/livstegn.py). Er
+        # kjøringen rød, eller har status.json ok: false, sendes /fail med en
+        # tekst om hva som feilet (datafeil, revisjon, tabellkontroll, ...), og
+        # eieren får e-post med en gang. Ellers et livstegn. Gjentatte /fail
+        # mens sjekken er nede gir ingen ny e-post. Skriptet kan aldri gjøre
+        # kjøringen rød (exit 0 også uten hemmeligheten og når healthchecks
+        # ikke svarer). Ikke ved avbrutt.
+        if: ${{ !cancelled() }}
         env:
           HC_URL: ${{ secrets.HEALTHCHECK_OBOS }}
-        run: |
-          if [ -z "$HC_URL" ]; then echo "HEALTHCHECK_OBOS er ikke satt -- ingen livstegn."; exit 0; fi
-          if curl -fsS -m 10 --retry 3 -o /dev/null "$HC_URL"; then echo "Livstegn sendt."; else echo "Livstegnet feilet (ingen betydning for kjøringen)."; fi
+          JOBB_STATUS: ${{ job.status }}
+          STEG: ${{ toJSON(steps) }}
+          TESTVARSEL: ${{ inputs.testvarsel && 'true' || 'false' }}
+        run: python3 scripts/livstegn.py obos

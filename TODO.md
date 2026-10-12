@@ -3,6 +3,25 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Varsel med en gang, og nytt forsøk hver time når status er rød (12.10.2026)
+
+9.10. sto Rosenborg-Start med 7.1. i fire timer uten varsel: de røde
+timekjøringene sendte ingenting, og kjøringene med lukket port var grønne og
+sendte livstegn hvert tiende minutt (6 røde, 21 grønne). Nå, for både
+«Oppdater kampdata» og «OBOS: hent resultater» (scripts/livstegn.py, siste
+steg): er kjøringen rød, eller har status.json ok: false, sendes /fail til
+healthchecks med en tekst om hva som feilet; ellers livstegn. Det gjelder også
+grønne kjøringer med åpen port (et avvik i revisjonen holder status rød).
+Porten (should_fetch.py) åpner for et nytt forsøk når status.json er rød og
+det er minst 55 minutter siden siste sjekk (ikke etter minuttet i timen:
+GitHub forsinker kjøringene). Slike forsøk bruker ingen tellende kall:
+UTEN_TELLENDE=true for hele jobben, og sperren ligger i oddspapi.call og
+highlightly_source.kall. Testvarsel: workflow_dispatch med testvarsel=true.
+
+Tester: tests/kilder/test_kilder.py («Livstegn eller varsel», «Porten: nytt
+forsøk hver time», «Ingen tellende kall»), tests/regression.js
+(«Dødmannsknappen»).
+
 ## Spilte kamper beholder dato, avspark og runde (8.10.2026)
 
 eliteserien.no/resultater viste 7.10. Start-Tromsø (spilt 3.5.) som
@@ -16,9 +35,11 @@ Eliteserien og i obos_build_data.py for OBOS, og i parse_rad på
 resultatsiden), med AVVIK og ::warning. Bare innen samme sesong: neste års
 kamp for de samme lagene røres ikke.
 
-**Venter på svar:** uspilte kamper flyttes bare når en annen kilde viser den
-samme nye datoen og tiden. fotball.no (nff-cache, fra 30.9.) hentes etter
-regelen fra 1.10. bare som reserve (robots.txt), så kilden må bestemmes.
+Uspilte kamper (10.10.2026): i Eliteserien flyttes en uspilt kamp bare når
+ESPN (sesongkallet) viser samme nye dato og tid, med kalenderfeeden som
+reserve; ellers beholdes vår, med ADVARSEL (reconcile_ny.bekreft_flytting).
+**Gjenstår:** samme regel for OBOS, bekreftet av Highlightly fra den daglige
+hentingen.
 
 Tester: tests/kilder/test_kilder.py, «En spilt kamp beholder dato».
 
