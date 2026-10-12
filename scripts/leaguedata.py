@@ -166,3 +166,20 @@ def forrige_terminliste(data_dir, sesong, forventet_par=None, log=lambda s: None
 
 def write_json(path, data, indent=2):
     path.write_text(json.dumps(data, ensure_ascii=False, indent=indent) + "\n", encoding="utf-8")
+
+
+def meld_data_skrevet(miljo=None):
+    """Sier fra til workflowen at kampene, terminlisten og modellen er skrevet
+    (data_skrevet=true i stegets utdata, 12.10.2026). Stegene etter
+    dataskriptet -- historikken, treffsikkerhetsloggen, delingsbildet,
+    revisjonen -- kjøres da også når kontrollene til slutt gjør skriptet
+    rødt. Krasjer skriptet før dette, hoppes de over som før. Utenfor
+    Actions (ingen GITHUB_OUTPUT) gjør den ingenting."""
+    import os
+    miljo = os.environ if miljo is None else miljo
+    sti = miljo.get("GITHUB_OUTPUT")
+    if not sti:
+        return False
+    with open(sti, "a", encoding="utf-8") as f:
+        f.write("data_skrevet=true\n")
+    return True

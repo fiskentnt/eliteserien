@@ -52,6 +52,8 @@ STEG_KATEGORI = (
 def kategori_av_tekst(tekst):
     """Hva feilteksten i status.json gjelder."""
     t = (tekst or "").lower()
+    if "kontroller fant avvik" in t:            # flere kontroller slo ut i samme kjøring
+        return "flere kontroller"
     if "terminlisten eller tabellen" in t:      # OBOS-byggingen skriver begge i én feil
         return "revisjon eller tabellkontroll"
     if "tabellen" in t:

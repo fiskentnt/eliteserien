@@ -3827,6 +3827,289 @@ sjekk("alle steg-id-ene i livstegn.py finnes i minst én av de to workflowene",
       all(any(f"\n        id: {sid}\n" in (ROT / ".github" / "workflows" / w).read_text("utf-8") for w in ("update-data.yml", "obos-results.yml"))
           for sid, _ in _lt.STEG_KATEGORI), str([s for s, _ in _lt.STEG_KATEGORI]))
 
+print("\n=== Kontrollene stopper ikke resten (update_data.etter_skriving, 12.10.2026) ===")
+# Før stoppet «mangler sluttresultat» og datovaktene kjøringen FØR sluttoddsen
+# og modellen. Nå: arbeidet først, kontrollene til slutt, alle kjøres, og
+# kjøringen blir rød med alle som slo ut. Rekkefølgen måles med innbyttede
+# funksjoner som skriver seg inn i en liste.
+import update_data as _uda
+import leaguedata as _lda
+import livstegn as _lta
+import tempfile as _tfa
+import shutil as _sha
+from datetime import timedelta as _tda
+
+_a_naa = _dt(2026, 10, 9, 21, 30, tzinfo=_tz.utc)
+_a_kamper = [{"date": "2026-10-04", "time": "17:00", "round": 21, "home": "Brann", "away": "Molde", "hg": 2, "ag": 1}]
+# Brann-Viking hadde avspark 9.10. kl. 19:00 norsk tid (17:00Z): 4,5 timer før _a_naa.
+_a_fx_sen = [{"round": 22, "matches": [{"home": "Brann", "away": "Viking", "date": "2026-10-09", "time": "19:00", "played": False}]}]
+_a_fx_ok = [{"round": 23, "matches": [{"home": "Viking", "away": "Brann", "date": "2026-10-18", "time": "17:00", "played": False}]}]
+_a_tk_ok = {"errors": 0, "avvik": []}
+_a_tk_rod = {"errors": 2, "avvik": ["Tabell, Brann: 2 uavgjort hos oss, 3 hos ligasiden", "Tabell, Viking: 17 vunnet hos oss, 16 hos ligasiden"]}
+
+
+def _a_kjor(fixtures, tk, datofeil=None, utenfor=(), merged=None, daglig=None, modell=None):
+    """Kjører etter_skriving med innbyttet arbeid. Returnerer (rekkefølgen, feilen eller None)."""
+    logg = []
+    ekte = (_uda.fetch_odds_history.main, _uda.merge_odds.main, _uda.fit_model.main, _uda.run_daily_audit,
+            _uda.write_status, _uda.should_fetch.merk_ok, _lda.meld_data_skrevet, _uda.sjekk_manglende_resultat)
+    ekte_mangler = _uda.sjekk_manglende_resultat
+
+    def _mangler(fx, naa, log):
+        logg.append("kontroll: mangler sluttresultat")
+        return ekte_mangler(fx, naa, log)
+
+    def _daglig(m, k, naa, log):
+        logg.append("kontroll: daglig")
+        return daglig() if daglig else True
+    _uda.fetch_odds_history.main = lambda: logg.append("sluttodds")
+    _uda.merge_odds.main = lambda: logg.append("odds slått sammen")
+    _uda.fit_model.main = modell or (lambda: logg.append("modell"))
+    _uda.run_daily_audit = _daglig
+    _uda.write_status = lambda ok, now, error=None: logg.append(f"status ok={ok}")
+    _uda.should_fetch.merk_ok = lambda liga, naa=None: logg.append("20-timersklokka nullstilt")
+    _lda.meld_data_skrevet = lambda miljo=None: logg.append("data skrevet")
+    _uda.sjekk_manglende_resultat = _mangler
+    try:
+        with _vern.miljo(ODDSPAPI_KEY=None):
+            _uda.etter_skriving(_a_kamper, fixtures, merged if merged is not None else _a_kamper, list(utenfor),
+                                datofeil, tk, [], _a_naa, lambda _s: None)
+        feilen = None
+    except Exception as e:
+        feilen = e
+    finally:
+        (_uda.fetch_odds_history.main, _uda.merge_odds.main, _uda.fit_model.main, _uda.run_daily_audit,
+         _uda.write_status, _uda.should_fetch.merk_ok, _lda.meld_data_skrevet, _uda.sjekk_manglende_resultat) = ekte
+    return logg, feilen
+
+
+_ARBEID = ["sluttodds", "odds slått sammen", "modell", "data skrevet"]
+_logg, _e = _a_kjor(_a_fx_ok, _a_tk_ok)
+sjekk("alt i orden: arbeidet først, så kontrollene, så grønn status og nullstilt 20-timersklokke",
+      _e is None and _logg == _ARBEID + ["kontroll: mangler sluttresultat", "kontroll: daglig", "20-timersklokka nullstilt", "status ok=True"],
+      f"{_logg} {_e!r}")
+
+_logg, _e = _a_kjor(_a_fx_sen, _a_tk_ok)
+sjekk("kamp uten resultat 4,5 timer etter avspark: sluttodds, odds og modell er kjørt FØR kontrollen slår ut",
+      isinstance(_e, _uda.DataAuditError) and _logg[:4] == _ARBEID and _logg.index("modell") < _logg.index("kontroll: mangler sluttresultat"),
+      f"{_logg} {_e!r}")
+sjekk("og den daglige kontrollen kjørte selv om «mangler sluttresultat» slo ut (ingen kontroll stopper de andre)",
+      "kontroll: daglig" in _logg and _logg.index("kontroll: daglig") > _logg.index("kontroll: mangler sluttresultat"), str(_logg))
+sjekk("én kontroll: feilteksten er den samme som før, og status skrives ikke grønn",
+      str(_e).startswith("1 kamp(er) mangler sluttresultat mer enn 3 timer etter avspark:") and "Brann-Viking" in str(_e)
+      and "status ok=True" not in _logg, f"{str(_e)[:200]} {_logg}")
+
+_logg, _e = _a_kjor(_a_fx_sen, _a_tk_rod)
+_l1 = str(_e).splitlines()[0]
+sjekk("to kontroller slår ut samtidig: første linje nevner begge, og begge tekstene står under",
+      isinstance(_e, _uda.DataAuditError) and _l1 == "2 kontroller fant avvik: mangler sluttresultat; tabellkontroll"
+      and "Brann-Viking (2026-10-09 19:00)" in str(_e) and "2 kritisk(e) avvik mellom tabellen vår og tabellen på ligasiden: Tabell, Brann" in str(_e),
+      str(_e)[:500])
+sjekk("og modellen er likevel tilpasset, og «data skrevet» er meldt før kontrollene", _logg[:4] == _ARBEID, str(_logg))
+
+# Den daglige kontrollen slår ut: vedlikeholdet er ikke utført, så
+# 20-timersklokka nullstilles ikke (da prøves det igjen etter en time).
+def _a_daglig_rod():
+    raise _uda.DataAuditError("1 avvik mellom matches.json og kontrollkilden:\nBrann-Molde: 2-1 hos oss, 3-1 hos kontrollkilden")
+_logg, _e = _a_kjor(_a_fx_ok, _a_tk_rod, daglig=_a_daglig_rod)
+sjekk("den daglige kontrollen slår ut: rødt, 20-timersklokka nullstilles IKKE, og tabellkontrollen sies fra om i samme feil",
+      isinstance(_e, _uda.DataAuditError) and "20-timersklokka nullstilt" not in _logg
+      and str(_e).splitlines()[0] == "2 kontroller fant avvik: daglig kontroll; tabellkontroll", f"{_logg} {str(_e)[:300]}")
+_logg, _e = _a_kjor(_a_fx_ok, _a_tk_rod)
+sjekk("bare tabellkontrollen slår ut: det daglige vedlikeholdet er utført, så klokka nullstilles (som før), og feilteksten er uendret",
+      isinstance(_e, _uda.DataAuditError) and "20-timersklokka nullstilt" in _logg
+      and str(_e) == "2 kritisk(e) avvik mellom tabellen vår og tabellen på ligasiden: Tabell, Brann: 2 uavgjort hos oss, 3 hos ligasiden",
+      f"{_logg} {str(_e)[:300]}")
+
+# Datovaktene: bare det å gjøre kjøringen rød ligger til slutt.
+_logg, _e = _a_kjor(_a_fx_ok, _a_tk_ok, datofeil="ingen_autoritet", utenfor=())
+sjekk("ingen autoritativ sesong: rødt til slutt, etter modellen, med beskjeden om sesonger.json",
+      isinstance(_e, _uda.DataAuditError) and _logg[:4] == _ARBEID and "data/sesonger.json" in str(_e), f"{_logg} {str(_e)[:200]}")
+_a_mange = [{"home": f"A{i}", "away": f"B{i}"} for i in range(100)]
+_logg, _e = _a_kjor(_a_fx_ok, _a_tk_ok, utenfor=[f"A{i}-B{i} (2026-01-07)" for i in range(26)], merged=_a_mange)
+sjekk("26 av 100 datoer utenfor sesongen: rødt til slutt, etter modellen",
+      isinstance(_e, _uda.DataAuditError) and _logg[:4] == _ARBEID and str(_e).startswith("26 av 100 kamper hadde dato utenfor sesongen"),
+      f"{_logg} {str(_e)[:200]}")
+_logg, _e = _a_kjor(_a_fx_ok, _a_tk_ok, utenfor=[f"A{i}-B{i} (2026-01-07)" for i in range(25)], merged=_a_mange)
+sjekk("motprøve: 25 av 100 er enkeltfeil (datoene er alt beholdt), ikke rødt", _e is None and "status ok=True" in _logg, f"{_logg} {_e!r}")
+
+# Et krasj i arbeidet er ikke en kontroll: det stopper som før, og «data
+# skrevet» meldes ikke.
+def _a_modell_krasj():
+    raise RuntimeError("modellen konvergerte ikke")
+_logg, _e = _a_kjor(_a_fx_sen, _a_tk_rod, modell=_a_modell_krasj)
+sjekk("krasjer modellen: kjøringen stopper der (som før), «data skrevet» meldes ikke, og kontrollene kjøres ikke",
+      isinstance(_e, RuntimeError) and "data skrevet" not in _logg and not any(l.startswith("kontroll") for l in _logg), f"{_logg} {_e!r}")
+
+# data_skrevet til workflowen.
+_a_ut = Path(_tfa.mkdtemp()) / "github_output"
+_a_ut.write_text("should_fetch=true\n", encoding="utf-8")
+sjekk("meld_data_skrevet legger data_skrevet=true til i stegets utdata (GITHUB_OUTPUT)",
+      _lda.meld_data_skrevet({"GITHUB_OUTPUT": str(_a_ut)}) is True
+      and _a_ut.read_text("utf-8") == "should_fetch=true\ndata_skrevet=true\n", _a_ut.read_text("utf-8"))
+sjekk("utenfor Actions (ingen GITHUB_OUTPUT) gjør den ingenting", _lda.meld_data_skrevet({}) is False)
+
+# Varselet: flere kontroller i én e-post.
+_a_status = {"ok": False, "error": _uda.samlet_feiltekst([("mangler sluttresultat", "1 kamp(er) mangler sluttresultat"),
+                                                           ("tabellkontroll", "2 kritisk(e) avvik mellom tabellen vår og tabellen på ligasiden")])[:300]}
+sjekk("livstegn: to kontroller gir kategorien «flere kontroller», og detaljen nevner begge",
+      _lta.hva_feilet("failure", {"oppdater": {"outcome": "failure"}}, _a_status)
+      == ("flere kontroller", "2 kontroller fant avvik: mangler sluttresultat; tabellkontroll"),
+      str(_lta.hva_feilet("failure", {"oppdater": {"outcome": "failure"}}, _a_status)))
+sjekk("livstegn: én kontroll gir samme kategori som før (tabellkontroll)",
+      _lta.hva_feilet("failure", {"oppdater": {"outcome": "failure"}},
+                      {"ok": False, "error": "2 kritisk(e) avvik mellom tabellen vår og tabellen på ligasiden: Tabell, Brann"})[0] == "tabellkontroll")
+
+print("\n=== Datovakten beholder den gamle datoen FØR noe skrives (hele update_data.main i en sandkasse) ===")
+# 9.10.2026 viste ligasiden Rosenborg-Start (7.11.) som 7.1. En mistenkelig
+# dato skal aldri ut på siden: rimelige_datoer() setter den gamle datoen
+# tilbake før matches.json og fixtures.json skrives. Det eneste som ligger til
+# slutt, er å gjøre kjøringen rød når det er mange slike. Her kjøres hele
+# main() med dataene fra 1.10. og kildene byttet ut.
+_a_sb = Path(_tfa.mkdtemp())
+(_a_sb / "eliteserien" / "data").mkdir(parents=True)
+(_a_sb / "data").mkdir()
+for _f in ("matches.json", "fixtures.json"):
+    _sha.copy(ROT / "tests" / "data" / "2026-10-01" / "eliteserien" / "data" / _f, _a_sb / "eliteserien" / "data" / _f)
+(_a_sb / "data" / "sesonger.json").write_text(json.dumps(
+    {"version": 2, "ligaer": {"eliteserien": {"aktiv": "2026", "sesonger": {"2026": {"status": "aktiv"}}}}}), encoding="utf-8")
+_a_liste = _lda.forrige_terminliste(_a_sb / "eliteserien" / "data", "2026")
+_a_uspilte = [r for r in _a_liste if r["hg"] is None]
+_a_forste = min(_dt.fromisoformat(f"{r['date']}T{r['time']}").replace(tzinfo=ZoneInfo("Europe/Oslo")) for r in _a_uspilte)
+_a_naa_m = (_a_forste - _tda(hours=2)).astimezone(_tz.utc)      # ingen kamp venter på resultat
+_a_offer = _a_uspilte[-1]                                        # siste uspilte kamp i terminlisten
+_a_gamle = {(r["home"], r["away"]): (r["date"], r["time"]) for r in _a_liste}
+
+
+def _a_main(ntf_rader):
+    """Kjører update_data.main i sandkassen. Returnerer (feilen eller None, rekkefølgen, datoene på disk da modellen ble tilpasset)."""
+    import tabellkontroll as _tka, daglig_revisjon as _dra
+    logg, paa_disk = [], {}
+    d = _a_sb / "eliteserien" / "data"
+    for _f in ("matches.json", "fixtures.json"):
+        _sha.copy(ROT / "tests" / "data" / "2026-10-01" / "eliteserien" / "data" / _f, d / _f)
+    for _f in ("status.json", "audit_state.json", "audit_tabell.json", "results_state.json", "github_output"):
+        (d / _f).unlink(missing_ok=True)
+    ekte = (_uda.ROOT, _uda.LEAGUE, _uda.STATE, _uda.STATUS_PATH, _uda.AUDIT_STATE_PATH, _uda.espn_source.fetch_all,
+            _uda.ligasiden_eller_reserve, _uda.get_ffk_rows, _uda.espn_source.fetch_season, _uda.ntf_source.hent_kalender,
+            _uda.ntf_source.siste_tabell, _uda.fetch_odds_history.main, _uda.merge_odds.main, _uda.fit_model.main,
+            _uda.should_fetch.merk_ok, _tka.avvik, _dra.data_katalog)
+
+    def _modell():
+        logg.append("modell")
+        paa_disk.update({(r["home"], r["away"]): (r["date"], r["time"]) for r in _lda.forrige_terminliste(d, "2026")})
+
+    def _ikke_kall(*a, **k):
+        logg.append("NETTKALL")
+        raise RuntimeError("testen skal ikke trenge denne kilden")
+    _ekte_avvik = _tka.avvik
+    (_uda.ROOT, _uda.LEAGUE, _uda.STATE, _uda.STATUS_PATH, _uda.AUDIT_STATE_PATH) = (
+        _a_sb, _a_sb / "eliteserien", d / "results_state.json", d / "status.json", d / "audit_state.json")
+    _uda.espn_source.fetch_all = lambda cache_dir=None, log=None: []
+    _uda.ligasiden_eller_reserve = lambda cache_dir=None, log=None: [dict(r) for r in ntf_rader]
+    _uda.get_ffk_rows = lambda cache_dir, log: [dict(r) for r in _a_liste if r["hg"] is not None]
+    _uda.espn_source.fetch_season = _ikke_kall
+    _uda.ntf_source.hent_kalender = _ikke_kall
+    _uda.ntf_source.siste_tabell = lambda liga: None
+    _uda.fetch_odds_history.main = lambda: logg.append("sluttodds")
+    _uda.merge_odds.main = lambda: logg.append("odds slått sammen")
+    _uda.fit_model.main = _modell
+    _uda.should_fetch.merk_ok = lambda liga, naa=None: logg.append("20-timersklokka nullstilt")
+    _tka.avvik = lambda liga, data_dir=None: _ekte_avvik(liga, data_dir=data_dir or d)
+    _dra.data_katalog = lambda liga, sesong=None: d
+    try:
+        with _vern.miljo(ODDSPAPI_KEY=None, GITHUB_OUTPUT=str(d / "github_output")):
+            _uda.main(now=_a_naa_m)
+        feilen = None
+    except Exception as e:
+        feilen = e
+    finally:
+        (_uda.ROOT, _uda.LEAGUE, _uda.STATE, _uda.STATUS_PATH, _uda.AUDIT_STATE_PATH, _uda.espn_source.fetch_all,
+         _uda.ligasiden_eller_reserve, _uda.get_ffk_rows, _uda.espn_source.fetch_season, _uda.ntf_source.hent_kalender,
+         _uda.ntf_source.siste_tabell, _uda.fetch_odds_history.main, _uda.merge_odds.main, _uda.fit_model.main,
+         _uda.should_fetch.merk_ok, _tka.avvik, _dra.data_katalog) = ekte
+    return feilen, logg, paa_disk
+
+
+def _a_fil(navn):
+    return json.loads((_a_sb / "eliteserien" / "data" / navn).read_text("utf-8"))
+
+
+def _a_utdata():
+    sti = _a_sb / "eliteserien" / "data" / "github_output"
+    return sti.read_text("utf-8") if sti.exists() else ""
+
+
+# 0) Motprøve: kilden er lik det vi har. Grønt, og ingenting flyttes.
+_e, _logg, _disk = _a_main(_a_liste)
+sjekk("sandkassen: uendret kilde gir grønn kjøring, grønn status og «data skrevet»",
+      _e is None and _a_fil("status.json")["ok"] is True and "data_skrevet=true" in _a_utdata() and "NETTKALL" not in _logg
+      and _disk == _a_gamle, f"{_e!r} {_logg}")
+
+# 1) Én mistenkelig dato: kampen beholder den gamle datoen på disk.
+_k_offer = (_a_offer["home"], _a_offer["away"])
+_e, _logg, _disk = _a_main([{**r, "date": "2026-01-07", "time": "18:00"} if (r["home"], r["away"]) == _k_offer else r for r in _a_liste])
+_fx_offer = [m for r in _a_fil("fixtures.json") for m in r["matches"] if (m["home"], m["away"]) == _k_offer]
+sjekk(f"{_k_offer[0]}-{_k_offer[1]} oppgis med 7.1.: fixtures.json har den gamle datoen ({_a_offer['date']} {_a_offer['time']}), og 2026-01-07 står ingen steder",
+      _e is None and "NETTKALL" not in _logg and len(_fx_offer) == 1 and (_fx_offer[0]["date"], _fx_offer[0]["time"]) == (_a_offer["date"], _a_offer["time"])
+      and "2026-01-07" not in json.dumps(_a_fil("fixtures.json")) + json.dumps(_a_fil("matches.json")),
+      f"{_e!r} {_fx_offer}")
+sjekk("og den gamle datoen sto på disk FØR modellen ble tilpasset (datovakten ligger før skrivingen)",
+      _disk.get(_k_offer) == (_a_offer["date"], _a_offer["time"]) and _disk == _a_gamle, str(_disk.get(_k_offer)))
+
+# 2) Mange mistenkelige datoer: alle de uspilte kampene (over 25 % av
+#    terminlisten) og 40 spilte. De spilte er frosset før datovakten (en spilt
+#    kamp flyttes aldri), de uspilte beholder den gamle datoen i datovakten.
+#    Alt skjer før skriving; arbeidet kjøres, og kjøringen blir rød TIL SLUTT.
+_a_gale = {(r["home"], r["away"]) for r in _a_uspilte} | {(r["home"], r["away"]) for r in [x for x in _a_liste if x["hg"] is not None][:40]}
+_e, _logg, _disk = _a_main([{**r, "date": "2026-01-07"} if (r["home"], r["away"]) in _a_gale else r for r in _a_liste])
+sjekk(f"{len(_a_gale)} av {len(_a_liste)} datoer er gale ({len(_a_uspilte)} uspilte): kjøringen blir rød med datovaktens beskjed om de uspilte",
+      len(_a_uspilte) > len(_a_liste) * 0.25 and isinstance(_e, _uda.DataAuditError)
+      and str(_e).startswith(f"{len(_a_uspilte)} av {len(_a_liste)} kamper hadde dato utenfor sesongen"), f"{len(_a_gale)} {_e!r}"[:300])
+sjekk("men ingen gal dato er skrevet: matches.json og fixtures.json har de gamle datoene for alle kampene",
+      "2026-01-07" not in json.dumps(_a_fil("fixtures.json")) + json.dumps(_a_fil("matches.json"))
+      and {(r["home"], r["away"]): (r["date"], r["time"]) for r in _lda.forrige_terminliste(_a_sb / "eliteserien" / "data", "2026")} == _a_gamle)
+sjekk("de gamle datoene sto på disk da modellen ble tilpasset, og sluttodds, odds og modell kjørte før kjøringen ble rød",
+      _disk == _a_gamle and _logg[:3] == ["sluttodds", "odds slått sammen", "modell"], f"{_logg}")
+sjekk("status.json er rød med beskjeden, og «data skrevet» er meldt så stegene etterpå kjøres",
+      _a_fil("status.json")["ok"] is False and "dato utenfor" in _a_fil("status.json")["error"] and "data_skrevet=true" in _a_utdata(),
+      f"{_a_fil('status.json')} {_a_utdata()!r}")
+
+print("\n=== OBOS-byggingen: begge kontrollene til slutt, etter «data skrevet» ===")
+_a_ob = (ROT / "scripts" / "obos_build_data.py").read_text("utf-8")
+_a_hale = _a_ob[_a_ob.index('print("  skrev matches.json, fixtures.json, model.json, status.json")'):]
+sjekk("obos_build_data: «data skrevet» meldes etter at modellen og status er skrevet, og før kontrollene avgjør utfallet",
+      _a_ob.index('(DATA / "model.json").write_text') < _a_ob.index("leaguedata.meld_data_skrevet()") < _a_ob.index("return 1 if feil else 0")
+      and _a_hale.index("leaguedata.meld_data_skrevet()") < _a_hale.index("if DATOVAKT_FEIL:") < _a_hale.index('if _tk["errors"]:'))
+sjekk("obos_build_data: datovakten og tabellkontrollen samles (ingen return mellom dem), så begge sies fra om",
+      "return" not in _a_hale[_a_hale.index("if DATOVAKT_FEIL:"):_a_hale.index("for f in feil:")])
+
+print("\n=== Workflowene: stegene etter dataskriptet kjøres når dataene er skrevet ===")
+for _wf_a, _sid_a, _steg_a, _ekstra_a in (
+        ("update-data.yml", "oppdater", ("uses: actions/setup-node", "name: Lagre sannsynlighetene etter nye resultater", "name: Treffsikkerhetslogg",
+                                         "name: Lag delingsbilde", "name: Daglig revisjon av terminlisten"), ""),
+        ("obos-results.yml", "bygg", ("name: Rundens viktigste kamp, forrige kamp og historikk", "name: Treffsikkerhetslogg",
+                                      "name: Daglig revisjon av terminlisten", "name: Tegn delingsbildet"), " && !inputs.dry_run")):
+    _wt_a = (ROT / ".github" / "workflows" / _wf_a).read_text("utf-8")
+    _biter_a = _wt_a.split("\n      - ")[1:]
+    _vilkaar_a = (f"if: ${{{{ !cancelled() && steps.gate.outputs.should_fetch == 'true'{_ekstra_a} && "
+                  f"(steps.{_sid_a}.outcome == 'success' || steps.{_sid_a}.outputs.data_skrevet == 'true') }}}}")
+    _funnet_a = [b for b in _biter_a if any(b.startswith(n) for n in _steg_a)]
+    sjekk(f"{_wf_a}: {len(_steg_a)} steg etter dataskriptet kjøres når skriptet var grønt ELLER meldte «data skrevet» (ikke ved avbrutt)",
+          len(_funnet_a) == len(_steg_a) and all(sum(1 for l in b.splitlines() if l.strip().startswith("if:")) == 1
+                                                 and f"        {_vilkaar_a}\n" in b for b in _funnet_a),
+          str([b.splitlines()[0] for b in _funnet_a]))
+    _etter_a = _biter_a[next(i for i, b in enumerate(_biter_a) if f"\n        id: {_sid_a}\n" in b) + 1:]
+    _lagre_a = next(i for i, b in enumerate(_etter_a) if b.startswith("name: Committer og pusher") or b.startswith("name: Lagre hvis noe endret seg"))
+    _uten_a = [b.splitlines()[0] for b in _etter_a[:_lagre_a]
+               if "always()" not in b and "!cancelled()" not in b and "Merk daglig vedlikehold" not in b]
+    sjekk(f"{_wf_a}: ingen andre steg mellom dataskriptet og lagringen hoppes over ved rød kontroll (bare «Merk daglig vedlikehold»)",
+          not _uten_a, str(_uten_a))
+_wt_o = (ROT / ".github" / "workflows" / "obos-results.yml").read_text("utf-8")
+_merk_o = next(b for b in _wt_o.split("\n      - ")[1:] if b.startswith("name: Merk daglig vedlikehold"))
+sjekk("obos-results.yml: «Merk daglig vedlikehold» krever fortsatt grønn bygging (vedlikeholdet prøves igjen etter en time)",
+      "&& steps.bygg.outcome == 'success'" in _merk_o and "data_skrevet" not in _merk_o, _merk_o[-400:])
+
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.
 _vern.sjekk_urort(sjekk)

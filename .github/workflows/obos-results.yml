@@ -169,11 +169,18 @@ jobs:
         if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
         run: python3 scripts/obos_build_data.py --from-matches
 
+      # STEGENE ETTER BYGGINGEN (12.10.2026): kjøres når dataene er skrevet,
+      # også når kontrollene til slutt i obos_build_data.py gjorde byggingen
+      # rød (data_skrevet=true fra skriptet, se leaguedata.meld_data_skrevet).
+      # Før hoppet en rød kontroll over panelene, treffsikkerhetsloggen,
+      # revisjonen og delingsbildet. «Merk daglig vedlikehold» krever fortsatt
+      # grønn bygging.
+      #
       # Rundens viktigste kamp, hva forrige kamp betydde, historikken, og
       # sannsynlighetene før avspark. Leses ut av selve siden i Chrome, så
       # tallene er de samme som tabellen viser. Samme skript som Eliteserien.
       - name: Rundens viktigste kamp, forrige kamp og historikk
-        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
+        if: ${{ !cancelled() && steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run && (steps.bygg.outcome == 'success' || steps.bygg.outputs.data_skrevet == 'true') }}
         continue-on-error: true  # skal aldri stoppe resultatene
         run: |
           npm install --no-save --no-audit --no-fund --prefix "$RUNNER_TEMP/pp" puppeteer-core@25.11.0
@@ -182,7 +189,7 @@ jobs:
 
       - name: Treffsikkerhetslogg (lagrede sannsynligheter mot resultat)
         id: logg
-        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
+        if: ${{ !cancelled() && steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run && (steps.bygg.outcome == 'success' || steps.bygg.outputs.data_skrevet == 'true') }}
         continue-on-error: true  # skal aldri stoppe resultatene
         run: python3 scripts/accuracy_log.py obos
 
@@ -195,8 +202,7 @@ jobs:
         # bekrefter at det er borte. fotball.no er ikke med (regelen fra
         # 1.10.2026): den hentes bare automatisk som reserve naar ligasiden
         # ikke svarer, aldri ellers (se nff_source.py).
-        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
-          && steps.bygg.outcome == 'success'
+        if: ${{ !cancelled() && steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run && (steps.bygg.outcome == 'success' || steps.bygg.outputs.data_skrevet == 'true') }}
         env:
           # Kontrollen mot Highlightly (hele sesongen, 3-4 kall i døgnet).
           HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
@@ -287,7 +293,7 @@ jobs:
         run: python3 scripts/sesong.py . bytt --liga obos --utfor
 
       - name: Tegn delingsbildet på nytt
-        if: steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run
+        if: ${{ !cancelled() && steps.gate.outputs.should_fetch == 'true' && !inputs.dry_run && (steps.bygg.outcome == 'success' || steps.bygg.outputs.data_skrevet == 'true') }}
         continue-on-error: true  # et feilet bilde skal ikke stoppe resultatene
         run: python3 scripts/make_og.py --obos
 

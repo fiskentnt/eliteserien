@@ -294,14 +294,20 @@ def main():
             json.dumps({"matches": [], "fetched_at": None}, ensure_ascii=False, indent=1) + "\n",
             encoding="utf-8")
     print("  skrev matches.json, fixtures.json, model.json, status.json")
+    # Til workflowen: dataene og modellen er skrevet. Panelene,
+    # treffsikkerhetsloggen, revisjonen og delingsbildet kjøres da også når
+    # kontrollene under gjør byggingen rød (12.10.2026).
+    leaguedata.meld_data_skrevet()
+    # Kontrollene til slutt. Begge sies fra om, ingen skjuler den andre.
+    feil = []
     if DATOVAKT_FEIL:
-        print("\nFEIL: " + DATOVAKT_BESKJED[DATOVAKT_FEIL], file=sys.stderr)
-        return 1
+        feil.append(DATOVAKT_BESKJED[DATOVAKT_FEIL])
     if _tk["errors"]:
-        print(f"\nFEIL: {_tk['errors']} kritisk(e) avvik mellom tabellen vår og tabellen på "
-              f"obos-ligaen.no: {_tk['avvik'][0]}", file=sys.stderr)
-        return 1
-    return 0
+        feil.append(f"{_tk['errors']} kritisk(e) avvik mellom tabellen vår og tabellen på "
+                    f"obos-ligaen.no: {_tk['avvik'][0]}")
+    for f in feil:
+        print("\nFEIL: " + f, file=sys.stderr)
+    return 1 if feil else 0
 
 
 if __name__ == "__main__":

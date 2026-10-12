@@ -3,6 +3,30 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Kontrollene stopper ikke resten (12.10.2026)
+
+Før stoppet «mangler sluttresultat etter 3 timer» og datovaktene
+update_data.py før sluttoddsen og modellen, og en rød kontroll hoppet over
+historikken, treffsikkerhetsloggen, delingsbildet og den daglige revisjonen i
+workflowen (i OBOS: panelene, treffsikkerhetsloggen, revisjonen og
+delingsbildet). Nå, i update_data.etter_skriving: først sluttodds,
+sammenslåing av odds og modellen, så alle kontrollene (mangler
+sluttresultat, datovaktene, den daglige kontrollen, tabellkontrollen). Ingen
+stopper de andre, og kjøringen blir rød til slutt med alle som slo ut.
+Skriptene melder data_skrevet=true til workflowen etter modellen
+(leaguedata.meld_data_skrevet), og stegene etterpå kjøres når skriptet var
+grønt eller meldte det. Krasjer skriptet før dataene er skrevet, hoppes de
+over som før.
+
+Uendret: datovakten beholder den gamle datoen FØR noe skrives
+(rimelige_datoer), og «terminlisten hører til en annen sesong» stopper før
+skriving. Det daglige vedlikeholdet merkes ikke som utført når den daglige
+kontrollen (Eliteserien) eller byggingen (OBOS) er rød.
+
+Tester: tests/kilder/test_kilder.py («Kontrollene stopper ikke resten»,
+«Datovakten beholder den gamle datoen FØR noe skrives», «OBOS-byggingen»,
+«Workflowene: stegene etter dataskriptet»).
+
 ## Varsel med en gang, og nytt forsøk hver time når status er rød (12.10.2026)
 
 9.10. sto Rosenborg-Start med 7.1. i fire timer uten varsel: de røde

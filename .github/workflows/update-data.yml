@@ -77,13 +77,19 @@ jobs:
           HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
         run: python3 scripts/update_data.py
 
+      # STEGENE ETTER DATASKRIPTET (12.10.2026): kjøres når dataene er skrevet,
+      # også når kontrollene til slutt i update_data.py gjorde skriptet rødt
+      # (data_skrevet=true fra skriptet, se leaguedata.meld_data_skrevet). Før
+      # hoppet en rød kontroll over historikken, treffsikkerhetsloggen,
+      # delingsbildet og revisjonen. Krasjer skriptet før dataene er skrevet,
+      # hoppes de over som før.
       - uses: actions/setup-node@v7
-        if: steps.gate.outputs.should_fetch == 'true'
+        if: ${{ !cancelled() && steps.gate.outputs.should_fetch == 'true' && (steps.oppdater.outcome == 'success' || steps.oppdater.outputs.data_skrevet == 'true') }}
         with:
           node-version: "22"
 
       - name: Lagre sannsynlighetene etter nye resultater (historikk)
-        if: steps.gate.outputs.should_fetch == 'true'
+        if: ${{ !cancelled() && steps.gate.outputs.should_fetch == 'true' && (steps.oppdater.outcome == 'success' || steps.oppdater.outputs.data_skrevet == 'true') }}
         continue-on-error: true  # historikken skal aldri stoppe datoppdateringen
         run: |
           # Åpner selve siden i Chrome (ligger på kjøreren) og leser tallene tabellen
@@ -94,12 +100,12 @@ jobs:
           NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/snapshot_probs.js --uten-prekick-vindu
 
       - name: Treffsikkerhetslogg (lagrede sannsynligheter mot resultat)
-        if: steps.gate.outputs.should_fetch == 'true'
+        if: ${{ !cancelled() && steps.gate.outputs.should_fetch == 'true' && (steps.oppdater.outcome == 'success' || steps.oppdater.outputs.data_skrevet == 'true') }}
         continue-on-error: true  # skal aldri stoppe datoppdateringen
         run: python3 scripts/accuracy_log.py eliteserien
 
       - name: Lag delingsbilde (toppen av tabellen) og sitemap
-        if: steps.gate.outputs.should_fetch == 'true'
+        if: ${{ !cancelled() && steps.gate.outputs.should_fetch == 'true' && (steps.oppdater.outcome == 'success' || steps.oppdater.outputs.data_skrevet == 'true') }}
         continue-on-error: true  # et feilet bilde skal ikke stoppe datoppdateringen
         run: |
           python3 scripts/make_og.py --league
@@ -114,7 +120,7 @@ jobs:
         # bekrefter at det er borte. fotball.no er ikke med (regelen fra
         # 1.10.2026): den hentes bare automatisk som reserve naar ligasiden
         # ikke svarer, aldri ellers (se nff_source.py).
-        if: steps.gate.outputs.should_fetch == 'true'
+        if: ${{ !cancelled() && steps.gate.outputs.should_fetch == 'true' && (steps.oppdater.outcome == 'success' || steps.oppdater.outputs.data_skrevet == 'true') }}
         env:
           # Kontrollen mot Highlightly (hele sesongen, 3-4 kall i døgnet).
           HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}

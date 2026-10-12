@@ -521,9 +521,106 @@ def sjekk_manglende_resultat(fixtures_out, now, log):
     return 0
 
 
-def main(cache_dir=None):
+def samlet_feiltekst(feil):
+    """Feilteksten når kontrollene til slutt slo ut. feil: [(kontroll, tekst)].
+    Én kontroll gir teksten dens uendret; flere gir en første linje som
+    nevner alle (den linjen går i e-posten fra healthchecks, se livstegn.py)."""
+    if len(feil) == 1:
+        return feil[0][1]
+    return (f"{len(feil)} kontroller fant avvik: " + "; ".join(n for n, _ in feil) + "\n"
+            + "\n".join(f"{n}: {tekst}" for n, tekst in feil))
+
+
+def etter_skriving(matches_out, fixtures_out, merged, utenfor, datofeil, tk, kontroll, now, log):
+    """Alt etter at kampene og terminlisten er skrevet (12.10.2026): FØRST
+    arbeidet -- sluttodds, sammenslåing av odds, modellen -- SÅ kontrollene.
+
+    Før stoppet «mangler sluttresultat» og datovaktene kjøringen før
+    sluttoddsen og modellen, og en rød kontroll hoppet over historikken,
+    treffsikkerhetsloggen og revisjonen i workflowen. Nå kjøres alle
+    kontrollene til slutt, ingen stopper de andre, og kjøringen blir rød med
+    alle som slo ut (DataAuditError).
+
+    Kontrollene avgjør bare om kjøringen blir rød. Det som skal hindre at
+    gale data kommer ut, har skjedd FØR skrivingen: rimelige_datoer() har
+    beholdt de gamle datoene, og «terminlisten hører til en annen sesong»
+    stopper i main() før noe skrives.
+
+    tk er svaret fra tabellkontroll.kontroller (regnet rett etter skrivingen,
+    siden et nytt poengtrekk må inn før modellen). kontroll er radene til den
+    daglige kontrollen."""
+    log("--- Sluttodds (football-data.co.uk, maks én gang i døgnet) ---")
+    fetch_odds_history.main()
+    # Sluttodds fra OddsPapi-vinduet: 60 til 15 minutter før avspark, den
+    # eneste kilden vi vet tidspunktet for. Gratis oppslag, og bare for
+    # kamper som ikke alt er hentet. Skal ALDRI kunne stoppe kjeden: uten
+    # nøkkel eller ved feil faller alt tilbake på football-data.
+    if os.environ.get("ODDSPAPI_KEY", "").strip():
+        log("--- Sluttodds (OddsPapi, vinduet 60-15 min før avspark) ---")
+        try:
+            import elite_closing_odds
+            elite_closing_odds.main([])
+        except Exception as e:
+            log(f"  OddsPapi-sluttodds feilet ({type(e).__name__}: {e}) "
+                f"-- fortsetter med football-data")
+    log("--- Slår sammen oddskilder ---")
+    merge_odds.main()
+    log("--- Tilpasser modellen ---")
+    fit_model.main()
+    # Til workflowen: dataene og modellen er skrevet. Stegene etter dette
+    # skriptet (historikken, treffsikkerhetsloggen, delingsbildet, revisjonen)
+    # kjøres da også når kontrollene under gjør skriptet rødt.
+    leaguedata.meld_data_skrevet()
+
+    log("--- Kontrollene ---")
+    feil = []   # [(kontroll, tekst)]
+
+    def _kontroll(navn, funksjon):
+        try:
+            return funksjon()
+        except DataAuditError as e:
+            feil.append((navn, str(e)))
+            return None
+
+    # En kamp som mangler resultat lenge etter avspark.
+    _kontroll("mangler sluttresultat", lambda: sjekk_manglende_resultat(fixtures_out, now, log))
+    # Datovaktene. Mange datoer utenfor sesongen er ikke enkeltfeil -- da er
+    # det noe galt med kilden, typisk en markupendring. Datoene med lagret
+    # verdi i samme sesong er alt beholdt (før skrivingen); dette sier bare
+    # fra.
+    if datofeil == "ingen_autoritet":
+        feil.append(("datovakt", DATOVAKT_BESKJED["ingen_autoritet"]))
+    elif utenfor and len(utenfor) > len(merged) * 0.25:
+        feil.append(("datovakt", f"{len(utenfor)} av {len(merged)} kamper hadde dato utenfor "
+                                 f"sesongen. Datoene er beholdt fra før, men kilden må sjekkes:\n"
+                                 + "\n".join(utenfor[:10])))
+    # Den daglige kontrollen mot kontrollkilden (ffksupporter.net; fotball.no
+    # er ikke med i den daglige kjeden). Slår den ut, er det daglige
+    # vedlikeholdet ikke utført, og 20-timersklokka nullstilles ikke.
+    gjorde_daglig = _kontroll("daglig kontroll", lambda: run_daily_audit(matches_out, kontroll, now, log))
+    # Tabellkontrollen mot tabellen på ligasiden.
+    if tk and tk.get("errors"):
+        feil.append(("tabellkontroll", f"{tk['errors']} kritisk(e) avvik mellom tabellen vår og tabellen "
+                                       f"på ligasiden: {tk['avvik'][0]}"))
+
+    # BARE naar det daglige vedlikeholdet faktisk ble utfort i denne
+    # kjoringen. En vanlig resultatkjoring midt paa dagen skal ikke
+    # nullstille 20-timersklokka -- da ville revisjonen og
+    # football-data-sjekken kunne bli utsatt i det uendelige.
+    if gjorde_daglig:
+        should_fetch.merk_ok(LIGA, now)
+        log("Daglig vedlikehold utfort -- 20-timersklokka nullstilt.")
+    if feil:
+        for navn, tekst in feil:
+            log(f"KONTROLL RØD: {navn}: {tekst.splitlines()[0]}")
+        raise DataAuditError(samlet_feiltekst(feil))
+    write_status(ok=True, now=now)
+    return 0
+
+
+def main(cache_dir=None, now=None):
     log = lambda s: print(s, file=sys.stderr)
-    now = datetime.now(timezone.utc)
+    now = now or datetime.now(timezone.utc)   # now kan settes i testene
 
     # En frossen sesong er uforanderlig. Rundt aarsskiftet viser kildene
     # NESTE sesong, saa en kjoring her ville skrevet neste sesongs kamper inn
@@ -649,72 +746,14 @@ def main(cache_dir=None):
         _t = ntf_source.siste_tabell(LIGA)
         _tk = tabellkontroll.kontroller(
             LIGA, _aktiv or now.astimezone(timezone.utc).year, matches_out,
-            _t.get("tabell") if _t and "tabell" in _t else _t, naa=now,
+            _t.get("tabell") if _t and "tabell" in _t else _t, naa=now, data_dir=data_dir,
             kilde_url=_t.get("kilde") if _t else None, kjoring=_ses.kjoring_id(), log=log)
 
-        # Etter skriving: filene er riktige så langt kildene rekker, men en
-        # kamp som mangler resultat lenge etter avspark skal stoppe kjøringen.
-        sjekk_manglende_resultat(fixtures_out, now, log)
-
-        # Mange datoer utenfor sesongen er ikke enkeltfeil -- da er det noe
-        # galt med kilden, typisk en markupendring. Datoene er rettet over,
-        # men kjoringen skal feile synlig.
-        # ETTER skrivingen, med vilje: dataene er skrevet som normalt, og
-        # dette sier bare at vi ikke kunne kontrollere datoene.
-        if _datofeil == "ingen_autoritet":
-            raise DataAuditError(DATOVAKT_BESKJED["ingen_autoritet"])
-        # ETTER skrivingen: naar denne slaar ut, er datoene med lagret verdi
-        # i samme sesong ALT rettet av rimelige_datoer(). Det som er skrevet
-        # er altsaa den lagrede verdien, ikke kildens gale dato. AA ikke
-        # skrive ville bare latt de eksisterende filene staa -- det er ikke
-        # galt, men det retter ingenting, og kilden maa uansett sjekkes.
-        if len(utenfor) > len(merged) * 0.25:
-            raise DataAuditError(
-                f"{len(utenfor)} av {len(merged)} kamper hadde dato utenfor "
-                f"sesongen. Datoene er beholdt fra før, men kilden må sjekkes:\n"
-                + "\n".join(utenfor[:10]))
-
-        log("--- Sluttodds (football-data.co.uk, maks én gang i døgnet) ---")
-        fetch_odds_history.main()
-        # Sluttodds fra OddsPapi-vinduet: 60 til 15 minutter før avspark, den
-        # eneste kilden vi vet tidspunktet for. Gratis oppslag, og bare for
-        # kamper som ikke alt er hentet. Skal ALDRI kunne stoppe kjeden: uten
-        # nøkkel eller ved feil faller alt tilbake på football-data.
-        if os.environ.get("ODDSPAPI_KEY", "").strip():
-            log("--- Sluttodds (OddsPapi, vinduet 60-15 min før avspark) ---")
-            try:
-                import elite_closing_odds
-                elite_closing_odds.main([])
-            except Exception as e:
-                log(f"  OddsPapi-sluttodds feilet ({type(e).__name__}: {e}) "
-                    f"-- fortsetter med football-data")
-        log("--- Slår sammen oddskilder ---")
-        merge_odds.main()
-        log("--- Tilpasser modellen ---")
-        fit_model.main()
-
-        # Etter alt det normale arbeidet er gjort og lagret: den daglige
-        # kontrollen mot ffksupporter.net. Kan fortsatt feile KJØRINGEN
-        # (stempelet blir rødt), men hindrer ikke dagens resultater/odds/
-        # modell i å bli skrevet og committet først.
-        # Den daglige kontrollen går nå mot fotball.no (NFF), ikke mot
-        # ffksupporter. Den er offisiell, uavhengig av ligasiden vi bygger
-        # fra, og komplett for hele sesongen. Faller den ut, bruker vi
-        # ffksupporter som før, slik at kontrollen aldri blir helt borte.
-        kontroll = nff_rows or ffk_rows
-        gjorde_daglig = run_daily_audit(matches_out, kontroll, now, log)
-
-        write_status(ok=True, now=now)
-        # BARE naar det daglige vedlikeholdet faktisk ble utfort i denne
-        # kjoringen. En vanlig resultatkjoring midt paa dagen skal ikke
-        # nullstille 20-timersklokka -- da ville revisjonen og
-        # football-data-sjekken kunne bli utsatt i det uendelige.
-        if gjorde_daglig:
-            should_fetch.merk_ok(LIGA, now)
-            log("Daglig vedlikehold utfort -- 20-timersklokka nullstilt.")
-        if _tk["errors"]:
-            raise DataAuditError(f"{_tk['errors']} kritisk(e) avvik mellom tabellen vår og tabellen "
-                                 f"på ligasiden: {_tk['avvik'][0]}")
+        # Resten: først arbeidet (sluttodds, odds, modell), så kontrollene.
+        # Datovaktene har alt beholdt de gamle datoene i rimelige_datoer()
+        # over, FØR skrivingen; her avgjøres bare om kjøringen blir rød.
+        etter_skriving(matches_out, fixtures_out, merged, utenfor, _datofeil, _tk,
+                       nff_rows or ffk_rows, now, log)
     except Exception as e:
         write_status(ok=False, now=now, error=e)
         raise
