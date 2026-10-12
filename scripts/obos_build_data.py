@@ -227,9 +227,15 @@ def main():
     import ntf_source
     import tabellkontroll
     _t = ntf_source.siste_tabell("obos")
+    # Rett etter kampslutt (12.10.2026): et avvik som bare gjelder en fersk
+    # kamp med resultat bekreftet utenfor NTF (obos_results.py lagrer det i
+    # results_state.json), er en advarsel og en ny sjekk i neste kjøring.
+    import resultatregel
     _tk = tabellkontroll.kontroller(
         "obos", _a0 or SEASON, matches_ut, _t.get("tabell") if _t and "tabell" in _t else _t,
-        kilde_url=_t.get("kilde") if _t else None, kjoring=_ses.kjoring_id())
+        kilde_url=_t.get("kilde") if _t else None, kjoring=_ses.kjoring_id(),
+        ferske=resultatregel.ferske_bekreftede("obos", matches_ut, datetime.now(timezone.utc),
+                                               state_sti=DATA / "results_state.json"))
 
     # Modellen: samme tilpasning som Eliteserien. Oddsleddet er med når vi har
     # sluttodds (obos/data/odds_closing.json, Pinnacle via OddsPapi), ellers

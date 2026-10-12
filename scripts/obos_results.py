@@ -586,6 +586,16 @@ def main():
         for l2 in linjer:
             log(f"    {l2}")
     kilder_naa = {"ligasiden": off, "highlightly": hl, "oddspapi": op_scores, "wikipedia": wiki, "fotball.no": nff}
+    # Kildene utenfor NTF som hadde resultatet da det ble publisert
+    # (12.10.2026, resultatregel.bekreftet_tilstand), til tabellkontrollen
+    # rett etter kampslutt. Publisert uten kontroll er ikke bekreftet.
+    nye_bekr = {k2: (publish[k2], resultatregel.uavhengige_enige(
+                    {kilde: v[k2] for kilde, v in kilder_naa.items() if v and k2 in v}, publish[k2]))
+                for k2 in publish if k2 not in prev and k2 not in ukontrollert}
+    if sjekket_naa:
+        for k2 in bekreftet:
+            if k2 in publish:
+                nye_bekr[k2] = (publish[k2], resultatregel.uavhengige_enige(svar_pk.get(k2), publish[k2]))
     aktuelle = set(ventende) | {k2 for v in kilder_naa.values() if v for k2 in v if k2 not in prev and k2 in sched}
     forst, forst_linjer = resultatregel.forst_sett(
         gml_state.get("forst_sett"), {k2: {kilde: (v or {}).get(k2) for kilde, v in kilder_naa.items()} for k2 in aktuelle},
@@ -625,6 +635,7 @@ def main():
             # Når hver kilde først hadde resultatet, for kampene som venter
             # (bare til loggen, resultatregel.forst_sett).
             "forst_sett": forst,
+            "bekreftet": resultatregel.bekreftet_tilstand(gml_state.get("bekreftet"), nye_bekr, now),
         }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
     if args.dry_run:

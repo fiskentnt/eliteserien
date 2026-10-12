@@ -25,6 +25,13 @@ REGELEN:
     fra en annen enkeltkilde -- og kjøringen er rød så lenge det står uten
     kontroll (ukontrollert=True, se kontroller_ukontrollerte).
 
+BEKREFTET (12.10.2026): når et resultat publiseres, lagres hvilke kilder
+utenfor NTF som hadde nøyaktig samme resultat (results_state.json,
+"bekreftet"). Tabellkontrollen bruker det rett etter kampslutt: et avvik mot
+tabellen på ligasiden som bare gjelder en fersk kamp med bekreftet resultat,
+er en advarsel og en ny sjekk i neste kjøring, ikke en rød kjøring (se
+tabellkontroll.py og ferske_bekreftede under).
+
 Ingen nettkall her: kalleren henter kildene og gir svarene inn.
 """
 import json
@@ -35,6 +42,12 @@ from pathlib import Path
 ROT = Path(__file__).resolve().parent.parent
 
 VENT_TIMER = 24
+# Tabellkontrollen: en kamp er FERSK til så mange timer etter avspark. 9.10.2026
+# førte tabellen på ligasiden Brann-Viking (0-2) som 0-0 til 3 t 10 min etter
+# avspark. Seks timer er også portens egen grense (should_fetch.py).
+FERSK_TIMER = 6
+# Så lenge står en bekreftelse i results_state.json.
+BEKREFTET_TIMER = 48
 
 LEVERANDOR = {"ligasiden": "NTF", "fotball.no": "NTF", "espn": "ESPN", "highlightly": "Highlightly",
               "oddspapi": "OddsPapi", "wikipedia": "Wikipedia", "ffksupporter": "ffksupporter",
@@ -164,6 +177,71 @@ def kontroller_ukontrollerte(liga, ukontrollerte, svar_per_kamp):
                 uenige.append((k, tuple(r), uavh))
             fortsatt[k] = tuple(r)
     return fortsatt, bekreftet, uenige
+
+
+def uavhengige_enige(svar, resultat):
+    """Kildene UTENFOR NTF som har nøyaktig dette resultatet.
+    svar: {kilde: (hg, ag) eller None}. Ligasiden og fotball.no er NTF, og
+    tabellen kontrollen sammenligner med, er også NTF sin."""
+    r = tuple(resultat)
+    return sorted(k for k, v in (svar or {}).items()
+                  if v is not None and LEVERANDOR.get(k) != "NTF" and tuple(v) == r)
+
+
+def bekreftet_tilstand(gml, nye, naa, behold_timer=BEKREFTET_TIMER):
+    """Feltet "bekreftet" i results_state.json:
+    {"Hjemme|Borte": {"resultat": [hg, ag], "kilder": [...], "publisert": iso}}.
+
+    gml: feltet fra forrige kjøring. nye: {(hjemme, borte): (resultat, kilder)}
+    for resultatene som ble publisert (eller bekreftet i etterkant) i denne
+    kjøringen; uten en kilde utenfor NTF lagres ingenting. Oppføringer eldre
+    enn behold_timer tas ut."""
+    ut = {}
+    for n, v in (gml or {}).items():
+        try:
+            if naa - datetime.fromisoformat(v["publisert"]) < timedelta(hours=behold_timer):
+                ut[n] = v
+        except Exception:
+            continue
+    for k, (resultat, kilder) in (nye or {}).items():
+        if kilder:
+            ut[f"{k[0]}|{k[1]}"] = {"resultat": [int(resultat[0]), int(resultat[1])], "kilder": sorted(kilder),
+                                    "publisert": naa.isoformat(timespec="seconds")}
+    return ut
+
+
+def ferske_bekreftede(liga, kamper, naa, state_sti=None, timer=FERSK_TIMER):
+    """De spilte kampene i `kamper` som er FERSKE (avspark for mindre enn
+    `timer` timer siden) og har resultatet BEKREFTET utenfor NTF: det står i
+    results_state.json med nøyaktig samme resultat og minst én kilde.
+
+    Returnerer [{home, away, hg, ag, avspark, frist, kilder}] med avspark og
+    frist som ISO-tid i UTC. En kamp uten avspark, uten oppføring eller med et
+    annet lagret resultat er ikke med: da gjelder tabellkontrollen som før."""
+    from zoneinfo import ZoneInfo
+    sti = Path(state_sti) if state_sti else ROT / liga / "data" / "results_state.json"
+    try:
+        bekreftet = json.loads(sti.read_text(encoding="utf-8")).get("bekreftet") or {}
+    except Exception:
+        return []
+    ut = []
+    for m in kamper:
+        if m.get("hg") is None or m.get("ag") is None or not m.get("date") or not m.get("time"):
+            continue
+        b = bekreftet.get(f"{m['home']}|{m['away']}")
+        if not b or not b.get("kilder") or list(b.get("resultat") or []) != [m["hg"], m["ag"]]:
+            continue
+        try:
+            avspark = datetime.fromisoformat(f"{m['date']}T{m['time']}").replace(
+                tzinfo=ZoneInfo("Europe/Oslo")).astimezone(naa.tzinfo)
+        except Exception:
+            continue
+        if timedelta(0) <= naa - avspark < timedelta(hours=timer):
+            ut.append({"home": m["home"], "away": m["away"], "hg": m["hg"], "ag": m["ag"],
+                       "avspark": avspark.isoformat(timespec="seconds"),
+                       "frist": (avspark + timedelta(hours=timer)).isoformat(timespec="seconds"),
+                       "kilder": list(b["kilder"])})
+    return ut
 
 
 def sjekk(liga, rot=None):

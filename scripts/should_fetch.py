@@ -24,6 +24,10 @@ Kjører videre hvis:
     etter 20 timer, og en feil kunne stå i et døgn i en landskampspause.
     Tiden regnes fra siste sjekk, ikke fra klokkeslettet: GitHub forsinker
     planlagte kjøringer, så et minuttvindu treffer tilfeldig.
+  - tabellkontrollen venter på en ny sjekk etter en fersk kamp (feltet
+    "venter" i audit_tabell.json, 12.10.2026, se tabellkontroll.py). Da åpner
+    porten i HVER kjøring til tabellen på ligasiden stemmer eller fristen er
+    ute, også uten tellende kall.
 """
 import json
 import os
@@ -169,10 +173,38 @@ def merk_rodt_forsok(liga, now):
     p.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
+# Tabellkontrollen venter på en ny sjekk etter en fersk kamp: så lenge etter
+# fristen åpner porten fortsatt, for sjekken som avgjør saken. Feiler de
+# kjøringene, tar timesforsøket ved rød status over.
+TABELL_VENTER_ETTER_MIN = 60
+
+
+def tabell_venter(liga, now):
+    """(ny sjekk?, begrunnelse). Sant når siste tabellkontroll lot en fersk
+    kamp vente (audit_tabell.json, "venter"): tabellen på ligasiden hadde
+    ført kampen med et annet resultat, eller manglet den, og resultatet vårt
+    er bekreftet utenfor NTF. Kontrollen tømmer feltet selv når tabellen
+    stemmer eller fristen er ute."""
+    try:
+        d = json.loads((LIGAER[liga] / "data" / "audit_tabell.json").read_text(encoding="utf-8"))
+    except Exception:
+        return False, ""
+    venter = d.get("venter") or []
+    frister = [x for x in (_tid(v.get("frist")) for v in venter) if x]
+    if not venter or not frister:
+        return False, ""
+    siste = max(x if x.tzinfo else x.replace(tzinfo=timezone.utc) for x in frister)
+    if now > siste + timedelta(minutes=TABELL_VENTER_ETTER_MIN):
+        return False, ""
+    kamper = ", ".join(str(v.get("kamp", "")).replace("|", "-") for v in venter[:4])
+    return True, f"tabellkontrollen venter på ny sjekk etter {kamper}: uten tellende kall"
+
+
 def vurder(now=None, liga="eliteserien"):
     """(kjør?, begrunnelse, uten_tellende). De vanlige reglene først, uendret;
     åpner ingen av dem, og status.json er rød, åpner porten for et nytt forsøk
-    uten tellende kall."""
+    uten tellende kall. Likedan når tabellkontrollen venter på en ny sjekk
+    etter en fersk kamp (tabell_venter)."""
     now = now or datetime.now(timezone.utc)
     ok, grunn = _vanlig(now, liga)
     if ok:
@@ -181,6 +213,9 @@ def vurder(now=None, liga="eliteserien"):
     if nytt:
         merk_rodt_forsok(liga, now)
         return True, hvorfor, True
+    venter, vgrunn = tabell_venter(liga, now)
+    if venter:
+        return True, vgrunn, True
     return False, grunn + (f"; {hvorfor}" if hvorfor else ""), False
 
 

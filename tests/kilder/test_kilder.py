@@ -1013,6 +1013,47 @@ _fixtures([{"round": 24, "matches": [{"home": "Ranheim", "away": "Egersund", "da
 with _vern.miljo(FORCE_FETCH="true"):
     _r = sf.vurder(now=_T, liga="test")
 sjekk("manuell kjøring (FORCE_FETCH): vanlig kjøring, ikke uten_tellende", _r[0] is True and _r[2] is False, str(_r))
+# Tabellkontrollen venter på en ny sjekk etter en fersk kamp (12.10.2026):
+# porten åpner i HVER kjøring så lenge audit_tabell.json har noe i "venter",
+# uten tellende kall, og til en time etter fristen.
+def _tabell_venter(liste):
+    (_sb2 / "data" / "audit_tabell.json").write_text(_json.dumps({"errors": 0, "venter": liste}), encoding="utf-8")
+
+
+def _bv(frist_om_min):
+    return [{"kamp": "Brann|Viking", "resultat": [0, 2], "grunn": "ført som 0-0 i tabellen",
+             "frist": (_T + _td(minutes=frist_om_min)).isoformat(timespec="seconds")}]
+
+
+_status(True, 5)
+sjekk("motprøve: grønn status fem minutter gammel og ingen audit_tabell.json: porten er lukket", sf.vurder(now=_T, liga="test")[0] is False)
+_tabell_venter(_bv(120))
+_r = sf.vurder(now=_T, liga="test")
+sjekk("tabellkontrollen venter: porten åpner fem minutter etter forrige sjekk, uten tellende kall, og begrunnelsen nevner kampen",
+      _r == (True, "tabellkontrollen venter på ny sjekk etter Brann-Viking: uten tellende kall", True), str(_r))
+sjekk("og det merkes ikke som et rødt forsøk", "siste_rodt_forsok" not in _tilstand(), str(_tilstand()))
+_tabell_venter([])
+sjekk("ingenting venter lenger (tabellen stemte, eller fristen gikk ut): lukket", sf.vurder(now=_T, liga="test")[0] is False)
+_tabell_venter(_bv(-59))
+sjekk("59 minutter etter fristen: åpner fortsatt, for sjekken som avgjør saken", sf.vurder(now=_T, liga="test")[::2] == (True, True))
+_tabell_venter(_bv(-61))
+sjekk("61 minutter etter fristen (kjøringene har feilet): lukket, timesforsøket ved rød status tar over",
+      sf.vurder(now=_T, liga="test")[0] is False)
+_tabell_venter(_bv(120))
+_status(False, 30, feil="1 kritisk(e) avvik")
+_r = sf.vurder(now=_T, liga="test")
+sjekk("rød status 30 minutter gammel (timesforsøket er ikke klart) og en kamp som venter: åpner for tabellsjekken, uten tellende kall",
+      _r[0] is True and _r[2] is True and "tabellkontrollen venter" in _r[1] and "siste_rodt_forsok" not in _tilstand(), str(_r))
+_status(True, 5)
+_fixtures([{"round": 24, "matches": [{"home": "Ranheim", "away": "Egersund", "date": _T.astimezone(sf.OSLO).strftime("%Y-%m-%d"),
+                                      "time": (_T.astimezone(sf.OSLO) - _td(minutes=110)).strftime("%H:%M"), "played": False}]}])
+_r = sf.vurder(now=_T, liga="test")
+sjekk("en kamp venter på resultat OG tabellkontrollen venter: vanlig kjøring med tellende kall som før",
+      _r[0] is True and _r[2] is False and "venter på resultat" in _r[1], str(_r))
+_fixtures([{"round": 24, "matches": [{"home": "Ranheim", "away": "Egersund", "date": "2026-10-20",
+                                      "time": "18:00", "played": False}]}])
+(_sb2 / "data" / "audit_tabell.json").unlink()
+
 # Utskriften: begge utfallene til GITHUB_OUTPUT, og UTEN_TELLENDE til resten av jobben.
 import io as _io_p, contextlib as _cl_p
 _gho, _ghe = _sb2 / "gh_output", _sb2 / "gh_env"
@@ -2831,6 +2872,11 @@ try:
           all(_pub.get(k) == v for k, v in _lig.items()) and len(_pub) == _n0 + 5 and not _st["conflicts"] and not _st["ukontrollert"],
           f"{_kode} {len(_pub)} {_n0} {_st}")
     sjekk("OddsPapi (koster ett kall per kamp) spørres bare for Ranheim-Egersund", _op_kall == ["Ranheim|Egersund"], str(_op_kall))
+    # Bekreftelsen (12.10.2026): hvilke kilder utenfor NTF som hadde resultatet da det ble publisert.
+    sjekk("tilstanden: de fire kampene er bekreftet av highlightly, Ranheim-Egersund av oddspapi, med tidspunktet for publiseringen",
+          {k: (v["resultat"], v["kilder"], v["publisert"]) for k, v in _st.get("bekreftet", {}).items()}
+          == {**{f"{k[0]}|{k[1]}": (list(v), ["highlightly"], "2026-10-03T18:43:00+00:00") for k, v in _lig.items() if k != ("Ranheim", "Egersund")},
+              "Ranheim|Egersund": ([5, 0], ["oddspapi"], "2026-10-03T18:43:00+00:00")}, str(_st.get("bekreftet")))
     sjekk("Highlightly: ett kall per kampdag (2.10. og 3.10.)",
           sorted(k["date"] for k in _hl_kall) == ["2026-10-02", "2026-10-03"], str(_hl_kall))
     # Uenighet: Highlightly har 1-0 for Haugesund-Stabæk (ligasiden 2-0), og ingen andre.
@@ -2851,6 +2897,7 @@ try:
     _kode, _st, _pub = _kjor(_dt(2026, 10, 3, 18, 1, tzinfo=_tz.utc), lig={("Ranheim", "Egersund"): (5, 0)})
     sjekk("bare ligasiden, 25 timer etter avspark: Ranheim-Egersund publiseres uten kontroll og står i tilstanden",
           _pub.get(("Ranheim", "Egersund")) == (5, 0) and _st["ukontrollert"] == {"Ranheim|Egersund": [5, 0]}, str(_st))
+    sjekk("og et resultat publisert uten kontroll står IKKE som bekreftet", _st.get("bekreftet") == {}, str(_st.get("bekreftet")))
     _ok_rr = Path(_tf2.mkdtemp()); (_ok_rr / "obos" / "data").mkdir(parents=True)
     _shr.copy(_sbo / "results_state.json", _ok_rr / "obos" / "data" / "results_state.json")
     sjekk("og kjøringen er rød så lenge den står uten kontroll (resultatregel.py sjekk obos)", _regel.sjekk("obos", rot=_ok_rr) == 1)
@@ -2864,6 +2911,9 @@ try:
     _shr.copy(_sbo / "results_state.json", _ok_rr / "obos" / "data" / "results_state.json")
     sjekk("en time senere bekrefter Highlightly 5-0: ikke lenger uten kontroll, og kjøringen er grønn",
           _st["ukontrollert"] == {} and _regel.sjekk("obos", rot=_ok_rr) == 0, str(_st))
+    sjekk("og da står det som bekreftet av highlightly",
+          _st.get("bekreftet") == {"Ranheim|Egersund": {"resultat": [5, 0], "kilder": ["highlightly"], "publisert": "2026-10-03T19:05:00+00:00"}},
+          str(_st.get("bekreftet")))
     # Én linje per resultat og hvem som hadde det først (4.10.2026). Ligasiden
     # har ingen av rundens resultater ennå 3.10. kl. 20.43; Highlightly har fire.
     import io as _io7, contextlib as _cl7
@@ -2950,12 +3000,36 @@ sjekk("uten Highlightly: et 0-0 fra ESPN som er uenig med ligasiden, publiseres 
       f"{_s['conflicts']} {_s['waiting'][:3]}")
 sjekk("og de andre kampene 29.5., der ESPN er enig med ligasiden, publiseres",
       _r[("Brann", "Sarpsborg 08")] == (1, 2) and _r[("Fredrikstad", "Start")] == (2, 1), str((_r[("Brann", "Sarpsborg 08")], _r[("Fredrikstad", "Start")])))
+# Bekreftelsen (12.10.2026): hvilke kilder utenfor NTF som hadde resultatet da det ble publisert.
+import resultatregel as _rrb
+_r, _s = _kjor_es(_naa_es)
+_b_bekr = _s.get("bekreftet", {})
+sjekk(f"Eliteserien: alle {len(_nye)} nye resultatene (29.5. og 20.9.) står som bekreftet, hvert med riktig resultat og minst én kilde utenfor NTF",
+      set(_b_bekr) == {f"{k[0]}|{k[1]}" for k in _nye}
+      and all(tuple(_b_bekr[f"{k[0]}|{k[1]}"]["resultat"]) == _r[k] and _b_bekr[f"{k[0]}|{k[1]}"]["kilder"]
+              and not {"ligasiden", "fotball.no"} & set(_b_bekr[f"{k[0]}|{k[1]}"]["kilder"]) for k in _nye), str(_b_bekr)[:400])
+sjekk("Vålerenga-Kristiansund 3-1 er bekreftet av highlightly alene (ESPN hadde 0-0 og teller ikke)",
+      _b_bekr.get("Vålerenga|Kristiansund") == {"resultat": [3, 1], "kilder": ["highlightly"], "publisert": _naa_es.isoformat(timespec="seconds")},
+      str(_b_bekr.get("Vålerenga|Kristiansund")))
+_udr.skriv_state(_s, _naa_es, state_sti=_sbs / "results_state.json")
+sjekk("skriv_state skriver feltet til results_state.json",
+      json.loads((_sbs / "results_state.json").read_text("utf-8")).get("bekreftet") == _b_bekr)
+# Neste kjøring, ti minutter senere, uten noe nytt (alt er publisert): feltet
+# må overleve, ellers vet ikke den nye tabellsjekken at resultatet er bekreftet.
+_ut_b, _s_b = _udr.kontroller_nye_resultater([dict(r) for r in _merged], [dict(m) for m in _es_m], _liga, [], [],
+                                             _naa_es + _td(minutes=10), log=lambda _x: None, hl_dag=_hl_nede,
+                                             espn_sesong=lambda aar: (_ for _ in ()).throw(RuntimeError("skal ikke kalles")),
+                                             state_sti=_sbs / "results_state.json")
+sjekk("neste kjøring uten nye resultater (ingen kilder spørres): bekreftelsene står", _s_b.get("bekreftet") == _b_bekr, str(_s_b.get("bekreftet"))[:300])
 # Etter 24 timer uten uavhengig kilde: ligasiden alene, ukontrollert (rødt),
 # men Aalesund-HamKam er fortsatt konflikt (ESPN er uenig).
 _r, _s = _kjor_es(_dt(2026, 5, 31, 12, 0, tzinfo=ZoneInfo("Europe/Oslo")), hl=_hl_nede)
 sjekk("etter 24 timer: Vålerenga-Kristiansund publiseres uten kontroll; Aalesund-HamKam holdes fortsatt tilbake",
       _r[("Vålerenga", "Kristiansund")] == (3, 1) and _s["ukontrollert"] == {("Vålerenga", "Kristiansund"): (3, 1)}
       and _r[("Aalesund", "HamKam")] == (None, None), str(_s))
+sjekk("publisert uten kontroll etter 24 timer (bare ligasiden): Vålerenga-Kristiansund står IKKE som bekreftet",
+      _s["ukontrollert"] == {("Vålerenga", "Kristiansund"): (3, 1)} and "Vålerenga|Kristiansund" not in _s.get("bekreftet", {}),
+      str(_s.get("bekreftet"))[:300])
 _udr.skriv_state(_s, _dt(2026, 5, 31, 12, 0, tzinfo=_tz.utc), state_sti=_sbs / "results_state.json")
 _ok_es = Path(_tf2.mkdtemp()); (_ok_es / "eliteserien" / "data").mkdir(parents=True)
 _shr.copy(_sbs / "results_state.json", _ok_es / "eliteserien" / "data" / "results_state.json")
@@ -3981,8 +4055,9 @@ _a_offer = _a_uspilte[-1]                                        # siste uspilte
 _a_gamle = {(r["home"], r["away"]): (r["date"], r["time"]) for r in _a_liste}
 
 
-def _a_main(ntf_rader):
-    """Kjører update_data.main i sandkassen. Returnerer (feilen eller None, rekkefølgen, datoene på disk da modellen ble tilpasset)."""
+def _a_main(ntf_rader, naa=None, tabell=None, state=None):
+    """Kjører update_data.main i sandkassen. Returnerer (feilen eller None, rekkefølgen, datoene på disk da modellen ble tilpasset).
+    naa: klokka (standard: to timer før første uspilte kamp). tabell: tabellen fra ligasiden. state: results_state.json før kjøringen."""
     import tabellkontroll as _tka, daglig_revisjon as _dra
     logg, paa_disk = [], {}
     d = _a_sb / "eliteserien" / "data"
@@ -3990,6 +4065,8 @@ def _a_main(ntf_rader):
         _sha.copy(ROT / "tests" / "data" / "2026-10-01" / "eliteserien" / "data" / _f, d / _f)
     for _f in ("status.json", "audit_state.json", "audit_tabell.json", "results_state.json", "github_output"):
         (d / _f).unlink(missing_ok=True)
+    if state is not None:
+        (d / "results_state.json").write_text(json.dumps(state), encoding="utf-8")
     ekte = (_uda.ROOT, _uda.LEAGUE, _uda.STATE, _uda.STATUS_PATH, _uda.AUDIT_STATE_PATH, _uda.espn_source.fetch_all,
             _uda.ligasiden_eller_reserve, _uda.get_ffk_rows, _uda.espn_source.fetch_season, _uda.ntf_source.hent_kalender,
             _uda.ntf_source.siste_tabell, _uda.fetch_odds_history.main, _uda.merge_odds.main, _uda.fit_model.main,
@@ -4010,7 +4087,7 @@ def _a_main(ntf_rader):
     _uda.get_ffk_rows = lambda cache_dir, log: [dict(r) for r in _a_liste if r["hg"] is not None]
     _uda.espn_source.fetch_season = _ikke_kall
     _uda.ntf_source.hent_kalender = _ikke_kall
-    _uda.ntf_source.siste_tabell = lambda liga: None
+    _uda.ntf_source.siste_tabell = lambda liga: tabell
     _uda.fetch_odds_history.main = lambda: logg.append("sluttodds")
     _uda.merge_odds.main = lambda: logg.append("odds slått sammen")
     _uda.fit_model.main = _modell
@@ -4019,7 +4096,7 @@ def _a_main(ntf_rader):
     _dra.data_katalog = lambda liga, sesong=None: d
     try:
         with _vern.miljo(ODDSPAPI_KEY=None, GITHUB_OUTPUT=str(d / "github_output")):
-            _uda.main(now=_a_naa_m)
+            _uda.main(now=naa or _a_naa_m)
         feilen = None
     except Exception as e:
         feilen = e
@@ -4109,6 +4186,248 @@ _wt_o = (ROT / ".github" / "workflows" / "obos-results.yml").read_text("utf-8")
 _merk_o = next(b for b in _wt_o.split("\n      - ")[1:] if b.startswith("name: Merk daglig vedlikehold"))
 sjekk("obos-results.yml: «Merk daglig vedlikehold» krever fortsatt grønn bygging (vedlikeholdet prøves igjen etter en time)",
       "&& steps.bygg.outcome == 'success'" in _merk_o and "data_skrevet" not in _merk_o, _merk_o[-400:])
+
+print("\n=== Bekreftelsen lagres når resultatet publiseres (resultatregel.py, 12.10.2026) ===")
+import resultatregel as _rrb
+import tabellkontroll as _tkb
+_TEK = TESTDATA / "tabell_etter_kamp"
+_b_les = lambda navn: json.loads((_TEK / navn).read_text("utf-8"))
+sjekk("uavhengige_enige: bare kildene utenfor NTF med nøyaktig samme resultat (ligasiden og fotball.no er NTF)",
+      _rrb.uavhengige_enige({"ligasiden": (0, 2), "fotball.no": (0, 2), "espn": (0, 2), "highlightly": (0, 0),
+                             "ffksupporter": None, "wikipedia": (0, 2)}, (0, 2)) == ["espn", "wikipedia"])
+_b_1900 = _dt(2026, 10, 9, 19, 0, tzinfo=_tz.utc)
+_b_t = _rrb.bekreftet_tilstand(
+    {"Gammel|Kamp": {"resultat": [1, 0], "kilder": ["espn"], "publisert": "2026-10-07T19:00:00+00:00"},
+     "Nyere|Kamp": {"resultat": [1, 1], "kilder": ["espn"], "publisert": "2026-10-07T19:10:00+00:00"}},
+    {("Brann", "Viking"): ((0, 2), ["highlightly", "espn"]), ("Bare", "NTF"): ((1, 0), [])}, _b_1900)
+sjekk("bekreftet_tilstand: nytt resultat lagres med kildene og tidspunktet; uten kilde utenfor NTF lagres ingenting; 48 timer gammelt tas ut",
+      _b_t == {"Nyere|Kamp": {"resultat": [1, 1], "kilder": ["espn"], "publisert": "2026-10-07T19:10:00+00:00"},
+               "Brann|Viking": {"resultat": [0, 2], "kilder": ["espn", "highlightly"], "publisert": "2026-10-09T19:00:00+00:00"}}, str(_b_t))
+
+
+print("\n=== Ferske kamper med bekreftet resultat (resultatregel.ferske_bekreftede) ===")
+# 9.10.2026: Brann-Viking 0-2, avspark 19:00 norsk tid (17:00Z). Fristen er seks timer etter avspark.
+_b_es = _b_les("eliteserien_matches.json")
+_b_k0910 = [m for m in _b_es if m["date"] <= "2026-10-09"]
+_b_sb = Path(_tf2.mkdtemp())
+_b_state = _b_sb / "results_state.json"
+
+
+def _b_skriv(bekreftet):
+    _b_state.write_text(json.dumps({"bekreftet": bekreftet}), encoding="utf-8")
+
+
+_BV = {"Brann|Viking": {"resultat": [0, 2], "kilder": ["espn", "highlightly"], "publisert": "2026-10-09T19:00:00+00:00"}}
+_b_skriv(_BV)
+_b_f = _rrb.ferske_bekreftede("eliteserien", _b_k0910, _b_1900, state_sti=_b_state)
+sjekk("to timer etter avspark, bekreftet av espn og highlightly: kampen er fersk, med avspark og frist (seks timer etter avspark)",
+      _b_f == [{"home": "Brann", "away": "Viking", "hg": 0, "ag": 2, "avspark": "2026-10-09T17:00:00+00:00",
+                "frist": "2026-10-09T23:00:00+00:00", "kilder": ["espn", "highlightly"]}], str(_b_f))
+sjekk("5 t 59 min etter avspark: fortsatt fersk",
+      len(_rrb.ferske_bekreftede("eliteserien", _b_k0910, _dt(2026, 10, 9, 22, 59, tzinfo=_tz.utc), state_sti=_b_state)) == 1)
+sjekk("seks timer etter avspark: ikke lenger fersk",
+      _rrb.ferske_bekreftede("eliteserien", _b_k0910, _dt(2026, 10, 9, 23, 0, tzinfo=_tz.utc), state_sti=_b_state) == [])
+_b_skriv({})
+sjekk("resultatet står ikke som bekreftet: ikke med", _rrb.ferske_bekreftede("eliteserien", _b_k0910, _b_1900, state_sti=_b_state) == [])
+_b_skriv({"Brann|Viking": {**_BV["Brann|Viking"], "resultat": [0, 0]}})
+sjekk("det bekreftede resultatet (0-0) er et annet enn det vi har (0-2): ikke med",
+      _rrb.ferske_bekreftede("eliteserien", _b_k0910, _b_1900, state_sti=_b_state) == [])
+_b_skriv({"Brann|Viking": {**_BV["Brann|Viking"], "kilder": []}})
+sjekk("ingen kilde utenfor NTF: ikke med", _rrb.ferske_bekreftede("eliteserien", _b_k0910, _b_1900, state_sti=_b_state) == [])
+_b_state.unlink()
+sjekk("ingen results_state.json: ikke med", _rrb.ferske_bekreftede("eliteserien", _b_k0910, _b_1900, state_sti=_b_state) == [])
+_b_skriv(_BV)
+
+print("\n=== Tabellkontrollen rett etter kampslutt: advarsel og ny sjekk, ikke rødt (tabellkontroll.ferske_unntak) ===")
+# De ekte tabellene fra ligasiden 9.10.2026 (labens kildearkiv): kl. 21:00
+# (19:00Z) var Brann-Viking ført som 0-0, kl. 22:10 (20:10Z) var den rettet.
+_b_t1900, _b_t2010 = _b_les("eliteserien_tabell_2026-10-09T1900Z.json"), _b_les("eliteserien_tabell_2026-10-09T2010Z.json")
+_B_URL = "https://www.eliteserien.no/resultater"
+
+
+def _b_kontroll(kamper, tabell, naa, ferske, mappe=None, liga="eliteserien", url=_B_URL, just=None):
+    d = mappe or Path(_tf2.mkdtemp())
+    if just is not None:
+        (d / "justeringer.json").write_text(json.dumps({"justeringer": just}, ensure_ascii=False), encoding="utf-8")
+    linjer = []
+    ut = _tkb.kontroller(liga, 2026, kamper, tabell, naa=naa, data_dir=d, kilde_url=url, kjoring="test",
+                         log=linjer.append, ferske=ferske)
+    return ut, linjer, d
+
+
+def _b_endre(tabell, **endringer):
+    """Tabellen med noen felt lagt til for enkelte lag: _b_endre(t, Molde={"mm": 1})."""
+    return [{**r, **{f: r[f] + v for f, v in endringer.get(r["lag"], {}).items()}} for r in tabell]
+
+
+def _b_tabell(kamper, erstatt=None, uten=()):
+    """En «offisiell» tabell regnet av kampene, der noen er ført med et annet resultat (erstatt) eller mangler (uten)."""
+    k = [{**m, **dict(zip(("hg", "ag"), (erstatt or {}).get((m["home"], m["away"]), (m["hg"], m["ag"]))))}
+         for m in kamper if (m["home"], m["away"]) not in uten]
+    lag = sorted({m["home"] for m in kamper} | {m["away"] for m in kamper})
+    v = _tkb.vaar_tabell(k, lag)
+    return [{"plass": r["plass"], "lag": l, **{f: r[f] for f in ("k", "v", "u", "t", "mf", "mm", "poeng")}, "diff": r["mf"] - r["mm"]}
+            for l, r in v.items()]
+
+
+_ut, _lin, _b_d = _b_kontroll(_b_k0910, _b_t1900, _b_1900, _b_f)
+sjekk("9.10. kl. 21:00, Brann-Viking ført som 0-0 hos ligasiden, resultatet vårt bekreftet: ingen kritiske avvik",
+      _ut["errors"] == 0 and _ut["avvik"] == [] and _ut["sammenlignet"] is True, str(_ut))
+sjekk("advarselen sier hvilken kamp, hva tabellen viser, resultatet vårt, hvem som bekreftet det og fristen",
+      _ut["advarsler"] == ["Tabell: Brann og Viking avviker bare i Brann-Viking, som er ført som 0-0 i tabellen på eliteserien.no. "
+                           "Hos oss 0-2, bekreftet av espn og highlightly. Avspark 19:00, sjekkes på nytt i neste kjøring (frist 01:00)."],
+      str(_ut["advarsler"]))
+sjekk("kampen står i «venter» med resultatet, kildene, fristen og grunnen",
+      _ut["venter"] == [{"kamp": "Brann|Viking", "resultat": [0, 2], "avspark": "2026-10-09T17:00:00+00:00",
+                         "frist": "2026-10-09T23:00:00+00:00", "kilder": ["espn", "highlightly"], "grunn": "ført som 0-0 i tabellen"}],
+      str(_ut["venter"]))
+sjekk("«alle like» settes ikke, så frysingen kan ikke bygge på denne kontrollen", _ut["alle_like"] is False and _ut["siste_like"] is None)
+sjekk("gul merknad i Actions, og status.json blir ikke rød av dette (tabellkontroll.avvik er 0)",
+      any(l.startswith("::warning title=Tabellen på eliteserien.no henger etter::Tabell: Brann og Viking") for l in _lin)
+      and _tkb.avvik("eliteserien", data_dir=_b_d) == 0, str(_lin))
+_ut, _lin, _ = _b_kontroll(_b_k0910, _b_t2010, _dt(2026, 10, 9, 20, 10, tzinfo=_tz.utc),
+                           _rrb.ferske_bekreftede("eliteserien", _b_k0910, _dt(2026, 10, 9, 20, 10, tzinfo=_tz.utc), state_sti=_b_state), mappe=_b_d)
+sjekk("ny sjekk kl. 22:10, tabellen er rettet: alle like, ingenting venter, og den vellykkede kontrollen er lagret",
+      _ut["errors"] == 0 and _ut["alle_like"] is True and _ut["venter"] == [] and _ut["siste_like"]
+      and not any("henger etter" in l for l in _lin), str(_ut)[:400])
+
+# Regelen som før når vilkårene ikke er oppfylt.
+_ut, _lin, _ = _b_kontroll(_b_k0910, _b_t1900, _b_1900, [])
+sjekk("samme tabell, resultatet IKKE bekreftet: to kritiske avvik som før (Brann og Viking)",
+      _ut["errors"] == 2 and _ut["venter"] == [] and _ut["avvik"][0].startswith("Tabell, Brann: 2 uavgjort hos oss, 3 hos eliteserien.no; 11 tap hos oss, 10 hos")
+      and _ut["avvik"][1].startswith("Tabell, Viking: 17 vunnet hos oss, 16 hos"), str(_ut["avvik"]))
+_ut, _lin, _ = _b_kontroll(_b_k0910, _b_t1900, _b_1900, None)
+sjekk("og uten ferske kamper i det hele tatt (kalleren sender ingen): som før", _ut["errors"] == 2 and _ut["venter"] == [])
+_b_2310 = _dt(2026, 10, 9, 23, 10, tzinfo=_tz.utc)
+_ut, _lin, _ = _b_kontroll(_b_k0910, _b_t1900, _b_2310, _rrb.ferske_bekreftede("eliteserien", _b_k0910, _b_2310, state_sti=_b_state), mappe=_b_d)
+sjekk("tabellen er fortsatt feil 6 t 10 min etter avspark (fristen er ute): kritisk som før, og ingenting venter lenger",
+      _ut["errors"] == 2 and _ut["venter"] == [] and _tkb.avvik("eliteserien", data_dir=_b_d) == 2, str(_ut)[:300])
+_ut, _lin, _ = _b_kontroll(_b_k0910, _b_endre(_b_t1900, Molde={"mm": 1, "diff": -1}), _b_1900, _b_f)
+sjekk("et tredje lag (Molde) avviker i tillegg: det er kritisk og gjør kjøringen rød; Brann-Viking venter fortsatt",
+      _ut["errors"] == 1 and _ut["avvik"][0].startswith("Tabell, Molde:") and [v["kamp"] for v in _ut["venter"]] == ["Brann|Viking"], str(_ut)[:400])
+_ut, _lin, _ = _b_kontroll(_b_k0910, _b_endre(_b_t1900, Brann={"mf": 2, "diff": 2}), _b_1900, _b_f)
+sjekk("resten går ikke opp (Brann har to mål mer hos ligasiden enn en 0-0 forklarer): noe eldre er ulikt, kritisk for begge lagene",
+      _ut["errors"] == 2 and _ut["venter"] == [] and {a.split(":")[0] for a in _ut["avvik"]} == {"Tabell, Brann", "Tabell, Viking"}, str(_ut)[:400])
+_ut, _lin, _ = _b_kontroll(_b_k0910, _b_endre(_b_t1900, Viking={"v": 1, "u": -1, "mf": 1, "diff": 1, "poeng": 2}), _b_1900, _b_f)
+sjekk("de to radene speiler ikke hverandre (Brann pluss en 0-0, Viking pluss en 1-0-seier): kritisk for begge",
+      _ut["errors"] == 2 and _ut["venter"] == [], str(_ut)[:400])
+
+# Halvveis oppdatert tabell: Brann er ført med 0-0, Viking mangler kampen.
+_b_halv = [dict(r) for r in _b_t1900]
+_b_vik = next(r for r in _b_halv if r["lag"] == "Viking")
+_b_vik.update(k=_b_vik["k"] - 1, u=_b_vik["u"] - 1, poeng=_b_vik["poeng"] - 1)
+_ut, _lin, _ = _b_kontroll(_b_k0910, _b_halv, _b_1900, _b_f)
+sjekk("halvveis oppdatert tabell (Brann ført med 0-0, Viking uten kampen): gjelder bare den kampen, venter",
+      _ut["errors"] == 0 and [(v["kamp"], v["grunn"]) for v in _ut["venter"]] == [("Brann|Viking", "ført som 0-0 i tabellen")], str(_ut)[:400])
+# Samme halvveis oppdaterte tabell, men Brann-raden er ikke «vår rad uten
+# kampen pluss én kamp»: da er noe eldre ulikt, og Brann er kritisk som før.
+# (Viking mangler bare kampen, og har advarselen om ulikt antall kamper.)
+for _b_navn, _b_felt in (("en uavgjort med to mål for og ingen mot finnes ikke", {"mf": 2, "diff": 2}),
+                         ("en seier og en uavgjort mer, ett tap mindre: et eldre tap er blitt uavgjort", {"v": 1, "t": -1, "mf": 1, "diff": 1, "poeng": 3})):
+    _ut, _lin, _ = _b_kontroll(_b_k0910, _b_endre(_b_halv, Brann=_b_felt), _b_1900, _b_f)
+    sjekk(f"Brann-raden går ikke opp som én kamp ({_b_navn}): kritisk for Brann, ingenting venter",
+          _ut["errors"] == 1 and _ut["avvik"][0].startswith("Tabell, Brann:") and _ut["venter"] == []
+          and any("Viking: 22 kamper hos oss, 21 hos" in a for a in _ut["advarsler"]), str(_ut)[:500])
+
+# To ferske kamper samme kveld, begge ført feil (10.10.: Bodø/Glimt-Kristiansund 3-1 og Rosenborg-Sandefjord 1-1).
+_b_1810 = _dt(2026, 10, 10, 18, 10, tzinfo=_tz.utc)
+_b_skriv({"Bodø/Glimt|Kristiansund": {"resultat": [3, 1], "kilder": ["espn"], "publisert": "2026-10-10T16:00:00+00:00"},
+          "Rosenborg|Sandefjord": {"resultat": [1, 1], "kilder": ["highlightly"], "publisert": "2026-10-10T18:00:00+00:00"}})
+_b_f2 = _rrb.ferske_bekreftede("eliteserien", _b_es, _b_1810, state_sti=_b_state)
+_ut, _lin, _ = _b_kontroll(_b_es, _b_tabell(_b_es, erstatt={("Bodø/Glimt", "Kristiansund"): (0, 0), ("Rosenborg", "Sandefjord"): (0, 1)}), _b_1810, _b_f2)
+sjekk("to ferske kamper, begge ført med et annet resultat: begge venter, ingen kritiske avvik",
+      len(_b_f2) == 2 and _ut["errors"] == 0
+      and sorted((v["kamp"], v["grunn"]) for v in _ut["venter"]) == [("Bodø/Glimt|Kristiansund", "ført som 0-0 i tabellen"),
+                                                                    ("Rosenborg|Sandefjord", "ført som 0-1 i tabellen")], str(_ut)[:500])
+sjekk("motprøve: den konstruerte tabellen uten endringer er lik vår (alle like)",
+      _b_kontroll(_b_es, _b_tabell(_b_es), _b_1810, _b_f2)[0]["alle_like"] is True)
+
+# Et nytt poengtrekk for et annet lag mens noe venter: legges inn, men «alle like» settes ikke.
+_ut, _lin, _b_d2 = _b_kontroll(_b_k0910, _b_endre(_b_t1900, Molde={"poeng": -1}), _b_1900, _b_f)
+sjekk("nytt poengtrekk (Molde) mens Brann-Viking venter: trekket legges inn, og kontrollen regnes ikke som vellykket",
+      [(j["lag"], j["poeng"]) for j in _ut["nye"]] == [("Molde", -1)] and _ut["errors"] == 0 and _ut["venter"]
+      and _ut["alle_like"] is False and _ut["siste_like"] is None, str(_ut)[:500])
+
+# Tabellen kan ikke leses i en ny sjekk: det som ventet, venter videre til fristen.
+_ut, _lin, _b_d3 = _b_kontroll(_b_k0910, _b_t1900, _b_1900, _b_f)
+_ut, _lin, _ = _b_kontroll(_b_k0910, {"feil": "fant ingen tabell på resultatsiden"}, _dt(2026, 10, 9, 19, 10, tzinfo=_tz.utc), _b_f, mappe=_b_d3)
+sjekk("ny sjekk der tabellen ikke kan leses: ikke sammenlignet, og Brann-Viking venter videre",
+      _ut["sammenlignet"] is False and _ut["errors"] == 0 and [v["kamp"] for v in _ut["venter"]] == ["Brann|Viking"], str(_ut)[:400])
+_ut, _lin, _ = _b_kontroll(_b_k0910, {"feil": "fant ingen tabell på resultatsiden"}, _b_2310, [], mappe=_b_d3)
+sjekk("og etter fristen venter ingenting lenger (da gjelder kontrollen som før når tabellen kan leses)", _ut["venter"] == [], str(_ut)[:300])
+
+print("\n=== Tillegget: den ferske kampen mangler i tabellen på ligasiden ===")
+# 10.10.2026 kl. 17:50 (15:50Z), den ekte tabellen: Bodø/Glimt-Kristiansund (3-1,
+# avspark 16:00) var ikke kommet inn (21 kamper der, 22 hos oss).
+_b_t1550 = _b_les("eliteserien_tabell_2026-10-10T1550Z.json")
+_b_1550 = _dt(2026, 10, 10, 15, 50, tzinfo=_tz.utc)
+_b_k1550 = [m for m in _b_es if (m["home"], m["away"]) != ("Rosenborg", "Sandefjord")]
+_b_fm = _rrb.ferske_bekreftede("eliteserien", _b_k1550, _b_1550, state_sti=_b_state)
+_ut, _lin, _b_d4 = _b_kontroll(_b_k1550, _b_t1550, _b_1550, _b_fm)
+sjekk("kampen mangler i tabellen, resultatet er bekreftet: advarsel med kampen og fristen, og den venter på ny sjekk",
+      _ut["errors"] == 0 and _ut["advarsler"] == ["Tabell: Bodø/Glimt-Kristiansund mangler i tabellen på eliteserien.no. Hos oss 3-1, bekreftet av espn. "
+                                                 "Avspark 16:00, sjekkes på nytt i neste kjøring (frist 22:00)."]
+      and [(v["kamp"], v["grunn"], v["frist"]) for v in _ut["venter"]] == [("Bodø/Glimt|Kristiansund", "mangler i tabellen", "2026-10-10T20:00:00+00:00")],
+      f"{_ut['advarsler']} {_ut['venter']}")
+_ut, _lin, _ = _b_kontroll(_b_k1550, _b_t1550, _b_1550, [])
+sjekk("motprøve uten bekreftelse: de to advarslene som før («hentet på ulike tidspunkt»), og ingen ny sjekk",
+      _ut["errors"] == 0 and _ut["venter"] == [] and len(_ut["advarsler"]) == 2
+      and all("hentet på ulike tidspunkt, ikke sammenlignet" in a for a in _ut["advarsler"]), str(_ut["advarsler"]))
+_b_2010 = _dt(2026, 10, 10, 20, 10, tzinfo=_tz.utc)
+_ut, _lin, _ = _b_kontroll(_b_k1550, _b_t1550, _b_2010, _rrb.ferske_bekreftede("eliteserien", _b_k1550, _b_2010, state_sti=_b_state), mappe=_b_d4)
+sjekk("kampen mangler fortsatt når fristen er ute: advarselen står som før, ikke rødt, og ingenting venter",
+      _ut["errors"] == 0 and _ut["venter"] == [] and len(_ut["advarsler"]) == 2, str(_ut)[:400])
+
+# OBOS 11.10.2026 kl. 18:50 (16:50Z), den ekte tabellen: alle åtte kampene manglet.
+_b_ob = _b_les("obos_matches.json")
+_b_obt = _b_les("obos_tabell_2026-10-11T1650Z.json")
+_b_ob_naa = _dt(2026, 10, 11, 16, 50, tzinfo=_tz.utc)
+_b_ob_ferske = [m for m in _b_ob if m["date"] == "2026-10-11"]
+_b_ob_state = _b_sb / "obos_state.json"
+_b_ob_state.write_text(json.dumps({"bekreftet": {f"{m['home']}|{m['away']}": {"resultat": [m["hg"], m["ag"]], "kilder": ["highlightly"],
+                                                                                "publisert": "2026-10-11T16:50:00+00:00"} for m in _b_ob_ferske}}), encoding="utf-8")
+_b_obf = _rrb.ferske_bekreftede("obos", _b_ob, _b_ob_naa, state_sti=_b_ob_state)
+_b_just_ob = [{"sesong": 2026, "lag": "Åsane", "poeng": -1, "dato": "2026-03-04"}]
+_ut, _lin, _ = _b_kontroll(_b_ob, _b_obt, _b_ob_naa, _b_obf, liga="obos", url="https://www.obos-ligaen.no/resultater", just=_b_just_ob)
+sjekk(f"OBOS 11.10.: alle {len(_b_ob_ferske)} kampene i runden mangler i tabellen på obos-ligaen.no; alle venter, ingen kritiske avvik, ingen nye poengtrekk",
+      len(_b_ob_ferske) == 8 and len(_b_obf) == 8 and _ut["errors"] == 0 and _ut["nye"] == []
+      and sorted(v["kamp"] for v in _ut["venter"]) == sorted(f"{m['home']}|{m['away']}" for m in _b_ob_ferske)
+      and all(v["grunn"] == "mangler i tabellen" for v in _ut["venter"]) and all("obos-ligaen.no" in a for a in _ut["advarsler"]),
+      f"{len(_b_obf)} {_ut['errors']} {_ut['advarsler'][:2]}")
+_b_obk = (ROT / "scripts" / "obos_build_data.py").read_text("utf-8")
+sjekk("obos_build_data.py sender de ferske, bekreftede kampene fra obos/data/results_state.json til tabellkontrollen",
+      'ferske=resultatregel.ferske_bekreftede("obos", matches_ut, datetime.now(timezone.utc),' in _b_obk
+      and 'state_sti=DATA / "results_state.json"' in _b_obk)
+
+print("\n=== Hele update_data.main: fersk kamp ført feil i tabellen gir grønn kjøring og ny sjekk ===")
+# Sandkassen fra over (dataene fra 1.10.). Den siste spilte kampen er fersk
+# (avspark for to timer siden), og tabellen fra ligasiden har ført den som
+# 0-0. Bekreftelsen står i results_state.json fra kjøringen som publiserte
+# resultatet; denne kjøringen har ingen nye resultater.
+_b_spilte = sorted([r for r in _a_liste if r["hg"] is not None], key=lambda r: (r["date"], r["time"]))
+_b_siste = next(r for r in reversed(_b_spilte) if (r["hg"], r["ag"]) != (0, 0))
+_b_avsp = _dt.fromisoformat(f"{_b_siste['date']}T{_b_siste['time']}").replace(tzinfo=ZoneInfo("Europe/Oslo")).astimezone(_tz.utc)
+_b_nokkel = f"{_b_siste['home']}|{_b_siste['away']}"
+_b_feil_tabell = {"tabell": _b_tabell(_b_spilte, erstatt={(_b_siste["home"], _b_siste["away"]): (0, 0)}), "kilde": _B_URL}
+_b_st_main = {"conflicts": [], "waiting": [], "ukontrollert": {}, "ukontrollert_sjekket": None, "forst_sett": {},
+              "bekreftet": {_b_nokkel: {"resultat": [_b_siste["hg"], _b_siste["ag"]], "kilder": ["espn"],
+                                        "publisert": (_b_avsp + _tda(minutes=115)).isoformat(timespec="seconds")}}}
+_e, _logg, _ = _a_main(_a_liste, naa=_b_avsp + _tda(hours=2), tabell=_b_feil_tabell, state=_b_st_main)
+_b_aud = _a_fil("audit_tabell.json")
+sjekk(f"{_b_siste['home']}-{_b_siste['away']} er fersk og bekreftet, tabellen har ført den som 0-0: kjøringen er grønn, status.json er grønn",
+      _e is None and _a_fil("status.json")["ok"] is True and _b_aud["errors"] == 0, f"{_e!r} {_b_aud}"[:500])
+sjekk("og kampen venter i audit_tabell.json, så porten åpner i neste kjøring",
+      [(v["kamp"], v["grunn"]) for v in _b_aud["venter"]] == [(_b_nokkel, "ført som 0-0 i tabellen")]
+      and _a_fil("results_state.json")["bekreftet"] == _b_st_main["bekreftet"], str(_b_aud.get("venter")))
+_e, _logg, _ = _a_main(_a_liste, naa=_b_avsp + _tda(hours=2), tabell=_b_feil_tabell, state={**_b_st_main, "bekreftet": {}})
+sjekk("samme kjøring uten bekreftelsen: tabellkontrollen gjør kjøringen rød, men først etter sluttodds, odds og modell",
+      isinstance(_e, _uda.DataAuditError) and "kritisk(e) avvik mellom tabellen vår og tabellen på ligasiden" in str(_e)
+      and _logg[:3] == ["sluttodds", "odds slått sammen", "modell"] and _a_fil("status.json")["ok"] is False
+      and _a_fil("audit_tabell.json")["venter"] == [], f"{_e!r} {_logg}"[:400])
+_e, _logg, _ = _a_main(_a_liste, naa=_b_avsp + _tda(hours=6, minutes=10), tabell=_b_feil_tabell, state=_b_st_main)
+sjekk("og 6 t 10 min etter avspark, fortsatt feil i tabellen: rød kjøring (fristen er ute)",
+      isinstance(_e, _uda.DataAuditError) and _a_fil("audit_tabell.json")["errors"] == 2 and _a_fil("audit_tabell.json")["venter"] == [],
+      f"{_e!r}"[:300])
 
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.

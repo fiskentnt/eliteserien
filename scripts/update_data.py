@@ -225,7 +225,8 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
     forst_gml = {n: v for n, v in (gml.get("forst_sett") or {}).items() if tuple(n.split("|")) not in publisert}
     if not nye and not sjekk_ukontr and not ventende:
         return merged, {"conflicts": [], "waiting": [], "ukontrollert": ukontr, "ukontrollert_sjekket": sist,
-                        "forst_sett": forst_gml}
+                        "forst_sett": forst_gml,
+                        "bekreftet": resultatregel.bekreftet_tilstand(gml.get("bekreftet"), {}, now)}
 
     kilder = {LIGAKILDE: resultat(liga_rader), "ffksupporter": resultat(ffk_rader) if ffk_rader else None}
     try:
@@ -258,6 +259,9 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
     oppe = {k for k, v in kilder.items() if v is not None}
 
     waiting, conflicts, nye_ukontr, linjer = [], [], {}, []
+    # Hvilke kilder utenfor NTF som hadde resultatet da det ble publisert
+    # (12.10.2026), til tabellkontrollen rett etter kampslutt.
+    nye_bekr = {}
     ut = []
     nye_k = {(r["home"], r["away"]) for r in nye}
     for r in merged:
@@ -280,6 +284,8 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
             ut.append({**r, "hg": u["resultat"][0], "ag": u["resultat"][1]})
             if u["ukontrollert"]:
                 nye_ukontr[k] = u["resultat"]
+            else:
+                nye_bekr[k] = (u["resultat"], resultatregel.uavhengige_enige(svar, u["resultat"]))
             if u["uenige"] or u["ukontrollert"]:
                 log(f"  {hvem}: {u['grunn']}")
             continue
@@ -290,6 +296,9 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
         ukontr, bekreftet, uenige = resultatregel.kontroller_ukontrollerte("eliteserien", ukontr, svar_pk)
         for k in bekreftet:
             log(f"  {k[0]}-{k[1]}: publisert uten kontroll, nå bekreftet")
+            _r = next(((m["hg"], m["ag"]) for m in tidligere if (m["home"], m["away"]) == k), None)
+            if _r is not None:
+                nye_bekr[k] = (_r, resultatregel.uavhengige_enige(svar_pk.get(k), _r))
         for k, rr, uavh in uenige:
             conflicts.append(f"{k[0]}-{k[1]}: publisert {rr[0]}-{rr[1]} uten kontroll, men "
                              + ", ".join(f"{kilde} har {v[0]}-{v[1]}" for kilde, v in uavh.items()))
@@ -312,7 +321,8 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
             log(f"    {l2}")
     return ut, {"conflicts": conflicts, "waiting": waiting, "ukontrollert": ukontr,
                 "ukontrollert_sjekket": now.isoformat(timespec="seconds") if sjekk_ukontr else sist,
-                "forst_sett": forst}
+                "forst_sett": forst,
+                "bekreftet": resultatregel.bekreftet_tilstand(gml.get("bekreftet"), nye_bekr, now)}
 
 
 def skriv_state(state, now, state_sti=None):
@@ -322,6 +332,9 @@ def skriv_state(state, now, state_sti=None):
         "ukontrollert": {f"{k[0]}|{k[1]}": list(v) for k, v in state["ukontrollert"].items()},
         "ukontrollert_sjekket": state["ukontrollert_sjekket"],
         "forst_sett": state.get("forst_sett") or {},
+        # Kildene utenfor NTF som hadde resultatet da det ble publisert
+        # (resultatregel.bekreftet_tilstand), til tabellkontrollen.
+        "bekreftet": state.get("bekreftet") or {},
     }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
@@ -742,12 +755,17 @@ def main(cache_dir=None, now=None):
         # justeringer.json her, foer modellen og grunnlaget. Avvik i kamper,
         # maal eller V/U/T feiler kjoringen nederst, etter at alt annet er
         # skrevet.
+        # Rett etter kampslutt (12.10.2026): et avvik som bare gjelder en
+        # fersk kamp med resultat bekreftet utenfor NTF, er en advarsel og en
+        # ny sjekk i neste kjøring (ferske), se tabellkontroll.py.
         import tabellkontroll
+        import resultatregel
         _t = ntf_source.siste_tabell(LIGA)
         _tk = tabellkontroll.kontroller(
             LIGA, _aktiv or now.astimezone(timezone.utc).year, matches_out,
             _t.get("tabell") if _t and "tabell" in _t else _t, naa=now, data_dir=data_dir,
-            kilde_url=_t.get("kilde") if _t else None, kjoring=_ses.kjoring_id(), log=log)
+            kilde_url=_t.get("kilde") if _t else None, kjoring=_ses.kjoring_id(), log=log,
+            ferske=resultatregel.ferske_bekreftede(LIGA, matches_out, now, state_sti=STATE))
 
         # Resten: først arbeidet (sluttodds, odds, modell), så kontrollene.
         # Datovaktene har alt beholdt de gamle datoene i rimelige_datoer()

@@ -3,6 +3,41 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Tabellkontrollen rett etter kampslutt: advarsel og ny sjekk (12.10.2026)
+
+9.10. førte tabellen på ligasiden Brann-Viking (0-2) som 0-0 til 80 minutter
+etter kampslutt (3 t 10 min etter avspark). Det ga kritisk avvik og rødt
+stempel til en manuell kjøring dagen etter. De andre kveldene i arkivet
+manglet den ferske kampen i tabellen i 20 til 80 minutter, og lagene ble da
+ikke sammenlignet før porten åpnet av en annen grunn.
+
+Regelen (tabellkontroll.ferske_unntak): gjelder avviket bare en fersk kamp
+(avspark for mindre enn seks timer siden, resultatregel.FERSK_TIMER) med
+resultat bekreftet utenfor NTF, blir det ADVARSEL og en ny sjekk i neste
+kjøring, ikke rødt. Det gjelder både når kampen er ført med et annet resultat
+og når den mangler i tabellen. «Bare den kampen» betyr at raden på ligasiden
+er vår rad uten kampen, eller den pluss nøyaktig én kamp; har begge lagene
+kampen ført, må resultatene være speilvendte. Avvik hos andre lag, en rest
+som ikke går opp, et ubekreftet resultat eller en kamp eldre enn seks timer
+gir kritisk avvik som før.
+
+- Bekreftelsen lagres når resultatet publiseres: results_state.json,
+  «bekreftet», med resultatet, kildene utenfor NTF og tidspunktet (begge
+  ligaene). Publisert uten kontroll (bare ligasiden, etter 24 timer) er ikke
+  bekreftet.
+- Kampen står i «venter» i audit_tabell.json. «Alle like» settes ikke, så
+  frysingen kan ikke bygge på kontrollen.
+- Porten (should_fetch.tabell_venter) åpner i hver kjøring så lenge noe
+  venter, uten tellende kall, og til en time etter fristen. Står avviket da,
+  er det kritisk, og timesforsøket ved rød status tar over.
+- Kan tabellen ikke leses i en ny sjekk, ventes det videre til fristen.
+
+Tester: tests/kilder/test_kilder.py («Bekreftelsen lagres», «Ferske kamper
+med bekreftet resultat», «Tabellkontrollen rett etter kampslutt»,
+«Tillegget», «Hele update_data.main: fersk kamp», porten i «Porten: nytt
+forsøk»), med de ekte tabellene fra 9.-11.10. i
+tests/kilder/testdata/tabell_etter_kamp.
+
 ## Kontrollene stopper ikke resten (12.10.2026)
 
 Før stoppet «mangler sluttresultat etter 3 timer» og datovaktene

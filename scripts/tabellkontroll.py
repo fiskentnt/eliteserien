@@ -22,6 +22,15 @@ Lag for lag:
                                GitHub-issue (varsle() under), ikke med rodt
                                stempel.
 
+RETT ETTER KAMPSLUTT (12.10.2026): gjelder avviket bare en FERSK kamp (avspark
+for mindre enn seks timer siden) med resultat bekreftet utenfor NTF, er det en
+advarsel og en ny sjekk i neste kjoring, ikke et kritisk avvik. Det gjelder
+baade naar kampen er foert med et annet resultat i tabellen paa ligasiden og
+naar den mangler der. Kampen staar i feltet "venter" i audit_tabell.json, og
+porten (should_fetch.py) aapner i hver kjoring saa lenge noe venter. Er
+resultatet ikke bekreftet, eller er fristen ute, gjelder reglene over. Se
+ferske_unntak().
+
 Resultatet skrives til <liga>/data/audit_tabell.json. Den siste vellykkede
 kontrollen (alle lag stemte) lagres i feltet siste_like med tidspunkt og et
 avtrykk av resultatene og justeringene den gjaldt. Frysingen ved sesongslutt
@@ -73,12 +82,16 @@ def vaar_tabell(kamper, lag, just=None):
     return t
 
 
-def sammenlign(vaar, offisiell, kilde="ligasiden"):
+def sammenlign(vaar, offisiell, kilde="ligasiden", venter=()):
     """(feil, advarsler, nye, alle_like).
 
     nye er [(lag, poeng)]: poeng som maa legges til lagets justeringer for at
     vaar poengsum skal bli den offisielle. alle_like er sant bare naar alle
-    lag har likt antall kamper og alt stemmer, ogsaa poengene."""
+    lag har likt antall kamper og alt stemmer, ogsaa poengene.
+
+    venter: lagene som venter paa en ny sjekk etter en fersk kamp (se
+    ferske_unntak). De sammenlignes ikke her -- verken avvik, advarsel eller
+    nytt poengtrekk -- og alle_like er da usann."""
     feil, advarsler, nye = [], [], []
     off = {r["lag"]: r for r in offisiell}
     alle_like = True
@@ -86,6 +99,9 @@ def sammenlign(vaar, offisiell, kilde="ligasiden"):
         v, o = vaar.get(lag), off.get(lag)
         if not v or not o:
             feil.append(f"Tabell, {lag}: står {'bare hos ' + kilde if o else 'bare hos oss'}")
+            alle_like = False
+            continue
+        if lag in venter:
             alle_like = False
             continue
         if v["k"] != o["k"]:
@@ -105,6 +121,97 @@ def sammenlign(vaar, offisiell, kilde="ligasiden"):
                 advarsler.append(f"Tabell, {lag}: plass {vaar[lag]['plass']} hos oss, "
                                  f"{off[lag]['plass']} hos {kilde} (lik poengsum, ulik rangering)")
     return feil, advarsler, nye, alle_like and not nye
+
+
+RADFELT = ("k", "v", "u", "t", "mf", "mm")
+
+
+def _en_kamp(o, b):
+    """Er tabellraden o lik raden b pluss NOEYAKTIG en kamp? Returnerer
+    (maal for, maal mot) for den kampen, ellers None."""
+    d = {f: o[f] - b[f] for f in RADFELT}
+    if d["k"] != 1 or min(d.values()) < 0 or d["v"] + d["u"] + d["t"] != 1:
+        return None
+    utfall = "v" if d["mf"] > d["mm"] else "t" if d["mf"] < d["mm"] else "u"
+    return (d["mf"], d["mm"]) if d[utfall] == 1 else None
+
+
+def _klokke(iso):
+    return datetime.fromisoformat(iso).astimezone(OSLO).strftime("%H:%M")
+
+
+def ferske_unntak(kamper, lag, just, offisiell, ferske, kilde="ligasiden"):
+    """Rett etter kampslutt (12.10.2026): (lag som venter, venter, advarsler).
+
+    9.10.2026 foerte tabellen paa ligasiden Brann-Viking (0-2) som 0-0 i 80
+    minutter etter kampslutt. Det ga kritisk avvik og roedt stempel til dagen
+    etter, enda resultatet vaart var bekreftet av en uavhengig kilde. De
+    andre kveldene manglet den ferske kampen i tabellen en stund.
+
+    ferske er kampene fra resultatregel.ferske_bekreftede: avspark for mindre
+    enn seks timer siden, og resultatet bekreftet utenfor NTF. For hver av
+    dem regnes tabellen vaar UTEN de ferske kampene (grunnlinjen), og hvert
+    av de to lagene er da i en av disse tilstandene:
+
+      lik      raden paa ligasiden er vaar rad (kampen er foert riktig)
+      mangler  raden er grunnlinjen (kampen er ikke kommet inn)
+      foert    raden er grunnlinjen pluss noeyaktig en kamp, med et annet
+               resultat enn vaart (9.10.: pluss en 0-0)
+      ulikt    antall kamper er ulikt, og resten gaar ikke opp
+      feil     samme antall kamper, men raden er ikke grunnlinjen pluss en
+               kamp: noe ELDRE er ulikt
+
+    REGELEN: har et av lagene "feil", eller har begge "foert" med resultater
+    som ikke er speilvendte, gjelder kontrollen som foer (kritisk). Ellers
+    gjelder avviket bare den ferske kampen: lagene sammenlignes ikke, det
+    blir ADVARSEL, og kampen staar i "venter" til tabellen stemmer eller
+    fristen (seks timer etter avspark) er ute. Da er kampen ikke lenger
+    fersk, og kontrollen gjelder som foer.
+
+    Uten ferske kamper skjer ingenting her."""
+    if not ferske:
+        return set(), [], []
+    off = {r["lag"]: r for r in offisiell}
+    nokler = {(f["home"], f["away"]) for f in ferske}
+    vaar = vaar_tabell(kamper, lag, just)
+    grunn = vaar_tabell([m for m in kamper if (m["home"], m["away"]) not in nokler], lag, just)
+    lag_venter, venter, advarsler = set(), [], []
+    for f in ferske:
+        h, a = f["home"], f["away"]
+        if any(l not in off or l not in vaar for l in (h, a)):
+            continue
+        tilstand = {}
+        for l in (h, a):
+            v, o, b = vaar[l], off[l], grunn[l]
+            if all(v[x] == o[x] for x in RADFELT):
+                tilstand[l] = ("lik", None)
+            elif all(b[x] == o[x] for x in RADFELT):
+                tilstand[l] = ("mangler", None)
+            elif o["k"] != v["k"]:
+                tilstand[l] = ("ulikt", None)
+            else:
+                en = _en_kamp(o, b)
+                tilstand[l] = ("foert", en) if en else ("feil", None)
+        typer = {tilstand[h][0], tilstand[a][0]}
+        if typer == {"lik"} or "feil" in typer:
+            continue
+        foert = tilstand[h][1] or (tilstand[a][1][::-1] if tilstand[a][1] else None)   # sett fra hjemmelaget
+        if tilstand[h][0] == "foert" and tilstand[a][0] == "foert" and tilstand[h][1] != tilstand[a][1][::-1]:
+            continue        # de to radene forteller ikke om samme kamp
+        hvem = f"{h}-{a}"
+        bekr = " og ".join(f["kilder"])
+        hale = (f"Hos oss {f['hg']}-{f['ag']}, bekreftet av {bekr}. Avspark {_klokke(f['avspark'])}, "
+                f"sjekkes på nytt i neste kjøring (frist {_klokke(f['frist'])}).")
+        if foert:
+            grunn_tekst = f"ført som {foert[0]}-{foert[1]} i tabellen"
+            advarsler.append(f"Tabell: {h} og {a} avviker bare i {hvem}, som er {grunn_tekst} på {kilde}. {hale}")
+        else:
+            grunn_tekst = "mangler i tabellen"
+            advarsler.append(f"Tabell: {hvem} {grunn_tekst} på {kilde}. {hale}")
+        lag_venter |= {l for l in (h, a) if tilstand[l][0] != "lik"}
+        venter.append({"kamp": f"{h}|{a}", "resultat": [f["hg"], f["ag"]], "avspark": f["avspark"],
+                       "frist": f["frist"], "kilder": list(f["kilder"]), "grunn": grunn_tekst})
+    return lag_venter, venter, advarsler
 
 
 def avtrykk(kamper, justeringer):
@@ -147,13 +254,15 @@ def _poeng_tekst(n):
 
 
 def kontroller(liga, sesong, kamper, offisiell, naa=None, data_dir=None, kilde_url=None,
-               kjoring=None, log=print, lag=None):
+               kjoring=None, log=print, lag=None, ferske=None):
     """Kjorer kontrollen, legger nye justeringer inn i justeringer.json og
     skriver audit_tabell.json. offisiell er tabellen fra ligasiden, eller
     {"feil": tekst} / None naar den ikke kunne hentes eller leses. lag er
     sesongens lag (standard: lagene i kampene og i ligaoppsettet; en frossen
     sesong som repareres, sender sine egne, siden oppsettet da kan gjelde
-    neste sesong). Returnerer innholdet i audit_tabell.json."""
+    neste sesong). ferske er de ferske kampene med bekreftet resultat
+    (resultatregel.ferske_bekreftede), se ferske_unntak; uten dem gjelder
+    kontrollen som foer. Returnerer innholdet i audit_tabell.json."""
     naa = naa or datetime.now(timezone.utc)
     data_dir = Path(data_dir or ROT / oppsett(liga)["data"])
     lag = sorted(lag or ({m["home"] for m in kamper} | {m["away"] for m in kamper} | set(oppsett(liga)["lag"])))
@@ -178,10 +287,19 @@ def kontroller(liga, sesong, kamper, offisiell, naa=None, data_dir=None, kilde_u
     elif isinstance(offisiell, dict):
         grunn = offisiell.get("feil")
     if not offisiell or not isinstance(offisiell, list):
+        # Kunne ikke sammenligne: det som ventet paa en ny sjekk, venter
+        # videre til fristen er ute.
+        venter = [v for v in (forrige.get("venter") or [])
+                  if forrige.get("sesong") == str(sesong) and v.get("frist") and datetime.fromisoformat(v["frist"]) > naa]
         ut.update({"sammenlignet": False, "errors": 0, "warnings": 1, "alle_like": False, "nye": [],
-                   "avvik": [], "advarsler": [f"Tabell: ikke sammenlignet ({grunn or 'fikk ingen tabell fra ligasiden'})"]})
+                   "avvik": [], "advarsler": [f"Tabell: ikke sammenlignet ({grunn or 'fikk ingen tabell fra ligasiden'})"],
+                   "venter": venter})
     else:
-        feil, advarsler, nye, alle_like = sammenlign(vaar, offisiell, kilde)
+        lag_venter, venter, ferske_adv = ferske_unntak(kamper, lag, _just.per_lag(just), offisiell, ferske, kilde)
+        feil, advarsler, nye, alle_like = sammenlign(vaar, offisiell, kilde, venter=lag_venter)
+        advarsler = ferske_adv + advarsler
+        for a in ferske_adv:
+            log(f"::warning title=Tabellen på {kilde} henger etter::{a}")
         lagt_inn = []
         for l, p in nye:
             r = vaar[l]
@@ -200,9 +318,11 @@ def kontroller(liga, sesong, kamper, offisiell, naa=None, data_dir=None, kilde_u
         if lagt_inn:
             jsti.write_text(json.dumps(jdok, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
             alle_like = alle_like or (not feil and all(o["k"] == vaar[o["lag"]]["k"] for o in offisiell))
+        # Saa lenge noe venter paa en ny sjekk, er ikke alle like: frysingen
+        # kan ikke bygge paa denne kontrollen.
         ut.update({"sammenlignet": True, "errors": len(feil), "warnings": len(advarsler),
-                   "alle_like": bool(alle_like) and not feil, "nye": lagt_inn,
-                   "avvik": feil[:20], "advarsler": advarsler[:20]})
+                   "alle_like": bool(alle_like) and not feil and not venter, "nye": lagt_inn,
+                   "avvik": feil[:20], "advarsler": advarsler[:20], "venter": venter})
     # Den siste vellykkede kontrollen, til frysingen (se docstringen oeverst):
     # en ny vellykket kontroll erstatter den; en kontroll som sammenlignet,
     # men ikke fant alle like, sletter den (et nyere avvik skal ikke kunne
