@@ -206,6 +206,9 @@ jobs:
         env:
           # Kontrollen mot Highlightly (hele sesongen, 3-4 kall i døgnet).
           HIGHLIGHTLY_API_KEY: ${{ secrets.HIGHLIGHTLY_API_KEY }}
+          # Var dataskriptet rødt (en kontroll slo ut), skal en ren revisjon
+          # ikke gjøre stempelet grønt (daglig_revisjon.annet_rodt).
+          DATASTEG_UTFALL: ${{ steps.bygg.outcome }}
         run: python3 scripts/daglig_revisjon.py obos
 
       - name: Merk daglig vedlikehold som utført

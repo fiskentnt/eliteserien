@@ -396,11 +396,34 @@ def dagens_avvik(liga, naa, sesong=None):
     return int(d.get("errors") or 0)
 
 
-def skriv_stempel(liga, feil, naa, sesong=None, kilde="kalenderfeeden"):
+def annet_rodt(liga, miljo=None):
+    """Sant naar noe ANNET enn terminlisterevisjonen holder stempelet rodt i
+    denne kjoringen: dataskriptet (update_data.py / obos_build_data.py) endte
+    rodt (DATASTEG_UTFALL=failure fra workflowen), eller tabellkontrollen
+    staar med kritiske avvik. Da skal en ren revisjon ikke gjore stempelet
+    gronnt (se skriv_stempel)."""
+    import os
+    miljo = os.environ if miljo is None else miljo
+    if (miljo.get("DATASTEG_UTFALL") or "").strip() == "failure":
+        return True
+    try:
+        return tabellkontroll.avvik(liga) > 0
+    except Exception:
+        return False
+
+
+def skriv_stempel(liga, feil, naa, sesong=None, kilde="kalenderfeeden", annet_rodt=False):
     """Setter ok=False saa lenge dagens revisjon staar med kritiske avvik.
 
     Samme regel som Eliteserien: gronnt kommer tilbake bare naar en NY
-    revisjon bekrefter at avviket er borte."""
+    revisjon bekrefter at avviket er borte.
+
+    annet_rodt (13.10.2026): siden 12.10. kjores revisjonen ogsaa naar en
+    kontroll gjorde dataskriptet rodt (kontrollene stopper ikke resten). En
+    ren revisjon satte da ok=True og fjernet feilteksten, enda feilen fra
+    dataskriptet sto: varselet mistet teksten, timesforsoket ved rod status
+    stoppet, og neste kjoring med lukket port sendte livstegn. Med
+    annet_rodt roerer en ren revisjon verken ok eller feilteksten."""
     sti = data_katalog(liga, sesong) / "status.json"
     d = {}
     if sti.exists():
@@ -415,7 +438,7 @@ def skriv_stempel(liga, feil, naa, sesong=None, kilde="kalenderfeeden"):
         hva = "tabellen" if all(f.startswith("Tabell, ") for f in feil) else "terminlisten"
         d["error"] = (f"{len(feil)} kritisk(e) avvik mellom {hva} og "
                       f"{kilde}: {feil[0]}")[:300]
-    else:
+    elif not annet_rodt:
         d["ok"] = True
         d.pop("revisjon_avvik", None)
         d.pop("error", None)
@@ -577,7 +600,7 @@ def main(argv, naa=None):
         "avvik": feil[:20], "advarsler": advarsler[:20], "bekreftet": {},
         "kontroller": _kblokk,
     }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
-    skriv_stempel(liga, feil, naa)
+    skriv_stempel(liga, feil, naa, annet_rodt=annet_rodt(liga))
 
     if feil:
         print(f"\nFEILER KJØRINGEN: {len(feil)} kritisk(e) avvik. Stempelet er rødt "

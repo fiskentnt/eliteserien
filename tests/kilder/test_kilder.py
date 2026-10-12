@@ -4429,6 +4429,50 @@ sjekk("og 6 t 10 min etter avspark, fortsatt feil i tabellen: rød kjøring (fri
       isinstance(_e, _uda.DataAuditError) and _a_fil("audit_tabell.json")["errors"] == 2 and _a_fil("audit_tabell.json")["venter"] == [],
       f"{_e!r}"[:300])
 
+print("\n=== En ren revisjon gjør ikke stempelet grønt når dataskriptet var rødt (13.10.2026) ===")
+# Siden 12.10. kjøres den daglige revisjonen også når en kontroll gjorde
+# dataskriptet rødt. skriv_stempel satte da ok=True og fjernet feilteksten.
+import daglig_revisjon as _drs
+_s_dir = Path(_tf2.mkdtemp())
+_s_ekte_kat, _s_ekte_avvik = _drs.data_katalog, _drs.tabellkontroll.avvik
+_drs.data_katalog = lambda liga, sesong=None: _s_dir
+_s_naa = _dt(2026, 10, 13, 9, 20, tzinfo=_tz.utc)
+_S_ROD = {"last_checked": "2026-10-13T09:19:00+00:00", "ok": False,
+          "error": "2 kritisk(e) avvik mellom tabellen vår og tabellen på ligasiden: Tabell, Brann: 2 uavgjort hos oss, 3 hos ligasiden"}
+
+
+def _s_stempel(for_, feil, annet):
+    (_s_dir / "status.json").write_text(json.dumps(for_), encoding="utf-8")
+    _drs.skriv_stempel("eliteserien", feil, _s_naa, annet_rodt=annet)
+    return json.loads((_s_dir / "status.json").read_text("utf-8"))
+
+
+_s = _s_stempel(_S_ROD, [], True)
+sjekk("dataskriptet var rødt, revisjonen er ren: status.json er fortsatt rød med feilteksten fra dataskriptet",
+      _s["ok"] is False and _s["error"] == _S_ROD["error"] and _s["revidert_at"] == "2026-10-13T09:20:00+00:00", str(_s))
+_s = _s_stempel(_S_ROD, [], False)
+sjekk("motprøve, dataskriptet var grønt og revisjonen er ren: stempelet blir grønt som før (avviket fra en tidligere revisjon er borte)",
+      _s["ok"] is True and "error" not in _s, str(_s))
+_s = _s_stempel({"last_checked": "2026-10-13T09:19:00+00:00", "ok": True}, [], True)
+sjekk("grønn status røres ikke av en ren revisjon", _s["ok"] is True and "error" not in _s, str(_s))
+_s = _s_stempel(_S_ROD, ["Rosenborg-Start: dato 2026-11-07 hos oss, 2026-11-18 i kalenderfeeden"], True)
+sjekk("revisjonen finner selv et avvik: rødt, uansett",
+      _s["ok"] is False and _s["revisjon_avvik"] == 1 and "kalenderfeeden" in _s["error"], str(_s))
+_drs.tabellkontroll.avvik = lambda liga, data_dir=None: 0
+sjekk("annet_rodt: DATASTEG_UTFALL=failure fra workflowen", _drs.annet_rodt("eliteserien", {"DATASTEG_UTFALL": "failure"}) is True)
+sjekk("annet_rodt: dataskriptet grønt og ingen avvik i tabellkontrollen: nei",
+      _drs.annet_rodt("eliteserien", {"DATASTEG_UTFALL": "success"}) is False and _drs.annet_rodt("eliteserien", {}) is False)
+_drs.tabellkontroll.avvik = lambda liga, data_dir=None: 2
+sjekk("annet_rodt: tabellkontrollen står med kritiske avvik (også uten workflowens variabel)", _drs.annet_rodt("eliteserien", {}) is True)
+_drs.data_katalog, _drs.tabellkontroll.avvik = _s_ekte_kat, _s_ekte_avvik
+_s_kilde = (ROT / "scripts" / "daglig_revisjon.py").read_text("utf-8")
+sjekk("daglig_revisjon.main sender annet_rodt til skriv_stempel", "skriv_stempel(liga, feil, naa, annet_rodt=annet_rodt(liga))" in _s_kilde)
+for _wf_s, _sid_s in (("update-data.yml", "oppdater"), ("obos-results.yml", "bygg")):
+    _rev_s = next(b for b in (ROT / ".github" / "workflows" / _wf_s).read_text("utf-8").split("\n      - ")[1:]
+                  if b.startswith("name: Daglig revisjon av terminlisten"))
+    sjekk(f"{_wf_s}: revisjonssteget får utfallet av dataskriptet (DATASTEG_UTFALL fra steps.{_sid_s}.outcome)",
+          f"DATASTEG_UTFALL: ${{{{ steps.{_sid_s}.outcome }}}}" in _rev_s, _rev_s[-300:])
+
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.
 _vern.sjekk_urort(sjekk)
