@@ -3,6 +3,53 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Datoregelen for OBOS, nye kamper, sesongregisteret og avgjørelser for hånd (13.10.2026)
+
+Ingen enkeltkilde setter eller flytter datoen for en uspilt kamp
+(reconcile_ny.bekreft_datoer, begge ligaene):
+
+- **Flytting.** Ligasiden viser en annen dato eller tid enn vi har lagret.
+  Kampen flyttes bare når den uavhengige kilden viser det samme. Eliteserien:
+  ESPN (sesongkallet), kalenderfeeden når ESPN ikke svarer. OBOS:
+  Highlightly-listen fra den daglige hentingen, som revisjonen nå lagrer i
+  obos/data/kontroll_highlightly.json (ingen kall fra byggingen). Uten en liste
+  yngre enn 48 timer venter flyttingen. Ellers beholdes datoen vi har, med
+  ADVARSEL.
+- **Ny kamp uten brukbar lagret dato** (kampen mangler i den lagrede listen,
+  eller den lagrede datoen ligger utenfor sesongvinduet): må bekreftes på
+  samme måte. Kan den ikke det, skrives ingenting, og kjøringen blir rød.
+  Sesongstart (under 20 lagrede kamper) er som før. Vurderes på nytt sammen
+  med kvalik og opprykksspill (eget punkt før 8.11.).
+- **Sesongregisteret.** Mangler data/sesonger.json, kan den ikke leses, eller
+  har den ingen aktiv sesong for ligaen, stopper update_data.py,
+  obos_build_data.py og obos_results.py før noe skrives. Det samme når de
+  lagrede kampene mangler rundenummer. status.json får ok: false med teksten.
+
+Flyttingene som holdes tilbake, står i <liga>/data/flytting_venter.json.
+Revisjonen (daglig_revisjon.py, flytting.revider_flyttinger) gjør avviket mot
+kalenderfeeden for en slik kamp til en advarsel. Det blir rødt og e-post når
+flyttingen har stått ubekreftet i 3 døgn, eller når det er under 48 timer til
+den tidligste av de to datoene (ikke når kampen alt har startet).
+
+**Avgjøre for hånd:** <liga>/data/flytting_overstyring.json, én linje per kamp
+(linjen står ferdig i feilteksten):
+
+    {"hjemme": "Rosenborg", "borte": "Start", "valg": "godta", "dato": "2026-11-18", "tid": "18:00"}
+
+«godta» flytter kampen (eller godtar en ny kamp), «avvis» beholder datoen vi
+har og slutter å varsle. Linjen gjelder bare så lenge ligasiden viser nøyaktig
+den datoen og tiden. Datafilene redigeres aldri.
+
+Samme dag: en ren revisjon gjør ikke lenger stempelet grønt når dataskriptet
+var rødt i samme kjøring (daglig_revisjon.annet_rodt, DATASTEG_UTFALL i
+workflowene). Feilen kom med «Kontrollene stopper ikke resten» 12.10.
+
+Tester: tests/kilder/test_kilder.py («Ingen enkeltkilde setter eller flytter
+en dato», «Hvilke kamper mangler en brukbar lagret dato», «Overstyringsfilen»,
+«Flyttinger som venter», «OBOS: Highlightly-listen», «Hele update_data.main:
+uten sesongregister, nye kamper og flyttinger», «En ren revisjon gjør ikke
+stempelet grønt»).
+
 ## Tabellkontrollen rett etter kampslutt: advarsel og ny sjekk (12.10.2026)
 
 9.10. førte tabellen på ligasiden Brann-Viking (0-2) som 0-0 til 80 minutter

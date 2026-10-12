@@ -2054,10 +2054,10 @@ _ut7, _utf7 = _bf(_neste_aar, _forr, _kilde({}, [], "espn"), _kilde({}, [], "kal
 sjekk("en rad fra neste sesong for samme lagpar er ikke en flytting", _utf7 == [] and _ut7 == _neste_aar)
 
 _ud = (ROT / "scripts" / "update_data.py").read_text("utf-8")
-sjekk("Eliteserien (update_data.py): bekreft_flytting kjøres etter datovakten, med ESPN-sesongkallet og kalenderfeeden",
-      "bekreft_flytting(merged, _forrige_liste, _espn_fasit, _kalender_fasit" in _ud
+sjekk("Eliteserien (update_data.py): bekreft_datoer kjøres etter datovakten, med ESPN-sesongkallet først og kalenderfeeden som reserve",
+      'merged, _forrige_liste, [("ESPN", _espn_fasit), ("kalenderfeeden", _kalender_fasit)], log=log,' in _ud
       and "espn_source.fetch_season(_aktiv" in _ud and "ntf_source.parse_kalender(ntf_source.hent_kalender(LIGA" in _ud
-      and _ud.index("rimelige_datoer(merged, _forrige_liste") < _ud.index("bekreft_flytting(merged"))
+      and _ud.index("rimelige_datoer(merged, _forrige_liste") < _ud.index("merged, _flytting = bekreft_datoer("))
 
 print("\n=== Testsidens prekick-kontroll bruker frysingens avsparkregel (10.10.2026) ===")
 # Rosenborg-Sandefjord pagikk da Glimt-Kristiansund kom inn: modellen ble ny,
@@ -3996,9 +3996,6 @@ sjekk("bare tabellkontrollen slår ut: det daglige vedlikeholdet er utført, så
       f"{_logg} {str(_e)[:300]}")
 
 # Datovaktene: bare det å gjøre kjøringen rød ligger til slutt.
-_logg, _e = _a_kjor(_a_fx_ok, _a_tk_ok, datofeil="ingen_autoritet", utenfor=())
-sjekk("ingen autoritativ sesong: rødt til slutt, etter modellen, med beskjeden om sesonger.json",
-      isinstance(_e, _uda.DataAuditError) and _logg[:4] == _ARBEID and "data/sesonger.json" in str(_e), f"{_logg} {str(_e)[:200]}")
 _a_mange = [{"home": f"A{i}", "away": f"B{i}"} for i in range(100)]
 _logg, _e = _a_kjor(_a_fx_ok, _a_tk_ok, utenfor=[f"A{i}-B{i} (2026-01-07)" for i in range(26)], merged=_a_mange)
 sjekk("26 av 100 datoer utenfor sesongen: rødt til slutt, etter modellen",
@@ -4055,16 +4052,26 @@ _a_offer = _a_uspilte[-1]                                        # siste uspilte
 _a_gamle = {(r["home"], r["away"]): (r["date"], r["time"]) for r in _a_liste}
 
 
-def _a_main(ntf_rader, naa=None, tabell=None, state=None):
+_a_hentet = []     # kildene sandkassen ble spurt om i siste kjøring («ligasiden»)
+
+
+def _a_main(ntf_rader, naa=None, tabell=None, state=None, espn=None, forbered=None):
     """Kjører update_data.main i sandkassen. Returnerer (feilen eller None, rekkefølgen, datoene på disk da modellen ble tilpasset).
-    naa: klokka (standard: to timer før første uspilte kamp). tabell: tabellen fra ligasiden. state: results_state.json før kjøringen."""
+    naa: klokka (standard: to timer før første uspilte kamp). tabell: tabellen fra ligasiden. state: results_state.json før kjøringen.
+    espn: radene ESPN-sesongkallet svarer med (uten: kallet feiler, og «NETTKALL» står i rekkefølgen). forbered(d): endrer filene i
+    sandkassen før kjøringen (d er datakatalogen; sesongregisteret ligger i d.parent.parent / "data" / "sesonger.json")."""
     import tabellkontroll as _tka, daglig_revisjon as _dra
     logg, paa_disk = [], {}
     d = _a_sb / "eliteserien" / "data"
     for _f in ("matches.json", "fixtures.json"):
         _sha.copy(ROT / "tests" / "data" / "2026-10-01" / "eliteserien" / "data" / _f, d / _f)
-    for _f in ("status.json", "audit_state.json", "audit_tabell.json", "results_state.json", "github_output"):
+    for _f in ("status.json", "audit_state.json", "audit_tabell.json", "results_state.json", "github_output",
+               "flytting_venter.json", "flytting_overstyring.json"):
         (d / _f).unlink(missing_ok=True)
+    (_a_sb / "data" / "sesonger.json").write_text(json.dumps(
+        {"version": 2, "ligaer": {"eliteserien": {"aktiv": "2026", "sesonger": {"2026": {"status": "aktiv"}}}}}), encoding="utf-8")
+    if forbered:
+        forbered(d)
     if state is not None:
         (d / "results_state.json").write_text(json.dumps(state), encoding="utf-8")
     ekte = (_uda.ROOT, _uda.LEAGUE, _uda.STATE, _uda.STATUS_PATH, _uda.AUDIT_STATE_PATH, _uda.espn_source.fetch_all,
@@ -4083,9 +4090,10 @@ def _a_main(ntf_rader, naa=None, tabell=None, state=None):
     (_uda.ROOT, _uda.LEAGUE, _uda.STATE, _uda.STATUS_PATH, _uda.AUDIT_STATE_PATH) = (
         _a_sb, _a_sb / "eliteserien", d / "results_state.json", d / "status.json", d / "audit_state.json")
     _uda.espn_source.fetch_all = lambda cache_dir=None, log=None: []
-    _uda.ligasiden_eller_reserve = lambda cache_dir=None, log=None: [dict(r) for r in ntf_rader]
+    _a_hentet.clear()
+    _uda.ligasiden_eller_reserve = lambda cache_dir=None, log=None: (_a_hentet.append("ligasiden"), [dict(r) for r in ntf_rader])[1]
     _uda.get_ffk_rows = lambda cache_dir, log: [dict(r) for r in _a_liste if r["hg"] is not None]
-    _uda.espn_source.fetch_season = _ikke_kall
+    _uda.espn_source.fetch_season = _ikke_kall if espn is None else (lambda aar, log=None: (logg.append("ESPN"), [dict(r) for r in espn])[1])
     _uda.ntf_source.hent_kalender = _ikke_kall
     _uda.ntf_source.siste_tabell = lambda liga: tabell
     _uda.fetch_odds_history.main = lambda: logg.append("sluttodds")
@@ -4472,6 +4480,494 @@ for _wf_s, _sid_s in (("update-data.yml", "oppdater"), ("obos-results.yml", "byg
                   if b.startswith("name: Daglig revisjon av terminlisten"))
     sjekk(f"{_wf_s}: revisjonssteget får utfallet av dataskriptet (DATASTEG_UTFALL fra steps.{_sid_s}.outcome)",
           f"DATASTEG_UTFALL: ${{{{ steps.{_sid_s}.outcome }}}}" in _rev_s, _rev_s[-300:])
+
+print("\n=== Ingen enkeltkilde setter eller flytter en dato: kildene i rekkefølge, nye kamper og avgjørelser for hånd (bekreft_datoer, 13.10.2026) ===")
+from reconcile_ny import bekreft_datoer as _bd, uten_lagret_dato as _uld
+import flytting as _fl
+import daglig_revisjon as _dr3
+import sesong as _ses3
+_f3_forr = [{"home": "Odd", "away": "Bryne", "round": 28, "date": "2026-10-25", "time": "15:00", "hg": None, "ag": None},
+            {"home": "Lyn", "away": "Moss", "round": 28, "date": "2026-10-25", "time": "15:00", "hg": None, "ag": None},
+            {"home": "Hødd", "away": "Odd", "round": 24, "date": "2026-10-03", "time": "17:00", "hg": 2, "ag": 3}]
+_OB = ("Odd", "Bryne")
+_f3_flyttet = [dict(r) for r in _f3_forr]
+_f3_flyttet[0].update(date="2026-10-26", time="18:00")
+
+
+def _f3_kilde(svar, kall, navn="Highlightly"):
+    def hent():
+        kall.append(navn)
+        if isinstance(svar, Exception):
+            raise svar
+        return svar
+    return (navn, hent)
+
+
+def _f3_kjor(rader, hl, nye=(), overstyringer=None, forrige=_f3_forr):
+    kall, logg = [], []
+    ut, utfall = _bd(rader, forrige, [_f3_kilde(hl, kall)], log=logg.append, nye=nye, overstyringer=overstyringer or {})
+    return {(r["home"], r["away"]): (r["date"], r.get("time")) for r in ut}, utfall, kall, logg
+
+
+# OBOS: én kilde (Highlightly-listen fra den daglige hentingen), ingen reserve.
+_r, _u, _kall, _logg = _f3_kjor(_f3_flyttet, {_OB: ("2026-10-26", "18:00")})
+sjekk("OBOS: Highlightly-listen viser samme nye dato og tid: Odd-Bryne flyttes",
+      _r[_OB] == ("2026-10-26", "18:00") and [(u["kamp"], u["type"], u["utfall"], u["kilde"]) for u in _u] == [("Odd-Bryne", "flytting", "flyttet", "Highlightly")]
+      and any("flyttet fra 25.10. 15:00 til 26.10. 18:00, bekreftet av Highlightly" in m for m in _logg), f"{_r[_OB]} {_u} {_logg}")
+_r, _u, _kall, _logg = _f3_kjor(_f3_flyttet, {_OB: ("2026-10-25", "15:00")})
+sjekk("OBOS: listen viser den gamle datoen: kampen beholder 25.10. 15:00, med ADVARSEL, og flyttingen venter",
+      _r[_OB] == ("2026-10-25", "15:00") and _u[0]["utfall"] == "beholdt" and _u[0]["ny"] == ("2026-10-26", "18:00") and _u[0]["har"] == ("2026-10-25", "15:00")
+      and any("ADVARSEL" in m and "ligasiden viser 26.10. 18:00" in m and "Highlightly viser 25.10. 15:00" in m and "beholder 25.10. 15:00" in m for m in _logg),
+      f"{_r[_OB]} {_u} {_logg}")
+_r, _u, _kall, _logg = _f3_kjor(_f3_flyttet, ValueError("den lagrede Highlightly-listen er 49 timer gammel (grensen er 48)"))
+sjekk("OBOS: listen er eldre enn 48 timer: ingen reserve, kampen beholder datoen, og det står hvorfor",
+      _r[_OB] == ("2026-10-25", "15:00") and _u[0]["utfall"] == "beholdt" and _u[0]["kilde"] is None
+      and any("Highlightly kan ikke brukes" in m and "49 timer gammel" in m for m in _logg)
+      and any("ADVARSEL" in m and "Highlightly kunne ikke brukes" in m for m in _logg), f"{_u} {_logg}")
+_r, _u, _kall, _logg = _f3_kjor([dict(r) for r in _f3_forr], {_OB: ("2026-10-26", "18:00")})
+sjekk("ingen flytting: listen leses ikke, ingenting endres", _kall == [] and _u == [] and _r[_OB] == ("2026-10-25", "15:00"))
+
+# Avgjort for hånd (overstyringsfilen).
+_o_godta = {_OB: {"valg": "godta", "dato": "2026-10-26", "tid": "18:00"}}
+_r, _u, _kall, _logg = _f3_kjor(_f3_flyttet, {_OB: ("2026-10-25", "15:00")}, overstyringer=_o_godta)
+sjekk("godta for hånd: kampen flyttes selv om kilden viser den gamle datoen, og kilden spørres ikke",
+      _r[_OB] == ("2026-10-26", "18:00") and _kall == [] and (_u[0]["utfall"], _u[0]["kilde"]) == ("flyttet", "overstyring")
+      and any("godtatt for hånd" in m for m in _logg), f"{_r[_OB]} {_kall} {_u} {_logg}")
+_o_avvis = {_OB: {"valg": "avvis", "dato": "2026-10-26", "tid": "18:00"}}
+_r, _u, _kall, _logg = _f3_kjor(_f3_flyttet, {_OB: ("2026-10-26", "18:00")}, overstyringer=_o_avvis)
+sjekk("avvis for hånd: kampen beholder datoen selv om kilden er enig med ligasiden, uten ADVARSEL",
+      _r[_OB] == ("2026-10-25", "15:00") and _kall == [] and _u[0]["utfall"] == "avvist"
+      and any("avvist for hånd" in m for m in _logg) and not any("ADVARSEL" in m for m in _logg), f"{_r[_OB]} {_u} {_logg}")
+_f3_annen = [dict(r) for r in _f3_forr]
+_f3_annen[0].update(date="2026-10-27", time="18:00")       # ligasiden viser nå noe annet enn linjen gjelder
+_r, _u, _kall, _logg = _f3_kjor(_f3_annen, {_OB: ("2026-10-25", "15:00")}, overstyringer=_o_godta)
+sjekk("linjen gjelder 26.10., ligasiden viser nå 27.10.: linjen brukes ikke, kilden avgjør, og det står i loggen",
+      _r[_OB] == ("2026-10-25", "15:00") and _kall == ["Highlightly"] and _u[0]["utfall"] == "beholdt"
+      and any("overstyringen for Odd-Bryne gjelder 26.10. 18:00, men ligasiden viser nå 27.10. 18:00 -- brukes ikke" in m for m in _logg), str(_logg))
+
+# En NY kamp uten lagret dato må bekreftes.
+_f3_ny = [dict(r) for r in _f3_forr] + [{"home": "Moss", "away": "Odd", "round": 29, "date": "2026-11-01", "time": "15:00", "hg": None, "ag": None}]
+_MO = ("Moss", "Odd")
+_r, _u, _kall, _logg = _f3_kjor(_f3_ny, {_MO: ("2026-11-01", "15:00")}, nye={_MO})
+sjekk("ny kamp, kilden viser samme dato og tid: bekreftet, og datoen står",
+      _r[_MO] == ("2026-11-01", "15:00") and [(u["type"], u["utfall"], u["kilde"]) for u in _u] == [("ny", "bekreftet", "Highlightly")]
+      and any("Ny kamp: Moss-Odd 1.11. 15:00, bekreftet av Highlightly" in m for m in _logg), f"{_u} {_logg}")
+for _f3_navn, _f3_svar, _f3_hva in (("kilden viser en annen tid", {_MO: ("2026-11-01", "18:00")}, "Highlightly viser 1.11. 18:00"),
+                                     ("kilden har ikke kampen", {}, "Highlightly har ikke kampen"),
+                                     ("kilden kan ikke brukes", ValueError("mangler"), "Highlightly kunne ikke brukes")):
+    _r, _u, _kall, _logg = _f3_kjor(_f3_ny, _f3_svar, nye={_MO})
+    sjekk(f"ny kamp, {_f3_navn}: ubekreftet (kalleren skal ikke skrive noe), og det står hva kilden viser",
+          [(u["type"], u["utfall"]) for u in _u] == [("ny", "ubekreftet")] and _u[0]["hva"] == _f3_hva
+          and any("AVVIK" in m and "vi har ingen lagret dato" in m and "ikke bekreftet" in m for m in _logg), f"{_u} {_logg}")
+_r, _u, _kall, _logg = _f3_kjor(_f3_ny, {}, nye={_MO}, overstyringer={_MO: {"valg": "godta", "dato": "2026-11-01", "tid": "15:00"}})
+sjekk("ny kamp godtatt for hånd: bekreftet uten kilde", (_u[0]["utfall"], _u[0]["kilde"]) == ("bekreftet", "overstyring") and _kall == [], f"{_u} {_kall}")
+_r, _u, _kall, _logg = _f3_kjor(_f3_ny, {}, nye=())
+sjekk("motprøve: samme kamp når den ikke regnes som ny (sesongstart), slipper gjennom uten oppslag", _u == [] and _kall == [])
+
+print("\n=== Hvilke kamper mangler en brukbar lagret dato (reconcile_ny.uten_lagret_dato) ===")
+# Sandkassens terminliste fra 1.10. (Eliteserien): vinduet er 8.3.2026 til 27.1.2027.
+_f3_usp = _a_uspilte[0]
+_f3_k = (_f3_usp["home"], _f3_usp["away"])
+sjekk("hele terminlisten er lagret: ingen kamp er ny", _uld([dict(r) for r in _a_liste], _a_liste, "2026") == set())
+sjekk("kampen mangler i den lagrede listen: den er ny",
+      _uld([dict(r) for r in _a_liste], [r for r in _a_liste if (r["home"], r["away"]) != _f3_k], "2026") == {_f3_k})
+sjekk("den lagrede datoen ligger utenfor sesongvinduet (7.1.2026): kampen regnes som ny",
+      _uld([dict(r) for r in _a_liste], [{**r, "date": "2026-01-07"} if (r["home"], r["away"]) == _f3_k else r for r in _a_liste], "2026") == {_f3_k})
+_f3_spilt = next(r for r in _a_liste if r["hg"] is not None)
+sjekk("en SPILT kamp er aldri ny her (den er frosset)",
+      _uld([dict(r) for r in _a_liste], [r for r in _a_liste if r is not _f3_spilt], "2026") == set())
+sjekk("sesongstart (under 20 lagrede kamper i sesongen): ingen regnes som nye, hele listen godtas som før",
+      _uld([dict(r) for r in _a_liste], _a_liste[:19], "2026") == set() and _uld([dict(r) for r in _a_liste], [], "2026") == set())
+from reconcile_ny import rimelige_datoer as _rd3
+_l3 = []
+_f3_urunde = [{k: v for k, v in r.items() if k != "round"} for r in _a_liste]
+_ut3, _utenfor3, _kode3 = _rd3([dict(r) for r in _a_liste], _f3_urunde, "2026", log=_l3.append)
+sjekk("de lagrede kampene mangler rundenummer: vakten står ikke over i stillhet, feilkoden er «ingen_runder» og det logges som AVVIK",
+      _kode3 == "ingen_runder" and _utenfor3 is None and any(m.startswith("AVVIK") and "rundenummer" in m for m in _l3), f"{_kode3} {_l3}")
+
+print("\n=== Overstyringsfilen: godta eller avvis en flytting per kamp (flytting.les_overstyringer) ===")
+_f3_d = Path(_tf2.mkdtemp())
+_f3_par = {("Odd", "Bryne"), ("Lyn", "Moss"), ("Moss", "Odd")}
+
+
+def _f3_les(innhold, raa=None):
+    (_f3_d / "flytting_overstyring.json").write_text(raa if raa is not None else json.dumps(innhold, ensure_ascii=False), encoding="utf-8")
+    logg = []
+    return _fl.les_overstyringer(_f3_d, _f3_par, log=logg.append), logg
+
+
+_o, _logg = _f3_les({"_bruk": ["..."], "overstyringer": [
+    {"hjemme": "Odd", "borte": "Bryne", "valg": "godta", "dato": "2026-10-26", "tid": "18:00"},
+    {"hjemme": "Lyn", "borte": "Moss", "valg": "avvis", "dato": "2026-10-24", "tid": "13:00"}]})
+sjekk("to gyldige linjer leses: godta og avvis, med dato og tid",
+      _o == {("Odd", "Bryne"): {"valg": "godta", "dato": "2026-10-26", "tid": "18:00"},
+             ("Lyn", "Moss"): {"valg": "avvis", "dato": "2026-10-24", "tid": "13:00"}} and _logg == [], f"{_o} {_logg}")
+for _f3_navn, _f3_linje, _f3_tekst in (
+        ("ukjent lagpar (skrivefeil i lagnavnet)", {"hjemme": "Od", "borte": "Bryne", "valg": "godta", "dato": "2026-10-26", "tid": "18:00"}, "ikke en kamp i terminlisten"),
+        ("annet valg enn godta/avvis", {"hjemme": "Odd", "borte": "Bryne", "valg": "ja", "dato": "2026-10-26", "tid": "18:00"}, "valg må være"),
+        ("dato i feil form", {"hjemme": "Odd", "borte": "Bryne", "valg": "godta", "dato": "26.10.2026", "tid": "18:00"}, "dato må være"),
+        ("tid mangler", {"hjemme": "Odd", "borte": "Bryne", "valg": "godta", "dato": "2026-10-26"}, "dato må være"),
+        ("linjen er ikke et objekt", "Odd-Bryne godta", "ikke på formen")):
+    _o, _logg = _f3_les({"overstyringer": [_f3_linje, {"hjemme": "Lyn", "borte": "Moss", "valg": "avvis", "dato": "2026-10-24", "tid": "13:00"}]})
+    sjekk(f"{_f3_navn}: linjen hoppes over med ADVARSEL, den gyldige linjen brukes",
+          set(_o) == {("Lyn", "Moss")} and len(_logg) == 1 and _logg[0].startswith("ADVARSEL: flytting_overstyring.json:") and _f3_tekst in _logg[0], f"{_o} {_logg}")
+_o, _logg = _f3_les({"overstyringer": [{"hjemme": "Odd", "borte": "Bryne", "valg": "godta", "dato": "2026-10-26", "tid": "18:00"},
+                                       {"hjemme": "Odd", "borte": "Bryne", "valg": "avvis", "dato": "2026-10-26", "tid": "18:00"}]})
+sjekk("samme kamp to ganger (godta og avvis): ingen av linjene brukes, med ADVARSEL", _o == {} and any("står flere ganger" in m for m in _logg), f"{_o} {_logg}")
+_o, _logg = _f3_les(None, raa='{"overstyringer": [ {"hjemme": "Odd", ]}')
+sjekk("filen er ikke gyldig JSON: ingen overstyringer brukes, med ADVARSEL (kjeden stopper ikke)",
+      _o == {} and len(_logg) == 1 and "kan ikke leses" in _logg[0], f"{_o} {_logg}")
+(_f3_d / "flytting_overstyring.json").unlink()
+sjekk("ingen fil: ingen overstyringer", _fl.les_overstyringer(_f3_d, _f3_par) == {})
+for _f3_liga in ("eliteserien", "obos"):
+    _f3_mal = json.loads((ROT / _f3_liga / "data" / "flytting_overstyring.json").read_text("utf-8"))
+    sjekk(f"{_f3_liga}/data/flytting_overstyring.json finnes, med bruksanvisning og et eksempel på formen linjene skal ha",
+          isinstance(_f3_mal.get("_bruk"), list) and set(_f3_mal["_eksempel"]) == {"hjemme", "borte", "valg", "dato", "tid"}
+          and isinstance(_f3_mal["overstyringer"], list))
+sjekk("linjen som skrives i varselet, er på samme form som filen leser",
+      json.loads(_fl.linje("Odd", "Bryne", "godta", "2026-10-26", "18:00")) == {"hjemme": "Odd", "borte": "Bryne", "valg": "godta", "dato": "2026-10-26", "tid": "18:00"})
+
+print("\n=== Flyttinger som venter: advarsel, og rødt etter 3 døgn eller under 48 timer før avspark (flytting.py) ===")
+_f3_n0 = _dt(2026, 10, 13, 10, 0, tzinfo=_tz.utc)
+_f3_utfall = [{"kamp": "Odd-Bryne", "nokkel": ("Odd", "Bryne"), "type": "flytting", "utfall": "beholdt", "kilde": "Highlightly",
+               "ny": ("2026-10-26", "18:00"), "har": ("2026-10-25", "15:00"), "hva": "Highlightly viser 25.10. 15:00"}]
+_v = _fl.skriv_venter(_f3_d, _f3_utfall, _f3_n0)
+sjekk("en tilbakeholdt flytting skrives til flytting_venter.json med vår dato, ligasidens dato og når den først ble sett",
+      _v == [{"kamp": "Odd|Bryne", "vaar": ["2026-10-25", "15:00"], "ligasiden": ["2026-10-26", "18:00"],
+              "forst_sett": "2026-10-13T10:00:00+00:00", "avvist": False, "hva": "Highlightly viser 25.10. 15:00"}]
+      and _fl.les_venter(_f3_d) == _v, str(_v))
+_f3_mtid = (_f3_d / "flytting_venter.json").stat().st_mtime_ns
+_v = _fl.skriv_venter(_f3_d, _f3_utfall, _f3_n0 + _tda(days=1))
+sjekk("neste dag viser ligasiden det samme: klokka fra første gang står, og filen skrives ikke på nytt",
+      _v[0]["forst_sett"] == "2026-10-13T10:00:00+00:00" and (_f3_d / "flytting_venter.json").stat().st_mtime_ns == _f3_mtid, str(_v))
+_v = _fl.skriv_venter(_f3_d, [{**_f3_utfall[0], "ny": ("2026-10-27", "18:00")}], _f3_n0 + _tda(days=2))
+sjekk("ligasiden viser en NY dato for kampen: ny påstand, ny klokke",
+      _v[0]["ligasiden"] == ["2026-10-27", "18:00"] and _v[0]["forst_sett"] == "2026-10-15T10:00:00+00:00", str(_v))
+_v = _fl.skriv_venter(_f3_d, [{**_f3_utfall[0], "utfall": "avvist"}, {"kamp": "Lyn-Moss", "nokkel": ("Lyn", "Moss"), "type": "flytting",
+                              "utfall": "flyttet", "kilde": "Highlightly", "ny": ("2026-10-24", "13:00"), "har": ("2026-10-25", "15:00"), "hva": ""}],
+                      _f3_n0)
+sjekk("en avvist flytting står med avvist: true; en gjennomført flytting står ikke i filen",
+      [(x["kamp"], x["avvist"]) for x in _v] == [("Odd|Bryne", True)], str(_v))
+_v = _fl.skriv_venter(_f3_d, [], _f3_n0)
+sjekk("ingenting holdes tilbake lenger: listen er tom", _v == [] and _fl.les_venter(_f3_d) == [])
+
+_VENT = [{"kamp": "Odd|Bryne", "vaar": ["2026-10-25", "15:00"], "ligasiden": ["2026-10-26", "18:00"],
+          "forst_sett": "2026-10-13T10:00:00+00:00", "avvist": False, "hva": "Highlightly viser 25.10. 15:00"}]
+_f, _a = _fl.revider_flyttinger(_VENT, _f3_n0 + _tda(hours=5), data_navn="obos/data")
+sjekk("fem timer etter første gang, 12 dager til avspark: ADVARSEL, ikke rødt",
+      _f == [] and _a == ["Odd-Bryne: ligasiden viser 26.10. 18:00, vi har 25.10. 15:00 -- flyttingen venter på bekreftelse (siden 13.10. 12:00)"], f"{_f} {_a}")
+_f, _a = _fl.revider_flyttinger(_VENT, _f3_n0 + _tda(days=3) - _tda(minutes=1), data_navn="obos/data")
+sjekk("2 døgn 23 t 59 min: fortsatt bare advarsel", _f == [] and len(_a) == 1)
+_f, _a = _fl.revider_flyttinger(_VENT, _f3_n0 + _tda(days=3), data_navn="obos/data")
+sjekk("3 døgn ubekreftet: KRITISK, med filen og linjen som skal limes inn",
+      _a == [] and _f == ['Odd-Bryne: ligasiden viser 26.10. 18:00, vi har 25.10. 15:00, ubekreftet i 3 døgn. Godta eller avvis i '
+                         'obos/data/flytting_overstyring.json: {"hjemme": "Odd", "borte": "Bryne", "valg": "godta", "dato": "2026-10-26", "tid": "18:00"}'],
+      str(_f))
+_VENT_NY = [{**_VENT[0], "forst_sett": "2026-10-23T12:00:00+00:00"}]
+# 25.10.2026 er dagen klokka stilles tilbake: 15:00 norsk tid er 14:00Z (ikke 13:00Z).
+_f, _a = _fl.revider_flyttinger(_VENT_NY, _dt(2026, 10, 23, 13, 59, tzinfo=_tz.utc), data_navn="obos/data")
+sjekk("48 t 1 min til den tidligste av de to datoene (25.10. 15:00 norsk vintertid): advarsel", _f == [] and len(_a) == 1, f"{_f} {_a}")
+_f, _a = _fl.revider_flyttinger(_VENT_NY, _dt(2026, 10, 23, 14, 1, tzinfo=_tz.utc), data_navn="obos/data")
+sjekk("47 t 59 min til avspark: KRITISK, selv om flyttingen bare er en time gammel",
+      len(_f) == 1 and "ubekreftet, og under 48 timer til avspark" in _f[0] and _a == [], f"{_f} {_a}")
+_VENT_FRAM = [{**_VENT[0], "ligasiden": ["2026-10-24", "13:00"], "forst_sett": "2026-10-22T10:00:00+00:00"}]
+_f, _a = _fl.revider_flyttinger(_VENT_FRAM, _dt(2026, 10, 22, 10, 59, tzinfo=_tz.utc), data_navn="obos/data")
+sjekk("ligasiden har flyttet kampen FRAM til 24.10. 13:00 (11:00Z): 48 t 1 min før den datoen er det advarsel", _f == [] and len(_a) == 1, f"{_f} {_a}")
+_f, _a = _fl.revider_flyttinger(_VENT_FRAM, _dt(2026, 10, 22, 12, 0, tzinfo=_tz.utc), data_navn="obos/data")
+sjekk("ligasiden har flyttet kampen FRAM til 24.10. 13:00: 48 timer regnes fra den tidligste datoen (47 timer igjen), kritisk",
+      len(_f) == 1, f"{_f} {_a}")
+_f, _a = _fl.revider_flyttinger(_VENT_NY, _dt(2026, 10, 25, 14, 30, tzinfo=_tz.utc), data_navn="obos/data")
+sjekk("kampen har startet etter avsparket vi har (ligasiden endrer oppføringen underveis): 48-timersregelen gjelder ikke, bare advarsel",
+      _f == [] and len(_a) == 1, f"{_f} {_a}")
+_f, _a = _fl.revider_flyttinger([{**_VENT[0], "avvist": True}], _f3_n0 + _tda(days=10), data_navn="obos/data")
+sjekk("avvist for hånd: verken advarsel eller rødt, heller ikke etter ti døgn", _f == [] and _a == [])
+
+# Den daglige revisjonen mot kalenderfeeden.
+_f3_vaare = {("Odd", "Bryne"): {"round": 28, "date": "2026-10-25", "time": "15:00", "hg": None, "ag": None},
+             ("Lyn", "Moss"): {"round": 28, "date": "2026-10-25", "time": "15:00", "hg": None, "ag": None}}
+_f3_kal = [{"home": "Odd", "away": "Bryne", "round": 28, "date": "2026-10-26", "time": "18:00"},
+           {"home": "Lyn", "away": "Moss", "round": 28, "date": "2026-10-25", "time": "15:00"}]
+_f, _a = _dr3.revider_kalender(_f3_vaare, _f3_kal, sesong="2026", naa=_f3_n0)
+sjekk("motprøve: feeden viser 26.10., vi har 25.10., og ingen flytting venter: kritisk som før",
+      _f == ["Odd-Bryne: dato 2026-10-25 hos oss, 2026-10-26 i kalenderfeeden"], str(_f))
+_f, _a = _dr3.revider_kalender(_f3_vaare, _f3_kal, sesong="2026", naa=_f3_n0, venter=_VENT)
+sjekk("samme avvik når flyttingen er holdt tilbake: ADVARSEL «venter på bekreftelse», ikke kritisk",
+      _f == [] and _a == ["Odd-Bryne: dato 2026-10-25 hos oss, 2026-10-26 i kalenderfeeden -- flyttingen venter på bekreftelse"], f"{_f} {_a}")
+_f, _a = _dr3.revider_kalender(_f3_vaare, _f3_kal, sesong="2026", naa=_f3_n0, venter=[{**_VENT[0], "avvist": True}])
+sjekk("og når den er avvist for hånd: ADVARSEL «avvist for hånd»", _f == [] and _a[0].endswith("flyttingen er avvist for hånd"), f"{_f} {_a}")
+_f, _a = _dr3.revider_kalender(_f3_vaare, [{**_f3_kal[0], "date": "2026-10-31"}, _f3_kal[1]], sesong="2026", naa=_f3_n0, venter=_VENT)
+sjekk("feeden viser en TREDJE dato (31.10.), ikke den som venter: kritisk", len(_f) == 1 and "2026-10-31" in _f[0], f"{_f} {_a}")
+_f3_drk = (ROT / "scripts" / "daglig_revisjon.py").read_text("utf-8")
+sjekk("daglig_revisjon.main leser flyttingene som venter, sender dem til kalenderrevisjonen og setter de kritiske først (til e-posten)",
+      "_venter = flytting.les_venter(_datadir)" in _f3_drk and "venter=_venter)" in _f3_drk
+      and "_ff, _fa = flytting.revider_flyttinger(_venter, naa, data_navn=oppsett(liga)[\"data\"])" in _f3_drk
+      and "feil, advarsler = _ff + feil, advarsler + _fa" in _f3_drk)
+
+print("\n=== OBOS: Highlightly-listen fra den daglige hentingen lagres og brukes i byggingen, uten nye kall ===")
+_f3_hl = {("Odd", "Bryne"): {"home": "Odd", "away": "Bryne", "date": "2026-10-26", "time": "18:00", "round": 28},
+          ("Lyn", "Moss"): {"home": "Lyn", "away": "Moss", "date": "2026-10-25", "time": "15:00", "round": 28}}
+_fl.lagre_kontrolliste(_f3_d, _f3_hl, _f3_n0)
+sjekk("listen lagres med hentetidspunktet og leses tilbake som {(hjemme, borte): (dato, tid)}",
+      _fl.highlightly_lagret(_f3_d, _f3_n0 + _tda(hours=20)) == {("Odd", "Bryne"): ("2026-10-26", "18:00"), ("Lyn", "Moss"): ("2026-10-25", "15:00")}
+      and json.loads((_f3_d / "kontroll_highlightly.json").read_text("utf-8"))["hentet"] == "2026-10-13T10:00:00+00:00")
+sjekk("48 timer gammel: brukes fortsatt", len(_fl.highlightly_lagret(_f3_d, _f3_n0 + _tda(hours=48))) == 2)
+for _f3_navn, _f3_naa in (("48 t 1 min gammel", _f3_n0 + _tda(hours=48, minutes=1)),):
+    try:
+        _fl.highlightly_lagret(_f3_d, _f3_naa)
+        _f3_kastet = ""
+    except ValueError as e:
+        _f3_kastet = str(e)
+    sjekk(f"{_f3_navn}: kan ikke brukes (flyttingen venter)", "48 timer gammel (grensen er 48)" in _f3_kastet, _f3_kastet)
+(_f3_d / "kontroll_highlightly.json").unlink()
+try:
+    _fl.highlightly_lagret(_f3_d, _f3_n0)
+    _f3_kastet = ""
+except ValueError as e:
+    _f3_kastet = str(e)
+sjekk("ingen lagret liste: kan ikke brukes", "mangler eller kan ikke leses" in _f3_kastet, _f3_kastet)
+# Revisjonen lagrer listen når kildene hentes på nytt, ikke når dagens funn gjenbrukes.
+_f3_lagret = []
+_f3_hent = lambda liga, vaare, naa: ({"Highlightly": _f3_hl}, [])
+_res1 = _dr3.kontroller_i_dag("obos", _f3_vaare, _f3_n0, None, hent=_f3_hent, lagre=_f3_lagret.append)
+sjekk("første revisjon i døgnet: listene hentes, og lagre() får Highlightly-listen", len(_f3_lagret) == 1 and _f3_lagret[0]["Highlightly"] is _f3_hl)
+_res2 = _dr3.kontroller_i_dag("obos", _f3_vaare, _f3_n0 + _tda(hours=2), {"kontroller": _res1[3]}, hent=_f3_hent, lagre=_f3_lagret.append)
+sjekk("senere samme dag: funnene gjenbrukes, ingenting hentes og ingenting lagres på nytt", _res2[4] is True and len(_f3_lagret) == 1)
+sjekk("daglig_revisjon.main lagrer listen bare for OBOS, i obos/data/kontroll_highlightly.json",
+      'if liga == "obos" and kontroller.get("Highlightly"):' in _f3_drk and "flytting.lagre_kontrolliste(_datadir, kontroller[\"Highlightly\"], naa)" in _f3_drk
+      and "lagre=_lagre_liste)" in _f3_drk)
+
+# Byggingen (obos_build_data.rows_for) i en sandkasse med terminlisten fra 1.10.
+import obos_build_data as _obd3
+import obos_results as _obr3
+import highlightly_source as _hls3
+_f3_ob = Path(_tf2.mkdtemp())
+for _f in ("matches.json", "fixtures.json"):
+    _sha.copy(ROT / "tests" / "data" / "2026-10-01" / "obos" / "data" / _f, _f3_ob / _f)
+_f3_obl = _lda.forrige_terminliste(_f3_ob, "2026")
+_f3_offer = [r for r in _f3_obl if r["hg"] is None][-1]
+_f3_ok = (_f3_offer["home"], _f3_offer["away"])
+_f3_nydato = ((_dt.fromisoformat(_f3_offer["date"]) + _tda(days=1)).strftime("%Y-%m-%d"), "18:00")
+_f3_ntf = [{**m, "ferdig": m["hg"] is not None, **({"date": _f3_nydato[0], "time": _f3_nydato[1]} if (m["home"], m["away"]) == _f3_ok else {})}
+           for m in _f3_obl]
+_f3_hl_kall, _f3_ntf_kall, _f3_res_kall = [], [], []
+_f3_ekte = (_obd3.DATA, _obr3.DATA, ntf_source.fetch_all, _hls3._http, _ses3.aktiv_sesong)
+# Resultatkjeden i samme sandkasse, og kildene dens byttet ut: stopper den
+# ikke der den skal, skal testen feile -- ikke hente fra nettet eller skrive
+# i de ekte filene.
+_f3_ekte_res = {n: getattr(_obr3, n) for n in ("MATCHES", "STATE", "ligasiden_og_reserve", "wikipedia_results",
+                                               "highlightly_resultater", "oddspapi_fixtures")}
+
+
+def _f3_ingen_kilde(navn):
+    def kalt(*a, **k):
+        _f3_res_kall.append(navn)
+        raise AssertionError(f"resultatkjeden skulle ha stoppet før {navn} ble hentet")
+    return kalt
+_f3_naa_ekte = _dt.now(_tz.utc)
+
+
+def _f3_bygg(liste_dato=None, alder_timer=1, overstyring=None):
+    """rows_for i sandkassen. liste_dato: det Highlightly-listen viser for kampen (None: ingen liste)."""
+    for _f in ("flytting_venter.json", "flytting_overstyring.json", "kontroll_highlightly.json", "status.json"):
+        (_f3_ob / _f).unlink(missing_ok=True)
+    if liste_dato is not None:
+        _fl.lagre_kontrolliste(_f3_ob, {(r["home"], r["away"]): ({**r, "date": liste_dato[0], "time": liste_dato[1]} if (r["home"], r["away"]) == _f3_ok else r)
+                                        for r in _f3_obl}, _f3_naa_ekte - _tda(hours=alder_timer))
+    if overstyring:
+        (_f3_ob / "flytting_overstyring.json").write_text(json.dumps({"overstyringer": [overstyring]}, ensure_ascii=False), encoding="utf-8")
+    logg = []
+    rader = _obd3.rows_for(log=logg.append)
+    r = next(x for x in rader if (x["home"], x["away"]) == _f3_ok)
+    return (r["date"], r["time"]), logg
+
+
+try:
+    _obd3.DATA, _obr3.DATA = _f3_ob, _f3_ob
+    _obr3.MATCHES, _obr3.STATE = _f3_ob / "matches.json", _f3_ob / "results_state.json"
+    for _n3 in ("ligasiden_og_reserve", "wikipedia_results", "highlightly_resultater", "oddspapi_fixtures"):
+        setattr(_obr3, _n3, _f3_ingen_kilde(_n3))
+    ntf_source.fetch_all = lambda *a, **k: (_f3_ntf_kall.append(1), [dict(r) for r in _f3_ntf])[1]
+    _hls3._http = lambda sti, param: (_f3_hl_kall.append(sti), (_ for _ in ()).throw(RuntimeError("byggingen skal ikke kalle Highlightly")))[1]
+    _f3_gml = (_f3_offer["date"], _f3_offer["time"])
+    _dato, _logg = _f3_bygg(liste_dato=_f3_nydato)
+    sjekk(f"byggingen: ligasiden flytter {_f3_ok[0]}-{_f3_ok[1]}, den lagrede Highlightly-listen (en time gammel) viser det samme: kampen flyttes",
+          _dato == _f3_nydato and any("bekreftet av Highlightly" in l for l in _logg) and _obd3.FLYTTING_UTFALL[0]["utfall"] == "flyttet", f"{_dato} {_logg[-3:]}")
+    _dato, _logg = _f3_bygg(liste_dato=_f3_gml)
+    sjekk("byggingen: listen viser den gamle datoen: kampen beholder den, med ADVARSEL",
+          _dato == _f3_gml and any(l.startswith("ADVARSEL") and "Highlightly viser" in l for l in _logg) and _obd3.FLYTTING_UTFALL[0]["utfall"] == "beholdt",
+          f"{_dato} {_logg[-3:]}")
+    _dato, _logg = _f3_bygg(liste_dato=_f3_nydato, alder_timer=49)
+    sjekk("byggingen: listen er 49 timer gammel: flyttingen venter (kampen beholder datoen) selv om listen er enig",
+          _dato == _f3_gml and any("49 timer gammel" in l for l in _logg), f"{_dato} {_logg[-3:]}")
+    _dato, _logg = _f3_bygg(liste_dato=None)
+    sjekk("byggingen: ingen lagret liste: flyttingen venter", _dato == _f3_gml and any("mangler eller kan ikke leses" in l for l in _logg), f"{_dato} {_logg[-3:]}")
+    _dato, _logg = _f3_bygg(liste_dato=_f3_gml, overstyring={"hjemme": _f3_ok[0], "borte": _f3_ok[1], "valg": "godta", "dato": _f3_nydato[0], "tid": _f3_nydato[1]})
+    sjekk("byggingen: godtatt for hånd i obos/data/flytting_overstyring.json: kampen flyttes", _dato == _f3_nydato and any("godtatt for hånd" in l for l in _logg),
+          f"{_dato} {_logg[-3:]}")
+    sjekk("byggingen gjorde ingen kall til Highlightly i noen av tilfellene", _f3_hl_kall == [], str(_f3_hl_kall))
+    # Uten sesongregister skrives ingenting (B).
+    _f3_bytes = {f: (_f3_ob / f).read_bytes() for f in ("matches.json", "fixtures.json")}
+    _ses3.aktiv_sesong = lambda rot, liga, log=lambda s: None: None
+    _f3_ntf_kall.clear()
+    try:
+        _obd3.rows_for(log=lambda _s: None)
+        _f3_stoppet = None
+    except SystemExit as e:
+        _f3_stoppet = str(e)
+    sjekk("OBOS-byggingen uten sesongregister stopper før ligasiden hentes", _f3_ntf_kall == [], str(_f3_ntf_kall))
+    _f3_st = json.loads((_f3_ob / "status.json").read_text("utf-8"))
+    sjekk("OBOS-byggingen uten sesongregister: stopper før noe skrives, og status.json får ok: false med «Sesongregisteret ...»",
+          _f3_stoppet is not None and "Sesongregisteret (data/sesonger.json)" in _f3_stoppet and "Ingenting er skrevet" not in ""
+          and _f3_st["ok"] is False and _f3_st["error"].startswith("Sesongregisteret (data/sesonger.json)")
+          and all((_f3_ob / f).read_bytes() == b for f, b in _f3_bytes.items()), f"{_f3_stoppet} {_f3_st}")
+    (_f3_ob / "status.json").unlink()
+    _f3_argv = sys.argv
+    sys.argv = ["obos_results.py"]
+    try:
+        _f3_kode = _obr3.main()
+    except AssertionError as e:
+        _f3_kode = f"stoppet ikke: {e}"
+    finally:
+        sys.argv = _f3_argv
+    _f3_st = json.loads((_f3_ob / "status.json").read_text("utf-8")) if (_f3_ob / "status.json").exists() else {"ok": None, "error": ""}
+    sjekk("OBOS-resultatkjeden uten sesongregister: stopper (kode 4) før kildene hentes, matches.json er urørt, og status.json er rød",
+          _f3_kode == 4 and _f3_st["ok"] is False and "Sesongregisteret" in _f3_st["error"] and _f3_res_kall == []
+          and all((_f3_ob / f).read_bytes() == b for f, b in _f3_bytes.items()) and not (_f3_ob / "results_state.json").exists(), f"{_f3_kode} {_f3_st} {_f3_res_kall}")
+finally:
+    (_obd3.DATA, _obr3.DATA, ntf_source.fetch_all, _hls3._http, _ses3.aktiv_sesong) = _f3_ekte
+    for _n3, _v3 in _f3_ekte_res.items():
+        setattr(_obr3, _n3, _v3)
+_f3_obk = (ROT / "scripts" / "obos_build_data.py").read_text("utf-8")
+sjekk("obos_build_data.py: bekreftelsen ligger etter datovakten og før første skriving, og bruker bare den lagrede listen",
+      _f3_obk.index("rimelige_datoer(offisiell, forrige or fra_csv, _aktiv") < _f3_obk.index("offisiell, FLYTTING_UTFALL = bekreft_datoer(")
+      < _f3_obk.index('leaguedata.write_json(DATA / "matches.json"')
+      and '[("Highlightly", lambda: flytting.highlightly_lagret(DATA, _naa))]' in _f3_obk and "hent_sesong" not in _f3_obk)
+for _wf3, _filer3 in (("update-data.yml", ("eliteserien/data/flytting_venter.json",)),
+                      ("obos-results.yml", ("obos/data/flytting_venter.json", "obos/data/kontroll_highlightly.json"))):
+    _wt3 = (ROT / ".github" / "workflows" / _wf3).read_text("utf-8")
+    sjekk(f"{_wf3}: lagrer {' og '.join(f.split('/')[-1] for f in _filer3)}, og ikke overstyringsfilen (den skrives for hånd)",
+          all(f in _wt3 for f in _filer3) and "flytting_overstyring" not in _wt3)
+
+print("\n=== Hele update_data.main: uten sesongregister, nye kamper og flyttinger (sandkassen) ===")
+def _f3_bytes_e():
+    return {f: (_a_sb / "eliteserien" / "data" / f).read_bytes() for f in ("matches.json", "fixtures.json")}
+
+
+_f3_reg = _a_sb / "data" / "sesonger.json"
+_f3_for = {f: (ROT / "tests" / "data" / "2026-10-01" / "eliteserien" / "data" / f).read_bytes() for f in ("matches.json", "fixtures.json")}
+for _f3_navn, _f3_gjor in (("mangler", lambda d: _f3_reg.unlink()),
+                           ("kan ikke leses (ikke gyldig JSON)", lambda d: _f3_reg.write_text("{ikke json", encoding="utf-8")),
+                           ("har ingen aktiv sesong for ligaen", lambda d: _f3_reg.write_text(json.dumps({"version": 2, "ligaer": {"obos": {"aktiv": "2026"}}}), encoding="utf-8"))):
+    _e, _logg, _ = _a_main([{**r, "date": "2026-01-07"} if r["hg"] is None else r for r in _a_liste], forbered=_f3_gjor)
+    sjekk(f"sesongregisteret {_f3_navn}: ingenting skrives (matches.json og fixtures.json er bit for bit som før), modellen kjøres ikke, og kjøringen er rød",
+          isinstance(_e, _uda.DataAuditError) and str(_e).startswith("Sesongregisteret (data/sesonger.json)") and _f3_bytes_e() == _f3_for
+          and _logg == [] and not (_a_sb / "eliteserien" / "data" / "results_state.json").exists(), f"{_e!r} {_logg}")
+    sjekk("  og kjøringen stoppet før ligasiden ble hentet", _a_hentet == [], str(_a_hentet))
+    sjekk(f"  og status.json er rød med teksten, så e-posten sier «sesongregister»",
+          _a_fil("status.json")["ok"] is False and _lta.hva_feilet("failure", {"oppdater": {"outcome": "failure"}}, _a_fil("status.json"))[0] == "sesongregister",
+          str(_a_fil("status.json")))
+
+# En kamp mangler i den lagrede terminlisten (filen vår er skadet): den er NY og må bekreftes.
+_f3_ny_k = (_a_offer["home"], _a_offer["away"])
+
+
+def _f3_fjern(d):
+    fx = json.loads((d / "fixtures.json").read_text("utf-8"))
+    for r in fx:
+        r["matches"] = [m for m in r["matches"] if (m["home"], m["away"]) != _f3_ny_k]
+    (d / "fixtures.json").write_text(json.dumps(fx, ensure_ascii=False), encoding="utf-8")
+
+
+def _f3_skadet(d):
+    _f3_fjern(d)
+    _f3_skadet.for_ = {f: (d / f).read_bytes() for f in ("matches.json", "fixtures.json")}
+
+
+_f3_espn_lik = [{"home": r["home"], "away": r["away"], "date": r["date"], "time": r["time"]} for r in _a_liste]
+_e, _logg, _ = _a_main(_a_liste, forbered=_f3_skadet, espn=_f3_espn_lik)
+_f3_fx = [m for r in _a_fil("fixtures.json") for m in r["matches"] if (m["home"], m["away"]) == _f3_ny_k]
+sjekk(f"{_f3_ny_k[0]}-{_f3_ny_k[1]} mangler i den lagrede listen, ESPN viser samme dato og tid som ligasiden: kampen skrives, kjøringen er grønn",
+      _e is None and "ESPN" in _logg and len(_f3_fx) == 1 and (_f3_fx[0]["date"], _f3_fx[0]["time"]) == (_a_offer["date"], _a_offer["time"]), f"{_e!r} {_logg} {_f3_fx}")
+_f3_espn_ulik = [{**r, "time": "13:00"} if (r["home"], r["away"]) == _f3_ny_k else r for r in _f3_espn_lik]
+_e, _logg, _ = _a_main(_a_liste, forbered=_f3_skadet, espn=_f3_espn_ulik)
+sjekk("ESPN viser en annen tid: ikke bekreftet, INGENTING skrives, modellen kjøres ikke, og feilen sier hva kildene viser og hvilken linje som godtar den",
+      isinstance(_e, _uda.DataAuditError) and str(_e).startswith("1 ny(e) kamp(er) uten lagret dato er ikke bekreftet av en uavhengig kilde. Ingenting er skrevet:")
+      and f"{_f3_ny_k[0]}-{_f3_ny_k[1]}: ligasiden viser {_a_offer['date']} {_a_offer['time']}; ESPN viser" in str(_e)
+      and _fl.linje(_f3_ny_k[0], _f3_ny_k[1], "godta", _a_offer["date"], _a_offer["time"]) in str(_e)
+      and _f3_bytes_e() == _f3_skadet.for_ and "modell" not in _logg, f"{str(_e)[:400]} {_logg}")
+sjekk("  og e-posten sier «ny kamp ikke bekreftet»",
+      _lta.hva_feilet("failure", {"oppdater": {"outcome": "failure"}}, _a_fil("status.json"))[0] == "ny kamp ikke bekreftet", str(_a_fil("status.json")))
+
+
+def _f3_skadet_godta(d):
+    _f3_fjern(d)
+    (d / "flytting_overstyring.json").write_text(json.dumps({"overstyringer": [json.loads(
+        _fl.linje(_f3_ny_k[0], _f3_ny_k[1], "godta", _a_offer["date"], _a_offer["time"]))]}, ensure_ascii=False), encoding="utf-8")
+
+
+_e, _logg, _ = _a_main(_a_liste, forbered=_f3_skadet_godta, espn=_f3_espn_ulik)
+_f3_fx = [m for r in _a_fil("fixtures.json") for m in r["matches"] if (m["home"], m["away"]) == _f3_ny_k]
+sjekk("samme tilfelle med linjen fra feilen limt inn i overstyringsfilen: kampen skrives, kjøringen er grønn, og datafilene ble ikke redigert for hånd",
+      _e is None and len(_f3_fx) == 1 and (_f3_fx[0]["date"], _f3_fx[0]["time"]) == (_a_offer["date"], _a_offer["time"]), f"{_e!r} {_f3_fx}")
+
+
+def _f3_lagret_gal(d):
+    fx = json.loads((d / "fixtures.json").read_text("utf-8"))
+    for r in fx:
+        for m in r["matches"]:
+            if (m["home"], m["away"]) == _f3_ny_k:
+                m["date"] = "2026-01-07"
+    (d / "fixtures.json").write_text(json.dumps(fx, ensure_ascii=False), encoding="utf-8")
+    _f3_lagret_gal.for_ = {f: (d / f).read_bytes() for f in ("matches.json", "fixtures.json")}
+
+
+_e, _logg, _ = _a_main(_a_liste, forbered=_f3_lagret_gal, espn=_f3_espn_ulik)
+sjekk("den LAGREDE datoen er gal (7.1.), ligasiden viser en dato i sesongen, ESPN er ikke enig: kampen er ny og ubekreftet, ingenting skrives (før ble 7.1. stående)",
+      isinstance(_e, _uda.DataAuditError) and "uten lagret dato" in str(_e) and _f3_bytes_e() == _f3_lagret_gal.for_, f"{str(_e)[:300]}")
+_e, _logg, _ = _a_main(_a_liste, forbered=_f3_lagret_gal, espn=_f3_espn_lik)
+sjekk("samme, men ESPN er enig med ligasiden: datoen rettes, og 7.1. står ingen steder",
+      _e is None and "2026-01-07" not in json.dumps(_a_fil("fixtures.json")), f"{_e!r}")
+
+# Flytting innenfor sesongvinduet (det som slapp gjennom 10.10.: Rosenborg-Start 7.11. vist som 18.11.).
+_f3_fl_k = (_a_uspilte[5]["home"], _a_uspilte[5]["away"])
+_f3_fl_gml = (_a_uspilte[5]["date"], _a_uspilte[5]["time"])
+_f3_fl_ny = ((_dt.fromisoformat(_f3_fl_gml[0]) + _tda(days=11)).strftime("%Y-%m-%d"), _f3_fl_gml[1])
+_f3_kilde_fl = [{**r, "date": _f3_fl_ny[0]} if (r["home"], r["away"]) == _f3_fl_k else r for r in _a_liste]
+
+
+def _f3_dato_paa_disk():
+    return next((m["date"], m["time"]) for r in _a_fil("fixtures.json") for m in r["matches"] if (m["home"], m["away"]) == _f3_fl_k)
+
+
+_e, _logg, _ = _a_main(_f3_kilde_fl, espn=_f3_espn_lik)
+_f3_vent = _a_fil("flytting_venter.json")["venter"]
+sjekk(f"ligasiden flytter {_f3_fl_k[0]}-{_f3_fl_k[1]} elleve dager, ESPN viser den gamle datoen: fixtures.json beholder den, kjøringen er grønn",
+      _e is None and _f3_dato_paa_disk() == _f3_fl_gml and _a_fil("status.json")["ok"] is True, f"{_e!r} {_f3_dato_paa_disk()}")
+sjekk("og flyttingen står i flytting_venter.json med begge datoene og tidspunktet",
+      [(v["kamp"], v["vaar"], v["ligasiden"], v["avvist"]) for v in _f3_vent] == [(f"{_f3_fl_k[0]}|{_f3_fl_k[1]}", list(_f3_fl_gml), list(_f3_fl_ny), False)]
+      and _f3_vent[0]["forst_sett"] == _a_naa_m.isoformat(timespec="seconds"), str(_f3_vent))
+_e, _logg, _ = _a_main(_f3_kilde_fl, espn=[{**r, "date": _f3_fl_ny[0]} if (r["home"], r["away"]) == _f3_fl_k else r for r in _f3_espn_lik])
+sjekk("ESPN viser den nye datoen: kampen flyttes, og ingenting venter",
+      _e is None and _f3_dato_paa_disk() == _f3_fl_ny and _a_fil("flytting_venter.json")["venter"] == [], f"{_e!r} {_f3_dato_paa_disk()}")
+
+
+def _f3_overstyr(valg):
+    def gjor(d):
+        (d / "flytting_overstyring.json").write_text(json.dumps({"overstyringer": [
+            {"hjemme": _f3_fl_k[0], "borte": _f3_fl_k[1], "valg": valg, "dato": _f3_fl_ny[0], "tid": _f3_fl_ny[1]}]}, ensure_ascii=False), encoding="utf-8")
+    return gjor
+
+
+_e, _logg, _ = _a_main(_f3_kilde_fl, forbered=_f3_overstyr("godta"))
+sjekk("godtatt i overstyringsfilen: kampen flyttes uten at ESPN eller kalenderfeeden spørres",
+      _e is None and _f3_dato_paa_disk() == _f3_fl_ny and "NETTKALL" not in _logg and "ESPN" not in _logg
+      and _a_fil("flytting_venter.json")["venter"] == [], f"{_e!r} {_f3_dato_paa_disk()} {_logg}")
+_e, _logg, _ = _a_main(_f3_kilde_fl, forbered=_f3_overstyr("avvis"),
+                       espn=[{**r, "date": _f3_fl_ny[0]} if (r["home"], r["away"]) == _f3_fl_k else r for r in _f3_espn_lik])
+_f3_vent = _a_fil("flytting_venter.json")["venter"]
+sjekk("avvist i overstyringsfilen: kampen beholder datoen, og flyttingen står som avvist (ingen varsling, se revider_flyttinger over)",
+      _e is None and _f3_dato_paa_disk() == _f3_fl_gml and [(v["kamp"], v["avvist"]) for v in _f3_vent] == [(f"{_f3_fl_k[0]}|{_f3_fl_k[1]}", True)],
+      f"{_e!r} {_f3_dato_paa_disk()} {_f3_vent}")
 
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.

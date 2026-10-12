@@ -54,6 +54,10 @@ def kategori_av_tekst(tekst):
     t = (tekst or "").lower()
     if "kontroller fant avvik" in t:            # flere kontroller slo ut i samme kjøring
         return "flere kontroller"
+    if "sesongregisteret" in t:                 # data/sesonger.json kan ikke leses: ingenting er skrevet
+        return "sesongregister"
+    if "uten lagret dato" in t:                 # en ny kamp er ikke bekreftet: ingenting er skrevet
+        return "ny kamp ikke bekreftet"
     if "terminlisten eller tabellen" in t:      # OBOS-byggingen skriver begge i én feil
         return "revisjon eller tabellkontroll"
     if "tabellen" in t:

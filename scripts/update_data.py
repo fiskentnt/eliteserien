@@ -25,8 +25,9 @@ import espn_source
 import should_fetch
 import ntf_source
 import nff_source
-from reconcile_ny import (bare_aktiv_sesong, behold_eksisterende, bekreft_flytting,
-                          reconcile as reconcile_kilder, rimelige_datoer)
+from reconcile_ny import (bare_aktiv_sesong, behold_eksisterende, bekreft_datoer,
+                          reconcile as reconcile_kilder, rimelige_datoer, uten_lagret_dato)
+import flytting
 import fetch_odds_history
 import merge_odds
 import fit_model
@@ -45,10 +46,14 @@ AUDIT_STATE_PATH = LEAGUE / "data" / "audit_state.json"
 
 DATOVAKT_BESKJED = {
     "ingen_autoritet": (
-        "Ingen autoritativ sesong i data/sesonger.json, så datovakten sto "
-        "over. Dataene er skrevet som normalt, men en gal dato fra kilden "
-        "ville ikke blitt fanget. Kjør: python3 scripts/sesong.py . init "
-        "<liga> <år>"),
+        "Sesongregisteret (data/sesonger.json) mangler, kan ikke leses eller "
+        "har ingen aktiv sesong for ligaen. Uten det kan datovakten ikke "
+        "kontrollere datoene, så ingenting er skrevet. Kjør: "
+        "python3 scripts/sesong.py . init <liga> <år>"),
+    "ingen_runder": (
+        "De lagrede kampene mangler rundenummer, så sesongvinduet kan ikke "
+        "regnes og datovakten ikke kontrollere datoene. Ingenting er skrevet. "
+        "Sjekk matches.json og fixtures.json."),
     "sesongskifte_mangler": (
         "Terminlisten er for en annen sesong enn registeret sier. "
         "Sesongskiftet er ikke kjørt, så datovakten sto over -- den ville "
@@ -601,9 +606,7 @@ def etter_skriving(matches_out, fixtures_out, merged, utenfor, datofeil, tk, kon
     # det noe galt med kilden, typisk en markupendring. Datoene med lagret
     # verdi i samme sesong er alt beholdt (før skrivingen); dette sier bare
     # fra.
-    if datofeil == "ingen_autoritet":
-        feil.append(("datovakt", DATOVAKT_BESKJED["ingen_autoritet"]))
-    elif utenfor and len(utenfor) > len(merged) * 0.25:
+    if utenfor and len(utenfor) > len(merged) * 0.25:
         feil.append(("datovakt", f"{len(utenfor)} av {len(merged)} kamper hadde dato utenfor "
                                  f"sesongen. Datoene er beholdt fra før, men kilden må sjekkes:\n"
                                  + "\n".join(utenfor[:10])))
@@ -646,6 +649,12 @@ def main(cache_dir=None, now=None):
         return 0
 
     try:
+        # Uten sesongregister skrives INGENTING (13.10.2026). Før sto
+        # datovakten over, dataene ble skrevet som normalt, og kjøringen ble
+        # rød til slutt: en gal dato fra kilden ville da kommet ut. Vakten
+        # skal aldri stå over i stillhet.
+        if _aktiv0 is None:
+            raise DataAuditError(DATOVAKT_BESKJED["ingen_autoritet"])
         try:
             espn_rows = espn_source.fetch_all(cache_dir=cache_dir, log=log)
         except espn_source.EspnDataError:
@@ -709,19 +718,39 @@ def main(cache_dir=None, now=None):
         # Rosenborg-Start (runde 26, 7.11.) som 7.1., og det slapp gjennom.
         _forrige_liste = leaguedata.forrige_terminliste(LEAGUE / "data", _aktiv, log=log) if _aktiv else None
         merged, utenfor, _datofeil = rimelige_datoer(merged, _forrige_liste or tidligere, _aktiv, log=log)
-        # Ingen enkeltkilde flytter en uspilt kamp (10.10.2026): ligasiden viste
-        # Rosenborg-Start (7.11.) som 18.11., innenfor sesongvinduet. Kampen
-        # flyttes bare når ESPN (sesongkallet, gratis) viser samme nye dato og
-        # tid; svarer ikke ESPN, avgjør kalenderfeeden. Se bekreft_flytting().
-        if _forrige_liste:
-            def _espn_fasit():
-                return {(r["home"], r["away"]): (r["date"], r.get("time"))
-                        for r in espn_source.fetch_season(_aktiv, log=log)}
+        # Kan vakten ikke kontrollere datoene, skrives ingenting.
+        if _datofeil in ("sesongskifte_mangler", "ingen_runder", "ingen_autoritet"):
+            raise DataAuditError(DATOVAKT_BESKJED[_datofeil])
+        # Ingen enkeltkilde setter eller flytter datoen for en uspilt kamp
+        # (10.10. og 13.10.2026, reconcile_ny.bekreft_datoer): ligasiden viste
+        # Rosenborg-Start (7.11.) som 18.11., innenfor sesongvinduet. En
+        # flytting gjennomføres bare når ESPN (sesongkallet, gratis) viser
+        # samme nye dato og tid; svarer ikke ESPN, avgjør kalenderfeeden.
+        # Ellers beholdes datoen vi har, og flyttingen venter
+        # (flytting_venter.json). En NY kamp uten brukbar lagret dato må
+        # bekreftes på samme måte; kan den ikke det, skrives ingenting.
+        # Avgjørelser for hånd står i flytting_overstyring.json.
+        def _espn_fasit():
+            return {(r["home"], r["away"]): (r["date"], r.get("time"))
+                    for r in espn_source.fetch_season(_aktiv, log=log)}
 
-            def _kalender_fasit():
-                return {(r["home"], r["away"]): (r["date"], r.get("time"))
-                        for r in ntf_source.parse_kalender(ntf_source.hent_kalender(LIGA, log=log), LIGA)}
-            merged, _flytting = bekreft_flytting(merged, _forrige_liste, _espn_fasit, _kalender_fasit, log=log)
+        def _kalender_fasit():
+            return {(r["home"], r["away"]): (r["date"], r.get("time"))
+                    for r in ntf_source.parse_kalender(ntf_source.hent_kalender(LIGA, log=log), LIGA)}
+        _lagret = _forrige_liste or tidligere
+        merged, _flytting = bekreft_datoer(
+            merged, _forrige_liste, [("ESPN", _espn_fasit), ("kalenderfeeden", _kalender_fasit)], log=log,
+            nye=uten_lagret_dato(merged, _lagret, _aktiv),
+            overstyringer=flytting.les_overstyringer(LEAGUE / "data", {(r["home"], r["away"]) for r in merged}, log=log))
+        _ubekreftet = [u for u in _flytting if u["utfall"] == "ubekreftet"]
+        if _ubekreftet:
+            raise DataAuditError(
+                f"{len(_ubekreftet)} ny(e) kamp(er) uten lagret dato er ikke bekreftet av en uavhengig kilde. "
+                f"Ingenting er skrevet:\n" + "\n".join(
+                    f"{u['kamp']}: ligasiden viser {u['ny'][0]} {u['ny'][1]}; {u['hva']}. Godta for hånd i "
+                    f"eliteserien/data/{flytting.OVERSTYRING}: "
+                    f"{flytting.linje(u['nokkel'][0], u['nokkel'][1], 'godta', u['ny'][0], u['ny'][1])}"
+                    for u in _ubekreftet[:10]))
         # Regelen for nye resultater (resultatregel.py): hovedkilden og en
         # annen leverandør må være enige. Publiserte resultater røres ikke.
         merged, _resstate = kontroller_nye_resultater(merged, tidligere, ntf_rows, espn_rows, ffk_rows, now, log=log)
@@ -749,6 +778,8 @@ def main(cache_dir=None, now=None):
         write_json(data_dir / "matches.json", matches_out)
         write_json(data_dir / "fixtures.json", fixtures_out)
         skriv_state(_resstate, now)
+        # Flyttingene som ble holdt tilbake, til den daglige revisjonen.
+        flytting.skriv_venter(data_dir, _flytting, now)
 
         # Tabellkontrollen mot tabellen paa ligasiden, fra samme henting
         # (scripts/tabellkontroll.py). Et nytt poengtrekk legges inn i

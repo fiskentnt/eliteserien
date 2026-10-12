@@ -455,6 +455,16 @@ def main():
         log(f"Sesongen {_a0} er frosset -- rører ingenting. "
             f"Venter på sesongskiftet.")
         return 0
+    # Uten sesongregister skrives INGENTING (13.10.2026): da vet vi ikke
+    # hvilken sesong resultatene hører til, og byggingen etterpå stopper av
+    # samme grunn.
+    if _a0 is None:
+        import leaguedata
+        _tekst = ("Sesongregisteret (data/sesonger.json) mangler, kan ikke leses eller har ingen aktiv sesong "
+                  "for ligaen. Ingenting er skrevet. Kjør: python3 scripts/sesong.py . init <liga> <år>")
+        log("FEIL: " + _tekst)
+        leaguedata.merk_status_rod(DATA / "status.json", _tekst)
+        return 4
 
     names = load_names()
     sched = schedule()

@@ -203,75 +203,154 @@ def frys_spilte(rader, eksisterende, kilde="ligasiden", log=lambda s: None):
     return ut
 
 
-def bekreft_flytting(rader, forrige, hent_espn, hent_kalender, log=lambda s: None):
-    """En uspilt kamp flyttes bare når ESPN viser samme nye dato og tid (10.10.2026).
+def _vis_dato(d, t=None):
+    return (f"{int(d[8:10])}.{int(d[5:7])}." if d and len(d) == 10 else str(d)) + (f" {t}" if t else "")
+
+
+def bekreft_datoer(rader, forrige, kilder, log=lambda s: None, nye=(), overstyringer=()):
+    """Ingen enkeltkilde setter eller flytter datoen for en uspilt kamp.
 
     eliteserien.no viste Rosenborg-Start (runde 26, 7.11. 18:00) som 7.1. den
-    9.10. og som 18.11. den 10.10. Datovakten (rimelige_datoer) stopper bare
+    9.10.2026 og som 18.11. den 10.10. Datovakten (rimelige_datoer) stopper bare
     datoer utenfor sesongen, så 18.11. kom på siden. Feilene flytter seg
-    mellom kampene fra dag til dag, så ingen enkeltkilde får flytte en kamp:
+    mellom kampene fra dag til dag. Derfor:
 
-      * Ligasiden viser en annen dato eller tid enn vi har for en uspilt kamp:
-        ESPN (sesongkallet, gratis) spørres. Viser ESPN den samme nye datoen
-        og tiden, flyttes kampen.
-      * Svarer ikke ESPN, avgjør kalenderfeeden på samme måte.
-      * Ellers (ESPN viser noe annet, mangler kampen, eller ingen svarer):
-        vi beholder datoen og tiden vi har, med ADVARSEL.
+      * FLYTTING: ligasiden viser en annen dato eller tid enn vi har lagret
+        for en uspilt kamp. Kampen flyttes bare når den uavhengige kilden
+        viser samme nye dato og tid. Ellers beholder vi datoen og tiden vi
+        har, med ADVARSEL ("beholdt"): flyttingen venter.
+      * NY KAMP (13.10.2026): en uspilt kamp uten brukbar lagret dato (nye, se
+        uten_lagret_dato). Datoen og tiden godtas bare når den uavhengige
+        kilden viser det samme. Ellers er den "ubekreftet", og kalleren skal
+        IKKE skrive noe: det finnes ingen gammel dato å beholde, vi utelater
+        aldri en kamp, og en ubekreftet dato skal ikke ut.
+
+    kilder: [(navn, hent)] i rekkefølge. Den første som svarer, avgjør; de
+    neste spørres bare når den foran kaster unntak. Eliteserien: ESPN
+    (sesongkallet, gratis), så kalenderfeeden. OBOS: Highlightly-listen fra
+    den daglige hentingen (flytting.highlightly_lagret), ingen reserve. hent
+    gir {(hjemme, borte): (dato, tid)} og kalles bare når minst én kamp er
+    flyttet eller ny og ikke avgjort for hånd.
+
+    overstyringer: avgjørelser for hånd fra <liga>/data/flytting_overstyring.json
+    (flytting.les_overstyringer): {(hjemme, borte): {"valg", "dato", "tid"}}.
+    En overstyring gjelder bare når ligasiden viser nøyaktig den datoen og
+    tiden. "godta": flyttingen gjennomføres (eller den nye kampen godtas)
+    uten kilde. "avvis": vi beholder det vi har, og flyttingen varsles ikke
+    lenger ("avvist").
 
     forrige: terminlisten vi sist skrev (leaguedata.forrige_terminliste).
-    hent_espn / hent_kalender: kalles bare når minst én kamp er flyttet, og gir
-    {(hjemme, borte): (dato, tid)} eller kaster unntak når kilden ikke svarer.
-    Returnerer (rader, utfall), utfall = [(kamp, "flyttet"|"beholdt", kilde)]."""
+    Returnerer (rader, utfall). utfall er en liste av dict:
+      {kamp, nokkel, type ("flytting"|"ny"), utfall ("flyttet"|"beholdt"|
+       "avvist"|"bekreftet"|"ubekreftet"), kilde, ny, har, hva}."""
     gamle = {_nøkkel(g): g for g in (forrige or []) if g.get("hg") is None and g.get("date")}
+    nye = set(nye or ())
+    overstyringer = overstyringer or {}
+
+    def ny_kamp(r):
+        return r.get("hg") is None and bool(r.get("date")) and _nøkkel(r) in nye
 
     def flyttet(r):
         g = gamle.get(_nøkkel(r))
-        return (g is not None and r.get("hg") is None and r.get("date")
+        return (not ny_kamp(r) and g is not None and r.get("hg") is None and r.get("date")
                 and r["date"][:4] == g["date"][:4]     # samme sesong
                 and (r.get("date"), r.get("time")) != (g.get("date"), g.get("time")))
 
-    if not any(flyttet(r) for r in rader):
+    def overstyrt(r):
+        """Overstyringen for kampen når den gjelder det ligasiden viser nå, ellers None."""
+        o = overstyringer.get(_nøkkel(r))
+        if o and (o.get("dato"), o.get("tid")) == (r.get("date"), r.get("time")):
+            return o
+        return None
+
+    aktuelle = [r for r in rader if flyttet(r) or ny_kamp(r)]
+    if not aktuelle:
         return rader, []
+    for r in aktuelle:
+        o = overstyringer.get(_nøkkel(r))
+        if o and not overstyrt(r):
+            log(f"ADVARSEL: overstyringen for {r['home']}-{r['away']} gjelder {_vis_dato(o.get('dato'), o.get('tid'))}, "
+                f"men ligasiden viser nå {_vis_dato(r.get('date'), r.get('time'))} -- brukes ikke")
 
-    def vis(d, t):
-        return (f"{int(d[8:10])}.{int(d[5:7])}." if d and len(d) == 10 else str(d)) + (f" {t}" if t else "")
-
-    fasit, kilde = None, None
-    try:
-        fasit, kilde = hent_espn(), "ESPN"
-    except Exception as e:
-        log(f"Flytting: ESPN svarte ikke ({type(e).__name__}: {e}) -- kalenderfeeden avgjør.")
-        try:
-            fasit, kilde = hent_kalender(), "kalenderfeeden"
-        except Exception as e2:
-            log(f"Flytting: kalenderfeeden svarte heller ikke ({type(e2).__name__}: {e2}).")
+    fasit, kilde, svarte_ikke = None, None, []
+    if any(not overstyrt(r) for r in aktuelle):
+        for i, (navn, hent) in enumerate(kilder):
+            try:
+                fasit, kilde = hent(), navn
+                break
+            except Exception as e:
+                svarte_ikke.append(navn)
+                neste = kilder[i + 1][0] if i + 1 < len(kilder) else None
+                if i == 0 and neste:
+                    log(f"Flytting: {navn} svarte ikke ({type(e).__name__}: {e}) -- {neste} avgjør.")
+                elif i == 0:
+                    log(f"Flytting: {navn} kan ikke brukes ({type(e).__name__}: {e}).")
+                else:
+                    log(f"Flytting: {navn} svarte heller ikke ({type(e).__name__}: {e}).")
+    if len(svarte_ikke) >= 2:
+        ingen_svarte = "verken " + " eller ".join([", ".join(svarte_ikke[:-1]), svarte_ikke[-1]]) + " svarte"
+    else:
+        ingen_svarte = f"{svarte_ikke[0] if svarte_ikke else 'ingen kilde'} kunne ikke brukes"
 
     ut, utfall = [], []
     for r in rader:
-        if not flyttet(r):
+        er_ny = ny_kamp(r)
+        if not er_ny and not flyttet(r):
             ut.append(r)
             continue
-        g = gamle[_nøkkel(r)]
-        ny, har = (r["date"], r.get("time")), (g["date"], g.get("time"))
+        k = _nøkkel(r)
+        g = gamle.get(k) if not er_ny else None
+        ny = (r["date"], r.get("time"))
+        har = (g["date"], g.get("time")) if g else None
         kamp = f"{r['home']}-{r['away']}"
-        if fasit is not None and fasit.get(_nøkkel(r)) == ny:
-            log(f"Flytting: {kamp} flyttet fra {vis(*har)} til {vis(*ny)}, bekreftet av {kilde}.")
-            utfall.append((kamp, "flyttet", kilde))
+        f0 = {"kamp": kamp, "nokkel": (r["home"], r["away"]), "type": "ny" if er_ny else "flytting", "ny": ny, "har": har}
+        o = overstyrt(r)
+        if o and o["valg"] == "godta":
+            log(f"Flytting: {kamp} flyttet fra {_vis_dato(*har)} til {_vis_dato(*ny)}, godtatt for hånd (overstyringsfilen)." if har
+                else f"Ny kamp: {kamp} {_vis_dato(*ny)}, godtatt for hånd (overstyringsfilen).")
+            utfall.append({**f0, "utfall": "bekreftet" if er_ny else "flyttet", "kilde": "overstyring", "hva": "godtatt for hånd"})
+            ut.append(r)
+            continue
+        if o and o["valg"] == "avvis" and not er_ny:
+            log(f"Flytting avvist for hånd (overstyringsfilen): {kamp}: ligasiden viser {_vis_dato(*ny)}, "
+                f"vi beholder {_vis_dato(*har)}.")
+            utfall.append({**f0, "utfall": "avvist", "kilde": "overstyring", "hva": "avvist for hånd"})
+            ut.append({**r, "date": g["date"], "time": g.get("time")})
+            continue
+        if fasit is not None and fasit.get(k) == ny:
+            log(f"Flytting: {kamp} flyttet fra {_vis_dato(*har)} til {_vis_dato(*ny)}, bekreftet av {kilde}." if har
+                else f"Ny kamp: {kamp} {_vis_dato(*ny)}, bekreftet av {kilde}.")
+            utfall.append({**f0, "utfall": "bekreftet" if er_ny else "flyttet", "kilde": kilde, "hva": f"bekreftet av {kilde}"})
             ut.append(r)
             continue
         if fasit is None:
-            hva = "verken ESPN eller kalenderfeeden svarte"
-        elif _nøkkel(r) in fasit:
-            hva = f"{kilde} viser {vis(*fasit[_nøkkel(r)])}"
+            hva = ingen_svarte
+        elif k in fasit:
+            hva = f"{kilde} viser {_vis_dato(*fasit[k])}"
         else:
             hva = f"{kilde} har ikke kampen"
-        melding = f"{kamp}: ligasiden viser {vis(*ny)}, vi har {vis(*har)}; {hva} -- beholder {vis(*har)}"
+        if er_ny:
+            melding = f"{kamp}: ligasiden viser {_vis_dato(*ny)}, og vi har ingen lagret dato; {hva} -- ikke bekreftet"
+            log(f"AVVIK: {melding}")
+            utfall.append({**f0, "utfall": "ubekreftet", "kilde": kilde, "hva": hva})
+            ut.append(r)
+            continue
+        melding = f"{kamp}: ligasiden viser {_vis_dato(*ny)}, vi har {_vis_dato(*har)}; {hva} -- beholder {_vis_dato(*har)}"
         log(f"ADVARSEL: {melding}")
         if os.environ.get("GITHUB_ACTIONS"):
             print(f"::warning title=Flytting ikke bekreftet::{melding}")
-        utfall.append((kamp, "beholdt", kilde))
+        utfall.append({**f0, "utfall": "beholdt", "kilde": kilde, "hva": hva})
         ut.append({**r, "date": g["date"], "time": g.get("time")})
     return ut, utfall
+
+
+def bekreft_flytting(rader, forrige, hent_espn, hent_kalender, log=lambda s: None):
+    """Regelen for Eliteserien slik den ble innført 10.10.2026: en uspilt kamp
+    flyttes bare når ESPN viser samme nye dato og tid; svarer ikke ESPN,
+    avgjør kalenderfeeden. Se bekreft_datoer, som denne kaller.
+    Returnerer (rader, utfall), utfall = [(kamp, "flyttet"|"beholdt", kilde)]."""
+    ut, utfall = bekreft_datoer(rader, forrige, [("ESPN", hent_espn), ("kalenderfeeden", hent_kalender)], log=log)
+    return ut, [(u["kamp"], u["utfall"], u["kilde"]) for u in utfall]
 
 
 # Hvor langt utenfor sesongens egne kamper en dato faar ligge for vi
@@ -431,8 +510,12 @@ def rimelige_datoer(merged, eksisterende, sesong, log=lambda s: None):
 
     ytre = _sesongens_ytterkanter(kjente)
     if ytre is None:
-        log(f"Datovakt: fant ikke runder i {aar}-dataene -- står over.")
-        return merged, [], None
+        # De lagrede kampene mangler rundenummer: vinduet kan ikke regnes.
+        # Vakten står ALDRI over i stillhet (13.10.2026): kalleren skal ikke
+        # skrive noe, som ved "sesongskifte_mangler".
+        log(f"AVVIK: de {len(kjente)} lagrede kampene i {aar} har ingen rundenummer, så sesongvinduet "
+            f"kan ikke regnes. Datovakten kan ikke kontrollere datoene.")
+        return merged, None, "ingen_runder"
     forste, siste = ytre
     fra = forste - timedelta(days=VINDU_FOR_DAGER)
     til = siste + timedelta(days=VINDU_ETTER_DAGER)
@@ -453,8 +536,10 @@ def rimelige_datoer(merged, eksisterende, sesong, log=lambda s: None):
             log(f"ADVARSEL: {r['home']}-{r['away']} oppgis med {r['date']}, "
                 f"utenfor {fra}–{til} i sesongen {aar}. "
                 + (f"Beholder {forrige}." if forrige
-                   else f"Tidligere dato {g.get('date')} er også utenfor, slipper gjennom." if ogsaa_utenfor
-                   else "Ingen tidligere dato i denne sesongen, slipper gjennom."))
+                   else f"Tidligere dato {g.get('date')} er også utenfor, slipper gjennom her "
+                        f"(må bekreftes av en uavhengig kilde, se bekreft_datoer)." if ogsaa_utenfor
+                   else "Ingen tidligere dato i denne sesongen, slipper gjennom her "
+                        "(må bekreftes av en uavhengig kilde, se bekreft_datoer)."))
             if forrige:
                 r = {**r, "date": forrige, "time": (g.get("time") or r.get("time"))}
         ut.append(r)
@@ -463,3 +548,35 @@ def rimelige_datoer(merged, eksisterende, sesong, log=lambda s: None):
         log(f"AVVIK: {len(utenfor)} av {len(merged)} kamper hadde dato utenfor "
             f"{fra}–{til}. Det er ikke enkeltfeil -- noe er galt med kilden.")
     return ut, utenfor, None
+
+
+def uten_lagret_dato(rader, eksisterende, sesong):
+    """Lagparene for de USPILTE kampene i rader som ikke har en brukbar
+    lagret dato (13.10.2026): kampen står ikke i eksisterende (terminlisten vi
+    sist skrev), eller den lagrede datoen ligger utenfor sesongvinduet. Slike
+    kamper kan ikke «beholde den gamle datoen», så datoen må bekreftes av en
+    uavhengig kilde (bekreft_datoer, nye).
+
+    Tom mengde når vinduet ikke kan regnes: uten sesong, og ved SESONGSTART
+    (under 20 kjente kamper i sesongen), der hele den nye terminlisten godtas
+    som før. Samme vindu som rimelige_datoer."""
+    from datetime import timedelta
+    if sesong is None:
+        return set()
+    aar = str(sesong)
+    gamle = {_nøkkel(r): r for r in (eksisterende or []) if (r.get("date") or "").startswith(aar)}
+    kjente = [r for r in gamle.values() if _dato(r.get("date"))]
+    if len(kjente) < 20:
+        return set()
+    ytre = _sesongens_ytterkanter(kjente)
+    if ytre is None:
+        return set()
+    fra, til = ytre[0] - timedelta(days=VINDU_FOR_DAGER), ytre[1] + timedelta(days=VINDU_ETTER_DAGER)
+    ut = set()
+    for r in rader:
+        if r.get("hg") is not None or not r.get("date"):
+            continue
+        d = _dato((gamle.get(_nøkkel(r)) or {}).get("date"))
+        if not (d and fra <= d <= til):
+            ut.add(_nøkkel(r))
+    return ut

@@ -32,6 +32,7 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import flytting
 import hentelogg
 import nff_source
 import ntf_source
@@ -149,8 +150,15 @@ def revider(vaare, nff_rader, ferskt=True, bekreftet=None, sesong=None):
     return feil, advarsler
 
 
-def revider_kalender(vaare, kalender, sesong=None, naa=None, log=lambda s: None):
+def revider_kalender(vaare, kalender, sesong=None, naa=None, log=lambda s: None, venter=None):
     """(feil, advarsler) for terminlisten mot kalenderfeeden.
+
+    venter (13.10.2026): flyttingene datakjoringen holdt tilbake
+    (flytting.les_venter). Viser feeden nettopp den datoen ligasiden viser
+    for en slik kamp, er avviket en ADVARSEL, ikke kritisk: NTF har flyttet
+    kampen, og vi venter paa en uavhengig kilde (eller har avvist flyttingen
+    for haand). Naar en flytting som venter blir kritisk, avgjoer
+    flytting.revider_flyttinger.
 
     vaare er ALLE kampene vaare ({(hjemme, borte): rad}), spilte og uspilte:
     en kamp som nettopp er spilt, kan fortsatt staa i feeden, og skal da
@@ -173,6 +181,7 @@ def revider_kalender(vaare, kalender, sesong=None, naa=None, log=lambda s: None)
                              f"enn {sesong} -- ikke sammenlignet")
         kalender = [r for r in kalender if (r.get("date") or "").startswith(str(sesong))]
     kal = {(r["home"], r["away"]): r for r in kalender}
+    venter = {tuple(v["kamp"].split("|")): v for v in (venter or [])}
     if not kal:
         return [], advarsler + ["kalenderfeeden ga ingen kamper i sesongen -- ingen kontroll denne gangen"]
     for key, k in sorted(kal.items()):
@@ -193,7 +202,13 @@ def revider_kalender(vaare, kalender, sesong=None, naa=None, log=lambda s: None)
                              f"kalenderfeeden (det er vårt avspark i UTC -- en flytting, eller tiden lagret i UTC)")
             continue
         if k["date"] != v.get("date"):
-            feil.append(f"{hvem}: dato {v.get('date')} hos oss, {k['date']} i kalenderfeeden")
+            _vent = venter.get(key)
+            if _vent and _vent.get("ligasiden", [None])[0] == k["date"]:
+                advarsler.append(f"{hvem}: dato {v.get('date')} hos oss, {k['date']} i kalenderfeeden -- "
+                                 + ("flyttingen er avvist for hånd" if _vent.get("avvist")
+                                    else "flyttingen venter på bekreftelse"))
+            else:
+                feil.append(f"{hvem}: dato {v.get('date')} hos oss, {k['date']} i kalenderfeeden")
         elif k.get("time") and v.get("time") and k["time"] != v["time"]:
             advarsler.append(f"{hvem}: avspark {v['time']} hos oss, {k['time']} i kalenderfeeden")
     for key, v in sorted(vaare.items()):
@@ -242,7 +257,7 @@ def _kontrollfunn(vaare, kontroller, naa):
     return feil + advarsler
 
 
-def kontroller_i_dag(liga, vaare, naa, tidligere, hent=None):
+def kontroller_i_dag(liga, vaare, naa, tidligere, hent=None, lagre=None):
     """Kontrollkildene (ESPN, Highlightly, OddsPapi) hentes ved FØRSTE
     revisjon i døgnet (norsk dato), ikke ved hver.
 
@@ -253,6 +268,10 @@ def kontroller_i_dag(liga, vaare, naa, tidligere, hent=None):
 
     Senere revisjoner samme dag bruker funnene fra den første, for kamper som
     fortsatt ikke har startet og der vår dato og tid er de samme som da.
+
+    lagre(kontroller): kalles med listene naar de er hentet paa nytt (ikke
+    naar dagens funn gjenbrukes). main() lagrer Highlightly-listen for OBOS
+    med den, til datoregelen i byggingen (flytting.highlightly_lagret).
 
     tidligere: forrige audit_fixtures.json (dict, eller None).
     Returnerer (kilder, feil, advarsler, blokk, gjenbrukt); blokk lagres i
@@ -269,6 +288,8 @@ def kontroller_i_dag(liga, vaare, naa, tidligere, hent=None):
                 [f["tekst"] for f in funn if not f["avvik"]] + blokk.get("feilet", []),
                 {**blokk, "funn": funn}, True)
     kontroller, feilet = (hent or hent_kontroller)(liga, vaare, naa)
+    if lagre:
+        lagre(kontroller)
     funn = _kontrollfunn(vaare, kontroller, naa)
     blokk = {"dato": i_dag, "hentet": naa.isoformat(timespec="seconds"),
              "kilder": list(kontroller), "funn": funn, "feilet": feilet}
@@ -555,8 +576,17 @@ def main(argv, naa=None):
         print(f"Daglig terminlisterevisjon, {oppsett(liga)['visningsnavn']}: kalenderfeeden kunne ikke "
               f"brukes ({type(e).__name__}: {e}) -- ingen kontroll denne gangen.")
         return 0
+    # Flyttingene datakjoringen holdt tilbake (13.10.2026): avviket mot
+    # kalenderfeeden for en slik kamp er en advarsel, og flyttingen blir
+    # kritisk etter reglene i flytting.revider_flyttinger (3 dogn ubekreftet,
+    # eller under 48 timer til avspark). De staar FORST i listen, saa
+    # e-posten sier hvilken kamp som maa avgjores for haand.
+    _datadir = ROT / oppsett(liga)["data"]
+    _venter = flytting.les_venter(_datadir)
     feil, advarsler = revider_kalender(vaare, kalender, sesong=_a, naa=naa,
-                                       log=lambda l: print(f"  {l}"))
+                                       log=lambda l: print(f"  {l}"), venter=_venter)
+    _ff, _fa = flytting.revider_flyttinger(_venter, naa, data_navn=oppsett(liga)["data"])
+    feil, advarsler = _ff + feil, advarsler + _fa
     # Kontrollen mot de uavhengige kildene (3.10.2026): Eliteserien ESPN og
     # Highlightly, OBOS Highlightly og OddsPapi. Hentes én gang i døgnet, se
     # kontroller_i_dag.
@@ -564,7 +594,19 @@ def main(argv, naa=None):
         _tidligere = json.loads(sti.read_text(encoding="utf-8"))
     except Exception:
         _tidligere = None
-    _kontroller, _kf, _ka, _kblokk, _gjenbrukt = kontroller_i_dag(liga, vaare, naa, _tidligere)
+    def _lagre_liste(kontroller):
+        # OBOS: Highlightly-listen fra den daglige hentingen bekrefter
+        # flyttinger i byggingen (obos_build_data.py), uten nye kall.
+        if liga == "obos" and kontroller.get("Highlightly"):
+            flytting.lagre_kontrolliste(_datadir, kontroller["Highlightly"], naa)
+    _kontroller, _kf, _ka, _kblokk, _gjenbrukt = kontroller_i_dag(liga, vaare, naa, _tidligere, lagre=_lagre_liste)
+    # To kontrollkilder som er enige om en annen dato enn vår, er ellers et
+    # avvik. For en flytting som venter, er det nettopp bekreftelsen vi
+    # venter på (byggingen bruker den i neste kjøring): advarsel.
+    _vent_par = {tuple(v["kamp"].split("|")) for v in _venter}
+    _vent_tekst = {f["tekst"] for f in _kblokk.get("funn", []) if f.get("avvik") and tuple(f["kamp"]) in _vent_par}
+    _ka = _ka + [f"{x} -- flyttingen venter på bekreftelse" for x in _kf if x in _vent_tekst]
+    _kf = [x for x in _kf if x not in _vent_tekst]
     feil, advarsler = feil + _kf, advarsler + _ka
     if liga == "eliteserien":
         try:

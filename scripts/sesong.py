@@ -181,23 +181,25 @@ def aktiv_sesong(rot, liga, log=lambda s: None):
     den ut eller fatt den til aa skrive fjoraarets datoer inn i den nye
     sesongen.
 
-    Mangler autoriteten, skal kalleren staa over vakten, kjore resten som
-    normalt, og la kjoringen feile synlig til slutt."""
+    Mangler autoriteten, skal datakjoringen IKKE skrive noe (13.10.2026):
+    update_data.py, obos_build_data.py og obos_results.py stopper foer
+    skrivingen, og kjoringen blir rod. Foer sto datovakten over, dataene ble
+    skrevet som normalt, og en gal dato fra kilden ville kommet ut."""
     p = reg_sti(rot)
     if not p.exists():
         log(f"INGEN SESONGAUTORITET: {p.relative_to(Path(rot))} finnes ikke. "
-            f"Datovakten står over -- den skal ikke gjette.")
+            f"Datakjøringen skriver ingenting -- sesongen skal ikke gjettes.")
         return None
     try:
         d = json.loads(p.read_text(encoding="utf-8"))
     except Exception as e:
         log(f"INGEN SESONGAUTORITET: klarte ikke lese data/sesonger.json "
-            f"({type(e).__name__}: {e}). Datovakten står over.")
+            f"({type(e).__name__}: {e}). Datakjøringen skriver ingenting.")
         return None
     s = d.get("ligaer", {}).get(liga, {}).get("aktiv")
     if not s:
         log(f"INGEN SESONGAUTORITET: data/sesonger.json har ingen aktiv "
-            f"sesong for {liga}. Datovakten står over.")
+            f"sesong for {liga}. Datakjøringen skriver ingenting.")
         return None
     log(f"Aktiv sesong for {liga}: {s} (data/sesonger.json)")
     return str(s)

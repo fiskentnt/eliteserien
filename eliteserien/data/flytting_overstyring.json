@@ -1,0 +1,18 @@
+{
+ "_bruk": [
+  "Avgjørelser for hånd om flyttede kamper. Datafilene (fixtures.json, matches.json) redigeres aldri.",
+  "Én linje per kamp i «overstyringer», på formen i «_eksempel». Lagnavnene skrives som på siden.",
+  "valg «godta»: kampen flyttes til datoen og tiden i linjen (det ligasiden viser).",
+  "valg «avvis»: vi beholder datoen vi har, og det varsles ikke mer om denne flyttingen.",
+  "Linjen gjelder bare så lenge ligasiden viser nøyaktig den datoen og tiden. Viser den noe annet, brukes linjen ikke.",
+  "Når kjøringen blir rød for en flytting, står linjen ferdig til å limes inn i e-posten og i loggen."
+ ],
+ "_eksempel": {
+  "hjemme": "Rosenborg",
+  "borte": "Start",
+  "valg": "godta",
+  "dato": "2026-11-18",
+  "tid": "18:00"
+ },
+ "overstyringer": []
+}

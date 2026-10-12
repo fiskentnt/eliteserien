@@ -183,3 +183,20 @@ def meld_data_skrevet(miljo=None):
     with open(sti, "a", encoding="utf-8") as f:
         f.write("data_skrevet=true\n")
     return True
+
+
+def merk_status_rod(sti, tekst):
+    """Setter ok: false og feilteksten i status.json, og lar resten stå
+    (13.10.2026). Brukes når en datakjøring stopper FØR den skriver noe: da er
+    datafilene urørt, men stempelet, e-posten (scripts/livstegn.py leser
+    teksten herfra) og timesforsøket ved rød status skal vite om det."""
+    from pathlib import Path as _P
+    sti = _P(sti)
+    try:
+        d = json.loads(sti.read_text(encoding="utf-8"))
+    except Exception:
+        d = {}
+    d["ok"] = False
+    d["error"] = str(tekst)[:300]
+    sti.parent.mkdir(parents=True, exist_ok=True)
+    sti.write_text(json.dumps(d, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")

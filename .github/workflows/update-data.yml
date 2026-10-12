@@ -217,6 +217,7 @@ jobs:
           [ -f eliteserien/data/audit_fixtures.json ] && git add eliteserien/data/audit_fixtures.json
           # Tabellkontrollen: resultatet, og poengtrekk den har lagt inn.
           [ -f eliteserien/data/audit_tabell.json ] && git add eliteserien/data/audit_tabell.json
+          [ -f eliteserien/data/flytting_venter.json ] && git add eliteserien/data/flytting_venter.json
           [ -f eliteserien/data/justeringer.json ] && git add eliteserien/data/justeringer.json
           [ -f eliteserien/data/ffk_cache.json ] && git add eliteserien/data/ffk_cache.json
           [ -f eliteserien/data/audit_state.json ] && git add eliteserien/data/audit_state.json

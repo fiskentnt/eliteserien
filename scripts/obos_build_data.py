@@ -44,7 +44,34 @@ ODDS_PATH = DATA / "odds_closing.json"
 # SLUTT paa den, etter at dataene er skrevet -- en manglende fil skal ikke
 # stoppe datakjeden, bare gjore kjoringen rod.
 DATOVAKT_FEIL = None
-DATOVAKT_BESKJED = {'ingen_autoritet': 'Ingen autoritativ sesong i data/sesonger.json, så datovakten sto over. Dataene er skrevet som normalt, men en gal dato fra kilden ville ikke blitt fanget. Kjør: python3 scripts/sesong.py . init <liga> <år>', 'sesongskifte_mangler': 'Terminlisten er for en annen sesong enn registeret sier. Sesongskiftet er ikke kjørt, så datovakten sto over -- den ville ellers skrevet hele den nye sesongen tilbake til fjorårets datoer. Ingenting er skrevet. Kjør: python3 scripts/sesong.py . bytt --utfor'}
+# Samme tekster som i update_data.py. Kan vakten ikke kontrollere datoene,
+# skrives ingenting (13.10.2026).
+DATOVAKT_BESKJED = {
+    "ingen_autoritet": (
+        "Sesongregisteret (data/sesonger.json) mangler, kan ikke leses eller "
+        "har ingen aktiv sesong for ligaen. Uten det kan datovakten ikke "
+        "kontrollere datoene, så ingenting er skrevet. Kjør: "
+        "python3 scripts/sesong.py . init <liga> <år>"),
+    "ingen_runder": (
+        "De lagrede kampene mangler rundenummer, så sesongvinduet kan ikke "
+        "regnes og datovakten ikke kontrollere datoene. Ingenting er skrevet. "
+        "Sjekk matches.json og fixtures.json."),
+    "sesongskifte_mangler": (
+        "Terminlisten er for en annen sesong enn registeret sier. "
+        "Sesongskiftet er ikke kjørt, så datovakten sto over -- den ville "
+        "ellers skrevet hele den nye sesongen tilbake til fjorårets datoer. "
+        "Ingenting er skrevet. Kjør: python3 scripts/sesong.py . bytt --utfor"),
+}
+# Utfallet fra reconcile_ny.bekreft_datoer i rows_for(): flyttingene som ble
+# holdt tilbake skrives til flytting_venter.json i main(), etter dataene.
+FLYTTING_UTFALL = []
+
+
+def stopp_uten_aa_skrive(tekst):
+    """Stopper byggingen FØR noe er skrevet: status.json får ok: false og
+    teksten (til e-posten og timesforsøket), datafilene står urørt."""
+    leaguedata.merk_status_rod(DATA / "status.json", tekst)
+    raise SystemExit("FEIL: " + tekst)
 
 
 def rows_for(season=SEASON, log=print):
@@ -80,6 +107,10 @@ def rows_for(season=SEASON, log=print):
     from reconcile_ny import bare_aktiv_sesong, reconcile
     import sesong as _sesong
     _aktiv = _sesong.aktiv_sesong(ROOT, "obos", log=log)
+    # Uten sesongregister skrives INGENTING (13.10.2026): datovakten skal
+    # aldri stå over i stillhet.
+    if _aktiv is None:
+        stopp_uten_aa_skrive(DATOVAKT_BESKJED["ingen_autoritet"])
     # Den siste gyldige terminlisten vi selv har skrevet (fixtures.json og
     # matches.json). Reserven og forrige verdi under, foran CSV-en: CSV-en er
     # fra sesongstart og satte 3.10.2026 tilbake et avspark vi hadde rettet
@@ -151,8 +182,34 @@ def rows_for(season=SEASON, log=print):
     # status.json var skrevet.
     if _datofeil == "sesongskifte_mangler":
         raise SystemExit("FEIL: " + DATOVAKT_BESKJED["sesongskifte_mangler"])
-    global DATOVAKT_FEIL
+    if _datofeil in ("ingen_runder", "ingen_autoritet"):
+        stopp_uten_aa_skrive(DATOVAKT_BESKJED[_datofeil])
+    global DATOVAKT_FEIL, FLYTTING_UTFALL
     DATOVAKT_FEIL = _datofeil
+    # Ingen enkeltkilde setter eller flytter datoen for en uspilt kamp
+    # (13.10.2026, reconcile_ny.bekreft_datoer). OBOS bekreftes av
+    # Highlightly-listen fra den DAGLIGE hentingen (lagret av
+    # daglig_revisjon.py, ingen kall herfra). Uten en liste yngre enn 48 timer
+    # venter flyttingen: datoen vi har beholdes, med ADVARSEL. En NY kamp
+    # uten brukbar lagret dato må bekreftes på samme måte; kan den ikke det,
+    # skrives ingenting. Avgjørelser for hånd: obos/data/flytting_overstyring.json.
+    import flytting
+    from reconcile_ny import bekreft_datoer, uten_lagret_dato
+    _naa = datetime.now(timezone.utc)
+    _lagret = forrige or fra_csv
+    offisiell, FLYTTING_UTFALL = bekreft_datoer(
+        offisiell, _lagret, [("Highlightly", lambda: flytting.highlightly_lagret(DATA, _naa))], log=log,
+        nye=uten_lagret_dato(offisiell, _lagret, _aktiv),
+        overstyringer=flytting.les_overstyringer(DATA, {(r["home"], r["away"]) for r in offisiell}, log=log))
+    _ubekreftet = [u for u in FLYTTING_UTFALL if u["utfall"] == "ubekreftet"]
+    if _ubekreftet:
+        stopp_uten_aa_skrive(
+            f"{len(_ubekreftet)} ny(e) kamp(er) uten lagret dato er ikke bekreftet av en uavhengig kilde. "
+            f"Ingenting er skrevet:\n" + "\n".join(
+                f"{u['kamp']}: ligasiden viser {u['ny'][0]} {u['ny'][1]}; {u['hva']}. Godta for hånd i "
+                f"obos/data/{flytting.OVERSTYRING}: "
+                f"{flytting.linje(u['nokkel'][0], u['nokkel'][1], 'godta', u['ny'][0], u['ny'][1])}"
+                for u in _ubekreftet[:10]))
     resultat = {(r["home"], r["away"]): r for r in fra_csv}
     out = []
     for r in offisiell:
@@ -219,6 +276,9 @@ def main():
     fixtures = leaguedata.build_fixtures(rows)
     leaguedata.write_json(DATA / "fixtures.json", fixtures, indent=1)
     print(f"  {len(fixtures)} runder med kamper igjen")
+    # Flyttingene som ble holdt tilbake, til den daglige revisjonen.
+    import flytting
+    flytting.skriv_venter(DATA, FLYTTING_UTFALL, datetime.now(timezone.utc))
 
     # Tabellkontrollen mot tabellen paa obos-ligaen.no, fra samme henting
     # (scripts/tabellkontroll.py). Et nytt poengtrekk legges inn i
