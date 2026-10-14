@@ -18,7 +18,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.8714,
-   "expected": 0.9095
+   "expected": 0.9141
   },
   "Egersund": {
    "date": "2026-10-11",
@@ -36,7 +36,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0089,
-   "expected": 0.0092
+   "expected": 0.0097
   },
   "Haugesund": {
    "date": "2026-10-11",
@@ -54,7 +54,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.9001,
-   "expected": 0.8878
+   "expected": 0.8852
   },
   "Hødd": {
    "date": "2026-10-11",
@@ -90,7 +90,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.6173,
-   "expected": 0.5502
+   "expected": 0.5458
   },
   "Lyn": {
    "date": "2026-10-11",
@@ -108,7 +108,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0472,
-   "expected": 0.0458
+   "expected": 0.047
   },
   "Moss": {
    "date": "2026-10-11",
@@ -126,7 +126,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.142,
-   "expected": 0.1216
+   "expected": 0.121
   },
   "Odd": {
    "date": "2026-10-11",
@@ -144,7 +144,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.9399,
-   "expected": 0.9662
+   "expected": 0.9669
   },
   "Ranheim": {
    "date": "2026-10-11",
@@ -162,7 +162,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0749,
-   "expected": 0.0872
+   "expected": 0.0869
   },
   "Raufoss": {
    "date": "2026-10-11",
@@ -180,7 +180,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.8341,
-   "expected": 0.8515
+   "expected": 0.855
   },
   "Sandnes Ulf": {
    "date": "2026-10-11",
@@ -194,11 +194,11 @@
    "actual": "draw",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 1,
+   "pp": 0,
    "good": false,
    "basis": "avspark",
    "foer": 0.0834,
-   "expected": 0.1006
+   "expected": 0.0953
   },
   "Sogndal": {
    "date": "2026-10-11",
@@ -216,7 +216,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0848,
-   "expected": 0.0635
+   "expected": 0.0632
   },
   "Stabæk": {
    "date": "2026-10-11",
@@ -248,11 +248,11 @@
    "actual": "draw",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 0,
-   "good": false,
+   "pp": -1,
+   "good": true,
    "basis": "avspark",
    "foer": 0.0628,
-   "expected": 0.0827
+   "expected": 0.0775
   },
   "Strømsgodset": {
    "date": "2026-10-11",
@@ -270,7 +270,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.4541,
-   "expected": 0.4129
+   "expected": 0.418
   },
   "Åsane": {
    "date": "2026-10-11",
@@ -284,12 +284,12 @@
    "actual": "win",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": -10,
+   "pp": -9,
    "good": true,
    "basis": "avspark",
    "foer": 0.8751,
-   "expected": 0.8883
+   "expected": 0.8961
   }
  },
- "updated": "2026-10-13T09:22:31Z"
+ "updated": "2026-10-14T09:03:25Z"
 }
