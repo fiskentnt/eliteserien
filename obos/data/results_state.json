@@ -1,13 +1,31 @@
 {
- "checked_at": "2026-10-14T15:11:22+00:00",
- "published": 200,
- "new": 0,
+ "checked_at": "2026-10-14T18:51:29+00:00",
+ "published": 202,
+ "new": 2,
  "conflicts": [],
- "waiting": [],
+ "waiting": [
+  "Haugesund mot Lyn: bare ligasiden har resultatet -- venter på en uavhengig kilde",
+  "Sogndal mot Odd: bare ligasiden har resultatet -- venter på en uavhengig kilde"
+ ],
  "ukontrollert": {},
  "ukontrollert_sjekket": null,
  "oddspapi_usage": 30,
- "forst_sett": {},
+ "forst_sett": {
+  "Moss|Egersund": {
+   "ligasiden": "2026-10-14T18:51:29+00:00",
+   "highlightly": "2026-10-14T18:51:29+00:00"
+  },
+  "Haugesund|Lyn": {
+   "ligasiden": "2026-10-14T18:51:29+00:00"
+  },
+  "Stabæk|Sandnes Ulf": {
+   "ligasiden": "2026-10-14T18:51:29+00:00",
+   "highlightly": "2026-10-14T18:51:29+00:00"
+  },
+  "Sogndal|Odd": {
+   "ligasiden": "2026-10-14T18:51:29+00:00"
+  }
+ },
  "bekreftet": {
   "Strømmen|Åsane": {
    "resultat": [
@@ -18,6 +36,26 @@
     "highlightly"
    ],
    "publisert": "2026-10-14T14:51:22+00:00"
+  },
+  "Moss|Egersund": {
+   "resultat": [
+    0,
+    0
+   ],
+   "kilder": [
+    "highlightly"
+   ],
+   "publisert": "2026-10-14T18:51:29+00:00"
+  },
+  "Stabæk|Sandnes Ulf": {
+   "resultat": [
+    4,
+    1
+   ],
+   "kilder": [
+    "highlightly"
+   ],
+   "publisert": "2026-10-14T18:51:29+00:00"
   }
  }
 }

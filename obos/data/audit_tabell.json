@@ -1,21 +1,46 @@
 {
- "checked_at": "2026-10-14T15:12:59+00:00",
+ "checked_at": "2026-10-14T18:52:32+00:00",
  "checked_date": "2026-10-14",
- "kjoring": "38587100351-1",
+ "kjoring": "38618682364-1",
  "kilde": "https://www.obos-ligaen.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 2,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-10-14T15:12:59+00:00",
-  "kjoring": "38587100351-1",
-  "kilde": "https://www.obos-ligaen.no/resultater",
-  "avtrykk": "8239f55f70b04795e9b42ea19ae77b2dabe45c93c1f9f2e64ea649746e1a9556"
- }
+ "advarsler": [
+  "Tabell: Moss-Egersund mangler i tabellen på obos-ligaen.no. Hos oss 0-0, bekreftet av highlightly. Avspark 19:00, sjekkes på nytt i neste kjøring (frist 01:00).",
+  "Tabell: Stabæk-Sandnes Ulf mangler i tabellen på obos-ligaen.no. Hos oss 4-1, bekreftet av highlightly. Avspark 19:00, sjekkes på nytt i neste kjøring (frist 01:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Moss|Egersund",
+   "resultat": [
+    0,
+    0
+   ],
+   "avspark": "2026-10-14T17:00:00+00:00",
+   "frist": "2026-10-14T23:00:00+00:00",
+   "kilder": [
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  },
+  {
+   "kamp": "Stabæk|Sandnes Ulf",
+   "resultat": [
+    4,
+    1
+   ],
+   "avspark": "2026-10-14T17:00:00+00:00",
+   "frist": "2026-10-14T23:00:00+00:00",
+   "kilder": [
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
