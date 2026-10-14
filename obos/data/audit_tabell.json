@@ -1,60 +1,21 @@
 {
- "checked_at": "2026-10-14T20:02:28+00:00",
+ "checked_at": "2026-10-14T20:12:17+00:00",
  "checked_date": "2026-10-14",
- "kjoring": "38628523844-1",
+ "kjoring": "38629899854-1",
  "kilde": "https://www.obos-ligaen.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 3,
- "alle_like": false,
+ "warnings": 0,
+ "alle_like": true,
  "nye": [],
  "avvik": [],
- "advarsler": [
-  "Tabell: Bryne-Raufoss mangler i tabellen på obos-ligaen.no. Hos oss 1-1, bekreftet av highlightly. Avspark 19:00, sjekkes på nytt i neste kjøring (frist 01:00).",
-  "Tabell: Hødd-Ranheim mangler i tabellen på obos-ligaen.no. Hos oss 1-1, bekreftet av highlightly. Avspark 19:00, sjekkes på nytt i neste kjøring (frist 01:00).",
-  "Tabell: Strømsgodset-Kongsvinger mangler i tabellen på obos-ligaen.no. Hos oss 5-1, bekreftet av highlightly. Avspark 19:00, sjekkes på nytt i neste kjøring (frist 01:00)."
- ],
- "venter": [
-  {
-   "kamp": "Bryne|Raufoss",
-   "resultat": [
-    1,
-    1
-   ],
-   "avspark": "2026-10-14T17:00:00+00:00",
-   "frist": "2026-10-14T23:00:00+00:00",
-   "kilder": [
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  },
-  {
-   "kamp": "Hødd|Ranheim",
-   "resultat": [
-    1,
-    1
-   ],
-   "avspark": "2026-10-14T17:00:00+00:00",
-   "frist": "2026-10-14T23:00:00+00:00",
-   "kilder": [
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  },
-  {
-   "kamp": "Strømsgodset|Kongsvinger",
-   "resultat": [
-    5,
-    1
-   ],
-   "avspark": "2026-10-14T17:00:00+00:00",
-   "frist": "2026-10-14T23:00:00+00:00",
-   "kilder": [
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  }
- ],
- "siste_like": null
+ "advarsler": [],
+ "venter": [],
+ "siste_like": {
+  "checked_at": "2026-10-14T20:12:17+00:00",
+  "kjoring": "38629899854-1",
+  "kilde": "https://www.obos-ligaen.no/resultater",
+  "avtrykk": "fa7724947449749c91d14cd858641b35eaeb1bf203bfa1a73f87f04c65fc9378"
+ }
 }
