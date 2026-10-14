@@ -1,32 +1,21 @@
 {
- "checked_at": "2026-10-14T15:04:06+00:00",
+ "checked_at": "2026-10-14T15:12:59+00:00",
  "checked_date": "2026-10-14",
- "kjoring": "38585769260-1",
+ "kjoring": "38587100351-1",
  "kilde": "https://www.obos-ligaen.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 1,
- "alle_like": false,
+ "warnings": 0,
+ "alle_like": true,
  "nye": [],
  "avvik": [],
- "advarsler": [
-  "Tabell: Strømmen-Åsane mangler i tabellen på obos-ligaen.no. Hos oss 6-1, bekreftet av highlightly. Avspark 15:00, sjekkes på nytt i neste kjøring (frist 21:00)."
- ],
- "venter": [
-  {
-   "kamp": "Strømmen|Åsane",
-   "resultat": [
-    6,
-    1
-   ],
-   "avspark": "2026-10-14T13:00:00+00:00",
-   "frist": "2026-10-14T19:00:00+00:00",
-   "kilder": [
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  }
- ],
- "siste_like": null
+ "advarsler": [],
+ "venter": [],
+ "siste_like": {
+  "checked_at": "2026-10-14T15:12:59+00:00",
+  "kjoring": "38587100351-1",
+  "kilde": "https://www.obos-ligaen.no/resultater",
+  "avtrykk": "8239f55f70b04795e9b42ea19ae77b2dabe45c93c1f9f2e64ea649746e1a9556"
+ }
 }
