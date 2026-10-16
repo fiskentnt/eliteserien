@@ -3,6 +3,33 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Seier, uavgjort og tap som snitt over stillinger, og innbyrdes oppgjør i simuleringen (16.10.2026)
+
+Før låste svarene kampen til én stilling: modellens forventede stilling pluss
+ett mål til vinneren (Glimt-Kristiansund 10.10.: «seier» var 6-0, og «Neste
+kamp» sa 69 % gull mot 63,4 % nå). Nå låses bare utfallet (forcedOutcome i
+simulateZoneProb), og stillingen trekkes for hver simulerte sesong fra
+modellens fordeling gitt utfallet. Lagstyrkene tilpasses ikke på nytt etter
+utfallet, og formdriften er som i simuleringen uten låsing. Gjelder «Hva betyr
+neste kamp», kortet, «Heie på», «Hvilke kamper betyr mest», rundens viktigste
+kamp, alternativene i «Hva betydde forrige kamp» og grunnlagsfilen (versjon 3).
+
+Forrige kamp: det faktiske resultatet tas ut, og kampen legges tilbake som
+åpen med målratene fra før avspark (sjansene i prekick.json, sluttoddsen som
+reserve, tilpasset med fitRates). Sjansene står i grunnlagsfilens avtrykk.
+
+Bare Eliteserien og OBOS. Testsiden (elo-test) er løs ut sesongen (17.10.)
+og har fortsatt den gamle koden (én låst stilling, grunnlagsfil versjon 2).
+Etter sesongen: ta punkt 11 og 12 inn der også, med samsvarstesten og
+kontroll W (ratingen regnet om for hvert alternativ i forrige kamp).
+
+Simuleringene rangerer helt like lag med innbyrdes oppgjør (minitabell av de
+spilte og simulerte kampene mellom dem), så loddtrekning.
+
+Den faste testen (regresjonen, samsvar): seier, uavgjort og tap vektet med
+utfallssjansene gir tallet nå innenfor 3 standardfeil, for hvert lags neste
+kamp, alle kampene i neste runde og forrige kamp, på Eliteserien og OBOS.
+
 ## puppeteer-core i en fast mappe (16.10.2026)
 
 macOS ryddet den midlertidige mappa (`$TMPDIR/tabellkalkulator-pp`) 10.10. og
@@ -35,8 +62,7 @@ likt: navn.
 Gjelder tabellen på de tre sidene (compute, computeAt, basePos), tabellkontrollen
 (advarselen «lik poengsum, ulik rangering» forsvinner), delingsbildet
 (make_og.py) og fasiten i backtest_zones.py/backtest_walkforward.py. Simuleringene
-skiller fortsatt helt like lag ved loddtrekning; det tas sammen med snitt over
-stillinger (punkt 11) og ny grunnlagsfil.
+fikk innbyrdes oppgjør samme dag, sammen med snitt over stillinger (over).
 
 Tester: tests/kilder/test_kilder.py («Rangeringen etter kampreglementet § 5-3»,
 også Python mot siden i 300 tilfeldige tilfeller), tests/regression.js

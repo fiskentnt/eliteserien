@@ -60,9 +60,8 @@ function chromePath() {
         const nr = qaNextRoundMatches(openMatches), iNeste = new Set(nr.list.map(m => openMatches.indexOf(m)));
         const tasks = [{id: 'base', idx: -1, score: null}];
         openMatches.forEach((m, idx) => {
-          tasks.push({id: idx + ':H', idx, score: forcedScoreline(m.home, m.away, true)},
-                     {id: idx + ':B', idx, score: forcedScoreline(m.home, m.away, false)});
-          if (iNeste.has(idx)) tasks.push({id: idx + ':U', idx, score: forcedDrawScoreline(m.home, m.away)});
+          tasks.push({id: idx + ':H', idx, utfall: 'H'}, {id: idx + ':B', idx, utfall: 'B'});
+          if (iNeste.has(idx)) tasks.push({id: idx + ':U', idx, utfall: 'U'});
         });
         const t = performance.now();
         await runZoneTasks({mu: MODEL.mu, H: MODEL.H, k: FORM_K,

@@ -1374,7 +1374,7 @@
         <li><strong>Ren Poisson i tilpasningen.</strong> Justeringen for få mål brukes når sannsynlighetene regnes ut, ikke når styrkene tilpasses. Dixon og Coles estimerte alt samlet. Med ρ = −0,04 er forskjellen i treffsikkerhet liten.</li>
         <li><strong>Formoppdatering med grenser og tilbaketrekking.</strong> Etter hvert simulert eller innfylt resultat justeres de to lagenes styrker litt, ut fra hvor mange mål de scoret og slapp inn mot det modellen ventet. Justeringen holdes innenfor faste grenser og trekkes litt tilbake mot utgangspunktet etter hver kamp. Styrken på justeringen ble satt med én regresjon mot sluttodds, grensene ut fra én ekstremverdi og tilbaketrekkingen etter skjønn. I en ny tilbaketest i begge ligaene ga regelen ingen målbar forskjell på sjansene for sluttplasseringene med odds, som siden bruker. Uten odds hjelper den, fordi lagstyrken da bare bygger på målene. Den er beholdt.</li>
         <li><strong>Scenariofilteret.</strong> Knappene som fyller inn kamper, trekker utfall med under 10 prosent sjanse på nytt, og forkaster sesonger med vesentlig flere eller færre overraskelser enn forventet. Det er et valg for visningen og påvirker ikke prosentene.</li>
-        <li><strong>Rangering etter reglementet.</strong> Poeng, målforskjell, scorede mål, så innbyrdes oppgjør (NFFs kampreglement § 5-3). Simuleringene skiller ennå lag som står helt likt på poeng, målforskjell og scorede mål ved loddtrekning.</li>
+        <li><strong>Rangering etter reglementet.</strong> Poeng, målforskjell, scorede mål, så innbyrdes oppgjør (NFFs kampreglement § 5-3). Simuleringene rangerer på samme måte; står lag fortsatt likt etter innbyrdes oppgjør, avgjør loddtrekning (i virkeligheten kvalifiseringsspill).</li>
         <li><strong>Tekniske tak.</strong> Forventede mål per lag er begrenset til 6, og det nås ikke i praksis. Resultater regnes med opptil 15 mål per lag. Omregningen fra odds søker mellom 0,15 og 4,5 forventede mål.</li>
       </ul>
       <p>Styrketallet flytter seg lite fra kamp til kamp. Hver kamp justerer det litt, ut fra hvor mange mål laget scoret og slapp inn mot det modellen ventet. Men justeringene trekkes samtidig tilbake mot utgangspunktet, og modellen tilpasses på nytt på alle kampene hver dag. Over en sesong står derfor styrketallet omtrent stille: sju kamper uten seier flyttet Sarpsborg 08 fra 4,80 til 4,65 i september 2026. Det er meningen. Styrke viser nivå. Vil du se de siste kampene, er det formtallet som sier det.</p>
@@ -1412,7 +1412,7 @@
       <h3>Sluttodds</h3>
       <p>Oddsen hentes mellom 60 og 15 minutter før avspark, når lagoppstillingen som regel er kjent. Får vi ikke hentet odds i dette vinduet, brukes ingen eldre odds.</p>
       <h3>Begrensninger</h3>
-      <p>Kvalikkampen for 14. plass er ikke modellert. Innbyrdes oppgjør er ennå ikke med i simuleringene. Med 100&nbsp;000 simuleringer er simuleringsusikkerheten høyst omtrent ±0,3 prosentpoeng. Når du fyller inn resultater selv, brukes færre simuleringer og usikkerheten er rundt ±1 prosentpoeng.</p>
+      <p>Kvalikkampen for 14. plass er ikke modellert. Lag som står helt likt også etter innbyrdes oppgjør, skilles ved loddtrekning (i virkeligheten kvalifiseringsspill). Med 100&nbsp;000 simuleringer er simuleringsusikkerheten høyst omtrent ±0,3 prosentpoeng. Når du fyller inn resultater selv, brukes færre simuleringer og usikkerheten er rundt ±1 prosentpoeng.</p>
       <p><a href="modellsjekk/">Full dokumentasjon av testene</a></p>
     </details>
     <p class="note">Modellen ble justert igjen 30. september etter ny tilbaketesting.</p>
@@ -2307,9 +2307,25 @@ function computeLiveState(){ return stillingFoer(null); }
 // innfylte resultatene med tidligere dato (stillingFoer(kampens dato) minus
 // baseStilling). Like datoer deler forskyvning. Uten innfylte resultater før
 // kampen er forskyvningen null, og Workeren regner nøyaktig som før.
+// Innbyrdes oppgjør i kampene tabellen bygger på (de spilte og scenarioets),
+// til rangeringen i simuleringene (rangerSesong i Workeren, 16.10.2026):
+// p/g/f[i*n+k] = poeng, målforskjell og scorede mål lag i har tatt mot lag k.
+function innbyrdesFra(kamper){
+  const n = TEAMS.length, p = new Array(n*n).fill(0), g = new Array(n*n).fill(0), f = new Array(n*n).fill(0);
+  kamper.forEach(m=>{
+    if(m.hg==null || m.ag==null) return;
+    const h = TI[m.home], a = TI[m.away];
+    if(h==null || a==null) return;
+    const hk = h*n+a, ak = a*n+h;
+    g[hk]+=m.hg-m.ag; g[ak]+=m.ag-m.hg; f[hk]+=m.hg; f[ak]+=m.ag;
+    if(m.hg>m.ag) p[hk]+=3; else if(m.hg<m.ag) p[ak]+=3; else { p[hk]++; p[ak]++; }
+  });
+  return {p, g, f};
+}
 function simStilling(open){
   const b = baseStilling(), ut = {att:Array.from(b.att), con:Array.from(b.con), ha:Array.from(b.ha), hc:Array.from(b.hc)};
   const fylte = matches.filter(m=>m.hg!=null&&m.ag!=null);
+  if(typeof MATCHES!=='undefined') ut.innbyrdes = innbyrdesFra(MATCHES.concat(fylte));
   if(!fylte.length) return ut;
   const forste = fylte.reduce((x,m)=>m.date<x?m.date:x, fylte[0].date);
   const forskyvning = [], idx = {}, forskyvningIdx = open.map(o=>{
@@ -2999,6 +3015,40 @@ var MAX_LAMBDA_LOG = ${MAX_LAMBDA_LOG};
 // runMCAsync() i hovedtråden), ikke Math.random() -- samme scenario skal
 // alltid gi samme prosenter, ikke støy på rundt ±1 prosentpoeng hver gang
 // render() utløses uten at noe faktisk endret seg. ----
+// Rangeringen i hver simulerte sesong (16.10.2026), samme regel som tabellen
+// (rangerTabell, NFFs kampreglement § 5-3): poeng, målforskjell, scorede mål,
+// så en minitabell av kampene mellom lagene som står helt likt -- de spilte
+// (IB, fra hovedtråden: p/g/f[i*n+k] = poeng, målforskjell og scorede mål lag i
+// har tatt mot lag k) og sesongens simulerte (SX/SY per åpen kamp) -- og til
+// slutt loddtrekning (R), der det i virkeligheten avgjøres ved
+// kvalifiseringsspill. Uten IB rangeres det som før.
+function rangerSesong(ord, P, G, F, R, n, IB, open, SX, SY){
+  ord.sort(function(p,q){ return P[q]-P[p] || G[q]-G[p] || F[q]-F[p] || R[q]-R[p]; });
+  if(!IB) return;
+  for(var i=0;i<n;){
+    var j=i+1;
+    while(j<n && P[ord[j]]===P[ord[i]] && G[ord[j]]===G[ord[i]] && F[ord[j]]===F[ord[i]]) j++;
+    if(j-i>1){
+      var gr=ord.slice(i,j), med={}, mp={}, mg={}, mf={};
+      for(var a=0;a<gr.length;a++){ med[gr[a]]=1; mp[gr[a]]=0; mg[gr[a]]=0; mf[gr[a]]=0; }
+      for(var a2=0;a2<gr.length;a2++) for(var b2=0;b2<gr.length;b2++){
+        if(a2===b2) continue;
+        var x0=gr[a2], ix=x0*n+gr[b2];
+        mp[x0]+=IB.p[ix]; mg[x0]+=IB.g[ix]; mf[x0]+=IB.f[ix];
+      }
+      for(var jj=0;jj<open.length;jj++){
+        var hh=open[jj][0], aa=open[jj][1];
+        if(!med[hh] || !med[aa]) continue;
+        var xs=SX[jj], ys=SY[jj];
+        mg[hh]+=xs-ys; mg[aa]+=ys-xs; mf[hh]+=xs; mf[aa]+=ys;
+        if(xs>ys) mp[hh]+=3; else if(xs<ys) mp[aa]+=3; else { mp[hh]++; mp[aa]++; }
+      }
+      gr.sort(function(p,q){ return mp[q]-mp[p] || mg[q]-mg[p] || mf[q]-mf[p] || R[q]-R[p]; });
+      for(var c=0;c<gr.length;c++) ord[i+c]=gr[c];
+    }
+    i=j;
+  }
+}
 function runProb(d){
   var mu=d.mu, H=d.H, k=d.k, P0=d.P0, G0=d.G0, F0=d.F0, open=d.open, N=d.N, runId=d.runId;
   var oddsOverride=d.oddsOverride;
@@ -3006,6 +3056,7 @@ function runProb(d){
   var rnd = mulberry32(d.seed);
   var cnt=[]; for(var i=0;i<n;i++) cnt.push(new Float64Array(n));
   var P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
+  var SX=new Int16Array(d.open.length), SY=new Int16Array(d.open.length);
   var attS=new Float64Array(n), conS=new Float64Array(n), haS=new Float64Array(n), hcS=new Float64Array(n);
   var ord=[]; for(var i2=0;i2<n;i2++) ord.push(i2);
   var REPORT_AT=1000;
@@ -3025,6 +3076,7 @@ function runProb(d){
         lh=Math.exp(eh); la=Math.exp(ea);
       }
       var xy=sampleScoreDC(lh,la,rnd), x=xy[0], y=xy[1];
+      SX[j]=x; SY[j]=y;
       G[h]+=x-y; G[a]+=y-x; F[h]+=x; F[a]+=y;
       if(x>y) P[h]+=3; else if(x<y) P[a]+=3; else { P[h]++; P[a]++; }
       var rh=x-lh, ra=y-la;
@@ -3034,7 +3086,7 @@ function runProb(d){
       applyDrift(conS,d.con,h,k*ra,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,h,k*ra,DRIFT_CAP_HAHC);
     }
     for(var i3=0;i3<n;i3++) R[i3]=rnd();
-    ord.sort(function(p,q){ return P[q]-P[p] || G[q]-G[p] || F[q]-F[p] || R[q]-R[p]; });
+    rangerSesong(ord, P, G, F, R, n, d.innbyrdes, d.open, SX, SY);
     for(var pos=0;pos<n;pos++) cnt[ord[pos]][pos]++;
     if(s===REPORT_AT || s===N){
       var out=cnt.map(function(row){ return Array.prototype.slice.call(row).map(function(c){ return c/s; }); });
@@ -3205,6 +3257,7 @@ function runInsightsAlle(d){
   var n=d.P0.length, PM=200;
   var rnd=mulberry32(d.seed);
   var P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
+  var SX=new Int16Array(d.open.length), SY=new Int16Array(d.open.length);
   var attS=new Float64Array(n), conS=new Float64Array(n), haS=new Float64Array(n), hcS=new Float64Array(n);
   var ord=[]; for(var i=0;i<n;i++) ord.push(i);
   var pos=new Int32Array(n), avgjort=new Uint8Array(n*Z);
@@ -3229,6 +3282,7 @@ function runInsightsAlle(d){
         lh=Math.exp(eh); la=Math.exp(ea);
       }
       var xy=sampleScoreDC(lh,la,rnd), x=xy[0], y=xy[1];
+      SX[j]=x; SY[j]=y;
       G[h]+=x-y; G[a]+=y-x; F[h]+=x; F[a]+=y;
       if(x>y) P[h]+=3; else if(x<y) P[a]+=3; else { P[h]++; P[a]++; }
       var rh=x-lh, ra=y-la;
@@ -3252,7 +3306,7 @@ function runInsightsAlle(d){
     for(var t1=0;t1<n*Z;t1++) if(!avgjort[t1]) dec[t1*(C+1)+C]++;
 
     for(var i3=0;i3<n;i3++) R[i3]=rnd();
-    ord.sort(function(p,q){ return P[q]-P[p] || G[q]-G[p] || F[q]-F[p] || R[q]-R[p]; });
+    rangerSesong(ord, P, G, F, R, n, d.innbyrdes, d.open, SX, SY);
     for(var i4=0;i4<n;i4++) pos[ord[i4]]=i4;
     for(var t2=0;t2<n;t2++){
       var pt=pos[t2], pp=Math.min(PM-1,P[t2]);
@@ -3285,6 +3339,16 @@ function runInsightsAlle(d){
 // ikke bare ett lags sone). Tellingen ligger etter at plasseringen er avgjort
 // og rører ikke tilfeldighetsstrømmen, så tallene blir identiske med og uten.
 function simulateZoneProb(d, forcedIdx, forcedScore, seed, wantAll){
+  // LÅST UTFALL (16.10.2026): d.forcedOutcome 'H', 'U' eller 'B'. Kampen
+  // simuleres som de andre, og stillingen trekkes for hver sesong fra
+  // fordelingen gitt utfallet: samme trekk som uten låsing når det gir
+  // utfallet (felles tilfeldige tall), ellers fra en egen strøm (rndF).
+  // Lagstyrkene regnes ikke på nytt; kampen virker videre gjennom
+  // formdriften, som i simuleringen uten låsing. Da gir seier, uavgjort og
+  // tap vektet med utfallssjansene tallet uten låsing. forcedScore (én fast
+  // stilling, med lagstyrkene etter den) brukes ikke lenger av svarene.
+  var utfall = d.forcedOutcome || null;
+  var rndF = mulberry32((seed ^ 0x5bd1e995) >>> 0);
   var n=d.P0.length, k=d.k, zone=d.zone, ti=d.ti;
   var P0=Float64Array.from(d.P0), G0=Float64Array.from(d.G0), F0=Float64Array.from(d.F0);
   // Den låste kampen står igjen i lista (hoppes over i løkka under, men bruker
@@ -3292,13 +3356,14 @@ function simulateZoneProb(d, forcedIdx, forcedScore, seed, wantAll){
   // nøyaktig samme tilfeldige tall med og uten låsing. Da kansellerer støyen i
   // differansen mot utgangspunktet (forcedIdx -1) i stedet for å legge seg oppå.
   var open=d.open, oddsOverride=d.oddsOverride||[];
-  if(forcedIdx>=0){
+  if(forcedIdx>=0 && !utfall){
     var h0=d.open[forcedIdx][0], a0=d.open[forcedIdx][1], hg=forcedScore[0], ag=forcedScore[1];
     G0[h0]+=hg-ag; G0[a0]+=ag-hg; F0[h0]+=hg; F0[a0]+=ag;
     if(hg>ag) P0[h0]+=3; else if(hg<ag) P0[a0]+=3; else { P0[h0]++; P0[a0]++; }
   }
   var rnd = mulberry32(seed);
   var P=new Float64Array(n), G=new Float64Array(n), F=new Float64Array(n), R=new Float64Array(n);
+  var SX=new Int16Array(d.open.length), SY=new Int16Array(d.open.length);
   var attS=new Float64Array(n), conS=new Float64Array(n), haS=new Float64Array(n), hcS=new Float64Array(n);
   var ord=[]; for(var i2=0;i2<n;i2++) ord.push(i2);
   var hitCount=0, posCount = wantAll ? new Float64Array(n*n) : null;
@@ -3306,7 +3371,7 @@ function simulateZoneProb(d, forcedIdx, forcedScore, seed, wantAll){
     P.set(P0); G.set(G0); F.set(F0);
     attS.set(d.att); conS.set(d.con); haS.set(d.ha); hcS.set(d.hc);
     for(var j=0;j<open.length;j++){
-      if(j===forcedIdx){ rnd(); continue; }
+      if(j===forcedIdx && !utfall){ rnd(); SX[j]=forcedScore[0]; SY[j]=forcedScore[1]; continue; }
       var h=open[j][0], a=open[j][1];
       var forced = oddsOverride[j];
       var lh, la;
@@ -3319,6 +3384,11 @@ function simulateZoneProb(d, forcedIdx, forcedScore, seed, wantAll){
         lh=Math.exp(eh); la=Math.exp(ea);
       }
       var xy=sampleScoreDC(lh,la,rnd), x=xy[0], y=xy[1];
+      if(j===forcedIdx && utfall){
+        var u0 = x>y ? 'H' : x<y ? 'B' : 'U', forsok = 0;
+        while(u0!==utfall && forsok<100000){ xy=sampleScoreDC(lh,la,rndF); x=xy[0]; y=xy[1]; u0 = x>y ? 'H' : x<y ? 'B' : 'U'; forsok++; }
+      }
+      SX[j]=x; SY[j]=y;
       G[h]+=x-y; G[a]+=y-x; F[h]+=x; F[a]+=y;
       if(x>y) P[h]+=3; else if(x<y) P[a]+=3; else { P[h]++; P[a]++; }
       var rh=x-lh, ra=y-la;
@@ -3328,7 +3398,7 @@ function simulateZoneProb(d, forcedIdx, forcedScore, seed, wantAll){
       applyDrift(conS,d.con,h,k*ra,DRIFT_CAP_ATTCON); applyDrift(hcS,d.hc,h,k*ra,DRIFT_CAP_HAHC);
     }
     for(var i3=0;i3<n;i3++) R[i3]=rnd();
-    ord.sort(function(p,q){ return P[q]-P[p] || G[q]-G[p] || F[q]-F[p] || R[q]-R[p]; });
+    rangerSesong(ord, P, G, F, R, n, d.innbyrdes, d.open, SX, SY);
     var pos = ord.indexOf(ti)+1;
     if(pos>=zone.lo && pos<=zone.hi) hitCount++;
     if(wantAll) for(var i5=0;i5<n;i5++) posCount[ord[i5]*n+i5]++;
@@ -5202,7 +5272,7 @@ function runZoneTasks(payload, tasks, onTask, gruppe){
       // t.over: egen utgangsstilling for AKKURAT denne kjøringen (brukes av
       // "hva betydde forrige kamp", der det er startpunktet som varieres, ikke
       // en gjenstående kamp). Samme frø som de andre, så støyen kansellerer.
-      poolQueue.push({epoch, gruppe, msg:{...payload, grunnlag, ...laastTaskOver(payload, t), mode:'zoneTask', runId:epoch, taskId:t.id, forcedIdx:t.idx, forcedScore:t.score},
+      poolQueue.push({epoch, gruppe, msg:{...payload, grunnlag, ...laastTaskOver(payload, t), mode:'zoneTask', runId:epoch, taskId:t.id, forcedIdx:t.idx, forcedScore:t.score, forcedOutcome:t.utfall||null},
         done:data=>{ results[t.id]={prob:data.prob, pos:data.pos}; if(onTask) onTask(t.id, results);
           if(--left===0){ if(egen) delete poolEpoker[gruppe]; resolve(results); } }});
     });
@@ -5229,9 +5299,7 @@ async function qaCheerFor(team, onPartial){
   const tasks = [{id:'base', idx:-1, score:null}];
   others.forEach(m=>{
     const idx = openMatches.indexOf(m);
-    tasks.push({id:idx+':H', idx, score:forcedScoreline(m.home,m.away,true)},
-               {id:idx+':U', idx, score:forcedDrawScoreline(m.home,m.away)},
-               {id:idx+':B', idx, score:forcedScoreline(m.home,m.away,false)});
+    tasks.push({id:idx+':H', idx, utfall:'H'}, {id:idx+':U', idx, utfall:'U'}, {id:idx+':B', idx, utfall:'B'});
   });
   const payload = {
     mu:MODEL.mu, H:MODEL.H, k:FORM_K,
@@ -5352,14 +5420,25 @@ const QA_OUT_LABEL = {win:'seier', draw:'uavgjort', loss:'tap'};
 function forrigeOppgaver(m, P0, G0, F0){
   const h0 = TI[m.home], a0 = TI[m.away];
   const faktisk = m.hg>m.ag ? 'H' : m.hg<m.ag ? 'B' : 'U';
-  return ['H','U','B'].filter(q=>q!==faktisk).map(q=>{
-    const [hg,ag] = likelyScoreGivenOutcome(m.home, m.away, q);
-    const P=Float64Array.from(P0), G=Float64Array.from(G0), F=Float64Array.from(F0);
-    applyResultDelta(P,G,F,h0,a0,m.hg,m.ag,-1); // det faktiske resultatet ut
-    applyResultDelta(P,G,F,h0,a0,hg,ag,1);      // det alternative inn
-    return {id:`f:${m.home}|${m.away}:${q}`, q, idx:-1, score:[hg,ag],
-            over:{P0:Array.from(P), G0:Array.from(G), F0:Array.from(F)}};
-  });
+  // SNITT OVER STILLINGER (16.10.2026): det faktiske resultatet tas ut av
+  // stillingen, og kampen legges tilbake som den første åpne kampen, med
+  // målratene fra FØR avspark: tilpasset sjansene ved avspark (preKickProbs:
+  // prekick.json, sluttoddsen som reserve) med fitRates, slik oddsen blandes
+  // inn. Uten dem brukes målratene nå (rateFor). Det alternative utfallet
+  // låses, og stillingen trekkes for hver simulerte sesong fra fordelingen
+  // gitt utfallet (som de andre svarene). Før ble det mest sannsynlige
+  // resultatet for utfallet lagt inn som én fast stilling.
+  //   Sjansene ved avspark står i oppgaven (foer), så de kommer med i
+  // grunnlagsfilens avtrykk: de er inndata, ikke avledet av modellen.
+  const P=Float64Array.from(P0), G=Float64Array.from(G0), F=Float64Array.from(F0);
+  applyResultDelta(P,G,F,h0,a0,m.hg,m.ag,-1);
+  const q0 = buildQaOpen(), S = simStilling(q0.open);
+  const pk = preKickProbs(m.home, m.away), foer = pk ? [pk.H, pk.U, pk.B] : null, naa = rateFor(m.home, m.away);
+  const over = {P0:Array.from(P), G0:Array.from(G), F0:Array.from(F),
+    open:[[h0,a0,m.round]].concat(q0.open), oddsOverride:[foer ? fitRates(foer[0], foer[2], naa) : naa].concat(q0.oddsOverride),
+    innbyrdes:innbyrdesFra(MATCHES.filter(x=>x!==m).concat(matches.filter(x=>x.hg!=null&&x.ag!=null)))};
+  if(S.forskyvningIdx) over.forskyvningIdx = [null].concat(S.forskyvningIdx);
+  return ['H','U','B'].filter(q=>q!==faktisk).map(q=>({id:`f:${m.home}|${m.away}:${q}`, q, idx:0, utfall:q, over, foer}));
 }
 async function qaLastMatchData(team, gruppe='forrige'){
   const zone = qaTargetZone(team);
@@ -5838,7 +5917,7 @@ function qaZoneFromPos(pos, n, zone){
 // fingeravtrykket (grunnlagAvtrykk) er det samme som siden selv regner av
 // dataene og koden den har lastet, og ingen resultater er fylt inn: da kommer
 // tabellen og svarene fra samme fil. Se grunnlagMottatt() under.
-const GRUNNLAG_VERSJON = 2, GRUNNLAG_N = 100000;
+const GRUNNLAG_VERSJON = 3, GRUNNLAG_N = 100000;
 function grunnlagOppgaver(openMatches){
   const medU = new Set(qaNextRoundMatches(openMatches).list.map(m=>openMatches.indexOf(m)));
   // Hvert lags neste kamp, valgt som i qaNextMatch.
@@ -5848,9 +5927,8 @@ function grunnlagOppgaver(openMatches){
   });
   const tasks = [{id:'base', idx:-1, score:null}];
   openMatches.forEach((m, idx)=>{
-    tasks.push({id:idx+':H', idx, score:forcedScoreline(m.home, m.away, true)},
-               {id:idx+':B', idx, score:forcedScoreline(m.home, m.away, false)});
-    if(medU.has(idx)) tasks.push({id:idx+':U', idx, score:forcedDrawScoreline(m.home, m.away)});
+    tasks.push({id:idx+':H', idx, utfall:'H'}, {id:idx+':B', idx, utfall:'B'});
+    if(medU.has(idx)) tasks.push({id:idx+':U', idx, utfall:'U'});
   });
   // Hvert lags forrige kamp: de andre utfallene ("Hva betydde forrige kamp"
   // og linja i lagboksen), én gang per kamp.
@@ -5876,7 +5954,7 @@ function grunnlagInndata(N){
     FORM_K, ODDS_W, P0:Array.from(q.P0), G0:Array.from(q.G0), F0:Array.from(q.F0), open:q.open,
     kamper:matches.map(m=>[m.date, m.round, m.home, m.away, m.hg, m.ag]),
     odds:Object.keys(ODDS_UP).sort().map(k=>[k, ODDS_UP[k].H, ODDS_UP[k].D, ODDS_UP[k].A]),
-    oppgaver:grunnlagOppgaver(q.openMatches).map(t=>[t.id, t.idx, t.score]),
+    oppgaver:grunnlagOppgaver(q.openMatches).map(t=>t.over ? [t.id, t.idx, t.utfall, t.foer] : [t.id, t.idx, t.utfall]),
     innsikt:{soner:innsiktSoner(), kontrollpunkter:buildCheckpoints(q.open)},
     worker:WORKER_SRC, ekstra:grunnlagEkstra()};
 }
@@ -5970,7 +6048,7 @@ function grunnlagSvar(payload, tasks, gruppe){
     // En oppgave med egen utgangsstilling (t.over, forrige kamp) godtas når
     // filen har samme id og resultat: stillingen er avledet av dagens stilling
     // (i avtrykket) og resultatet.
-    if(!f || f[1]!==t.idx || JSON.stringify(f[2])!==JSON.stringify(t.score) || (t.over && !t.id.startsWith('f:'))) return null;
+    if(!f || f[1]!==t.idx || (f[2]??null)!==(t.utfall??null) || (t.over && !t.id.startsWith('f:'))) return null;
     const u = GRUNNLAG.fil.utfall[t.id];
     let treff = 0;
     for(let k=payload.zone.lo-1; k<=payload.zone.hi-1; k++) treff += u[payload.ti*n+k];
@@ -5999,7 +6077,7 @@ async function grunnlagRegn(N = GRUNNLAG_N){
   const utfall = {};
   tasks.forEach(t=>{ utfall[t.id] = res[t.id].pos.map(p=>Math.round(p*N)); });
   return {versjon:GRUNNLAG_VERSJON, sesonger:N, fingeravtrykk:avtrykk, lag:TEAMS.slice(),
-          oppgaver:tasks.map(t=>[t.id, t.idx, t.score]), utfall, innsikt};
+          oppgaver:tasks.map(t=>[t.id, t.idx, t.utfall]), utfall, innsikt};
 }
 // Tillegget i filen (5.10.2026): kampene "Hvilke kamper betyr mest?" velger
 // for hvert lag, med filen i bruk og uten scenario (grovsilingen kommer da fra
@@ -6021,7 +6099,7 @@ async function grunnlagKeymatchKamper(){
 // regnet sammen med resten.
 async function grunnlagTilleggRegn(idxer, N = GRUNNLAG_N){
   const {P0,G0,F0,open,openMatches,oddsOverride,scenarioKey} = buildQaOpen();
-  const tasks = idxer.map(idx=>({id:idx+':U', idx, score:forcedDrawScoreline(openMatches[idx].home, openMatches[idx].away)}));
+  const tasks = idxer.map(idx=>({id:idx+':U', idx, utfall:'U'}));
   if(!tasks.length) return {oppgaver:[], utfall:{}};
   const res = await runZoneTasks({
     mu:MODEL.mu, H:MODEL.H, k:FORM_K,
@@ -6031,7 +6109,7 @@ async function grunnlagTilleggRegn(idxer, N = GRUNNLAG_N){
   }, tasks, null, 'grunnlag');
   const utfall = {};
   tasks.forEach(t=>{ utfall[t.id] = res[t.id].pos.map(p=>Math.round(p*N)); });
-  return {oppgaver:tasks.map(t=>[t.id, t.idx, t.score]), utfall};
+  return {oppgaver:tasks.map(t=>[t.id, t.idx, t.utfall]), utfall};
 }
 // Innsiktsblokken i filen: tellingene fra runInsightsAlle, per lag med
 // poengene bare i spennet der laget har sesonger (suksess ligger alltid
@@ -6084,9 +6162,7 @@ async function qaKeyRoundData(opts){
   const tasks = [{id:'base', idx:-1, score:null}];
   nr.list.forEach(m=>{
     const idx = openMatches.indexOf(m);
-    tasks.push({id:idx+':H', idx, score:forcedScoreline(m.home,m.away,true)},
-               {id:idx+':U', idx, score:forcedDrawScoreline(m.home,m.away)},
-               {id:idx+':B', idx, score:forcedScoreline(m.home,m.away,false)});
+    tasks.push({id:idx+':H', idx, utfall:'H'}, {id:idx+':U', idx, utfall:'U'}, {id:idx+':B', idx, utfall:'B'});
   });
   const res = await runZoneTasks({
     mu:MODEL.mu, H:MODEL.H, k:FORM_K,
@@ -6591,17 +6667,12 @@ function buildMatchImpactCandidates(team, openMatches){
 // matchImpact i hjelpe-Workeren, der ingenting ble forkastet).
 let impactGruppeNr = 0;
 function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base, gruppe=null){
-  const candidates = candidateSpecs.map(c=>({
-    idx:c.idx,
-    homeScore: forcedScoreline(c.match.home, c.match.away, true),
-    awayScore: forcedScoreline(c.match.home, c.match.away, false),
-    drawScore: c.needsDraw ? forcedDrawScoreline(c.match.home, c.match.away) : null
-  }));
+  const candidates = candidateSpecs.map(c=>({idx:c.idx, needsDraw:!!c.needsDraw}));
   const tasks = [];
   if(base.wantBaseline) tasks.push({id:'base', idx:-1, score:null});
   candidates.forEach(c=>{
-    tasks.push({id:c.idx+':H', idx:c.idx, score:c.homeScore}, {id:c.idx+':B', idx:c.idx, score:c.awayScore});
-    if(c.drawScore) tasks.push({id:c.idx+':U', idx:c.idx, score:c.drawScore});
+    tasks.push({id:c.idx+':H', idx:c.idx, utfall:'H'}, {id:c.idx+':B', idx:c.idx, utfall:'B'});
+    if(c.needsDraw) tasks.push({id:c.idx+':U', idx:c.idx, utfall:'U'});
   });
   return runZoneTasks({
     mu:MODEL.mu, H:MODEL.H, k:FORM_K,
@@ -6610,7 +6681,7 @@ function runMatchImpactAsync(team, zone, candidateSpecs, scenarioKey, base, grup
     oddsOverride:base.oddsOverride, N:base.N||QA_N_IMPACT, ti:TI[team], zone, seed:hashStr(scenarioKey+'|impact')
   }, tasks, null, gruppe || `impact:${++impactGruppeNr}`).then(res=>({results: candidates.map(c=>{
     const h=res[c.idx+':H'].prob, a=res[c.idx+':B'].prob;
-    return {idx:c.idx, homeProb:h, awayProb:a, drawProb:c.drawScore ? res[c.idx+':U'].prob : null,
+    return {idx:c.idx, homeProb:h, awayProb:a, drawProb:c.needsDraw ? res[c.idx+':U'].prob : null,
             baseProb:base.wantBaseline ? res.base.prob : null, diff:Math.abs(h-a)};
   })}));
 }

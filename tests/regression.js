@@ -4108,6 +4108,122 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       }
     }
   };
+  // DEN FASTE TESTEN (16.10.2026): seier, uavgjort og tap vektet med
+  // utfallssjansene skal gi tallet nå, innenfor støyen. Før låste svarene én
+  // stilling (Glimt-Kristiansund 10.10.: 6-0), og «seier» bommet med opptil
+  // 3,5 prosentpoeng. Nå låses utfallet, og stillingen trekkes per sesong.
+  // På Eliteserien og OBOS, med grunnlagsfilen (100 000 sesonger):
+  //   (a) hvert lags neste kamp og (b) alle kampene i neste runde for hvert lag
+  //       og hver åpne sone («Heie på», «Hvilke kamper betyr mest»), med svar
+  //       fra filen; (c) «Hva betydde forrige kamp»: de tre utfallene vektet,
+  //       mot samme stilling med kampen åpen (regnet på siden, 100 000).
+  // Ikke på testsiden ut sesongen: den er løs (17.10.) og har den gamle
+  // koden. Når den får punkt 11 og 12, tas den med igjen uten (c): der regnes
+  // ratingen om for hvert alternativ (kontroll W), så de tre tallene vektet
+  // gir ikke tallet med kampen åpen (side !== 'elo-test' under).
+  // Grensen er 3 standardfeil per tall (uavhengige trekk; frøet er felles, så
+  // den er romslig). Og innbyrdes oppgjør i simuleringen: to lag helt likt
+  // rangeres etter kampene mellom dem, ikke ved loddtrekning.
+  //   node tests/regression.js --bare samsvar
+  const samsvar = async () => {
+    setGroup('Seier, uavgjort og tap vektet med utfallssjansene gir tallet nå (den faste testen)');
+    const forrige = GRUNNLAG_MODUS;
+    GRUNNLAG_MODUS = {};
+    try {
+      for (const side of ['eliteserien', 'obos']) {
+        const pg = await open(1400, 900, base.replace('/eliteserien/', `/${side}/`));
+        await pg.waitForFunction('typeof GRUNNLAG_STATUS!=="undefined" && GRUNNLAG_STATUS!=="venter"', {timeout: 120000});
+        const r = await pg.evaluate(async (medForrige) => {
+          const {P0, G0, F0, open, openMatches, oddsOverride, scenarioKey} = buildQaOpen();
+          const nr = qaNextRoundMatches(openMatches);
+          const pFor = m => { const [lh, la] = rateFor(m.home, m.away); return outcome(lh, la); };
+          const se = (p, h, u, b, base, N) => Math.sqrt((p.H * p.H * h * (1 - h) + p.U * p.U * u * (1 - u) + p.B * p.B * b * (1 - b) + base * (1 - base)) / N);
+          const ut = {status: GRUNNLAG_STATUS, neste: [], runde: [], forrige: [], fraFil: true, ib: {}, foer: [], utenFoer: 0, avtrykk: null};
+          // Uten filen ville alt blitt regnet på siden med 100 000 sesonger (for
+          // tregt): da stopper testen her, med en tydelig feil. Filene i
+          // tests/data må regnes på nytt når koden i simuleringen endres.
+          if (GRUNNLAG_STATUS !== 'i bruk') return ut;
+          for (const team of TEAMS) {
+            for (const key of ZONE_KEYS.filter(k => LEAGUE.zones[k])) {
+              const zone = qaZoneByKey(team, key);
+              if (!zone || zone.pct < 0.01 || zone.pct > 0.99) continue;
+              const tasks = [{id: 'base', idx: -1, score: null}];
+              nr.list.forEach(m => { const idx = openMatches.indexOf(m);
+                tasks.push({id: idx + ':H', idx, utfall: 'H'}, {id: idx + ':U', idx, utfall: 'U'}, {id: idx + ':B', idx, utfall: 'B'}); });
+              const res = await runZoneTasks({mu: MODEL.mu, H: MODEL.H, k: FORM_K, ...simStilling(open),
+                P0: Array.from(P0), G0: Array.from(G0), F0: Array.from(F0), open, oddsOverride,
+                N: GRUNNLAG_N, ti: TI[team], zone, seed: hashStr(scenarioKey + '|impact')}, tasks, null, 'samsvar');
+              if (res.sesonger !== GRUNNLAG_N) ut.fraFil = false;
+              for (const m of nr.list) {
+                const idx = openMatches.indexOf(m), p = pFor(m), h = res[idx + ':H'].prob, u = res[idx + ':U'].prob, b = res[idx + ':B'].prob, b0 = res.base.prob;
+                const rad = {lag: team, sone: key, kamp: `${m.home}-${m.away}`, bom: p.H * h + p.U * u + p.B * b - b0, se: se(p, h, u, b, b0, res.sesonger)};
+                ut.runde.push(rad);
+                if ((m.home === team || m.away === team) && qaTargetZone(team).key === key) ut.neste.push(rad);
+              }
+            }
+            // (c) Forrige kamp: alternativene og det faktiske utfallet, vektet, mot kampen åpen.
+            const zone = qaTargetZone(team), m = lastPlayedFor(team);
+            if (!medForrige || !zone || !m || zone.pct < 0.01 || zone.pct > 0.99) continue;
+            const alt = forrigeOppgaver(m, P0, G0, F0), over = alt[0].over;
+            const faktisk = m.hg > m.ag ? 'H' : m.hg < m.ag ? 'B' : 'U';
+            const tasks = [{id: 'aapen', idx: -1, score: null, over}, ...alt,
+                           {id: `f:${m.home}|${m.away}:${faktisk}`, q: faktisk, idx: 0, utfall: faktisk, over}];
+            const res = await runZoneTasks({mu: MODEL.mu, H: MODEL.H, k: FORM_K, ...simStilling(open),
+              P0: Array.from(P0), G0: Array.from(G0), F0: Array.from(F0), open, oddsOverride,
+              N: GRUNNLAG_N, ti: TI[team], zone, seed: hashStr(scenarioKey + '|samsvar')}, tasks, null, 'samsvar-forrige');
+            const [lh, la] = over.oddsOverride[0], p = outcome(lh, la), id = q => `f:${m.home}|${m.away}:${q}`;
+            // Målratene for den gjenåpnede kampen er fra før avspark: de gir
+            // sjansene ved avspark (preKickProbs), ikke modellens sjanser nå.
+            const pk = preKickProbs(m.home, m.away);
+            if (pk) ut.foer.push({kamp: `${m.home}-${m.away}`, avvik: Math.max(Math.abs(p.H - pk.H), Math.abs(p.B - pk.B)),
+                                  naa: (o => Math.max(Math.abs(o.H - pk.H), Math.abs(o.B - pk.B)))(outcome(...rateFor(m.home, m.away)))});
+            else ut.utenFoer++;
+            const h = res[id('H')].prob, u = res[id('U')].prob, b = res[id('B')].prob, b0 = res.aapen.prob;
+            ut.forrige.push({lag: team, sone: zone.key, kamp: `${m.home}-${m.away}`, bom: p.H * h + p.U * u + p.B * b - b0, se: se(p, h, u, b, b0, res.sesonger)});
+          }
+          // Sjansene ved avspark står i grunnlagsfilens avtrykk for hver oppgave i forrige kamp.
+          if (medForrige) {
+            const f = grunnlagInndata(GRUNNLAG_N).oppgaver.filter(o => String(o[0]).startsWith('f:'));
+            ut.avtrykk = {n: f.length, fire: f.filter(o => o.length === 4).length, medFoer: f.filter(o => Array.isArray(o[3]) && o[3].length === 3).length};
+          }
+          // Innbyrdes oppgjør i simuleringen: lag 0 og 1 står helt likt i hver sesong
+          // (ingen åpne kamper); lag 0 vant innbyrdes. Gull for lag 0: 1 med, 0,5 uten.
+          const n = TEAMS.length, nuller = () => new Array(n).fill(0);
+          const Pl = TEAMS.map((_, i) => i < 2 ? 50 : 40 - i), IB = {p: new Array(n * n).fill(0), g: new Array(n * n).fill(0), f: new Array(n * n).fill(0)};
+          IB.p[0 * n + 1] = 3; IB.g[0 * n + 1] = 1; IB.f[0 * n + 1] = 1; IB.g[1 * n + 0] = -1;
+          const lik = {mu: MODEL.mu, H: MODEL.H, k: 0, att: nuller(), con: nuller(), ha: nuller(), hc: nuller(),
+            P0: Pl, G0: TEAMS.map(() => 0), F0: TEAMS.map(() => 30), open: [], oddsOverride: [], N: 4000, ti: 0,
+            zone: {key: 'gull', lo: 1, hi: 1, dir: 'front'}, seed: 7};
+          const medIB = await runZoneTasks({...lik, innbyrdes: IB}, [{id: 'base', idx: -1, score: null}], null, 'samsvar-ib1');
+          const utenIB = await runZoneTasks(lik, [{id: 'base', idx: -1, score: null}], null, 'samsvar-ib2');
+          ut.ib = {med: medIB.base.prob, uten: utenIB.base.prob};
+          return ut;
+        }, side !== 'elo-test');
+        const verst = rader => rader.reduce((v, x) => Math.abs(x.bom) / x.se > Math.abs(v.bom) / v.se ? x : v, {bom: 0, se: 1});
+        const vis = (rader, navn) => { const v = verst(rader), u = rader.filter(x => Math.abs(x.bom) > 3 * x.se);
+          return [u.length === 0, `${navn}: ${rader.length} tall, største ${(100 * v.bom).toFixed(2)} pp (${(Math.abs(v.bom) / v.se).toFixed(1)} SE, ${v.lag || ''} ${v.kamp || ''})`,
+                  u.slice(0, 4).map(x => `${x.lag} ${x.sone} ${x.kamp}: ${(100 * x.bom).toFixed(2)} pp`).join('; ')]; };
+        check(`${side}: grunnlagsfilen er i bruk og svarene kommer fra den`, r.status === 'i bruk' && r.fraFil, `${r.status} ${r.fraFil}`);
+        if (r.status !== 'i bruk') { await pg.close(); continue; }
+        for (const [rader, navn] of [[r.neste, 'neste kamp'], [r.runde, 'neste runde, alle lag og åpne soner'],
+                                     ...(side !== 'elo-test' ? [[r.forrige, 'forrige kamp']] : [])]) {
+          const [ok, tekst, detalj] = vis(rader, navn);
+          check(`${side}: ${tekst}, alle innenfor 3 SE`, ok && rader.length > 0, detalj);
+        }
+        if (side !== 'elo-test') {
+          const verstF = r.foer.reduce((v, x) => x.avvik > v.avvik ? x : v, {avvik: 0});
+          const ulike = r.foer.filter(x => x.naa > 0.01).length;
+          check(`${side}: forrige kamp regnes med målratene fra før avspark: ${r.foer.length} kamper med sjanser ved avspark gir dem tilbake innenfor 0,005 (største ${verstF.avvik.toFixed(4)}, ${verstF.kamp || ''}); ${ulike} av dem skiller seg over 1 prosentpoeng fra modellen nå`,
+            r.foer.length > 0 && verstF.avvik <= 0.005 && ulike > 0, JSON.stringify(r.foer.slice(0, 4)));
+          check(`${side}: sjansene ved avspark står i grunnlagsfilens avtrykk (${r.avtrykk && r.avtrykk.medFoer} av ${r.avtrykk && r.avtrykk.n} oppgaver i forrige kamp)`,
+            !!r.avtrykk && r.avtrykk.n > 0 && r.avtrykk.fire === r.avtrykk.n && r.avtrykk.medFoer > 0, JSON.stringify(r.avtrykk));
+        }
+        check(`${side}: innbyrdes oppgjør i simuleringen: to lag helt likt rangeres etter kampene mellom dem (${r.ib.med} med, ${r.ib.uten.toFixed(3)} uten)`,
+          r.ib.med === 1 && Math.abs(r.ib.uten - 0.5) < 0.05, JSON.stringify(r.ib));
+        await pg.close();
+      }
+    } finally { GRUNNLAG_MODUS = forrige; }
+  };
   // Innbyrdes oppgjør i tabellen (16.10.2026, NFFs kampreglement § 5-3):
   // poeng, målforskjell, scorede mål, så en minitabell av kampene mellom lagene
   // som står helt likt (rangerTabell). På alle tre sidene: (a) regelen selv med
@@ -4306,6 +4422,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'blandet') await blandetRunde();
       else if (BARE === 'stempel') await stempel();
       else if (BARE === 'innbyrdes') await innbyrdes();
+      else if (BARE === 'samsvar') await samsvar();
       else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort, trekning, forkampen, blandet, stempel)`);
     } else {
     // ---- 0. dagens data ----
@@ -6660,23 +6777,24 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     }
     await page.bringToFront();
 
-    // ---- Svarene: låste utfall regnes som scenarioet ----
-    // Et svar som låser en åpen kamp til et resultat skal regne med samme
-    // lagstyrker og målrater som scenarioet bruker med samme resultat utfylt
-    // (som kontroll U på testsiden). Utgangsstillingen regnes i Workerne. Testen
-    // fanger oppgavene svarveien faktisk sender ("Rundens viktigste kamp", "Hva
-    // betyr neste kamp?", "Heie på", finsilingen i "Hvilke kamper betyr
-    // mest?"), spiller hver låste oppgave av i en Worker (mode laastStilling,
-    // samme kode som oppgaven kjører) og sammenligner bit for bit med
-    // simStilling (lagstyrkene og forskyvningen per kamp etter tidsregelen,
-    // 3.10.2026) og oddsOverrideFor etter setMatch + refreshLiveState. Uten og med et annet
-    // resultat allerede fylt inn. Før fikk den låste kjøringen lagstyrkene og
-    // oddsratene fra før resultatet.
+    // ---- Svarene: låst utfall, samme lagstyrker som uten låsing ----
+    // SIDEN 16.10.2026 låser svarene UTFALLET (forcedOutcome H/U/B), ikke én
+    // stilling: stillingen trekkes for hver simulerte sesong fra fordelingen
+    // gitt utfallet, og lagstyrkene tilpasses IKKE på nytt etter utfallet.
+    // Da gir seier, uavgjort og tap vektet med utfallssjansene tallet uten
+    // låsing (den faste testen, gruppen «samsvar»). Testen fanger oppgavene
+    // svarveien faktisk sender ("Rundens viktigste kamp", "Hva betyr neste
+    // kamp?", "Heie på", finsilingen i "Hvilke kamper betyr mest?") og krever
+    // for hver låste oppgave: låst utfall, ingen låst stilling (forcedScore,
+    // laastStilling), og lagstyrkene, forskyvningen og målratene bit-like dem
+    // simStilling gir for samme åpne kamper uten låsing. Uten og med et annet
+    // resultat allerede fylt inn. Før (3.10.-16.10.) ble én stilling låst, og
+    // lagstyrkene regnet på nytt i Workeren (laastStilling).
     //  I tillegg: de delte funksjonene i WORKER_SRC er tegn for tegn
     // hovedtrådens (Function.toString), deklarert én gang, og konstantene er
     // like; og grovsilingen i "Hvilke kamper betyr mest?" går i poolen med
-    // egen stilling per låst utfall.
-    setGroup('Svarene: låste utfall som scenarioet');
+    // låst utfall.
+    setGroup('Svarene: låst utfall, samme lagstyrker som uten låsing');
     for (const [sti, liga] of [['/eliteserien/', 'Eliteserien'], ['/obos/', 'OBOS']]) {
       const url = base.replace('/eliteserien/', sti);
       const lp = await browser.newPage();
@@ -6744,51 +6862,39 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           const lag = TEAMS.find(t => { const z = qaTargetZone(t); return z && !qaSettled(t, z) && nr.list.some(m => m.home === t || m.away === t); });
           __sendt.length = 0;
           await qaKeyRoundData(); await qaNextMatch(lag); await qaCheerFor(lag); await qaKeyMatches(lag);
-          // Hver låste oppgave, spilt av i en egen Worker: stillingen den regner.
+          // Hver låste oppgave: låst utfall, ingen låst stilling, og samme
+          // lagstyrker, forskyvning og målrater som uten låsing.
           const laaste = __sendt.filter(m => m.mode === 'zoneTask' && m.forcedIdx >= 0);
-          const merket = laaste.filter(m => m.laastStilling).length;
-          const kanSpille = WORKER_SRC.includes("d.mode==='laastStilling'");
-          const stillinger = [];
-          if (kanSpille) {
-            const w = new Worker(URL.createObjectURL(new Blob([WORKER_SRC], {type: 'application/javascript'})));
-            const svar = new Map(); w.onmessage = e => svar.set(e.data.runId, e.data);
-            laaste.forEach((m, i) => w.postMessage({...m, mode: 'laastStilling', runId: i}));
-            const t0 = Date.now(); while (svar.size < laaste.length && Date.now() - t0 < 60000) await new Promise(r => setTimeout(r, 20));
-            w.terminate();
-            laaste.forEach((m, i) => stillinger.push(svar.get(i)));
-          }
+          const merket = laaste.filter(m => ['H', 'U', 'B'].includes(m.forcedOutcome) && m.forcedScore == null && !m.laastStilling).length;
+          const utfall = new Set(laaste.map(m => m.forcedOutcome));
           const likt = (a, b) => a.length === b.length && a.every((x, i) => Object.is(x, b[i]));
           const ulike = []; let par = 0, maksAvvik = 0;
-          laaste.forEach((m, i) => {
-            const st = stillinger[i] || {att: m.att, con: m.con, ha: m.ha, hc: m.hc, oddsOverride: m.oddsOverride, forskyvning: m.forskyvning, forskyvningIdx: m.forskyvningIdx};
-            const o = m.open[m.forcedIdx], x = matches.find(y => !(y.hg != null && y.ag != null) && TI[y.home] === o[0] && TI[y.away] === o[1]);
-            setMatch(x, m.forcedScore[0], m.forcedScore[1], false); refreshLiveState();
-            const navn = `${x.home}-${x.away} ${m.forcedScore.join('-')}`, S = simStilling(m.open);
+          laaste.forEach(m => {
+            const o = m.open[m.forcedIdx], navn = `${TEAMS[o[0]]}-${TEAMS[o[1]]} ${m.forcedOutcome}`, S = simStilling(m.open);
             for (const f of ['att', 'con', 'ha', 'hc']) { par++;
-              if (!likt(Array.from(st[f]), Array.from(S[f]))) { ulike.push(`${navn}: ${f}`); maksAvvik = Math.max(maksAvvik, ...Array.from(S[f]).map((v, j) => Math.abs(v - st[f][j]))); } }
+              if (!likt(Array.from(m[f]), Array.from(S[f]))) { ulike.push(`${navn}: ${f}`); maksAvvik = Math.max(maksAvvik, ...Array.from(S[f]).map((v, j) => Math.abs(v - m[f][j]))); } }
             par++;
-            if (JSON.stringify(st.forskyvningIdx || null) !== JSON.stringify(S.forskyvningIdx || null)
-                || JSON.stringify(st.forskyvning || null) !== JSON.stringify(S.forskyvning || null)) ulike.push(`${navn}: forskyvning`);
-            m.open.forEach((oo, j) => { if (j === m.forcedIdx) return;
-              const sc = oddsOverrideFor(TEAMS[oo[0]], TEAMS[oo[1]]), sendt = (st.oddsOverride || [])[j] || null; par++;
+            if (JSON.stringify(m.forskyvningIdx || null) !== JSON.stringify(S.forskyvningIdx || null)
+                || JSON.stringify(m.forskyvning || null) !== JSON.stringify(S.forskyvning || null)) ulike.push(`${navn}: forskyvning`);
+            m.open.forEach((oo, j) => {
+              const sc = oddsOverrideFor(TEAMS[oo[0]], TEAMS[oo[1]]), sendt = (m.oddsOverride || [])[j] || null; par++;
               if (!((sc === null && sendt === null) || (sc && sendt && likt(sc, sendt)))) ulike.push(`${navn}: oddsOverride ${TEAMS[oo[0]]}-${TEAMS[oo[1]]}`); });
-            setMatch(x, null, null, false); refreshLiveState();
           });
           render();
-          return {lag, kjoringer: laaste.length, merket, kanSpille, kamper: new Set(laaste.map(m => m.forcedIdx)).size, par, ulike: ulike.length, eks: ulike.slice(0, 4), maksAvvik};
+          return {lag, kjoringer: laaste.length, merket, utfall: [...utfall].sort().join(''), kamper: new Set(laaste.map(m => m.forcedIdx)).size, par, ulike: ulike.length, eks: ulike.slice(0, 4), maksAvvik};
         });
         await settle(lp);
         const hvor = medAnnet ? 'med et annet resultat fylt inn' : 'uten scenario';
-        console.log(`      ${liga} ${hvor} (følger ${r.lag}): ${r.kjoringer} låste oppgaver i ${r.kamper} kamper, ${r.merket} regnet i Workeren, ${r.par} sammenligninger`);
-        check(`${liga}, ${hvor}: lagstyrkene og målratene Workerne regner for låste utfall er bit-like scenarioets med samme resultat`,
-          r.kanSpille && r.kjoringer >= 20 && r.kamper >= 5 && r.merket === r.kjoringer && r.ulike === 0,
-          `${r.ulike} ulike av ${r.par}, største avvik ${r.maksAvvik.toExponential(1)}, avspilling mulig: ${r.kanSpille}: ${r.eks.join('; ')}`);
+        console.log(`      ${liga} ${hvor} (følger ${r.lag}): ${r.kjoringer} låste oppgaver i ${r.kamper} kamper, ${r.merket} med låst utfall og ingen låst stilling, ${r.par} sammenligninger`);
+        check(`${liga}, ${hvor}: hver låste oppgave låser utfallet (H, U og B), ikke stillingen, og har lagstyrkene og målratene fra simuleringen uten låsing`,
+          r.kjoringer >= 20 && r.kamper >= 5 && r.merket === r.kjoringer && r.utfall === 'BHU' && r.ulike === 0,
+          `${r.ulike} ulike av ${r.par}, største avvik ${r.maksAvvik.toExponential(1)}, utfall ${r.utfall}: ${r.eks.join('; ')}`);
       }
 
-      // Grovsilingen i "Hvilke kamper betyr mest?" går i poolen, 400 sesonger,
-      // med egen utgangsstilling per låst utfall (før: hjelpe-Workeren, uten
-      // egen stilling). Alle oppgavene med N = QA_N_IMPACT er låste og merket
-      // laastStilling, to per kandidatkamp, og ingen matchImpact-melding sendes.
+      // Grovsilingen i "Hvilke kamper betyr mest?" går i poolen, 400 sesonger
+      // (før: hjelpe-Workeren). Alle oppgavene med N = QA_N_IMPACT låser
+      // utfallet (H og B, to per kandidatkamp), ingen låser stillingen, og
+      // ingen matchImpact-melding sendes.
       const grov = await lp.evaluate(async () => {
         const {openMatches} = buildQaOpen(); const nr = qaNextRoundMatches(openMatches);
         const lag = TEAMS.find(t => { const z = qaTargetZone(t); return z && !qaSettled(t, z) && nr.list.some(m => m.home === t || m.away === t); });
@@ -6796,10 +6902,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         __sendt.length = 0;
         await qaKeyMatches(lag);
         const g = __sendt.filter(m => m.mode === 'zoneTask' && m.N === QA_N_IMPACT);
-        return {lag, kand, N: QA_N_IMPACT, oppgaver: g.length, laaste: g.filter(m => m.forcedIdx >= 0 && m.laastStilling).length,
+        return {lag, kand, N: QA_N_IMPACT, oppgaver: g.length, laaste: g.filter(m => m.forcedIdx >= 0 && ['H', 'B'].includes(m.forcedOutcome) && m.forcedScore == null && !m.laastStilling).length,
                 matchImpact: __sendt.filter(m => m.mode === 'matchImpact').length};
       });
-      check(`${liga}: grovsilingen går i poolen med 400 sesonger og egen utgangsstilling per låst utfall`,
+      check(`${liga}: grovsilingen går i poolen med 400 sesonger og låser utfallet, ikke stillingen`,
         grov.N === 400 && grov.kand >= 10 && grov.oppgaver === 2 * grov.kand && grov.laaste === grov.oppgaver && grov.matchImpact === 0,
         JSON.stringify(grov));
       // matchImpact-svarene i poolen blir ferdige også når et annet svar starter
@@ -7378,9 +7484,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           await qaKeyRoundData();
         } finally { runZoneTasks = ekte; }
         const mangler = sett.filter(x => { if (x.tillegg) return false; const f = fil.get(x.t.id);
-          return !f || f.idx !== x.t.idx || JSON.stringify(f.score) !== JSON.stringify(x.t.score) || JSON.stringify(f.over) !== JSON.stringify(x.t.over); });
+          return !f || f.idx !== x.t.idx || (f.utfall ?? null) !== (x.t.utfall ?? null) || JSON.stringify(f.score) !== JSON.stringify(x.t.score) || JSON.stringify(f.over) !== JSON.stringify(x.t.over); });
         return {antall: sett.length, grupper: [...new Set(sett.map(x => x.gruppe.split(':')[0]))].sort(),
-                mangler: mangler.slice(0, 5).map(x => `${x.gruppe} ${x.t.id} ${JSON.stringify(x.t.score)}`), nMangler: mangler.length,
+                mangler: mangler.slice(0, 5).map(x => `${x.gruppe} ${x.t.id} ${x.t.utfall || JSON.stringify(x.t.score)}`), nMangler: mangler.length,
                 feilFro: sett.filter(x => x.seed !== seed).length, oppgaver: fil.size, medOver: sett.filter(x => x.t.over).length,
                 medForrige: grunnlagMedForrige(), filForrige: [...fil.keys()].filter(id => id.startsWith('f:')).length,
                 tillegg: sett.filter(x => x.tillegg).length};
@@ -7441,10 +7547,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         tmpServer = await serve(TMP);
         const pg = await open(1400, 900, `http://127.0.0.1:${tmpServer.address().port}/obos/`);
         const sidens = await pg.evaluate(() => grunnlagAvtrykk(300)), sidensN = await pg.evaluate(() => grunnlagAvtrykk());
-        const oppg = await pg.evaluate(() => grunnlagOppgaver(buildQaOpen().openMatches).map(t => [t.id, t.idx, t.score]));
+        const oppg = await pg.evaluate(() => grunnlagOppgaver(buildQaOpen().openMatches).map(t => [t.id, t.idx, t.utfall]));
         await pg.close();
         check('lag_grunnlag.js skriver filen med sidens avtrykk for N = 300, inndata og alle oppgavene',
-          r.status === 0 && g.versjon === 2 && g.side === 'obos' && g.sesonger === 300 && g.fingeravtrykk === sidens && g.inndata === 'abc123'
+          r.status === 0 && g.versjon === 3 && g.side === 'obos' && g.sesonger === 300 && g.fingeravtrykk === sidens && g.inndata === 'abc123'
             && JSON.stringify(g.oppgaver) === JSON.stringify(oppg) && Object.keys(g.utfall || {}).length === oppg.length,
           `kode ${r.status}: ${(r.stdout + r.stderr).slice(-400)}`);
         check('... og siden godtar den ikke som en fil for N = 100 000 (annet avtrykk)', g.fingeravtrykk !== sidensN, '');
@@ -7476,7 +7582,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
 
         // Hele veien, billig: siden i kopien regner med GRUNNLAG_N = 300.
         // Filen prøves på siden med den nye filen, og banneret skrives fra den.
-        const N300 = sideTekst.replace('const GRUNNLAG_VERSJON = 2, GRUNNLAG_N = 100000;', 'const GRUNNLAG_VERSJON = 2, GRUNNLAG_N = 300;');
+        const N300 = sideTekst.replace(/const GRUNNLAG_VERSJON = (\d+), GRUNNLAG_N = 100000;/, 'const GRUNNLAG_VERSJON = $1, GRUNNLAG_N = 300;');
+        check('kopien av siden regner med GRUNNLAG_N = 300', N300 !== sideTekst && N300.includes('GRUNNLAG_N = 300;'));
         fs.writeFileSync(sideFil, N300);
         const r4 = kjor('obos', '--inndata', 'def456');
         const g4 = JSON.parse(fs.readFileSync(FIL, 'utf8')), km4 = fs.existsSync(KM) ? JSON.parse(fs.readFileSync(KM, 'utf8')) : null;
@@ -7846,6 +7953,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await blandetRunde();
     await stempel();
     await innbyrdes();
+    await samsvar();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen

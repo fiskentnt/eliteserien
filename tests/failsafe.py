@@ -809,7 +809,7 @@ def main():
               for f in ("matches.json", "fixtures.json", "model.json", "odds_upcoming.json")))
     for s_ in ("eliteserien", "obos"):
         t = (ROOT / s_ / "index.html").read_text(encoding="utf-8")
-        check(f"{s_}/index.html: fast N = 100 000 i grunnlagsfilen (GRUNNLAG_N), versjon 2 med innsiktsblokken", "const GRUNNLAG_VERSJON = 2, GRUNNLAG_N = 100000;" in t)
+        check(f"{s_}/index.html: fast N = 100 000 i grunnlagsfilen (GRUNNLAG_N), versjon 3 (låst utfall i oppgavene, 16.10.2026)", "const GRUNNLAG_VERSJON = 3, GRUNNLAG_N = 100000;" in t)
     # Innsiktssvarene ("Hvorfor har ...?", "Hva må ... gjøre?", "Når kan det
     # være avgjort?", "Hvem kjemper ... mot?") kommer fra én kjøring for alle
     # lag og soner: filens blokk når den gjelder, ellers siden selv med like
