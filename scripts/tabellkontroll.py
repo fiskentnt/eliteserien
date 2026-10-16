@@ -64,7 +64,8 @@ FELT = (("k", "kamper"), ("v", "vunnet"), ("u", "uavgjort"), ("t", "tap"),
 def vaar_tabell(kamper, lag, just=None):
     """{lag: {k, v, u, t, mf, mm, poeng, plass}} fra de spilte kampene, med
     justeringene ({lag: poeng}) lagt til poengene, rangert som paa siden
-    (poeng, maalforskjell, scorede maal, navn)."""
+    (poeng, maalforskjell, scorede maal, innbyrdes oppgjoer, navn; se
+    scripts/rangering.py)."""
     just = just or {}
     t = {n: {"k": 0, "v": 0, "u": 0, "t": 0, "mf": 0, "mm": 0} for n in lag}
     for m in kamper:
@@ -76,7 +77,11 @@ def vaar_tabell(kamper, lag, just=None):
             r["v" if f > mot else "t" if f < mot else "u"] += 1
     for l, r in t.items():
         r["poeng"] = 3 * r["v"] + r["u"] + just.get(l, 0)
-    rekke = sorted(t, key=lambda n: (-t[n]["poeng"], -(t[n]["mf"] - t[n]["mm"]), -t[n]["mf"], n))
+    # Rangeringen etter kampreglementet § 5-3, med innbyrdes oppgjør (16.10.2026,
+    # scripts/rangering.py), som på siden.
+    import rangering
+    rekke = rangering.rekkefolge(list(t), kamper, {n: t[n]["poeng"] for n in t},
+                                 {n: t[n]["mf"] - t[n]["mm"] for n in t}, {n: t[n]["mf"] for n in t})
     for i, n in enumerate(rekke):
         t[n]["plass"] = i + 1
     return t

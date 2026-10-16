@@ -1305,7 +1305,7 @@
       <p>Deretter spilles resten av sesongen 100&nbsp;000 ganger med tilfeldige resultater etter disse sannsynlighetene. Inne i hver simulerte sesong holdes lagstyrken fast, slik den gjør i testene modellen er validert med. Det er bare resultatene som står i kamplisten, som flytter den. Topp 4, Nedrykk og fordelingen i boksen for laget du følger er andelen av sesongene der laget endte der. Resultater du fyller inn selv, står fast i alle simuleringene. Tallene for dagens tabell er regnet på forhånd med 100&nbsp;000 sesonger. Fyller du inn resultater selv, regner nettleseren 10&nbsp;000 sesonger med dem.</p>
       <p>Knappene som fyller inn resten av kampene ("&lt;laget du følger&gt; vinner resten", "...taper resten", "Simuler tomme kamper", og knappen i hver runde) bruker alle ett tilfeldig, plausibelt sesongforløp: resultater trekkes kamp for kamp i kronologisk rekkefølge med fast lagstyrke, og sesongen forkastes og trekkes på nytt hvis den får vesentlig flere eller færre overraskelser enn forventet. Når kampene er fylt inn, flytter de ratingen på samme måte som resultater du fyller inn selv.</p>
       <p>Tabellen, kamplisten, simuleringene og svarene bygger alle på nøyaktig den samme lagstyrken. Det finnes ikke lenger en egen variant for visning: ett tall, ett sted.</p>
-      <p class="note">Rangering: poeng, målforskjell, scorede mål. Innbyrdes oppgjør (fjerde kriterium) er ikke regnet inn, verken i tabellen eller i simuleringene. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
+      <p class="note">Rangering: poeng, målforskjell, scorede mål, så innbyrdes oppgjør (NFFs kampreglement § 5-3). Simuleringene regner ennå ikke innbyrdes oppgjør. Runde 12 ble flyttet fra juli til 24. og 25. oktober.</p>
       <p class="note">H, U og B er sjansen for hjemmeseier, uavgjort og borteseier når laget spiller hjemme mot et lag med snittrating.</p>
       <div class="tblscroll"><table class="mt" id="modelTbl"></table></div>
     </details>
@@ -4306,7 +4306,7 @@ function computeAt(idx){
     h.results.push(rh); a.results.push(ra);
   });
   const rows = Object.values(t).map(r=>{ const just=poengJust(r.name, end); return {...r, just, pts:r.w*3+r.d+just, gd:r.gf-r.ga}; });
-  rows.sort((x,y)=> y.pts-x.pts || y.gd-x.gd || y.gf-x.gf || x.name.localeCompare(y.name,'no'));
+  rangerTabell(rows, games);
   rows.forEach((r,i)=>r.pos=i+1);
   return rows;
 }
@@ -4461,6 +4461,44 @@ let navLock = null;
   new ResizeObserver(update).observe(document.body);
 })();
 
+// RANGERINGEN (16.10.2026) etter NFFs kampreglement § 5-3, som
+// turneringsbestemmelsene for Eliteserien og OBOS-ligaen 2026 viser til
+// (pkt. 4.1 d): poeng, målforskjell, scorede mål, så innbyrdes oppgjør (5).
+// TOLKNINGEN FOR TO LAG (vår lesning): «resultatet av innbyrdes kamper» leses
+// som en minitabell av kampene mellom dem, slik (5) sier for tre eller flere:
+// poeng, så målforskjell, så scorede mål i de kampene. Bortemål teller ikke.
+// Minitabellen settes opp én gang for gruppen som står likt; lag som fortsatt
+// står likt, rangeres etter navn (i virkeligheten kvalifiseringsspill etter
+// (6) når det gjelder mesterskap eller opp-/nedrykk). Poengtrekk ligger i
+// poengene, ikke i minitabellen. (2), flest kamper møtt til, gjelder bare
+// walkover og er ikke med. Samme regel i Python: scripts/rangering.py.
+// rows: [{pts, gd, gf, ...}], sorteres på stedet og returneres. kamper: de
+// spilte kampene tabellen bygger på ({home, away, hg, ag}). navn(rad) gir
+// lagnavnet (standard rad.name).
+function rangerTabell(rows, kamper, navn){
+  navn = navn || (r=>r.name);
+  const lik = (x,y) => x.pts===y.pts && x.gd===y.gd && x.gf===y.gf;
+  rows.sort((x,y)=> y.pts-x.pts || y.gd-x.gd || y.gf-x.gf || navn(x).localeCompare(navn(y),'no'));
+  for(let i=0; i<rows.length;){
+    let j=i+1;
+    while(j<rows.length && lik(rows[j], rows[i])) j++;
+    if(j-i>1){
+      const mini = {};
+      rows.slice(i,j).forEach(r=>{ mini[navn(r)] = {p:0, gd:0, gf:0}; });
+      kamper.forEach(m=>{
+        const h=mini[m.home], a=mini[m.away];
+        if(!h || !a || m.hg==null || m.ag==null) return;
+        h.gd+=m.hg-m.ag; a.gd+=m.ag-m.hg; h.gf+=m.hg; a.gf+=m.ag;
+        if(m.hg>m.ag) h.p+=3; else if(m.hg<m.ag) a.p+=3; else { h.p++; a.p++; }
+      });
+      const gruppe = rows.slice(i,j).sort((x,y)=>{ const a=mini[navn(x)], b=mini[navn(y)];
+        return b.p-a.p || b.gd-a.gd || b.gf-a.gf || navn(x).localeCompare(navn(y),'no'); });
+      rows.splice(i, j-i, ...gruppe);
+    }
+    i=j;
+  }
+  return rows;
+}
 function compute(){
   const t={};
   BASE.forEach(r=>t[r[0]]={name:r[0],p:r[1],w:r[2],d:r[3],l:r[4],gf:r[5],ga:r[6],left:0});
@@ -4473,7 +4511,7 @@ function compute(){
     if(m.hg>m.ag){h.w++;a.l++;} else if(m.hg<m.ag){a.w++;h.l++;} else {h.d++;a.d++;}
   });
   const rows=Object.values(t).map(r=>{ const just=poengJust(r.name); return {...r,just,pts:r.w*3+r.d+just,gd:r.gf-r.ga,max:r.w*3+r.d+just+3*r.left}; });
-  rows.sort((x,y)=> y.pts-x.pts || y.gd-x.gd || y.gf-x.gf || x.name.localeCompare(y.name,'no'));
+  rangerTabell(rows, MATCHES.concat(matches.filter(m=>m.hg!=null&&m.ag!=null)));
   return {rows,played};
 }
 
@@ -8811,7 +8849,7 @@ async function boot(){
 
   basePos = {};
   (()=>{ const r=BASE.map(b=>({n:b[0],pts:b[2]*3+b[3]+poengJust(b[0]),gd:b[5]-b[6],gf:b[5]}));
-    r.sort((x,y)=>y.pts-x.pts||y.gd-x.gd||y.gf-x.gf||x.n.localeCompare(y.n,'no'));
+    rangerTabell(r, MATCHES, x=>x.n);
     r.forEach((x,i)=>basePos[x.n]=i+1); })();
 
   // Form og hjemme/borte-tall fra kampdataene

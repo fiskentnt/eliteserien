@@ -4108,6 +4108,89 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       }
     }
   };
+  // Innbyrdes oppgjør i tabellen (16.10.2026, NFFs kampreglement § 5-3):
+  // poeng, målforskjell, scorede mål, så en minitabell av kampene mellom lagene
+  // som står helt likt (rangerTabell). På alle tre sidene: (a) regelen selv med
+  // tre konstruerte tilfeller, (b) tabellen på siden er compute() sin
+  // rekkefølge, og (c) to lag som står helt likt i dagens tabell, står i
+  // minitabellens rekkefølge. Kjøres med resten av suiten, eller alene:
+  //   node tests/regression.js --bare innbyrdes
+  const innbyrdes = async () => {
+    setGroup('Innbyrdes oppgjør i tabellen (kampreglementet § 5-3)');
+    for (const side of ['eliteserien', 'obos', 'elo-test']) {
+      const url = base.replace('/eliteserien/', `/${side}/`);
+      const pg = await browser.newPage();
+      pg.on('pageerror', e => errors.push(`innbyrdes ${side}: ${e.message}`));
+      await pg.setViewport({width: 1400, height: 900});
+      await pg.goto(url, {waitUntil: 'networkidle0'});
+      await pg.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true', {timeout: 120000});
+      const r = await pg.evaluate(() => {
+        const rad = (name, pts, gd, gf) => ({name, pts, gd, gf});
+        const k = (home, away, hg, ag) => ({home, away, hg, ag});
+        const navn = rows => rows.map(x => x.name).join(',');
+        // To lag helt likt: B vant innbyrdes (2-0 og 1-1), og står over A selv om A kommer først alfabetisk.
+        const to = navn(rangerTabell([rad('A', 50, 10, 40), rad('B', 50, 10, 40), rad('C', 60, 5, 30)],
+          [k('A', 'B', 0, 2), k('B', 'A', 1, 1), k('A', 'C', 3, 0)]));
+        // Tre lag helt likt, minitabellen: alle har 3 poeng innbyrdes; målforskjell innbyrdes avgjør (C +2, B 0, A -2).
+        const tre = navn(rangerTabell([rad('A', 40, 0, 30), rad('B', 40, 0, 30), rad('C', 40, 0, 30)],
+          [k('A', 'B', 1, 0), k('B', 'C', 1, 0), k('C', 'A', 3, 0)]));
+        // Likt på poeng, men ulik målforskjell: innbyrdes teller IKKE (B slo A, men A har bedre målforskjell).
+        const mf = navn(rangerTabell([rad('B', 40, 2, 30), rad('A', 40, 5, 30)], [k('A', 'B', 0, 1)]));
+        // Helt likt også innbyrdes: navn.
+        const navnet = navn(rangerTabell([rad('B', 40, 0, 30), rad('A', 40, 0, 30)], [k('A', 'B', 1, 1)]));
+        // Dagens tabell: rekkefølgen på siden og alle par som står helt likt.
+        const {rows} = compute();
+        const dom = [...document.querySelectorAll('#tbl tbody tr .teamname .lg')].map(e => e.textContent.trim());
+        const kamper = MATCHES.concat(matches.filter(m => m.hg != null && m.ag != null));
+        const like = [], feil = [];
+        for (let i = 0; i + 1 < rows.length; i++) {
+          const a = rows[i], b = rows[i + 1];
+          if (a.pts !== b.pts || a.gd !== b.gd || a.gf !== b.gf) continue;
+          // Minitabellen for akkurat dette paret (en gruppe på to; større grupper er dekket av tilfellet over).
+          const gr = rows.filter(x => x.pts === a.pts && x.gd === a.gd && x.gf === a.gf);
+          const p = {}; gr.forEach(x => p[x.name] = [0, 0, 0]);
+          kamper.forEach(m => { if (!p[m.home] || !p[m.away]) return; const h = p[m.home], w = p[m.away];
+            h[1] += m.hg - m.ag; w[1] += m.ag - m.hg; h[2] += m.hg; w[2] += m.ag;
+            if (m.hg > m.ag) h[0] += 3; else if (m.hg < m.ag) w[0] += 3; else { h[0]++; w[0]++; } });
+          const x = p[a.name], y = p[b.name];
+          const riktig = x[0] > y[0] || (x[0] === y[0] && (x[1] > y[1] || (x[1] === y[1] && (x[2] > y[2] || (x[2] === y[2] && a.name.localeCompare(b.name, 'no') <= 0)))));
+          like.push(`${i + 1}. ${a.name} (${x.join('/')}) foran ${b.name} (${y.join('/')})`);
+          if (!riktig) feil.push(`${a.name} foran ${b.name}, men minitabellen sier ${x.join('/')} mot ${y.join('/')}`);
+        }
+        return {to, tre, mf, navnet, rekke: navn(rows), dom: dom.join(','), like, feil};
+      });
+      check(`${side}: to lag helt likt rangeres etter innbyrdes oppgjør (B over A), ikke etter navn`, r.to === 'C,B,A', r.to);
+      check(`${side}: tre lag helt likt rangeres etter minitabellen (målforskjell innbyrdes: C, B, A)`, r.tre === 'C,B,A', r.tre);
+      check(`${side}: innbyrdes teller ikke før målforskjell og scorede mål`, r.mf === 'A,B', r.mf);
+      check(`${side}: helt likt også innbyrdes gir navn`, r.navnet === 'A,B', r.navnet);
+      check(`${side}: tabellen på siden står i compute() sin rekkefølge`, r.dom === r.rekke, `${r.dom} | ${r.rekke}`);
+      check(`${side}: lag som står helt likt i dagens tabell, står i minitabellens rekkefølge (${r.like.length} par${r.like.length ? ': ' + r.like.join('; ') : ''})`,
+        r.feil.length === 0, r.feil.join('; '));
+      await pg.close();
+    }
+    // Det ekte tilfellet (tests/data/2026-10-16, før runde 24): Viking og
+    // Bodø/Glimt står helt likt (53 poeng, +36, 56 scorede mål). Viking vant
+    // innbyrdes 5-0 i april og skal stå først; før sto Bodø/Glimt først etter navn.
+    const bilde = DATA_DAG;
+    DATA_DAG = '2026-10-16';
+    try {
+      const pg = await browser.newPage();
+      pg.on('pageerror', e => errors.push(`innbyrdes 16.10.: ${e.message}`));
+      await pg.setViewport({width: 1400, height: 900});
+      await pg.goto(base, {waitUntil: 'networkidle0'});
+      await pg.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true', {timeout: 120000});
+      const r = await pg.evaluate(() => ({
+        dom: [...document.querySelectorAll('#tbl tbody tr .teamname .lg')].slice(0, 2).map(e => e.textContent.trim()),
+        rader: compute().rows.slice(0, 2).map(x => `${x.name} ${x.pts} ${x.gd} ${x.gf}`),
+        base: ['Viking', 'Bodø/Glimt'].map(n => basePos[n]),
+        runde: (() => { const rr = computeAt(currentRoundIdx()); return rr.slice(0, 2).map(x => x.name); })()}));
+      check('eliteserien 16.10.: Viking og Bodø/Glimt står helt likt (53, +36, 56)',
+        r.rader.join('|') === 'Viking 53 36 56|Bodø/Glimt 53 36 56', r.rader.join(' | '));
+      check('eliteserien 16.10.: Viking står først i tabellen på siden, i basePos og i tabellen for runden (innbyrdes 5-0)',
+        r.dom.join(',') === 'Viking,Bodø/Glimt' && r.base.join(',') === '1,2' && r.runde.join(',') === 'Viking,Bodø/Glimt', JSON.stringify(r));
+      await pg.close();
+    } finally { DATA_DAG = bilde; }
+  };
   const blandetRunde = async () => {
     setGroup('"Simuler på nytt" i en blandet runde, og plassen når knappen forsvinner');
     for (const [form, vp] of [['PC', {width: 1400, height: 900}],
@@ -4222,6 +4305,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'forkampen') await forKampen();
       else if (BARE === 'blandet') await blandetRunde();
       else if (BARE === 'stempel') await stempel();
+      else if (BARE === 'innbyrdes') await innbyrdes();
       else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort, trekning, forkampen, blandet, stempel)`);
     } else {
     // ---- 0. dagens data ----
@@ -7761,6 +7845,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await forKampen();
     await blandetRunde();
     await stempel();
+    await innbyrdes();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen

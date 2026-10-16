@@ -70,7 +70,7 @@ def seriekamper(allm):
 def fasit_for(ms, teams, targets):
     TI = {t: i for i, t in enumerate(teams)}
     n = len(teams)
-    pos_f = BZ.final_positions(*BZ.standings(ms, TI, n), teams)
+    pos_f = BZ.final_positions(*BZ.standings(ms, TI, n), teams, ms)
     fasit = {}
     for name, lo, hi in targets:
         a = lo if lo > 0 else n + lo + 1

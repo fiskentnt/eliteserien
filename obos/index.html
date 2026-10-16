@@ -1390,7 +1390,7 @@
         <li><strong>Ren Poisson i tilpasningen.</strong> Justeringen for få mål brukes når sannsynlighetene regnes ut, ikke når styrkene tilpasses. Dixon og Coles estimerte alt samlet. Med ρ = −0,04 er forskjellen i treffsikkerhet liten.</li>
         <li><strong>Formoppdatering med grenser og tilbaketrekking.</strong> Etter hvert simulert eller innfylt resultat justeres de to lagenes styrker litt, ut fra hvor mange mål de scoret og slapp inn mot det modellen ventet. Justeringen holdes innenfor faste grenser og trekkes litt tilbake mot utgangspunktet etter hver kamp. Styrken på justeringen ble satt med én regresjon mot sluttodds, grensene ut fra én ekstremverdi og tilbaketrekkingen etter skjønn. I en ny tilbaketest i begge ligaene ga regelen ingen målbar forskjell på sjansene for sluttplasseringene med odds, som siden bruker. Uten odds hjelper den, fordi lagstyrken da bare bygger på målene. Den er beholdt.</li>
         <li><strong>Scenariofilteret.</strong> Knappene som fyller inn kamper, trekker utfall med under 10 prosent sjanse på nytt, og forkaster sesonger med vesentlig flere eller færre overraskelser enn forventet. Det er et valg for visningen og påvirker ikke prosentene.</li>
-        <li><strong>Rangering uten innbyrdes oppgjør.</strong> Poeng, målforskjell, scorede mål. Innbyrdes oppgjør er ikke regnet inn.</li>
+        <li><strong>Rangering etter reglementet.</strong> Poeng, målforskjell, scorede mål, så innbyrdes oppgjør (NFFs kampreglement § 5-3). Simuleringene skiller ennå lag som står helt likt på poeng, målforskjell og scorede mål ved loddtrekning.</li>
         <li><strong>Tekniske tak.</strong> Forventede mål per lag er begrenset til 6, og det nås ikke i praksis. Resultater regnes med opptil 15 mål per lag. Omregningen fra odds søker mellom 0,15 og 4,5 forventede mål.</li>
       </ul>
       <p>Styrketallet flytter seg lite fra kamp til kamp. Hver kamp justerer det litt, ut fra hvor mange mål laget scoret og slapp inn mot det modellen ventet. Men justeringene trekkes samtidig tilbake mot utgangspunktet, og modellen tilpasses på nytt på alle kampene hver dag. Over en sesong står derfor styrketallet omtrent stille: sju kamper uten seier flyttet Sarpsborg 08 fra 4,80 til 4,65 i september 2026. Det er meningen. Styrke viser nivå. Vil du se de siste kampene, er det formtallet som sier det.</p>
@@ -1421,7 +1421,7 @@
       <h3>Sluttodds</h3>
       <p>Oddsen hentes mellom 60 og 15 minutter før avspark, når lagoppstillingen som regel er kjent. Får vi ikke hentet odds i dette vinduet, brukes ingen eldre odds.</p>
       <h3>Begrensninger</h3>
-      <p>Opprykksspillet mellom 3. og 6. plass og kvalikkampen for 14. plass er ikke modellert. Innbyrdes oppgjør er ikke med som rangeringskriterium. Med 100&nbsp;000 simuleringer er simuleringsusikkerheten høyst omtrent ±0,3 prosentpoeng. Når du fyller inn resultater selv, brukes færre simuleringer og usikkerheten er rundt ±1 prosentpoeng.</p>
+      <p>Opprykksspillet mellom 3. og 6. plass og kvalikkampen for 14. plass er ikke modellert. Innbyrdes oppgjør er ennå ikke med i simuleringene. Med 100&nbsp;000 simuleringer er simuleringsusikkerheten høyst omtrent ±0,3 prosentpoeng. Når du fyller inn resultater selv, brukes færre simuleringer og usikkerheten er rundt ±1 prosentpoeng.</p>
       <p><a href="modellsjekk/">Full dokumentasjon av testene</a></p>
     </details>
     <p class="note">Modellen ble justert igjen 30. september etter ny tilbaketesting.</p>
@@ -4381,7 +4381,7 @@ function computeAt(idx){
     h.results.push(rh); a.results.push(ra);
   });
   const rows = Object.values(t).map(r=>{ const just=poengJust(r.name, end); return {...r, just, pts:r.w*3+r.d+just, gd:r.gf-r.ga}; });
-  rows.sort((x,y)=> y.pts-x.pts || y.gd-x.gd || y.gf-x.gf || x.name.localeCompare(y.name,'no'));
+  rangerTabell(rows, games);
   rows.forEach((r,i)=>r.pos=i+1);
   return rows;
 }
@@ -4536,6 +4536,44 @@ let navLock = null;
   new ResizeObserver(update).observe(document.body);
 })();
 
+// RANGERINGEN (16.10.2026) etter NFFs kampreglement § 5-3, som
+// turneringsbestemmelsene for Eliteserien og OBOS-ligaen 2026 viser til
+// (pkt. 4.1 d): poeng, målforskjell, scorede mål, så innbyrdes oppgjør (5).
+// TOLKNINGEN FOR TO LAG (vår lesning): «resultatet av innbyrdes kamper» leses
+// som en minitabell av kampene mellom dem, slik (5) sier for tre eller flere:
+// poeng, så målforskjell, så scorede mål i de kampene. Bortemål teller ikke.
+// Minitabellen settes opp én gang for gruppen som står likt; lag som fortsatt
+// står likt, rangeres etter navn (i virkeligheten kvalifiseringsspill etter
+// (6) når det gjelder mesterskap eller opp-/nedrykk). Poengtrekk ligger i
+// poengene, ikke i minitabellen. (2), flest kamper møtt til, gjelder bare
+// walkover og er ikke med. Samme regel i Python: scripts/rangering.py.
+// rows: [{pts, gd, gf, ...}], sorteres på stedet og returneres. kamper: de
+// spilte kampene tabellen bygger på ({home, away, hg, ag}). navn(rad) gir
+// lagnavnet (standard rad.name).
+function rangerTabell(rows, kamper, navn){
+  navn = navn || (r=>r.name);
+  const lik = (x,y) => x.pts===y.pts && x.gd===y.gd && x.gf===y.gf;
+  rows.sort((x,y)=> y.pts-x.pts || y.gd-x.gd || y.gf-x.gf || navn(x).localeCompare(navn(y),'no'));
+  for(let i=0; i<rows.length;){
+    let j=i+1;
+    while(j<rows.length && lik(rows[j], rows[i])) j++;
+    if(j-i>1){
+      const mini = {};
+      rows.slice(i,j).forEach(r=>{ mini[navn(r)] = {p:0, gd:0, gf:0}; });
+      kamper.forEach(m=>{
+        const h=mini[m.home], a=mini[m.away];
+        if(!h || !a || m.hg==null || m.ag==null) return;
+        h.gd+=m.hg-m.ag; a.gd+=m.ag-m.hg; h.gf+=m.hg; a.gf+=m.ag;
+        if(m.hg>m.ag) h.p+=3; else if(m.hg<m.ag) a.p+=3; else { h.p++; a.p++; }
+      });
+      const gruppe = rows.slice(i,j).sort((x,y)=>{ const a=mini[navn(x)], b=mini[navn(y)];
+        return b.p-a.p || b.gd-a.gd || b.gf-a.gf || navn(x).localeCompare(navn(y),'no'); });
+      rows.splice(i, j-i, ...gruppe);
+    }
+    i=j;
+  }
+  return rows;
+}
 function compute(){
   const t={};
   BASE.forEach(r=>t[r[0]]={name:r[0],p:r[1],w:r[2],d:r[3],l:r[4],gf:r[5],ga:r[6],left:0});
@@ -4548,7 +4586,7 @@ function compute(){
     if(m.hg>m.ag){h.w++;a.l++;} else if(m.hg<m.ag){a.w++;h.l++;} else {h.d++;a.d++;}
   });
   const rows=Object.values(t).map(r=>{ const just=poengJust(r.name); return {...r,just,pts:r.w*3+r.d+just,gd:r.gf-r.ga,max:r.w*3+r.d+just+3*r.left}; });
-  rows.sort((x,y)=> y.pts-x.pts || y.gd-x.gd || y.gf-x.gf || x.name.localeCompare(y.name,'no'));
+  rangerTabell(rows, MATCHES.concat(matches.filter(m=>m.hg!=null&&m.ag!=null)));
   return {rows,played};
 }
 
@@ -8868,7 +8906,7 @@ async function boot(){
 
   basePos = {};
   (()=>{ const r=BASE.map(b=>({n:b[0],pts:b[2]*3+b[3]+poengJust(b[0]),gd:b[5]-b[6],gf:b[5]}));
-    r.sort((x,y)=>y.pts-x.pts||y.gd-x.gd||y.gf-x.gf||x.n.localeCompare(y.n,'no'));
+    rangerTabell(r, MATCHES, x=>x.n);
     r.forEach((x,i)=>basePos[x.n]=i+1); })();
 
   // Form og hjemme/borte-tall fra kampdataene

@@ -19,6 +19,12 @@ repoet:
 - `elo-test/emodell/`: model, accuracy, keymatch, lastmatch, prekick og
   grunnlag. Testsiden leser kampene fra `eliteserien/data/`.
 
+`2026-10-16/` er Eliteserien-filene fra 16.10.2026 (før runde 24): matches,
+fixtures, model, justeringer, odds_upcoming og status. Viking og Bodø/Glimt
+står da helt likt (53 poeng, +36, 56 scorede mål), og gruppen «Innbyrdes
+oppgjør i tabellen» bruker det til å sjekke at Viking står først (innbyrdes
+5-0, kampreglementet § 5-3).
+
 Slik brukes det (se `DATA_DAG` i `tests/regression.js`):
 
 - Testserveren svarer `/<liga>/data/<fil>.json` og `/elo-test/emodell/<fil>.json`

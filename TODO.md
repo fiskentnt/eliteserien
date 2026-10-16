@@ -3,6 +3,31 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## Innbyrdes oppgjør i tabellen (16.10.2026)
+
+NFFs kampreglement § 5-3 (Lovdata, sist endret 24.02.2026), som
+turneringsbestemmelsene for Eliteserien og OBOS-ligaen 2026 viser til i pkt.
+4.1 d): poeng, målforskjell, scorede mål, så innbyrdes oppgjør; fortsatt likt
+i mesterskap eller opp-/nedrykk avgjøres ved kvalifiseringsspill. Før skilte
+tabellen helt like lag på navn. 16.10. sto Viking og Bodø/Glimt helt likt (53
+poeng, +36, 56 scorede); Viking vant innbyrdes 5-0 og står nå først, som på
+ligasiden.
+
+Tolkningen for to lag («resultatet av innbyrdes kamper») står i
+scripts/rangering.py og ved rangerTabell() på sidene: en minitabell av kampene
+mellom lagene, poeng, så målforskjell, så scorede mål. Ingen bortemål. Fortsatt
+likt: navn.
+
+Gjelder tabellen på de tre sidene (compute, computeAt, basePos), tabellkontrollen
+(advarselen «lik poengsum, ulik rangering» forsvinner), delingsbildet
+(make_og.py) og fasiten i backtest_zones.py/backtest_walkforward.py. Simuleringene
+skiller fortsatt helt like lag ved loddtrekning; det tas sammen med snitt over
+stillinger (punkt 11) og ny grunnlagsfil.
+
+Tester: tests/kilder/test_kilder.py («Rangeringen etter kampreglementet § 5-3»,
+også Python mot siden i 300 tilfeldige tilfeller), tests/regression.js
+(«Innbyrdes oppgjør i tabellen», med tests/data/2026-10-16).
+
 ## Datoregelen for OBOS, nye kamper, sesongregisteret og avgjørelser for hånd (13.10.2026)
 
 Ingen enkeltkilde setter eller flytter datoen for en uspilt kamp

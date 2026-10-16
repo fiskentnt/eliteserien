@@ -129,10 +129,16 @@ def standings(matches, TI, n):
     return pts, gd, gf
 
 
-def final_positions(pts, gd, gf, teams):
-    """Faktisk sluttplassering. Helt like lag skilles på navn (som compute() på
-    siden), ikke tilfeldig -- fasiten skal være entydig."""
-    order = sorted(range(len(teams)), key=lambda i: (-pts[i], -gd[i], -gf[i], teams[i]))
+def final_positions(pts, gd, gf, teams, kamper=()):
+    """Faktisk sluttplassering etter kampreglementet § 5-3: poeng,
+    målforskjell, scorede mål, innbyrdes oppgjør (kampene i kamper), så navn,
+    som compute() på siden (scripts/rangering.py) -- fasiten skal være
+    entydig."""
+    import rangering
+    rekke = rangering.rekkefolge(list(teams), list(kamper), {t: pts[i] for i, t in enumerate(teams)},
+                                 {t: gd[i] for i, t in enumerate(teams)}, {t: gf[i] for i, t in enumerate(teams)})
+    TI_ = {t: i for i, t in enumerate(teams)}
+    order = [TI_[t] for t in rekke]
     pos = np.zeros(len(teams), dtype=int)
     for rank, i in enumerate(order):
         pos[i] = rank + 1
@@ -370,7 +376,7 @@ def main():
         TI = {t: i for i, t in enumerate(teams)}
         n = len(teams)
         pts_f, gd_f, gf_f = standings(matches, TI, n)
-        pos_f = final_positions(pts_f, gd_f, gf_f, teams)
+        pos_f = final_positions(pts_f, gd_f, gf_f, teams, matches)
         actual = {}
         for name, lo, hi in lcfg["targets"]:
             a = lo if lo > 0 else n + lo + 1

@@ -4969,6 +4969,88 @@ sjekk("avvist i overstyringsfilen: kampen beholder datoen, og flyttingen står s
       _e is None and _f3_dato_paa_disk() == _f3_fl_gml and [(v["kamp"], v["avvist"]) for v in _f3_vent] == [(f"{_f3_fl_k[0]}|{_f3_fl_k[1]}", True)],
       f"{_e!r} {_f3_dato_paa_disk()} {_f3_vent}")
 
+print("\n=== Rangeringen etter kampreglementet § 5-3: innbyrdes oppgjør (scripts/rangering.py, 16.10.2026) ===")
+import rangering as _rg
+import random as _rnd12
+import subprocess as _sp12
+_k12 = lambda h, a, hg, ag: {"home": h, "away": a, "hg": hg, "ag": ag}
+
+
+def _r12(lag, kamper):
+    """lag: [(navn, poeng, målforskjell, scorede)] -> navnene i rekkefølge."""
+    return _rg.rekkefolge([x[0] for x in lag], kamper, {x[0]: x[1] for x in lag}, {x[0]: x[2] for x in lag}, {x[0]: x[3] for x in lag})
+
+
+sjekk("to lag helt likt: B vant innbyrdes (2-0, 1-1) og står over A, selv om A kommer først alfabetisk",
+      _r12([("A", 50, 10, 40), ("B", 50, 10, 40), ("C", 60, 5, 30)], [_k12("A", "B", 0, 2), _k12("B", "A", 1, 1), _k12("A", "C", 3, 0)]) == ["C", "B", "A"])
+sjekk("tre lag helt likt: minitabellen avgjør (alle 3 poeng innbyrdes, målforskjell innbyrdes C +2, B 0, A -2)",
+      _r12([("A", 40, 0, 30), ("B", 40, 0, 30), ("C", 40, 0, 30)], [_k12("A", "B", 1, 0), _k12("B", "C", 1, 0), _k12("C", "A", 3, 0)]) == ["C", "B", "A"])
+sjekk("innbyrdes teller ikke før målforskjell (B slo A, men A har bedre målforskjell)",
+      _r12([("B", 40, 2, 30), ("A", 40, 5, 30)], [_k12("A", "B", 0, 1)]) == ["A", "B"])
+sjekk("innbyrdes teller ikke før scorede mål", _r12([("B", 40, 2, 30), ("A", 40, 2, 31)], [_k12("A", "B", 0, 1)]) == ["A", "B"])
+sjekk("helt likt også innbyrdes: navn (i virkeligheten kvalifiseringsspill)", _r12([("B", 40, 0, 30), ("A", 40, 0, 30)], [_k12("A", "B", 1, 1)]) == ["A", "B"])
+sjekk("innbyrdes poeng før innbyrdes målforskjell (A 6 poeng og +2, B 3 poeng og +5: A først)",
+      _r12([("A", 40, 0, 30), ("B", 40, 0, 30), ("C", 40, 0, 30)],
+           [_k12("A", "B", 1, 0), _k12("A", "C", 1, 0), _k12("B", "C", 6, 0)]) == ["A", "B", "C"])
+sjekk("innbyrdes målforskjell før innbyrdes scorede mål (3 poeng hver: C +1 og 6 mål, B 0 og 1 mål, A -1 og 5 mål)",
+      _r12([("A", 40, 0, 30), ("B", 40, 0, 30), ("C", 40, 0, 30)],
+           [_k12("A", "B", 1, 0), _k12("B", "C", 1, 0), _k12("C", "A", 6, 4)]) == ["C", "B", "A"])
+sjekk("kamper uten resultat og kamper mot andre lag teller ikke i minitabellen",
+      _r12([("A", 40, 0, 30), ("B", 40, 0, 30)], [_k12("A", "B", None, None), _k12("B", "C", 5, 0)]) == ["A", "B"])
+# Poengtrekk: likt på poeng ETTER trekket; minitabellen teller bare kampene.
+sjekk("poengtrekk ligger i poengene, ikke i minitabellen (B trukket ett poeng står likt med A, men vant innbyrdes)",
+      _r12([("A", 40, 0, 30), ("B", 40, 0, 30)], [_k12("B", "A", 2, 1)]) == ["B", "A"])
+
+# Det ekte tilfellet: Viking og Bodø/Glimt etter 11.10.2026, og tabellen på ligasiden 11.10. kl. 23:10.
+_m12 = json.loads((TESTDATA / "tabell_etter_kamp" / "eliteserien_matches_2026-10-11.json").read_text("utf-8"))
+_lag12 = sorted({m["home"] for m in _m12} | {m["away"] for m in _m12})
+import tabellkontroll as _tk12
+_v12 = _tk12.vaar_tabell(_m12, _lag12, {})
+sjekk("tabellen 11.10.: Viking og Bodø/Glimt står helt likt (53, +36, 56), og Viking står først (innbyrdes 5-0)",
+      [(_v12[n]["poeng"], _v12[n]["mf"] - _v12[n]["mm"], _v12[n]["mf"]) for n in ("Viking", "Bodø/Glimt")] == [(53, 36, 56)] * 2
+      and _v12["Viking"]["plass"] == 1 and _v12["Bodø/Glimt"]["plass"] == 2, str({n: _v12[n] for n in ("Viking", "Bodø/Glimt")}))
+_d12 = Path(_tf2.mkdtemp())
+_ut12 = _tk12.kontroller("eliteserien", 2026, _m12, json.loads((TESTDATA / "tabell_etter_kamp" / "eliteserien_tabell_2026-10-11T2110Z.json").read_text("utf-8")),
+                         naa=_dt(2026, 10, 11, 21, 10, tzinfo=_tz.utc), data_dir=_d12, kilde_url="https://www.eliteserien.no/resultater", kjoring="test", log=lambda _s: None)
+sjekk("tabellkontrollen mot tabellen på ligasiden 11.10.: alle like, og advarselen «lik poengsum, ulik rangering» er borte",
+      _ut12["alle_like"] is True and _ut12["errors"] == 0 and _ut12["advarsler"] == [], str(_ut12["advarsler"]))
+import make_og as _og12
+_og_rader = _og12.standings(_m12)
+sjekk("delingsbildet (make_og.standings): Viking først, Bodø/Glimt andre", [r["name"] for r in _og_rader[:2]] == ["Viking", "Bodø/Glimt"], str([r["name"] for r in _og_rader[:3]]))
+import backtest_zones as _bz12
+_TI12 = {t: i for i, t in enumerate(_lag12)}
+_pos12 = _bz12.final_positions(*_bz12.standings(_m12, _TI12, len(_lag12)), _lag12, _m12)
+sjekk("backtest_zones.final_positions: Viking 1, Bodø/Glimt 2", (_pos12[_TI12["Viking"]], _pos12[_TI12["Bodø/Glimt"]]) == (1, 2), str((_pos12[_TI12["Viking"]], _pos12[_TI12["Bodø/Glimt"]])))
+
+# Samme regel på sidene: rangerTabell() er lik i eliteserien, obos og elo-test, og gir samme rekkefølge som Python.
+import re as _re12
+_fn12 = {}
+for _side12 in ("eliteserien/index.html", "obos/index.html", "elo-test/index.html"):
+    _src12 = (ROT / _side12).read_text("utf-8")
+    _m = _re12.search(r"\nfunction rangerTabell\(rows, kamper, navn\)\{.*?\n\}\n", _src12, _re12.S)
+    _fn12[_side12] = _m.group(0) if _m else None
+    sjekk(f"{_side12}: de tre sorteringene bruker rangerTabell (computeAt, compute, basePos), og ingen sorterer selv på poeng",
+          _src12.count("rangerTabell(rows, games);") == 1 and _src12.count("rangerTabell(rows, MATCHES.concat(") == 1
+          and _src12.count("rangerTabell(r, MATCHES, x=>x.n);") == 1 and _src12.count("y.pts-x.pts") == 1)
+sjekk("rangerTabell er identisk på de tre sidene", len(set(_fn12.values())) == 1 and None not in _fn12.values())
+_rnd12.seed(20261016)
+_tilf12 = []
+for _ in range(300):
+    n = _rnd12.randint(2, 6)
+    navn = [f"Lag {chr(65 + i)}" for i in range(n)]
+    pts = {x: _rnd12.choice([40, 40, 41]) for x in navn}
+    gd = {x: _rnd12.choice([0, 0, 1]) for x in navn}
+    gf = {x: _rnd12.choice([30, 30, 31]) for x in navn}
+    kamper = [_k12(h, a, _rnd12.randint(0, 3), _rnd12.randint(0, 3)) for h in navn for a in navn if h != a and _rnd12.random() < 0.6]
+    _tilf12.append({"rader": [{"name": x, "pts": pts[x], "gd": gd[x], "gf": gf[x]} for x in navn], "kamper": kamper,
+                    "py": _rg.rekkefolge(navn, kamper, pts, gd, gf)})
+_js12 = _fn12["eliteserien/index.html"] + "\nconst T = JSON.parse(require('fs').readFileSync(0, 'utf8'));\n" \
+        "process.stdout.write(JSON.stringify(T.map(t => rangerTabell(t.rader.map(r => ({...r})), t.kamper).map(r => r.name))));\n"
+_ut_js12 = json.loads(_sp12.run(["node", "-e", _js12], input=json.dumps(_tilf12), capture_output=True, text=True, check=True).stdout)
+_ulik12 = [(t["py"], j) for t, j in zip(_tilf12, _ut_js12) if t["py"] != j]
+sjekk(f"Python og siden gir samme rekkefølge i 300 tilfeldige tilfeller med mange like lag ({sum(1 for t in _tilf12 if len(set((r['pts'], r['gd'], r['gf']) for r in t['rader'])) < len(t['rader']))} med likhet)",
+      not _ulik12, str(_ulik12[:3]))
+
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.
 _vern.sjekk_urort(sjekk)

@@ -110,7 +110,14 @@ def standings(matches, just=None):
     for r in rows:
         r["pts"] = r["w"] * 3 + r["d"] + just.get(r["name"], 0)
         r["gd"] = r["gf"] - r["ga"]
-    rows.sort(key=lambda r: (-r["pts"], -r["gd"], -r["gf"], r["name"]))
+    # Rangeringen etter kampreglementet § 5-3, med innbyrdes oppgjør, som på
+    # siden (scripts/rangering.py).
+    import rangering
+    rekke = rangering.rekkefolge([r["name"] for r in rows], [m for m in matches if m.get("hg") is not None],
+                                 {r["name"]: r["pts"] for r in rows}, {r["name"]: r["gd"] for r in rows},
+                                 {r["name"]: r["gf"] for r in rows})
+    plass = {n: i for i, n in enumerate(rekke)}
+    rows.sort(key=lambda r: plass[r["name"]])
     return rows
 
 
