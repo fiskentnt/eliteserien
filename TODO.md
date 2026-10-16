@@ -3,6 +3,20 @@
 Kortere oppgaver hører hjemme i en commit, ikke her. Dette er de som må
 huskes fram til en dato eller en hendelse.
 
+## puppeteer-core i en fast mappe (16.10.2026)
+
+macOS ryddet den midlertidige mappa (`$TMPDIR/tabellkalkulator-pp`) 10.10. og
+14.10.2026 kl. 03:35: katalogen sto igjen, men pakken kunne ikke lastes. Nå
+leser tests/run.sh og tests/for_push.sh inn tests/puppeteer_sti.sh: pakken
+ligger i `~/.local/share/tabellkalkulator/pp` (TABELLKALKULATOR_PP
+overstyrer), sjekken er `require('puppeteer-core')`, og kan den ikke lastes,
+installeres 25.11.0 på nytt; feiler det igjen, stopper skriptet. NODE_PATH fra
+miljøet brukes når pakken kan lastes med den. frys_sesong.py og
+sjekk_frosset.py bruker samme mappe. CI er uendret ($RUNNER_TEMP/pp).
+
+Tester: tests/kilder/test_kilder.py («puppeteer-core i en fast mappe», med en
+falsk npm).
+
 ## Innbyrdes oppgjør i tabellen (16.10.2026)
 
 NFFs kampreglement § 5-3 (Lovdata, sist endret 24.02.2026), som

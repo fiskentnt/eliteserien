@@ -13,8 +13,8 @@ kontrakt = Path(rot) / liga / sesong / "data" / "frosset.json"
 if not kontrakt.exists():
     print(f"  ingen frosset.json i {liga}/{sesong}/data/", file=sys.stderr); sys.exit(1)
 K = json.loads(kontrakt.read_text(encoding="utf-8"))
-pp = os.environ.get("NODE_PATH") or str(
-    Path(os.environ.get("TMPDIR", "/tmp")) / "tabellkalkulator-pp/node_modules")
+pp = os.environ.get("NODE_PATH") or str(  # samme faste mappe som tests/puppeteer_sti.sh
+    Path(os.environ.get("TABELLKALKULATOR_PP") or Path.home() / ".local/share/tabellkalkulator/pp") / "node_modules")
 r = subprocess.run(["node", str(HER / "les_side.js"), rot, f"{liga}/{sesong}/",
                     str(HER / "_sjekk.json")],
                    env={**os.environ, "NODE_PATH": pp}, capture_output=True, text=True)

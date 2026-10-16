@@ -72,3 +72,10 @@ Tilbaketesten av modellen er et eget skript, og krever nedlastet CSV:
 curl -s https://football-data.co.uk/new/NOR.csv -o /tmp/NOR.csv
 python3 scripts/backtest_zones.py --csv /tmp/NOR.csv --seasons 2016-2025
 ```
+
+## puppeteer-core lokalt
+
+`tests/run.sh` og `tests/for_push.sh` leser inn `tests/puppeteer_sti.sh`.
+Pakken ligger i `~/.local/share/tabellkalkulator/pp` (ikke i den midlertidige
+mappa, som macOS rydder), sjekkes med `require('puppeteer-core')` og
+installeres på nytt (25.11.0) når den ikke kan lastes.

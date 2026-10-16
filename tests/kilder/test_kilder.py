@@ -5051,6 +5051,65 @@ _ulik12 = [(t["py"], j) for t, j in zip(_tilf12, _ut_js12) if t["py"] != j]
 sjekk(f"Python og siden gir samme rekkefølge i 300 tilfeldige tilfeller med mange like lag ({sum(1 for t in _tilf12 if len(set((r['pts'], r['gd'], r['gf']) for r in t['rader'])) < len(t['rader']))} med likhet)",
       not _ulik12, str(_ulik12[:3]))
 
+print("\n=== puppeteer-core i en fast mappe, sjekket med require (tests/puppeteer_sti.sh, 16.10.2026) ===")
+# macOS ryddet den midlertidige mappa 10.10. og 14.10.2026: mappa sto igjen,
+# men pakken kunne ikke lastes. En falsk npm installerer en tom «pakke» og
+# skriver ned kallet, så testen verken laster ned noe eller rører den ekte mappa.
+import subprocess as _sp6, os as _os6, stat as _st6
+_d6 = Path(_tf2.mkdtemp())
+_npm6 = _d6 / "falsk_npm"
+_npm6.write_text('''#!/bin/sh
+echo "$@" >> "$PP_LOGG"
+[ -n "$PP_NPM_FEIL" ] && exit 0
+p=""; neste=0
+for a in "$@"; do [ $neste = 1 ] && p="$a"; neste=0; [ "$a" = "--prefix" ] && neste=1; done
+mkdir -p "$p/node_modules/puppeteer-core"
+echo '{"name":"puppeteer-core","main":"index.js"}' > "$p/node_modules/puppeteer-core/package.json"
+echo 'module.exports = {}' > "$p/node_modules/puppeteer-core/index.js"
+''', encoding="utf-8")
+_npm6.chmod(_npm6.stat().st_mode | _st6.S_IEXEC)
+
+
+def _pp6(pp_dir, feil=False):
+    """Leser inn tests/puppeteer_sti.sh i et rent skall. Returnerer (kode, NODE_PATH, kallene til npm, utskrift)."""
+    logg = _d6 / "npm.logg"
+    logg.unlink(missing_ok=True)
+    miljo = {k: v for k, v in _os6.environ.items() if k != "NODE_PATH"}
+    miljo.update(TABELLKALKULATOR_PP=str(pp_dir), PP_NPM=str(_npm6), PP_LOGG=str(logg), HOME=str(_d6 / "hjem"))
+    if feil:
+        miljo["PP_NPM_FEIL"] = "1"
+    r = _sp6.run(["bash", "-c", f'. "{ROT}/tests/puppeteer_sti.sh" || exit 1; echo "NODE_PATH=$NODE_PATH"'],
+                 cwd=_d6, env=miljo, capture_output=True, text=True)
+    np_ = next((l[10:] for l in r.stdout.splitlines() if l.startswith("NODE_PATH=")), None)
+    kall = logg.read_text().splitlines() if logg.exists() else []
+    return r.returncode, np_, kall, r.stdout + r.stderr
+
+
+_pp_a = _d6 / "tom"
+_k, _np, _kall, _ut = _pp6(_pp_a)
+sjekk("tom mappe: puppeteer-core 25.11.0 installeres én gang i den faste mappa, og NODE_PATH peker dit",
+      _k == 0 and len(_kall) == 1 and "puppeteer-core@25.11.0" in _kall[0] and f"--prefix {_pp_a}" in _kall[0]
+      and _np == str(_pp_a / "node_modules"), f"{_k} {_kall} {_np} {_ut[-300:]}")
+_k, _np, _kall, _ut = _pp6(_pp_a)
+sjekk("pakken kan lastes: ingen ny installasjon", _k == 0 and _kall == [] and _np == str(_pp_a / "node_modules"), f"{_k} {_kall} {_np}")
+(_pp_a / "node_modules" / "puppeteer-core" / "package.json").unlink()
+(_pp_a / "node_modules" / "puppeteer-core" / "index.js").unlink()
+_k, _np, _kall, _ut = _pp6(_pp_a)
+sjekk("halvt ryddet (katalogen står, filene er borte, som 10.10. og 14.10.): installeres på nytt",
+      _k == 0 and len(_kall) == 1 and _np == str(_pp_a / "node_modules"), f"{_k} {_kall} {_np} {_ut[-300:]}")
+_pp_b = _d6 / "uten_pakke"
+(_pp_b / "node_modules" / "annen-pakke").mkdir(parents=True)
+_k, _np, _kall, _ut = _pp6(_pp_b)
+sjekk("node_modules finnes, men uten puppeteer-core: installeres", _k == 0 and len(_kall) == 1, f"{_k} {_kall}")
+_k, _np, _kall, _ut = _pp6(_d6 / "feiler", feil=True)
+sjekk("installasjonen gir ingen pakke som kan lastes: stopper med en tydelig beskjed",
+      _k != 0 and "kan fortsatt ikke lastes" in _ut and _np is None, f"{_k} {_ut[-300:]}")
+_kilde6 = {f: (ROT / f).read_text("utf-8") for f in ("tests/run.sh", "tests/for_push.sh", "scripts/frys_sesong.py", "scripts/sjekk_frosset.py")}
+sjekk("run.sh og for_push.sh leser inn tests/puppeteer_sti.sh, og ingen bruker den midlertidige mappa lenger",
+      all(". tests/puppeteer_sti.sh || exit 1" in _kilde6[f] for f in ("tests/run.sh", "tests/for_push.sh"))
+      and not any("tabellkalkulator-pp" in v for v in _kilde6.values())
+      and all('".local/share/tabellkalkulator/pp"' in _kilde6[f] for f in ("scripts/frys_sesong.py", "scripts/sjekk_frosset.py")))
+
 # Hver suite vokter seg selv: en lekkasje herfra skal ikke vaere usynlig til
 # noen tilfeldigvis kjorer failsafe etterpaa.
 _vern.sjekk_urort(sjekk)

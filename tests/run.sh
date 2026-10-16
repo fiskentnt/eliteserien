@@ -9,19 +9,9 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-if ! node -e "require('puppeteer-core')" >/dev/null 2>&1; then
-  if [ -n "${NODE_PATH:-}" ] && node -e "require('puppeteer-core')" >/dev/null 2>&1; then
-    :
-  else
-    PP_DIR="${TMPDIR:-/tmp}/tabellkalkulator-pp"
-    if [ ! -d "$PP_DIR/node_modules/puppeteer-core" ]; then
-      echo "Henter puppeteer-core til $PP_DIR ..."
-      mkdir -p "$PP_DIR"
-      npm install --no-save --no-audit --no-fund --silent --prefix "$PP_DIR" puppeteer-core@25.11.0
-    fi
-    export NODE_PATH="$PP_DIR/node_modules"
-  fi
-fi
+# puppeteer-core: fast mappe utenfor den midlertidige, sjekket med require og
+# installert på nytt når den ikke kan lastes (tests/puppeteer_sti.sh).
+. tests/puppeteer_sti.sh || exit 1
 
 # Failsafe-testene for resultatkjeden kjører først: de trenger verken nett,
 # nøkkel eller nettleser.
