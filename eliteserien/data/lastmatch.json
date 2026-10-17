@@ -3,22 +3,22 @@
  "note": "Hva forrige kamp betydde per lag, regnet ut av scripts/snapshot_probs.js. Siden bygger linja i lagboksen av feltene her.",
  "teams": {
   "Bodø/Glimt": {
-   "date": "2026-10-10",
-   "home": "Bodø/Glimt",
-   "away": "Kristiansund",
-   "hg": 3,
-   "ag": 1,
-   "opp": "Kristiansund",
-   "gf": 3,
-   "ga": 1,
+   "date": "2026-10-17",
+   "home": "HamKam",
+   "away": "Bodø/Glimt",
+   "hg": 0,
+   "ag": 2,
+   "opp": "HamKam",
+   "gf": 2,
+   "ga": 0,
    "actual": "win",
    "zone": "gull",
    "chance": "gullsjansen",
-   "pp": 2,
+   "pp": 4,
    "good": true,
    "basis": "avspark",
-   "foer": 0.6304,
-   "expected": 0.6356
+   "foer": 0.6524,
+   "expected": 0.651
   },
   "Brann": {
    "date": "2026-10-09",
@@ -32,11 +32,11 @@
    "actual": "loss",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": -2,
+   "pp": -3,
    "good": false,
    "basis": "avspark",
    "foer": 0.0917,
-   "expected": 0.1075
+   "expected": 0.1056
   },
   "Fredrikstad": {
    "date": "2026-10-11",
@@ -54,25 +54,25 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0221,
-   "expected": 0.02
+   "expected": 0.0193
   },
   "HamKam": {
-   "date": "2026-10-11",
-   "home": "Start",
-   "away": "HamKam",
-   "hg": 2,
-   "ag": 4,
-   "opp": "Start",
-   "gf": 4,
+   "date": "2026-10-17",
+   "home": "HamKam",
+   "away": "Bodø/Glimt",
+   "hg": 0,
+   "ag": 2,
+   "opp": "Bodø/Glimt",
+   "gf": 0,
    "ga": 2,
-   "actual": "win",
+   "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": -15,
-   "good": true,
+   "pp": 0,
+   "good": false,
    "basis": "avspark",
-   "foer": 0.2097,
-   "expected": 0.2002
+   "foer": 0.0553,
+   "expected": 0.054
   },
   "KFUM Oslo": {
    "date": "2026-10-12",
@@ -90,7 +90,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.1246,
-   "expected": 0.1251
+   "expected": 0.1235
   },
   "Kristiansund": {
    "date": "2026-10-10",
@@ -108,7 +108,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.5769,
-   "expected": 0.565
+   "expected": 0.5721
   },
   "Lillestrøm": {
    "date": "2026-10-11",
@@ -122,11 +122,11 @@
    "actual": "draw",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": -2,
+   "pp": -1,
    "good": false,
    "basis": "avspark",
    "foer": 0.195,
-   "expected": 0.2126
+   "expected": 0.2215
   },
   "Molde": {
    "date": "2026-10-11",
@@ -144,7 +144,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.6082,
-   "expected": 0.6071
+   "expected": 0.6041
   },
   "Rosenborg": {
    "date": "2026-10-10",
@@ -158,11 +158,11 @@
    "actual": "draw",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": -7,
+   "pp": -6,
    "good": false,
    "basis": "avspark",
    "foer": 0.5821,
-   "expected": 0.6153
+   "expected": 0.6229
   },
   "Sandefjord": {
    "date": "2026-10-10",
@@ -180,7 +180,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0853,
-   "expected": 0.0774
+   "expected": 0.0847
   },
   "Sarpsborg 08": {
    "date": "2026-10-11",
@@ -198,7 +198,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0231,
-   "expected": 0.0289
+   "expected": 0.0268
   },
   "Start": {
    "date": "2026-10-11",
@@ -212,11 +212,11 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 14,
+   "pp": 12,
    "good": false,
    "basis": "avspark",
    "foer": 0.6752,
-   "expected": 0.642
+   "expected": 0.6142
   },
   "Tromsø": {
    "date": "2026-10-11",
@@ -230,11 +230,11 @@
    "actual": "draw",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": -3,
+   "pp": -4,
    "good": false,
    "basis": "avspark",
    "foer": 0.6552,
-   "expected": 0.6619
+   "expected": 0.6517
   },
   "Viking": {
    "date": "2026-10-09",
@@ -248,11 +248,11 @@
    "actual": "win",
    "zone": "gull",
    "chance": "gullsjansen",
-   "pp": 12,
+   "pp": 8,
    "good": true,
    "basis": "avspark",
    "foer": 0.2315,
-   "expected": 0.2762
+   "expected": 0.2379
   },
   "Vålerenga": {
    "date": "2026-10-12",
@@ -270,7 +270,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0665,
-   "expected": 0.0601
+   "expected": 0.0618
   },
   "Aalesund": {
    "date": "2026-10-11",
@@ -288,8 +288,8 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.2701,
-   "expected": 0.2553
+   "expected": 0.2525
   }
  },
- "updated": "2026-10-17T13:51:15Z"
+ "updated": "2026-10-17T14:01:24Z"
 }
