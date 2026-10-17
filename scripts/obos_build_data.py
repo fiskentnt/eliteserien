@@ -200,7 +200,8 @@ def rows_for(season=SEASON, log=print):
     offisiell, FLYTTING_UTFALL = bekreft_datoer(
         offisiell, _lagret, [("Highlightly", lambda: flytting.highlightly_lagret(DATA, _naa))], log=log,
         nye=uten_lagret_dato(offisiell, _lagret, _aktiv),
-        overstyringer=flytting.les_overstyringer(DATA, {(r["home"], r["away"]) for r in offisiell}, log=log))
+        overstyringer=flytting.les_overstyringer(DATA, {(r["home"], r["away"]) for r in offisiell}, log=log),
+        naa=_naa)
     _ubekreftet = [u for u in FLYTTING_UTFALL if u["utfall"] == "ubekreftet"]
     if _ubekreftet:
         stopp_uten_aa_skrive(

@@ -814,7 +814,7 @@ def main(cache_dir=None, now=None):
         merged, _flytting = bekreft_datoer(
             merged, _forrige_liste, [("ESPN", _espn_fasit), ("kalenderfeeden", _kalender_fasit)], log=log,
             nye=uten_lagret_dato(merged, _lagret, _aktiv),
-            overstyringer=flytting.les_overstyringer(LEAGUE / "data", {(r["home"], r["away"]) for r in merged}, log=log))
+            overstyringer=flytting.les_overstyringer(LEAGUE / "data", {(r["home"], r["away"]) for r in merged}, log=log), naa=now)
         _ubekreftet = [u for u in _flytting if u["utfall"] == "ubekreftet"]
         if _ubekreftet:
             raise DataAuditError(

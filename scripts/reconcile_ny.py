@@ -25,6 +25,8 @@ endres dato og avspark, men kampen er den samme og skal oppdateres -- ikke
 dukke opp som en ny kamp ved siden av den gamle.
 """
 import os
+from datetime import datetime, timezone
+from zoneinfo import ZoneInfo
 
 
 def _nøkkel(r):
@@ -207,7 +209,7 @@ def _vis_dato(d, t=None):
     return (f"{int(d[8:10])}.{int(d[5:7])}." if d and len(d) == 10 else str(d)) + (f" {t}" if t else "")
 
 
-def bekreft_datoer(rader, forrige, kilder, log=lambda s: None, nye=(), overstyringer=()):
+def bekreft_datoer(rader, forrige, kilder, log=lambda s: None, nye=(), overstyringer=(), naa=None):
     """Ingen enkeltkilde setter eller flytter datoen for en uspilt kamp.
 
     eliteserien.no viste Rosenborg-Start (runde 26, 7.11. 18:00) som 7.1. den
@@ -240,9 +242,20 @@ def bekreft_datoer(rader, forrige, kilder, log=lambda s: None, nye=(), overstyri
     lenger ("avvist").
 
     forrige: terminlisten vi sist skrev (leaguedata.forrige_terminliste).
+
+    DATOEN SOM HAR VÆRT (17.10.2026): viser ligasiden en dato FØR I DAG (norsk
+    tid, naa) for en uspilt kamp vi har, flyttes den aldri, og ingen kilde
+    spørres: utfall "beholdt" med "fortid": True (advarsel i
+    flytting.revider_flyttinger, aldri rødt). Ligasiden viste Lillestrøm-
+    Aalesund (8.11.) som 17.8., og fristen på 48 timer slo til med en gang.
+    Samme dag kan tiden fortsatt flyttes. Viser kilden som avgjør nøyaktig VÅR
+    dato og tid, står den i "bekrefter_vaar" (også advarsel, se
+    revider_flyttinger).
+
     Returnerer (rader, utfall). utfall er en liste av dict:
       {kamp, nokkel, type ("flytting"|"ny"), utfall ("flyttet"|"beholdt"|
-       "avvist"|"bekreftet"|"ubekreftet"), kilde, ny, har, hva}."""
+       "avvist"|"bekreftet"|"ubekreftet"), kilde, ny, har, hva}, og for
+      "beholdt" også "fortid" og "bekrefter_vaar" når de gjelder."""
     gamle = {_nøkkel(g): g for g in (forrige or []) if g.get("hg") is None and g.get("date")}
     nye = set(nye or ())
     overstyringer = overstyringer or {}
@@ -255,6 +268,12 @@ def bekreft_datoer(rader, forrige, kilder, log=lambda s: None, nye=(), overstyri
         return (not ny_kamp(r) and g is not None and r.get("hg") is None and r.get("date")
                 and r["date"][:4] == g["date"][:4]     # samme sesong
                 and (r.get("date"), r.get("time")) != (g.get("date"), g.get("time")))
+
+    idag = (naa or datetime.now(timezone.utc)).astimezone(ZoneInfo("Europe/Oslo")).date().isoformat()
+
+    def fortid(r):
+        """En flyttet kamp der ligasiden viser en dato før i dag (17.10.2026)."""
+        return flyttet(r) and r["date"] < idag
 
     def overstyrt(r):
         """Overstyringen for kampen når den gjelder det ligasiden viser nå, ellers None."""
@@ -273,7 +292,7 @@ def bekreft_datoer(rader, forrige, kilder, log=lambda s: None, nye=(), overstyri
                 f"men ligasiden viser nå {_vis_dato(r.get('date'), r.get('time'))} -- brukes ikke")
 
     fasit, kilde, svarte_ikke = None, None, []
-    if any(not overstyrt(r) for r in aktuelle):
+    if any(not overstyrt(r) and not fortid(r) for r in aktuelle):
         for i, (navn, hent) in enumerate(kilder):
             try:
                 fasit, kilde = hent(), navn
@@ -317,6 +336,13 @@ def bekreft_datoer(rader, forrige, kilder, log=lambda s: None, nye=(), overstyri
             utfall.append({**f0, "utfall": "avvist", "kilde": "overstyring", "hva": "avvist for hånd"})
             ut.append({**r, "date": g["date"], "time": g.get("time")})
             continue
+        if fortid(r):
+            log(f"ADVARSEL: {kamp}: ligasiden viser {_vis_dato(*ny)}, en dato som har vært, for en uspilt kamp "
+                f"-- beholder {_vis_dato(*har)}, flyttes aldri.")
+            utfall.append({**f0, "utfall": "beholdt", "kilde": None, "hva": "ligasiden viser en dato som har vært",
+                           "fortid": True})
+            ut.append({**r, "date": g["date"], "time": g.get("time")})
+            continue
         if fasit is not None and fasit.get(k) == ny:
             log(f"Flytting: {kamp} flyttet fra {_vis_dato(*har)} til {_vis_dato(*ny)}, bekreftet av {kilde}." if har
                 else f"Ny kamp: {kamp} {_vis_dato(*ny)}, bekreftet av {kilde}.")
@@ -339,7 +365,9 @@ def bekreft_datoer(rader, forrige, kilder, log=lambda s: None, nye=(), overstyri
         log(f"ADVARSEL: {melding}")
         if os.environ.get("GITHUB_ACTIONS"):
             print(f"::warning title=Flytting ikke bekreftet::{melding}")
-        utfall.append({**f0, "utfall": "beholdt", "kilde": kilde, "hva": hva})
+        bekrefter = kilde if fasit is not None and har is not None and fasit.get(k) == har else None
+        utfall.append({**f0, "utfall": "beholdt", "kilde": kilde, "hva": hva,
+                       **({"bekrefter_vaar": bekrefter} if bekrefter else {})})
         ut.append({**r, "date": g["date"], "time": g.get("time")})
     return ut, utfall
 

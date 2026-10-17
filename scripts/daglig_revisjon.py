@@ -579,13 +579,15 @@ def main(argv, naa=None):
     # Flyttingene datakjoringen holdt tilbake (13.10.2026): avviket mot
     # kalenderfeeden for en slik kamp er en advarsel, og flyttingen blir
     # kritisk etter reglene i flytting.revider_flyttinger (3 dogn ubekreftet,
-    # eller under 48 timer til avspark). De staar FORST i listen, saa
+    # eller under 48 timer til VAAR dato; en dato som har vaert, og en kilde
+    # som viser vaar dato, er bare advarsel saa lenge kalenderfeeden ikke viser
+    # den samme nye datoen, 17.10.2026). De staar FORST i listen, saa
     # e-posten sier hvilken kamp som maa avgjores for haand.
     _datadir = ROT / oppsett(liga)["data"]
     _venter = flytting.les_venter(_datadir)
     feil, advarsler = revider_kalender(vaare, kalender, sesong=_a, naa=naa,
                                        log=lambda l: print(f"  {l}"), venter=_venter)
-    _ff, _fa = flytting.revider_flyttinger(_venter, naa, data_navn=oppsett(liga)["data"])
+    _ff, _fa = flytting.revider_flyttinger(_venter, naa, data_navn=oppsett(liga)["data"], kalender=kalender)
     feil, advarsler = _ff + feil, advarsler + _fa
     # Kontrollen mot de uavhengige kildene (3.10.2026): Eliteserien ESPN og
     # Highlightly, OBOS Highlightly og OddsPapi. Hentes én gang i døgnet, se

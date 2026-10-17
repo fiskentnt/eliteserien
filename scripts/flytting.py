@@ -26,8 +26,14 @@ Tre filer i <liga>/data:
 
 RØDT (revider_flyttinger, kjøres i den daglige revisjonen): en flytting som
 har stått ubekreftet i VENT_DOGN døgn, eller der det er under FOR_AVSPARK_TIMER
-timer til den tidligste av de to datoene. Da må den avgjøres for hånd i
-overstyringsfilen; datafilene redigeres aldri.
+timer til VÅR dato. Da må den avgjøres for hånd i overstyringsfilen;
+datafilene redigeres aldri.
+
+ADVARSEL, ALDRI RØDT (17.10.2026): en dato som har vært, for en uspilt kamp
+("fortid", flyttes aldri), og en flytting der kilden som avgjør viser VÅR dato
+("bekrefter_vaar"), så lenge kalenderfeeden ikke viser den samme nye datoen som
+ligasiden. Ligasiden viste Lillestrøm-Aalesund (8.11.) som 17.8., og før regnet
+fristen fra den tidligste av de to datoene: statusen ble rød med en gang.
 """
 import json
 import os
@@ -134,33 +140,58 @@ def skriv_venter(data_dir, utfall, naa):
             continue
         kamp = f"{u['nokkel'][0]}|{u['nokkel'][1]}"
         g = gamle.get((kamp, tuple(u["ny"])))
-        ut.append({"kamp": kamp, "vaar": list(u["har"]), "ligasiden": list(u["ny"]),
-                   "forst_sett": (g or {}).get("forst_sett") or naa.isoformat(timespec="seconds"),
-                   "avvist": u["utfall"] == "avvist", "hva": u.get("hva") or ""})
+        rad = {"kamp": kamp, "vaar": list(u["har"]), "ligasiden": list(u["ny"]),
+               "forst_sett": (g or {}).get("forst_sett") or naa.isoformat(timespec="seconds"),
+               "avvist": u["utfall"] == "avvist", "hva": u.get("hva") or ""}
+        # 17.10.2026: en dato som har vært, og en kilde som viser vår dato.
+        if u.get("fortid"):
+            rad["fortid"] = True
+        if u.get("bekrefter_vaar"):
+            rad["bekrefter_vaar"] = u["bekrefter_vaar"]
+        ut.append(rad)
     ut.sort(key=lambda v: v["kamp"])
     if ut != les_venter(data_dir) or not sti.exists():
         sti.write_text(json.dumps({"venter": ut}, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
     return ut
 
 
-def revider_flyttinger(venter, naa, data_navn="<liga>/data"):
+def revider_flyttinger(venter, naa, data_navn="<liga>/data", kalender=None):
     """(feil, advarsler) for flyttingene som venter på bekreftelse.
 
     ADVARSEL så lenge en flytting venter. KRITISK (rød kjøring, e-post) når
     den har stått ubekreftet i VENT_DOGN døgn, eller når det er under
-    FOR_AVSPARK_TIMER timer til den tidligste av de to datoene: da viser siden
-    kanskje feil avspark for en kamp som snart spilles, og den må avgjøres
-    for hånd. En flytting som er avvist for hånd, gir verken advarsel eller
-    feil."""
+    FOR_AVSPARK_TIMER timer til VÅR dato: da viser siden kanskje feil avspark
+    for en kamp som snart spilles, og den må avgjøres for hånd. En flytting
+    som er avvist for hånd, gir verken advarsel eller feil.
+
+    Aldri rødt, bare advarsel (17.10.2026): "fortid" (ligasiden viser en dato
+    som har vært), og "bekrefter_vaar" (kilden som avgjør viser vår dato) så
+    lenge kalenderfeeden ikke viser den samme nye datoen som ligasiden. Gjør
+    den det, er to NTF-kanaler enige om den nye datoen, og flyttingen er
+    trolig ekte: da gjelder fristene. Før regnet 48 timer fra den tidligste
+    av de to datoene, og en dato som hadde vært, ga rødt med en gang.
+
+    kalender: radene fra kalenderfeeden ({home, away, date, time}), eller None."""
     feil, advarsler = [], []
+    kal = {(k.get("home"), k.get("away")): (k.get("date"), k.get("time")) for k in (kalender or [])}
     for v in venter or []:
         if v.get("avvist"):
             continue
         h, b = v["kamp"].split("|")
         vaar, lig = v["vaar"], v["ligasiden"]
         grunn = f"{h}-{b}: ligasiden viser {_vis(*lig)}, vi har {_vis(*vaar)}"
+        siden = f"{datetime.fromisoformat(v['forst_sett']).astimezone(OSLO):%d.%m. %H:%M}"
+        if v.get("fortid"):
+            advarsler.append(f"{grunn} -- ligasiden viser en dato som har vært, for en uspilt kamp; "
+                             f"flyttes aldri (siden {siden})")
+            continue
+        k = kal.get((h, b))
+        kal_ny = bool(k) and k[0] == lig[0] and (not k[1] or not lig[1] or k[1] == lig[1])
+        if v.get("bekrefter_vaar") and not kal_ny:
+            advarsler.append(f"{grunn} -- {v['bekrefter_vaar']} viser vår dato, flyttingen holdes tilbake (siden {siden})")
+            continue
         ventet = naa - datetime.fromisoformat(v["forst_sett"])
-        til_avspark = min(_avspark(*vaar), _avspark(*lig)) - naa
+        til_avspark = _avspark(*vaar) - naa
         # Har kampen startet etter avsparket VI har, gjelder ikke 48-timersregelen:
         # da er den i gang (ligasiden endrer oppføringen underveis) eller utsatt,
         # og en kamp uten resultat tre timer etter avspark gjør uansett
@@ -171,12 +202,13 @@ def revider_flyttinger(venter, naa, data_navn="<liga>/data"):
             hvorfor = f"ubekreftet i {ventet.days} døgn"
         elif not startet and til_avspark < timedelta(hours=FOR_AVSPARK_TIMER):
             hvorfor = f"ubekreftet, og under {FOR_AVSPARK_TIMER} timer til avspark"
+        if hvorfor and kal_ny and v.get("bekrefter_vaar"):
+            hvorfor += f" ({v['bekrefter_vaar']} viser vår dato, men kalenderfeeden viser den samme nye som ligasiden)"
         if hvorfor:
             feil.append(f"{grunn}, {hvorfor}. Godta eller avvis i {data_navn}/{OVERSTYRING}: "
                         f"{linje(h, b, 'godta', lig[0], lig[1])}")
         else:
-            advarsler.append(f"{grunn} -- flyttingen venter på bekreftelse (siden "
-                             f"{datetime.fromisoformat(v['forst_sett']).astimezone(OSLO):%d.%m. %H:%M})")
+            advarsler.append(f"{grunn} -- flyttingen venter på bekreftelse (siden {siden})")
     return feil, advarsler
 
 

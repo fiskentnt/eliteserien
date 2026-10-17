@@ -4789,13 +4789,106 @@ _VENT_FRAM = [{**_VENT[0], "ligasiden": ["2026-10-24", "13:00"], "forst_sett": "
 _f, _a = _fl.revider_flyttinger(_VENT_FRAM, _dt(2026, 10, 22, 10, 59, tzinfo=_tz.utc), data_navn="obos/data")
 sjekk("ligasiden har flyttet kampen FRAM til 24.10. 13:00 (11:00Z): 48 t 1 min før den datoen er det advarsel", _f == [] and len(_a) == 1, f"{_f} {_a}")
 _f, _a = _fl.revider_flyttinger(_VENT_FRAM, _dt(2026, 10, 22, 12, 0, tzinfo=_tz.utc), data_navn="obos/data")
-sjekk("ligasiden har flyttet kampen FRAM til 24.10. 13:00: 48 timer regnes fra den tidligste datoen (47 timer igjen), kritisk",
-      len(_f) == 1, f"{_f} {_a}")
+sjekk("ligasiden har flyttet kampen FRAM til 24.10. 13:00: 48 timer regnes fra VÅR dato (17.10.2026), 74 timer igjen: advarsel",
+      _f == [] and len(_a) == 1, f"{_f} {_a}")
+_f, _a = _fl.revider_flyttinger(_VENT_FRAM, _dt(2026, 10, 23, 14, 1, tzinfo=_tz.utc), data_navn="obos/data")
+sjekk("og 47 t 59 min før VÅR dato (25.10. 15:00): kritisk", len(_f) == 1 and "under 48 timer til avspark" in _f[0], f"{_f} {_a}")
 _f, _a = _fl.revider_flyttinger(_VENT_NY, _dt(2026, 10, 25, 14, 30, tzinfo=_tz.utc), data_navn="obos/data")
 sjekk("kampen har startet etter avsparket vi har (ligasiden endrer oppføringen underveis): 48-timersregelen gjelder ikke, bare advarsel",
       _f == [] and len(_a) == 1, f"{_f} {_a}")
 _f, _a = _fl.revider_flyttinger([{**_VENT[0], "avvist": True}], _f3_n0 + _tda(days=10), data_navn="obos/data")
 sjekk("avvist for hånd: verken advarsel eller rødt, heller ikke etter ti døgn", _f == [] and _a == [])
+
+print("\n=== Datoregelen fra 17.10.2026: en dato som har vært flyttes aldri, og en kilde som viser vår dato gir advarsel ===")
+# Ligasiden viste Lillestrøm-Aalesund (8.11.) som 17.8., og fristen på 48 timer
+# regnet fra den tidligste av de to datoene: rødt med en gang (17.10. 14.01Z).
+_f17n = _dt(2026, 10, 17, 14, 0, tzinfo=_tz.utc)
+_f17_fortid = [dict(r) for r in _f3_forr]
+_f17_fortid[0].update(date="2026-08-17", time="17:00")
+_kall17, _logg17 = [], []
+_ut17, _u17 = _bd(_f17_fortid, _f3_forr, [_f3_kilde({_OB: ("2026-08-17", "17:00")}, _kall17)], log=_logg17.append, naa=_f17n)
+_r17 = {(r["home"], r["away"]): (r["date"], r.get("time")) for r in _ut17}
+sjekk("ligasiden viser en dato som har vært (17.8.) for en uspilt kamp: vi beholder 25.10., ingen kilde spørres, selv om den ville vist 17.8.",
+      _r17[_OB] == ("2026-10-25", "15:00") and _kall17 == []
+      and [(u["utfall"], u.get("fortid"), u["kilde"]) for u in _u17] == [("beholdt", True, None)]
+      and any("en dato som har vært" in m and "flyttes aldri" in m for m in _logg17), f"{_r17[_OB]} {_kall17} {_u17} {_logg17}")
+# Flyttet FRAM og spilt før vi fikk det med oss: ligasiden viser en dato som
+# har vært, MED resultat. fortid() bygger på flyttet(), som bare gjelder rader
+# uten resultat; ntf_source.fetch_all gir resultatraden når kampen er spilt.
+# Raden går da urørt videre med ligasidens dato og resultat, og
+# resultatregelen avgjør om resultatet publiseres (update_data:
+# bekreft_datoer før kontroller_nye_resultater; OBOS: obos_results).
+_f17_spilt = [dict(r) for r in _f3_forr]
+_f17_spilt[0].update(date="2026-10-12", time="18:00", hg=2, ag=1)
+_kall17, _logg17 = [], []
+_ut17, _u17 = _bd(_f17_spilt, _f3_forr, [_f3_kilde({_OB: ("2026-10-12", "18:00")}, _kall17)], log=_logg17.append, naa=_f17n)
+_rad17 = next(r for r in _ut17 if (r["home"], r["away"]) == _OB)
+sjekk("flyttet fram og SPILT (ligasiden 12.10. med 2-1, vi 25.10. uspilt): raden går urørt videre med ligasidens dato og resultat, "
+      "ingen «fortid», ingen kilde spørres",
+      (_rad17["date"], _rad17["time"], _rad17["hg"], _rad17["ag"]) == ("2026-10-12", "18:00", 2, 1) and _u17 == [] and _kall17 == []
+      and not any("har vært" in m for m in _logg17), f"{_rad17} {_u17} {_kall17} {_logg17}")
+# To kjøringer: først datoen uten resultat (fortid, vi beholder 25.10.), så
+# samme dato med resultat. Den andre kjøringen har vår 25.10. som forrige.
+_f17_uten = [dict(r) for r in _f3_forr]
+_f17_uten[0].update(date="2026-10-12", time="18:00")
+_ut17a, _u17a = _bd(_f17_uten, _f3_forr, [_f3_kilde({}, [])], log=lambda _m: None, naa=_f17n)
+_forr17 = [{**r, "hg": None, "ag": None} if (r["home"], r["away"]) == _OB else r for r in _ut17a]
+_ut17b, _u17b = _bd(_f17_spilt, _forr17, [_f3_kilde({}, [])], log=lambda _m: None, naa=_f17n + _tda(hours=2))
+_rad17b = next(r for r in _ut17b if (r["home"], r["away"]) == _OB)
+sjekk("først uten resultat: vi beholder 25.10. (fortid); neste kjøring med resultatet: ligasidens 12.10. og 2-1 går videre",
+      [u.get("fortid") for u in _u17a] == [True] and next(r for r in _ut17a if (r["home"], r["away"]) == _OB)["date"] == "2026-10-25"
+      and _u17b == [] and (_rad17b["date"], _rad17b["hg"], _rad17b["ag"]) == ("2026-10-12", 2, 1), f"{_u17a} {_u17b} {_rad17b}")
+_rr17 = __import__("resultatregel")
+_u17r = _rr17.avgjor("eliteserien", {"ligasiden": (2, 1)}, {"ligasiden", "espn"},
+                     avspark=_dt(2026, 10, 12, 16, 0, tzinfo=_tz.utc), naa=_dt(2026, 10, 12, 20, 0, tzinfo=_tz.utc))
+sjekk("og resultatregelen gjelder som før for et slikt resultat: bare ligasiden, 4 timer etter avspark, venter",
+      _u17r["utfall"] == "vent", str(_u17r))
+_f17_idag = [dict(r) for r in _f3_forr]
+_f17_idag[0].update(date="2026-10-25", time="18:00")
+_kall17 = []
+_ut17, _u17 = _bd(_f17_idag, _f3_forr, [_f3_kilde({_OB: ("2026-10-25", "18:00")}, _kall17)], log=lambda _m: None,
+                 naa=_dt(2026, 10, 25, 9, 0, tzinfo=_tz.utc))
+sjekk("samme dag med ny tid (25.10. 15:00 -> 18:00, sjekket 25.10. om morgenen): flyttes som før når kilden viser den",
+      {(r["home"], r["away"]): (r["date"], r.get("time")) for r in _ut17}[_OB] == ("2026-10-25", "18:00") and _kall17 == ["Highlightly"]
+      and _u17[0]["utfall"] == "flyttet", f"{_u17}")
+_r, _u, _kall, _logg = _f3_kjor(_f3_flyttet, {_OB: ("2026-10-25", "15:00")})
+sjekk("kilden viser nøyaktig VÅR dato og tid: «bekrefter_vaar» lagres på flyttingen",
+      _u[0]["utfall"] == "beholdt" and _u[0].get("bekrefter_vaar") == "Highlightly" and not _u[0].get("fortid"), str(_u))
+_r, _u, _kall, _logg = _f3_kjor(_f3_flyttet, {_OB: ("2026-10-31", "15:00")})
+sjekk("kilden viser en TREDJE dato: ingen «bekrefter_vaar»", _u[0]["utfall"] == "beholdt" and "bekrefter_vaar" not in _u[0], str(_u))
+_v17 = _fl.skriv_venter(_f3_d, [{**_f3_utfall[0], "bekrefter_vaar": "Highlightly"},
+                                {"kamp": "Lyn-Moss", "nokkel": ("Lyn", "Moss"), "type": "flytting", "utfall": "beholdt", "kilde": None,
+                                 "ny": ("2026-08-17", "17:00"), "har": ("2026-10-25", "15:00"), "hva": "ligasiden viser en dato som har vært",
+                                 "fortid": True}], _f3_n0)
+sjekk("flytting_venter.json får «bekrefter_vaar» og «fortid» når de gjelder",
+      [(x["kamp"], x.get("bekrefter_vaar"), x.get("fortid")) for x in _v17] == [("Lyn|Moss", None, True), ("Odd|Bryne", "Highlightly", None)],
+      str(_v17))
+_fl.skriv_venter(_f3_d, [], _f3_n0)
+_LSK = [{"kamp": "Lillestrøm|Aalesund", "vaar": ["2026-11-08", "17:00"], "ligasiden": ["2026-08-17", "17:00"],
+         "forst_sett": "2026-10-17T14:00:51+00:00", "avvist": False, "hva": "ligasiden viser en dato som har vært", "fortid": True}]
+_f, _a = _fl.revider_flyttinger(_LSK, _dt(2026, 10, 17, 14, 20, tzinfo=_tz.utc), data_navn="eliteserien/data")
+sjekk("Lillestrøm-Aalesund 17.10. (ligasiden 17.8., vi 8.11.): ADVARSEL, ikke rødt",
+      _f == [] and _a == ["Lillestrøm-Aalesund: ligasiden viser 17.8. 17:00, vi har 8.11. 17:00 -- ligasiden viser en dato som har vært, "
+                          "for en uspilt kamp; flyttes aldri (siden 17.10. 16:00)"], f"{_f} {_a}")
+_f, _a = _fl.revider_flyttinger(_LSK, _dt(2026, 11, 7, 12, 0, tzinfo=_tz.utc), data_navn="eliteserien/data")
+sjekk("og fortsatt bare advarsel etter tre uker og under 48 timer før vår dato", _f == [] and len(_a) == 1, f"{_f} {_a}")
+# Rosenborg-Start 10.10.: ligasiden 18.11., vi, ESPN og kalenderfeeden 7.11.
+_RBK = [{"kamp": "Rosenborg|Start", "vaar": ["2026-11-07", "18:00"], "ligasiden": ["2026-11-18", "18:00"],
+         "forst_sett": "2026-10-10T16:01:00+00:00", "avvist": False, "hva": "ESPN viser 7.11. 18:00", "bekrefter_vaar": "ESPN"}]
+_RBK_KAL = [{"home": "Rosenborg", "away": "Start", "round": 26, "date": "2026-11-07", "time": "18:00"}]
+_f, _a = _fl.revider_flyttinger(_RBK, _dt(2026, 11, 6, 12, 0, tzinfo=_tz.utc), data_navn="eliteserien/data", kalender=_RBK_KAL)
+sjekk("Rosenborg-Start (ESPN og kalenderfeeden viser vår 7.11.): ADVARSEL også etter 3 døgn og under 48 timer før avspark",
+      _f == [] and _a == ["Rosenborg-Start: ligasiden viser 18.11. 18:00, vi har 7.11. 18:00 -- ESPN viser vår dato, "
+                          "flyttingen holdes tilbake (siden 10.10. 18:01)"], f"{_f} {_a}")
+_f, _a = _fl.revider_flyttinger(_RBK, _dt(2026, 11, 6, 12, 0, tzinfo=_tz.utc), data_navn="eliteserien/data",
+                                kalender=[{**_RBK_KAL[0], "date": "2026-11-18"}])
+sjekk("men viser kalenderfeeden den SAMME nye datoen som ligasiden (to NTF-kanaler): rødt etter reglene, og teksten sier hvorfor",
+      len(_f) == 1 and "ESPN viser vår dato, men kalenderfeeden viser den samme nye som ligasiden" in _f[0] and _a == [], f"{_f} {_a}")
+_f, _a = _fl.revider_flyttinger(_RBK, _dt(2026, 10, 11, 12, 0, tzinfo=_tz.utc), data_navn="eliteserien/data",
+                                kalender=[{**_RBK_KAL[0], "date": "2026-11-18"}])
+sjekk("og før fristene er nådd (ett døgn, 27 dager til vår dato): fortsatt advarsel", _f == [] and len(_a) == 1, f"{_f} {_a}")
+_f, _a = _fl.revider_flyttinger(_RBK, _dt(2026, 11, 6, 12, 0, tzinfo=_tz.utc), data_navn="eliteserien/data")
+sjekk("uten kalenderfeeden (None): ESPN viser vår dato, advarsel", _f == [] and len(_a) == 1, f"{_f} {_a}")
 
 # Den daglige revisjonen mot kalenderfeeden.
 _f3_vaare = {("Odd", "Bryne"): {"round": 28, "date": "2026-10-25", "time": "15:00", "hg": None, "ag": None},
@@ -4815,7 +4908,7 @@ sjekk("feeden viser en TREDJE dato (31.10.), ikke den som venter: kritisk", len(
 _f3_drk = (ROT / "scripts" / "daglig_revisjon.py").read_text("utf-8")
 sjekk("daglig_revisjon.main leser flyttingene som venter, sender dem til kalenderrevisjonen og setter de kritiske først (til e-posten)",
       "_venter = flytting.les_venter(_datadir)" in _f3_drk and "venter=_venter)" in _f3_drk
-      and "_ff, _fa = flytting.revider_flyttinger(_venter, naa, data_navn=oppsett(liga)[\"data\"])" in _f3_drk
+      and "_ff, _fa = flytting.revider_flyttinger(_venter, naa, data_navn=oppsett(liga)[\"data\"], kalender=kalender)" in _f3_drk
       and "feil, advarsler = _ff + feil, advarsler + _fa" in _f3_drk)
 
 print("\n=== OBOS: Highlightly-listen fra den daglige hentingen lagres og brukes i byggingen, uten nye kall ===")
