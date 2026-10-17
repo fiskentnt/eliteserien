@@ -10,20 +10,26 @@ Kildene står i prioritert rekkefølge (KILDER), og hver har en leverandør
                Highlightly mangler eller er uenig, hvert kall koster),
                Wikipedia, fotball.no (bare i krise)
 
-REGELEN:
-  * Hovedkilden er den første kilden i rekkefølgen som svarte (er oppe).
-    Er ligasiden nede, blir neste kilde hovedkilde.
-  * Et resultat publiseres når hovedkilden og minst én kilde fra en ANNEN
-    leverandør er enige.
-  * Har hovedkilden ikke resultatet ennå: vent.
-  * En uenig kilde stopper ikke, så lenge en annen uavhengig kilde er enig
-    (et 0-0 fra ESPN som er uenig med ligasiden, publiseres derfor aldri
-    alene, og det stopper heller ikke et resultat Highlightly bekrefter).
-    Ingen enige og minst én uenig: konflikt, holdes tilbake.
-  * Ingen uavhengig kilde har resultatet: vent. Etter VENT_TIMER timer fra
-    avspark publiseres resultatet fra den OFFISIELLE ligasiden alene -- aldri
-    fra en annen enkeltkilde -- og kjøringen er rød så lenge det står uten
-    kontroll (ukontrollert=True, se kontroller_ukontrollerte).
+REGELEN (stemmer, 17.10.2026):
+  * Én stemme per leverandør: den første kilden i rekkefølgen som har et
+    resultat for kampen. Ligasiden og fotball.no er én stemme (NTF).
+  * Bare ferdigspilte kamper gir stemme: ESPN når kampen er markert
+    completed (og ikke 0-0 med en vinner, "suspect"), Highlightly når status
+    er "Finished". Det sørger kalleren for (update_data.kontroller_nye_resultater,
+    obos_results.highlightly_resultater); svar her er bare sluttresultater.
+  * Et resultat publiseres når minst to stemmer har nøyaktig samme resultat,
+    og ingen annen stilling har like mange. Ligasiden trenger ikke være blant
+    dem. Er ligasiden uenig, er den overstemt: publiser, med advarsel
+    ("overstemt", se overstemt_tilstand). 17.10.2026 hadde ligasiden
+    Viking-Fredrikstad 1-2 (pausestillingen), ESPN og Highlightly 3-2.
+  * Like mange stemmer for to stillinger (1 mot 1, 2 mot 2): konflikt,
+    holdes tilbake (rødt, se sjekk).
+  * Én stemme: vent. Etter VENT_TIMER timer fra avspark publiseres resultatet
+    fra den OFFISIELLE ligasiden alene -- aldri fra en annen enkeltkilde -- og
+    kjøringen er rød så lenge det står uten kontroll (ukontrollert=True, se
+    kontroller_ukontrollerte).
+  * Før 17.10.2026 var den første kilden som svarte, hovedkilde, og et
+    resultat krevde hovedkilden pluss én annen leverandør.
 
 BEKREFTET (12.10.2026): når et resultat publiseres, lagres hvilke kilder
 utenfor NTF som hadde nøyaktig samme resultat (results_state.json,
@@ -75,48 +81,61 @@ KILDER = {
 
 
 def avgjor(liga, svar, oppe, avspark=None, naa=None):
-    """Avgjørelsen for én kamp.
+    """Avgjørelsen for én kamp, med stemmer (17.10.2026, se REGELEN øverst).
 
-    svar:    {kilde: (hg, ag)} for kildene som har et sluttresultat; en kilde
+    svar:    {kilde: (hg, ag)} for kildene som har et SLUTTRESULTAT; en kilde
              som svarte uten resultat for kampen, står ikke (eller med None).
     oppe:    kildene som svarte denne kjøringen (kunne hentes og leses).
     avspark, naa: datetime med tidssone; trengs bare for ventetiden.
 
-    Returnerer {utfall, resultat, hoved, enig, uenige, ukontrollert, grunn}
-    der utfall er "publiser", "vent" eller "konflikt"."""
+    Returnerer {utfall, resultat, hoved, enig, uenige, ukontrollert,
+    overstemt, grunn} der utfall er "publiser", "vent" eller "konflikt".
+    Ved publisering er hoved og enig de to første kildene (i rekkefølgen)
+    med vinnerresultatet; ellers er hoved den første kilden som svarte.
+    uenige er kildene med en annen stilling, overstemt er sann når ligasiden
+    (NTF) er blant dem."""
     rekke = KILDER[liga]
     ut = {"utfall": "vent", "resultat": None, "hoved": None, "enig": None, "uenige": [],
-          "ukontrollert": False, "grunn": ""}
-    hoved = next((k for k in rekke if k in oppe), None)
-    ut["hoved"] = hoved
-    if hoved is None:
-        ut["grunn"] = "ingen kilde svarte"
-        return ut
-    r = svar.get(hoved)
-    if r is None:
-        ut["grunn"] = f"hovedkilden ({hoved}) har ikke resultatet ennå"
-        return ut
-    r = tuple(r)
+          "ukontrollert": False, "overstemt": False, "grunn": ""}
+    forste = next((k for k in rekke if k in oppe), None)
+    stemmer = {}                      # leverandør -> (kilde, resultat)
     for k in rekke:
-        if k == hoved or LEVERANDOR[k] == LEVERANDOR[hoved]:
-            continue
         v = svar.get(k)
-        if v is None:
-            continue
-        if tuple(v) == r:
-            ut.update(utfall="publiser", resultat=r, enig=k,
-                      grunn=f"{hoved} og {k} er enige" + (f" ({', '.join(ut['uenige'])} uenig)" if ut["uenige"] else ""))
-            return ut
-        ut["uenige"].append(k)
-    if ut["uenige"]:
-        ut.update(utfall="konflikt", grunn=f"{hoved} har {r[0]}-{r[1]}, " + ", ".join(
-            f"{k} har {svar[k][0]}-{svar[k][1]}" for k in ut["uenige"]) + " -- holdes tilbake")
+        if v is not None and LEVERANDOR[k] not in stemmer:
+            stemmer[LEVERANDOR[k]] = (k, tuple(v))
+    grupper = {}                      # resultat -> kildene som har det, i rekkefølgen
+    for k, r in sorted(stemmer.values(), key=lambda x: rekke.index(x[0])):
+        grupper.setdefault(r, []).append(k)
+    ut["hoved"] = forste
+    if not grupper:
+        ut["grunn"] = f"hovedkilden ({forste}) har ikke resultatet ennå" if forste else "ingen kilde svarte"
         return ut
-    if hoved == "ligasiden" and avspark is not None and naa is not None and naa - avspark >= timedelta(hours=VENT_TIMER):
-        ut.update(utfall="publiser", resultat=r, ukontrollert=True,
+    mest = max(len(v) for v in grupper.values())
+    vinnere = [r for r, v in grupper.items() if len(v) == mest]
+    if mest >= 2 and len(vinnere) == 1:
+        r = vinnere[0]
+        enige = grupper[r]
+        uenige = [k for rr, v in grupper.items() if rr != r for k in v]
+        uenige.sort(key=rekke.index)
+        ut.update(utfall="publiser", resultat=r, hoved=enige[0], enig=enige[1], uenige=uenige,
+                  overstemt=any(LEVERANDOR[k] == "NTF" for k in uenige),
+                  grunn=f"{enige[0]} og {enige[1]} er enige"
+                        + (f" ({', '.join(uenige)} uenig)" if uenige else ""))
+        return ut
+    if len(grupper) > 1:
+        alle = sorted((k for v in grupper.values() for k in v), key=rekke.index)
+        ut.update(utfall="konflikt", uenige=[k for k in alle if k != forste],
+                  grunn=", ".join(f"{k} har {svar[k][0]}-{svar[k][1]}" for k in alle) + " -- holdes tilbake")
+        return ut
+    # Én stemme.
+    (r, (k,)), = [(r, tuple(v)) for r, v in grupper.items()]
+    if (k == "ligasiden" and avspark is not None and naa is not None
+            and naa - avspark >= timedelta(hours=VENT_TIMER)):
+        ut.update(utfall="publiser", resultat=r, hoved=k, ukontrollert=True,
                   grunn=f"bare ligasiden har resultatet etter {VENT_TIMER} timer -- publisert uten kontroll")
         return ut
-    ut["grunn"] = f"bare {hoved} har resultatet -- venter på en uavhengig kilde"
+    ut["grunn"] = (f"bare {k} har resultatet -- venter på en uavhengig kilde" if k == forste
+                   else f"hovedkilden ({forste}) har ikke resultatet ennå; bare {k} har det")
     return ut
 
 
@@ -225,6 +244,80 @@ def bekreftet_tilstand(gml, nye, naa, behold_timer=BEKREFTET_TIMER):
     return ut
 
 
+def overstemt_tilstand(gml, nye, ligasiden, naa):
+    """Feltet "overstemt" i results_state.json (17.10.2026): resultatene som ble
+    publisert mot ligasidens stemme, så lenge ligasiden er uenig.
+    {"Hjemme|Borte": {"resultat": [hg, ag], "ligasiden": [hg, ag], "kilder": [...],
+                      "publisert": iso}}.
+
+    gml: feltet fra forrige kjøring. nye: {(hjemme, borte): (resultat,
+    ligasidens resultat, kildene som var enige)} fra denne kjøringen.
+    ligasiden: {(hjemme, borte): (hg, ag)} fra ligasiden nå, eller None når
+    den ikke svarte. En oppføring tas ut når ligasiden har samme resultat som
+    vi; ingen tidsgrense ellers. Tabellkontrollen bruker dem (ferske_bekreftede),
+    og status.json viser dem som advarsel (overstemt_tekster)."""
+    ut = {}
+    for n, v in (gml or {}).items():
+        k = tuple(n.split("|"))
+        if ligasiden is not None and k in ligasiden and list(ligasiden[k]) == list(v.get("resultat") or []):
+            continue
+        if ligasiden is not None and k in ligasiden:
+            v = {**v, "ligasiden": [int(ligasiden[k][0]), int(ligasiden[k][1])]}
+        ut[n] = v
+    for k, (resultat, lig, kilder) in (nye or {}).items():
+        n = f"{k[0]}|{k[1]}"
+        if n in ut and ut[n].get("resultat") == [int(resultat[0]), int(resultat[1])] \
+                and ut[n].get("ligasiden") == [int(lig[0]), int(lig[1])]:
+            continue    # står alt: tidspunktet beholdes, og fila endres ikke i hver kjøring
+        ut[n] = {"resultat": [int(resultat[0]), int(resultat[1])],
+                 "ligasiden": [int(lig[0]), int(lig[1])], "kilder": sorted(kilder),
+                 "publisert": naa.isoformat(timespec="seconds")}
+    return ut
+
+
+def overstemt_etterpaa(publiserte, ligasiden, bekreftet):
+    """De publiserte resultatene der ligasiden NÅ viser noe annet, og
+    resultatet vårt er bekreftet av kilder utenfor NTF (17.10.2026).
+
+    Hullet det tetter: en kamp publisert av ESPN og Highlightly før ligasiden
+    hadde resultatet, ble aldri "overstemt" når ligasiden senere viste noe
+    annet (publiserte resultater vurderes ikke på nytt), og tabellkontrollen
+    ga rødt etter seks timer. Slike kamper er overstemt i senere kjøringer.
+
+    publiserte: {(hjemme, borte): (hg, ag)} som står på siden. ligasiden:
+    {(hjemme, borte): (hg, ag)} fra ligasiden nå, eller None. bekreftet:
+    feltet "bekreftet" i results_state.json ({"H|B": {resultat, kilder, ...}}),
+    med denne kjøringens nye. Uten en bekreftelse med samme resultat er det
+    ikke med: da er det et ubekreftet avvik, og tabellkontrollen gjelder.
+    Returnerer {(hjemme, borte): (resultat, ligasidens resultat, kilder)}."""
+    ut = {}
+    for k, r in (publiserte or {}).items():
+        lig = (ligasiden or {}).get(k)
+        if lig is None or tuple(lig) == tuple(r):
+            continue
+        b = (bekreftet or {}).get(f"{k[0]}|{k[1]}") or {}
+        if b.get("kilder") and list(b.get("resultat") or []) == [r[0], r[1]]:
+            ut[k] = (tuple(r), tuple(lig), list(b["kilder"]))
+    return ut
+
+
+def overstemt_tekster(liga, state_sti=None, overstemt=None):
+    """Advarslene til status.json for resultatene publisert mot ligasidens
+    stemme: "Viking-Fredrikstad: publisert 3-2 (espn og highlightly), ligasiden
+    har 1-2"."""
+    if overstemt is not None:
+        ov = overstemt
+    else:
+        sti = Path(state_sti) if state_sti else ROT / liga / "data" / "results_state.json"
+        try:
+            ov = json.loads(sti.read_text(encoding="utf-8")).get("overstemt") or {}
+        except Exception:
+            return []
+    return [f"{n.replace('|', '-')}: publisert {v['resultat'][0]}-{v['resultat'][1]} ({' og '.join(v.get('kilder') or [])}), "
+            f"ligasiden har {v['ligasiden'][0]}-{v['ligasiden'][1]}"
+            for n, v in sorted(ov.items()) if v.get("resultat") and v.get("ligasiden")]
+
+
 def ferske_bekreftede(liga, kamper, naa, state_sti=None, timer=FERSK_TIMER):
     """De spilte kampene i `kamper` som er FERSKE (avspark for mindre enn
     `timer` timer siden) og har resultatet BEKREFTET utenfor NTF: det står i
@@ -232,15 +325,33 @@ def ferske_bekreftede(liga, kamper, naa, state_sti=None, timer=FERSK_TIMER):
 
     Returnerer [{home, away, hg, ag, avspark, frist, kilder}] med avspark og
     frist som ISO-tid i UTC. En kamp uten avspark, uten oppføring eller med et
-    annet lagret resultat er ikke med: da gjelder tabellkontrollen som før."""
+    annet lagret resultat er ikke med: da gjelder tabellkontrollen som før.
+
+    OVERSTEMT (17.10.2026): en kamp i "overstemt" (publisert mot ligasidens
+    stemme) er med uansett alder, så lenge ligasiden er uenig, med frist None:
+    ligasidens tabell fører den med ligasidens resultat, og det er en
+    advarsel, ikke rødt. Uten frist holder den heller ikke porten åpen
+    (should_fetch.tabell_venter)."""
     from zoneinfo import ZoneInfo
     sti = Path(state_sti) if state_sti else ROT / liga / "data" / "results_state.json"
     try:
-        bekreftet = json.loads(sti.read_text(encoding="utf-8")).get("bekreftet") or {}
+        _st = json.loads(sti.read_text(encoding="utf-8"))
     except Exception:
         return []
+    bekreftet = _st.get("bekreftet") or {}
+    overstemt = _st.get("overstemt") or {}
     ut = []
     for m in kamper:
+        o = overstemt.get(f"{m.get('home')}|{m.get('away')}")
+        if o and m.get("hg") is not None and list(o.get("resultat") or []) == [m["hg"], m["ag"]]:
+            try:
+                avspark = datetime.fromisoformat(f"{m['date']}T{m['time']}").replace(
+                    tzinfo=ZoneInfo("Europe/Oslo")).astimezone(naa.tzinfo).isoformat(timespec="seconds")
+            except Exception:
+                avspark = None
+            ut.append({"home": m["home"], "away": m["away"], "hg": m["hg"], "ag": m["ag"],
+                       "avspark": avspark, "frist": None, "kilder": list(o.get("kilder") or []), "overstemt": True})
+            continue
         if m.get("hg") is None or m.get("ag") is None or not m.get("date") or not m.get("time"):
             continue
         b = bekreftet.get(f"{m['home']}|{m['away']}")

@@ -1160,6 +1160,9 @@ print("\n=== Et kritisk revisjonsavvik skal stå til det er løst ===")
 _st_dir = Path(_tf2.mkdtemp())
 _ud.AUDIT_STATE_PATH = _st_dir / "audit_state.json"
 _ud.STATUS_PATH = _st_dir / "status.json"
+# results_state.json også (17.10.2026): write_status leser de overstemte
+# resultatene derfra, og den ekte fila skal ikke bestemme testene.
+_ekte_ud_state, _ud.STATE = _ud.STATE, _st_dir / "results_state.json"
 # Tabellkontrollens tilstand ogsaa i den tomme katalogen (0 avvik). Ellers
 # leser write_status() den ekte eliteserien/data/audit_tabell.json, og et ekte
 # avvik der (2 fra 9.10.2026 19:00Z) ga 4 i stedet for 2 og roede tester.
@@ -1302,6 +1305,7 @@ sjekk("gårsdagens avvik holder ikke stempelet rødt", _status()["ok"] is True)
 _ud.write_status(ok=False, now=_naa4, error="noe annet gikk galt")
 sjekk("en vanlig feil gjør det fortsatt rødt", _status()["ok"] is False)
 _ud.AUDIT_STATE_PATH = _ekte
+_ud.STATE = _ekte_ud_state
 _tko_iso.avvik = _ekte_tk_avvik
 _dr_iso.data_katalog = _ekte_dr_katalog
 
@@ -2693,14 +2697,48 @@ _t = [
      "obos", {"ligasiden": (1, 1)}, None, _lenge, ("publiser", (1, 1), "ligasiden", None, True)),
     ("bare ligasiden etter 3 timer: vent",
      "obos", {"ligasiden": (1, 1)}, None, None, ("vent", None, "ligasiden", None, False)),
-    ("ligasiden er oppe, men har ikke resultatet: vent, selv om ESPN og Highlightly er enige",
-     "eliteserien", {"espn": (1, 0), "highlightly": (1, 0)}, None, None, ("vent", None, "ligasiden", None, False)),
+    ("ligasiden er oppe, men har ikke resultatet, ESPN og Highlightly er enige: publiseres (stemmene, 17.10.2026; før: vent)",
+     "eliteserien", {"espn": (1, 0), "highlightly": (1, 0)}, None, None, ("publiser", (1, 0), "espn", "highlightly", False)),
+    ("Viking-Fredrikstad 17.10.: ligasiden 1-2 (pausestillingen), ESPN og Highlightly 3-2: 3-2 publiseres, ligasiden overstemt",
+     "eliteserien", {"ligasiden": (1, 2), "espn": (3, 2), "highlightly": (3, 2)}, None, None, ("publiser", (3, 2), "espn", "highlightly", False)),
+    ("to mot to (ligasiden og ffksupporter 1-2, ESPN og Highlightly 3-2): konflikt",
+     "eliteserien", {"ligasiden": (1, 2), "ffksupporter": (1, 2), "espn": (3, 2), "highlightly": (3, 2)}, None, None,
+     ("konflikt", None, "ligasiden", None, False)),
+    ("ligasiden og fotball.no 1-2 er ÉN stemme (NTF) mot ESPN 3-2: konflikt",
+     "eliteserien", {"ligasiden": (1, 2), "fotball.no": (1, 2), "espn": (3, 2)}, None, None, ("konflikt", None, "ligasiden", None, False)),
+    ("OBOS: ligasiden 1-2, Highlightly og OddsPapi 3-2: 3-2 publiseres",
+     "obos", {"ligasiden": (1, 2), "highlightly": (3, 2), "oddspapi": (3, 2)}, None, None, ("publiser", (3, 2), "highlightly", "oddspapi", False)),
+    ("OBOS: Highlightly og Wikipedia enige før ligasiden har resultatet: publiseres",
+     "obos", {"highlightly": (2, 2), "wikipedia": (2, 2)}, None, None, ("publiser", (2, 2), "highlightly", "wikipedia", False)),
+    ("bare Highlightly, også etter 25 timer: vent (bare ligasiden kan stå alene, uten kontroll)",
+     "obos", {"highlightly": (2, 2)}, None, _lenge, ("vent", None, "ligasiden", None, False)),
     ("OBOS: Highlightly mangler, OddsPapi (reserve) enig: publiseres",
      "obos", {"ligasiden": (0, 4), "oddspapi": (0, 4)}, None, None, ("publiser", (0, 4), "ligasiden", "oddspapi", False)),
 ]
 for _navn, _l, _sv, _opp, _naa, _f in _t:
     _u = _avg(_l, _sv, _opp, _naa)
     sjekk(_navn, (_u["utfall"], _u["resultat"], _u["hoved"], _u["enig"], _u["ukontrollert"]) == _f, str(_u))
+_u = _avg("eliteserien", {"ligasiden": (1, 2), "espn": (3, 2), "highlightly": (3, 2)})
+sjekk("Viking-Fredrikstad: ligasiden står som uenig og overstemt, grunnen sier hvem som var enige",
+      _u["uenige"] == ["ligasiden"] and _u["overstemt"] is True and _u["grunn"] == "espn og highlightly er enige (ligasiden uenig)", str(_u))
+_u = _avg("eliteserien", {"ligasiden": (3, 1), "espn": (0, 0), "highlightly": (3, 1)})
+sjekk("ESPN 0-0 uenig med ligasiden og Highlightly: publiseres, men ligasiden er ikke overstemt", _u["overstemt"] is False and _u["uenige"] == ["espn"], str(_u))
+_u = _avg("eliteserien", {"ligasiden": (1, 2), "espn": (3, 2), "highlightly": (3, 2)})
+sjekk('linjen i loggen: "Bryne-Lyn 3-2: espn og highlightly enige, publisert (ligasiden 1-2 uenig)"',
+      _regel.resultatlinje("eliteserien", ("Bryne", "Lyn"), _u, {"ligasiden": (1, 2), "espn": (3, 2), "highlightly": (3, 2)})
+      == "Bryne-Lyn 3-2: espn og highlightly enige, publisert (ligasiden 1-2 uenig)")
+# De overstemte (results_state.json, «overstemt»): står så lenge ligasiden er uenig.
+_ov_n = _dt(2026, 10, 17, 18, 1, tzinfo=_tz.utc)
+_ov = _regel.overstemt_tilstand({}, {("Viking", "Fredrikstad"): ((3, 2), (1, 2), ["espn", "highlightly"])}, {("Viking", "Fredrikstad"): (1, 2)}, _ov_n)
+sjekk("overstemt lagres med vårt resultat, ligasidens, kildene og tidspunktet",
+      _ov == {"Viking|Fredrikstad": {"resultat": [3, 2], "ligasiden": [1, 2], "kilder": ["espn", "highlightly"], "publisert": "2026-10-17T18:01:00+00:00"}}, str(_ov))
+sjekk("advarselen til status.json: «Viking-Fredrikstad: publisert 3-2 (espn og highlightly), ligasiden har 1-2»",
+      _regel.overstemt_tekster("eliteserien", overstemt=_ov) == ["Viking-Fredrikstad: publisert 3-2 (espn og highlightly), ligasiden har 1-2"])
+sjekk("neste dag er ligasiden fortsatt uenig: står", _regel.overstemt_tilstand(_ov, {}, {("Viking", "Fredrikstad"): (1, 2)}, _ov_n + _td(days=1)) == _ov)
+sjekk("ligasiden svarte ikke (None): står", _regel.overstemt_tilstand(_ov, {}, None, _ov_n + _td(days=1)) == _ov)
+sjekk("ligasiden retter til 3-2: tas ut", _regel.overstemt_tilstand(_ov, {}, {("Viking", "Fredrikstad"): (3, 2)}, _ov_n + _td(days=1)) == {})
+sjekk("ligasiden viser noe tredje (2-2): står, med ligasidens nye resultat",
+      _regel.overstemt_tilstand(_ov, {}, {("Viking", "Fredrikstad"): (2, 2)}, _ov_n)["Viking|Fredrikstad"]["ligasiden"] == [2, 2])
 _fort, _bekr, _ueni = _regel.kontroller_ukontrollerte("obos", {("Moss", "Odd"): (1, 1), ("Lyn", "Bryne"): (2, 0), ("Hødd", "Moss"): (0, 0)},
     {("Moss", "Odd"): {"highlightly": (1, 1)}, ("Lyn", "Bryne"): {"fotball.no": (2, 0)}, ("Hødd", "Moss"): {"wikipedia": (1, 0)}})
 sjekk("uten kontroll: bekreftet av Highlightly; fotball.no (samme leverandør) bekrefter ikke; Wikipedia uenig",
@@ -3158,9 +3196,11 @@ def _kjor_es_bs(naa, har_liga, bruk=0, behold=False):
     return {(r["home"], r["away"]): (r["hg"], r["ag"]) for r in _ut}, _s, "\n".join(logg)
 _t_bs = _kickoff_utc_bs = __import__("datetime").datetime.fromisoformat(f"{_bs['date']}T{_bs['time']}:00").replace(tzinfo=ZoneInfo("Europe/Oslo"))
 _r, _s, _lg = _kjor_es_bs(_t_bs + _td(minutes=120), har_liga=False)
-sjekk(f"Brann-Sarpsborg 08 over, ligasiden har det ikke: Highlightly spørres for {_bs['date']}, og linjen sier hvem som har det",
-      _hl_tell == [_bs["date"]] and _r[_kBS] == (None, None)
-      and "Brann-Sarpsborg 08: ligasiden har ikke resultatet ennå (espn 1-2, highlightly 1-2), venter" in _lg, f"{_hl_tell} {_lg}")
+sjekk(f"Brann-Sarpsborg 08 over, ligasiden har det ikke: Highlightly spørres for {_bs['date']}, og ESPN og Highlightly 1-2 publiserer "
+      f"(stemmene, 17.10.2026; før: vent til ligasiden)",
+      _hl_tell == [_bs["date"]] and _r[_kBS] == (1, 2)
+      and "Brann-Sarpsborg 08 1-2: espn og highlightly enige, publisert" in _lg
+      and "publisert før ligasiden har resultatet" in _lg, f"{_hl_tell} {_lg}")
 _r, _s, _lg = _kjor_es_bs(_t_bs + _td(minutes=130), har_liga=True, behold=True)
 _tid = lambda m: (_t_bs + _td(minutes=m)).strftime("%H.%M")
 sjekk("ti minutter senere har ligasiden det: publisert, og hvem som hadde det først",
@@ -3168,6 +3208,104 @@ sjekk("ti minutter senere har ligasiden det: publisert, og hvem som hadde det f�
       and f"Brann-Sarpsborg 08: espn {_tid(120)}, highlightly {_tid(120)}, ligasiden {_tid(130)}" in _lg, _lg)
 _r, _s, _lg = _kjor_es_bs(_t_bs + _td(minutes=120), har_liga=False, bruk=45)
 sjekk("45 kall i dag (over 40): Highlightly spørres ikke bare for loggen", _hl_tell == [] and "over LOGG_TAK" in _lg, f"{_hl_tell} {_lg}")
+
+print("\n=== Stemmene hele veien: Viking-Fredrikstad 17.10.2026, bare ferdige kamper, og før ligasiden (kontroller_nye_resultater, decide) ===")
+_vk = ("Viking", "Fredrikstad")
+_vk_rad = {"date": "2026-10-17", "time": "18:00", "round": 24, "home": "Viking", "away": "Fredrikstad", "hg": 1, "ag": 2}
+_vk_naa = _dt(2026, 10, 17, 20, 1, tzinfo=ZoneInfo("Europe/Oslo"))
+_vk_st = Path(_tf2.mkdtemp()) / "results_state.json"
+def _vk_kjor(liga_rad, espn_rader, hl_rader, naa=_vk_naa, state=False):
+    if not state and _vk_st.exists():
+        _vk_st.unlink()
+    _udr.LIGAKILDE = "ligasiden"
+    merged = [{**m, "src": "ntf"} for m in _es_m] + [{**liga_rad, "src": "ntf"}]
+    _ut, _s = _udr.kontroller_nye_resultater(merged, [dict(m) for m in _es_m], [dict(m) for m in _es_m] + [dict(liga_rad)], [], [], naa,
+                                             log=lambda _x: None, hl_dag=lambda d: [dict(r) for r in hl_rader if r["date"] == d],
+                                             espn_sesong=lambda aar: [dict(r) for r in espn_rader], state_sti=_vk_st, hl_bruk=lambda: 0)
+    return next((r["hg"], r["ag"]) for r in _ut if (r["home"], r["away"]) == _vk), _s
+_E32 = [{"home": "Viking", "away": "Fredrikstad", "date": "2026-10-17", "time": "18:00", "hg": 3, "ag": 2, "suspect": False}]
+_H32 = [{"home": "Viking", "away": "Fredrikstad", "date": "2026-10-17", "time": "18:00", "hg": 3, "ag": 2, "ferdig": True}]
+_res, _s = _vk_kjor(_vk_rad, _E32, _H32)
+sjekk("ligasiden 1-2, ESPN og Highlightly 3-2 (begge ferdige): 3-2 publiseres, ingen konflikt",
+      _res == (3, 2) and _s["conflicts"] == [] and _s["waiting"] == [], f"{_res} {_s['conflicts']} {_s['waiting']}")
+sjekk("og den står som overstemt i tilstanden, med ligasidens 1-2 og kildene",
+      _s["overstemt"] == {"Viking|Fredrikstad": {"resultat": [3, 2], "ligasiden": [1, 2], "kilder": ["espn", "highlightly"],
+                                                 "publisert": _vk_naa.isoformat(timespec="seconds")}}, str(_s.get("overstemt")))
+_udr.skriv_state(_s, _vk_naa, state_sti=_vk_st)
+sjekk("skriv_state skriver «overstemt», og advarselen lages av fila",
+      json.loads(_vk_st.read_text("utf-8")).get("overstemt") == _s["overstemt"]
+      and _rrb.overstemt_tekster("eliteserien", state_sti=_vk_st) == ["Viking-Fredrikstad: publisert 3-2 (espn og highlightly), ligasiden har 1-2"])
+_E_live = [{**_E32[0], "hg": None, "ag": None}]                  # ESPN: completed=False gir ingen stilling (espn_source.tolk)
+_E_susp = [{**_E32[0], "suspect": True}]                         # ESPN: 0-0 med vinner merket er mistenkelig
+_H_live = [{**_H32[0], "ferdig": False}]                         # Highlightly: ikke «Finished»
+_res, _s = _vk_kjor(_vk_rad, _E_live, _H_live)
+sjekk("KRAVET: ESPN ikke completed og Highlightly ikke Finished teller ikke som stemmer: bare ligasiden, vent",
+      _res == (None, None) and any("Viking-Fredrikstad" in w for w in _s["waiting"]) and _s["overstemt"] == {}, f"{_res} {_s['waiting']}")
+_res, _s = _vk_kjor(_vk_rad, _E_susp, _H32)
+sjekk("ESPN merket mistenkelig teller ikke: ligasiden 1-2 mot Highlightly 3-2 er én mot én, konflikt",
+      _res == (None, None) and any("Viking-Fredrikstad" in c for c in _s["conflicts"]), f"{_res} {_s['conflicts']}")
+_res, _s = _vk_kjor({**_vk_rad, "hg": None, "ag": None}, _E32, _H32)
+sjekk("ligasiden har ikke resultatet ennå (105 min etter avspark er passert): ESPN og Highlightly 3-2 publiserer, ikke overstemt",
+      _res == (3, 2) and _s["overstemt"] == {} and "Viking|Fredrikstad" in _s["bekreftet"], f"{_res} {_s}")
+_res, _s = _vk_kjor({**_vk_rad, "hg": None, "ag": None}, _E_live, _H32)
+sjekk("og med bare Highlightly (ESPN ikke ferdig): vent", _res == (None, None), str(_res))
+# Neste kjøring: ligasiden retter til 3-2. Ingen nye resultater; overstemt tas ut.
+_vk_kjor(_vk_rad, _E32, _H32)
+_udr.skriv_state(_vk_kjor(_vk_rad, _E32, _H32)[1], _vk_naa, state_sti=_vk_st)
+_udr.LIGAKILDE = "ligasiden"
+_ut2, _s2 = _udr.kontroller_nye_resultater([{**m, "src": "ntf"} for m in _es_m] + [{**_vk_rad, "hg": 3, "ag": 2, "src": "ntf"}],
+                                           [dict(m) for m in _es_m] + [{**_vk_rad, "hg": 3, "ag": 2}],
+                                           [dict(m) for m in _es_m] + [{**_vk_rad, "hg": 3, "ag": 2}], [], [], _vk_naa + _td(hours=12),
+                                           log=lambda _x: None, hl_dag=lambda d: [], espn_sesong=lambda aar: [], state_sti=_vk_st, hl_bruk=lambda: 0)
+sjekk("neste dag har ligasiden rettet til 3-2: oppføringen i «overstemt» tas ut", _s2.get("overstemt") == {}, str(_s2.get("overstemt")))
+# Hullet (17.10.2026): publisert 3-2 av ESPN og Highlightly FØR ligasiden har
+# resultatet, og ligasiden får 1-2 en time senere. Kampen er publisert og
+# vurderes ikke på nytt, men skal stå som overstemt, ellers gir
+# tabellkontrollen rødt etter seks timer.
+def _vk_steg(naa, liga_rad, tidligere):
+    _udr.LIGAKILDE = "ligasiden"
+    _ut, _s = _udr.kontroller_nye_resultater([{**m, "src": "ntf"} for m in _es_m] + [{**liga_rad, "src": "ntf"}],
+                                             [dict(m) for m in tidligere], [dict(m) for m in _es_m] + [dict(liga_rad)], [], [], naa,
+                                             log=lambda _x: None, hl_dag=lambda d: [dict(r) for r in _H32 if r["date"] == d],
+                                             espn_sesong=lambda aar: [dict(r) for r in _E32], state_sti=_vk_st, hl_bruk=lambda: 0)
+    _udr.skriv_state(_s, naa, state_sti=_vk_st)
+    return next((r["hg"], r["ag"]) for r in _ut if (r["home"], r["away"]) == _vk), _s
+if _vk_st.exists():
+    _vk_st.unlink()
+_res1, _s1 = _vk_steg(_vk_naa, {**_vk_rad, "hg": None, "ag": None}, _es_m)
+_publ = [dict(m) for m in _es_m] + [{**_vk_rad, "hg": 3, "ag": 2}]
+_res2, _s2 = _vk_steg(_vk_naa + _td(hours=1), _vk_rad, _publ)
+sjekk("publisert 3-2 av ESPN og Highlightly før ligasiden; en time senere viser ligasiden 1-2: kampen står som overstemt",
+      _res1 == (3, 2) and _s1["overstemt"] == {} and _res2 == (3, 2)
+      and _s2["overstemt"] == {"Viking|Fredrikstad": {"resultat": [3, 2], "ligasiden": [1, 2], "kilder": ["espn", "highlightly"],
+                                                  "publisert": (_vk_naa + _td(hours=1)).isoformat(timespec="seconds")}},
+      f"{_res1} {_res2} {_s2.get('overstemt')}")
+_res3, _s3 = _vk_steg(_vk_naa + _td(hours=2), _vk_rad, _publ)
+sjekk("kjøringen etter: oppføringen står uendret (tidspunktet beholdes, så tilstandsfila endres ikke i hver kjøring)",
+      _s3["overstemt"] == _s2["overstemt"], str(_s3.get("overstemt")))
+_vk_f = _rrb.ferske_bekreftede("eliteserien", _publ, _vk_naa + _td(hours=7), state_sti=_vk_st)
+sjekk("sju timer etter avspark er kampen fortsatt med i tabellkontrollens unntak, uten frist (advarsel, ikke rødt)",
+      [(f["home"], f["away"], f["frist"], f["kilder"]) for f in _vk_f] == [("Viking", "Fredrikstad", None, ["espn", "highlightly"])], str(_vk_f))
+sjekk("og advarselen i status.json sier hva ligasiden viser",
+      _rrb.overstemt_tekster("eliteserien", state_sti=_vk_st) == ["Viking-Fredrikstad: publisert 3-2 (espn og highlightly), ligasiden har 1-2"])
+sjekk("siden beholder 3-2 i begge de senere kjøringene (behold_eksisterende ville brukt ligasidens nye 1-2)", _res2 == (3, 2) and _res3 == (3, 2))
+_vk_st.unlink()
+_res4, _s4 = _vk_steg(_vk_naa + _td(hours=3), _vk_rad, _publ)
+sjekk("motprøve: uten bekreftelse i tilstanden brukes ligasidens endring som før (1-2), og ingenting står som overstemt",
+      _res4 == (1, 2) and _s4["overstemt"] == {}, f"{_res4} {_s4.get('overstemt')}")
+sjekk("overstemt_etterpaa: uten en bekreftelse med samme resultat er det ikke overstemt (ubekreftet avvik, tabellkontrollen gjelder)",
+      _rrb.overstemt_etterpaa({_vk: (3, 2)}, {_vk: (1, 2)}, {}) == {}
+      and _rrb.overstemt_etterpaa({_vk: (3, 2)}, {_vk: (1, 2)}, {"Viking|Fredrikstad": {"resultat": [2, 2], "kilder": ["espn"]}}) == {}
+      and _rrb.overstemt_etterpaa({_vk: (3, 2)}, {_vk: (3, 2)}, {"Viking|Fredrikstad": {"resultat": [3, 2], "kilder": ["espn"]}}) == {})
+
+# OBOS: decide med de samme stemmene.
+_ov_obos = {}
+_vk_s = {("Moss", "Odd"): {"date": "2026-10-17", "time": "15:00", "round": 25}}
+_p, _c, _w, _uk = _R.decide({("Moss", "Odd"): (1, 2)}, {("Moss", "Odd"): (3, 2)}, None, _vk_s, {}, _dt(2026, 10, 17, 16, 0, tzinfo=_tz.utc),
+                            hl={("Moss", "Odd"): (3, 2)}, overstemt=_ov_obos)
+sjekk("OBOS: ligasiden 1-2, Highlightly og OddsPapi 3-2: 3-2 publiseres, og den står som overstemt",
+      _p.get(("Moss", "Odd")) == (3, 2) and not _c and _ov_obos == {("Moss", "Odd"): ((3, 2), (1, 2), ["highlightly", "oddspapi"])},
+      f"{_p} {_c} {_ov_obos}")
 
 print("\n=== Reservekjeden for terminlisten (terminliste_reserve.py) ===")
 # Ligasiden kan ikke brukes: kalenderfeeden, (ESPN i Eliteserien),
@@ -4413,6 +4551,26 @@ _ut, _lin, _ = _b_kontroll(_b_k0910, _b_t2010, _dt(2026, 10, 9, 20, 10, tzinfo=_
 sjekk("ny sjekk kl. 22:10, tabellen er rettet: alle like, ingenting venter, og den vellykkede kontrollen er lagret",
       _ut["errors"] == 0 and _ut["alle_like"] is True and _ut["venter"] == [] and _ut["siste_like"]
       and not any("henger etter" in l for l in _lin), str(_ut)[:400])
+
+# Publisert mot ligasidens stemme (17.10.2026): ligasidens tabell fører kampen
+# med ligasidens resultat så lenge ligasiden er uenig. Advarsel uten frist,
+# også lenge etter seks timer.
+_ov_state = Path(_tf2.mkdtemp()) / "results_state.json"
+_ov_state.write_text(json.dumps({"overstemt": {"Brann|Viking": {"resultat": [0, 2], "ligasiden": [0, 0], "kilder": ["espn", "highlightly"],
+                                                                "publisert": "2026-10-09T18:00:00+00:00"}}}), encoding="utf-8")
+_ov_dagen = _dt(2026, 10, 10, 12, 0, tzinfo=_tz.utc)
+_ov_f = _rrb.ferske_bekreftede("eliteserien", _b_k0910, _ov_dagen, state_sti=_ov_state)
+sjekk("overstemt: med i «ferske» uansett alder, uten frist", [(f["home"], f["away"], f["frist"], f.get("overstemt")) for f in _ov_f]
+      == [("Brann", "Viking", None, True)], str(_ov_f))
+_ut, _lin, _ = _b_kontroll(_b_k0910, _b_t1900, _ov_dagen, _ov_f)
+sjekk("dagen etter, ligasidens tabell fører Brann-Viking som 0-0: advarsel, ingen kritiske avvik",
+      _ut["errors"] == 0 and _ut["advarsler"] == ["Tabell: Brann og Viking avviker bare i Brann-Viking, som er ført som 0-0 i tabellen på "
+                                                  "eliteserien.no. Hos oss 0-2, publisert med espn og highlightly mot ligasidens stemme; "
+                                                  "advarsel så lenge ligasiden er uenig."], str(_ut)[:500])
+sjekk("og uten frist holder den ikke porten åpen (should_fetch.tabell_venter teller bare frister)",
+      [v["frist"] for v in _ut["venter"]] == [None], str(_ut["venter"]))
+_ut, _lin, _ = _b_kontroll(_b_k0910, _b_t1900, _ov_dagen, _rrb.ferske_bekreftede("eliteserien", _b_k0910, _ov_dagen, state_sti=_b_state))
+sjekk("motprøve: samme dag uten overstemt-oppføring: to kritiske avvik som før", _ut["errors"] == 2, str(_ut)[:300])
 
 # Regelen som før når vilkårene ikke er oppfylt.
 _ut, _lin, _ = _b_kontroll(_b_k0910, _b_t1900, _b_1900, [])

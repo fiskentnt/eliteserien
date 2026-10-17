@@ -205,8 +205,14 @@ def ferske_unntak(kamper, lag, just, offisiell, ferske, kilde="ligasiden"):
             continue        # de to radene forteller ikke om samme kamp
         hvem = f"{h}-{a}"
         bekr = " og ".join(f["kilder"])
-        hale = (f"Hos oss {f['hg']}-{f['ag']}, bekreftet av {bekr}. Avspark {_klokke(f['avspark'])}, "
-                f"sjekkes på nytt i neste kjøring (frist {_klokke(f['frist'])}).")
+        if f.get("frist") is None:
+            # Publisert mot ligasidens stemme (17.10.2026): advarsel så lenge
+            # ligasiden er uenig, uten frist (resultatregel.ferske_bekreftede).
+            hale = (f"Hos oss {f['hg']}-{f['ag']}, publisert med {bekr} mot ligasidens stemme; "
+                    f"advarsel så lenge ligasiden er uenig.")
+        else:
+            hale = (f"Hos oss {f['hg']}-{f['ag']}, bekreftet av {bekr}. Avspark {_klokke(f['avspark'])}, "
+                    f"sjekkes på nytt i neste kjøring (frist {_klokke(f['frist'])}).")
         if foert:
             grunn_tekst = f"ført som {foert[0]}-{foert[1]} i tabellen"
             advarsler.append(f"Tabell: {h} og {a} avviker bare i {hvem}, som er {grunn_tekst} på {kilde}. {hale}")

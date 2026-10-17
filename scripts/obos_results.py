@@ -177,20 +177,23 @@ def finished_without_result(fixtures, prev, names, teams):
     return out
 
 
-def decide(off, op_scores, wiki, sched, prev, now, hl=None, nff=None, linjer=None):
-    """Avgjør hva som kan publiseres, med regelen i resultatregel.py (3.10.2026):
-    et resultat publiseres når hovedkilden og minst én kilde fra en annen
-    leverandør er enige. Hovedkilden er den første som svarte i rekkefølgen
-    ligasiden, Highlightly, OddsPapi, Wikipedia, fotball.no. fotball.no og
-    ligasiden er samme leverandør (NTF). Uten uavhengig kilde publiseres
-    ligasidens resultat alene etter 24 timer, og står da som ukontrollert til
-    en uavhengig kilde bekrefter det; en annen enkeltkilde publiserer aldri.
+def decide(off, op_scores, wiki, sched, prev, now, hl=None, nff=None, linjer=None, overstemt=None):
+    """Avgjør hva som kan publiseres, med regelen i resultatregel.py: stemmene
+    (17.10.2026). Én stemme per leverandør (ligasiden og fotball.no er NTF),
+    og et resultat publiseres når minst to stemmer er enige og ingen annen
+    stilling har like mange; ligasiden kan bli overstemt (advarsel). Like
+    mange: konflikt. Uten uavhengig kilde publiseres ligasidens resultat alene
+    etter 24 timer, og står da som ukontrollert til en uavhengig kilde
+    bekrefter det; en annen enkeltkilde publiserer aldri.
 
     off (ligasiden), hl (Highlightly), op_scores (OddsPapi), wiki (Wikipedia),
     nff (fotball.no): {(hjemme, borte): (hg, ag)}, eller None når kilden ikke
     svarte. Returnerer (publiser, konflikter, venter, ukontrollert).
     linjer (en liste): får én linje per kamp som er ny eller venter
-    (resultatregel.resultatlinje), også når den holdes tilbake."""
+    (resultatregel.resultatlinje), også når den holdes tilbake.
+    overstemt (en dict): får {(hjemme, borte): (resultat, ligasidens
+    resultat, kildene som var enige)} for resultatene som ble publisert mot
+    ligasidens stemme (stemmene, 17.10.2026)."""
     import resultatregel
     kilder = {"ligasiden": off, "highlightly": hl, "oddspapi": op_scores, "wikipedia": wiki, "fotball.no": nff}
     oppe = {k for k, v in kilder.items() if v is not None}
@@ -216,6 +219,10 @@ def decide(off, op_scores, wiki, sched, prev, now, hl=None, nff=None, linjer=Non
             publish[k] = u["resultat"]
             if u["ukontrollert"]:
                 ukontrollert[k] = u["resultat"]
+            lig = svar.get("ligasiden", svar.get("fotball.no"))
+            if u["overstemt"] and overstemt is not None and lig is not None:
+                overstemt[k] = (u["resultat"], lig, resultatregel.uavhengige_enige(svar, u["resultat"]))
+                log(f"  ADVARSEL {hvem}: publisert {u['resultat'][0]}-{u['resultat'][1]} mot ligasidens {lig[0]}-{lig[1]}")
             if u["uenige"] or u["ukontrollert"]:
                 log(f"  {hvem}: {u['grunn']}")
         elif u["utfall"] == "konflikt":
@@ -529,8 +536,9 @@ def main():
 
     # Første runde uten OddsPapi. Det som ikke kan publiseres, får OddsPapi
     # som reserve (ett tellende kall per kamp), og avgjøres på nytt.
-    linjer = []
-    publish, conflicts, waiting, ukontrollert = decide(off, None, wiki, sched, prev, now, hl=hl, nff=nff, linjer=linjer)
+    linjer, _overstemt = [], {}
+    publish, conflicts, waiting, ukontrollert = decide(off, None, wiki, sched, prev, now, hl=hl, nff=nff, linjer=linjer,
+                                                       overstemt=_overstemt)
     # Også det regelen ville publisert uten kontroll: OddsPapi er en
     # uavhengig kilde og skal prøves før ligasiden får stå alene.
     uavgjort = [k2 for k2 in trenger if (k2 not in publish or k2 in ukontrollert) and k2 not in ukontr_for]
@@ -549,8 +557,9 @@ def main():
                 op_scores[k2] = sc
                 log(f"    {k2[0]} mot {k2[1]}: {sc[0]}-{sc[1]} (tellende kall)")
             time.sleep(1.2)
-        linjer = []
-        publish, conflicts, waiting, ukontrollert = decide(off, op_scores, wiki, sched, prev, now, hl=hl, nff=nff, linjer=linjer)
+        linjer, _overstemt = [], {}
+        publish, conflicts, waiting, ukontrollert = decide(off, op_scores, wiki, sched, prev, now, hl=hl, nff=nff, linjer=linjer,
+                                                           overstemt=_overstemt)
     elif key is None and not args.no_oddspapi and uavgjort:
         log("  ODDSPAPI_KEY mangler: OddsPapi brukes ikke som reserve")
 
@@ -654,6 +663,12 @@ def main():
             log(f"  {p}")
         return 3
 
+    # Publisert før, og ligasiden viser nå noe annet (17.10.2026): overstemt
+    # når resultatet vårt er bekreftet utenfor NTF.
+    _bekr_ny = resultatregel.bekreftet_tilstand(gml_state.get("bekreftet"), nye_bekr, now)
+    for k2, v2 in resultatregel.overstemt_etterpaa(prev, off, _bekr_ny).items():
+        _overstemt.setdefault(k2, v2)
+    _ov_ny = resultatregel.overstemt_tilstand(gml_state.get("overstemt"), _overstemt, off, now)
     # En tørrkjøring skriver ingenting, heller ikke tilstanden.
     if not args.dry_run:
         STATE.write_text(json.dumps({
@@ -668,12 +683,15 @@ def main():
             # Når hver kilde først hadde resultatet, for kampene som venter
             # (bare til loggen, resultatregel.forst_sett).
             "forst_sett": forst,
-            "bekreftet": resultatregel.bekreftet_tilstand(gml_state.get("bekreftet"), nye_bekr, now),
+            "bekreftet": _bekr_ny,
             # Kontrollen mot Wikipedia (17.10.2026): advarslene til status.json
             # og livstegnet (obos_build_data.py), og når kilden sist
             # registrerte noe nytt (resultatregel.kilde_stoppet).
-            "advarsler": advarsler[:10],
+            "advarsler": (resultatregel.overstemt_tekster("obos", overstemt=_ov_ny) + advarsler)[:10],
             "kilder": kilder_tilstand,
+            # Publisert mot ligasidens stemme, så lenge ligasiden er uenig
+            # (resultatregel.overstemt_tilstand, 17.10.2026).
+            "overstemt": _ov_ny,
         }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
     if args.dry_run:

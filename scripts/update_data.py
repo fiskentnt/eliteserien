@@ -199,9 +199,13 @@ STATE = LEAGUE / "data" / "results_state.json"
 
 def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rader, now, log=lambda s: None,
                               hl_dag=None, espn_sesong=None, state_sti=None, hl_bruk=None):
-    """Regelen i resultatregel.py (3.10.2026) for resultatene som er NYE i
-    denne kjøringen: et resultat publiseres når hovedkilden og minst én kilde
-    fra en annen leverandør er enige. Ellers står kampen som uspilt (vent)
+    """Regelen i resultatregel.py for resultatene som er NYE i denne
+    kjøringen: stemmene (17.10.2026), ett resultat publiseres når minst to
+    leverandører er enige og ingen annen stilling har like mange. Ligasiden
+    kan bli overstemt (advarsel, "overstemt" i tilstanden), og en kamp som er
+    over, publiseres også før ligasiden har resultatet når ESPN og Highlightly
+    er enige. Bare ferdigspilte kamper gir stemme: ESPN completed og ikke
+    "suspect", Highlightly "Finished". Ellers står kampen som uspilt (vent)
     eller holdes tilbake (konflikt). Publiserte resultater røres ikke
     (behold_eksisterende). Bare ligasiden kan publisere alene, etter 24
     timer, og står da som ukontrollert i results_state.json til ESPN,
@@ -245,10 +249,33 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
     ventende = [r for r in merged if (r["home"], r["away"]) not in publisert and _avspark(r)
                 and now - timedelta(days=3) <= _avspark(r) <= now - timedelta(minutes=105)]
     forst_gml = {n: v for n, v in (gml.get("forst_sett") or {}).items() if tuple(n.split("|")) not in publisert}
+    # Publisert før (også før ligasiden hadde resultatet), og ligasiden viser
+    # nå noe annet: overstemt når resultatet vårt er bekreftet utenfor NTF
+    # (resultatregel.overstemt_etterpaa, 17.10.2026).
+    vaare_pub = {(m["home"], m["away"]): (m["hg"], m["ag"]) for m in tidligere if m.get("hg") is not None}
+    _bekr0 = resultatregel.bekreftet_tilstand(gml.get("bekreftet"), {}, now)
+    _lig0 = resultat(liga_rader)
+    # behold_eksisterende bruker ligasidens NYE resultat når den endrer et
+    # publisert. Er vårt bekreftet utenfor NTF (eller kampen alt overstemt),
+    # beholdes vårt: ligasiden er én stemme mot to (17.10.2026).
+    _etter = resultatregel.overstemt_etterpaa(vaare_pub, _lig0, _bekr0)
+    _behold = set(_etter) | {tuple(n.split("|")) for n, v in (gml.get("overstemt") or {}).items()
+                             if tuple(v.get("resultat") or ()) == vaare_pub.get(tuple(n.split("|")))}
+
+    def _vaart_resultat(r):
+        k = (r["home"], r["away"])
+        if (k in _behold and r.get("hg") is not None and vaare_pub.get(k)
+                and (r["hg"], r["ag"]) != vaare_pub[k]):
+            log(f"  ADVARSEL {k[0]}-{k[1]}: ligasiden viser nå {r['hg']}-{r['ag']}, beholder "
+                f"{vaare_pub[k][0]}-{vaare_pub[k][1]} (bekreftet utenfor NTF, ligasiden overstemt)")
+            return {**r, "hg": vaare_pub[k][0], "ag": vaare_pub[k][1], "src": "overstemt"}
+        return r
+    merged = [_vaart_resultat(r) for r in merged]
     if not nye and not sjekk_ukontr and not ventende:
         return merged, {"conflicts": [], "waiting": [], "ukontrollert": ukontr, "ukontrollert_sjekket": sist,
                         "forst_sett": forst_gml,
-                        "bekreftet": resultatregel.bekreftet_tilstand(gml.get("bekreftet"), {}, now)}
+                        "bekreftet": _bekr0,
+                        "overstemt": resultatregel.overstemt_tilstand(gml.get("overstemt"), _etter, _lig0, now)}
 
     kilder = {LIGAKILDE: resultat(liga_rader), "ffksupporter": resultat(ffk_rader) if ffk_rader else None}
     try:
@@ -284,18 +311,28 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
     # Hvilke kilder utenfor NTF som hadde resultatet da det ble publisert
     # (12.10.2026), til tabellkontrollen rett etter kampslutt.
     nye_bekr = {}
+    # Publisert mot ligasidens stemme (17.10.2026): advarsel, og tabellkontrollen
+    # fører kampen som venter så lenge ligasiden er uenig.
+    nye_overstemt = {}
     ut = []
     nye_k = {(r["home"], r["away"]) for r in nye}
     for r in merged:
         k = (r["home"], r["away"])
         if r.get("hg") is None or k in publisert:
-            ut.append(r)
-            # Over, men ingen resultat her ennå: bare linjen (regelen venter).
+            # Over, men ligasiden har ikke resultatet: stemmene avgjør likevel
+            # (17.10.2026). To enige kilder utenfor NTF publiserer; uten kontroll
+            # (bare ligasiden) gjelder bare når ligasiden har det.
             if k not in publisert and r in ventende:
                 svar = {kilde: v[k] for kilde, v in kilder.items() if v and k in v}
                 if svar:
-                    linjer.append(resultatregel.resultatlinje("eliteserien", k, resultatregel.avgjor(
-                        "eliteserien", svar, oppe, avspark=_avspark(r), naa=now), svar))
+                    u = resultatregel.avgjor("eliteserien", svar, oppe, avspark=_avspark(r), naa=now)
+                    linjer.append(resultatregel.resultatlinje("eliteserien", k, u, svar))
+                    if u["utfall"] == "publiser" and not u["ukontrollert"]:
+                        ut.append({**r, "hg": u["resultat"][0], "ag": u["resultat"][1], "src": u["hoved"]})
+                        nye_bekr[k] = (u["resultat"], resultatregel.uavhengige_enige(svar, u["resultat"]))
+                        log(f"  {k[0]}-{k[1]}: {u['grunn']}, publisert før ligasiden har resultatet")
+                        continue
+            ut.append(r)
             continue
         avspark = _avspark(r)
         svar = {kilde: v[k] for kilde, v in kilder.items() if v and k in v}
@@ -308,6 +345,10 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
                 nye_ukontr[k] = u["resultat"]
             else:
                 nye_bekr[k] = (u["resultat"], resultatregel.uavhengige_enige(svar, u["resultat"]))
+            if u["overstemt"] and svar.get(LIGAKILDE) is not None:
+                nye_overstemt[k] = (u["resultat"], svar[LIGAKILDE], resultatregel.uavhengige_enige(svar, u["resultat"]))
+                log(f"  ADVARSEL {hvem}: publisert {u['resultat'][0]}-{u['resultat'][1]} mot ligasidens "
+                    f"{svar[LIGAKILDE][0]}-{svar[LIGAKILDE][1]} ({u['grunn']})")
             if u["uenige"] or u["ukontrollert"]:
                 log(f"  {hvem}: {u['grunn']}")
             continue
@@ -341,10 +382,15 @@ def kontroller_nye_resultater(merged, tidligere, liga_rader, espn_rader, ffk_rad
         log("  Først hos kilden (kjøringen som så det):")
         for l2 in forst_linjer:
             log(f"    {l2}")
+    _bekr = resultatregel.bekreftet_tilstand(gml.get("bekreftet"), nye_bekr, now)
+    for k, v in resultatregel.overstemt_etterpaa(vaare_pub, kilder.get(LIGAKILDE), _bekr).items():
+        nye_overstemt.setdefault(k, v)
     return ut, {"conflicts": conflicts, "waiting": waiting, "ukontrollert": ukontr,
                 "ukontrollert_sjekket": now.isoformat(timespec="seconds") if sjekk_ukontr else sist,
                 "forst_sett": forst,
-                "bekreftet": resultatregel.bekreftet_tilstand(gml.get("bekreftet"), nye_bekr, now)}
+                "bekreftet": _bekr,
+                "overstemt": resultatregel.overstemt_tilstand(gml.get("overstemt"), nye_overstemt,
+                                                              kilder.get(LIGAKILDE), now)}
 
 
 def skriv_state(state, now, state_sti=None):
@@ -357,6 +403,9 @@ def skriv_state(state, now, state_sti=None):
         # Kildene utenfor NTF som hadde resultatet da det ble publisert
         # (resultatregel.bekreftet_tilstand), til tabellkontrollen.
         "bekreftet": state.get("bekreftet") or {},
+        # Publisert mot ligasidens stemme, så lenge ligasiden er uenig
+        # (resultatregel.overstemt_tilstand, 17.10.2026).
+        "overstemt": state.get("overstemt") or {},
     }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
 
@@ -398,6 +447,12 @@ def write_status(ok, now, error=None):
     # Advarsler fra dagens kontroll (17.10.2026): gjør ikke statusen rød, men
     # står her og går med livstegnet (livstegn.py).
     advarsler = dagens_revisjonsadvarsler(now)
+    # Resultater publisert mot ligasidens stemme (17.10.2026).
+    try:
+        import resultatregel
+        advarsler = resultatregel.overstemt_tekster(LIGA, state_sti=STATE) + advarsler
+    except Exception:
+        pass
     if advarsler:
         data["advarsler"] = advarsler
     STATUS_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
