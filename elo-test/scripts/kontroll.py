@@ -679,8 +679,11 @@ for _fr in FULL_FRASER:
 krev("qaHighlight faller ikke tilbake til 'luck'",
      "dataset.qid = 'luck'" not in _aktiv_js and "qid || 'luck'" not in _aktiv_js)
 
-# ---------- O: rekkefølgen i elo-test.yml -- panelene stopper aldri modellen
-print("O   elo-test.yml: modellen og prognoseloggen lagres før panelene")
+# ---------- O: elo-test.yml lagrer bare modellen og prognoseloggen (17.10.2026)
+# Før: to commits, modellen først og panelene etterpå. Fra 17.10.2026 er
+# testsiden løs: panelene regnes ikke lenger, og grunnlag.yml regner ikke
+# testsidens grunnlagsfil. kontroll.py stopper fortsatt lagringen.
+print("O   elo-test.yml: bygg, kontroll.py, lagre modellen og prognoseloggen; ingen panelsteg")
 import re as _re
 _wft = (ROT / ".github" / "workflows" / "elo-test.yml").read_text(encoding="utf-8")
 # Stegene i rekkefølge: navn og kjørt tekst (alt til neste "      - ").
@@ -690,11 +693,8 @@ for _b in _re.split(r"\n      - ", _wft.split("\n    steps:\n", 1)[1])[1:] if "\
     _b = "\n".join(l for l in _b.splitlines() if not l.strip().startswith("#"))   # kommentarer teller ikke
     _steg.append((_n.group(1).strip() if _n else _b.split("\n")[0], _b))
 _navn = [n for n, _ in _steg]
+_kjort = "\n".join(b for _, b in _steg)
 _MODELLFILER = ("elo-test/emodell/model.json", "elo-test/emodell/meta.json", "elo-test/emodell/prognoselogg")
-# Banneret (keymatch.json) er ikke med: det regnes av grunnlag.yml fra
-# grunnlagsfilen (scripts/lag_grunnlag.js), som i produksjonen.
-_PANELFILER = tuple(f"elo-test/emodell/{f}" for f in
-                    ("lastmatch.json", "prekick.json", "accuracy.json"))
 def _adds(tekst):
     """Stiene i git add-linjene i et steg (med linjeskift-fortsettelser)."""
     t = tekst.replace("\\\n", " ")
@@ -703,34 +703,19 @@ def _adds(tekst):
 def _i(navn):
     return _navn.index(navn) if navn in _navn else -1
 _iB, _iK, _iLM = _i("Bygg ELO90-modellen"), _i("Kontroller modellen"), _i("Lagre modellen og prognoseloggen")
-_iP, _iKP, _iLP = _i("Paneler -- regn dem med /elo-test/"), _i("Kontroller panelene"), _i("Lagre panelene")
-krev("rekkefølgen: bygg, kontroll.py, lagre modellen, paneler, kontroll_paneler.py, lagre panelene",
-     -1 not in (_iB, _iK, _iLM, _iP, _iKP, _iLP) and _iB < _iK < _iLM < _iP < _iKP < _iLP,
-     str(_navn))
-if -1 not in (_iK, _iKP, _iLM, _iLP):
-    krev("kontroll.py kjøres i modellsteget, kontroll_paneler.py i panelsteget",
-         "elo-test/scripts/kontroll.py" in _steg[_iK][1] and "kontroll_paneler" not in _steg[_iK][1]
-         and "elo-test/scripts/kontroll_paneler.py" in _steg[_iKP][1])
-    _am, _ap = _adds(_steg[_iLM][1]), _adds(_steg[_iLP][1])
+krev("rekkefølgen: bygg, kontroll.py, lagre modellen og prognoseloggen",
+     -1 not in (_iB, _iK, _iLM) and _iB < _iK < _iLM, str(_navn))
+if -1 not in (_iK, _iLM):
+    krev("kontroll.py kjøres i modellsteget", "elo-test/scripts/kontroll.py" in _steg[_iK][1])
+    _am = _adds(_steg[_iLM][1])
     krev("modellcommiten tar model.json, meta.json og prognoseloggen -- og ingen panelfil",
          sorted(_am) == sorted(_MODELLFILER), str(_am))
-    krev("panelcommiten tar de tre panelfilene -- ikke banneret (grunnlag.yml), modellen eller loggen",
-         sorted(_ap) == sorted(_PANELFILER), str(_ap))
-if _iP != -1:
-    # Panelene regnes i hver byggende kjøring (10.10.2026). En port som bare så
-    # model.json og oddsen, lot lastmatch.json bli staaende fra foer
-    # grunnlagsfilen passet, og kontroll W ble roed i hver kjoering etterpaa.
-    _pst = _steg[_iP][1]
-    krev("panelene regnes i hver byggende kjøring: panelsteget har ingen if-betingelse, og det finnes ingen panelport",
-         not any(l.strip().startswith("if:") for l in _pst.splitlines())
-         and "paneler.py port" not in "".join(b for _, b in _steg)
-         and "def port(" not in (ROT / "elo-test" / "scripts" / "paneler.py").read_text(encoding="utf-8"),
-         _pst.splitlines()[1][:80] if len(_pst.splitlines()) > 1 else _pst[:80])
-    krev("ingen git add av hele elo-test/emodell (da ville panelene følge med modellen)",
-         "git add elo-test/emodell\n" not in _wft and not _re.search(r"git add elo-test/emodell/?\s*$", _wft, _re.M))
-    krev("ingen continue-on-error eller if: always() som slipper panelfiler gjennom etter feil",
-         "continue-on-error" not in _wft and "always()" not in _wft and "failure()" not in _wft)
-print()
+krev("ingen panelsteg: verken snapshot_probs, accuracy_log, paneler.py eller kontroll_paneler.py",
+     not any(x in _kjort for x in ("snapshot_probs", "accuracy_log", "paneler.py", "kontroll_paneler")), str(_navn))
+krev("ingen git add av hele elo-test/emodell",
+     "git add elo-test/emodell\n" not in _wft and not _re.search(r"git add elo-test/emodell/?\s*$", _wft, _re.M))
+krev("ingen continue-on-error eller if: always() som slipper modellen gjennom etter en rød kontroll",
+     "continue-on-error" not in _wft and "always()" not in _wft and "failure()" not in _wft)
 
 # ---------- E: festede sha256
 # ---------- T: lambda-TABELLEN -- labens fit_rates som bruddpunkter

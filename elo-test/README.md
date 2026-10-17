@@ -7,6 +7,15 @@ ligger på `/eliteserien/` og er uendret.
 Mappen kan slettes i sin helhet uten at produksjonen påvirkes. Ingen
 produksjonsfil er endret for å få testsiden til å virke.
 
+**Løs fra 17.10.2026, ut sesongen:** bare modellen og prognoseloggen
+oppdateres (elo-test.yml: bygg.py, kontroll.py, lagringen). Panelene
+(`lastmatch.json`, `prekick.json`, `accuracy.json`) regnes ikke lenger, og
+grunnlag.yml regner ikke testsidens grunnlagsfil eller banner; de står som de
+var. Ingen nye endringer fra hovedsiden flettes inn. kontroll.py og
+kontroll_paneler.py er ute av `tests/for_push.sh`, siden begge leser dagens
+data. Prognoseloggen trengs etter sesongen (oddsvekten, ELO90 mot
+produksjonsmodellen). Beskrivelsen av panelene under gjelder slik det var før.
+
 ## Hva som leses hvor
 
 | Fil | Kilde |

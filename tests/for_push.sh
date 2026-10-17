@@ -7,15 +7,17 @@
 #   1. failsafe                      tests/failsafe.py
 #   2. kildetestene                  tests/kilder/test_kilder.py
 #   3. sesongskiftetestene           tests/kilder/test_sesongskifte.py
-#   4. testsiden (ELO)               elo-test/scripts/kontroll.py
-#   5. byggene er oppdatert          build_league.py obos --check, build_modellsjekk.py --check
-#   6. hele regresjonen              tests/regression.js (Chrome, puppeteer-core)
-#   7. panelene på testsiden         elo-test/scripts/kontroll_paneler.py
-#      (etter regresjonen, ikke samtidig: begge bruker nettleseren)
+#   4. byggene er oppdatert          build_league.py obos --check, build_modellsjekk.py --check
+#   5. hele regresjonen              tests/regression.js (Chrome, puppeteer-core)
 # Til slutt: commitene som pushes (git log origin/main..HEAD).
 #
-# KORT KONTROLL (4.10.2026): failsafe, kontroll.py, kontroll_paneler.py og
-# regression.js --bare del, bare når full for_push var grønn på samme kode
+# ELO-TESTSIDEN ER LØS (17.10.2026): elo-test/scripts/kontroll.py og
+# kontroll_paneler.py er ikke med lenger. Begge leser dagens data (modellen,
+# panelene og kampene), og 17.10. stoppet de pushen fordi ELO-modellen ikke var
+# bygget på nytt etter HamKam-Glimt. kontroll.py kjører fortsatt i
+# elo-test.yml, før modellen og prognoseloggen lagres.
+#
+# KORT KONTROLL (4.10.2026): failsafe og regression.js --bare del, bare når full for_push var grønn på samme kode
 # før rebasen og origin bare endret filer på listen over genererte filer
 # (tests/for_push_valg.py, som skriver ut hvorfor). Ellers full. En grønn full
 # kjøring lagrer commiten i .git/for-push-gronn. FOR_PUSH_FULL=1 gir alltid full.
@@ -62,8 +64,6 @@ echo
 VALG=$(echo "$VALG_UT" | grep '^VALG=' | cut -d= -f2)
 if [ "$VALG" = "kort" ] && [ -z "${FOR_PUSH_FULL:-}" ]; then
   steg "failsafe"                 "$PY" tests/failsafe.py
-  steg "kontroll.py (ELO)"        "$PY" elo-test/scripts/kontroll.py
-  steg "kontroll_paneler.py"      "$PY" elo-test/scripts/kontroll_paneler.py
   steg "regression.js --bare del" node tests/regression.js --bare del
   echo
   echo "Kort kontroll grønn på $(( ($(date +%s) - start) / 60 )) min. Dette pushes:"
@@ -83,11 +83,9 @@ fi
 steg "failsafe"                 "$PY" tests/failsafe.py
 steg "kildetestene"             "$PY" tests/kilder/test_kilder.py
 steg "sesongskiftetestene"      "$PY" tests/kilder/test_sesongskifte.py
-steg "kontroll.py (ELO)"        "$PY" elo-test/scripts/kontroll.py
 steg "obos/index.html bygget"   python3 scripts/build_league.py obos --check
 steg "modellsjekk-sidene"       python3 scripts/build_modellsjekk.py --check
 steg "hele regresjonen"         node tests/regression.js
-steg "kontroll_paneler.py"      "$PY" elo-test/scripts/kontroll_paneler.py
 
 echo
 echo "Alt grønt på $(( ($(date +%s) - start) / 60 )) min. Dette pushes:"

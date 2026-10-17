@@ -10,10 +10,8 @@ name: "Grunnlag: tabellen og svarene regnet på forhånd"
 # jobbene som skriver det siden regner med, ved push av sidene eller
 # skriptet, og manuelt.
 #
-# Testsiden (elo-test/emodell/grunnlag.json, med ELO-Odds 90) regnes her
-# også, etter «ELO-test: bygg modellen», som bygger modellen den regner med.
-# Ikke som et steg i elo-test.yml: da ville en lang regning (om lag en time
-# ved sesongstart) holdt av køen for byggingen av modellen.
+# Testsiden (elo-test/emodell/grunnlag.json) regnes ikke lenger (17.10.2026,
+# ELO-testsiden løs): filen og banneret står som de var.
 #
 # Porten (scripts/grunnlag_port.py) ser om inndataene er endret siden filen
 # ble regnet. Nesten alle kjøringene stopper der, etter noen sekunder, uten
@@ -35,7 +33,6 @@ on:
       - "Odds nær avspark"
       - "OBOS: hent resultater"
       - "Bygg ligasidene"
-      - "ELO-test: bygg modellen"
     types: [completed]
     branches: [main]
   push:
@@ -43,7 +40,6 @@ on:
     paths:
       - eliteserien/index.html
       - obos/index.html
-      - elo-test/index.html
       - eliteserien/data/justeringer.json
       - obos/data/justeringer.json
       - scripts/lag_grunnlag.js
@@ -71,20 +67,15 @@ jobs:
         with:
           ref: main
 
-      # Etter «ELO-test: bygg modellen» bare testsiden, etter de andre
-      # jobbene bare ligaene (testsidens modell er ikke bygget ennå), ellers
-      # alle tre.
+      # Bare de to ligaene. Testsidens grunnlagsfil regnes ikke lenger
+      # (17.10.2026, ELO-testsiden løs: bare modellen og prognoseloggen ut
+      # sesongen), og «ELO-test: bygg modellen» utløser ikke denne.
       - name: Er inndataene endret siden filen ble regnet?
         id: port
         env:
           TVING: ${{ inputs.tving && 'true' || 'false' }}
-          UTLOSER: ${{ github.event.workflow_run.name || '' }}
         run: |
-          case "$UTLOSER" in
-            "ELO-test: bygg modellen") sider="elo-test" ;;
-            "") sider="eliteserien obos elo-test" ;;
-            *) sider="eliteserien obos" ;;
-          esac
+          sider="eliteserien obos"
           python3 scripts/grunnlag_port.py $sider
 
       # Bare den nyeste i en runde regner en liga (8.10.2026): har en nyere

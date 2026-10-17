@@ -695,8 +695,11 @@ def main():
               kall in t and t.count("snapshot_probs.js") == t.count("--uten-prekick-vindu") + t.count("se scripts/snapshot_probs.js")
               and "--bare-prekick" not in t)
     elo = (wfd / "elo-test.yml").read_text(encoding="utf-8")
-    check("elo-test.yml: testsiden er eneste skriver av sin prekick.json og bruker ingen av modusene",
-          "--uten-prekick-vindu" not in elo and "--bare-prekick" not in elo and "--ut elo-test/emodell" in elo)
+    # 17.10.2026: ELO-testsiden er løs, og panelene (også prekick.json) regnes
+    # ikke lenger. Ingen workflow skriver testsidens prekick.json.
+    check("elo-test.yml: panelene regnes ikke lenger (ingen snapshot_probs), og ingen workflow skriver til elo-test/emodell med snapshot_probs",
+          "snapshot_probs" not in "\n".join(l for l in elo.splitlines() if not l.strip().startswith("#"))
+          and not any("--ut elo-test/emodell" in f.read_text(encoding="utf-8") for f in wfd.glob("*.yml")))
 
     # 22. Grunnlagsfilen (del 2, steg 2): porten slipper gjennom bare når det
     # siden regner med er endret, og workflowen kan ikke stoppe datajobbene.
@@ -846,12 +849,14 @@ def main():
                 break
     utlosere = gw.split("workflows:", 1)[1].split("types:", 1)[0]
     utlosere = [l.strip()[2:].strip().strip('"') for l in utlosere.splitlines() if l.strip().startswith("- ")]
-    check("grunnlag.yml: utløses etter datajobbene, oddsjobbene, byggingen av ligasidene og ELO-modellen, med navn som finnes",
-          sorted(navn_wf.get(n, "?") for n in utlosere) == ["build-leagues.yml", "elo-test.yml", "obos-results.yml", "prekick-odds.yml", "update-data.yml", "update-odds.yml"],
+    # 17.10.2026: ELO-testsiden er løs, og testsidens grunnlagsfil regnes ikke
+    # lenger. ELO-byggingen utløser ikke grunnlag.yml.
+    check("grunnlag.yml: utløses etter datajobbene, oddsjobbene og byggingen av ligasidene (ikke ELO-modellen), med navn som finnes",
+          sorted(navn_wf.get(n, "?") for n in utlosere) == ["build-leagues.yml", "obos-results.yml", "prekick-odds.yml", "update-data.yml", "update-odds.yml"],
           str(utlosere))
-    check("grunnlag.yml: etter ELO-modellen bare testsiden, etter datajobbene bare ligaene, ellers alle tre",
-          '"ELO-test: bygg modellen") sider="elo-test" ;;' in gw and '"") sider="eliteserien obos elo-test" ;;' in gw
-          and '*) sider="eliteserien obos" ;;' in gw and "python3 scripts/grunnlag_port.py $sider" in gw)
+    check("grunnlag.yml: bare de to ligaene, aldri testsiden",
+          'sider="eliteserien obos"' in gw and "python3 scripts/grunnlag_port.py $sider" in gw
+          and 'sider="elo-test"' not in gw and "eliteserien obos elo-test" not in gw)
     check("grunnlag.yml: bare kjøringer på main utløser den, og push av sidene og skriptene",
           "types: [completed]\n    branches: [main]\n" in gw and all(f"      - {p_}\n" in gw for p_ in
           ("eliteserien/index.html", "obos/index.html", "scripts/lag_grunnlag.js", "scripts/grunnlag_port.py",

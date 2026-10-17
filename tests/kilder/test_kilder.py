@@ -3825,6 +3825,18 @@ sjekk("elo-test.yml: ingen kø på hele workflowen, byggejobben trenger porten o
 sjekk("elo-test.yml: porten kjører puljeport.py elo med GITHUB_TOKEN og har actions: read; ingen gammel betingelse på utløserens utfall",
       "  port:\n" in _ewk and "python3 scripts/puljeport.py elo" in _ewk and "GITHUB_TOKEN: ${{ github.token }}" in _ewk
       and "actions: read" in _ewk and "workflow_run.conclusion" not in _ewk and _ewk.index("  bygg:") < _ewk.index("  port:"))
+# ELO-testsiden løs (17.10.2026): bare modellen og prognoseloggen ut sesongen.
+_fp = (ROT / "tests" / "for_push.sh").read_text("utf-8")
+_fpk = "\n".join(l for l in _fp.splitlines() if not l.strip().startswith("#"))
+sjekk("ELO løs: for_push.sh kjører verken kontroll.py eller kontroll_paneler.py (de leser dagens data)",
+      "elo-test/scripts/kontroll.py" not in _fpk and "kontroll_paneler" not in _fpk
+      and 'steg "regression.js --bare del"' in _fpk and 'steg "hele regresjonen"' in _fpk, _fpk[-400:])
+sjekk("ELO løs: grunnlag.yml regner bare de to ligaene, utløses ikke av ELO-byggingen og ikke av elo-test/index.html",
+      'sider="eliteserien obos"' in _gwk and "elo-test" not in _gwk.split("jobs:")[0] and '"ELO-test: bygg modellen"' not in _gwk
+      and "elo-test/index.html" not in _gwk, _gwk[:600])
+sjekk("ELO løs: elo-test.yml har ingen panelsteg, og kontroll.py står før lagringen av modellen og prognoseloggen",
+      not any(x in _ewk for x in ("snapshot_probs", "accuracy_log", "paneler.py", "kontroll_paneler", "Lagre panelene"))
+      and _ewk.index("python3 elo-test/scripts/kontroll.py") < _ewk.index("git add elo-test/emodell/model.json"))
 sjekk("grunnlag.yml: steget puljen etter porten, ligaene fra det, med actions: read",
       "python3 scripts/grunnlag_port.py $sider" in _gwk and "LIGAER: ${{ steps.port.outputs.ligaer }}" in _gwk
       and "python3 scripts/puljeport.py grunnlag" in _gwk and "ligaer: ${{ steps.puljen.outputs.ligaer }}" in _gwk
