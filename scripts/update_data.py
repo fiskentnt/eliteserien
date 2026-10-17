@@ -137,6 +137,23 @@ def dagens_revisjonsavvik(now):
     return int(st.get("errors") or 0)
 
 
+# Høyst så mange advarsler i audit_state.json og status.json.
+ADVARSLER_MAKS = 10
+
+
+def dagens_revisjonsadvarsler(now):
+    """Advarslene fra DAGENS kontroll mot ffksupporter.net (17.10.2026), til
+    status.json og livstegnet: et resultat kilden mangler, men en annen
+    uavhengig kilde bekrefter, eller at kilden har stoppet. Gjør aldri rødt."""
+    try:
+        st = json.loads(AUDIT_STATE_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    if st.get("checked_date") != now.astimezone(OSLO).strftime("%Y-%m-%d"):
+        return []
+    return [str(a) for a in st.get("advarsler") or []]
+
+
 def ligasiden_eller_reserve(cache_dir=None, log=lambda s: None):
     """Kampene fra ligasiden. RESERVE (regelen fra 1.10.2026, se
     nff_source.py): BARE naar ligasiden ikke svarer, hentes fotball.no --
@@ -378,6 +395,11 @@ def write_status(ok, now, error=None):
         data["error"] = str(error)[:300]
     if avvik:
         data["revisjon_avvik"] = avvik
+    # Advarsler fra dagens kontroll (17.10.2026): gjør ikke statusen rød, men
+    # står her og går med livstegnet (livstegn.py).
+    advarsler = dagens_revisjonsadvarsler(now)
+    if advarsler:
+        data["advarsler"] = advarsler
     STATUS_PATH.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
 
 
@@ -418,46 +440,83 @@ def _kickoff_utc(date_str, time_str):
     return naive.replace(tzinfo=OSLO).astimezone(timezone.utc)
 
 
-def audit_against_ffk(matches_out, ffk_rows, now):
+def _vaare_spilte(matches_out):
+    """De spilte kampene med avspark som datetime (None uten gyldig tid), til
+    resultatregel.revider_kilde og kilde_stoppet."""
+    ut = []
+    for m in matches_out:
+        try:
+            avspark = _kickoff_utc(m["date"], m["time"]) if m.get("time") else None
+        except ValueError:
+            avspark = None
+        ut.append({**m, "avspark": avspark})
+    return ut
+
+
+def _ffk_resultater(ffk_rows):
+    """{(hjemme, borte): (hg, ag) eller None} fra ffksupporter-radene."""
+    return {(r["home"], r["away"]): ((r["hg"], r["ag"]) if r["hg"] is not None and r["ag"] is not None else None)
+            for r in ffk_rows}
+
+
+def kontroll_bekreftere(now, log=lambda s: None):
+    """De uavhengige kildene som kan bekrefte et resultat ffksupporter.net
+    mangler (17.10.2026), uten tellende kall:
+      * football-data.co.uk: hele sesongen, hentet i dag av fetch_odds_history
+        (odds_fd.json, før kontrollene i etter_skriving).
+      * ESPN: hele sesongen i ett gratis kall. ESPN har hatt feil 0-0, men her
+        teller bare nøyaktig samme resultat som vårt.
+      * Kildene utenfor NTF som bekreftet resultatet da det ble publisert
+        (results_state.json, "bekreftet", 48 timer).
+    Kalles bare når ffksupporter mangler en kamp (resultatregel.revider_kilde).
+    Returnerer {kilde: {(hjemme, borte): (hg, ag)}}."""
+    ut = {}
+    try:
+        fd = json.loads((LEAGUE / "data" / "odds_fd.json").read_text(encoding="utf-8"))
+        ut["football-data"] = {(m["home"], m["away"]): (m["hg"], m["ag"]) for m in fd.get("matches") or []
+                               if m.get("hg") is not None and m.get("ag") is not None}
+    except Exception as e:
+        log(f"  kontrollen: football-data.co.uk kunne ikke leses ({type(e).__name__}: {e})")
+    try:
+        for n, v in (json.loads(STATE.read_text(encoding="utf-8")).get("bekreftet") or {}).items():
+            for kilde in v.get("kilder") or []:
+                ut.setdefault(kilde, {})[tuple(n.split("|"))] = tuple(v["resultat"])
+    except Exception:
+        pass
+    try:
+        import sesong as _ses
+        aar = _ses.aktiv_sesong(ROOT, LIGA, log=lambda _s: None) or now.astimezone(OSLO).year
+        ut.setdefault("espn", {}).update({(r["home"], r["away"]): (r["hg"], r["ag"])
+                                          for r in espn_source.fetch_season(aar, log=log)
+                                          if r.get("hg") is not None and r.get("ag") is not None})
+    except Exception as e:
+        log(f"  kontrollen: ESPN-sesongen kunne ikke hentes ({type(e).__name__}: {e})")
+    return ut
+
+
+def audit_against_ffk(matches_out, ffk_rows, now, bekreftere=None):
     """Sammenligner ALLE spilte kamper i matches_out (vår fasit akkurat nå,
     uansett hvilken kilde hvert resultat kom fra) mot ffksupporter.net sin
-    egen liste (ffk_rows, fra denne kjøringens get_ffk_rows()). ffksupporter
-    oppdateres for hånd og ligger ofte etter, så avvik deles i to
-    alvorlighetsgrader:
+    egen liste (ffk_rows, fra denne kjøringens get_ffk_rows()), med regelen i
+    resultatregel.revider_kilde (17.10.2026):
       1. Begge kilder har et resultat, men de er ULIKE -- feil med en gang.
-      2. Vi har et resultat (typisk fra ESPN) som ffksupporter.net ikke har
-         registrert ennå -- bare en advarsel, siden dette er normalt og
-         forbigående. Blir en feil først når det er over 72 timer siden
-         avspark og ffksupporter.net FORTSATT ikke har det.
-      3. ffksupporter.net har et resultat vi mangler helt -- feil med en
-         gang (skal være umulig gitt at reconcile() alltid bruker
-         ffksupporter sitt tall når det finnes, så dette er et tegn på en
-         reell feil i sammenslåingen).
-    Returnerer (errors, warnings), begge lister med tekst."""
-    ffk_by_pair = {(r["home"], r["away"]): r for r in ffk_rows}
+      2. ffksupporter.net mangler resultatet (eller kampen), men en annen
+         uavhengig kilde (kontroll_bekreftere) har samme resultat som oss --
+         advarsel. ffksupporter oppdateres for hånd og ligger ofte etter.
+         Før 17.10. ble dette rødt etter 72 timer uansett: KFUM Oslo-Vålerenga
+         (12.10.) holdt statusen rød fra 16.10., og da varslet ingenting annet.
+      3. Mangler den, og ingen uavhengig kilde bekrefter: advarsel til 72
+         timer etter avspark, så feil.
+      4. ffksupporter.net har et resultat vi mangler helt -- feil med en
+         gang (et tegn på en reell feil i sammenslåingen).
+    bekreftere: som i revider_kilde; uten hentes kontroll_bekreftere når
+    det trengs. Returnerer (errors, warnings), begge lister med tekst."""
+    import resultatregel
     matches_by_pair = {(m["home"], m["away"]): m for m in matches_out}
-    errors, warnings = [], []
-
-    for m in matches_out:
-        ffk = ffk_by_pair.get((m["home"], m["away"]))
-        if ffk is None:
-            errors.append(f"{m['home']}-{m['away']} ({m['date']}): finnes hos oss, men ikke i det hele tatt hos ffksupporter.net")
-        elif ffk["hg"] is None or ffk["ag"] is None:
-            hours_since = None
-            if m.get("time"):
-                try:
-                    hours_since = (now - _kickoff_utc(m["date"], m["time"])).total_seconds() / 3600
-                except ValueError:
-                    hours_since = None
-            if hours_since is not None and hours_since > 72:
-                errors.append(f"{m['home']}-{m['away']} ({m['date']}): vi har {m['hg']}-{m['ag']}, "
-                               f"ffksupporter.net har fortsatt ikke registrert resultat {hours_since:.0f} timer etter avspark")
-            else:
-                suffix = f" ({hours_since:.0f}t siden avspark)" if hours_since is not None else ""
-                warnings.append(f"{m['home']}-{m['away']} ({m['date']}): vi har {m['hg']}-{m['ag']}, "
-                                 f"kontrollkilden har ikke registrert resultat ennå{suffix}")
-        elif (ffk["hg"], ffk["ag"]) != (m["hg"], m["ag"]):
-            errors.append(f"{m['home']}-{m['away']} ({m['date']}): vi har {m['hg']}-{m['ag']}, kontrollkilden har {ffk['hg']}-{ffk['ag']}")
+    errors, warnings = resultatregel.revider_kilde(
+        "ffksupporter", _vaare_spilte(matches_out), _ffk_resultater(ffk_rows),
+        bekreftere if bekreftere is not None else (lambda: kontroll_bekreftere(now)), now,
+        navn="ffksupporter.net")
 
     for r in ffk_rows:
         if r["hg"] is None or r["ag"] is None:
@@ -468,12 +527,16 @@ def audit_against_ffk(matches_out, ffk_rows, now):
     return errors, warnings
 
 
-def run_daily_audit(matches_out, ffk_rows, now, log):
+def run_daily_audit(matches_out, ffk_rows, now, log, bekreftere=None):
     """Én gang i døgnet: full kontroll av alle spilte kamper mot
     ffksupporter.net. Kjøres på den første kjøringen som når hit hver dag --
     egen dato-sperre her, ikke avhengig av noe bestemt klokkeslett. Kritiske
-    avvik feiler kjøringen (stempelet blir rødt); "ikke registrert ennå" er
-    bare en advarsel i loggen med mindre den har stått i over 72 timer.
+    avvik feiler kjøringen (stempelet blir rødt); et resultat ffksupporter
+    mangler er en advarsel når en annen uavhengig kilde bekrefter det, og
+    ellers til 72 timer etter avspark (audit_against_ffk). Har ffksupporter
+    ikke registrert noe på flere døgn, er det en advarsel om at kilden har
+    stoppet (resultatregel.kilde_stoppet). Advarslene lagres i
+    audit_state.json og står i status.json resten av dagen.
     "Sjekket i dag"-merket settes uansett utfall, så en reell feil ikke
     spammer hvert kvarter resten av dagen."""
     today = now.astimezone(OSLO).strftime("%Y-%m-%d")
@@ -494,9 +557,19 @@ def run_daily_audit(matches_out, ffk_rows, now, log):
         log(f"Daglig kontroll: {state['errors']} avvik fra tidligere i dag "
             f"-- kjører revisjonen på nytt.")
     log(f"--- Daglig kontroll: {len(matches_out)} spilte kamper mot ffksupporter.net ---")
-    errors, warnings = audit_against_ffk(matches_out, ffk_rows, now)
+    import resultatregel
+    errors, warnings = audit_against_ffk(matches_out, ffk_rows, now, bekreftere=bekreftere)
+    kilder = dict(state.get("kilder") or {})
+    kilder["ffksupporter"], stoppet = resultatregel.kilde_stoppet(
+        "ffksupporter.net", _vaare_spilte(matches_out), _ffk_resultater(ffk_rows), kilder.get("ffksupporter"), now)
+    if stoppet:
+        warnings.insert(0, stoppet)
     AUDIT_STATE_PATH.write_text(json.dumps(
-        {"checked_date": today, "errors": len(errors), "warnings": len(warnings)}, ensure_ascii=False, indent=2) + "\n",
+        {"checked_date": today, "errors": len(errors), "warnings": len(warnings),
+         # Til status.json og livstegnet (write_status, livstegn.py).
+         "advarsler": warnings[:ADVARSLER_MAKS],
+         # Når hver kontrollkilde sist registrerte noe nytt (kilde_stoppet).
+         "kilder": kilder}, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8")
     for w in warnings:
         log(f"ADVARSEL: {w}")

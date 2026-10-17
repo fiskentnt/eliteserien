@@ -1226,6 +1226,72 @@ _ud.write_status(ok=True, now=_gammel_naa)
 sjekk("og DA blir stempelet grønt igjen", _status()["ok"] is True, str(_status()))
 sjekk("avviksfeltet er borte", "revisjon_avvik" not in _status(), str(_status()))
 
+# REGELEN FRA 17.10.2026 (resultatregel.revider_kilde): ffksupporter.net
+# manglet KFUM Oslo-Vålerenga 2-1 (12.10.). Før ble det rødt etter 72 timer, og
+# statusen sto rød fra 16.10. 07.45, så ingen ekte feil i runde 24 ville gitt
+# nytt varsel. Nå: rødt bare når en kilde har et annet resultat, eller ingen
+# uavhengig kilde bekrefter etter fristen; mangler, men bekreftet: advarsel.
+import resultatregel as _rr17
+_k17 = {"date": "2026-10-12", "time": "18:00", "round": 23, "home": "KFUM Oslo", "away": "Vålerenga", "hg": 2, "ag": 1}
+_n17 = ("KFUM Oslo", "Vålerenga")
+_naa17 = _dt(2026, 10, 17, 12, 0, tzinfo=_tz.utc)    # 116 timer etter avspark (18.00 norsk tid)
+_ffk17 = [{**_k17, "hg": None, "ag": None}]
+_e17, _w17 = _ud.audit_against_ffk([_k17], _ffk17, _naa17, bekreftere={"football-data": {_n17: (2, 1)}})
+sjekk("17.10.: ffksupporter mangler resultatet, football-data bekrefter det: advarsel, ikke feil",
+      _e17 == [] and len(_w17) == 1 and "ffksupporter.net mangler resultatet 116 timer etter avspark; bekreftet av football-data" in _w17[0],
+      f"{_e17} {_w17}")
+_e17, _w17 = _ud.audit_against_ffk([_k17], _ffk17, _naa17, bekreftere={})
+sjekk("ingen uavhengig kilde bekrefter, over 72 timer etter avspark: feil",
+      len(_e17) == 1 and "ingen uavhengig kilde bekrefter det" in _e17[0], f"{_e17} {_w17}")
+_e17, _w17 = _ud.audit_against_ffk([_k17], _ffk17, _dt(2026, 10, 13, 12, 0, tzinfo=_tz.utc), bekreftere={})
+sjekk("uten bekreftelse, innenfor 72 timer: advarsel", _e17 == [] and len(_w17) == 1 and "ennå (20t siden avspark)" in _w17[0],
+      f"{_e17} {_w17}")
+_e17, _w17 = _ud.audit_against_ffk([_k17], _ffk17, _naa17,
+                                   bekreftere={"ligasiden": {_n17: (2, 1)}, "fotball.no": {_n17: (2, 1)}})
+sjekk("NTF (ligasiden, fotball.no) teller ikke som uavhengig bekreftelse: feil", len(_e17) == 1, f"{_e17} {_w17}")
+_e17, _w17 = _ud.audit_against_ffk([_k17], _ffk17, _naa17, bekreftere={"espn": {_n17: (0, 0)}})
+sjekk("en kilde med et ANNET resultat bekrefter ikke (ESPNs feil 0-0): feil", len(_e17) == 1, f"{_e17} {_w17}")
+_e17, _w17 = _ud.audit_against_ffk([_k17], [], _naa17, bekreftere={"espn": {_n17: (2, 1)}})
+sjekk("ffksupporter mangler hele kampen, ESPN bekrefter: advarsel",
+      _e17 == [] and len(_w17) == 1 and "mangler kampen" in _w17[0] and "bekreftet av espn" in _w17[0], f"{_e17} {_w17}")
+_e17, _w17 = _ud.audit_against_ffk([_k17], [{**_k17, "hg": 1}], _naa17, bekreftere={"espn": {_n17: (2, 1)}})
+sjekk("et ANNET resultat hos ffksupporter er feil, også når andre har vårt",
+      _e17 == ["KFUM Oslo-Vålerenga (2026-10-12): vi har 2-1, ffksupporter.net har 1-1"], f"{_e17} {_w17}")
+_kalt17 = []
+_ud.audit_against_ffk([_k17], [dict(_k17)], _naa17, bekreftere=lambda: _kalt17.append(1) or {})
+sjekk("bekreftelsene (ESPN-kallet) hentes bare når ffksupporter mangler noe", _kalt17 == [], str(_kalt17))
+# Hele flyten: kontrollen er grønn, advarslene lagres og står i status.json.
+_ud.AUDIT_STATE_PATH.write_text(_json.dumps({"checked_date": "2020-01-01"}), encoding="utf-8")
+_ok17 = _ud.run_daily_audit([_k17], _ffk17, _naa17, lambda _s: None, bekreftere={"football-data": {_n17: (2, 1)}})
+_t17 = _json.loads(_ud.AUDIT_STATE_PATH.read_text(encoding="utf-8"))
+sjekk("run_daily_audit med et bekreftet resultat ffksupporter mangler: utført uten feil, advarselen lagret",
+      _ok17 is True and _t17["errors"] == 0 and any("bekreftet av football-data" in a for a in _t17.get("advarsler", [])), str(_t17))
+_ud.write_status(ok=True, now=_naa17)
+sjekk("og status.json er grønn, med advarselen", _status()["ok"] is True and "error" not in _status()
+      and any("KFUM Oslo-Vålerenga" in a for a in _status().get("advarsler", [])), str(_status()))
+sjekk("en vanlig kjøring en annen dag: advarslene fra i går er borte",
+      (_ud.write_status(ok=True, now=_naa17 + _td(days=1)), "advarsler" not in _status())[1], str(_status()))
+
+# Kilden har stoppet (resultatregel.kilde_stoppet): advarsel, aldri rødt.
+_a17 = {"date": "2026-10-11", "home": "Lillestrøm", "away": "Molde", "hg": 2, "ag": 2,
+        "avspark": _dt(2026, 10, 11, 17, 15, tzinfo=_tz.utc)}
+_b17 = {**_k17, "avspark": _dt(2026, 10, 12, 16, 0, tzinfo=_tz.utc)}
+_r17 = {("Lillestrøm", "Molde"): (2, 2), _n17: None}
+_s17, _adv17 = _rr17.kilde_stoppet("ffksupporter.net", [_a17, _b17], _r17, None, _naa17)
+sjekk("første gang: «endret» er avsparket for siste kamp kilden har, og den mangler en kamp spilt etter det for over 3 døgn siden: stoppet",
+      _s17 == {"resultater": 1, "endret": "2026-10-11T17:15:00+00:00"} and _adv17
+      and "ffksupporter.net har ikke registrert noe nytt på 6 døgn (siden 11.10.)" in _adv17 and "stoppet" in _adv17, f"{_s17} {_adv17}")
+_, _adv17 = _rr17.kilde_stoppet("ffksupporter.net", [_a17, _b17], _r17, _s17, _dt(2026, 10, 14, 12, 0, tzinfo=_tz.utc))
+sjekk("under 3 døgn etter den manglende kampen: ingen advarsel", _adv17 is None, str(_adv17))
+_s17b, _adv17 = _rr17.kilde_stoppet("ffksupporter.net", [_a17, _b17], {**_r17, _n17: (2, 1)}, _s17, _naa17)
+sjekk("kilden registrerer resultatet: «endret» blir nå, ingen advarsel",
+      _s17b == {"resultater": 2, "endret": "2026-10-17T12:00:00+00:00"} and _adv17 is None, f"{_s17b} {_adv17}")
+_, _adv17 = _rr17.kilde_stoppet("ffksupporter.net", [_a17, _b17], {**_r17, _n17: (2, 1)}, _s17b, _naa17 + _td(days=10))
+sjekk("ingenting nytt på ti døgn, men kilden har alt (landskamppause): ingen advarsel", _adv17 is None, str(_adv17))
+_gml17 = {**_a17, "date": "2026-05-10", "avspark": _dt(2026, 5, 10, 15, 0, tzinfo=_tz.utc)}
+_, _adv17 = _rr17.kilde_stoppet("Wikipedia", [_gml17, _a17], {("Lillestrøm", "Molde"): (2, 2)}, None, _naa17)
+sjekk("et gammelt hull (Wikipedia mangler OBOS-kamper fra 10.5.) er ikke et tegn på at kilden har stoppet", _adv17 is None, str(_adv17))
+
 # 4) Gaarsdagens avvik skal ikke faerge dagens stempel
 _ud.AUDIT_STATE_PATH.write_text(
     _json.dumps({"checked_date": "2020-01-01", "errors": 5}), encoding="utf-8")
@@ -2938,6 +3004,31 @@ try:
     sjekk('og "Haugesund-Stabæk: highlightly 20.43, ligasiden 20.53"', "Haugesund-Stabæk: highlightly 20.43, ligasiden 20.53" in _ut, _ut[-900:])
     _kode, _st, _pub, _ut = _kjor_ut(_dt(2026, 10, 3, 19, 3, tzinfo=_tz.utc), _lig)
     sjekk("kjøringen etter publiseringen: kampen er tatt ut av tilstanden", "Haugesund|Stabæk" not in _st.get("forst_sett", {}), str(_st.get("forst_sett")))
+    # Kontrollen mot Wikipedia (17.10.2026, resultatregel.revider_kilde): et
+    # ANNET resultat er en konflikt (rødt; før bare en linje i loggen), et
+    # manglende er en advarsel når publiseringen hadde en uavhengig kilde.
+    _wk = dict(_pub)
+    del _wk[("Haugesund", "Stabæk")]
+    _wk[("Hødd", "Odd")] = (3, 3)
+    _kode, _st, _ = _kjor(_dt(2026, 10, 7, 12, 0, tzinfo=_tz.utc), wiki=_wk)
+    sjekk("OBOS: Wikipedia har Hødd-Odd 3-3 mot vårt 2-3: konflikt",
+          any("kontrollen mot Wikipedia" in c and "Hødd-Odd (2026-10-03): vi har 2-3, Wikipedia har 3-3" in c for c in _st["conflicts"]),
+          str(_st["conflicts"]))
+    _ok_rr17 = Path(_tf2.mkdtemp()); (_ok_rr17 / "obos" / "data").mkdir(parents=True)
+    _shr.copy(_sbo / "results_state.json", _ok_rr17 / "obos" / "data" / "results_state.json")
+    sjekk("og kjøringen er rød (resultatregel.py sjekk obos)", _regel.sjekk("obos", rot=_ok_rr17) == 1)
+    sjekk("Wikipedia mangler Haugesund-Stabæk, publisert med en uavhengig kilde: advarsel, ikke konflikt",
+          any(a.startswith("Haugesund-Stabæk (2026-10-03): vi har 2-0, Wikipedia mangler resultatet")
+              and "bekreftet av en uavhengig kilde ved publiseringen" in a for a in _st.get("advarsler", []))
+          and not any("Haugesund-Stabæk" in c for c in _st["conflicts"]), f"{_st.get('advarsler')} {_st['conflicts']}")
+    sjekk("og tilstanden husker hvor mange resultater Wikipedia har (kilde_stoppet)",
+          _st.get("kilder", {}).get("wikipedia", {}).get("resultater") == len(_wk), str(_st.get("kilder")))
+    _wk[("Hødd", "Odd")] = (2, 3)
+    _kode, _st, _ = _kjor(_dt(2026, 10, 7, 12, 10, tzinfo=_tz.utc), wiki=_wk)
+    _shr.copy(_sbo / "results_state.json", _ok_rr17 / "obos" / "data" / "results_state.json")
+    sjekk("Wikipedia retter Hødd-Odd: ingen konflikt, kjøringen grønn, advarselen om Haugesund-Stabæk står",
+          not _st["conflicts"] and _regel.sjekk("obos", rot=_ok_rr17) == 0
+          and any("Haugesund-Stabæk" in a for a in _st.get("advarsler", [])), f"{_st['conflicts']} {_st.get('advarsler')}")
     # Over LOGG_TAK (40) i døgnet: ingen kall bare for loggen.
     _shr.copy(ROT / "tests" / "data" / "2026-10-01" / "obos" / "data" / "matches.json", _sbo / "matches.json")
     (_sbo / "results_state.json").unlink()
@@ -3781,8 +3872,30 @@ _p, _ut, _k = _lt_kjor(jobb="failure", steg=_feiler("oppdater"), status={"ok": F
 sjekk("rød kjøring, tabellkontrollen: /fail med «tabellkontroll» og feilen",
       _p[0][0] == _HC + "/fail" and _p[0][1].startswith("Eliteserien: tabellkontroll\n" + _TAB) and "::error title=Eliteserien: tabellkontroll::" in _ut, f"{_p} {_ut}")
 _p, _ut, _k = _lt_kjor(jobb="failure", steg=_feiler("oppdater"), status={"ok": False, "error": _DAT})
-sjekk("rød kjøring, kamp uten sluttresultat: «datafeil», bare første linje av feilen",
-      _p[0][1].startswith("Eliteserien: datafeil\n1 kamp(er) mangler sluttresultat mer enn 3 timer etter avspark:\nKjøringen hentet data."), _p[0][1])
+sjekk("rød kjøring, kamp uten sluttresultat: «datafeil», med hele feilen (selve avviket, 17.10.2026)",
+      _p[0][1].startswith("Eliteserien: datafeil\n" + _DAT + "\nKjøringen hentet data."), _p[0][1])
+sjekk("og i ::error-linjen er linjeskiftet %0A (én workflow-kommando)",
+      "::error title=Eliteserien: datafeil::1 kamp(er) mangler sluttresultat mer enn 3 timer etter avspark:%0ARosenborg-Start" in _ut, _ut)
+# 16.10.2026: e-posten sa «1 avvik mellom matches.json og kontrollkilden:» og ikke hvilken kamp.
+_KFUM = ("1 avvik mellom matches.json og kontrollkilden:\nKFUM Oslo-Vålerenga (2026-10-12): vi har 2-1, "
+         "ffksupporter.net har 1-1")
+_p, _ut, _k = _lt_kjor(steg=_GATE_LUKKET, status={"ok": False, "error": _KFUM, "revisjon_avvik": 1})
+sjekk("rød status: /fail har selve avviket (kampen og resultatene), ikke bare første linje",
+      _p[0][0] == _HC + "/fail" and "KFUM Oslo-Vålerenga (2026-10-12): vi har 2-1, ffksupporter.net har 1-1" in _p[0][1], _p[0][1])
+# Advarsler (17.10.2026): grønn status med advarsler gir livstegn MED teksten.
+_ADV = "KFUM Oslo-Vålerenga (2026-10-12): vi har 2-1, ffksupporter.net mangler resultatet 114 timer etter avspark; bekreftet av espn, football-data"
+_STOPP = "ffksupporter.net har ikke registrert noe nytt på 6 døgn (siden 11.10.) og mangler 1 resultat(er) fra kamper spilt etter det: kilden ser ut til å ha stoppet"
+_p, _ut, _k = _lt_kjor(steg=_GATE_AAPEN, status={**_GRONN, "advarsler": [_STOPP, _ADV]})
+sjekk("grønn status med advarsler: livstegn (ikke /fail), med advarslene som tekst",
+      len(_p) == 1 and _p[0][0] == _HC and _p[0][1] is not None
+      and _p[0][1].startswith("Eliteserien: grønn, 2 advarsel(er)\n- " + _STOPP + "\n- " + _ADV)
+      and "https://github.com/fiskentnt/eliteserien/actions/runs/123" in _p[0][1], str(_p))
+sjekk("og en ::notice i loggen, ikke ::warning eller ::error",
+      "::notice title=Eliteserien: 2 advarsel(er)::" in _ut and "::warning" not in _ut and "::error" not in _ut, _ut)
+_p, _ut, _k = _lt_kjor(steg=_GATE_AAPEN, status={"ok": False, "error": _REV, "advarsler": [_ADV]})
+sjekk("rød status med advarsler: /fail med feilen og advarslene",
+      _p[0][0] == _HC + "/fail" and _p[0][1].startswith("Eliteserien: revisjon\n" + _REV)
+      and "Advarsler (ikke rødt):\n- " + _ADV in _p[0][1], _p[0][1])
 _p, _ut, _k = _lt_kjor(jobb="failure", steg=_feiler("revisjon"), status={"ok": False, "error": _REV})
 sjekk("rød kjøring, revisjonssteget: «revisjon» med feilen fra status.json", _p[0][1].startswith("Eliteserien: revisjon\n" + _REV), _p[0][1])
 _p, _ut, _k = _lt_kjor(jobb="failure", steg=_feiler("resultatregel", _GATE_LUKKET), status=_GRONN)
@@ -4025,7 +4138,9 @@ _a_status = {"ok": False, "error": _uda.samlet_feiltekst([("mangler sluttresulta
                                                            ("tabellkontroll", "2 kritisk(e) avvik mellom tabellen vår og tabellen på ligasiden")])[:300]}
 sjekk("livstegn: to kontroller gir kategorien «flere kontroller», og detaljen nevner begge",
       _lta.hva_feilet("failure", {"oppdater": {"outcome": "failure"}}, _a_status)
-      == ("flere kontroller", "2 kontroller fant avvik: mangler sluttresultat; tabellkontroll"),
+      == ("flere kontroller", "2 kontroller fant avvik: mangler sluttresultat; tabellkontroll\n"
+          "mangler sluttresultat: 1 kamp(er) mangler sluttresultat\n"
+          "tabellkontroll: 2 kritisk(e) avvik mellom tabellen vår og tabellen på ligasiden"),
       str(_lta.hva_feilet("failure", {"oppdater": {"outcome": "failure"}}, _a_status)))
 sjekk("livstegn: én kontroll gir samme kategori som før (tabellkontroll)",
       _lta.hva_feilet("failure", {"oppdater": {"outcome": "failure"}},

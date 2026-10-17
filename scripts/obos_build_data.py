@@ -352,6 +352,14 @@ def main():
         _status["revisjon_avvik"] = _avvik
         _status["error"] = (f"{_avvik} kritisk(e) avvik mellom terminlisten eller tabellen og "
                             f"obos-ligaen.no, se obos/data/audit_fixtures.json og audit_tabell.json")
+    # Advarslene fra kontrollen mot Wikipedia (obos_results.py, 17.10.2026):
+    # gjør ikke rødt, men står her og går med livstegnet (livstegn.py).
+    try:
+        _adv = json.loads((DATA / "results_state.json").read_text(encoding="utf-8")).get("advarsler") or []
+    except Exception:
+        _adv = []
+    if _adv:
+        _status["advarsler"] = [str(a) for a in _adv]
     (DATA / "status.json").write_text(
         json.dumps(_status, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 

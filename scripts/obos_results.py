@@ -560,15 +560,6 @@ def main():
         log("INGEN KILDER SVARTE. Beholder forrige datasett uendret.")
         return 2
 
-    # Kryssjekk av det som ALT er publisert: endrer ingenting, men sier fra
-    # hvis en kilde er uenig i noe vi har stående.
-    if wiki:
-        old_conf = [f"{h} mot {a}: vi har {v[0]}-{v[1]}, Wikipedia {wiki[(h,a)][0]}-{wiki[(h,a)][1]}"
-                    for (h, a), v in prev.items() if (h, a) in wiki and wiki[(h, a)] != v]
-        log(f"  kryssjekk mot Wikipedia: {len(prev)} publiserte, "
-            f"{sum(1 for k2 in prev if k2 in wiki)} finnes hos Wikipedia, {len(old_conf)} uenige")
-        for c in old_conf[:10]:
-            log(f"    UENIGHET {c}")
 
     # Resultater publisert uten kontroll: bekreftet nå, eller fortsatt uten.
     import resultatregel
@@ -582,6 +573,38 @@ def main():
             conflicts.append(f"{k2[0]} mot {k2[1]}: publisert {r[0]}-{r[1]} uten kontroll, men "
                              + ", ".join(f"{kilde} har {v[0]}-{v[1]}" for kilde, v in uavh.items()))
     ukontr_for.update(ukontrollert)
+
+    # Kontrollen av det som ALT er publisert mot Wikipedia (hele sesongen),
+    # med regelen i resultatregel.revider_kilde (17.10.2026), som
+    # ffksupporter.net i Eliteserien. Et ANNET resultat hos Wikipedia er en
+    # konflikt (rødt); før sto det bare i loggen. Mangler Wikipedia resultatet,
+    # er det en advarsel når en uavhengig kilde bekrefter det: Highlightly i
+    # denne kjøringen, kildene i "bekreftet", eller publiseringen selv -- et
+    # publisert resultat som ikke står uten kontroll, hadde en uavhengig kilde
+    # da det ble publisert (resultatregelen). Uten kontroll er rødt fra før.
+    advarsler = []
+    kilder_tilstand = dict(gml_state.get("kilder") or {})
+    if wiki is not None:
+        vaare = [{"home": k2[0], "away": k2[1], "date": sched[k2]["date"], "hg": v[0], "ag": v[1],
+                  "avspark": avspark(k2)} for k2, v in sorted(prev.items()) if k2 in sched]
+        wiki_res = {k2: wiki.get(k2) for k2 in sched}
+
+        def _bekreftere():
+            b = {"en uavhengig kilde ved publiseringen": {k2: v for k2, v in prev.items() if k2 not in ukontr_for}}
+            if hl:
+                b["highlightly"] = dict(hl)
+            for n, v in (gml_state.get("bekreftet") or {}).items():
+                for kilde in v.get("kilder") or []:
+                    b.setdefault(kilde, {})[tuple(n.split("|"))] = tuple(v["resultat"])
+            return b
+        wfeil, wadv = resultatregel.revider_kilde("wikipedia", vaare, wiki_res, _bekreftere, now, navn="Wikipedia")
+        kilder_tilstand["wikipedia"], stoppet = resultatregel.kilde_stoppet(
+            "Wikipedia", vaare, wiki_res, kilder_tilstand.get("wikipedia"), now)
+        advarsler = ([stoppet] if stoppet else []) + wadv
+        log(f"  kontroll mot Wikipedia: {len(vaare)} publiserte, {len(wfeil)} avvik, {len(advarsler)} advarsel(er)")
+        for a in advarsler[:10]:
+            log(f"    ADVARSEL {a}")
+        conflicts += [f"kontrollen mot Wikipedia: {f}" for f in wfeil]
     log(f"\nNye resultater: {len(publish) - len(prev)}. Venter: {len(waiting)}. Konflikter: {len(conflicts)}. "
         f"Uten kontroll: {len(ukontr_for)}.")
     for c in conflicts:
@@ -646,6 +669,11 @@ def main():
             # (bare til loggen, resultatregel.forst_sett).
             "forst_sett": forst,
             "bekreftet": resultatregel.bekreftet_tilstand(gml_state.get("bekreftet"), nye_bekr, now),
+            # Kontrollen mot Wikipedia (17.10.2026): advarslene til status.json
+            # og livstegnet (obos_build_data.py), og når kilden sist
+            # registrerte noe nytt (resultatregel.kilde_stoppet).
+            "advarsler": advarsler[:10],
+            "kilder": kilder_tilstand,
         }, ensure_ascii=False, indent=1) + "\n", encoding="utf-8")
 
     if args.dry_run:

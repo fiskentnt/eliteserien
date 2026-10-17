@@ -32,6 +32,14 @@ tabellen på ligasiden som bare gjelder en fersk kamp med bekreftet resultat,
 er en advarsel og en ny sjekk i neste kjøring, ikke en rød kjøring (se
 tabellkontroll.py og ferske_bekreftede under).
 
+KONTROLLKILDENE (17.10.2026): alle publiserte resultater kontrolleres mot en
+kilde med hele sesongen (ffksupporter.net i Eliteserien, Wikipedia i OBOS),
+se revider_kilde og kilde_stoppet. Rødt bare når kilden har et ANNET resultat
+enn oss, eller når den mangler et resultat og ingen uavhengig kilde bekrefter
+det etter fristen. Mangler kilden det, men en annen bekrefter: advarsel. Har
+kilden ikke registrert noe på flere døgn: advarsel om at den har stoppet.
+Advarslene står i status.json ("advarsler") og går med livstegnet.
+
 Ingen nettkall her: kalleren henter kildene og gir svarene inn.
 """
 import json
@@ -48,6 +56,13 @@ VENT_TIMER = 24
 FERSK_TIMER = 6
 # Så lenge står en bekreftelse i results_state.json.
 BEKREFTET_TIMER = 48
+# Kontrollen av alle publiserte resultater mot en kontrollkilde (revider_kilde):
+# mangler kilden et resultat og ingen annen uavhengig kilde bekrefter det, er
+# det rødt så mange timer etter avspark. Med en bekreftelse er det en advarsel.
+KONTROLL_FRIST_TIMER = 72
+# En kontrollkilde som ikke har registrert noe nytt på så mange døgn og mangler
+# resultater vi har hatt like lenge, har stoppet (kilde_stoppet): advarsel.
+STOPPET_DOGN = 3
 
 LEVERANDOR = {"ligasiden": "NTF", "fotball.no": "NTF", "espn": "ESPN", "highlightly": "Highlightly",
               "oddspapi": "OddsPapi", "wikipedia": "Wikipedia", "ffksupporter": "ffksupporter",
@@ -242,6 +257,104 @@ def ferske_bekreftede(liga, kamper, naa, state_sti=None, timer=FERSK_TIMER):
                        "frist": (avspark + timedelta(hours=timer)).isoformat(timespec="seconds"),
                        "kilder": list(b["kilder"])})
     return ut
+
+
+def revider_kilde(kilde, vaare, kilde_res, bekreftere, naa, frist_timer=KONTROLL_FRIST_TIMER, navn=None):
+    """Kontrollen av ALLE publiserte resultater mot én kontrollkilde (17.10.2026),
+    felles for begge ligaene. Regelen:
+
+      * Kilden har et ANNET resultat enn oss: feil (rødt) med en gang.
+      * Kilden mangler resultatet (eller hele kampen), men minst én annen
+        uavhengig kilde har nøyaktig samme resultat som oss: advarsel.
+      * Kilden mangler det og ingen uavhengig kilde bekrefter det: advarsel
+        til frist_timer etter avspark, så feil.
+
+    Før 17.10. var «mangler» alene rødt etter 72 timer: ffksupporter.net
+    manglet KFUM Oslo-Vålerenga 2-1 (12.10.), og statusen sto rød fra 16.10.
+    07.45, så ingen ekte feil i runde 24 ville gitt nytt varsel.
+
+    vaare: [{home, away, date, hg, ag, avspark}] -- de spilte kampene våre,
+           avspark som datetime med tidssone eller None.
+    kilde_res: {(hjemme, borte): (hg, ag) eller None}; None er en kamp kilden
+           har uten resultat, en kamp som ikke står, har kilden ikke.
+    bekreftere: {annen kilde: {(hjemme, borte): (hg, ag)}}, eller en funksjon
+           som gir det; den kalles bare når en kamp mangler hos kilden (kan
+           koste et nettkall). NTF teller aldri som uavhengig.
+    kilde er nøkkelen i LEVERANDOR, navn det som står i tekstene.
+    Returnerer (feil, advarsler), begge lister med tekst."""
+    feil, advarsler = [], []
+    navn = navn or kilde
+    cache = {}
+
+    def bekreftet_av(nokkel, r):
+        if "b" not in cache:
+            try:
+                cache["b"] = (bekreftere() if callable(bekreftere) else bekreftere) or {}
+            except Exception as e:
+                advarsler.append(f"bekreftelsene til kontrollen mot {navn} kunne ikke hentes ({type(e).__name__}: {e})")
+                cache["b"] = {}
+        return sorted(k for k, res in cache["b"].items()
+                      if LEVERANDOR.get(k) not in ("NTF", LEVERANDOR.get(kilde)) and k != kilde
+                      and res and res.get(nokkel) is not None and tuple(res[nokkel]) == r)
+
+    for m in vaare:
+        nokkel = (m["home"], m["away"])
+        r = (m["hg"], m["ag"])
+        hvem = f"{m['home']}-{m['away']} ({m['date']})"
+        if nokkel in kilde_res and kilde_res[nokkel] is not None:
+            if tuple(kilde_res[nokkel]) != r:
+                v = kilde_res[nokkel]
+                feil.append(f"{hvem}: vi har {r[0]}-{r[1]}, {navn} har {v[0]}-{v[1]}")
+            continue
+        timer = (naa - m["avspark"]).total_seconds() / 3600 if m.get("avspark") else None
+        hva = "mangler resultatet" if nokkel in kilde_res else "mangler kampen"
+        naar = f" {timer:.0f} timer etter avspark" if timer is not None else ""
+        bekr = bekreftet_av(nokkel, r)
+        if bekr:
+            advarsler.append(f"{hvem}: vi har {r[0]}-{r[1]}, {navn} {hva}{naar}; bekreftet av {', '.join(bekr)}")
+        elif timer is not None and timer <= frist_timer:
+            advarsler.append(f"{hvem}: vi har {r[0]}-{r[1]}, {navn} {hva} ennå ({timer:.0f}t siden avspark), "
+                             f"ingen annen uavhengig kilde har bekreftet det")
+        else:
+            feil.append(f"{hvem}: vi har {r[0]}-{r[1]}, {navn} {hva}{naar}, og ingen uavhengig kilde bekrefter det")
+    return feil, advarsler
+
+
+def kilde_stoppet(navn, vaare, kilde_res, gml, naa, dogn=STOPPET_DOGN):
+    """Har kontrollkilden sluttet å oppdatere? (17.10.2026) Advarsel, aldri rødt.
+
+    Tilstanden {"resultater": antall, "endret": iso} husker når antallet
+    resultater hos kilden sist endret seg. Første gang settes "endret" til
+    avsparket for den siste kampen kilden har resultat for: kilden har i alle
+    fall ikke registrert noe før det.
+
+    Advarsel når kilden mangler en kamp spilt ETTER at den sist registrerte
+    noe, og kampen er minst `dogn` døgn gammel. En kilde som har alt, er à jour
+    selv om ingenting er endret (landskamppause), og et gammelt hull (Wikipedia
+    mangler fem OBOS-kamper fra 10.5.) er ikke et tegn på at kilden har stoppet.
+    Returnerer (ny tilstand, advarsel eller None)."""
+    n = sum(1 for v in kilde_res.values() if v is not None)
+    gml = gml or {}
+    try:
+        endret = datetime.fromisoformat(gml["endret"]) if gml.get("endret") else None
+    except ValueError:
+        endret = None
+    if endret is None:
+        har = [m["avspark"] for m in vaare if m.get("avspark") and kilde_res.get((m["home"], m["away"])) is not None]
+        endret = max(har) if har else naa
+    elif gml.get("resultater") != n:
+        endret = naa
+    tilstand = {"resultater": n, "endret": endret.isoformat(timespec="seconds")}
+    grense = naa - timedelta(days=dogn)
+    mangler = [m for m in vaare if kilde_res.get((m["home"], m["away"])) is None
+               and m.get("avspark") and endret < m["avspark"] <= grense]
+    if not mangler:
+        return tilstand, None
+    from zoneinfo import ZoneInfo
+    e = endret.astimezone(ZoneInfo("Europe/Oslo"))
+    dager = (naa - endret).total_seconds() / 86400
+    return tilstand, (f"{navn} har ikke registrert noe nytt på {dager:.0f} døgn (siden {e.day}.{e.month}.) og mangler "
+                      f"{len(mangler)} resultat(er) fra kamper spilt etter det: kilden ser ut til å ha stoppet")
 
 
 def sjekk(liga, rot=None):

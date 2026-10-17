@@ -17,6 +17,12 @@ REGELEN: er kjøringen rød, eller har <liga>/data/status.json ok: false, sendes
     lukket port livstegn hvert tiende minutt (6 røde, 21 grønne).
   * Livstegnet kommer igjen når en kjøring er grønn OG status.json er grønn,
     altså etter en ekte kjøring som har rettet det.
+  * SELVE AVVIKET (17.10.2026): /fail har hele feilteksten fra status.json,
+    ikke bare første linje. Før sto det «1 avvik mellom matches.json og
+    kontrollkilden:» uten hvilken kamp det gjaldt. Advarslene i status.json
+    ("advarsler": en kilde mangler et resultat en annen bekrefter, eller en
+    kilde har stoppet) gjør ikke rødt, men går med livstegnet som tekst
+    (POST til samme adresse) og med /fail.
 
 Skriptet kan aldri gjøre kjøringen rød: mangler hemmeligheten, eller svarer
 ikke healthchecks, avsluttes det med 0. Hemmeligheten (HC_URL) skrives aldri ut.
@@ -80,7 +86,9 @@ def hva_feilet(jobb_status, steg, status):
     jobb_status: job.status ('success', 'failure'). steg: {id: {'outcome': ...}}
     fra toJSON(steps). status: innholdet i status.json."""
     feilet = [sid for sid, _ in STEG_KATEGORI if (steg.get(sid) or {}).get("outcome") == "failure"]
-    feiltekst = str(status.get("error") or "").strip().splitlines()[0] if status.get("error") else ""
+    # Hele teksten som detalj (17.10.2026), første linje til kategorien.
+    feiltekst = str(status.get("error") or "").strip()
+    forste = feiltekst.splitlines()[0] if feiltekst else ""
     status_rod = status.get("ok") is False
     # Bare når JOBBEN er rød: et steg med continue-on-error har outcome
     # 'failure' uten at kjøringen er rød, og da avgjør status.json.
@@ -88,14 +96,25 @@ def hva_feilet(jobb_status, steg, status):
         for sid, kategori in STEG_KATEGORI:
             if sid in feilet:
                 if kategori is None:
-                    return kategori_av_tekst(feiltekst), feiltekst or f"steget «{sid}» feilet, se kjøringen"
+                    return kategori_av_tekst(forste), feiltekst or f"steget «{sid}» feilet, se kjøringen"
                 # Detaljen fra status.json bare når den gjelder samme sak.
-                detalj = feiltekst if (status_rod and kategori_av_tekst(feiltekst) == kategori) else ""
+                detalj = feiltekst if (status_rod and kategori_av_tekst(forste) == kategori) else ""
                 return kategori, detalj or f"steget «{sid}» feilet, se kjøringen"
         return "annet", feiltekst or "et steg feilet, se kjøringen"
     if status_rod:
-        return kategori_av_tekst(feiltekst), feiltekst or "status.json har ok: false uten feiltekst"
+        return kategori_av_tekst(forste), feiltekst or "status.json har ok: false uten feiltekst"
     return None
+
+
+def advarsler(status):
+    """Advarslene i status.json (17.10.2026): gjør ikke rødt, men står i
+    livstegnet og i /fail."""
+    return [str(a) for a in status.get("advarsler") or [] if str(a).strip()]
+
+
+def merknad(tekst):
+    """Tekst til en workflow-kommando (::warning::): linjeskift som %0A."""
+    return str(tekst).replace("%", "%25").replace("\r", "%0D").replace("\n", "%0A")
 
 
 def kjoringslenke(env=None):
@@ -104,11 +123,20 @@ def kjoringslenke(env=None):
     return f"{srv}/{repo}/actions/runs/{run}" if srv and repo and run else ""
 
 
-def varseltekst(liga, feil, port_aapen=None, env=None):
+def varseltekst(liga, feil, port_aapen=None, env=None, adv=None):
     kategori, detalj = feil
     linjer = [f"{LIGAER[liga][0]}: {kategori}", detalj]
     if port_aapen is not None:
         linjer.append("Kjøringen hentet data." if port_aapen else "Porten var lukket: feilen står fra en tidligere kjøring.")
+    if adv:
+        linjer.append("Advarsler (ikke rødt):\n" + "\n".join(f"- {a}" for a in adv))
+    linjer.append(kjoringslenke(env))
+    return "\n".join(l for l in linjer if l)
+
+
+def livstegntekst(liga, adv, env=None):
+    """Teksten som går med livstegnet når status er grønn med advarsler."""
+    linjer = [f"{LIGAER[liga][0]}: grønn, {len(adv)} advarsel(er)"] + [f"- {a}" for a in adv]
     linjer.append(kjoringslenke(env))
     return "\n".join(l for l in linjer if l)
 
@@ -148,19 +176,26 @@ def main(argv=None, env=None):
     if not hc:
         print("Hemmeligheten for healthchecks er ikke satt -- ingen livstegn og ingen e-post.")
         if feil:
-            print(f"::warning title={LIGAER[liga][0]}: {feil[0]}::{feil[1]}")
+            print(f"::warning title={LIGAER[liga][0]}: {feil[0]}::{merknad(feil[1])}")
         return 0
     if (env.get("TESTVARSEL") or "").strip() == "true":
         tekst = "TEST av varslingen, ingen feil.\n" + varseltekst(liga, ("tabellkontroll", "eksempel på feiltekst"), port_aapen, env)
         print("Testvarsel: /fail " + ("sendt" if send(hc + "/fail", tekst) else "IKKE sendt") + ", så et livstegn.")
         print("Livstegn sendt." if send(hc) else "Livstegnet ble ikke sendt.")
         return 0
+    adv = advarsler(status)
     if feil:
-        tekst = varseltekst(liga, feil, port_aapen, env)
+        tekst = varseltekst(liga, feil, port_aapen, env, adv)
         tittel = f"{LIGAER[liga][0]}: {feil[0]}"
-        print(f"::{'error' if jobb != 'success' else 'warning'} title={tittel}::{feil[1]}")
+        print(f"::{'error' if jobb != 'success' else 'warning'} title={tittel}::{merknad(feil[1])}")
         print("/fail sendt til healthchecks: " + tekst.replace("\n", " | ") if send(hc + "/fail", tekst)
               else "/fail ble ikke sendt.")
+        return 0
+    if adv:
+        tekst = livstegntekst(liga, adv, env)
+        print(f"::notice title={LIGAER[liga][0]}: {len(adv)} advarsel(er)::{merknad(chr(10).join(adv))}")
+        print("Livstegn sendt med advarslene: " + tekst.replace("\n", " | ") if send(hc, tekst)
+              else "Livstegnet ble ikke sendt.")
         return 0
     print("Livstegn sendt." if send(hc) else "Livstegnet ble ikke sendt.")
     return 0
