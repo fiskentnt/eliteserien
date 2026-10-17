@@ -382,4 +382,6 @@ jobs:
           JOBB_STATUS: ${{ job.status }}
           STEG: ${{ toJSON(steps) }}
           TESTVARSEL: ${{ inputs.testvarsel && 'true' || 'false' }}
+          # Varsel-issuene ved ny feil (17.10.2026, livstegn.varsle_issues).
+          GH_TOKEN: ${{ github.token }}
         run: python3 scripts/livstegn.py obos

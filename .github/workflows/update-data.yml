@@ -26,6 +26,10 @@ on:
         description: "Send et testvarsel (/fail merket TEST) til healthchecks og et livstegn rett etter"
         type: boolean
         default: false
+      testissue:
+        description: "Lag én test-issue med @fiskentnt (varsel-issuene), for å se at e-posten kommer"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -289,4 +293,7 @@ jobs:
           JOBB_STATUS: ${{ job.status }}
           STEG: ${{ toJSON(steps) }}
           TESTVARSEL: ${{ inputs.testvarsel && 'true' || 'false' }}
+          # Varsel-issuene ved ny feil (17.10.2026, livstegn.varsle_issues).
+          GH_TOKEN: ${{ github.token }}
+          TESTISSUE: ${{ inputs.testissue && 'true' || 'false' }}
         run: python3 scripts/livstegn.py eliteserien

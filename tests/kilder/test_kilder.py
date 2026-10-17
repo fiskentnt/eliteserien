@@ -4128,6 +4128,110 @@ with _cl_l.redirect_stdout(_io_l.StringIO()):
 _hl.KATALOG = _hl_ekte_kat_lt
 sjekk("ESPN ute tre ganger (advarsel i kildevakten): livstegnet går med teksten, ikke /fail",
       len(_lt_ping) == 1 and _lt_ping[0][0] == _HC and "eliteserien/espn har feilet 3 ganger på rad" in (_lt_ping[0][1] or ""), str(_lt_ping))
+print("\n=== Varsel-issuer ved ny feil (livstegn.varsle_issues, 17.10.2026) ===")
+# healthchecks sender bare e-post ved overgangen oppe -> nede. En ny feil mens
+# status alt er rød (Lillestrøm-Aalesund 17.10.), ga ingen e-post.
+class _FalskGh:
+    def __init__(self, issues=()):
+        self.issues, self.kall, self.nr, self.naa = [dict(i) for i in issues], [], 100, None
+    def _i(self, nr):
+        return next(i for i in self.issues if i["number"] == int(nr))
+    def __call__(self, args):
+        self.kall.append(list(args))
+        t = self.naa.isoformat().replace("+00:00", "Z")
+        if args[:2] == ["issue", "list"]:
+            return json.dumps([{k: i[k] for k in ("number", "title", "state", "updatedAt", "closedAt")} for i in self.issues])
+        if args[:2] == ["issue", "create"]:
+            self.nr += 1
+            self.issues.append({"number": self.nr, "title": args[args.index("--title") + 1], "body": args[args.index("--body") + 1],
+                                "state": "OPEN", "updatedAt": t, "closedAt": None})
+        elif args[:2] == ["issue", "edit"]:
+            self._i(args[2]).update(body=args[args.index("--body") + 1], updatedAt=t)
+        elif args[:2] == ["issue", "reopen"]:
+            self._i(args[2]).update(state="OPEN", closedAt=None, updatedAt=t)
+        elif args[:2] == ["issue", "close"]:
+            self._i(args[2]).update(state="CLOSED", closedAt=t, updatedAt=t)
+        return ""
+    def hva(self):
+        return [a[:2] for a in self.kall if a[:2] != ["issue", "list"]]
+_KAT = "datafeil"
+_VF = "1 kamp(er) mangler sluttresultat mer enn 3 timer etter avspark:\nViking-Fredrikstad (2026-10-17 18:00): {t} timer siden avspark, fortsatt uten sluttresultat"
+_LSK2 = "Lillestrøm-Aalesund: ligasiden viser 17.8. 17:00, vi har 8.11. 17:00"
+_k1 = _lt.feilnokler("eliteserien", _KAT, _VF.format(t="3.3"))
+sjekk("nøkkelen: overskriftslinja hoppes over, og «3.3 timer» og «119 timer» gir samme nøkkel",
+      list(_k1.values()) == ["Viking-Fredrikstad (2026-10-17 18:00): 3.3 timer siden avspark, fortsatt uten sluttresultat"]
+      and _k1.keys() == _lt.feilnokler("eliteserien", _KAT, _VF.format(t="119")).keys(), str(_k1))
+sjekk("en annen kamp gir en annen nøkkel", _k1.keys() != _lt.feilnokler("eliteserien", _KAT, _LSK2).keys())
+_g = _FalskGh([{"number": 50, "title": "OBOS-ligaen: datafeil: Moss-Odd [varsel abcd1234]", "body": "", "state": "OPEN",
+                "updatedAt": "2026-10-17T10:00:00Z", "closedAt": None}])
+_t0 = _dt(2026, 10, 17, 19, 20, tzinfo=_tz.utc)
+def _vi(min_, feil):
+    _g.naa = _t0 + _td(minutes=min_)
+    _g.kall.clear()
+    return _lt.varsle_issues("eliteserien", feil, _g.naa, lenke="https://github.com/x/actions/runs/1", kjor=_g, log=lambda _s: None)
+_A = (_KAT, _VF.format(t="3.3"))
+_AB = (_KAT, _VF.format(t="3.5") + "\n" + _LSK2)
+_B = (_KAT, "1 kamp(er) mangler sluttresultat mer enn 3 timer etter avspark:\n" + _LSK2)
+_vi(0, _A)
+_ny = _g.issues[-1]
+sjekk("første røde: én ny issue, med @fiskentnt i teksten, kolon (ingen tankestrek) og nøkkelen i tittelen",
+      _g.hva() == [["issue", "create"]] and _ny["body"].startswith("@fiskentnt") and _ny["title"].startswith("Eliteserien: datafeil: Viking-Fredrikstad") and "—" not in _ny["title"] + _ny["body"]
+      and _ny["title"].endswith(f"[varsel {list(_k1)[0]}]"), f"{_g.hva()} {_ny['title']}")
+_vi(10, _A)
+sjekk("samme feil ti minutter senere: ingen ny issue (bare «sist sett» i teksten)", _g.hva() == [["issue", "edit"]], str(_g.hva()))
+_vi(20, _AB)
+sjekk("en ny kamp mens status er rød: én ny issue for den, den gamle står", sorted(map(tuple, _g.hva())) == [("issue", "create"), ("issue", "edit")]
+      and len([i for i in _g.issues if i["state"] == "OPEN" and i["title"].startswith("Eliteserien")]) == 2, str(_g.hva()))
+_vi(30, _B)
+sjekk("Viking-Fredrikstad borte i ti minutter: ikke lukket ennå", ["issue", "close"] not in _g.hva(), str(_g.hva()))
+_vi(90, _B)
+_iA = next(i for i in _g.issues if "Viking" in i["title"])
+sjekk("borte i over én time (sist sett for 70 minutter siden): lukket", ["issue", "close"] in _g.hva() and _iA["state"] == "CLOSED", str(_g.hva()))
+_vi(180, _A)
+sjekk("tilbake innen et døgn: den gamle issuen gjenåpnes, ingen ny (og Lillestrøm-Aalesund, borte i 90 min, lukkes)",
+      ["issue", "reopen"] in _g.hva() and ["issue", "create"] not in _g.hva() and _iA["state"] == "OPEN"
+      and next(i for i in _g.issues if "Lillestrøm" in i["title"])["state"] == "CLOSED", str(_g.hva()))
+_vi(185, None)
+sjekk("grønn fem minutter senere: ingenting lukkes ennå (status som veksler gir ikke ny e-post)", _g.hva() == [], str(_g.hva()))
+_vi(270, None)
+sjekk("grønn i 90 minutter: lukket", _iA["state"] == "CLOSED", str(_g.hva()))
+_vi(270 + 2 * 24 * 60, _A)
+sjekk("samme feil to døgn senere: en ny issue", _g.hva() == [["issue", "create"]], str(_g.hva()))
+sjekk("OBOS-issuen røres aldri av Eliteserien-kjøringene", _g._i(50)["state"] == "OPEN" and all(a[2:3] != ["50"] for a in _g.kall), "")
+# Resultatregelen: detaljen fra results_state.json, én nøkkel per kamp.
+(_lt.LIGAER["eliteserien"][1] / "results_state.json").write_text(_json.dumps(
+    {"conflicts": ["Viking-Fredrikstad: ligasiden har 1-2, espn har 3-2 -- holdes tilbake"], "ukontrollert": {"Molde|Start": [2, 0]}}), encoding="utf-8")
+sjekk("rødt fra resultatregelen: én linje per konflikt og per resultat uten kontroll",
+      _lt.resultatdetalj("eliteserien") == "konflikt: Viking-Fredrikstad: ligasiden har 1-2, espn har 3-2 -- holdes tilbake\nuten kontroll: Molde-Start 2-0")
+# I main: bare i Actions med GH_TOKEN, testissuen, og gh som feiler gir aldri rødt.
+_ekte_gh = _lt._gh
+_gh_kall = []
+_lt._gh = lambda args: (_gh_kall.append(list(args)), "[]")[1]
+_lt.urllib.request.urlopen = _lt_aapne
+(_lt.LIGAER["eliteserien"][1] / "status.json").write_text(_json.dumps(_GRONN), encoding="utf-8")
+_lt_ping.clear()
+with _cl_l.redirect_stdout(_io_l.StringIO()):
+    _k = _lt.main(["eliteserien"], {"HC_URL": _HC, "JOBB_STATUS": "success", "STEG": _json.dumps(_GATE_AAPEN),
+                                    "GITHUB_ACTIONS": "true", "GH_TOKEN": "t", "TESTISSUE": "true"})
+sjekk("TESTISSUE=true: én test-issue med @fiskentnt, og livstegnet går som vanlig",
+      _k == 0 and [a for a in _gh_kall if a[:2] == ["issue", "create"]][0][3] == "Eliteserien: TEST av varsel-issue [test]"
+      and "@fiskentnt" in [a for a in _gh_kall if a[:2] == ["issue", "create"]][0][5] and _lt_ping == [(_HC, None)], f"{_gh_kall} {_lt_ping}")
+_gh_kall.clear()
+with _cl_l.redirect_stdout(_io_l.StringIO()):
+    _lt.main(["eliteserien"], {"HC_URL": _HC, "JOBB_STATUS": "success", "STEG": _json.dumps(_GATE_AAPEN)})
+sjekk("utenfor Actions (ingen GITHUB_ACTIONS/GH_TOKEN): ingen gh-kall", _gh_kall == [], str(_gh_kall))
+def _gh_nede(args):
+    raise __import__("subprocess").CalledProcessError(1, "gh")
+_lt._gh = _gh_nede
+(_lt.LIGAER["eliteserien"][1] / "status.json").write_text(_json.dumps({"ok": False, "error": _REV}), encoding="utf-8")
+_ut_gh = _io_l.StringIO()
+_lt_ping.clear()
+with _cl_l.redirect_stdout(_ut_gh):
+    _k = _lt.main(["eliteserien"], {"HC_URL": _HC, "JOBB_STATUS": "success", "STEG": _json.dumps(_GATE_AAPEN),
+                                    "GITHUB_ACTIONS": "true", "GH_TOKEN": "t"})
+sjekk("gh feiler: exit 0, en linje i loggen, og /fail går som før",
+      _k == 0 and "varsel-issuene: CalledProcessError" in _ut_gh.getvalue() and _lt_ping[0][0] == _HC + "/fail", _ut_gh.getvalue()[-300:])
+_lt._gh = _ekte_gh
 _lt.LIGAER, _lt.urllib.request.urlopen = _lt_ekte
 
 print("\n=== Ingen tellende kall når UTEN_TELLENDE=true (nytt forsøk ved rød status) ===")

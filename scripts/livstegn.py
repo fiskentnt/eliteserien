@@ -27,14 +27,29 @@ REGELEN: er kjøringen rød, eller har <liga>/data/status.json ok: false, sendes
 Skriptet kan aldri gjøre kjøringen rød: mangler hemmeligheten, eller svarer
 ikke healthchecks, avsluttes det med 0. Hemmeligheten (HC_URL) skrives aldri ut.
 
+  * NY FEIL GIR NYTT VARSEL (17.10.2026, varsle_issues): healthchecks sender
+    bare e-post ved overgangen oppe -> nede, så en ny feil mens status alt er
+    rød, ga ingen e-post. Hver linje i avviket får en nøkkel (tall som «#», så
+    «3.3 timer» og «119 timer» er samme feil), og en ny nøkkel gir en
+    GitHub-issue med @fiskentnt (e-post). Samme nøkkel som står, gir ingenting
+    nytt. En issue lukkes først når nøkkelen har vært borte i én time, og kommer
+    samme nøkkel tilbake innen et døgn, gjenåpnes den i stedet for en ny: en
+    status som veksler, skal ikke gi ny e-post hver gang.
+
 Miljø: HC_URL, JOBB_STATUS (job.status), STEG (toJSON(steps)), TESTVARSEL
 (true = send et /fail merket TEST og et livstegn rett etter, for å se hva
-e-posten inneholder), og GitHubs egne for lenken til kjøringen.
+e-posten inneholder), TESTISSUE (true = lag én test-issue med @fiskentnt),
+GH_TOKEN (varsel-issuene; uten den ingen issues) og GitHubs egne for lenken
+til kjøringen.
 """
+import hashlib
 import json
 import os
+import re
+import subprocess
 import sys
 import urllib.request
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 ROT = Path(__file__).resolve().parent.parent
@@ -156,6 +171,97 @@ def send(url, tekst=None):
         return False
 
 
+# Varsel-issuene (17.10.2026).
+VARSEL_MERKE = "[varsel "
+LUKK_ETTER = timedelta(hours=1)          # nøkkelen borte så lenge: issuen lukkes
+GJENAAPNE_INNEN = timedelta(days=1)      # samme nøkkel tilbake innen: gjenåpnes
+DELTAKER = "@fiskentnt"                  # nevnt i teksten, så eieren er deltaker og får e-post
+
+
+def feilnokler(liga, kategori, detalj):
+    """{nøkkel: linje} for avviket. Hver linje er én feil; en overskriftslinje
+    («1 kamp(er) mangler sluttresultat ...:», «2 kontroller fant avvik: ...»)
+    hoppes over når det finnes linjer under. Tall (også med desimaler) blir «#», og bare de første
+    150 tegnene teller: feilteksten i status.json er kuttet ved 300 tegn, og et
+    nytt antall timer skal ikke flytte kuttet inn i nøkkelen."""
+    linjer = [l.strip() for l in str(detalj or "").splitlines() if l.strip()]
+    if len(linjer) > 1 and (linjer[0].endswith(":") or re.match(r"\d+ kontroller fant avvik", linjer[0])):
+        linjer = linjer[1:]
+    ut = {}
+    for l in linjer:
+        norm = re.sub(r"\d+(?:[.,]\d+)*", "#", l)[:150]     # «3.3» og «119» er begge ett tall
+        ut[hashlib.sha1(f"{liga}|{kategori}|{norm}".encode("utf-8")).hexdigest()[:8]] = l
+    return ut
+
+
+def _gh(args):
+    return subprocess.run(["gh", *args], capture_output=True, text=True, timeout=60, check=True).stdout
+
+
+def _iso(t):
+    return datetime.fromisoformat(str(t).replace("Z", "+00:00"))
+
+
+def resultatdetalj(liga):
+    """Konfliktene og resultatene uten kontroll fra results_state.json, når steget
+    «resultatregel» er rødt: én linje per kamp, så hver kamp får sin nøkkel."""
+    try:
+        st = json.loads((LIGAER[liga][1] / "results_state.json").read_text(encoding="utf-8"))
+    except Exception:
+        return ""
+    linjer = [f"konflikt: {c}" for c in st.get("conflicts") or []]
+    linjer += [f"uten kontroll: {k.replace('|', '-')} {v[0]}-{v[1]}" for k, v in (st.get("ukontrollert") or {}).items()]
+    return "\n".join(linjer)
+
+
+def varsle_issues(liga, feil, naa, lenke="", kjor=None, log=print):
+    """Varsel-issuene for denne kjøringen (se modulteksten). feil: (kategori,
+    detalj) eller None når alt er i orden. kjor(args) kjører gh og gir stdout
+    (byttes ut i testene). Returnerer en liste over det som ble gjort."""
+    kjor = kjor or _gh
+    navn = LIGAER[liga][0]
+    aktive = feilnokler(liga, feil[0], feil[1]) if feil else {}
+    issues = json.loads(kjor(["issue", "list", "--state", "all", "--limit", "200",
+                              "--json", "number,title,state,updatedAt,closedAt"]) or "[]")
+    mine = {}
+    for i in issues:
+        t = i.get("title") or ""
+        if not (t.startswith(f"{navn}:") and VARSEL_MERKE in t):
+            continue
+        n = t.rsplit(VARSEL_MERKE, 1)[1].split("]", 1)[0].strip()
+        g = mine.get(n)
+        if g is None or (i["state"] == "OPEN") > (g["state"] == "OPEN") or \
+                ((i["state"] == "OPEN") == (g["state"] == "OPEN") and i["number"] > g["number"]):
+            mine[n] = i
+    gjort = []
+    for n, linje in aktive.items():
+        tekst = (f"{DELTAKER}\n\n**{navn}: {feil[0]}**\n\n{linje}\n\nHele avviket:\n```\n{feil[1]}\n```\n\n"
+                 f"Sist sett: {naa:%Y-%m-%d %H:%M} UTC\n{lenke}\n\nLukkes når feilen har vært borte i én time. "
+                 f"Kommer den tilbake innen et døgn, gjenåpnes denne i stedet for en ny.")
+        i = mine.get(n)
+        if i and i["state"] == "OPEN":
+            kjor(["issue", "edit", str(i["number"]), "--body", tekst])          # sist sett
+            gjort.append(("står", n))
+        elif i and i.get("closedAt") and naa - _iso(i["closedAt"]) < GJENAAPNE_INNEN:
+            kjor(["issue", "reopen", str(i["number"]), "--comment",
+                  f"{DELTAKER} Feilen er tilbake ({naa:%d.%m. %H:%M} UTC)."])
+            kjor(["issue", "edit", str(i["number"]), "--body", tekst])
+            gjort.append(("gjenåpnet", n))
+        else:
+            # Kolon, ikke tankestrek: «Eliteserien: datafeil: Viking-Fredrikstad ... [varsel 3f2a91c0]».
+            kjor(["issue", "create", "--title", f"{navn}: {feil[0]}: {linje[:110]} {VARSEL_MERKE}{n}]", "--body", tekst])
+            gjort.append(("ny", n))
+    for n, i in mine.items():
+        if i["state"] == "OPEN" and n not in aktive and naa - _iso(i["updatedAt"]) >= LUKK_ETTER:
+            kjor(["issue", "close", str(i["number"]), "--comment",
+                  f"Feilen har vært borte i over én time (sist sett {_iso(i['updatedAt']):%d.%m. %H:%M} UTC). Lukket automatisk."])
+            gjort.append(("lukket", n))
+    for hva, n in gjort:
+        if hva != "står":
+            log(f"  varsel-issue {n}: {hva}")
+    return gjort
+
+
 def main(argv=None, env=None):
     argv = sys.argv[1:] if argv is None else argv
     env = os.environ if env is None else env
@@ -176,6 +282,22 @@ def main(argv=None, env=None):
         return 0
     status = les_status(liga)
     feil = hva_feilet(jobb, steg, status)
+    # Varsel-issuene (17.10.2026): bare i Actions med GH_TOKEN. Kan aldri gjøre
+    # kjøringen rød.
+    if env.get("GITHUB_ACTIONS") and env.get("GH_TOKEN"):
+        naa = datetime.now(timezone.utc)
+        try:
+            if (env.get("TESTISSUE") or "").strip() == "true":
+                _gh(["issue", "create", "--title", f"{LIGAER[liga][0]}: TEST av varsel-issue [test]", "--body",
+                     f"{DELTAKER} Test av varsel-issuene fra Actions ({naa:%Y-%m-%d %H:%M} UTC). Kommer denne som "
+                     f"e-post, virker varslingen. Lukk den gjerne.\n{kjoringslenke(env)}"])
+                print("Test-issue laget.")
+            f2 = feil
+            if f2 and f2[0] == "resultat uten kontroll eller i konflikt" and f2[1].startswith("steget"):
+                f2 = (f2[0], resultatdetalj(liga) or f2[1])
+            varsle_issues(liga, f2, naa, lenke=kjoringslenke(env))
+        except Exception as e:
+            print(f"  varsel-issuene: {type(e).__name__}: {str(e)[:200]} (ingen betydning for kjøringen)")
     if not hc:
         print("Hemmeligheten for healthchecks er ikke satt -- ingen livstegn og ingen e-post.")
         if feil:
