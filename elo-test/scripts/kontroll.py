@@ -1203,8 +1203,12 @@ console.log(JSON.stringify({saker, alt}));
     _saker.append([[[_ekstra[0]["home"], _ekstra[0]["away"], 0, 2]], _h0, _a0, 2, 1])
     # Forrige kamp: et lags siste spilte kamp, med faktisk og alternativt resultat.
     _sisteu = sorted(_spilteu, key=lambda m: (m["date"], m["home"], m["away"]))[-1]
+    # Alternativet er det motsatte utfallet med tre mål (17.10.2026): før var
+    # det alltid 0-3, og HamKam-Bodø/Glimt 0-2 flyttet da ratingen bare 0,8
+    # (kravet er over 1,0), så byggingen av testsiden stoppet.
+    _altres = (3, 0) if _sisteu["ag"] > _sisteu["hg"] else (0, 3)
     _alt = [{"key": "faktisk", "home": _sisteu["home"], "away": _sisteu["away"], "hg": _sisteu["hg"], "ag": _sisteu["ag"]},
-            {"key": "alternativ", "home": _sisteu["home"], "away": _sisteu["away"], "hg": 0, "ag": 3}]
+            {"key": "alternativ", "home": _sisteu["home"], "away": _sisteu["away"], "hg": _altres[0], "ag": _altres[1]}]
     with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as fh:
         json.dump({"termin": _terminu, "spilte": _spilteu, "odds": _oddsu["matches"], "saker": _saker, "alt": _alt}, fh,
                   ensure_ascii=False); _innu = fh.name
@@ -1238,7 +1242,7 @@ console.log(JSON.stringify({saker, alt}));
                                **({"hg": alt[0], "ag": alt[1]} if alt and m["home"] == _sisteu["home"] and m["away"] == _sisteu["away"] else {})}
                               for m in _rest], dict(E.HVA, k=M["k"]), M["hjemmefordel_rating"], M["w"])
             return R
-        _fak, _alt3 = _spill(None), _spill((0, 3))
+        _fak, _alt3 = _spill(None), _spill(_altres)
         _a1 = max(abs(_fak[t] - M["rating_alle"][t]) for t in M["rating_alle"])
         krev(f"forrige kamp: avspilling fra {_foer} med faktisk resultat gir byggingens rating", _a1 <= 1e-9,
              f"største avvik {_a1:.2e}")
@@ -1246,7 +1250,7 @@ console.log(JSON.stringify({saker, alt}));
         _a2 = max(abs(_du["alt"]["alternativ"][t] - _forv[t]) for t in _forv)
         _a3 = max(abs(_du["alt"]["faktisk"][t] - M["rating_alle"][t]) for t in M["rating_alle"])
         _fl2 = max(abs(_forv[t] - M["rating_alle"][t]) for t in _forv)
-        krev(f"forrige kamp ({_sisteu['home']} - {_sisteu['away']} 0-3 i stedet for "
+        krev(f"forrige kamp ({_sisteu['home']} - {_sisteu['away']} {_altres[0]}-{_altres[1]} i stedet for "
              f"{_sisteu['hg']}-{_sisteu['ag']}): sidens rating = Python-avspillingen",
              _a2 <= 1e-9 and _a3 <= 1e-9 and _fl2 > 1.0,
              f"alternativ {_a2:.2e}, faktisk {_a3:.2e}, flytting {_fl2:.1f}")
