@@ -14,11 +14,11 @@
    "actual": "win",
    "zone": "gull",
    "chance": "gullsjansen",
-   "pp": 5,
+   "pp": 2,
    "good": true,
    "basis": "avspark",
    "foer": 0.7006,
-   "expected": 0.7002
+   "expected": 0.6747
   },
   "Brann": {
    "date": "2026-10-09",
@@ -36,25 +36,25 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0002,
-   "expected": 0.0003
+   "expected": 0.0002
   },
   "Fredrikstad": {
-   "date": "2026-10-11",
-   "home": "Fredrikstad",
-   "away": "Tromsø",
-   "hg": 1,
-   "ag": 1,
-   "opp": "Tromsø",
-   "gf": 1,
-   "ga": 1,
-   "actual": "draw",
+   "date": "2026-10-17",
+   "home": "Viking",
+   "away": "Fredrikstad",
+   "hg": 3,
+   "ag": 2,
+   "opp": "Viking",
+   "gf": 2,
+   "ga": 3,
+   "actual": "loss",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
    "pp": 0,
    "good": false,
    "basis": "avspark",
-   "foer": 0.0113,
-   "expected": 0.0136
+   "foer": 0.0091,
+   "expected": 0.0105
   },
   "HamKam": {
    "date": "2026-10-17",
@@ -72,7 +72,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.1176,
-   "expected": 0.146
+   "expected": 0.1453
   },
   "KFUM Oslo": {
    "date": "2026-10-12",
@@ -90,7 +90,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0989,
-   "expected": 0.1147
+   "expected": 0.1095
   },
   "Kristiansund": {
    "date": "2026-10-17",
@@ -104,11 +104,11 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 27,
+   "pp": 26,
    "good": false,
    "basis": "avspark",
    "foer": 0.532,
-   "expected": 0.5454
+   "expected": 0.5419
   },
   "Lillestrøm": {
    "date": "2026-10-11",
@@ -126,7 +126,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.2143,
-   "expected": 0.245
+   "expected": 0.2447
   },
   "Molde": {
    "date": "2026-10-11",
@@ -140,11 +140,11 @@
    "actual": "draw",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": -1,
+   "pp": -2,
    "good": false,
    "basis": "avspark",
    "foer": 0.5698,
-   "expected": 0.5614
+   "expected": 0.5578
   },
   "Rosenborg": {
    "date": "2026-10-10",
@@ -162,7 +162,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.6575,
-   "expected": 0.6894
+   "expected": 0.6889
   },
   "Sandefjord": {
    "date": "2026-10-10",
@@ -180,7 +180,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0699,
-   "expected": 0.0882
+   "expected": 0.0919
   },
   "Sarpsborg 08": {
    "date": "2026-10-11",
@@ -198,7 +198,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0173,
-   "expected": 0.0259
+   "expected": 0.0281
   },
   "Start": {
    "date": "2026-10-11",
@@ -216,7 +216,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.7308,
-   "expected": 0.678
+   "expected": 0.6733
   },
   "Tromsø": {
    "date": "2026-10-11",
@@ -230,29 +230,29 @@
    "actual": "draw",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": 0,
-   "good": false,
+   "pp": 1,
+   "good": true,
    "basis": "avspark",
    "foer": 0.6248,
-   "expected": 0.6511
+   "expected": 0.6548
   },
   "Viking": {
-   "date": "2026-10-09",
-   "home": "Brann",
-   "away": "Viking",
-   "hg": 0,
+   "date": "2026-10-17",
+   "home": "Viking",
+   "away": "Fredrikstad",
+   "hg": 3,
    "ag": 2,
-   "opp": "Brann",
-   "gf": 2,
-   "ga": 0,
+   "opp": "Fredrikstad",
+   "gf": 3,
+   "ga": 2,
    "actual": "win",
    "zone": "gull",
    "chance": "gullsjansen",
-   "pp": 2,
-   "good": true,
+   "pp": -2,
+   "good": false,
    "basis": "avspark",
-   "foer": 0.2251,
-   "expected": 0.1825
+   "foer": 0.2994,
+   "expected": 0.2385
   },
   "Vålerenga": {
    "date": "2026-10-12",
@@ -266,11 +266,11 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 4,
+   "pp": 5,
    "good": false,
    "basis": "avspark",
    "foer": 0.0504,
-   "expected": 0.0522
+   "expected": 0.0547
   },
   "Aalesund": {
    "date": "2026-10-17",
@@ -288,8 +288,8 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.4264,
-   "expected": 0.4132
+   "expected": 0.413
   }
  },
- "updated": "2026-10-17T16:23:43Z"
+ "updated": "2026-10-17T20:34:17Z"
 }
