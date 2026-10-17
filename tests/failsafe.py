@@ -434,25 +434,35 @@ def main():
                               capture_output=True, text=True, cwd=ROOT, env=env)
     with tempfile.TemporaryDirectory() as d:
         logg_fil(d, "Oppdater_kampdata", 100, [("eliteserien", "nff", "ok"), ("eliteserien", "espn", "ok")])
+        # 17.10.2026: bare terminlisten (ntf-terminliste) gjør rødt; de andre
+        # kildene gir en advarsel (hentelogg.RODE_KILDER).
         logg_fil(d, "OBOS:_hent_resultater", 200,
-                 [("obos", "ntf-resultater", "feil")] * 4 + [("alle", "oddspapi-historical-odds", "feil")] * 3)
+                 [("obos", "ntf-terminliste", "feil")] * 4 + [("obos", "ntf-resultater", "feil")] * 3
+                 + [("alle", "oddspapi-historical-odds", "feil")] * 3)
         r = sjekk_som(d, "Oppdater kampdata")
         check("kildevakt: eliteseriejobben blir ikke rød av OBOS-jobbens feil",
-              r.returncode == 0 and "ntf-resultater" not in r.stderr, (r.stdout + r.stderr)[-200:])
+              r.returncode == 0 and "ntf-terminliste" not in r.stderr, (r.stdout + r.stderr)[-200:])
         r = sjekk_som(d, "OBOS: hent resultater")
-        check("kildevakt: OBOS-jobben blir rød av sine egne kilder",
-              r.returncode == 1 and "obos/ntf-resultater" in r.stderr and "oddspapi-historical-odds" in r.stderr,
-              (r.stdout + r.stderr)[-200:])
+        check("kildevakt: OBOS-jobben blir rød av terminlisten, og resultatsiden og OddsPapi står som advarsel",
+              r.returncode == 1 and "FEIL: obos/ntf-terminliste" in r.stderr and "ADVARSEL: obos/ntf-resultater" in r.stderr
+              and "ADVARSEL: alle/oddspapi-historical-odds" in r.stderr, (r.stdout + r.stderr)[-400:])
         r = sjekk_som(d, None)
         check("kildevakt: lokalt, uten jobb, sjekkes alle jobber", r.returncode == 1, (r.stdout + r.stderr)[-200:])
         r = sjekk_som(d, "Oppdater kampdata", "--alle")
         check("kildevakt: --alle sjekker alle jobber også i Actions", r.returncode == 1, (r.stdout + r.stderr)[-200:])
     with tempfile.TemporaryDirectory() as d:
-        logg_fil(d, "Oppdater_kampdata", 101, [("eliteserien", "nff", "feil")] * 3)
+        logg_fil(d, "Oppdater_kampdata", 101, [("eliteserien", "ntf-terminliste", "feil")] * 3 + [("eliteserien", "nff", "feil")] * 3)
         logg_fil(d, "OBOS:_hent_resultater", 201, [("obos", "nff", "ok")])
         r = sjekk_som(d, "Oppdater kampdata")
-        check("kildevakt: eliteseriejobben blir rød av sine egne kilder",
-              r.returncode == 1 and "eliteserien/nff" in r.stderr, (r.stdout + r.stderr)[-200:])
+        check("kildevakt: eliteseriejobben blir rød av sin egen terminliste, og fotball.no (reserve) står som advarsel",
+              r.returncode == 1 and "FEIL: eliteserien/ntf-terminliste" in r.stderr and "ADVARSEL: eliteserien/nff" in r.stderr,
+              (r.stdout + r.stderr)[-300:])
+    with tempfile.TemporaryDirectory() as d:
+        logg_fil(d, "Oppdater_kampdata", 102, [("eliteserien", "espn", "feil")] * 3 + [("eliteserien", "ntf-resultater", "feil")] * 3)
+        r = sjekk_som(d, "Oppdater kampdata")
+        check("kildevakt: bare kontroll- og resultatkilder ute (ESPN, ligasidens resultater): advarsel og exit 0",
+              r.returncode == 0 and "ADVARSEL: eliteserien/espn" in r.stderr and "ADVARSEL: eliteserien/ntf-resultater" in r.stderr,
+              (r.stdout + r.stderr)[-300:])
         r = sjekk_som(d, "OBOS: hent resultater")
         check("kildevakt: OBOS-jobben blir ikke rød av eliteseriejobbens feil",
               r.returncode == 0, (r.stdout + r.stderr)[-200:])

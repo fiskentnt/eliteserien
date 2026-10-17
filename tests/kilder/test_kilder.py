@@ -1783,6 +1783,23 @@ try:
     ntf_source.fetch_all = lambda *a, **k: (_ for _ in ()).throw(ntf_source.SvarerIkke("ingen svar"))
     _rader = _obd.rows_for(log=lambda _s: None)
     _res = _obr.offisielle_resultater()
+    # Datovakten i OBOS (A3, 17.10.2026): over 25 % utenfor sesongen er en
+    # advarsel; byggingen stopper ikke (før: SystemExit, ingenting skrevet).
+    import reconcile_ny as _rny30
+    _ekte_rd30 = _rny30.rimelige_datoer
+    _rny30.rimelige_datoer = lambda rader, forrige, aktiv, log=None: (rader, [f"kamp{i} (2026-01-07)" for i in range(int(len(rader) * 0.3))], None)
+    _obd.ADVARSLER.clear()
+    _ekte_fa30 = ntf_source.fetch_all
+    _forr30 = [{**r, "ferdig": r.get("hg") is not None} for r in _ldr.forrige_terminliste(_obd.DATA, "2026")]
+    ntf_source.fetch_all = lambda *a, **k: [dict(r) for r in _forr30]     # ligasiden svarer, så datovakten kjøres
+    try:
+        _rader30 = _obd.rows_for(log=lambda _s: None)
+    finally:
+        _rny30.rimelige_datoer = _ekte_rd30
+        ntf_source.fetch_all = _ekte_fa30
+    sjekk("OBOS: datovakten med 30 % utenfor sesongen gir advarsel, og byggingen fortsetter med alle kampene",
+          len(_rader30) == 240 and any("av 240 kamper hadde dato utenfor sesongen" in a for a in _obd.ADVARSLER), str(_obd.ADVARSLER))
+    _obd.ADVARSLER.clear()
     sjekk("OBOS: ligasiden svarer ikke -> byggingen bruker reservekjeden (her: den siste gyldige terminlisten), resultatkjeden fotball.no",
           _nff_kall == ["obos"] and len(_rader) == 240 and _res == {}, f"{_nff_kall} {len(_rader)} {_res}")
     import update_data as _ud
@@ -2486,8 +2503,9 @@ for _dag in range(3):
         except Exception:
             pass
 _etter7 = _start7 + _td3(days=3)
-sjekk("tre feil mot obos-ligaen.no gir exit 1",
-      _hl.sjekk(naa=_etter7) == 1)
+sjekk("tre feil mot resultatsiden til obos-ligaen.no: advarsel, ikke rødt (17.10.2026: bare terminlisten gir rødt)",
+      _hl.sjekk(naa=_etter7) == 0 and any("obos/ntf-resultater" in a for a in _hl.advarsler(naa=_etter7)),
+      str(_hl.advarsler(naa=_etter7)))
 _nede7 = _hl.ute(naa=_etter7)
 sjekk("og kildenavnet står i meldingen",
       _nede7 and _nede7[0][1] == "ntf-resultater", str(_nede7))
@@ -2553,8 +2571,8 @@ sjekk("tre HTTP 500 teller som tre feil",
       _hl.feil_paa_rad("alle", "oddspapi-fixtures") == 3)
 sjekk("og kilden navngis per endepunkt, med liga «alle»",
       ("alle", "oddspapi-fixtures", 3) in _hl.ute(), str(_hl.ute()))
-sjekk("en kilde uten egen liga kan altså gjøre kjøringen rød",
-      _hl.sjekk() == 1)
+sjekk("en kontrollkilde uten egen liga (OddsPapi) gir advarsel, ikke rødt (17.10.2026)",
+      _hl.sjekk() == 0 and any("alle/oddspapi-fixtures" in a for a in _hl.advarsler()), str(_hl.advarsler()))
 _op.urllib.request.urlopen = _op_ekte_aapne
 _op.budsjett_stopp = _op_ekte_budsjett
 
@@ -2562,52 +2580,53 @@ print("\n=== Bare samme fysiske kilde nullstiller feilrekken ===")
 # Faren: ligasiden er nede, reservekilden svarer, kjeden gaar videre -- og
 # alarmen forsvinner fordi "en kilde" lyktes. Da er loggen verre enn ingen
 # logg: den sier at alt er bra mens hovedkilden har vaert nede i en uke.
-# Hver fysisk kilde har derfor sin egen rekke, paa (liga, kilde).
+# Hver fysisk kilde har derfor sin egen rekke, paa (liga, kilde). Terminlisten
+# er hovedkilden her: siden 17.10.2026 er den den eneste som gjoer roedt.
 _hl10 = Path(_tf2.mkdtemp())
 _hl.KATALOG = _hl10
 _n10 = _dt(2026, 9, 20, 10, 0, tzinfo=_tz.utc)
 for _i in range(3):
-    _hl.logg("obos", "ntf-resultater", "feil", melding="timeout",
+    _hl.logg("obos", "ntf-terminliste", "feil", melding="timeout",
              naa=_n10 + _td3(days=_i))
 _etter10 = _n10 + _td3(days=3)
 sjekk("hovedkilden har tre feil på rad",
-      _hl.feil_paa_rad("obos", "ntf-resultater", naa=_etter10) == 3)
+      _hl.feil_paa_rad("obos", "ntf-terminliste", naa=_etter10) == 3)
 
 # 1. En RESERVEKILDE lykkes -- fotball.no er reserve for ligasiden.
 _hl.logg("obos", "nff", "ok", kamper=240, naa=_etter10)
 sjekk("at reservekilden fotball.no lykkes nullstiller IKKE hovedkilden",
-      _hl.feil_paa_rad("obos", "ntf-resultater",
+      _hl.feil_paa_rad("obos", "ntf-terminliste",
                        naa=_etter10 + _td3(hours=1)) == 3)
 sjekk("og kjøringen er fortsatt rød",
       _hl.sjekk(naa=_etter10 + _td3(hours=1)) == 1)
 
-# 2. Den ANDRE SIDEN hos samme leverandor lykkes. Terminlisten og
-#    resultatsiden er to forespørsler til to adresser: den ene kan svare
+# 2. Den ANDRE SIDEN hos samme leverandor lykkes. Resultatsiden og
+#    terminlisten er to forespørsler til to adresser: den ene kan svare
 #    mens den andre er nede, og da er de ikke samme fysiske kilde.
-_hl.logg("obos", "ntf-terminliste", "ok", kamper=56,
+_hl.logg("obos", "ntf-resultater", "ok", kamper=56,
          naa=_etter10 + _td3(hours=2))
-sjekk("at terminlisten lykkes nullstiller ikke resultatsiden",
-      _hl.feil_paa_rad("obos", "ntf-resultater",
+sjekk("at resultatsiden lykkes nullstiller ikke terminlisten",
+      _hl.feil_paa_rad("obos", "ntf-terminliste",
                        naa=_etter10 + _td3(hours=3)) == 3)
 
 # 3. SAMME KILDE i den andre ligaen lykkes.
-_hl.logg("eliteserien", "ntf-resultater", "ok", kamper=184,
+_hl.logg("eliteserien", "ntf-terminliste", "ok", kamper=56,
          naa=_etter10 + _td3(hours=4))
 sjekk("at Eliteserien-siden lykkes nullstiller ikke OBOS-siden",
-      _hl.feil_paa_rad("obos", "ntf-resultater",
+      _hl.feil_paa_rad("obos", "ntf-terminliste",
                        naa=_etter10 + _td3(hours=5)) == 3)
 
 # 4. Alle de tre andre kildene lyktes, og alarmen staar likevel -- med
 #    NOYAKTIG hovedkilden navngitt, ikke de som virker.
 _nede10 = _hl.ute(naa=_etter10 + _td3(hours=5))
 sjekk("alarmen navngir bare kilden som er nede",
-      _nede10 == [("obos", "ntf-resultater", 3)], str(_nede10))
+      _nede10 == [("obos", "ntf-terminliste", 3)], str(_nede10))
 
 # 5. Bare en vellykket henting fra SAMME kilde nullstiller.
-_hl.logg("obos", "ntf-resultater", "ok", kamper=184,
+_hl.logg("obos", "ntf-terminliste", "ok", kamper=184,
          naa=_etter10 + _td3(hours=6))
 sjekk("en vellykket henting fra samme kilde nullstiller",
-      _hl.feil_paa_rad("obos", "ntf-resultater",
+      _hl.feil_paa_rad("obos", "ntf-terminliste",
                        naa=_etter10 + _td3(hours=7)) == 0)
 sjekk("og da blir kjøringen grønn",
       _hl.sjekk(naa=_etter10 + _td3(hours=7)) == 0)
@@ -2660,7 +2679,8 @@ _etter12 = _n11 + _td3(days=3)
 sjekk("tre døgn med 0 kamper teller som tre feil",
       _hl.feil_paa_rad("obos", "nff", naa=_etter12) == 3,
       str([r["utfall"] for r in _hl.les(naa=_etter12) if r["kilde"] == "nff"]))
-sjekk("og gjør kjøringen rød", _hl.sjekk(naa=_etter12) == 1)
+sjekk("og gir advarsel (fotball.no er reserve), ikke rødt (17.10.2026)",
+      _hl.sjekk(naa=_etter12) == 0 and any("obos/nff" in a for a in _hl.advarsler(naa=_etter12)), str(_hl.advarsler(naa=_etter12)))
 _nffs.parse_side = _nff_ekte_parse
 _nffs.hent = _nff_ekte_hent
 _nffs.CACHE_KATALOG = _nff_ekte_kat
@@ -4086,6 +4106,28 @@ sjekk("adressen (hemmeligheten) skrives aldri ut", "hemmelig-uuid" not in _alle_
 _p, _ut, _k = _lt_kjor(steg=_GATE_LUKKET, status=_GRONN, test=True)
 sjekk("testvarsel: først /fail merket TEST, så et livstegn rett etter",
       [u for u, _ in _p] == [_HC + "/fail", _HC] and _p[0][1].startswith("TEST av varslingen") and _k == 0, str(_p))
+# Frys-kategorien (17.10.2026): frys har utfallet failure i hver kjøring med
+# åpen port; en kjøring som er rød av resultatregelen, skal ikke merkes «sesongskifte».
+_p, _ut, _k = _lt_kjor(jobb="failure", steg={**_GATE_AAPEN, "frys": {"outcome": "failure", "conclusion": "success"},
+                                             "resultatregel": {"outcome": "failure"}}, status=_GRONN)
+sjekk("åpen port, frys failure og resultatregel failure: kategorien er «resultat uten kontroll eller i konflikt», ikke sesongskifte",
+      _p[0][0] == _HC + "/fail" and _p[0][1].startswith("Eliteserien: resultat uten kontroll eller i konflikt\n"), _p[0][1])
+# Kilder som er ute, men bare gir advarsel, går med livstegnet (i Actions).
+_lt_kat = Path(_tf_l.mkdtemp())
+_hl_ekte_kat_lt = _hl.KATALOG
+_hl.KATALOG = _lt_kat
+with _vern.miljo(GITHUB_WORKFLOW="Oppdater kampdata", GITHUB_RUN_ID="9"):
+    for _i in range(3):
+        _hl.logg("eliteserien", "espn", "feil", melding="HTTP 500")
+_lt.urllib.request.urlopen = _lt_aapne
+_lt_ping.clear()
+(_lt.LIGAER["eliteserien"][1] / "status.json").write_text(_json.dumps(_GRONN), encoding="utf-8")
+with _cl_l.redirect_stdout(_io_l.StringIO()):
+    _lt.main(["eliteserien"], {"HC_URL": _HC, "JOBB_STATUS": "success", "STEG": _json.dumps(_GATE_AAPEN),
+                               "GITHUB_WORKFLOW": "Oppdater kampdata"})
+_hl.KATALOG = _hl_ekte_kat_lt
+sjekk("ESPN ute tre ganger (advarsel i kildevakten): livstegnet går med teksten, ikke /fail",
+      len(_lt_ping) == 1 and _lt_ping[0][0] == _HC and "eliteserien/espn har feilet 3 ganger på rad" in (_lt_ping[0][1] or ""), str(_lt_ping))
 _lt.LIGAER, _lt.urllib.request.urlopen = _lt_ekte
 
 print("\n=== Ingen tellende kall når UTEN_TELLENDE=true (nytt forsøk ved rød status) ===")
@@ -4261,9 +4303,11 @@ sjekk("bare tabellkontrollen slår ut: det daglige vedlikeholdet er utført, så
 # Datovaktene: bare det å gjøre kjøringen rød ligger til slutt.
 _a_mange = [{"home": f"A{i}", "away": f"B{i}"} for i in range(100)]
 _logg, _e = _a_kjor(_a_fx_ok, _a_tk_ok, utenfor=[f"A{i}-B{i} (2026-01-07)" for i in range(26)], merged=_a_mange)
-sjekk("26 av 100 datoer utenfor sesongen: rødt til slutt, etter modellen",
-      isinstance(_e, _uda.DataAuditError) and _logg[:4] == _ARBEID and str(_e).startswith("26 av 100 kamper hadde dato utenfor sesongen"),
-      f"{_logg} {str(_e)[:200]}")
+sjekk("26 av 100 datoer utenfor sesongen: advarsel, ikke rødt (17.10.2026; datoene er alt beholdt)",
+      _e is None and _logg[:4] == _ARBEID and "status ok=True" in _logg
+      and any(a.startswith("26 av 100 kamper hadde dato utenfor sesongen") for a in _uda.KJORINGENS_ADVARSLER),
+      f"{_logg} {_e!r} {_uda.KJORINGENS_ADVARSLER}")
+_uda.KJORINGENS_ADVARSLER.clear()
 _logg, _e = _a_kjor(_a_fx_ok, _a_tk_ok, utenfor=[f"A{i}-B{i} (2026-01-07)" for i in range(25)], merged=_a_mange)
 sjekk("motprøve: 25 av 100 er enkeltfeil (datoene er alt beholdt), ikke rødt", _e is None and "status ok=True" in _logg, f"{_logg} {_e!r}")
 
@@ -4320,7 +4364,7 @@ _a_gamle = {(r["home"], r["away"]): (r["date"], r["time"]) for r in _a_liste}
 _a_hentet = []     # kildene sandkassen ble spurt om i siste kjøring («ligasiden»)
 
 
-def _a_main(ntf_rader, naa=None, tabell=None, state=None, espn=None, forbered=None):
+def _a_main(ntf_rader, naa=None, tabell=None, state=None, espn=None, forbered=None, espn_dag=None):
     """Kjører update_data.main i sandkassen. Returnerer (feilen eller None, rekkefølgen, datoene på disk da modellen ble tilpasset).
     naa: klokka (standard: to timer før første uspilte kamp). tabell: tabellen fra ligasiden. state: results_state.json før kjøringen.
     espn: radene ESPN-sesongkallet svarer med (uten: kallet feiler, og «NETTKALL» står i rekkefølgen). forbered(d): endrer filene i
@@ -4354,7 +4398,7 @@ def _a_main(ntf_rader, naa=None, tabell=None, state=None, espn=None, forbered=No
     _ekte_avvik = _tka.avvik
     (_uda.ROOT, _uda.LEAGUE, _uda.STATE, _uda.STATUS_PATH, _uda.AUDIT_STATE_PATH) = (
         _a_sb, _a_sb / "eliteserien", d / "results_state.json", d / "status.json", d / "audit_state.json")
-    _uda.espn_source.fetch_all = lambda cache_dir=None, log=None: []
+    _uda.espn_source.fetch_all = espn_dag or (lambda cache_dir=None, log=None: [])
     _a_hentet.clear()
     _uda.ligasiden_eller_reserve = lambda cache_dir=None, log=None: (_a_hentet.append("ligasiden"), [dict(r) for r in ntf_rader])[1]
     _uda.get_ffk_rows = lambda cache_dir, log: [dict(r) for r in _a_liste if r["hg"] is not None]
@@ -4413,17 +4457,30 @@ sjekk("og den gamle datoen sto på disk FØR modellen ble tilpasset (datovakten 
 #    Alt skjer før skriving; arbeidet kjøres, og kjøringen blir rød TIL SLUTT.
 _a_gale = {(r["home"], r["away"]) for r in _a_uspilte} | {(r["home"], r["away"]) for r in [x for x in _a_liste if x["hg"] is not None][:40]}
 _e, _logg, _disk = _a_main([{**r, "date": "2026-01-07"} if (r["home"], r["away"]) in _a_gale else r for r in _a_liste])
-sjekk(f"{len(_a_gale)} av {len(_a_liste)} datoer er gale ({len(_a_uspilte)} uspilte): kjøringen blir rød med datovaktens beskjed om de uspilte",
-      len(_a_uspilte) > len(_a_liste) * 0.25 and isinstance(_e, _uda.DataAuditError)
-      and str(_e).startswith(f"{len(_a_uspilte)} av {len(_a_liste)} kamper hadde dato utenfor sesongen"), f"{len(_a_gale)} {_e!r}"[:300])
+sjekk(f"{len(_a_gale)} av {len(_a_liste)} datoer er gale ({len(_a_uspilte)} uspilte): datovakten gir advarsel om de uspilte, ikke rødt (17.10.2026)",
+      len(_a_uspilte) > len(_a_liste) * 0.25 and _e is None
+      and any(a.startswith(f"{len(_a_uspilte)} av {len(_a_liste)} kamper hadde dato utenfor sesongen")
+              for a in _a_fil("status.json").get("advarsler", [])), f"{len(_a_gale)} {_e!r} {_a_fil('status.json')}"[:400])
 sjekk("men ingen gal dato er skrevet: matches.json og fixtures.json har de gamle datoene for alle kampene",
       "2026-01-07" not in json.dumps(_a_fil("fixtures.json")) + json.dumps(_a_fil("matches.json"))
       and {(r["home"], r["away"]): (r["date"], r["time"]) for r in _lda.forrige_terminliste(_a_sb / "eliteserien" / "data", "2026")} == _a_gamle)
-sjekk("de gamle datoene sto på disk da modellen ble tilpasset, og sluttodds, odds og modell kjørte før kjøringen ble rød",
+sjekk("de gamle datoene sto på disk da modellen ble tilpasset, og sluttodds, odds og modell kjørte",
       _disk == _a_gamle and _logg[:3] == ["sluttodds", "odds slått sammen", "modell"], f"{_logg}")
-sjekk("status.json er rød med beskjeden, og «data skrevet» er meldt så stegene etterpå kjøres",
-      _a_fil("status.json")["ok"] is False and "dato utenfor" in _a_fil("status.json")["error"] and "data_skrevet=true" in _a_utdata(),
-      f"{_a_fil('status.json')} {_a_utdata()!r}")
+sjekk("status.json er grønn med advarselen, og «data skrevet» er meldt så stegene etterpå kjøres",
+      _a_fil("status.json")["ok"] is True and any("dato utenfor" in a for a in _a_fil("status.json").get("advarsler", []))
+      and "data_skrevet=true" in _a_utdata(), f"{_a_fil('status.json')} {_a_utdata()!r}")
+
+# ESPN-data som ikke kan tolkes (A8, 17.10.2026): advarsel, ESPN utelates.
+def _espn_kan_ikke_tolkes(cache_dir=None, log=None):
+    raise _uda.espn_source.EspnDataError("1 ferdigspilt(e) kamp(er) fra ESPN kunne ikke tolkes riktig:\n  - ukjent lag-id '999'")
+_e, _logg, _disk = _a_main(_a_liste, espn_dag=_espn_kan_ikke_tolkes)
+sjekk("ESPN-data som ikke kan tolkes: kjøringen stopper ikke (ingen EspnDataError), og advarselen står i status.json",
+      not isinstance(_e, _uda.espn_source.EspnDataError)
+      and any(a.startswith("ESPN-data kunne ikke tolkes (1 ferdigspilt(e) kamp(er) fra ESPN kunne ikke tolkes riktig:) -- ESPN utelatt")
+              for a in _a_fil("status.json").get("advarsler", [])), f"{_e!r} {_a_fil('status.json')}"[:400])
+_e2, _, _ = _a_main(_a_liste)
+sjekk("motprøve: neste kjøring uten ESPN-feil har ikke advarselen (nullstilles i main)",
+      not any("ESPN-data" in a for a in _a_fil("status.json").get("advarsler", [])), str(_a_fil("status.json"))[:300])
 
 print("\n=== OBOS-byggingen: begge kontrollene til slutt, etter «data skrevet» ===")
 _a_ob = (ROT / "scripts" / "obos_build_data.py").read_text("utf-8")

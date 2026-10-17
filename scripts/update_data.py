@@ -42,6 +42,10 @@ LIGA = "eliteserien"
 FFK_MIN_INTERVAL_MIN = 60  # ffksupporter.net skrapes (16 sider) maks én gang i timen
 STATUS_PATH = LEAGUE / "data" / "status.json"
 AUDIT_STATE_PATH = LEAGUE / "data" / "audit_state.json"
+# Advarsler fra denne kjøringen (17.10.2026): datovakten (over 25 % av datoene
+# utenfor sesongen) og ESPN-data som ikke kan tolkes. De gjør ikke rødt, men
+# står i status.json og går med livstegnet (write_status). Nullstilles i main.
+KJORINGENS_ADVARSLER = []
 
 
 DATOVAKT_BESKJED = {
@@ -446,7 +450,7 @@ def write_status(ok, now, error=None):
         data["revisjon_avvik"] = avvik
     # Advarsler fra dagens kontroll (17.10.2026): gjør ikke statusen rød, men
     # står her og går med livstegnet (livstegn.py).
-    advarsler = dagens_revisjonsadvarsler(now)
+    advarsler = list(KJORINGENS_ADVARSLER) + dagens_revisjonsadvarsler(now)
     # Resultater publisert mot ligasidens stemme (17.10.2026).
     try:
         import resultatregel
@@ -734,10 +738,13 @@ def etter_skriving(matches_out, fixtures_out, merged, utenfor, datofeil, tk, kon
     # det noe galt med kilden, typisk en markupendring. Datoene med lagret
     # verdi i samme sesong er alt beholdt (før skrivingen); dette sier bare
     # fra.
+    # 17.10.2026: en advarsel, ikke rødt. Datoene er alt beholdt fra før
+    # (rimelige_datoer, før skrivingen), så siden er riktig; kilden må sjekkes.
     if utenfor and len(utenfor) > len(merged) * 0.25:
-        feil.append(("datovakt", f"{len(utenfor)} av {len(merged)} kamper hadde dato utenfor "
-                                 f"sesongen. Datoene er beholdt fra før, men kilden må sjekkes:\n"
-                                 + "\n".join(utenfor[:10])))
+        tekst = (f"{len(utenfor)} av {len(merged)} kamper hadde dato utenfor sesongen hos ligasiden; "
+                 f"datoene er beholdt fra før, kilden må sjekkes (f.eks. {utenfor[0]})")
+        log(f"ADVARSEL: {tekst}")
+        KJORINGENS_ADVARSLER.append(tekst)
     # Den daglige kontrollen mot kontrollkilden (ffksupporter.net; fotball.no
     # er ikke med i den daglige kjeden). Slår den ut, er det daglige
     # vedlikeholdet ikke utført, og 20-timersklokka nullstilles ikke.
@@ -765,6 +772,7 @@ def etter_skriving(matches_out, fixtures_out, merged, utenfor, datofeil, tk, kon
 def main(cache_dir=None, now=None):
     log = lambda s: print(s, file=sys.stderr)
     now = now or datetime.now(timezone.utc)   # now kan settes i testene
+    KJORINGENS_ADVARSLER.clear()
 
     # En frossen sesong er uforanderlig. Rundt aarsskiftet viser kildene
     # NESTE sesong, saa en kjoring her ville skrevet neste sesongs kamper inn
@@ -785,13 +793,18 @@ def main(cache_dir=None, now=None):
             raise DataAuditError(DATOVAKT_BESKJED["ingen_autoritet"])
         try:
             espn_rows = espn_source.fetch_all(cache_dir=cache_dir, log=log)
-        except espn_source.EspnDataError:
-            # Datakvalitetsproblem (ferdigspilt kamp som ikke lot seg tolke),
-            # ikke en vanlig nettverks-/API-feil -- skal IKKE skjules. Feiler
-            # kjøringen synlig (stempelet blir rødt) i stedet for å risikere
-            # å bare hoppe stille over et ekte resultat, slik det gjorde
-            # 20. september 2026 (se git-historikken for den hendelsen).
-            raise
+        except espn_source.EspnDataError as e:
+            # Datakvalitetsproblem (ferdigspilt kamp som ikke lot seg tolke).
+            # Skal ikke skjules, men gjør ikke lenger kjøringen rød (17.10.2026):
+            # ESPN er én stemme blant flere, og resultatregelen krever to
+            # enige, så ingenting feil kan publiseres av at ESPN utelates.
+            # Advarsel i status.json og livstegnet; kildevakten (hentelogg)
+            # teller feilen. 20.9.2026 hoppet koden stille over et ekte
+            # resultat -- derfor står det synlig.
+            tekst = f"ESPN-data kunne ikke tolkes ({str(e).splitlines()[0]}) -- ESPN utelatt denne kjøringen"
+            log(f"ADVARSEL: {tekst}")
+            KJORINGENS_ADVARSLER.append(tekst)
+            espn_rows = []
         except Exception as e:
             # Alt annet (429, 400, timeout, DNS...) er bare ESPN som er
             # utilgjengelig -- ffksupporter.net er fasit uansett, så dette

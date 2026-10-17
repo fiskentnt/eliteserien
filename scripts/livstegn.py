@@ -49,7 +49,10 @@ STEG_KATEGORI = (
     ("bygg", None),              # obos_build_data.py
     ("revisjon", "revisjon"),
     ("sesongskifte", "sesongskifte"),
-    ("frys", "sesongskifte"),
+    # «frys» er ikke med (17.10.2026): steget har continue-on-error og utfallet
+    # failure i hver kjøring med åpen port («ikke ferdig ennå»), og kan aldri
+    # gjøre kjøringen rød. Sto det her, ble en kjøring som var rød av
+    # resultatregel eller kildevakt merket «sesongskifte».
     ("resultatregel", "resultat uten kontroll eller i konflikt"),
     ("kildevakt", "kilde ute"),
 )
@@ -184,6 +187,14 @@ def main(argv=None, env=None):
         print("Livstegn sendt." if send(hc) else "Livstegnet ble ikke sendt.")
         return 0
     adv = advarsler(status)
+    # Kilder som er ute, men bare gir advarsel (hentelogg.RODE_KILDER,
+    # 17.10.2026). Bare i Actions, der jobben er kjent.
+    if env.get("GITHUB_WORKFLOW"):
+        try:
+            import hentelogg
+            adv = adv + hentelogg.advarsler(jobb=hentelogg._jobbnavn(env["GITHUB_WORKFLOW"]))
+        except Exception:
+            pass
     if feil:
         tekst = varseltekst(liga, feil, port_aapen, env, adv)
         tittel = f"{LIGAER[liga][0]}: {feil[0]}"

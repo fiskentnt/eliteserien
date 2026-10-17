@@ -57,6 +57,15 @@ KATALOG = Path(os.environ.get("HENTELOGG_KATALOG") or ROT / "data" / "hentelogg"
 # To kan vaere et blaff; tre paa rad er et monster.
 FEIL_PAA_RAD_GRENSE = 3
 
+# Kildene der det gjor kjoringen ROD at de er ute (17.10.2026). Alle andre gir
+# en ADVARSEL (::warning og livstegnet): kontroll- og reservekildene (ESPN,
+# Highlightly, OddsPapi, Wikipedia, ffksupporter, fotball.no, football-data)
+# og ligasidens resultater, tabell og kalenderfeed. Med stemmene publiserer
+# ESPN og Highlightly uten ligasiden, og er alt nede, fanger «mangler
+# sluttresultat etter 3 timer» (Eliteserien) og «ingen kilder svarte» (OBOS)
+# det. Uten terminlisten kan ingenting bygges.
+RODE_KILDER = {"ntf-terminliste"}
+
 
 def _jobbnavn(wf):
     """Workflow-navnet slik det staar i filnavnet."""
@@ -212,9 +221,17 @@ def sammendrag(dager=14, bare_feil=False, naa=None):
     return 1 if nede else 0
 
 
+def advarsler(dager=14, naa=None, jobb=None):
+    """Kildene som er ute, men bare gir advarsel (ikke i RODE_KILDER), som
+    tekst til livstegnet: "eliteserien/espn har feilet 3 ganger på rad"."""
+    return [f"{liga}/{kilde} har feilet {n} ganger på rad -- kilden er sannsynligvis ute (advarsel)"
+            for liga, kilde, n in ute(dager, naa, jobb) if kilde not in RODE_KILDER]
+
+
 def sjekk(dager=14, naa=None, jobb=None, alle=False):
-    """Exit 1 hvis en av DENNE jobbens kilder har feilet FEIL_PAA_RAD_GRENSE
-    ganger paa rad (se modulteksten). alle=True: alle jobbers kilder.
+    """Exit 1 hvis en av DENNE jobbens kilder i RODE_KILDER har feilet
+    FEIL_PAA_RAD_GRENSE ganger paa rad (se modulteksten); de andre gir en
+    advarsel (17.10.2026). alle=True: alle jobbers kilder.
 
     Kalles som eget steg TIL SLUTT i kjeden, etter at data er lagret: en
     kilde som er ute skal gjore kjoringen rod, men ikke hindre at dagens
@@ -223,8 +240,14 @@ def sjekk(dager=14, naa=None, jobb=None, alle=False):
         jobb = denne_jobben()
     if alle:
         jobb = None
-    nede = ute(dager, naa, jobb)
+    alle_nede = ute(dager, naa, jobb)
     hvem = f"jobben {jobb}" if jobb else "alle jobber"
+    for liga, kilde, n in (x for x in alle_nede if x[1] not in RODE_KILDER):
+        melding = f"{liga}/{kilde} har feilet {n} ganger på rad ({hvem}) -- kilden er sannsynligvis ute."
+        if os.environ.get("GITHUB_ACTIONS"):
+            print(f"::warning title=Kilde ute (advarsel): {liga}/{kilde}::{melding}")
+        print(f"ADVARSEL: {melding}", file=sys.stderr)
+    nede = [x for x in alle_nede if x[1] in RODE_KILDER]
     if not nede:
         print(f"Hentelogg ({hvem}): ingen kilde har feilet {FEIL_PAA_RAD_GRENSE} "
               f"ganger på rad.")

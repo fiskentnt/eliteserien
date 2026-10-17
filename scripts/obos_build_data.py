@@ -44,6 +44,9 @@ ODDS_PATH = DATA / "odds_closing.json"
 # SLUTT paa den, etter at dataene er skrevet -- en manglende fil skal ikke
 # stoppe datakjeden, bare gjore kjoringen rod.
 DATOVAKT_FEIL = None
+# Advarsler fra byggingen (17.10.2026): datovakten med over 25 % av datoene
+# utenfor sesongen. Står i status.json og går med livstegnet.
+ADVARSLER = []
 # Samme tekster som i update_data.py. Kan vakten ikke kontrollere datoene,
 # skrives ingenting (13.10.2026).
 DATOVAKT_BESKJED = {
@@ -171,11 +174,14 @@ def rows_for(season=SEASON, log=print):
     # utenfor er None naar det ikke finnes autoritativ sesong. Da har vakten
     # staatt over, og main() skal feile TIL SLUTT -- etter at dataene er
     # skrevet, slik at en manglende fil ikke stopper hele kjeden.
+    # 17.10.2026: en advarsel, ikke en stopp. Datoene er alt beholdt fra den
+    # forrige terminlisten (rimelige_datoer), så siden blir riktig; kilden må
+    # sjekkes. Før stoppet byggingen her, og siden sto som i forrige kjøring.
     if utenfor is not None and len(utenfor) > len(offisiell) * 0.25:
-        raise SystemExit(
-            f"FEIL: {len(utenfor)} av {len(offisiell)} kamper hadde dato utenfor "
-            f"sesongen. Datoene er beholdt fra forrige terminliste, men kilden må "
-            f"sjekkes:\n" + "\n".join(utenfor[:10]))
+        tekst = (f"{len(utenfor)} av {len(offisiell)} kamper hadde dato utenfor sesongen hos ligasiden; "
+                 f"datoene er beholdt fra forrige terminliste, kilden må sjekkes (f.eks. {utenfor[0]})")
+        log(f"ADVARSEL: {tekst}")
+        ADVARSLER.append(tekst)
     # FOR SKRIVINGEN: rows_for() kalles for foerste write_json i main(), saa
     # en raise her lar de eksisterende filene staa urort. Beskjeden laa til
     # naa i main() ETTER at matches.json, fixtures.json, model.json og
@@ -244,6 +250,7 @@ def load_closing_odds():
 
 
 def main():
+    ADVARSLER.clear()
     # En frossen sesong er uforanderlig -- se sesong.er_frosset().
     import sesong as _ses
     _a0 = _ses.aktiv_sesong(ROOT, "obos", log=lambda _s: None)
@@ -359,6 +366,7 @@ def main():
         _adv = json.loads((DATA / "results_state.json").read_text(encoding="utf-8")).get("advarsler") or []
     except Exception:
         _adv = []
+    _adv = list(ADVARSLER) + list(_adv)
     if _adv:
         _status["advarsler"] = [str(a) for a in _adv]
     (DATA / "status.json").write_text(
