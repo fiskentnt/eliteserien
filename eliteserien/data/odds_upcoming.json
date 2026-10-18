@@ -1,103 +1,108 @@
 {
-  "fetched_at": "2026-10-18T09:01:07+00:00",
-  "matches": [
-    {
-      "home": "Sarpsborg 08",
-      "away": "Rosenborg",
-      "commence_time": "2026-10-18T12:30:00Z",
-      "H": 0.4092,
-      "D": 0.2447,
-      "A": 0.3461,
-      "n_bookmakers": 22,
-      "odds": {
-        "H": 2.303,
-        "U": 3.748,
-        "B": 2.702
-      }
-    },
-    {
-      "home": "Molde",
-      "away": "Start",
-      "commence_time": "2026-10-18T15:00:00Z",
-      "H": 0.7197,
-      "D": 0.1631,
-      "A": 0.1172,
-      "n_bookmakers": 22,
-      "odds": {
-        "H": 1.333,
-        "U": 5.439,
-        "B": 7.302
-      }
-    },
-    {
-      "home": "Sandefjord",
-      "away": "Lillestrøm",
-      "commence_time": "2026-10-18T15:00:00Z",
-      "H": 0.3657,
-      "D": 0.2578,
-      "A": 0.3765,
-      "n_bookmakers": 22,
-      "odds": {
-        "H": 2.565,
-        "U": 3.57,
-        "B": 2.495
-      }
-    },
-    {
-      "home": "Vålerenga",
-      "away": "Brann",
-      "commence_time": "2026-10-18T15:00:00Z",
-      "H": 0.416,
-      "D": 0.238,
-      "A": 0.346,
-      "n_bookmakers": 22,
-      "odds": {
-        "H": 2.267,
-        "U": 3.847,
-        "B": 2.703
-      }
-    },
-    {
-      "home": "Tromsø",
-      "away": "KFUM Oslo",
-      "commence_time": "2026-10-18T17:15:00Z",
-      "H": 0.6687,
-      "D": 0.1982,
-      "A": 0.1331,
-      "n_bookmakers": 22,
-      "odds": {
-        "H": 1.432,
-        "U": 4.553,
-        "B": 6.529
-      }
-    },
-    {
-      "home": "Bodø/Glimt",
-      "away": "Vålerenga",
-      "commence_time": "2026-10-24T14:00:00Z",
-      "H": 0.8098,
-      "D": 0.118,
-      "A": 0.0722,
-      "n_bookmakers": 10,
-      "odds": {
-        "H": 1.168,
-        "U": 6.771,
-        "B": 10.055
-      }
-    },
-    {
-      "home": "HamKam",
-      "away": "Rosenborg",
-      "commence_time": "2026-10-24T16:00:00Z",
-      "H": 0.2136,
-      "D": 0.2235,
-      "A": 0.5629,
-      "n_bookmakers": 11,
-      "odds": {
-        "H": 4.083,
-        "U": 3.92,
-        "B": 1.658
-      }
-    }
-  ]
+ "fetched_at": "2026-10-18T11:40:35+00:00",
+ "matches": [
+  {
+   "home": "Sarpsborg 08",
+   "away": "Rosenborg",
+   "commence_time": "2026-10-18T12:30:00Z",
+   "H": 0.4121,
+   "D": 0.2402,
+   "A": 0.3477,
+   "n_bookmakers": 1,
+   "odds": {
+    "H": 2.37,
+    "U": 4.019,
+    "B": 2.8
+   },
+   "bookmaker": "pinnacle",
+   "priced_at": "2026-10-18T11:40:27.603Z",
+   "prekick": true,
+   "minutter_for": 49.5
+  },
+  {
+   "home": "Molde",
+   "away": "Start",
+   "commence_time": "2026-10-18T15:00:00Z",
+   "H": 0.7197,
+   "D": 0.1631,
+   "A": 0.1172,
+   "n_bookmakers": 22,
+   "odds": {
+    "H": 1.333,
+    "U": 5.439,
+    "B": 7.302
+   }
+  },
+  {
+   "home": "Sandefjord",
+   "away": "Lillestrøm",
+   "commence_time": "2026-10-18T15:00:00Z",
+   "H": 0.3657,
+   "D": 0.2578,
+   "A": 0.3765,
+   "n_bookmakers": 22,
+   "odds": {
+    "H": 2.565,
+    "U": 3.57,
+    "B": 2.495
+   }
+  },
+  {
+   "home": "Vålerenga",
+   "away": "Brann",
+   "commence_time": "2026-10-18T15:00:00Z",
+   "H": 0.416,
+   "D": 0.238,
+   "A": 0.346,
+   "n_bookmakers": 22,
+   "odds": {
+    "H": 2.267,
+    "U": 3.847,
+    "B": 2.703
+   }
+  },
+  {
+   "home": "Tromsø",
+   "away": "KFUM Oslo",
+   "commence_time": "2026-10-18T17:15:00Z",
+   "H": 0.6687,
+   "D": 0.1982,
+   "A": 0.1331,
+   "n_bookmakers": 22,
+   "odds": {
+    "H": 1.432,
+    "U": 4.553,
+    "B": 6.529
+   }
+  },
+  {
+   "home": "Bodø/Glimt",
+   "away": "Vålerenga",
+   "commence_time": "2026-10-24T14:00:00Z",
+   "H": 0.8098,
+   "D": 0.118,
+   "A": 0.0722,
+   "n_bookmakers": 10,
+   "odds": {
+    "H": 1.168,
+    "U": 6.771,
+    "B": 10.055
+   }
+  },
+  {
+   "home": "HamKam",
+   "away": "Rosenborg",
+   "commence_time": "2026-10-24T16:00:00Z",
+   "H": 0.2136,
+   "D": 0.2235,
+   "A": 0.5629,
+   "n_bookmakers": 11,
+   "odds": {
+    "H": 4.083,
+    "U": 3.92,
+    "B": 1.658
+   }
+  }
+ ],
+ "prekick_at": "2026-10-18T11:40:35+00:00"
 }
