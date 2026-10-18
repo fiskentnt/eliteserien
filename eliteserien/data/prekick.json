@@ -544,7 +544,8 @@
      "nedrykk": 0.8189
     }
    },
-   "stamp": "2026-10-18T14:30:38Z"
+   "stamp": "2026-10-18T14:30:38Z",
+   "frosset": true
   },
   "2026|Sandefjord|Lillestrøm": {
    "home": "Sandefjord",
@@ -585,7 +586,8 @@
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T14:30:38Z"
+   "stamp": "2026-10-18T14:30:38Z",
+   "frosset": true
   },
   "2026|Vålerenga|Brann": {
    "home": "Vålerenga",
@@ -626,7 +628,8 @@
      "nedrykk": 0.0003
     }
    },
-   "stamp": "2026-10-18T14:30:38Z"
+   "stamp": "2026-10-18T14:30:38Z",
+   "frosset": true
   },
   "2026|Tromsø|KFUM Oslo": {
    "home": "Tromsø",
@@ -674,9 +677,9 @@
    "away": "Vålerenga",
    "date": "2026-10-24",
    "round": 12,
-   "H": 0.8054,
-   "U": 0.1192,
-   "B": 0.0754,
+   "H": 0.8057,
+   "U": 0.1188,
+   "B": 0.0755,
    "kilde": "odds+modell",
    "oddsvekt": 0.7,
    "odds": {
@@ -686,13 +689,13 @@
     "bookmaker": null
    },
    "modell": {
-    "H": 0.795,
-    "U": 0.1218,
-    "B": 0.0832
+    "H": 0.7961,
+    "U": 0.1206,
+    "B": 0.0833
    },
    "sjanser": {
     "Bodø/Glimt": {
-     "gull": 0.6821,
+     "gull": 0.6901,
      "cl": 1,
      "europa": 1,
      "kvalik": 0,
@@ -702,20 +705,20 @@
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1375,
-     "nedrykk": 0.0977
+     "kvalik": 0.0688,
+     "nedrykk": 0.0258
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|HamKam|Rosenborg": {
    "home": "HamKam",
    "away": "Rosenborg",
    "date": "2026-10-24",
    "round": 12,
-   "H": 0.2241,
-   "U": 0.222,
-   "B": 0.5539,
+   "H": 0.2249,
+   "U": 0.2213,
+   "B": 0.5538,
    "kilde": "odds+modell",
    "oddsvekt": 0.7,
    "odds": {
@@ -725,219 +728,219 @@
     "bookmaker": null
    },
    "modell": {
-    "H": 0.2493,
-    "U": 0.2169,
-    "B": 0.5337
+    "H": 0.2513,
+    "U": 0.2174,
+    "B": 0.5314
    },
    "sjanser": {
     "HamKam": {
      "gull": 0,
      "cl": 0,
-     "europa": 0,
-     "kvalik": 0.1679,
-     "nedrykk": 0.0675
+     "europa": 0.0001,
+     "kvalik": 0.177,
+     "nedrykk": 0.0594
     },
     "Rosenborg": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.6637,
+     "europa": 0.6144,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Viking|Tromsø": {
    "home": "Viking",
    "away": "Tromsø",
    "date": "2026-10-25",
    "round": 12,
-   "H": 0.6419,
-   "U": 0.1819,
-   "B": 0.1763,
+   "H": 0.6435,
+   "U": 0.181,
+   "B": 0.1755,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.6419,
-    "U": 0.1819,
-    "B": 0.1763
+    "H": 0.6435,
+    "U": 0.181,
+    "B": 0.1755
    },
    "sjanser": {
     "Viking": {
-     "gull": 0.3179,
-     "cl": 0.9998,
+     "gull": 0.3099,
+     "cl": 0.9997,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Tromsø": {
      "gull": 0,
-     "cl": 0.0002,
-     "europa": 0.5902,
+     "cl": 0.0003,
+     "europa": 0.5401,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Kristiansund|KFUM Oslo": {
    "home": "Kristiansund",
    "away": "KFUM Oslo",
    "date": "2026-10-25",
    "round": 12,
-   "H": 0.4166,
-   "U": 0.2416,
-   "B": 0.3417,
+   "H": 0.4172,
+   "U": 0.2425,
+   "B": 0.3403,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.4166,
-    "U": 0.2416,
-    "B": 0.3417
+    "H": 0.4172,
+    "U": 0.2425,
+    "B": 0.3403
    },
    "sjanser": {
     "Kristiansund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1222,
-     "nedrykk": 0.7649
+     "kvalik": 0.133,
+     "nedrykk": 0.7518
     },
     "KFUM Oslo": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.0675,
-     "nedrykk": 0.0194
+     "europa": 0.0001,
+     "kvalik": 0.0662,
+     "nedrykk": 0.0162
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Lillestrøm|Brann": {
    "home": "Lillestrøm",
    "away": "Brann",
    "date": "2026-10-25",
    "round": 12,
-   "H": 0.3721,
-   "U": 0.2519,
-   "B": 0.376,
+   "H": 0.4035,
+   "U": 0.2486,
+   "B": 0.3479,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.3721,
-    "U": 0.2519,
-    "B": 0.376
+    "H": 0.4035,
+    "U": 0.2486,
+    "B": 0.3479
    },
    "sjanser": {
     "Lillestrøm": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.1475,
-     "kvalik": 0.0001,
+     "europa": 0.2297,
+     "kvalik": 0,
      "nedrykk": 0
     },
     "Brann": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0514,
-     "kvalik": 0.0012,
-     "nedrykk": 0.0002
+     "europa": 0.0087,
+     "kvalik": 0.0027,
+     "nedrykk": 0.0005
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Sarpsborg 08|Aalesund": {
    "home": "Sarpsborg 08",
    "away": "Aalesund",
    "date": "2026-10-25",
    "round": 12,
-   "H": 0.5372,
-   "U": 0.2149,
-   "B": 0.2478,
+   "H": 0.5322,
+   "U": 0.2171,
+   "B": 0.2507,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.5372,
-    "U": 0.2149,
-    "B": 0.2478
+    "H": 0.5322,
+    "U": 0.2171,
+    "B": 0.2507
    },
    "sjanser": {
     "Sarpsborg 08": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0011,
-     "kvalik": 0.0143,
-     "nedrykk": 0.0036
+     "europa": 0.0006,
+     "kvalik": 0.0145,
+     "nedrykk": 0.0027
     },
     "Aalesund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.2659,
-     "nedrykk": 0.1617
+     "kvalik": 0.2813,
+     "nedrykk": 0.1452
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Start|Sandefjord": {
    "home": "Start",
    "away": "Sandefjord",
    "date": "2026-10-25",
    "round": 12,
-   "H": 0.4947,
-   "U": 0.2299,
-   "B": 0.2754,
+   "H": 0.4932,
+   "U": 0.2274,
+   "B": 0.2794,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.4947,
-    "U": 0.2299,
-    "B": 0.2754
+    "H": 0.4932,
+    "U": 0.2274,
+    "B": 0.2794
    },
    "sjanser": {
     "Start": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.0977,
-     "nedrykk": 0.8234
+     "kvalik": 0.0704,
+     "nedrykk": 0.8946
     },
     "Sandefjord": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.1034,
-     "nedrykk": 0.0585
+     "europa": 0,
+     "kvalik": 0.1645,
+     "nedrykk": 0.1015
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Molde|Fredrikstad": {
    "home": "Molde",
    "away": "Fredrikstad",
    "date": "2026-10-25",
    "round": 12,
-   "H": 0.6116,
-   "U": 0.2019,
-   "B": 0.1866,
+   "H": 0.6228,
+   "U": 0.1905,
+   "B": 0.1867,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.6116,
-    "U": 0.2019,
-    "B": 0.1866
+    "H": 0.6228,
+    "U": 0.1905,
+    "B": 0.1867
    },
    "sjanser": {
     "Molde": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.5439,
+     "europa": 0.6045,
      "kvalik": 0,
      "nedrykk": 0
     },
@@ -945,339 +948,339 @@
      "gull": 0,
      "cl": 0,
      "europa": 0.0018,
-     "kvalik": 0.0223,
-     "nedrykk": 0.0031
+     "kvalik": 0.0216,
+     "nedrykk": 0.0023
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Bodø/Glimt|Viking": {
    "home": "Bodø/Glimt",
    "away": "Viking",
    "date": "2026-10-30",
    "round": 25,
-   "H": 0.544,
-   "U": 0.2158,
-   "B": 0.2402,
+   "H": 0.5477,
+   "U": 0.2142,
+   "B": 0.2381,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.544,
-    "U": 0.2158,
-    "B": 0.2402
+    "H": 0.5477,
+    "U": 0.2142,
+    "B": 0.2381
    },
    "sjanser": {
     "Bodø/Glimt": {
-     "gull": 0.6821,
+     "gull": 0.6901,
      "cl": 1,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Viking": {
-     "gull": 0.3179,
-     "cl": 0.9998,
+     "gull": 0.3099,
+     "cl": 0.9997,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Fredrikstad|Rosenborg": {
    "home": "Fredrikstad",
    "away": "Rosenborg",
    "date": "2026-10-31",
    "round": 25,
-   "H": 0.2938,
-   "U": 0.2489,
-   "B": 0.4574,
+   "H": 0.2948,
+   "U": 0.2485,
+   "B": 0.4568,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.2938,
-    "U": 0.2489,
-    "B": 0.4574
+    "H": 0.2948,
+    "U": 0.2485,
+    "B": 0.4568
    },
    "sjanser": {
     "Fredrikstad": {
      "gull": 0,
      "cl": 0,
      "europa": 0.0018,
-     "kvalik": 0.0223,
-     "nedrykk": 0.0031
+     "kvalik": 0.0216,
+     "nedrykk": 0.0023
     },
     "Rosenborg": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.6637,
+     "europa": 0.6144,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Aalesund|Sandefjord": {
    "home": "Aalesund",
    "away": "Sandefjord",
    "date": "2026-10-31",
    "round": 25,
-   "H": 0.4803,
-   "U": 0.2198,
-   "B": 0.2999,
+   "H": 0.4763,
+   "U": 0.2232,
+   "B": 0.3004,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.4803,
-    "U": 0.2198,
-    "B": 0.2999
+    "H": 0.4763,
+    "U": 0.2232,
+    "B": 0.3004
    },
    "sjanser": {
     "Aalesund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.2659,
-     "nedrykk": 0.1617
+     "kvalik": 0.2813,
+     "nedrykk": 0.1452
     },
     "Sandefjord": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.1034,
-     "nedrykk": 0.0585
+     "europa": 0,
+     "kvalik": 0.1645,
+     "nedrykk": 0.1015
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Brann|Molde": {
    "home": "Brann",
    "away": "Molde",
    "date": "2026-11-01",
    "round": 25,
-   "H": 0.3958,
-   "U": 0.2222,
-   "B": 0.382,
+   "H": 0.3921,
+   "U": 0.218,
+   "B": 0.3899,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.3958,
-    "U": 0.2222,
-    "B": 0.382
+    "H": 0.3921,
+    "U": 0.218,
+    "B": 0.3899
    },
    "sjanser": {
     "Brann": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0514,
-     "kvalik": 0.0012,
-     "nedrykk": 0.0002
+     "europa": 0.0087,
+     "kvalik": 0.0027,
+     "nedrykk": 0.0005
     },
     "Molde": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.5439,
+     "europa": 0.6045,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|KFUM Oslo|HamKam": {
    "home": "KFUM Oslo",
    "away": "HamKam",
    "date": "2026-11-01",
    "round": 25,
-   "H": 0.4775,
-   "U": 0.2349,
-   "B": 0.2876,
+   "H": 0.4806,
+   "U": 0.2353,
+   "B": 0.2841,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.4775,
-    "U": 0.2349,
-    "B": 0.2876
+    "H": 0.4806,
+    "U": 0.2353,
+    "B": 0.2841
    },
    "sjanser": {
     "KFUM Oslo": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.0675,
-     "nedrykk": 0.0194
+     "europa": 0.0001,
+     "kvalik": 0.0662,
+     "nedrykk": 0.0162
     },
     "HamKam": {
      "gull": 0,
      "cl": 0,
-     "europa": 0,
-     "kvalik": 0.1679,
-     "nedrykk": 0.0675
+     "europa": 0.0001,
+     "kvalik": 0.177,
+     "nedrykk": 0.0594
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Sarpsborg 08|Kristiansund": {
    "home": "Sarpsborg 08",
    "away": "Kristiansund",
    "date": "2026-11-01",
    "round": 25,
-   "H": 0.6301,
-   "U": 0.1958,
-   "B": 0.1741,
+   "H": 0.6289,
+   "U": 0.196,
+   "B": 0.1751,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.6301,
-    "U": 0.1958,
-    "B": 0.1741
+    "H": 0.6289,
+    "U": 0.196,
+    "B": 0.1751
    },
    "sjanser": {
     "Sarpsborg 08": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0011,
-     "kvalik": 0.0143,
-     "nedrykk": 0.0036
+     "europa": 0.0006,
+     "kvalik": 0.0145,
+     "nedrykk": 0.0027
     },
     "Kristiansund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1222,
-     "nedrykk": 0.7649
+     "kvalik": 0.133,
+     "nedrykk": 0.7518
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Start|Lillestrøm": {
    "home": "Start",
    "away": "Lillestrøm",
    "date": "2026-11-01",
    "round": 25,
-   "H": 0.4158,
-   "U": 0.2327,
-   "B": 0.3515,
+   "H": 0.4096,
+   "U": 0.2312,
+   "B": 0.3592,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.4158,
-    "U": 0.2327,
-    "B": 0.3515
+    "H": 0.4096,
+    "U": 0.2312,
+    "B": 0.3592
    },
    "sjanser": {
     "Start": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.0977,
-     "nedrykk": 0.8234
+     "kvalik": 0.0704,
+     "nedrykk": 0.8946
     },
     "Lillestrøm": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.1475,
-     "kvalik": 0.0001,
+     "europa": 0.2297,
+     "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Vålerenga|Tromsø": {
    "home": "Vålerenga",
    "away": "Tromsø",
    "date": "2026-11-01",
    "round": 25,
-   "H": 0.4196,
-   "U": 0.2303,
-   "B": 0.3501,
+   "H": 0.4397,
+   "U": 0.2265,
+   "B": 0.3338,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.4196,
-    "U": 0.2303,
-    "B": 0.3501
+    "H": 0.4397,
+    "U": 0.2265,
+    "B": 0.3338
    },
    "sjanser": {
     "Vålerenga": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1375,
-     "nedrykk": 0.0977
+     "kvalik": 0.0688,
+     "nedrykk": 0.0258
     },
     "Tromsø": {
      "gull": 0,
-     "cl": 0.0002,
-     "europa": 0.5902,
+     "cl": 0.0003,
+     "europa": 0.5401,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Kristiansund|Vålerenga": {
    "home": "Kristiansund",
    "away": "Vålerenga",
    "date": "2026-11-07",
    "round": 26,
-   "H": 0.3241,
-   "U": 0.2282,
-   "B": 0.4476,
+   "H": 0.3244,
+   "U": 0.2268,
+   "B": 0.4488,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.3241,
-    "U": 0.2282,
-    "B": 0.4476
+    "H": 0.3244,
+    "U": 0.2268,
+    "B": 0.4488
    },
    "sjanser": {
     "Kristiansund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1222,
-     "nedrykk": 0.7649
+     "kvalik": 0.133,
+     "nedrykk": 0.7518
     },
     "Vålerenga": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1375,
-     "nedrykk": 0.0977
+     "kvalik": 0.0688,
+     "nedrykk": 0.0258
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Rosenborg|Start": {
    "home": "Rosenborg",
    "away": "Start",
    "date": "2026-11-07",
    "round": 26,
-   "H": 0.7092,
-   "U": 0.1654,
-   "B": 0.1254,
+   "H": 0.7431,
+   "U": 0.1441,
+   "B": 0.1127,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.7092,
-    "U": 0.1654,
-    "B": 0.1254
+    "H": 0.7431,
+    "U": 0.1441,
+    "B": 0.1127
    },
    "sjanser": {
     "Rosenborg": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.6637,
+     "europa": 0.6144,
      "kvalik": 0,
      "nedrykk": 0
     },
@@ -1285,168 +1288,168 @@
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.0977,
-     "nedrykk": 0.8234
+     "kvalik": 0.0704,
+     "nedrykk": 0.8946
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Tromsø|Bodø/Glimt": {
    "home": "Tromsø",
    "away": "Bodø/Glimt",
    "date": "2026-11-08",
    "round": 26,
-   "H": 0.2264,
-   "U": 0.2225,
-   "B": 0.5511,
+   "H": 0.2261,
+   "U": 0.2215,
+   "B": 0.5524,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.2264,
-    "U": 0.2225,
-    "B": 0.5511
+    "H": 0.2261,
+    "U": 0.2215,
+    "B": 0.5524
    },
    "sjanser": {
     "Tromsø": {
      "gull": 0,
-     "cl": 0.0002,
-     "europa": 0.5902,
+     "cl": 0.0003,
+     "europa": 0.5401,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Bodø/Glimt": {
-     "gull": 0.6821,
+     "gull": 0.6901,
      "cl": 1,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|HamKam|Sarpsborg 08": {
    "home": "HamKam",
    "away": "Sarpsborg 08",
    "date": "2026-11-08",
    "round": 26,
-   "H": 0.3483,
-   "U": 0.2416,
-   "B": 0.4101,
+   "H": 0.3503,
+   "U": 0.242,
+   "B": 0.4077,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.3483,
-    "U": 0.2416,
-    "B": 0.4101
+    "H": 0.3503,
+    "U": 0.242,
+    "B": 0.4077
    },
    "sjanser": {
     "HamKam": {
      "gull": 0,
      "cl": 0,
-     "europa": 0,
-     "kvalik": 0.1679,
-     "nedrykk": 0.0675
+     "europa": 0.0001,
+     "kvalik": 0.177,
+     "nedrykk": 0.0594
     },
     "Sarpsborg 08": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0011,
-     "kvalik": 0.0143,
-     "nedrykk": 0.0036
+     "europa": 0.0006,
+     "kvalik": 0.0145,
+     "nedrykk": 0.0027
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Lillestrøm|Aalesund": {
    "home": "Lillestrøm",
    "away": "Aalesund",
    "date": "2026-11-08",
    "round": 26,
-   "H": 0.5775,
-   "U": 0.2054,
-   "B": 0.2171,
+   "H": 0.5728,
+   "U": 0.2088,
+   "B": 0.2184,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.5775,
-    "U": 0.2054,
-    "B": 0.2171
+    "H": 0.5728,
+    "U": 0.2088,
+    "B": 0.2184
    },
    "sjanser": {
     "Lillestrøm": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.1475,
-     "kvalik": 0.0001,
+     "europa": 0.2297,
+     "kvalik": 0,
      "nedrykk": 0
     },
     "Aalesund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.2659,
-     "nedrykk": 0.1617
+     "kvalik": 0.2813,
+     "nedrykk": 0.1452
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Sandefjord|Molde": {
    "home": "Sandefjord",
    "away": "Molde",
    "date": "2026-11-08",
    "round": 26,
-   "H": 0.2943,
-   "U": 0.2333,
-   "B": 0.4724,
+   "H": 0.2799,
+   "U": 0.2318,
+   "B": 0.4883,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.2943,
-    "U": 0.2333,
-    "B": 0.4724
+    "H": 0.2799,
+    "U": 0.2318,
+    "B": 0.4883
    },
    "sjanser": {
     "Sandefjord": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.1034,
-     "nedrykk": 0.0585
+     "europa": 0,
+     "kvalik": 0.1645,
+     "nedrykk": 0.1015
     },
     "Molde": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.5439,
+     "europa": 0.6045,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Viking|KFUM Oslo": {
    "home": "Viking",
    "away": "KFUM Oslo",
    "date": "2026-11-08",
    "round": 26,
-   "H": 0.779,
-   "U": 0.1323,
-   "B": 0.0887,
+   "H": 0.7801,
+   "U": 0.1319,
+   "B": 0.088,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.779,
-    "U": 0.1323,
-    "B": 0.0887
+    "H": 0.7801,
+    "U": 0.1319,
+    "B": 0.088
    },
    "sjanser": {
     "Viking": {
-     "gull": 0.3179,
-     "cl": 0.9998,
+     "gull": 0.3099,
+     "cl": 0.9997,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
@@ -1454,338 +1457,338 @@
     "KFUM Oslo": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.0675,
-     "nedrykk": 0.0194
+     "europa": 0.0001,
+     "kvalik": 0.0662,
+     "nedrykk": 0.0162
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Fredrikstad|Brann": {
    "home": "Fredrikstad",
    "away": "Brann",
    "date": "2026-11-08",
    "round": 26,
-   "H": 0.2665,
-   "U": 0.2601,
-   "B": 0.4734,
+   "H": 0.291,
+   "U": 0.2599,
+   "B": 0.4491,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.2665,
-    "U": 0.2601,
-    "B": 0.4734
+    "H": 0.291,
+    "U": 0.2599,
+    "B": 0.4491
    },
    "sjanser": {
     "Fredrikstad": {
      "gull": 0,
      "cl": 0,
      "europa": 0.0018,
-     "kvalik": 0.0223,
-     "nedrykk": 0.0031
+     "kvalik": 0.0216,
+     "nedrykk": 0.0023
     },
     "Brann": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0514,
-     "kvalik": 0.0012,
-     "nedrykk": 0.0002
+     "europa": 0.0087,
+     "kvalik": 0.0027,
+     "nedrykk": 0.0005
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Molde|Bodø/Glimt": {
    "home": "Molde",
    "away": "Bodø/Glimt",
    "date": "2026-11-20",
    "round": 27,
-   "H": 0.2628,
-   "U": 0.2193,
-   "B": 0.5179,
+   "H": 0.2639,
+   "U": 0.2073,
+   "B": 0.5288,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.2628,
-    "U": 0.2193,
-    "B": 0.5179
+    "H": 0.2639,
+    "U": 0.2073,
+    "B": 0.5288
    },
    "sjanser": {
     "Molde": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.5439,
+     "europa": 0.6045,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Bodø/Glimt": {
-     "gull": 0.6821,
+     "gull": 0.6901,
      "cl": 1,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Tromsø|Viking": {
    "home": "Tromsø",
    "away": "Viking",
    "date": "2026-11-21",
    "round": 27,
-   "H": 0.3041,
-   "U": 0.2442,
-   "B": 0.4518,
+   "H": 0.3065,
+   "U": 0.2438,
+   "B": 0.4497,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.3041,
-    "U": 0.2442,
-    "B": 0.4518
+    "H": 0.3065,
+    "U": 0.2438,
+    "B": 0.4497
    },
    "sjanser": {
     "Tromsø": {
      "gull": 0,
-     "cl": 0.0002,
-     "europa": 0.5902,
+     "cl": 0.0003,
+     "europa": 0.5401,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Viking": {
-     "gull": 0.3179,
-     "cl": 0.9998,
+     "gull": 0.3099,
+     "cl": 0.9997,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|HamKam|Fredrikstad": {
    "home": "HamKam",
    "away": "Fredrikstad",
    "date": "2026-11-21",
    "round": 27,
-   "H": 0.357,
-   "U": 0.248,
-   "B": 0.395,
+   "H": 0.354,
+   "U": 0.2482,
+   "B": 0.3978,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.357,
-    "U": 0.248,
-    "B": 0.395
+    "H": 0.354,
+    "U": 0.2482,
+    "B": 0.3978
    },
    "sjanser": {
     "HamKam": {
      "gull": 0,
      "cl": 0,
-     "europa": 0,
-     "kvalik": 0.1679,
-     "nedrykk": 0.0675
+     "europa": 0.0001,
+     "kvalik": 0.177,
+     "nedrykk": 0.0594
     },
     "Fredrikstad": {
      "gull": 0,
      "cl": 0,
      "europa": 0.0018,
-     "kvalik": 0.0223,
-     "nedrykk": 0.0031
+     "kvalik": 0.0216,
+     "nedrykk": 0.0023
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Vålerenga|Start": {
    "home": "Vålerenga",
    "away": "Start",
    "date": "2026-11-21",
    "round": 27,
-   "H": 0.5561,
-   "U": 0.2141,
-   "B": 0.2298,
+   "H": 0.6101,
+   "U": 0.1879,
+   "B": 0.2021,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.5561,
-    "U": 0.2141,
-    "B": 0.2298
+    "H": 0.6101,
+    "U": 0.1879,
+    "B": 0.2021
    },
    "sjanser": {
     "Vålerenga": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1375,
-     "nedrykk": 0.0977
+     "kvalik": 0.0688,
+     "nedrykk": 0.0258
     },
     "Start": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.0977,
-     "nedrykk": 0.8234
+     "kvalik": 0.0704,
+     "nedrykk": 0.8946
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|KFUM Oslo|Brann": {
    "home": "KFUM Oslo",
    "away": "Brann",
    "date": "2026-11-22",
    "round": 27,
-   "H": 0.252,
-   "U": 0.2488,
-   "B": 0.4992,
+   "H": 0.2772,
+   "U": 0.2501,
+   "B": 0.4727,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.252,
-    "U": 0.2488,
-    "B": 0.4992
+    "H": 0.2772,
+    "U": 0.2501,
+    "B": 0.4727
    },
    "sjanser": {
     "KFUM Oslo": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.0675,
-     "nedrykk": 0.0194
+     "europa": 0.0001,
+     "kvalik": 0.0662,
+     "nedrykk": 0.0162
     },
     "Brann": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0514,
-     "kvalik": 0.0012,
-     "nedrykk": 0.0002
+     "europa": 0.0087,
+     "kvalik": 0.0027,
+     "nedrykk": 0.0005
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Kristiansund|Sandefjord": {
    "home": "Kristiansund",
    "away": "Sandefjord",
    "date": "2026-11-22",
    "round": 27,
-   "H": 0.3872,
-   "U": 0.2466,
-   "B": 0.3662,
+   "H": 0.3898,
+   "U": 0.2481,
+   "B": 0.3621,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.3872,
-    "U": 0.2466,
-    "B": 0.3662
+    "H": 0.3898,
+    "U": 0.2481,
+    "B": 0.3621
    },
    "sjanser": {
     "Kristiansund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1222,
-     "nedrykk": 0.7649
+     "kvalik": 0.133,
+     "nedrykk": 0.7518
     },
     "Sandefjord": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.1034,
-     "nedrykk": 0.0585
+     "europa": 0,
+     "kvalik": 0.1645,
+     "nedrykk": 0.1015
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Aalesund|Rosenborg": {
    "home": "Aalesund",
    "away": "Rosenborg",
    "date": "2026-11-22",
    "round": 27,
-   "H": 0.2982,
-   "U": 0.205,
-   "B": 0.4968,
+   "H": 0.2952,
+   "U": 0.2058,
+   "B": 0.499,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.2982,
-    "U": 0.205,
-    "B": 0.4968
+    "H": 0.2952,
+    "U": 0.2058,
+    "B": 0.499
    },
    "sjanser": {
     "Aalesund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.2659,
-     "nedrykk": 0.1617
+     "kvalik": 0.2813,
+     "nedrykk": 0.1452
     },
     "Rosenborg": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.6637,
+     "europa": 0.6144,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Sarpsborg 08|Lillestrøm": {
    "home": "Sarpsborg 08",
    "away": "Lillestrøm",
    "date": "2026-11-22",
    "round": 27,
-   "H": 0.4634,
-   "U": 0.2409,
+   "H": 0.4606,
+   "U": 0.2438,
    "B": 0.2956,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.4634,
-    "U": 0.2409,
+    "H": 0.4606,
+    "U": 0.2438,
     "B": 0.2956
    },
    "sjanser": {
     "Sarpsborg 08": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0011,
-     "kvalik": 0.0143,
-     "nedrykk": 0.0036
+     "europa": 0.0006,
+     "kvalik": 0.0145,
+     "nedrykk": 0.0027
     },
     "Lillestrøm": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.1475,
-     "kvalik": 0.0001,
+     "europa": 0.2297,
+     "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Bodø/Glimt|KFUM Oslo": {
    "home": "Bodø/Glimt",
    "away": "KFUM Oslo",
    "date": "2026-11-28",
    "round": 28,
-   "H": 0.8514,
-   "U": 0.0968,
-   "B": 0.0518,
+   "H": 0.8504,
+   "U": 0.0975,
+   "B": 0.0522,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.8514,
-    "U": 0.0968,
-    "B": 0.0518
+    "H": 0.8504,
+    "U": 0.0975,
+    "B": 0.0522
    },
    "sjanser": {
     "Bodø/Glimt": {
-     "gull": 0.6821,
+     "gull": 0.6901,
      "cl": 1,
      "europa": 1,
      "kvalik": 0,
@@ -1794,203 +1797,203 @@
     "KFUM Oslo": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.0675,
-     "nedrykk": 0.0194
+     "europa": 0.0001,
+     "kvalik": 0.0662,
+     "nedrykk": 0.0162
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Rosenborg|Molde": {
    "home": "Rosenborg",
    "away": "Molde",
    "date": "2026-11-28",
    "round": 28,
-   "H": 0.5358,
-   "U": 0.2023,
-   "B": 0.2619,
+   "H": 0.536,
+   "U": 0.199,
+   "B": 0.2651,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.5358,
-    "U": 0.2023,
-    "B": 0.2619
+    "H": 0.536,
+    "U": 0.199,
+    "B": 0.2651
    },
    "sjanser": {
     "Rosenborg": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.6637,
+     "europa": 0.6144,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Molde": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.5439,
+     "europa": 0.6045,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Fredrikstad|Aalesund": {
    "home": "Fredrikstad",
    "away": "Aalesund",
    "date": "2026-11-29",
    "round": 28,
-   "H": 0.4404,
-   "U": 0.2447,
-   "B": 0.3149,
+   "H": 0.4366,
+   "U": 0.2466,
+   "B": 0.3168,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.4404,
-    "U": 0.2447,
-    "B": 0.3149
+    "H": 0.4366,
+    "U": 0.2466,
+    "B": 0.3168
    },
    "sjanser": {
     "Fredrikstad": {
      "gull": 0,
      "cl": 0,
      "europa": 0.0018,
-     "kvalik": 0.0223,
-     "nedrykk": 0.0031
+     "kvalik": 0.0216,
+     "nedrykk": 0.0023
     },
     "Aalesund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.2659,
-     "nedrykk": 0.1617
+     "kvalik": 0.2813,
+     "nedrykk": 0.1452
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Brann|Kristiansund": {
    "home": "Brann",
    "away": "Kristiansund",
    "date": "2026-11-29",
    "round": 28,
-   "H": 0.6611,
-   "U": 0.1833,
-   "B": 0.1556,
+   "H": 0.6585,
+   "U": 0.1835,
+   "B": 0.1579,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.6611,
-    "U": 0.1833,
-    "B": 0.1556
+    "H": 0.6585,
+    "U": 0.1835,
+    "B": 0.1579
    },
    "sjanser": {
     "Brann": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0514,
-     "kvalik": 0.0012,
-     "nedrykk": 0.0002
+     "europa": 0.0087,
+     "kvalik": 0.0027,
+     "nedrykk": 0.0005
     },
     "Kristiansund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1222,
-     "nedrykk": 0.7649
+     "kvalik": 0.133,
+     "nedrykk": 0.7518
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Sandefjord|Tromsø": {
    "home": "Sandefjord",
    "away": "Tromsø",
    "date": "2026-11-29",
    "round": 28,
-   "H": 0.3432,
-   "U": 0.2569,
-   "B": 0.3999,
+   "H": 0.3287,
+   "U": 0.2614,
+   "B": 0.4099,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.3432,
-    "U": 0.2569,
-    "B": 0.3999
+    "H": 0.3287,
+    "U": 0.2614,
+    "B": 0.4099
    },
    "sjanser": {
     "Sandefjord": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.1034,
-     "nedrykk": 0.0585
+     "europa": 0,
+     "kvalik": 0.1645,
+     "nedrykk": 0.1015
     },
     "Tromsø": {
      "gull": 0,
-     "cl": 0.0002,
-     "europa": 0.5902,
+     "cl": 0.0003,
+     "europa": 0.5401,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Start|Sarpsborg 08": {
    "home": "Start",
    "away": "Sarpsborg 08",
    "date": "2026-11-29",
    "round": 28,
-   "H": 0.4303,
-   "U": 0.2322,
-   "B": 0.3375,
+   "H": 0.427,
+   "U": 0.228,
+   "B": 0.345,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.4303,
-    "U": 0.2322,
-    "B": 0.3375
+    "H": 0.427,
+    "U": 0.228,
+    "B": 0.345
    },
    "sjanser": {
     "Start": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.0977,
-     "nedrykk": 0.8234
+     "kvalik": 0.0704,
+     "nedrykk": 0.8946
     },
     "Sarpsborg 08": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0011,
-     "kvalik": 0.0143,
-     "nedrykk": 0.0036
+     "europa": 0.0006,
+     "kvalik": 0.0145,
+     "nedrykk": 0.0027
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Viking|Vålerenga": {
    "home": "Viking",
    "away": "Vålerenga",
    "date": "2026-11-29",
    "round": 28,
-   "H": 0.7059,
-   "U": 0.1576,
-   "B": 0.1365,
+   "H": 0.7092,
+   "U": 0.1553,
+   "B": 0.1355,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.7059,
-    "U": 0.1576,
-    "B": 0.1365
+    "H": 0.7092,
+    "U": 0.1553,
+    "B": 0.1355
    },
    "sjanser": {
     "Viking": {
-     "gull": 0.3179,
-     "cl": 0.9998,
+     "gull": 0.3099,
+     "cl": 0.9997,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
@@ -1999,271 +2002,271 @@
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1375,
-     "nedrykk": 0.0977
+     "kvalik": 0.0688,
+     "nedrykk": 0.0258
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Lillestrøm|HamKam": {
    "home": "Lillestrøm",
    "away": "HamKam",
    "date": "2026-11-30",
    "round": 28,
-   "H": 0.6303,
-   "U": 0.1912,
-   "B": 0.1785,
+   "H": 0.6315,
+   "U": 0.1922,
+   "B": 0.1763,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.6303,
-    "U": 0.1912,
-    "B": 0.1785
+    "H": 0.6315,
+    "U": 0.1922,
+    "B": 0.1763
    },
    "sjanser": {
     "Lillestrøm": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.1475,
-     "kvalik": 0.0001,
+     "europa": 0.2297,
+     "kvalik": 0,
      "nedrykk": 0
     },
     "HamKam": {
      "gull": 0,
      "cl": 0,
-     "europa": 0,
-     "kvalik": 0.1679,
-     "nedrykk": 0.0675
+     "europa": 0.0001,
+     "kvalik": 0.177,
+     "nedrykk": 0.0594
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Molde|Viking": {
    "home": "Molde",
    "away": "Viking",
    "date": "2026-12-04",
    "round": 29,
-   "H": 0.3492,
-   "U": 0.2351,
-   "B": 0.4156,
+   "H": 0.3578,
+   "U": 0.2235,
+   "B": 0.4187,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.3492,
-    "U": 0.2351,
-    "B": 0.4156
+    "H": 0.3578,
+    "U": 0.2235,
+    "B": 0.4187
    },
    "sjanser": {
     "Molde": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.5439,
+     "europa": 0.6045,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Viking": {
-     "gull": 0.3179,
-     "cl": 0.9998,
+     "gull": 0.3099,
+     "cl": 0.9997,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Aalesund|Bodø/Glimt": {
    "home": "Aalesund",
    "away": "Bodø/Glimt",
    "date": "2026-12-05",
    "round": 29,
-   "H": 0.1192,
-   "U": 0.1461,
-   "B": 0.7347,
+   "H": 0.1178,
+   "U": 0.146,
+   "B": 0.7362,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.1192,
-    "U": 0.1461,
-    "B": 0.7347
+    "H": 0.1178,
+    "U": 0.146,
+    "B": 0.7362
    },
    "sjanser": {
     "Aalesund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.2659,
-     "nedrykk": 0.1617
+     "kvalik": 0.2813,
+     "nedrykk": 0.1452
     },
     "Bodø/Glimt": {
-     "gull": 0.6821,
+     "gull": 0.6901,
      "cl": 1,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Vålerenga|Rosenborg": {
    "home": "Vålerenga",
    "away": "Rosenborg",
    "date": "2026-12-05",
    "round": 29,
-   "H": 0.3709,
-   "U": 0.2271,
-   "B": 0.4019,
+   "H": 0.3919,
+   "U": 0.2243,
+   "B": 0.3838,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.3709,
-    "U": 0.2271,
-    "B": 0.4019
+    "H": 0.3919,
+    "U": 0.2243,
+    "B": 0.3838
    },
    "sjanser": {
     "Vålerenga": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1375,
-     "nedrykk": 0.0977
+     "kvalik": 0.0688,
+     "nedrykk": 0.0258
     },
     "Rosenborg": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.6637,
+     "europa": 0.6144,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Sarpsborg 08|Brann": {
    "home": "Sarpsborg 08",
    "away": "Brann",
    "date": "2026-12-06",
    "round": 29,
-   "H": 0.3373,
-   "U": 0.251,
-   "B": 0.4116,
+   "H": 0.3661,
+   "U": 0.2479,
+   "B": 0.386,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.3373,
-    "U": 0.251,
-    "B": 0.4116
+    "H": 0.3661,
+    "U": 0.2479,
+    "B": 0.386
    },
    "sjanser": {
     "Sarpsborg 08": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0011,
-     "kvalik": 0.0143,
-     "nedrykk": 0.0036
+     "europa": 0.0006,
+     "kvalik": 0.0145,
+     "nedrykk": 0.0027
     },
     "Brann": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0514,
-     "kvalik": 0.0012,
-     "nedrykk": 0.0002
+     "europa": 0.0087,
+     "kvalik": 0.0027,
+     "nedrykk": 0.0005
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|KFUM Oslo|Fredrikstad": {
    "home": "KFUM Oslo",
    "away": "Fredrikstad",
    "date": "2026-12-06",
    "round": 29,
-   "H": 0.3816,
-   "U": 0.2637,
-   "B": 0.3547,
+   "H": 0.3789,
+   "U": 0.264,
+   "B": 0.3571,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.3816,
-    "U": 0.2637,
-    "B": 0.3547
+    "H": 0.3789,
+    "U": 0.264,
+    "B": 0.3571
    },
    "sjanser": {
     "KFUM Oslo": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.0675,
-     "nedrykk": 0.0194
+     "europa": 0.0001,
+     "kvalik": 0.0662,
+     "nedrykk": 0.0162
     },
     "Fredrikstad": {
      "gull": 0,
      "cl": 0,
      "europa": 0.0018,
-     "kvalik": 0.0223,
-     "nedrykk": 0.0031
+     "kvalik": 0.0216,
+     "nedrykk": 0.0023
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Kristiansund|Lillestrøm": {
    "home": "Kristiansund",
    "away": "Lillestrøm",
    "date": "2026-12-06",
    "round": 29,
-   "H": 0.3135,
-   "U": 0.2364,
-   "B": 0.4501,
+   "H": 0.3134,
+   "U": 0.2393,
+   "B": 0.4473,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.3135,
-    "U": 0.2364,
-    "B": 0.4501
+    "H": 0.3134,
+    "U": 0.2393,
+    "B": 0.4473
    },
    "sjanser": {
     "Kristiansund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1222,
-     "nedrykk": 0.7649
+     "kvalik": 0.133,
+     "nedrykk": 0.7518
     },
     "Lillestrøm": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.1475,
-     "kvalik": 0.0001,
+     "europa": 0.2297,
+     "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Tromsø|Start": {
    "home": "Tromsø",
    "away": "Start",
    "date": "2026-12-06",
    "round": 29,
-   "H": 0.6174,
-   "U": 0.2044,
-   "B": 0.1782,
+   "H": 0.65,
+   "U": 0.184,
+   "B": 0.166,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.6174,
-    "U": 0.2044,
-    "B": 0.1782
+    "H": 0.65,
+    "U": 0.184,
+    "B": 0.166
    },
    "sjanser": {
     "Tromsø": {
      "gull": 0,
-     "cl": 0.0002,
-     "europa": 0.5902,
+     "cl": 0.0003,
+     "europa": 0.5401,
      "kvalik": 0,
      "nedrykk": 0
     },
@@ -2271,65 +2274,65 @@
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.0977,
-     "nedrykk": 0.8234
+     "kvalik": 0.0704,
+     "nedrykk": 0.8946
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|HamKam|Sandefjord": {
    "home": "HamKam",
    "away": "Sandefjord",
    "date": "2026-12-06",
    "round": 29,
-   "H": 0.4094,
-   "U": 0.2475,
-   "B": 0.3431,
+   "H": 0.4121,
+   "U": 0.2493,
+   "B": 0.3386,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.4094,
-    "U": 0.2475,
-    "B": 0.3431
+    "H": 0.4121,
+    "U": 0.2493,
+    "B": 0.3386
    },
    "sjanser": {
     "HamKam": {
      "gull": 0,
      "cl": 0,
-     "europa": 0,
-     "kvalik": 0.1679,
-     "nedrykk": 0.0675
+     "europa": 0.0001,
+     "kvalik": 0.177,
+     "nedrykk": 0.0594
     },
     "Sandefjord": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.1034,
-     "nedrykk": 0.0585
+     "europa": 0,
+     "kvalik": 0.1645,
+     "nedrykk": 0.1015
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Bodø/Glimt|Sarpsborg 08": {
    "home": "Bodø/Glimt",
    "away": "Sarpsborg 08",
    "date": "2026-12-13",
    "round": 30,
-   "H": 0.7853,
-   "U": 0.1299,
-   "B": 0.0848,
+   "H": 0.7861,
+   "U": 0.1293,
+   "B": 0.0846,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.7853,
-    "U": 0.1299,
-    "B": 0.0848
+    "H": 0.7861,
+    "U": 0.1293,
+    "B": 0.0846
    },
    "sjanser": {
     "Bodø/Glimt": {
-     "gull": 0.6821,
+     "gull": 0.6901,
      "cl": 1,
      "europa": 1,
      "kvalik": 0,
@@ -2338,80 +2341,80 @@
     "Sarpsborg 08": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0011,
-     "kvalik": 0.0143,
-     "nedrykk": 0.0036
+     "europa": 0.0006,
+     "kvalik": 0.0145,
+     "nedrykk": 0.0027
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Brann|Aalesund": {
    "home": "Brann",
    "away": "Aalesund",
    "date": "2026-12-13",
    "round": 30,
-   "H": 0.5695,
-   "U": 0.2052,
-   "B": 0.2253,
+   "H": 0.5625,
+   "U": 0.2075,
+   "B": 0.23,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.5695,
-    "U": 0.2052,
-    "B": 0.2253
+    "H": 0.5625,
+    "U": 0.2075,
+    "B": 0.23
    },
    "sjanser": {
     "Brann": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0514,
-     "kvalik": 0.0012,
-     "nedrykk": 0.0002
+     "europa": 0.0087,
+     "kvalik": 0.0027,
+     "nedrykk": 0.0005
     },
     "Aalesund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.2659,
-     "nedrykk": 0.1617
+     "kvalik": 0.2813,
+     "nedrykk": 0.1452
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Fredrikstad|Molde": {
    "home": "Fredrikstad",
    "away": "Molde",
    "date": "2026-12-13",
    "round": 30,
-   "H": 0.2866,
-   "U": 0.2336,
-   "B": 0.4799,
+   "H": 0.285,
+   "U": 0.2292,
+   "B": 0.4858,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.2866,
-    "U": 0.2336,
-    "B": 0.4799
+    "H": 0.285,
+    "U": 0.2292,
+    "B": 0.4858
    },
    "sjanser": {
     "Fredrikstad": {
      "gull": 0,
      "cl": 0,
      "europa": 0.0018,
-     "kvalik": 0.0223,
-     "nedrykk": 0.0031
+     "kvalik": 0.0216,
+     "nedrykk": 0.0023
     },
     "Molde": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.5439,
+     "europa": 0.6045,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Lillestrøm|Tromsø": {
    "home": "Lillestrøm",
@@ -2419,156 +2422,156 @@
    "date": "2026-12-13",
    "round": 30,
    "H": 0.4568,
-   "U": 0.2369,
-   "B": 0.3063,
+   "U": 0.2383,
+   "B": 0.3049,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
     "H": 0.4568,
-    "U": 0.2369,
-    "B": 0.3063
+    "U": 0.2383,
+    "B": 0.3049
    },
    "sjanser": {
     "Lillestrøm": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.1475,
-     "kvalik": 0.0001,
+     "europa": 0.2297,
+     "kvalik": 0,
      "nedrykk": 0
     },
     "Tromsø": {
      "gull": 0,
-     "cl": 0.0002,
-     "europa": 0.5902,
+     "cl": 0.0003,
+     "europa": 0.5401,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Rosenborg|KFUM Oslo": {
    "home": "Rosenborg",
    "away": "KFUM Oslo",
    "date": "2026-12-13",
    "round": 30,
-   "H": 0.7264,
-   "U": 0.1597,
-   "B": 0.1139,
+   "H": 0.7254,
+   "U": 0.1603,
+   "B": 0.1143,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.7264,
-    "U": 0.1597,
-    "B": 0.1139
+    "H": 0.7254,
+    "U": 0.1603,
+    "B": 0.1143
    },
    "sjanser": {
     "Rosenborg": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.6637,
+     "europa": 0.6144,
      "kvalik": 0,
      "nedrykk": 0
     },
     "KFUM Oslo": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.0675,
-     "nedrykk": 0.0194
+     "europa": 0.0001,
+     "kvalik": 0.0662,
+     "nedrykk": 0.0162
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Sandefjord|Vålerenga": {
    "home": "Sandefjord",
    "away": "Vålerenga",
    "date": "2026-12-13",
    "round": 30,
-   "H": 0.3986,
-   "U": 0.2525,
-   "B": 0.3489,
+   "H": 0.3827,
+   "U": 0.2565,
+   "B": 0.3607,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.3986,
-    "U": 0.2525,
-    "B": 0.3489
+    "H": 0.3827,
+    "U": 0.2565,
+    "B": 0.3607
    },
    "sjanser": {
     "Sandefjord": {
      "gull": 0,
      "cl": 0,
-     "europa": 0.0002,
-     "kvalik": 0.1034,
-     "nedrykk": 0.0585
+     "europa": 0,
+     "kvalik": 0.1645,
+     "nedrykk": 0.1015
     },
     "Vålerenga": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1375,
-     "nedrykk": 0.0977
+     "kvalik": 0.0688,
+     "nedrykk": 0.0258
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Start|Kristiansund": {
    "home": "Start",
    "away": "Kristiansund",
    "date": "2026-12-13",
    "round": 30,
-   "H": 0.5887,
-   "U": 0.1987,
-   "B": 0.2126,
+   "H": 0.5857,
+   "U": 0.196,
+   "B": 0.2184,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.5887,
-    "U": 0.1987,
-    "B": 0.2126
+    "H": 0.5857,
+    "U": 0.196,
+    "B": 0.2184
    },
    "sjanser": {
     "Start": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.0977,
-     "nedrykk": 0.8234
+     "kvalik": 0.0704,
+     "nedrykk": 0.8946
     },
     "Kristiansund": {
      "gull": 0,
      "cl": 0,
      "europa": 0,
-     "kvalik": 0.1222,
-     "nedrykk": 0.7649
+     "kvalik": 0.133,
+     "nedrykk": 0.7518
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   },
   "2026|Viking|HamKam": {
    "home": "Viking",
    "away": "HamKam",
    "date": "2026-12-13",
    "round": 30,
-   "H": 0.804,
-   "U": 0.1146,
-   "B": 0.0814,
+   "H": 0.8069,
+   "U": 0.1133,
+   "B": 0.0798,
    "kilde": "modell",
    "oddsvekt": 0,
    "odds": null,
    "modell": {
-    "H": 0.804,
-    "U": 0.1146,
-    "B": 0.0814
+    "H": 0.8069,
+    "U": 0.1133,
+    "B": 0.0798
    },
    "sjanser": {
     "Viking": {
-     "gull": 0.3179,
-     "cl": 0.9998,
+     "gull": 0.3099,
+     "cl": 0.9997,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
@@ -2576,12 +2579,12 @@
     "HamKam": {
      "gull": 0,
      "cl": 0,
-     "europa": 0,
-     "kvalik": 0.1679,
-     "nedrykk": 0.0675
+     "europa": 0.0001,
+     "kvalik": 0.177,
+     "nedrykk": 0.0594
     }
    },
-   "stamp": "2026-10-18T16:51:37Z"
+   "stamp": "2026-10-18T17:01:32Z"
   }
  },
  "note": "Sannsynlighet for hvert utfall før avspark, per kamp. Oppdateres bare før avspark fra terminlisten og fryses med siste stempel fra før avspark når kampen er spilt, så \"forrige kamp\" og treffsikkerheten er uten etterpåklokskap. Fra 70 til 15 minutter før avspark skrives raden av \"Odds nær avspark\", med sluttoddsen."

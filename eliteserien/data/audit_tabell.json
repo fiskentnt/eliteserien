@@ -1,21 +1,63 @@
 {
- "checked_at": "2026-10-18T16:50:51+00:00",
+ "checked_at": "2026-10-18T17:00:56+00:00",
  "checked_date": "2026-10-18",
- "kjoring": "39146840268-1",
+ "kjoring": "39147587102-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 3,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-10-18T16:50:51+00:00",
-  "kjoring": "39146840268-1",
-  "kilde": "https://www.eliteserien.no/resultater",
-  "avtrykk": "cba8f592aece9d064230fd5bcce204f3da87fc8580f0a4b433373d2353b55c04"
- }
+ "advarsler": [
+  "Tabell: Molde-Start mangler i tabellen på eliteserien.no. Hos oss 6-1, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00).",
+  "Tabell: Sandefjord-Lillestrøm mangler i tabellen på eliteserien.no. Hos oss 0-2, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00).",
+  "Tabell: Vålerenga-Brann mangler i tabellen på eliteserien.no. Hos oss 3-1, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Molde|Start",
+   "resultat": [
+    6,
+    1
+   ],
+   "avspark": "2026-10-18T15:00:00+00:00",
+   "frist": "2026-10-18T21:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  },
+  {
+   "kamp": "Sandefjord|Lillestrøm",
+   "resultat": [
+    0,
+    2
+   ],
+   "avspark": "2026-10-18T15:00:00+00:00",
+   "frist": "2026-10-18T21:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  },
+  {
+   "kamp": "Vålerenga|Brann",
+   "resultat": [
+    3,
+    1
+   ],
+   "avspark": "2026-10-18T15:00:00+00:00",
+   "frist": "2026-10-18T21:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
