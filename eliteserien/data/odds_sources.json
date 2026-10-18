@@ -470,7 +470,13 @@
      "hentet": "2026-10-17T06:50:36.977Z"
     }
    },
-   "kickoff": "2026-10-17T12:00:00"
+   "kickoff": "2026-10-17T12:00:00",
+   "resultat": {
+    "hg": 0,
+    "ag": 2,
+    "utfall": "B"
+   },
+   "frosset": true
   },
   "2026|Kristiansund|Aalesund": {
    "home": "Kristiansund",
@@ -517,7 +523,13 @@
      "hentet": "2026-10-17T06:51:06.429Z"
     }
    },
-   "kickoff": "2026-10-17T14:00:00"
+   "kickoff": "2026-10-17T14:00:00",
+   "resultat": {
+    "hg": 1,
+    "ag": 4,
+    "utfall": "B"
+   },
+   "frosset": true
   },
   "2026|Viking|Fredrikstad": {
    "home": "Viking",
@@ -564,18 +576,24 @@
      "hentet": "2026-10-17T08:03:20.763Z"
     }
    },
-   "kickoff": "2026-10-17T16:00:00"
+   "kickoff": "2026-10-17T16:00:00",
+   "resultat": {
+    "hg": 3,
+    "ag": 2,
+    "utfall": "H"
+   },
+   "frosset": true
   },
   "2026|Sarpsborg 08|Rosenborg": {
    "home": "Sarpsborg 08",
    "away": "Rosenborg",
    "kilder": {
     "oddsapi": {
-     "H": 0.4025,
-     "U": 0.2428,
-     "B": 0.3547,
-     "n_bookmakers": 21,
-     "hentet": "2026-10-17T09:02:02+00:00"
+     "H": 0.4092,
+     "U": 0.2447,
+     "B": 0.3461,
+     "n_bookmakers": 22,
+     "hentet": "2026-10-18T09:01:07+00:00"
     },
     "pinnacle": {
      "H": 0.3959,
@@ -618,11 +636,11 @@
    "away": "Start",
    "kilder": {
     "oddsapi": {
-     "H": 0.7307,
-     "U": 0.1577,
-     "B": 0.1115,
-     "n_bookmakers": 21,
-     "hentet": "2026-10-17T09:02:02+00:00"
+     "H": 0.7197,
+     "U": 0.1631,
+     "B": 0.1172,
+     "n_bookmakers": 22,
+     "hentet": "2026-10-18T09:01:07+00:00"
     },
     "pinnacle": {
      "H": 0.7306,
@@ -665,11 +683,11 @@
    "away": "Lillestrøm",
    "kilder": {
     "oddsapi": {
-     "H": 0.358,
-     "U": 0.2576,
-     "B": 0.3844,
-     "n_bookmakers": 21,
-     "hentet": "2026-10-17T09:02:02+00:00"
+     "H": 0.3657,
+     "U": 0.2578,
+     "B": 0.3765,
+     "n_bookmakers": 22,
+     "hentet": "2026-10-18T09:01:07+00:00"
     },
     "pinnacle": {
      "H": 0.364,
@@ -712,11 +730,11 @@
    "away": "Brann",
    "kilder": {
     "oddsapi": {
-     "H": 0.3882,
-     "U": 0.2406,
-     "B": 0.3712,
-     "n_bookmakers": 21,
-     "hentet": "2026-10-17T09:02:02+00:00"
+     "H": 0.416,
+     "U": 0.238,
+     "B": 0.346,
+     "n_bookmakers": 22,
+     "hentet": "2026-10-18T09:01:07+00:00"
     },
     "unibet": {
      "H": 0.3916,
@@ -759,11 +777,11 @@
    "away": "KFUM Oslo",
    "kilder": {
     "oddsapi": {
-     "H": 0.6365,
-     "U": 0.2093,
-     "B": 0.1542,
-     "n_bookmakers": 21,
-     "hentet": "2026-10-17T09:02:02+00:00"
+     "H": 0.6687,
+     "U": 0.1982,
+     "B": 0.1331,
+     "n_bookmakers": 22,
+     "hentet": "2026-10-18T09:01:07+00:00"
     },
     "unibet": {
      "H": 0.6397,
@@ -800,8 +818,34 @@
     }
    },
    "kickoff": "2026-10-18T17:15:00"
+  },
+  "2026|Bodø/Glimt|Vålerenga": {
+   "home": "Bodø/Glimt",
+   "away": "Vålerenga",
+   "kilder": {
+    "oddsapi": {
+     "H": 0.8098,
+     "U": 0.118,
+     "B": 0.0722,
+     "n_bookmakers": 10,
+     "hentet": "2026-10-18T09:01:07+00:00"
+    }
+   }
+  },
+  "2026|HamKam|Rosenborg": {
+   "home": "HamKam",
+   "away": "Rosenborg",
+   "kilder": {
+    "oddsapi": {
+     "H": 0.2136,
+     "U": 0.2235,
+     "B": 0.5629,
+     "n_bookmakers": 11,
+     "hentet": "2026-10-18T09:01:07+00:00"
+    }
+   }
   }
  },
  "note": "Kildene side om side for hver kamp, med margin fjernet. Modellen bruker fortsatt The Odds API; denne filen finnes for å sammenligne dem. Raden fryses når kampen er spilt.",
- "updated": "2026-10-17T09:05:05+00:00"
+ "updated": "2026-10-18T09:04:13+00:00"
 }
