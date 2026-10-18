@@ -1,33 +1,21 @@
 {
- "checked_at": "2026-10-18T20:00:51+00:00",
+ "checked_at": "2026-10-18T20:10:51+00:00",
  "checked_date": "2026-10-18",
- "kjoring": "39161323030-1",
+ "kjoring": "39162100100-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 1,
- "alle_like": false,
+ "warnings": 0,
+ "alle_like": true,
  "nye": [],
  "avvik": [],
- "advarsler": [
-  "Tabell: Tromsø-KFUM Oslo mangler i tabellen på eliteserien.no. Hos oss 1-1, bekreftet av espn og highlightly. Avspark 19:15, sjekkes på nytt i neste kjøring (frist 01:15)."
- ],
- "venter": [
-  {
-   "kamp": "Tromsø|KFUM Oslo",
-   "resultat": [
-    1,
-    1
-   ],
-   "avspark": "2026-10-18T17:15:00+00:00",
-   "frist": "2026-10-18T23:15:00+00:00",
-   "kilder": [
-    "espn",
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  }
- ],
- "siste_like": null
+ "advarsler": [],
+ "venter": [],
+ "siste_like": {
+  "checked_at": "2026-10-18T20:10:51+00:00",
+  "kjoring": "39162100100-1",
+  "kilde": "https://www.eliteserien.no/resultater",
+  "avtrykk": "05fe7bd8fb07ab47cc5e9651a51e792e6669d3141256060faa46d3a0e0db66c2"
+ }
 }
