@@ -1,21 +1,33 @@
 {
- "checked_at": "2026-10-18T14:20:46+00:00",
+ "checked_at": "2026-10-18T14:30:53+00:00",
  "checked_date": "2026-10-18",
- "kjoring": "39135551366-1",
+ "kjoring": "39136306472-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-10-18T14:20:46+00:00",
-  "kjoring": "39135551366-1",
-  "kilde": "https://www.eliteserien.no/resultater",
-  "avtrykk": "0438499f45ac6f20525c7875eb960c701444b060a75a340b8d28cc213cf1d74d"
- }
+ "advarsler": [
+  "Tabell: Sarpsborg 08-Rosenborg mangler i tabellen på eliteserien.no. Hos oss 0-3, bekreftet av espn og highlightly. Avspark 14:30, sjekkes på nytt i neste kjøring (frist 20:30)."
+ ],
+ "venter": [
+  {
+   "kamp": "Sarpsborg 08|Rosenborg",
+   "resultat": [
+    0,
+    3
+   ],
+   "avspark": "2026-10-18T12:30:00+00:00",
+   "frist": "2026-10-18T18:30:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
