@@ -1,21 +1,32 @@
 {
- "checked_at": "2026-10-18T15:11:19+00:00",
+ "checked_at": "2026-10-18T16:51:09+00:00",
  "checked_date": "2026-10-18",
- "kjoring": "39139286161-1",
+ "kjoring": "39146841849-1",
  "kilde": "https://www.obos-ligaen.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-10-18T15:11:19+00:00",
-  "kjoring": "39139286161-1",
-  "kilde": "https://www.obos-ligaen.no/resultater",
-  "avtrykk": "ef693277034d957b1d454bfea6c343d6c65f10bd1cec3fd4e445cfae48346ba9"
- }
+ "advarsler": [
+  "Tabell: Åsane-Stabæk mangler i tabellen på obos-ligaen.no. Hos oss 0-1, bekreftet av highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Åsane|Stabæk",
+   "resultat": [
+    0,
+    1
+   ],
+   "avspark": "2026-10-18T15:00:00+00:00",
+   "frist": "2026-10-18T21:00:00+00:00",
+   "kilder": [
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
