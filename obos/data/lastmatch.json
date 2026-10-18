@@ -14,47 +14,47 @@
    "actual": "draw",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": -1,
+   "pp": 0,
    "good": false,
    "basis": "avspark",
    "foer": 0.8712,
-   "expected": 0.916
+   "expected": 0.9229
   },
   "Egersund": {
-   "date": "2026-10-14",
-   "home": "Moss",
-   "away": "Egersund",
-   "hg": 0,
-   "ag": 0,
-   "opp": "Moss",
-   "gf": 0,
-   "ga": 0,
+   "date": "2026-10-18",
+   "home": "Egersund",
+   "away": "Sogndal",
+   "hg": 3,
+   "ag": 3,
+   "opp": "Sogndal",
+   "gf": 3,
+   "ga": 3,
    "actual": "draw",
-   "zone": "europa",
-   "chance": "topp 6-sjansen",
-   "pp": 1,
-   "good": true,
+   "zone": "kvalik",
+   "chance": "kvaliksjansen",
+   "pp": 0,
+   "good": false,
    "basis": "avspark",
-   "foer": 0.0448,
-   "expected": 0.0661
+   "foer": 0.0006,
+   "expected": 0.0003
   },
   "Haugesund": {
-   "date": "2026-10-14",
-   "home": "Haugesund",
-   "away": "Lyn",
-   "hg": 3,
+   "date": "2026-10-18",
+   "home": "Strømsgodset",
+   "away": "Haugesund",
+   "hg": 5,
    "ag": 0,
-   "opp": "Lyn",
-   "gf": 3,
-   "ga": 0,
-   "actual": "win",
+   "opp": "Strømsgodset",
+   "gf": 0,
+   "ga": 5,
+   "actual": "loss",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": 3,
-   "good": true,
+   "pp": -12,
+   "good": false,
    "basis": "avspark",
-   "foer": 0.8498,
-   "expected": 0.8277
+   "foer": 0.885,
+   "expected": 0.8541
   },
   "Hødd": {
    "date": "2026-10-14",
@@ -66,13 +66,13 @@
    "gf": 1,
    "ga": 1,
    "actual": "draw",
-   "zone": "kvalik",
-   "chance": "kvaliksjansen",
-   "pp": 0,
-   "good": false,
+   "zone": "europa",
+   "chance": "topp 6-sjansen",
+   "pp": 1,
+   "good": true,
    "basis": "avspark",
-   "foer": 0.0001,
-   "expected": 0
+   "foer": 0.0402,
+   "expected": 0.0725
   },
   "Kongsvinger": {
    "date": "2026-10-14",
@@ -86,11 +86,11 @@
    "actual": "loss",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": -23,
+   "pp": -28,
    "good": false,
    "basis": "avspark",
    "foer": 0.6156,
-   "expected": 0.5698
+   "expected": 0.5103
   },
   "Lyn": {
    "date": "2026-10-14",
@@ -108,7 +108,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0788,
-   "expected": 0.0662
+   "expected": 0.0649
   },
   "Moss": {
    "date": "2026-10-14",
@@ -126,7 +126,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0753,
-   "expected": 0.0484
+   "expected": 0.0474
   },
   "Odd": {
    "date": "2026-10-14",
@@ -144,7 +144,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.9936,
-   "expected": 0.9985
+   "expected": 0.9988
   },
   "Ranheim": {
    "date": "2026-10-14",
@@ -156,13 +156,13 @@
    "gf": 1,
    "ga": 1,
    "actual": "draw",
-   "zone": "kvalik",
-   "chance": "kvaliksjansen",
+   "zone": "europa",
+   "chance": "topp 6-sjansen",
    "pp": 0,
    "good": false,
    "basis": "avspark",
-   "foer": 0.0033,
-   "expected": 0.001
+   "foer": 0.049,
+   "expected": 0.0865
   },
   "Raufoss": {
    "date": "2026-10-14",
@@ -180,7 +180,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.916,
-   "expected": 0.9029
+   "expected": 0.9007
   },
   "Sandnes Ulf": {
    "date": "2026-10-14",
@@ -194,29 +194,29 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 1,
+   "pp": 2,
    "good": false,
    "basis": "avspark",
    "foer": 0.0522,
-   "expected": 0.0466
+   "expected": 0.0561
   },
   "Sogndal": {
-   "date": "2026-10-14",
-   "home": "Sogndal",
-   "away": "Odd",
-   "hg": 0,
-   "ag": 1,
-   "opp": "Odd",
-   "gf": 0,
-   "ga": 1,
-   "actual": "loss",
+   "date": "2026-10-18",
+   "home": "Egersund",
+   "away": "Sogndal",
+   "hg": 3,
+   "ag": 3,
+   "opp": "Egersund",
+   "gf": 3,
+   "ga": 3,
+   "actual": "draw",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 4,
+   "pp": 0,
    "good": false,
    "basis": "avspark",
-   "foer": 0.1001,
-   "expected": 0.0999
+   "foer": 0.1324,
+   "expected": 0.1355
   },
   "Stabæk": {
    "date": "2026-10-14",
@@ -252,25 +252,25 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.1744,
-   "expected": 0.1216
+   "expected": 0.1233
   },
   "Strømsgodset": {
-   "date": "2026-10-14",
+   "date": "2026-10-18",
    "home": "Strømsgodset",
-   "away": "Kongsvinger",
+   "away": "Haugesund",
    "hg": 5,
-   "ag": 1,
-   "opp": "Kongsvinger",
+   "ag": 0,
+   "opp": "Haugesund",
    "gf": 5,
-   "ga": 1,
+   "ga": 0,
    "actual": "win",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": 20,
+   "pp": 15,
    "good": true,
    "basis": "avspark",
-   "foer": 0.5312,
-   "expected": 0.5344
+   "foer": 0.7277,
+   "expected": 0.7515
   },
   "Åsane": {
    "date": "2026-10-14",
@@ -288,8 +288,8 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.8031,
-   "expected": 0.8043
+   "expected": 0.8091
   }
  },
- "updated": "2026-10-18T09:02:27Z"
+ "updated": "2026-10-18T14:41:53Z"
 }

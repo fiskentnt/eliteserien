@@ -1,25 +1,25 @@
 {
  "version": 1,
  "note": "Hvor godt tallene som ble lagret FØR avspark traff. Ingenting er regnet på nytt i etterkant. Skrevet av scripts/accuracy_log.py.",
- "updated": "2026-10-18T09:02:27+00:00",
- "n": 23,
+ "updated": "2026-10-18T14:41:53+00:00",
+ "n": 25,
  "fra": "2026-10-02",
- "til": "2026-10-14",
+ "til": "2026-10-18",
  "kilder": {
   "side": {
-   "n": 23,
-   "treff": 0.6957,
-   "logloss": 0.8453
+   "n": 25,
+   "treff": 0.68,
+   "logloss": 0.8602
   },
   "modell": {
-   "n": 23,
-   "treff": 0.6957,
-   "logloss": 0.8859
+   "n": 25,
+   "treff": 0.68,
+   "logloss": 0.8989
   },
   "odds": {
-   "n": 23,
-   "treff": 0.6957,
-   "logloss": 0.8299
+   "n": 25,
+   "treff": 0.68,
+   "logloss": 0.8453
   }
  },
  "kalibrering": [
@@ -33,16 +33,16 @@
   {
    "lo": 0.2,
    "hi": 0.4,
-   "n": 35,
-   "ventet": 0.2558,
-   "faktisk": 0.1714
+   "n": 39,
+   "ventet": 0.2545,
+   "faktisk": 0.1795
   },
   {
    "lo": 0.4,
    "hi": 0.6,
-   "n": 17,
-   "ventet": 0.4854,
-   "faktisk": 0.7059
+   "n": 19,
+   "ventet": 0.4885,
+   "faktisk": 0.6842
   },
   {
    "lo": 0.6,
