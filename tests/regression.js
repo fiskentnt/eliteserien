@@ -166,9 +166,9 @@ const QA_EXPECT = {
   // Vanskeligst/lettest: begge ytterpunktene skal ha et tall.
   hardest:    {what: 'prosent',       pat: new RegExp(PCT)},
   cheer:      {what: 'prosentpoeng',  pat: new RegExp(PP)},
-  // Spennet, ikke bare ordet "plass": svaret nevner plasseringer flere steder,
-  // så et løsere mønster ville ikke merket om selve spennet forsvant.
-  range:      {what: 'plasseringsspenn', pat: /mellom \d+\. og \d+\. plass|Nesten sikkert \d+\. plass|ender på \d+\. plass uansett/},
+  // "Hvilken plass ender X på?" (19.10.2026): det matematiske spennet, ikke
+  // bare ordet "plass", som svaret nevner flere steder.
+  range:      {what: 'plasseringsspenn', pat: /ende fra \d+\. til \d+\. plass|ender på \d+\. plass uansett/},
   decided:    {what: 'runde',         pat: /runde \d+/},
   rivals:     {what: 'prosent',       pat: new RegExp(PCT)},
   // Fortegnet er ute av ordlyden: tallet står nå som "9,3 poeng mer enn
@@ -3708,10 +3708,15 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await rolig();
       // Åtte kamper lagt inn for hånd: Brann taper noen, rivalene om topp 4
       // vinner noen, resten uavgjort. Oppsettet velges slik at Brann ligger
-      // rundt 5 % topp 4-sjanse når runde 23 er simulert.
+      // rundt 1 % topp 4-sjanse når runde 23 er simulert: da kommer og går
+      // linjer i lagboksen med trekningene, så høyden over knappen endrer seg.
+      // Før 19.10.2026 var det rundt 5 %, der 5 %-regelen byttet sone mellom
+      // topp 4 og kvalik; nå følger lagboksen den mest åpne retningen
+      // (qaRetninger) og blir stående på topp 4, og over 4 % endret høyden seg
+      // ikke (0 av 40 trykk).
       await pg.evaluate(() => { const t = document.getElementById('autoFillToggle'); if (t.checked) t.click(); });
       let valgt = null;
-      for (const [tap, vinn] of [[0, 4], [0, 2], [1, 1], [0, 6], [1, 3], [0, 0], [2, 2], [1, 5]]) {
+      for (const [tap, vinn] of [[1, 6], [1, 4], [2, 0], [2, 2], [1, 5], [0, 6], [1, 3], [0, 4]]) {
         await pg.evaluate((tap, vinn) => {
           matches.forEach(m => setMatch(m, null, null));
           const fri = m => m.hg == null && m.round !== 23;
@@ -3726,12 +3731,17 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           mcStraks = true; render();
         }, tap, vinn);
         await rolig();
-        await pg.evaluate(async () => { await simulateGroup('r23', false); render(); });
-        await rolig();
-        const p = await pg.evaluate(() => (qaZoneByKey('Brann', 'europa') || {}).pct || 0);
-        if (p >= 0.02 && p <= 0.10) { valgt = {tap, vinn, p}; break; }
+        // Opptil fire trekninger av runde 23 per oppsett: sjansen etter én
+        // trekning varierer (mobil fant ingen med bare én, 19.10.2026).
+        for (let t = 0; t < 4 && !valgt; t++) {
+          await pg.evaluate(async t => { await simulateGroup('r23', t > 0); render(); }, t);
+          await rolig();
+          const p = await pg.evaluate(() => (qaZoneByKey('Brann', 'europa') || {}).pct || 0);
+          if (p >= 0.005 && p <= 0.03) valgt = {tap, vinn, p};
+        }
+        if (valgt) break;
       }
-      check(`${form}: fant et oppsett med åtte kamper der Brann ligger rundt 5 % topp 4-sjanse (${valgt ? `Brann taper ${valgt.tap}, rivaler vinner ${valgt.vinn}: ${Math.round(valgt.p * 100)} %` : 'ingen'})`, !!valgt, '');
+      check(`${form}: fant et oppsett med åtte kamper der Brann ligger rundt 1 % topp 4-sjanse (${valgt ? `Brann taper ${valgt.tap}, rivaler vinner ${valgt.vinn}: ${Math.round(valgt.p * 100)} %` : 'ingen'})`, !!valgt, '');
       if (!valgt) { await pg.close(); continue; }
       const sel = '.round-sim[data-round="23"]';
       await pg.evaluate(s => { const b = document.querySelector(s); window.scrollTo(0, b.getBoundingClientRect().top + scrollY - 200); }, sel);
@@ -4360,6 +4370,104 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     }
     check(`alle fire tilfellene er prøvd (${[...sett].sort().join(', ')})`, ['safe', 'safe~', 'out', 'out~'].every(k => sett.has(k)), '');
   };
+  // TRE TILSTANDER I "SPØR OM TABELLEN" (19.10.2026). Før valgte qaTargetZone
+  // første sone over 5 % og falt tilbake på kvalik, også når kvalik var
+  // avgjort: Brann fikk tre like svar om kvalik. Nå bygger valget på
+  // matStatus (qaRetninger): opp er den matematisk åpne sonen foran der
+  // utfallet er mest åpent, ned er 13. plass eller bedre så lenge den ikke er
+  // matematisk avgjort.
+  //   1  begge åpne: "Hva må", "Hvorfor" og "Hvilke kamper betyr mest"
+  //      øverst; "Hva må" og kampene følger den mest åpne retningen,
+  //      "Hvorfor" den andre, og de tre svarene er ulike
+  //   2  én åpen: de vanlige spørsmålene, alle om den
+  //   3  midtsone: "Hvilken plass ender X på?", "Hvem kjemper X mot om
+  //      plassene?" og "Hvilken kamp blir vanskeligst" øverst, ingen spørsmål
+  //      som bare kan svare med noe som er avgjort, og banneret spør om plassen
+  // For alle lagene i bildet og i et scenario med alt unntatt de to siste
+  // rundene fylt (frø 1), der noen lag havner i midtsonen. Svarene om plassen
+  // og om hvem laget kjemper mot, prøves for hvert lag i midtsonen.
+  //   node tests/regression.js --bare tilstander
+  const tilstander = async () => {
+    setGroup('Spør om tabellen: tre tilstander per lag (begge retninger åpne, én avgjort, midtsone)');
+    const merker = pg => pg.waitForFunction('lastYtterSig===badgeSignatureOf(compute().rows, matches.filter(isEmpty).map(m=>[m.home,m.away]))', {timeout: 60000});
+    const vurder = pg => pg.evaluate(async () => {
+      const {rows} = compute(), y = ytterNaa(), feil = [], antall = {1: 0, 2: 0, 3: 0}, naer = p => Math.abs(p - 0.5);
+      const b13 = LEAGUE.zones.kvalik.boundary;
+      for (const [i, row] of rows.entries()) {
+        const t = row.name, r = qaRetninger(t), f = m => feil.push(`${t}: ${m}`);
+        antall[r.tilstand]++;
+        // Retningene fra matStatus, ikke fra 5 %-grensen.
+        const aapneOpp = ['gull', 'cl', 'europa'].filter(k => LEAGUE.zones[k]).map(k => qaZoneByKey(t, k)).filter(z => z && z.mat === 0);
+        if (!!r.opp !== aapneOpp.length > 0 || (r.opp && aapneOpp.some(z => naer(z.pct) < naer(r.opp.pct)))) f('opp er ikke den mest åpne matematisk åpne sonen foran');
+        if (!!r.ned !== (matStatus(t, 1, b13) === 0)) f('ned følger ikke matStatus for 13. plass');
+        if (r.tilstand !== (r.opp && r.ned ? 1 : r.opp || r.ned ? 2 : 3)) f(`tilstand ${r.tilstand}`);
+        const ids = qaSynligeSporsmal(t).map(q => q.id), topp = ids.slice(0, QA_TOP_N);
+        const sone = rolle => (qaTargetZone(t, rolle) || {}).key;
+        if (r.tilstand === 1) {
+          const andre = r.aapnest === r.opp ? r.ned : r.opp;
+          if (topp.join() !== 'howto,why,keymatches') f(`øverst: ${topp}`);
+          if (sone('howto') !== r.aapnest.key || sone() !== r.aapnest.key || sone('why') !== andre.key) f(`sonene: howto ${sone('howto')}, why ${sone('why')}, kampene ${sone()}`);
+        } else if (r.tilstand === 2) {
+          if (topp.join() !== 'why,howto,keymatches') f(`øverst: ${topp}`);
+          if ([sone('howto'), sone('why'), sone()].some(k => k !== r.aapnest.key)) f('sonene følger ikke den åpne retningen');
+        } else {
+          if (topp.join() !== 'range,rivals,hardest') f(`øverst: ${topp}`);
+          if (ids.some(id => QA_BARE_SONE.has(id))) f(`spørsmål om noe avgjort: ${ids.filter(id => QA_BARE_SONE.has(id))}`);
+          const lab = id => QA_QUESTIONS.find(q => q.id === id).label(t);
+          if (lab('range') !== `Hvilken plass ender ${t} på?` || lab('rivals') !== `Hvem kjemper ${t} mot om plassene?`) f('spørsmålsteksten');
+          // Plassen: matematisk laveste og høyeste, mest sannsynlige fra simuleringene.
+          const d = lastMC[t], mode = d.indexOf(Math.max(...d)) + 1, svar = qaRange(t);
+          if (y[t].verst === y[t].best ? !svar.includes(`ender på ${y[t].best}. plass uansett`)
+              : !(svar.includes(`ende fra ${y[t].best}. til ${y[t].verst}. plass`) && svar.includes(`Oftest blir det ${mode}. plass`))) f(`plassen: ${svar}`);
+          // Hvem den kjemper mot: lagene som fortsatt kan bytte plass (qaCanCross).
+          const kan = rows.filter(x => x.name !== t && qaCanCross(row, x)), sv = await qaRivals(t);
+          if (!sv.startsWith(`${t} ligger på ${i + 1}. plass med `)) f(`kjemper: ${sv}`);
+          if (!kan.length ? !sv.includes('ingen lag kan lenger bytte plass') : !kan.every(x => sv.includes(x.name) || /I alt kan /.test(sv))) f(`kjemper, lagene: ${sv}`);
+        }
+      }
+      return {feil, antall};
+    });
+    const sett = {1: 0, 2: 0, 3: 0};
+    for (const side of ['eliteserien', 'obos']) {
+      const url = base.replace('/eliteserien/', `/${side}/`);
+      const pg = await open(1400, 900, url);
+      await settle(pg); await merker(pg);
+      for (const [hvor, R] of [['bildet', 0], ['alt unntatt de to siste rundene fylt (frø 1)', 2]]) {
+        if (R) {
+          await pg.evaluate(async R => {
+            document.getElementById('autoFillToggle').checked = false;
+            const maxR = Math.max(...matches.map(m => m.round));
+            await simulateTypicalAsync(matches.filter(m => isEmpty(m) && m.round <= maxR - R), 1);
+            render();
+          }, R);
+          await settle(pg); await merker(pg);
+        }
+        const v = await vurder(pg);
+        [1, 2, 3].forEach(k => { sett[k] += v.antall[k]; });
+        check(`${side}, ${hvor}: tilstand 1 for ${v.antall[1]}, 2 for ${v.antall[2]} og 3 for ${v.antall[3]} lag; retningene, sonene og spørsmålene stemmer for alle`,
+          !v.feil.length, v.feil.slice(0, 4).join(' | '));
+        // Banneret og de tre øverste svarene for ett lag i hver tilstand.
+        const valg = await pg.evaluate(() => [1, 2, 3].map(k => (compute().rows.find(r => qaRetninger(r.name).tilstand === k) || {}).name).filter(Boolean));
+        for (const lag of valg) {
+          await pg.select('#teamSelect', lag);
+          await settle(pg);
+          const b = await pg.evaluate(async t => {
+            const r = qaRetninger(t), el = document.getElementById('qaHighlight');
+            const topp = qaSynligeSporsmal(t).slice(0, QA_TOP_N).filter(q => q.id !== 'keymatches');
+            const svar = [];
+            for (const q of topp) svar.push(await q.run(t, () => {}));
+            return {tilstand: r.tilstand, banner: el.textContent, qid: el.dataset.qid, svar,
+              forventet: r.tilstand === 3 ? `Hvilken plass ender ${t} på?` : r.tilstand === 1 ? QA_QUESTIONS.find(q => q.id === 'howto').label(t) : null};
+          }, lag);
+          check(`${side}, ${hvor}: ${lag} (tilstand ${b.tilstand}): banneret «${b.banner}», og svarene øverst er ulike og uten feil`,
+            (!b.forventet || b.banner === b.forventet) && new Set(b.svar).size === b.svar.length
+              && b.svar.every(s => s.length > 20 && !/undefined|NaN|\[object|^Klarte ikke/.test(s)), JSON.stringify(b).slice(0, 600));
+        }
+      }
+      await pg.close();
+    }
+    check(`alle tre tilstandene er prøvd (1: ${sett[1]}, 2: ${sett[2]}, 3: ${sett[3]} lag)`, sett[1] > 0 && sett[2] > 0 && sett[3] > 0, '');
+  };
   // Innbyrdes oppgjør i tabellen (16.10.2026, NFFs kampreglement § 5-3):
   // poeng, målforskjell, scorede mål, så en minitabell av kampene mellom lagene
   // som står helt likt (rangerTabell). På alle tre sidene: (a) regelen selv med
@@ -4560,6 +4668,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'innbyrdes') await innbyrdes();
       else if (BARE === 'samsvar') await samsvar();
       else if (BARE === 'avgjort') await avgjort();
+      else if (BARE === 'tilstander') await tilstander();
       else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort, trekning, forkampen, blandet, stempel)`);
     } else {
     // ---- 0. dagens data ----
@@ -8096,6 +8205,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await innbyrdes();
     await samsvar();
     await avgjort();
+    await tilstander();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen

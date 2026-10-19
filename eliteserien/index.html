@@ -4923,11 +4923,49 @@ function qaZoneByKey(team, key){
     boundary: z.boundary != null ? z.boundary : z.hi,
     dir: z.boundary != null ? 'back' : 'front', pct:medStatus(pct, mat), mat};
 }
-// "Mest aktuelt" for laget: gull hvis over 5 %, ellers Europa hvis over 5 %,
-// ellers nedrykk hvis over 5 %, ellers kvalik.
-function qaTargetZone(team){
+// TRE TILSTANDER PER LAG (19.10.2026). Før valgte qaTargetZone første sone
+// over 5 % (gull, Europa, nedrykk) og falt tilbake på kvalik, også når kvalik
+// var avgjort: Brann (7. plass, 29 poeng) fikk tre like svar om kvalik. Nå
+// bygger valget på matStatus (matematisk avgjort), ikke på 5 %-grensen. To
+// retninger:
+//   opp  sonene foran (gull, Champions League, topp 4/6): den matematisk åpne
+//        sonen der utfallet er mest åpent (nærmest 50 %), så Glimt får gull,
+//        Molde topp 4 og Brann topp 4 når gull og Champions League er umulig
+//   ned  13. plass eller bedre (å unngå kvalik og nedrykk), åpen så lenge den
+//        ikke er matematisk avgjort; ordet er nedrykk når den er over 5 %,
+//        ellers kvalik (samme grense, bare spørsmålet skiller dem)
+// En retning er åpen også under 1 % og over 99 %; da er svaret "så godt som"
+// (qaSettledText). tilstand: 1 begge åpne, 2 én åpen, 3 begge avgjort
+// (midtsone), 0 sesongen er ferdig.
+function qaRetninger(team){
   const d = lastMC && lastMC[team];
   if(!d) return null;
+  if(!matches.some(isEmpty)) return {tilstand:0, opp:null, ned:null, aapnest:null};
+  const pctOf = key => { const z = LEAGUE.zones[key]; if(!z) return 0;
+    let v = 0; for(let p=z.lo; p<=z.hi; p++) v += d[p-1]; return v; };
+  const naer = p => Math.abs(p-0.5);
+  const opp = ['gull','cl','europa'].filter(k=>LEAGUE.zones[k]).map(k=>qaZoneByKey(team, k))
+    .filter(z=>z && z.mat===0).sort((a,b)=>naer(a.pct)-naer(b.pct))[0] || null;
+  const b = LEAGUE.zones.kvalik.boundary;
+  const ned = matStatus(team, 1, b)===0 ? qaZoneByKey(team, pctOf('nedrykk')>0.05 ? 'nedrykk' : 'kvalik') : null;
+  const pNed = d.slice(0, b).reduce((x,y)=>x+y, 0);
+  const aapnest = opp && ned ? (naer(opp.pct)<=naer(pNed) ? opp : ned) : (opp || ned);
+  return {tilstand: opp && ned ? 1 : opp || ned ? 2 : 3, opp, ned, aapnest};
+}
+// Sonen spørsmålene handler om. Når begge retningene er åpne: "Hva må X
+// gjøre" (rolle 'howto') og alt uten rolle ("Hvilke kamper betyr mest", neste
+// kamp, heie på, forrige kamp, kortet) følger den mest åpne retningen, og
+// "Hvorfor" (rolle 'why') den andre. Brann: "Hva må" om topp 4, "Hvorfor" om
+// kvalik; Sandefjord: "Hva må" om kvalik, "Hvorfor" om topp 4 (brukeren
+// 19.10.2026). Én åpen retning: den. Midtsone og ferdig
+// sesong: som før (gull, Europa, nedrykk over 5 %, ellers kvalik), men i
+// midtsonen vises ikke spørsmålene som bruker sonen (qaSynligeSporsmal).
+function qaTargetZone(team, rolle){
+  const r = qaRetninger(team);
+  if(!r) return null;
+  if(r.tilstand===1) return rolle==='why' ? (r.aapnest===r.opp ? r.ned : r.opp) : r.aapnest;
+  if(r.tilstand===2) return r.aapnest;
+  const d = lastMC[team];
   const pctOf = key => { const z = LEAGUE.zones[key]; if(!z) return 0;
     let v = 0; for(let p=z.lo; p<=z.hi; p++) v += d[p-1]; return v; };
   if(pctOf('gull')>0.05) return qaZoneByKey(team,'gull');
@@ -5056,6 +5094,16 @@ function qaSettledText(team, zone, st, konklusjon=true){
   const i = rows.findIndex(r=>r.name===team), me = rows[i], pos = i+1, b = st.b;
   const ref = pos<=b ? rows[b] : rows[b-1];
   if(!me || !ref) return hode.trim();
+  // Ingen kamper spilt (qaIngenSpilt): alle står på null poeng, og rekkefølgen
+  // i tabellen er tilfeldig. Da sier svaret ingenting om plass, avstand eller
+  // lagene bak, bare simuleringene (19.10.2026).
+  if(qaIngenSpilt()){
+    const z = LEAGUE.zones[zone.key];
+    const motsatt = st.kind==='safe~' || st.kind==='safe'
+      ? (back ? `${team} havner på kvalikplass eller lavere` : `${team} når ikke ${z.label}`)
+      : `${team} ${z.verb}`;
+    return `${hode}Ingen kamper er spilt ennå, så tabellen sier ingenting om styrkeforholdet. ${motsatt} i under 1 % av simuleringene.`;
+  }
   // Tall med ord til og med tolv ("sju av de ni lagene"), siffer fra 13.
   const tallN = n => n<=12 ? QA_NUM[n] : String(n);
   const lagN = n => n===1 ? 'ett' : tallN(n);
@@ -6449,12 +6497,14 @@ async function qaKeyRound(){
   return qaMedHtml(tekst, html);
 }
 
-// ---- Hvor kan laget realistisk ende? Bare fordelingen over sluttplasser fra
-// tabell-simuleringen (lastMC), ingen ny simulering: mest sannsynlige plass og
-// spennet fra 5. til 95. persentil (første plass der samlet sjanse når 5 og
-// 95 prosent), som dekker minst 90 prosent av simuleringene. ----
-// Andeler fra et utvalg påstås aldri som 100 %.
-const qaPctCap = x => pctTxt(x);
+// ---- Hvilken plass ender laget på? (19.10.2026, før "Hvor kan laget
+// realistisk ende?") Laveste og høyeste mulige plass er matematiske: samme
+// ytterpunkter som merkene og "100 %"/"–" (ytterNaa), som regner med at lag
+// møter hverandre (HamKam: Viking og Glimt møtes, 4.10.2026). Den mest
+// sannsynlige plassen og spennet fra 5. til 95. persentil (første plass der
+// samlet sjanse når 5 og 95 prosent, som dekker minst 90 prosent) er fra
+// tabell-simuleringen (lastMC), uten ny simulering. Står øverst i midtsonen
+// (qaRetninger, tilstand 3), ellers under Flere spørsmål. ----
 function qaRange(team){
   const d = lastMC && lastMC[team];
   if(!d) return 'Ingen data å regne på ennå.';
@@ -6463,11 +6513,6 @@ function qaRange(team){
   if(idx<0) return 'Ingen data å regne på ennå.';
   const me = rows[idx];
   if(!matches.some(isEmpty)) return `Sesongen er ferdig: ${team} endte på ${idx+1}. plass med ${poengTxt(me.pts)}.`;
-  // Matematisk mulig spenn: samme ytterpunkter som merkene og "100 %"/"–"
-  // (ytterNaa). Lik poengsum kan avgjøres av målforskjell, så et lag på samme
-  // poeng kan ende både bak og foran. Før talte svaret selv, uten at lagene
-  // også møter hverandre, og kunne si "så høyt som 1. plass" om et lag som
-  // står med "–" for gull (HamKam: Viking og Glimt møtes, 4.10.2026).
   const {verst:worst, best} = ytterNaa()[team];
   if(worst===best) return `${team} ender på ${best}. plass uansett hva som skjer i de gjenstående kampene.`;
   let mode = 0;
@@ -6480,63 +6525,12 @@ function qaRange(team){
   }
   if(lo===null) lo = 1;
   if(hi===null) hi = d.length;
-  let cover = 0; for(let i=lo-1;i<hi;i++) cover += d[i];
-  // Rekkefølge: hvor laget står og havner som regel, så den vanligste plassen
-  // og sonen, så den beste plassen simuleringene faktisk nådde (bare når den
-  // er sjelden), og til sist det matematisk mulige.
-  const pos = idx+1;
-  const naa = (pos===lo || pos===hi || qaIngenSpilt()) ? '' : `ligger på ${pos}. plass nå og `;
-  // Når SIMULERINGSINTERVALLET alt strekker seg til ytterpunktet, sier den
-  // matematiske grensen ingenting: når intervallet begynner på 1. plass, er
-  // "så høyt som 1. plass" ren gjentakelse. Det er intervallet (lo/hi) som
-  // avgjør, ikke hvor den matematiske grensen ligger.
-  const sisteP = d.length;
-  const matematisk = (b, w) => {
-    const oppe = b<lo && lo>1, nede = w>hi && hi<sisteP;
-    if(oppe && nede) return ` Matematisk kan ${team} ende så høyt som ${b}. plass og så lavt som ${w}. plass.`;
-    if(nede) return ` Matematisk kan ${team} fortsatt ende så lavt som ${w}. plass.`;
-    if(oppe) return ` Matematisk kan ${team} fortsatt ende så høyt som ${b}. plass.`;
-    return '';
-  };
-  if(lo===hi){
-    return `${team} ender nesten sikkert på ${lo}. plass (${qaPctCap(d[lo-1])} av simuleringene).`
-      + matematisk(best, worst);
-  }
-  const N = lastMCN;
-  const bestSim = d.findIndex(v=>Math.round(v*N)>0)+1;
-  const antall = c => `${QA_NUM[c] || c} ${c===1 ? 'gang' : 'ganger'}`;
-  // Sonen laget kjemper om, med tabellens tall -- samme som resten av siden.
-  const zone = qaTargetZone(team);
-  // To ulike tall, og de skal ikke blandes: d[mode] er sjansen for DEN
-  // plassen, og d[0] er sjansen for å vinne serien. Sonen (for eksempel
-  // direkte opprykk, 1. og 2. plass) hører ikke hjemme her -- den står i
-  // tabellen og i de andre svarene.
-  // "Oftest blir det ..." sies bare når den vanligste plassen ligger INNE i
-  // spennet: er den lik en av endene, er den alt nevnt.
-  const vanligst = (mode+1!==lo && mode+1!==hi) ? `Oftest blir det ${mode+1}. plass (${qaPctCap(d[mode])})` : '';
-  // Er førsteplass både den vanligste plassen og serieseieren, er det samme
-  // tall: da sies det bare én gang (og "Oftest ..." er alt utelatt over).
-  const vinner = d[0]>=0.01 && !(vanligst && mode===0)
-    ? `laget vinner serien i ${qaPctCap(d[0])} av simuleringene` : '';
-  const oftest = vanligst && vinner ? `${vanligst}, og ${vinner}.`
-    : vanligst ? `${vanligst}.`
-    : vinner ? `${qaStor(vinner)}.` : '';
-  // Beste plass i simuleringene nevnes bare når den er sjelden: ellers står den
-  // alt i spennet over.
-  const sjelden = bestSim < lo && d[bestSim-1] < 0.01;
-  const bestTxt = sjelden
-    ? ` Beste plassering i ${N.toLocaleString('nb-NO')} simuleringer var ${bestSim}. plass, og det skjedde ${antall(Math.round(d[bestSim-1]*N))}.`
-    : '';
-  const ext = matematisk(best, worst);
-  // "ender som regel mellom 1. og 2. plass" leses som en generell påstand om
-  // laget. Tallet bak intervallet er der alt: det dekker MINST 90 prosent av
-  // simuleringene (plasseringer er hele tall, så intervallet dekker minst så
-  // mye, ikke nøyaktig).
-  // Tallet bak intervallet står i setningen: det dekker MINST 90 prosent av
-  // simuleringene (plasseringer er hele tall, så intervallet dekker minst så
-  // mye, ikke nøyaktig).
-  return `${team} ${naa}ender i minst 90 % av simuleringene mellom ${lo}. og ${hi}. plass.`
-    + `${oftest?' '+oftest:''}${bestTxt}${ext}`;
+  // Ingen kamper spilt: rekkefølgen i tabellen er tilfeldig, så plassen nå
+  // nevnes ikke.
+  const naa = qaIngenSpilt() ? '' : `${team} ligger på ${idx+1}. plass med ${poengTxt(me.pts)}. `;
+  return `${naa}Matematisk kan ${naa ? 'de' : team} ende fra ${best}. til ${worst}. plass. `
+    + `Oftest blir det ${mode+1}. plass (${pctTxt(d[mode])})`
+    + (lo===hi ? '.' : `, og i minst 90 % av simuleringene ender de mellom ${lo}. og ${hi}. plass.`);
 }
 // ---- Spørsmål 8: hell/uhell -- ingen simulering. Sammenligner FAKTISKE
 // poeng i FAKTISK spilte kamper (MATCHES, ikke scenario-resultater -- "hell"
@@ -7022,7 +7016,7 @@ function listNames(shown, more){
 // sjansen (samme tall som knappeteksten), ikke en betinget telling.
 // Spørsmålsteksten for spørsmål 1: sier ikke "0 %/100 % sjanse" når saken er avgjort.
 function qaWhyLabel(team){
-  const z = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team);
+  const z = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team, 'why');
   if(!z) return `Hvorfor har ${team} den sjansen den har?`;
   const st = qaSettled(team, z);
   if(!st) return `Hvorfor har ${team} ${pctTxt(z.pct, z.mat)} sjanse for ${z.label}?`;
@@ -7033,7 +7027,7 @@ function qaWhyLabel(team){
   return `Hvorfor kan ${team} ikke lenger ${QA_REACH_PHRASE[z.key]}?`;
 }
 async function qaWhy(team){
-  const zone = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team);
+  const zone = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team, 'why');
   if(!zone) return 'Ingen data å regne på ennå.';
   const st = qaSettled(team, zone);
   if(st) return qaSettledText(team, zone, st, false);
@@ -7287,16 +7281,40 @@ function qaTaAv(x, maxPts){
     : `${qaAntall(x)} av de ${qaAntall(maxPts)} poengene som er igjen`;
 }
 async function qaHowTo(team){
-  const zone = qaTargetZone(team);
+  const zone = qaTargetZone(team, 'howto');
   if(!zone) return 'Ingen data å regne på ennå.';
   const st = qaSettled(team, zone);
-  if(st) return qaSettledText(team, zone, st);
+  // Opp: så lenge sonen er matematisk mulig, også under 1 %, svarer "Hva må"
+  // med poengene, lagene som må tape og prosenten (19.10.2026).
+  if(st && !(st.kind==='out~' && zone.dir==='front')) return qaSettledText(team, zone, st);
   const A = await innsiktData();
   const data = innsiktFor(A, team, zone.key);
-  if(data.successCount===0){
-    return `Ingen av de ${data.N.toLocaleString('nb-NO')} simulerte sesongene endte med at ${team} klarte å ${QA_REACH_PHRASE[zone.key]}.`;
-  }
   const maxPts = 3 * buildQaOpen().open.filter(o=>o[0]===TI[team]||o[1]===TI[team]).length;
+  // Opp (19.10.2026): hvilke lag som må tape. Ender laget på T poeng, kan
+  // høyst (siste plass i sonen minus én) lag ende over, og lagene som alt har
+  // mer enn T, teller med. Lagene som fortsatt kan komme over T, med navn når
+  // de er fire eller færre, ellers antall. Bare når sjansen er under 5 %
+  // (Brann, rundt 1 %, 19.10.2026) eller ingen simulering når målet; ellers
+  // sier poengsummen og sjansen nok. Tomt bak, og når det ikke sier noe.
+  let langSkudd = true;
+  const maaTape = T => {
+    if(zone.dir!=='front' || T==null || !langSkudd) return '';
+    const andre = compute().rows.filter(r=>r.name!==team);
+    const plass = zone.hi-1-andre.filter(r=>r.pts>T).length, kan = andre.filter(r=>r.pts<=T && r.max>T);
+    if(plass<0 || kan.length<=plass) return '';
+    const n = kan.length, navn = joinNames(kan.map(r=>r.name));
+    if(plass===0) return ` Da må ${n===1 ? navn : n===2 ? `både ${navn}` : n<=4 ? `${navn} alle`
+      : `alle de ${QA_NUM[n]||n} lagene som fortsatt kan nå mer enn ${qaAntall(T)} poeng,`} ende på ${poengTxt(T)} eller færre.`;
+    return ` Da kan høyst ${plass===1 ? 'ett' : QA_NUM[plass]} av ${n<=4 ? `lagene ${navn} ende over ${poengTxt(T)}`
+      : `de ${QA_NUM[n]||n} lagene som fortsatt kan nå mer enn ${qaAntall(T)} poeng, gjøre det`}.`;
+  };
+  if(data.successCount===0){
+    const ingen = `Ingen av de ${data.N.toLocaleString('nb-NO')} simulerte sesongene endte med at ${team} klarte å ${QA_REACH_PHRASE[zone.key]}.`;
+    // Opp er fortsatt matematisk mulig (ellers var saken avgjort over).
+    const maks = compute().rows.find(r=>r.name===team).pts + maxPts;
+    return zone.dir==='front' && maaTape(maks)
+      ? `${ingen} Det er fortsatt mulig: tar de alle de ${maxPts} poengene som er igjen, ender de på ${poengTxt(maks)}.${maaTape(maks)}` : ingen;
+  }
   const kurve = qaGlattKurve(data);
   const myPts = compute().rows.find(r=>r.name===team).pts;
   const threshold = qaGrense(kurve, data);
@@ -7316,6 +7334,7 @@ async function qaHowTo(team){
   const successShare = !dist ? data.successCount/data.N
     : zone.dir==='front' ? zone.pct
     : dist.slice(0, zone.boundary).reduce((a,b)=>a+b, 0);
+  langSkudd = successShare<0.05;
   if(successShare>0.95){
     // Nesten alltid i mål: "klarer å ..." i "100 %" av sesongene leses rart, så
     // svaret sies rett ut. Poengsummen er der den glattede kurven passerer
@@ -7347,7 +7366,7 @@ async function qaHowTo(team){
   // "er sjansen", så sonens uttrykk ikke gjentas.
   const kjerne = hvem => `${hvem} må ta ${qaTaAv(threshold-myPts, maxPts)} for å komme opp på ${qaAntall(threshold)}. `
     + `Ender de på ${poengTxt(threshold)}, er ${hvem==='De' ? 'sjansen' : sjansen} ${q(ved)}.`
-    + `${qaHoyere(kurve, data, threshold, ved, bar)}${hvorfor}`;
+    + `${qaHoyere(kurve, data, threshold, ved, bar)}${hvorfor}${hv.lag ? '' : maaTape(threshold)}`;
   // Ingen oppnåelig sum når 50 % (qaGrense er null): laget kan ikke sikre
   // målet med egne resultater alene. Det kan fortsatt klare det, men ikke uten
   // hjelp. Sjansen ved summen laget får ved å ta alle poengene som er
@@ -7366,7 +7385,7 @@ async function qaHowTo(team){
     const sj = hvem==='De' || zone.dir==='back' ? 'sjansen' : (LEAGUE.zones[zone.key].chance || 'sjansen');
     const pst = v<0.005 ? 'under 1 %' : `${v<0.25 ? 'bare ' : ''}${q(v)}`;
     return `${start} Selv om de tar alle poengene som er igjen og ender på ${qaAntall(maks)}, er ${sj} ${pst}.`
-      + `${hv.lag ? ` Det avhenger også av at ${hv.lag} taper poeng.` : ''}`;
+      + `${hv.lag ? ` Det avhenger også av at ${hv.lag} taper poeng.` : maaTape(maks)}`;
   };
   const utenGrense = threshold==null;
   // Lang sjanse: si det først, så ingen leser grensen som noe laget ofte når.
@@ -7533,6 +7552,7 @@ async function qaRivals(team){
     if(idx<rows.length-1) parts.push(`rett foran ${rows[idx+1].name}`);
     return `Sesongen er ferdig: ${team} endte på ${idx+1}. plass med ${poengTxt(rows[idx].pts)}${parts.length?', '+parts.join(' og '):''}.`;
   }
+  if(qaMidtsone(team)) return qaPlassRivaler(team, rows, idx);
   const data = innsiktFor(await innsiktData(), team, zone.key);
   const others = TEAMS.filter(t=>t!==team);
   const aheadTop = others.map(t=>({t,c:data.aheadOfT[TI[t]]})).sort((a,b)=>b.c-a.c)[0];
@@ -7574,6 +7594,31 @@ async function qaRivals(team){
   return `I simuleringene ender ${team} som oftest rett bak ${aheadTop.t} (${pctTxt(aheadShare)}) og rett foran ${behindTop.t} (${pctTxt(behindShare)}).${rivalTxt}`;
 }
 
+// "Hvem kjemper X mot om plassene?" i midtsonen (19.10.2026): begge retningene
+// er avgjort, så det er plassene det kjempes om. Lagene som laget fortsatt kan
+// passere eller bli passert av (qaCanCross, på flest mulige poeng): de som
+// står likt, nærmeste poenggruppe over og under med poengavstanden, og hvor
+// mange det er i alt.
+function qaPlassRivaler(team, rows, idx){
+  const me = rows[idx], kan = rows.filter(r=>r.name!==team && qaCanCross(me, r));
+  const navn = a => joinNames(a.map(r=>r.name));
+  const start = `${team} ligger på ${idx+1}. plass med ${poengTxt(me.pts)}`;
+  if(!kan.length) return `${start}, og ingen lag kan lenger bytte plass med dem.`;
+  const likt = kan.filter(r=>r.pts===me.pts), over = kan.filter(r=>r.pts>me.pts), under = kan.filter(r=>r.pts<me.pts);
+  const overGr = over.filter(r=>r.pts===Math.min(...over.map(x=>x.pts)));
+  const underGr = under.filter(r=>r.pts===Math.max(...under.map(x=>x.pts)));
+  const overTxt = overGr.length ? `${navn(overGr)}, ${qaAntall(overGr[0].pts-me.pts)} poeng foran` : '';
+  const underTxt = underGr.length ? `${navn(underGr)}, ${qaAntall(me.pts-underGr[0].pts)} poeng bak` : '';
+  const naer = overTxt && underTxt ? ` Rett over står ${overTxt}, og rett under ${underTxt}.`
+    : overTxt ? ` Rett over står ${overTxt}.` : underTxt ? ` Rett under står ${underTxt}.` : '';
+  // De andre som kan bytte plass: ved navn når de er fire eller færre.
+  const andre = kan.filter(r=>!likt.includes(r) && !overGr.includes(r) && !underGr.includes(r)), n = kan.length;
+  const resten = !andre.length ? ` Ingen andre lag kan lenger bytte plass med ${team}.`
+    : andre.length<=4 ? ` ${navn(andre)} kan også bytte plass med ${team}.`
+    : ` I alt kan ${n<=12 ? QA_NUM[n] : n} lag fortsatt bytte plass med ${team}.`;
+  return `${start}${likt.length ? `, likt med ${navn(likt)}` : ''}.${naer}${resten}`;
+}
+
 // ---- Knappene selv. Uten valgt lag vises bare de to som ikke trenger et
 // lag (7 og 8 i oppgaven -- "runin" og "luck" her). Svaret erstatter alltid
 // forrige, og et NYTT spørsmål mens et gammelt fortsatt regner forkaster det
@@ -7582,7 +7627,7 @@ async function qaRivals(team){
 const QA_QUESTIONS = [
   {id:'why', needsTeam:true, run:qaWhy, label:qaWhyLabel},
   {id:'howto', needsTeam:true, run:qaHowTo, label:team=>{
-    const z=qaTargetZone(team);
+    const z=qaTargetZone(team, 'howto');
     return `Hva må ${team} gjøre for å ${z?qaReachQuestion(z.key):'nå målet'}?`;
   }},
   {id:'keymatches', needsTeam:true, run:qaKeyMatches, label:team=>`Hvilke kamper betyr mest for ${team}?`},
@@ -7592,12 +7637,28 @@ const QA_QUESTIONS = [
   {id:'nextmatch', needsTeam:true, run:team=>qaNextMatch(team), label:team=>`Hva betyr neste kamp for ${team}?`},
   {id:'hardest', needsTeam:true, run:team=>qaHardestMatch(team), label:team=>`Hvilken kamp blir vanskeligst for ${team}?`},
   {id:'cheer', needsTeam:true, run:qaCheerFor, label:team=>`Hvem bør ${team} heie på denne runden?`},
-  {id:'range', needsTeam:true, run:qaRange, label:team=>`Hvor kan ${team} realistisk ende?`},
+  {id:'range', needsTeam:true, run:qaRange, label:team=>`Hvilken plass ender ${team} på?`},
   {id:'decided', needsTeam:true, run:qaWhenDecided, label:()=>'Når kan det være avgjort?'},
-  {id:'rivals', needsTeam:true, run:qaRivals, label:team=>`Hvem kjemper ${team} mot?`},
+  {id:'rivals', needsTeam:true, run:qaRivals, label:team=>qaMidtsone(team) ? `Hvem kjemper ${team} mot om plassene?` : `Hvem kjemper ${team} mot?`},
   {id:'luck', needsTeam:false, run:()=>qaLuck(), label:()=>'Hvem har vært heldig eller uheldig?'},
 ];
 const QA_TOP_N = 3;
+// Spørsmålene for laget, i rekkefølge etter tilstanden (qaRetninger). 1: "Hva
+// må" og "Hvilke kamper betyr mest" (den mest åpne retningen) og "Hvorfor"
+// (den andre) øverst. 3
+// (midtsone): "Hvilken plass ender X på?", "Hvem kjemper X mot om
+// plassene?" og "Hvilken kamp blir vanskeligst" øverst, og spørsmålene som bare kan svare med noe som er
+// avgjort, er borte. 2 og ferdig sesong: som før.
+const qaMidtsone = team => { const r = team && qaRetninger(team); return !!r && r.tilstand===3; };
+const QA_BARE_SONE = new Set(['why','howto','keymatches','nextmatch','lastmatch','cheer','decided']);
+function qaSynligeSporsmal(team){
+  const alle = QA_QUESTIONS.filter(q => team ? true : !q.needsTeam);
+  const r = team && qaRetninger(team);
+  if(!r || r.tilstand===0 || r.tilstand===2) return alle;
+  const forst = r.tilstand===1 ? ['howto','why','keymatches'] : ['range','rivals','hardest'];
+  return forst.map(id=>alle.find(q=>q.id===id))
+    .concat(alle.filter(q=>!forst.includes(q.id) && !(r.tilstand===3 && QA_BARE_SONE.has(q.id))));
+}
 let qaActiveId = null, qaRequestSeq = 0, qaExtraOpen = false;
 // Spørsmålet og svaret "Kopier tekst" kopierer (settes i runQaQuestion).
 let qaKopi = null;
@@ -7615,7 +7676,7 @@ const qaReady = () => !!(lastMC && lastMCFinal && lastMCScenarioKey===qaScenario
 function renderQaButtons(){
   const box = document.getElementById('qaButtons');
   const team = SELECTED_TEAM;
-  const active = QA_QUESTIONS.filter(q => team ? true : !q.needsTeam);
+  const active = qaSynligeSporsmal(team);
   // Svaret ligger rett under sitt eget spørsmål. Gjenoppbyggingen beholder
   // et allerede vist svar (tekst og lastetilstand) for det aktive spørsmålet.
   const prev = document.getElementById('qaAnswer');
@@ -7686,6 +7747,19 @@ function renderQaHighlight(){
   }
   el.classList.remove('plain');
   const zone = qaTargetZone(SELECTED_TEAM);
+  // Tre tilstander (qaRetninger): midtsonen spør om plassen; begge retninger
+  // åpne spør "Hva må", som følger den mest åpne.
+  const r = zone && qaRetninger(SELECTED_TEAM);
+  if(r && r.tilstand===3){
+    el.textContent = `Hvilken plass ender ${SELECTED_TEAM} på?`;
+    el.dataset.qid = 'range';
+    return;
+  }
+  if(r && r.tilstand===1){
+    el.textContent = QA_QUESTIONS.find(q=>q.id==='howto').label(SELECTED_TEAM);
+    el.dataset.qid = 'howto';
+    return;
+  }
   if(!zone){
     // lastMC ikke klar ennå (rett etter sideinnlasting) -- vis samme
     // fallback som uten lag til den er det, i stedet for en tom knapp.
