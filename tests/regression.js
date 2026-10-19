@@ -7906,7 +7906,11 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           const svarEtter = qaKopi ? qaKopi.svar : null, h = QA_HTML.get(svarEtter);
           // Gjennom nettleseren, så de harde mellomrommene skrives likt (&nbsp;).
           const lest = document.createElement('div'); if (h) lest.innerHTML = h;
-          const visEtter = !!h && document.getElementById('qaAnswer').innerHTML.includes(lest.innerHTML);
+          // Et svar uten rader (ren tekst, som "Ingen av de andre kampene ...")
+          // har ingen HTML i QA_HTML: da er det teksten som skal vises. Med
+          // grunnlagsfilen versjon 3 ble Brynes svar i OBOS slik (19.10.2026).
+          const norm = t => (t || '').replace(/\s+/g, ' ').trim();
+          const visEtter = h ? document.getElementById('qaAnswer').innerHTML.includes(lest.innerHTML) : norm(svarTekst()) === norm(svarEtter);
           return {foer, etter: {status: GRUNNLAG_STATUS, N: lastMCN}, svarFoer, svarEtter, visEtter, fraFil: await qaCheerFor(lag)};
         }, lagMedSone);
         await ps.close();
