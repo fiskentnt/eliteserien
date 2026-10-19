@@ -5024,7 +5024,19 @@ function qaSettled(team, zone){
   }
   return null;
 }
-function qaSettledText(team, zone, st){
+// BEGRUNNELSEN (19.10.2026). Før ga svaret bare konklusjonen ("Brann er så
+// godt som sikret ...: det skal svært mye til"), også på "Hvorfor er X så godt
+// som sikret ...?". Nå fra tabellen: plassen, poengavstanden til grenseplassen
+// (første plass utenfor sonen når laget er innenfor, ellers siste plass i
+// sonen), kampene igjen og hvor mange lag som må forbi laget (eller som laget
+// må forbi). Matematisk avgjort (safe/out) er regnet på flest mulige poeng,
+// uten prosent: hvor mange lag som kan nå laget (eller laget kan nå) mot hvor
+// mange som trengs, med samme regel som enkleYtterpunkter. Har Workeren
+// avgjort det med kampene lagene imellom, sies det. Så godt som avgjort
+// (safe~/out~) kan fortsatt skje: "under 1 % av simuleringene". Sonene foran
+// og bak regnes likt, med plassen som grense. konklusjon=false på "Hvorfor
+// ...?", der spørsmålet alt sier konklusjonen.
+function qaSettledText(team, zone, st, konklusjon=true){
   const safeP = QA_SAFE_PHRASE[zone.key], reach = QA_REACH_PHRASE[zone.key];
   const back = zone.dir==='back';
   if(st.kind==='done'){
@@ -5035,10 +5047,108 @@ function qaSettledText(team, zone, st){
          : st.pos===LEAGUE.zones.kvalik.lo ? 'og må i kvalik' : 'og rykket ned');
     return `Sesongen er ferdig: ${team} endte på ${st.pos}. plass med ${poengTxt(st.pts)} ${res}.`;
   }
-  if(st.kind==='safe') return `${team} er ${safeP}, og ingen gjenstående kamp kan endre det.`;
-  if(st.kind==='out') return `${team} kan ikke lenger ${reach}${back?' (det blir kvalik eller nedrykk)':''}, uansett hva som skjer i de gjenstående kampene.`;
-  if(st.kind==='safe~') return `${team} er så godt som ${safeP}: det skal svært mye til for at det endrer seg.`;
-  return `${team} har så godt som ingen mulighet til å ${reach} lenger${back?' (kvalik eller nedrykk er så godt som sikkert)':''}.`;
+  const hode = !konklusjon ? ''
+    : st.kind==='safe' ? `${team} er ${safeP}. `
+    : st.kind==='out' ? `${team} kan ikke lenger ${reach}. `
+    : st.kind==='safe~' ? `${team} er så godt som ${safeP}. `
+    : `${team} har så godt som ingen mulighet til å ${reach} lenger. `;
+  const {rows} = compute();
+  const i = rows.findIndex(r=>r.name===team), me = rows[i], pos = i+1, b = st.b;
+  const ref = pos<=b ? rows[b] : rows[b-1];
+  if(!me || !ref) return hode.trim();
+  // Tall med ord til og med tolv ("sju av de ni lagene"), siffer fra 13.
+  const tallN = n => n<=12 ? QA_NUM[n] : String(n);
+  const lagN = n => n===1 ? 'ett' : tallN(n);
+  const kamperN = n => n===1 ? 'én kamp' : `${tallN(n)} kamper`;
+  const foran = rows.slice(0, i), bak = rows.slice(i+1);
+  const kvalikPlass = back && LEAGUE.zones.kvalik && b+1===LEAGUE.zones.kvalik.lo;
+  const refPlass = pos<=b ? (kvalikPlass ? 'på kvalikplass' : `på ${b+1}. plass`) : `på ${b}. plass`;
+  const diff = me.pts - ref.pts;
+  const start = `${team} ligger på ${pos}. plass med ${poengTxt(me.pts)}, ` +
+    (diff===0 ? `like mange som ${ref.name} ${refPlass}. ` : `${qaAntall(Math.abs(diff))} ${diff>0?'foran':'bak'} ${ref.name} ${refPlass}. `);
+  // Å falle ut av sonen, sett fra et lag som er innenfor: infinitiv og presens.
+  const [falle, faller] = back ? (kvalikPlass ? ['havne på kvalikplass', 'havner på kvalikplass'] : [`havne lavere enn ${b}. plass`, `havner lavere enn ${b}. plass`])
+    : b===1 ? ['miste 1. plassen', 'mister 1. plassen']
+    : /^topp /.test(zone.label) ? [`falle ut av ${zone.label}`, `faller ut av ${zone.label}`] : [`havne lavere enn ${b}. plass`, `havner lavere enn ${b}. plass`];
+  const restKamper = me.left===1 ? 'den siste kampen' : me.left===2 ? 'begge kampene som gjenstår' : `alle de ${tallN(me.left)} kampene som gjenstår`;
+  const navn = a => joinNames(a.map(r=>r.name));
+  // k av lagene ved navn: "enten Bodø/Glimt eller Viking" når det er ett av
+  // dem, ellers "to av lagene Bryne, Hødd og Ranheim".
+  const avNavn = (k, a) => k===1 ? `enten ${a.slice(0,-1).map(r=>r.name).join(', ')} eller ${a[a.length-1].name}` : `${lagN(k)} av lagene ${navn(a)}`;
+  // Lagene som teller, på flest mulige poeng (samme regel som
+  // enkleYtterpunkter): bak laget de som kan nå lagets poeng, foran laget de
+  // som laget kan nå med sitt maks. Bare de kan endre noe.
+  const jagere = bak.filter(r=>r.max>=me.pts), naabare = foran.filter(r=>r.pts<=me.max);
+  // k av lagene i lista. Tre eller færre nevnes ved navn ("både Bryne og
+  // Hødd"); flere telles, "av de ni lagene bak" når lista er alle lagene bak
+  // (eller foran), ellers med hvilke lag det er ("av de fem lagene de kan nå").
+  const hvem = (k, liste, alleHvor, ellers) => {
+    const n = liste.length;
+    if(n<=3) return k<n ? avNavn(k, liste) : n===2 ? `både ${navn(liste)}` : navn(liste);
+    const hvilke = alleHvor ? `lagene ${alleHvor}` : ellers;
+    return k<n ? `${k>=3 ? 'hele ' : ''}${lagN(k)} av de ${tallN(n)} ${hvilke}` : `alle de ${tallN(n)} ${hvilke}`;
+  };
+  // Kampene lagene i lista spiller mot hverandre (der Workeren finner at de
+  // ikke alle kan ta nok poeng samtidig).
+  const mellom = liste => { const s = new Set(liste.map(r=>r.name));
+    return matches.filter(m=>isEmpty(m) && s.has(m.home) && s.has(m.away)); };
+  const iKampene = ms => !ms.length ? 'i kampene som gjenstår'
+    : ms.length<=3 ? `i ${ms.length===1 ? 'kampen' : 'kampene'} ${joinNames(ms.map(m=>`${m.home} mot ${m.away}`))}`
+    : `i ${tallN(ms.length)} av kampene som gjenstår`;
+  const y = ytterNaa()[team];
+  let resten;
+  if(st.kind==='safe'){
+    // Laget taper resten: lagene bak som kan nå like mange poeng, mot hvor
+    // mange som må forbi for å skyve laget ut av sonen.
+    const trengs = b-pos+1, kan = jagere.length, nBak = tallN(bak.length);
+    // Etter "Selv om ..." kommer verbet først ("kan bare fire ... nå").
+    const forst = me.left===0 ? `${team} har ingen kamper igjen, og ` : `Selv om ${team} taper ${restKamper}, `;
+    const kanNaa = subj => me.left===0 ? `${subj} kan nå ${poengTxt(me.pts)}` : `kan ${subj} nå ${poengTxt(me.pts)}`;
+    if(kan<trengs){
+      const subj = kan===0 ? `ingen av de ${nBak} lagene bak` : kan<=3 ? `bare ${navn(jagere)}` : `bare ${lagN(kan)} av de ${nBak} lagene bak`;
+      resten = `${forst}${kanNaa(subj)}. Det må ${lagN(trengs)} til for at ${team} skal ${falle}. Det er matematisk avgjort.`;
+    } else {
+      // Nok lag kan nå laget hver for seg, men Workeren har regnet med
+      // kampene dem imellom (ytterpunkter): ikke alle kan ta poengene samtidig.
+      const subj = kan<=3 ? (kan===2 ? `både ${navn(jagere)}` : navn(jagere))
+        : kan===bak.length ? `alle de ${nBak} lagene bak` : `${lagN(kan)} av de ${nBak} lagene bak`;
+      // Ingen setning begynner med et tall i siffer (13 eller mer): "Av dem må 13 forbi".
+      const maaForbi = trengs===kan ? (kan===2 ? 'Begge må' : `Alle ${tallN(kan)} må`) : trengs>12 ? `Av dem må ${trengs}` : `${qaStor(lagN(trengs))} av dem må`;
+      resten = `${forst}${kanNaa(subj)} hver for seg. `
+        + `${maaForbi} forbi for at ${team} skal ${falle}, men de tar poeng fra hverandre ${iKampene(mellom(jagere))}. `
+        + `Dermed kan ${team} i verste fall ende på ${y ? y.verst : b}. plass. Det er matematisk avgjort.`;
+    }
+  } else if(st.kind==='out'){
+    // Laget vinner resten: lagene foran som alt har flere poeng enn lagets
+    // maks, er grunnen. Ellers (Workeren) lagene laget kan nå, som møter
+    // hverandre.
+    const trengs = pos-b, utenfor = foran.filter(r=>r.pts>me.max);
+    const forst = me.left===0 ? `${team} har ingen kamper igjen og ender på ${poengTxt(me.max)}.`
+      : `Selv om ${team} vinner ${restKamper}, ender de på ${poengTxt(me.max)}.`;
+    const harAllerede = !utenfor.length ? ''
+      : utenfor.length<=3
+        ? (utenfor.every(r=>r.pts===utenfor[0].pts) ? ` ${navn(utenfor)} har allerede ${utenfor[0].pts}.`
+           : ` ${joinNames([`${utenfor[0].name} har allerede ${utenfor[0].pts}`].concat(utenfor.slice(1).map(r=>`${r.name} ${r.pts}`)))}.`)
+        : utenfor.length>12 ? ` Av de ${tallN(foran.length)} lagene foran har ${utenfor.length} allerede mer enn ${poengTxt(me.max)}.`
+        : ` ${qaStor(lagN(utenfor.length))} av de ${tallN(foran.length)} lagene foran har allerede mer enn ${poengTxt(me.max)}.`;
+    // Ellers (Workeren): lagene laget kan nå, hver for seg, tar poeng fra
+    // hverandre. "De andre" når noen alt er utenfor rekkevidde.
+    const n = naabare.length, hvilke = utenfor.length ? 'andre' : 'lagene foran';
+    const forbi = () => n<=3 ? (trengs===n ? (n===2 ? `både ${navn(naabare)}` : navn(naabare)) : avNavn(trengs, naabare))
+      : trengs===n ? `alle de ${tallN(n)} ${hvilke}` : `${lagN(trengs)} av de ${tallN(n)} ${hvilke}`;
+    resten = forst + harAllerede + (utenfor.length>=b ? ' Det er matematisk avgjort.'
+      : ` ${team} må forbi ${forbi()} for å ${reach}, og hver for seg kan de nås. `
+        + `Men de tar poeng fra hverandre ${iKampene(mellom(naabare))}, så ${team} kan i beste fall ende på ${y ? y.best : b+1}. plass. Det er matematisk avgjort.`);
+  } else if(st.kind==='safe~'){
+    resten = pos<=b
+      ? `Det gjenstår ${kamperN(me.left)}, men for at ${team} skal ${falle}, må ${hvem(b-pos+1, jagere, jagere.length===bak.length ? 'bak' : null, `lagene som kan nå ${poengTxt(me.pts)},`)} passere dem. Det skjer i under 1 % av simuleringene.`
+      : `Det gjenstår ${kamperN(me.left)}, og ${team} må passere ${hvem(pos-b, naabare, naabare.length===foran.length ? 'foran' : null, 'lagene de kan nå').replace(/^hele /, '')} for å ${reach}. Det slår feil i under 1 % av simuleringene.`;
+  } else {
+    resten = pos>b
+      ? `Det gjenstår ${kamperN(me.left)}, men for at ${team} skal ${reach}, må de passere ${hvem(pos-b, naabare, naabare.length===foran.length ? 'foran' : null, 'lagene de kan nå')}. Det skjer i under 1 % av simuleringene.`
+      : `Det gjenstår ${kamperN(me.left)}, og for at ${team} skal ${reach}, må ${b-pos===0 ? 'ingen' : `ikke flere enn ${lagN(b-pos)}`} av ${jagere.length<=3 ? `lagene ${navn(jagere)}` : `de ${tallN(jagere.length)} lagene som kan nå ${poengTxt(me.pts)},`} passere dem. Det skjer i under 1 % av simuleringene.`;
+  }
+  return hode + start + resten;
 }
 // Kan lagene fortsatt krysse hverandre i tabellen? Bruker maks mulige poeng.
 function qaCanCross(a, b){ return a.pts+3*a.left >= b.pts && b.pts+3*b.left >= a.pts; }
@@ -6919,13 +7029,14 @@ function qaWhyLabel(team){
   if(st.kind==='done') return `Hvordan endte sesongen for ${team}?`;
   if(st.kind==='safe') return `Hvorfor er ${team} ${QA_SAFE_PHRASE[z.key]}?`;
   if(st.kind==='safe~') return `Hvorfor er ${team} så godt som ${QA_SAFE_PHRASE[z.key]}?`;
+  if(st.kind==='out~') return `Hvorfor har ${team} så godt som ingen mulighet til å ${QA_REACH_PHRASE[z.key]}?`;
   return `Hvorfor kan ${team} ikke lenger ${QA_REACH_PHRASE[z.key]}?`;
 }
 async function qaWhy(team){
   const zone = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team);
   if(!zone) return 'Ingen data å regne på ennå.';
   const st = qaSettled(team, zone);
-  if(st) return qaSettledText(team, zone, st);
+  if(st) return qaSettledText(team, zone, st, false);
   const field = qaFieldInWay(team, zone);
   const rival = field ? {t:field.nearest} : qaFindRival(team, zone);
   const A = await innsiktData();

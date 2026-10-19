@@ -152,7 +152,7 @@ const PCT = String.raw`(?:\d+\s%|<1\s%|>99\s%|\d+ prosent)`;
 const PP = String.raw`(?:[+−±]\d+|\d+ prosentpoeng|to prosentpoeng)`;
 // Prosenttall med vanlig mellomrom, slik utfallslinjene i rundesvaret skriver dem.
 const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
-const SETTLED = /(sikret|kan ikke lenger|Sesongen er ferdig|så godt som|ingen gjenstående|Ingen kamper igjen|Ingen data|betydde lite|betyr lite|ingen spilte kamper|ingen runde|har ingen|Alle kampene|Ingen av de|Ingen kamp i|Ingenting er i spill)/i;
+const SETTLED = /(sikret|kan ikke lenger|Sesongen er ferdig|så godt som|ingen gjenstående|Ingen kamper igjen|Ingen data|betydde lite|betyr lite|ingen spilte kamper|ingen runde|har ingen|Alle kampene|Ingen av de|Ingen kamp i|Ingenting er i spill|Det er matematisk avgjort|under 1 % av simuleringene)/i;
 const QA_EXPECT = {
   why:        {what: 'prosent',       pat: new RegExp(PCT)},
   howto:      {what: 'poeng',         pat: /\d+ (?:av \d+ mulige )?poeng|poengsummer/},
@@ -4224,6 +4224,142 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       }
     } finally { GRUNNLAG_MODUS = forrige; }
   };
+  // AVGJORT, MED BEGRUNNELSE (19.10.2026). Før svarte "Hvorfor er X så godt
+  // som sikret ...?" bare med konklusjonen. Nå fra tabellen: plassen,
+  // avstanden til grenseplassen, kampene igjen og hvor mange lag som må forbi.
+  // Lagene som telles, er bare de som kan nå laget (eller som laget kan nå)
+  // på flest mulige poeng, og tre eller færre nevnes ved navn.
+  //   safe/out:   "Det er matematisk avgjort.", ingen prosent; out sier hvem
+  //               som alt har flere poeng enn lagets maks
+  //   safe~/out~: "under 1 % av simuleringene", ikke "matematisk"
+  // De andre svarene har konklusjonen først. På begge ligaene: (a) alle
+  // avgjorte lag og soner i bildet, (b) bunnlaget taper til det ikke lenger
+  // kan unngå kvalik (out i bunnsonen), og (c) konkurrenter som møter
+  // hverandre: nok lag kan nå laget hver for seg, men Workeren (ytterpunkter)
+  // finner at de ikke kan ta poengene samtidig. Da skal svaret si det (hver
+  // for seg, tar poeng fra hverandre, verste/beste plass), ikke telle som om det
+  // fortsatt var mulig. Scenarioet i (c): alle kampene unntatt de R siste
+  // rundene fylt med simulateTypicalAsync(frø), funnet med et søk 19.10.:
+  // Aalesund (safe) i Eliteserien og Moss (out, topp 6) i OBOS.
+  //   node tests/regression.js --bare avgjort
+  const AVGJORT_SCENARIO = {eliteserien: {R: 2, fro: 3}, obos: {R: 2, fro: 6}};
+  const avgjort = async () => {
+    setGroup('Avgjort: svaret begrunner med tabellen (safe, safe~, out, out~, og konkurrenter som møter hverandre)');
+    const ORD = ['null', 'én', 'to', 'tre', 'fire', 'fem', 'seks', 'sju', 'åtte', 'ni', 'ti', 'elleve', 'tolv'];
+    const tall = n => n <= 12 ? ORD[n] : String(n), lagTall = n => n === 1 ? 'ett' : tall(n);
+    const stor = t => t.charAt(0).toUpperCase() + t.slice(1);
+    const merker = pg => pg.waitForFunction('lastYtterSig===badgeSignatureOf(compute().rows, matches.filter(isEmpty).map(m=>[m.home,m.away]))', {timeout: 60000});
+    // Alle avgjorte lag og soner på siden nå, med lagene som teller.
+    const hent = pg => pg.evaluate(async () => {
+      const {rows} = compute(), y = ytterNaa(), ut = [];
+      for (const [i, row] of rows.entries()) {
+        for (const key of ZONE_KEYS.filter(k => LEAGUE.zones[k])) {
+          const z = qaZoneByKey(row.name, key), st = z && qaSettled(row.name, z);
+          if (!st || st.kind === 'done') continue;
+          qaWhyZoneOverride = key;
+          let label, svar;
+          try { label = qaWhyLabel(row.name); svar = await qaWhy(row.name); } finally { qaWhyZoneOverride = null; }
+          ut.push({lag: row.name, key, kind: st.kind, label, svar, pos: i + 1, b: st.b, pts: row.pts, max: row.max,
+            antForan: i, antBak: rows.length - i - 1, verst: y[row.name].verst, best: y[row.name].best,
+            jagere: rows.slice(i + 1).filter(x => x.max >= row.pts).map(x => x.name),
+            naabare: rows.slice(0, i).filter(x => x.pts <= row.max).map(x => x.name),
+            utenfor: rows.slice(0, i).filter(x => x.pts > row.max).map(x => x.name),
+            medKonklusjon: qaSettledText(row.name, z, st, true)});
+        }
+      }
+      return ut;
+    });
+    // Lagene i lista: ved navn når de er tre eller færre, ellers "av de N ...".
+    const nevnt = (svar, liste, alleHvor, ellers) => liste.length <= 3 ? liste.every(n => svar.includes(n))
+      : svar.includes(`de ${tall(liste.length)} ${alleHvor ? 'lagene ' + alleHvor : ellers}`);
+    const konkurrenter = x => x.kind === 'safe' ? x.jagere.length >= x.b - x.pos + 1 : x.kind === 'out' && x.utenfor.length < x.b;
+    const feilI = x => {
+      const feil = [];
+      if (!x.svar.startsWith(`${x.lag} ligger på ${x.pos}. plass med `)) feil.push('begynner ikke med plassen');
+      if (/undefined|NaN|\[object|null/.test(x.svar + x.label)) feil.push('undefined/NaN');
+      // Ingen setning begynner med et tall i siffer, og ett av få lag heter "enten ... eller".
+      if (/(^|\. )\d/.test(x.svar)) feil.push('en setning begynner med siffer');
+      if (/\bett av lagene\b/.test(x.svar)) feil.push('«ett av lagene» i stedet for «enten ... eller»');
+      if (!x.medKonklusjon.endsWith(x.svar) || x.medKonklusjon === x.svar) feil.push('konklusjonen står ikke først i de andre svarene');
+      const mat = x.kind === 'safe' || x.kind === 'out';
+      if (mat && (!x.svar.endsWith('Det er matematisk avgjort.') || /%/.test(x.svar))) feil.push('matematisk: uten «Det er matematisk avgjort.» eller med prosent');
+      if (!mat && (!/(skjer|slår feil) i under 1 % av simuleringene\.$/.test(x.svar) || /matematisk/.test(x.svar))) feil.push('så godt som: uten «under 1 % av simuleringene»');
+      const lab = {safe: `Hvorfor er ${x.lag} `, 'safe~': `Hvorfor er ${x.lag} så godt som `, out: `Hvorfor kan ${x.lag} ikke lenger `,
+                   'out~': `Hvorfor har ${x.lag} så godt som ingen mulighet til å `}[x.kind];
+      if (!x.label.startsWith(lab)) feil.push(`spørsmålet: ${x.label}`);
+      if (x.kind === 'safe~' && x.pos <= x.b && !nevnt(x.svar, x.jagere, x.jagere.length === x.antBak ? 'bak' : null, `lagene som kan nå ${x.pts} poeng`))
+        feil.push(`de ${x.jagere.length} lagene som kan nå laget, er ikke nevnt rett`);
+      if (x.kind === 'out~' && x.pos > x.b && !nevnt(x.svar, x.naabare, x.naabare.length === x.antForan ? 'foran' : null, 'lagene de kan nå'))
+        feil.push(`de ${x.naabare.length} lagene laget kan nå, er ikke nevnt rett`);
+      if (konkurrenter(x)) {
+        if (!/hver for seg/.test(x.svar) || !/tar poeng fra hverandre/.test(x.svar)) feil.push('konkurrentene: uten «hver for seg» og «tar poeng fra hverandre»');
+        if (x.kind === 'safe' && !(x.verst <= x.b && x.svar.includes(`i verste fall ende på ${x.verst}. plass`))) feil.push(`konkurrentene: verste plass ${x.verst}`);
+        if (x.kind === 'out' && !(x.best > x.b && x.svar.includes(`i beste fall ende på ${x.best}. plass`))) feil.push(`konkurrentene: beste plass ${x.best}`);
+      } else if (x.kind === 'out') {
+        const ok = x.utenfor.length <= 3 ? x.utenfor.every(n => x.svar.includes(n)) && x.svar.includes(' har allerede ')
+          : x.svar.includes(x.utenfor.length > 12 ? `Av de ${tall(x.antForan)} lagene foran har ${x.utenfor.length} allerede mer enn ${x.max} poeng.`
+                          : `${stor(tall(x.utenfor.length))} av de ${tall(x.antForan)} lagene foran har allerede mer enn ${x.max} poeng.`);
+        if (!ok) feil.push(`de ${x.utenfor.length} lagene som alt har mer enn ${x.max} poeng, er ikke nevnt rett`);
+        if (/hver for seg/.test(x.svar)) feil.push('«hver for seg» uten at konkurrentene møter hverandre');
+      } else if (x.kind === 'safe') {
+        if (!x.svar.includes(`Det må ${lagTall(x.b - x.pos + 1)} til`)) feil.push('safe: hvor mange som må forbi');
+        if (/hver for seg/.test(x.svar)) feil.push('«hver for seg» uten at konkurrentene møter hverandre');
+      }
+      return feil;
+    };
+    const vurder = (side, hvor, alle) => {
+      const typer = ['safe', 'safe~', 'out', 'out~'].map(k => `${k} ${alle.filter(x => x.kind === k).length}`).join(', ');
+      const gale = alle.map(x => ({x, feil: feilI(x)})).filter(r => r.feil.length);
+      check(`${side}, ${hvor}: ${alle.length} avgjorte lag og soner (${typer}), alle begrunnet fra tabellen`, alle.length > 0 && !gale.length,
+        gale.slice(0, 3).map(r => `${r.x.lag} ${r.x.key} ${r.x.kind}: ${r.feil.join('; ')}: ${r.x.svar}`).join(' | '));
+    };
+    const sett = new Set();
+    for (const side of ['eliteserien', 'obos']) {
+      const url = base.replace('/eliteserien/', `/${side}/`);
+      // (a) bildet slik det er
+      let pg = await open(1400, 900, url);
+      await settle(pg); await merker(pg);
+      const a = await hent(pg);
+      vurder(side, 'bildet', a);
+      a.forEach(x => sett.add(x.kind));
+      // (b) bunnlaget taper kamp for kamp til det ikke lenger kan unngå kvalik
+      const bunn = await pg.evaluate(() => compute().rows.slice(-1)[0].name);
+      let ute = null;
+      for (let n = 1; n <= 30 && !ute; n++) {
+        const fortsatt = await pg.evaluate(t => {
+          document.getElementById('autoFillToggle').checked = false;
+          const m = matches.find(x => isEmpty(x) && (x.home === t || x.away === t));
+          if (!m) return false;
+          setMatch(m, m.home === t ? 0 : 2, m.home === t ? 2 : 0); render(); return true;
+        }, bunn);
+        if (!fortsatt) break;
+        await merker(pg);
+        ute = await pg.evaluate(t => { const z = qaZoneByKey(t, 'kvalik'), st = z && qaSettled(t, z); return st && st.kind === 'out'; }, bunn) ? n : null;
+      }
+      const b = (await hent(pg)).filter(x => x.lag === bunn && x.key === 'kvalik' && x.kind === 'out');
+      check(`${side}: ${bunn} taper ${ute} kamper og kan ikke lenger unngå kvalik`, !!ute && b.length === 1, `${ute}`);
+      if (b.length) vurder(side, `${bunn} etter ${ute} tap`, b);
+      await pg.close();
+      // (c) konkurrenter som møter hverandre
+      const sc = AVGJORT_SCENARIO[side];
+      pg = await open(1400, 900, url);
+      await settle(pg);
+      await pg.evaluate(async (R, fro) => {
+        document.getElementById('autoFillToggle').checked = false;
+        const maxR = Math.max(...matches.map(m => m.round));
+        await simulateTypicalAsync(matches.filter(m => isEmpty(m) && m.round <= maxR - R), fro);
+        render();
+      }, sc.R, sc.fro);
+      await merker(pg);
+      const c = (await hent(pg)).filter(konkurrenter);
+      check(`${side}: med alt unntatt de ${sc.R} siste rundene fylt (frø ${sc.fro}) er ${c.length} lag avgjort fordi konkurrentene møter hverandre (${c.map(x => `${x.lag} ${x.key} ${x.kind}`).join(', ')})`,
+        c.length > 0, '');
+      if (c.length) vurder(side, 'konkurrenter som møter hverandre', c);
+      c.forEach(x => sett.add(x.kind + ' konkurrenter'));
+      await pg.close();
+    }
+    check(`alle fire tilfellene er prøvd (${[...sett].sort().join(', ')})`, ['safe', 'safe~', 'out', 'out~'].every(k => sett.has(k)), '');
+  };
   // Innbyrdes oppgjør i tabellen (16.10.2026, NFFs kampreglement § 5-3):
   // poeng, målforskjell, scorede mål, så en minitabell av kampene mellom lagene
   // som står helt likt (rangerTabell). På alle tre sidene: (a) regelen selv med
@@ -4423,6 +4559,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'stempel') await stempel();
       else if (BARE === 'innbyrdes') await innbyrdes();
       else if (BARE === 'samsvar') await samsvar();
+      else if (BARE === 'avgjort') await avgjort();
       else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort, trekning, forkampen, blandet, stempel)`);
     } else {
     // ---- 0. dagens data ----
@@ -7958,6 +8095,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await stempel();
     await innbyrdes();
     await samsvar();
+    await avgjort();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen
