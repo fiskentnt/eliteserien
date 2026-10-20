@@ -188,17 +188,17 @@
    "away": "Raufoss",
    "date": "2026-10-21",
    "round": 24,
-   "H": 0.6415,
-   "U": 0.1936,
-   "B": 0.1649,
+   "H": 0.6396,
+   "U": 0.1944,
+   "B": 0.166,
    "kilde": "odds+modell",
    "oddsvekt": 0.7,
    "odds": {
-    "H": 0.6657,
-    "U": 0.1889,
-    "B": 0.1454,
+    "H": 0.6627,
+    "U": 0.1906,
+    "B": 0.1467,
     "bookmaker": "pinnacle",
-    "priced_at": "2026-10-19T14:02:36.326Z"
+    "priced_at": "2026-10-20T10:06:57.841Z"
    },
    "modell": {
     "H": 0.5857,
@@ -209,17 +209,17 @@
     "Sogndal": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.4121,
-     "nedrykk": 0.0759
+     "kvalik": 0.431,
+     "nedrykk": 0.071
     },
     "Raufoss": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0501,
-     "nedrykk": 0.9391
+     "kvalik": 0.048,
+     "nedrykk": 0.9424
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Egersund|Hødd": {
    "home": "Egersund",
@@ -1186,17 +1186,17 @@
    "away": "Ranheim",
    "date": "2026-10-24",
    "round": 28,
-   "H": 0.2726,
-   "U": 0.2181,
-   "B": 0.5093,
+   "H": 0.2369,
+   "U": 0.2069,
+   "B": 0.5562,
    "kilde": "odds+modell",
    "oddsvekt": 0.7,
    "odds": {
-    "H": 0.2664,
-    "U": 0.2192,
-    "B": 0.5143,
-    "bookmaker": "unibet",
-    "priced_at": "2026-10-18T10:32:57.659Z"
+    "H": 0.2158,
+    "U": 0.2037,
+    "B": 0.5805,
+    "bookmaker": "bet365",
+    "priced_at": "2026-10-20T00:05:58.233Z"
    },
    "modell": {
     "H": 0.2873,
@@ -1207,29 +1207,35 @@
     "Raufoss": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0501,
-     "nedrykk": 0.9391
+     "kvalik": 0.048,
+     "nedrykk": 0.9424
     },
     "Ranheim": {
      "gull": 0,
-     "europa": 0.0981,
+     "europa": 0.0969,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Strømmen|Strømsgodset": {
    "home": "Strømmen",
    "away": "Strømsgodset",
    "date": "2026-10-25",
    "round": 28,
-   "H": 0.1682,
-   "U": 0.1664,
-   "B": 0.6655,
-   "kilde": "modell",
-   "oddsvekt": 0,
-   "odds": null,
+   "H": 0.1429,
+   "U": 0.1648,
+   "B": 0.6923,
+   "kilde": "odds+modell",
+   "oddsvekt": 0.7,
+   "odds": {
+    "H": 0.1319,
+    "U": 0.1643,
+    "B": 0.7039,
+    "bookmaker": "pinnacle",
+    "priced_at": "2026-10-20T03:37:53.371Z"
+   },
    "modell": {
     "H": 0.1682,
     "U": 0.1664,
@@ -1238,30 +1244,36 @@
    "sjanser": {
     "Strømmen": {
      "gull": 0,
-     "europa": 0.0012,
-     "kvalik": 0.0016,
+     "europa": 0.0024,
+     "kvalik": 0.0012,
      "nedrykk": 0
     },
     "Strømsgodset": {
-     "gull": 0.8422,
+     "gull": 0.842,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Haugesund|Hødd": {
    "home": "Haugesund",
    "away": "Hødd",
    "date": "2026-10-25",
    "round": 28,
-   "H": 0.7983,
-   "U": 0.1222,
-   "B": 0.0794,
-   "kilde": "modell",
-   "oddsvekt": 0,
-   "odds": null,
+   "H": 0.8033,
+   "U": 0.1157,
+   "B": 0.081,
+   "kilde": "odds+modell",
+   "oddsvekt": 0.7,
+   "odds": {
+    "H": 0.8056,
+    "U": 0.1125,
+    "B": 0.0819,
+    "bookmaker": "pinnacle",
+    "priced_at": "2026-10-20T10:18:26.755Z"
+   },
    "modell": {
     "H": 0.7983,
     "U": 0.1222,
@@ -1269,31 +1281,37 @@
    },
    "sjanser": {
     "Haugesund": {
-     "gull": 0.738,
+     "gull": 0.723,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Hødd": {
      "gull": 0,
-     "europa": 0.1213,
+     "europa": 0.1207,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Sandnes Ulf|Lyn": {
    "home": "Sandnes Ulf",
    "away": "Lyn",
    "date": "2026-10-25",
    "round": 28,
-   "H": 0.4119,
-   "U": 0.248,
-   "B": 0.3401,
-   "kilde": "modell",
-   "oddsvekt": 0,
-   "odds": null,
+   "H": 0.4084,
+   "U": 0.2541,
+   "B": 0.3375,
+   "kilde": "odds+modell",
+   "oddsvekt": 0.7,
+   "odds": {
+    "H": 0.406,
+    "U": 0.2572,
+    "B": 0.3368,
+    "bookmaker": "pinnacle",
+    "priced_at": "2026-10-20T00:04:25.793Z"
+   },
    "modell": {
     "H": 0.4119,
     "U": 0.248,
@@ -1303,29 +1321,35 @@
     "Sandnes Ulf": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.3829,
-     "nedrykk": 0.0497
+     "kvalik": 0.3851,
+     "nedrykk": 0.0475
     },
     "Lyn": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0124,
-     "nedrykk": 0.0001
+     "kvalik": 0.0132,
+     "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Bryne|Egersund": {
    "home": "Bryne",
    "away": "Egersund",
    "date": "2026-10-25",
    "round": 28,
-   "H": 0.5242,
-   "U": 0.2528,
-   "B": 0.2229,
-   "kilde": "modell",
-   "oddsvekt": 0,
-   "odds": null,
+   "H": 0.5552,
+   "U": 0.233,
+   "B": 0.2118,
+   "kilde": "odds+modell",
+   "oddsvekt": 0.7,
+   "odds": {
+    "H": 0.5677,
+    "U": 0.2252,
+    "B": 0.2071,
+    "bookmaker": "pinnacle",
+    "priced_at": "2026-10-20T08:55:17.684Z"
+   },
    "modell": {
     "H": 0.5242,
     "U": 0.2528,
@@ -1334,30 +1358,36 @@
    "sjanser": {
     "Bryne": {
      "gull": 0,
-     "europa": 0.7485,
+     "europa": 0.7493,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Egersund": {
      "gull": 0,
-     "europa": 0.0309,
+     "europa": 0.0307,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Moss|Åsane": {
    "home": "Moss",
    "away": "Åsane",
    "date": "2026-10-25",
    "round": 28,
-   "H": 0.5619,
-   "U": 0.2263,
-   "B": 0.2118,
-   "kilde": "modell",
-   "oddsvekt": 0,
-   "odds": null,
+   "H": 0.6093,
+   "U": 0.2025,
+   "B": 0.1881,
+   "kilde": "odds+modell",
+   "oddsvekt": 0.7,
+   "odds": {
+    "H": 0.6298,
+    "U": 0.1921,
+    "B": 0.178,
+    "bookmaker": "pinnacle",
+    "priced_at": "2026-10-19T18:06:08.976Z"
+   },
    "modell": {
     "H": 0.5619,
     "U": 0.2263,
@@ -1367,29 +1397,35 @@
     "Moss": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0898,
-     "nedrykk": 0.0014
+     "kvalik": 0.0735,
+     "nedrykk": 0.0015
     },
     "Åsane": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0511,
-     "nedrykk": 0.9338
+     "kvalik": 0.048,
+     "nedrykk": 0.9376
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Sogndal|Kongsvinger": {
    "home": "Sogndal",
    "away": "Kongsvinger",
    "date": "2026-10-25",
    "round": 28,
-   "H": 0.2487,
-   "U": 0.2153,
-   "B": 0.536,
-   "kilde": "modell",
-   "oddsvekt": 0,
-   "odds": null,
+   "H": 0.2288,
+   "U": 0.2004,
+   "B": 0.5708,
+   "kilde": "odds+modell",
+   "oddsvekt": 0.7,
+   "odds": {
+    "H": 0.2196,
+    "U": 0.195,
+    "B": 0.5854,
+    "bookmaker": "bet365",
+    "priced_at": "2026-10-20T00:07:21.104Z"
+   },
    "modell": {
     "H": 0.2487,
     "U": 0.2153,
@@ -1399,29 +1435,35 @@
     "Sogndal": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.4121,
-     "nedrykk": 0.0759
+     "kvalik": 0.431,
+     "nedrykk": 0.071
     },
     "Kongsvinger": {
-     "gull": 0.4188,
+     "gull": 0.4345,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Stabæk|Odd": {
    "home": "Stabæk",
    "away": "Odd",
    "date": "2026-10-25",
    "round": 28,
-   "H": 0.4866,
-   "U": 0.2156,
-   "B": 0.2978,
-   "kilde": "modell",
-   "oddsvekt": 0,
-   "odds": null,
+   "H": 0.5146,
+   "U": 0.2171,
+   "B": 0.2683,
+   "kilde": "odds+modell",
+   "oddsvekt": 0.7,
+   "odds": {
+    "H": 0.5289,
+    "U": 0.2139,
+    "B": 0.2573,
+    "bookmaker": "pinnacle",
+    "priced_at": "2026-10-19T04:13:01.824Z"
+   },
    "modell": {
     "H": 0.4866,
     "U": 0.2156,
@@ -1429,7 +1471,7 @@
    },
    "sjanser": {
     "Stabæk": {
-     "gull": 0.001,
+     "gull": 0.0005,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
@@ -1441,7 +1483,7 @@
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Egersund|Strømmen": {
    "home": "Egersund",
@@ -1462,18 +1504,18 @@
    "sjanser": {
     "Egersund": {
      "gull": 0,
-     "europa": 0.0309,
+     "europa": 0.0307,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Strømmen": {
      "gull": 0,
-     "europa": 0.0012,
-     "kvalik": 0.0016,
+     "europa": 0.0024,
+     "kvalik": 0.0012,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Hødd|Bryne": {
    "home": "Hødd",
@@ -1494,18 +1536,18 @@
    "sjanser": {
     "Hødd": {
      "gull": 0,
-     "europa": 0.1213,
+     "europa": 0.1207,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Bryne": {
      "gull": 0,
-     "europa": 0.7485,
+     "europa": 0.7493,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Lyn|Raufoss": {
    "home": "Lyn",
@@ -1527,17 +1569,17 @@
     "Lyn": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0124,
-     "nedrykk": 0.0001
+     "kvalik": 0.0132,
+     "nedrykk": 0
     },
     "Raufoss": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0501,
-     "nedrykk": 0.9391
+     "kvalik": 0.048,
+     "nedrykk": 0.9424
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Odd|Sandnes Ulf": {
    "home": "Odd",
@@ -1565,11 +1607,11 @@
     "Sandnes Ulf": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.3829,
-     "nedrykk": 0.0497
+     "kvalik": 0.3851,
+     "nedrykk": 0.0475
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Ranheim|Sogndal": {
    "home": "Ranheim",
@@ -1590,18 +1632,18 @@
    "sjanser": {
     "Ranheim": {
      "gull": 0,
-     "europa": 0.0981,
+     "europa": 0.0969,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Sogndal": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.4121,
-     "nedrykk": 0.0759
+     "kvalik": 0.431,
+     "nedrykk": 0.071
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Strømsgodset|Moss": {
    "home": "Strømsgodset",
@@ -1621,7 +1663,7 @@
    },
    "sjanser": {
     "Strømsgodset": {
-     "gull": 0.8422,
+     "gull": 0.842,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
@@ -1629,11 +1671,11 @@
     "Moss": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0898,
-     "nedrykk": 0.0014
+     "kvalik": 0.0735,
+     "nedrykk": 0.0015
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Åsane|Haugesund": {
    "home": "Åsane",
@@ -1655,17 +1697,17 @@
     "Åsane": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0511,
-     "nedrykk": 0.9338
+     "kvalik": 0.048,
+     "nedrykk": 0.9376
     },
     "Haugesund": {
-     "gull": 0.738,
+     "gull": 0.723,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Kongsvinger|Stabæk": {
    "home": "Kongsvinger",
@@ -1685,19 +1727,19 @@
    },
    "sjanser": {
     "Kongsvinger": {
-     "gull": 0.4188,
+     "gull": 0.4345,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Stabæk": {
-     "gull": 0.001,
+     "gull": 0.0005,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Bryne|Kongsvinger": {
    "home": "Bryne",
@@ -1718,18 +1760,18 @@
    "sjanser": {
     "Bryne": {
      "gull": 0,
-     "europa": 0.7485,
+     "europa": 0.7493,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Kongsvinger": {
-     "gull": 0.4188,
+     "gull": 0.4345,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Haugesund|Odd": {
    "home": "Haugesund",
@@ -1749,7 +1791,7 @@
    },
    "sjanser": {
     "Haugesund": {
-     "gull": 0.738,
+     "gull": 0.723,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
@@ -1761,7 +1803,7 @@
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Moss|Ranheim": {
    "home": "Moss",
@@ -1783,17 +1825,17 @@
     "Moss": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0898,
-     "nedrykk": 0.0014
+     "kvalik": 0.0735,
+     "nedrykk": 0.0015
     },
     "Ranheim": {
      "gull": 0,
-     "europa": 0.0981,
+     "europa": 0.0969,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Raufoss|Egersund": {
    "home": "Raufoss",
@@ -1815,17 +1857,17 @@
     "Raufoss": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0501,
-     "nedrykk": 0.9391
+     "kvalik": 0.048,
+     "nedrykk": 0.9424
     },
     "Egersund": {
      "gull": 0,
-     "europa": 0.0309,
+     "europa": 0.0307,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Sandnes Ulf|Åsane": {
    "home": "Sandnes Ulf",
@@ -1847,17 +1889,17 @@
     "Sandnes Ulf": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.3829,
-     "nedrykk": 0.0497
+     "kvalik": 0.3851,
+     "nedrykk": 0.0475
     },
     "Åsane": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0511,
-     "nedrykk": 0.9338
+     "kvalik": 0.048,
+     "nedrykk": 0.9376
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Sogndal|Hødd": {
    "home": "Sogndal",
@@ -1879,17 +1921,17 @@
     "Sogndal": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.4121,
-     "nedrykk": 0.0759
+     "kvalik": 0.431,
+     "nedrykk": 0.071
     },
     "Hødd": {
      "gull": 0,
-     "europa": 0.1213,
+     "europa": 0.1207,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Stabæk|Strømsgodset": {
    "home": "Stabæk",
@@ -1909,19 +1951,19 @@
    },
    "sjanser": {
     "Stabæk": {
-     "gull": 0.001,
+     "gull": 0.0005,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Strømsgodset": {
-     "gull": 0.8422,
+     "gull": 0.842,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   },
   "2026|Strømmen|Lyn": {
    "home": "Strømmen",
@@ -1942,18 +1984,18 @@
    "sjanser": {
     "Strømmen": {
      "gull": 0,
-     "europa": 0.0012,
-     "kvalik": 0.0016,
+     "europa": 0.0024,
+     "kvalik": 0.0012,
      "nedrykk": 0
     },
     "Lyn": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0124,
-     "nedrykk": 0.0001
+     "kvalik": 0.0132,
+     "nedrykk": 0
     }
    },
-   "stamp": "2026-10-19T14:21:27Z"
+   "stamp": "2026-10-20T10:32:07Z"
   }
  },
  "note": "Sannsynlighet for hvert utfall før avspark, per kamp. Oppdateres bare før avspark fra terminlisten og fryses med siste stempel fra før avspark når kampen er spilt, så \"forrige kamp\" og treffsikkerheten er uten etterpåklokskap. Fra 70 til 15 minutter før avspark skrives raden av \"Odds nær avspark\", med sluttoddsen."
