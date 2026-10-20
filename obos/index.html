@@ -558,7 +558,7 @@
   .panel > h2{font:700 22px/1 var(--cond);margin:0;padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
   .panel > h2 .count{font:500 14px var(--body);color:var(--muted)}
   .simnote{margin:-4px 16px 10px;color:var(--muted);font-size:12.5px}
-  .oppdatert-linje{margin:0;color:var(--muted);font-size:12.5px;line-height:1.45}
+  .oppdatert-linje{margin:0;max-width:68ch;color:var(--muted);font-size:12.5px;line-height:1.45}
   .scenario-line{margin:-4px 16px 10px;color:var(--ink);font-size:12.5px;font-weight:600}
 
   /* Tabell */
@@ -7185,9 +7185,12 @@ async function qaWhy(team, rolle='why', kjerne=false){
   if(st) return qaSettledText(team, zone, st, false, kjerne);
   const field = qaFieldInWay(team, zone);
   const rival = field ? {t:field.nearest} : qaFindRival(team, zone);
-  const A = await innsiktData();
-  const data = innsiktFor(A, team, zone.key);
-  const rivalSnitt = rival ? qaSnitt(innsiktPoeng(A, rival.t)) : null;
+  // Kjernen trenger ikke innsikten (part1 er tabellen og styrken): da
+  // startes den heller ikke, så lagboksen ikke tar poolen fra kortene og
+  // innsikten fortsatt regnes i bakgrunnen først når poolen er ledig.
+  const A = kjerne ? null : await innsiktData();
+  const data = kjerne ? null : innsiktFor(A, team, zone.key);
+  const rivalSnitt = rival && !kjerne ? qaSnitt(innsiktPoeng(A, rival.t)) : null;
   const {rows} = compute();
   const row = rows.find(r=>r.name===team);
   const pos = rows.indexOf(row)+1;
