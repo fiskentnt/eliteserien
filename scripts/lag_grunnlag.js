@@ -171,8 +171,11 @@ async function hentTekster(page) {
     // (samme som keymatch.json), til oppsummeringen (fase 1a).
     let viktigste = null;
     try { const k = keymatchFra(await qaKeyRoundData()); if (k) viktigste = {banner: k.banner, runde: k.round, sone: k.zone}; } catch (e) {}
+    // navn: kolonnen; sone: sonens eget navn i setningene ("direkte opprykk"
+    // i OBOS, ikke "opprykk"); tittel: forklaringen på kolonnen.
     const kolonner = ['gull', 'europa', 'ned'].map(key => { const c = LEAGUE.cols.find(x => x.key === key) || {};
-      return {key, navn: c.head, kort: c.headSm || null}; });
+      const z = LEAGUE.zones[key === 'ned' ? 'nedrykk' : key] || {};
+      return {key, navn: c.head, kort: c.headSm || null, sone: z.label || null, tittel: c.title || null}; });
     const tb = document.querySelector('#tbl tbody'), rad = Object.fromEntries(compute().rows.map(r => [r.name, r]));
     const rader = [...tb.querySelectorAll('tr')].map((tr, i) => {
       const r = rad[tr.dataset.team], d = lastMC[r.name];

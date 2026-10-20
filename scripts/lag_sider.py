@@ -66,8 +66,10 @@ def oppdatert(t):
 
 
 def sone_navn(t, key):
+    """Sonens navn i setningene, slik siden kaller den («direkte opprykk» i
+    OBOS, ikke kolonnenavnet «Opprykk»)."""
     k = next(x for x in t["tabell"]["kolonner"] if x["key"] == key)
-    return k["navn"][0].lower() + k["navn"][1:]
+    return k.get("sone") or (k["navn"][0].lower() + k["navn"][1:])
 
 
 def _vist(r, key):

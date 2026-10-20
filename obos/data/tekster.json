@@ -9,17 +9,23 @@
    {
     "key": "gull",
     "navn": "Opprykk",
-    "kort": "Oppr."
+    "kort": "Oppr.",
+    "sone": "direkte opprykk",
+    "tittel": "Sannsynlighet for direkte opprykk, altså 1. eller 2. plass. Klikk for å sortere."
    },
    {
     "key": "europa",
     "navn": "Topp 6",
-    "kort": null
+    "kort": null,
+    "sone": "topp 6",
+    "tittel": "Sannsynlighet for 1. til 6. plass, altså direkte opprykk eller opprykkskvalifisering. Klikk for å sortere."
    },
    {
     "key": "ned",
     "navn": "Nedrykk",
-    "kort": "Nedr."
+    "kort": "Nedr.",
+    "sone": "nedrykk",
+    "tittel": "Sannsynlighet for 15. eller 16. plass. Kvalik på 14. plass er ikke regnet med. Klikk for å sortere."
    }
   ],
   "kolonner_html": "<th class=\"sortable hide-xs hh\" id=\"gullHeader\" data-sort=\"gull\" title=\"Sannsynlighet for direkte opprykk, altså 1. eller 2. plass. Klikk for å sortere.\"><span class=\"lg\">Opprykk</span><span class=\"sm\"> Oppr.</span></th>\n          <th class=\"sortable hh\" id=\"europaHeader\" data-sort=\"europa\" title=\"Sannsynlighet for 1. til 6. plass, altså direkte opprykk eller opprykkskvalifisering. Klikk for å sortere.\">Topp 6</th>\n          <th class=\"sortable hh\" id=\"nedHeader\" data-sort=\"ned\" title=\"Sannsynlighet for 15. eller 16. plass. Kvalik på 14. plass er ikke regnet med. Klikk for å sortere.\"><span class=\"lg\">Nedrykk</span><span class=\"sm\"> Nedr.</span></th>",
