@@ -165,5 +165,10 @@ jobs:
           if git diff --cached --quiet; then echo "Uendret."; exit 0; fi
           git commit -q -m "Grunnlag (${{ matrix.liga }}) $(date -u +%Y-%m-%dT%H:%MZ)"
           bash scripts/push_med_rebase.sh
+          # Sidene i commiten, til IndexNow under (før sitemap-commiten).
+          FILER="$(git show --name-only --format= HEAD)"
           # lastmod i sitemap.xml: når tabellen sist ble regnet.
           bash scripts/push_sitemap.sh || echo "::warning::sitemap.xml ble ikke oppdatert"
+          # IndexNow (fase 1c, 20.10.2026): meld fra om de endrede sidene.
+          # Feiler det, blir det bare en advarsel.
+          python3 scripts/indexnow.py $FILER

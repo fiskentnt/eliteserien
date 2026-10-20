@@ -936,6 +936,18 @@ def main():
     check("sitemap.xml: én skriver (push_sitemap.sh i grunnlag.yml), ikke update-data.yml, og lastmod fra grunnlagsfilen",
           "make_sitemap.py" not in "\n".join(l for l in uw.splitlines() if not l.lstrip().startswith("#")) and "sitemap.xml" not in uw.split("git add eliteserien/og.png")[1].split("\n")[0]
           and 'grunnlag.json' in ms and '"laget"' in ms and "make_sitemap.py" in (ROOT / "scripts" / "push_sitemap.sh").read_text(encoding="utf-8"))
+    # IndexNow (fase 1c): nøkkelfilen i roten, sidene som adresser, og kallet
+    # i grunnlag.yml etter pushen, som aldri kan gjøre kjøringen rød.
+    import indexnow
+    k_ = indexnow.nokkel()
+    check("IndexNow: nøkkelfilen <nøkkel>.txt i roten har nøkkelen som innhold, og sidene i en commit blir adresser (ikke data, sitemap eller elo-test)",
+          (ROOT / f"{k_}.txt").read_text(encoding="utf-8").strip() == k_
+          and indexnow.adresser(["eliteserien/index.html", "index.html", "obos/index.html", "eliteserien/data/grunnlag.json", "sitemap.xml", "elo-test/index.html"])
+          == ["https://tabellkalkulator.no/eliteserien/", "https://tabellkalkulator.no/", "https://tabellkalkulator.no/obos/"])
+    lg_steg = gst[i_lg]
+    check("IndexNow: grunnlag.yml melder fra om sidene i grunnlag-commiten etter pushen, og indexnow.py avslutter alltid med 0",
+          lg_steg.index("bash scripts/push_med_rebase.sh") < lg_steg.index('FILER="$(git show --name-only --format= HEAD)"') < lg_steg.index("python3 scripts/indexnow.py $FILER")
+          and "except Exception" in (ROOT / "scripts" / "indexnow.py").read_text(encoding="utf-8"))
     for liga in ("eliteserien", "obos"):
         uten = re.findall(r'<span class="sm">(?! )[^<]{0,20}', (ROOT / liga / "index.html").read_text(encoding="utf-8"))
         check(f"søk: {liga}/index.html: fullt og kort navn har mellomrom først i det korte («Legg inn resultater Resultater», «Rosenborg RBK»), i markupen og i JS",
