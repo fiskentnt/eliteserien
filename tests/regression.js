@@ -4503,6 +4503,56 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     check(`alle tre tilstandene og begge reglene er prøvd (1: ${sett[1]}, regel 1: ${sett.regel1}, regel 2: ${sett.regel2}, 2: ${sett[2]}, 3: ${sett[3]} lag)`,
       sett[1] > 0 && sett[2] > 0 && sett[3] > 0 && sett.regel1 > 0 && sett.regel2 > 0, '');
   };
+  // GOOGLE (20.10.2026). Forsiden videresender bare den som har vært her før
+  // (tk:sisteLiga); førstegangsbesøk og søkemotorer ser oversikten. Ligasidene
+  // har tabellen med tall og sjanser i HTML-en (regionene STATISK-*, skrevet
+  // av lag_grunnlag.js): uten JavaScript står den der med "Oppdatert ...",
+  // og med JavaScript tar render() over og fjerner merknaden.
+  //   node tests/regression.js --bare statisk
+  const statisk = async () => {
+    setGroup('Google: forsiden videresender bare kjente, og tabellen står i HTML-en');
+    const rot = base.replace('/eliteserien/', '/');
+    const forside = async (siste, hash = '') => {
+      const pg = await browser.newPage();
+      await pg.goto(rot + '?velg', {waitUntil: 'domcontentloaded'});
+      await pg.evaluate(s => { localStorage.clear(); if (s) localStorage.setItem('tk:sisteLiga', s); }, siste);
+      await pg.goto(rot + hash, {waitUntil: 'networkidle0'});
+      await new Promise(r => setTimeout(r, 300));
+      const ut = await pg.evaluate(() => ({sti: location.pathname + location.hash, h1: (document.querySelector('h1') || {}).textContent || ''}));
+      await pg.close();
+      return ut;
+    };
+    const f0 = await forside(null), fo = await forside('obos'), fe = await forside('eliteserien'), fx = await forside('tull'), fh = await forside(null, '#team=Brann');
+    check(`forsiden: førstegangsbesøk blir på oversikten (${f0.sti}, «${f0.h1.trim()}»)`, f0.sti === '/' && f0.h1.trim().length > 0, JSON.stringify(f0));
+    check(`forsiden: med tk:sisteLiga videresendes kjente til ligaen (obos: ${fo.sti}, eliteserien: ${fe.sti}); ukjent verdi blir på oversikten (${fx.sti})`,
+      fo.sti === '/obos/' && fe.sti === '/eliteserien/' && fx.sti === '/', JSON.stringify({fo, fe, fx}));
+    check(`forsiden: gamle delte lenker (#team=...) går fortsatt til Eliteserien (${fh.sti})`, fh.sti === '/eliteserien/#team=Brann', JSON.stringify(fh));
+    for (const side of ['eliteserien', 'obos']) {
+      const url = base.replace('/eliteserien/', `/${side}/`);
+      // Uten JavaScript: det søkemotorer og alle uten JS ser.
+      const uten = await browser.newPage();
+      await uten.setJavaScriptEnabled(false);
+      await uten.goto(url, {waitUntil: 'domcontentloaded'});
+      const u = await uten.evaluate(() => {
+        const rader = [...document.querySelectorAll('#tbl tbody tr')];
+        return {rader: rader.length, lag: rader.map(r => r.dataset.team), tall: rader.map(r => [...r.querySelectorAll('td.odds')].map(td => td.textContent)),
+          poeng: rader.map(r => (r.querySelector('td.pts') || {}).textContent), note: (document.getElementById('statiskNote') || {}).textContent || '',
+          kol: ['gullHeader', 'europaHeader', 'nedHeader'].map(id => document.getElementById(id).textContent.trim()), tittel: document.title};
+      });
+      await uten.close();
+      check(`${side}: uten JavaScript står tabellen med ${u.rader} lag, poeng og tre sjanser per lag, overskriftene (${u.kol.join(', ')}) og «${u.note.slice(0, 45)}...»`,
+        u.rader === 16 && new Set(u.lag).size === 16 && u.poeng.every(p => /^\*?\d+$/.test(p)) && u.tall.every(t => t.length === 3 && t.every(x => /%|–/.test(x)))
+          && u.kol.every(k => k.length > 1) && /^Oppdatert \d+\. \S+ \d{4} kl\. \d\d\.\d\d\. Sjansene for /.test(u.note), JSON.stringify(u).slice(0, 400));
+      // Med JavaScript: render() tar over, og merknaden er borte.
+      const med = await open(1400, 900, url);
+      await settle(med);
+      const m = await med.evaluate(() => ({rader: document.querySelectorAll('#tbl tbody tr').length, note: !!document.getElementById('statiskNote'),
+        forst: (document.querySelector('#tbl tbody tr') || {dataset: {}}).dataset.team, sidenForst: compute().rows[0].name}));
+      await med.close();
+      check(`${side}: med JavaScript tar tabellen over (${m.rader} rader, først ${m.forst}), og merknaden fra den statiske tabellen er borte`,
+        m.rader === 16 && !m.note && m.forst === m.sidenForst, JSON.stringify(m));
+    }
+  };
   // Innbyrdes oppgjør i tabellen (16.10.2026, NFFs kampreglement § 5-3):
   // poeng, målforskjell, scorede mål, så en minitabell av kampene mellom lagene
   // som står helt likt (rangerTabell). På alle tre sidene: (a) regelen selv med
@@ -4704,6 +4754,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'samsvar') await samsvar();
       else if (BARE === 'avgjort') await avgjort();
       else if (BARE === 'tilstander') await tilstander();
+      else if (BARE === 'statisk') await statisk();
       else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort, trekning, forkampen, blandet, stempel)`);
     } else {
     // ---- 0. dagens data ----
@@ -5379,9 +5430,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await page.bringToFront();
 
     // ---- 15. forsiden ----
-    // Folk sendes rett til ligaen de sist brukte, førstegangsbesøkende til
-    // Eliteserien. Teksten og lenkene skal likevel STÅ i HTML-en, for
-    // søkemotorer og for /?velg.
+    // Folk som har vært her før, sendes rett til ligaen de sist brukte;
+    // førstegangsbesøkende blir på oversikten (20.10.2026). Teksten og
+    // lenkene skal STÅ i HTML-en, for søkemotorer og for /?velg.
     setGroup('Forsiden');
     const rot = base.replace('/eliteserien/', '/');
     const ferskt = async (url) => {
@@ -5394,7 +5445,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await ctx.close();
       return u;
     };
-    check('førstegangsbesøk sendes til Eliteserien', /\/eliteserien\/$/.test(await ferskt(rot)),
+    // Fra 20.10.2026 videresendes bare den som har vært her før (tk:sisteLiga);
+    // førstegangsbesøk og søkemotorer blir på oversikten (gruppen «statisk»).
+    check('førstegangsbesøk blir på oversikten (ingen videresending uten tk:sisteLiga)', new URL(await ferskt(rot)).pathname === '/',
       await ferskt(rot));
     // Forsiden har ingen simulering, så den vanlige open() (som venter på
     // lastMCFinal) kan ikke brukes her.
@@ -8241,6 +8294,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await samsvar();
     await avgjort();
     await tilstander();
+    await statisk();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen

@@ -39,6 +39,18 @@
  *   --n       BARE for testene: annen N enn sidens GRUNNLAG_N. Avtrykket
  *             regnes med den N-en, så siden godtar aldri en slik fil; derfor
  *             prøves den ikke på siden, og banneret skrives ikke.
+ *   --bare-statisk  regner ingenting: skriver den statiske tabellen (under) fra
+ *             grunnlagsfilen som finnes, når siden godtar den
+ *
+ * DEN STATISKE TABELLEN (20.10.2026): med den ferdige filen i bruk hentes
+ * tabellen slik siden selv tegner den (radene i #tbl, med sortering etter
+ * innbyrdes oppgjør og sjansene fra filen) og overskriftene for sjansene, og de
+ * skrives inn i regionene STATISK-* i <side>/index.html, med når det ble
+ * regnet (STATISK-OPPDATERT). Da står tabellen med tall i HTML-en for
+ * søkemotorer og uten JavaScript; render() på siden tar over. Ingen egen
+ * tabellkode: alt kommer fra siden. Regionene teller ikke i grunnlag-porten
+ * (scripts/statisk_region.py). Feiler dette, skrives filen likevel, med en
+ * advarsel. Testsiden (elo-test) har ingen slike regioner.
  */
 const http = require('http');
 const fs = require('fs');
@@ -53,6 +65,7 @@ const UT = path.resolve(ROOT, flagg('--ut') || path.join(SIDE, 'data'));
 const FIL = path.join(UT, 'grunnlag.json');
 const INNDATA = flagg('--inndata');
 const TEST_N = flagg('--n') != null ? +flagg('--n') : null;
+const BARE_STATISK = ARGS.includes('--bare-statisk');
 if (TEST_N != null && !(Number.isInteger(TEST_N) && TEST_N > 0)) { console.error(`--n: ugyldig ${flagg('--n')}`); process.exit(2); }
 const MIME = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css',
   '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.ttf': 'font/ttf'};
@@ -142,6 +155,42 @@ function sjekkInnsikt(r) {
 // keymatch.json ved siden av filen. Uendret banner (samme kåring, runde, lag,
 // sesonger og grense) skrives ikke på nytt, så et nytt tidsstempel alene ikke
 // gir en commit.
+const STATISK_RE = /(<!-- STATISK-([A-Z]+) -->)([\s\S]*?)(<!-- \/STATISK-\2 -->)/g;
+const SIDEFIL = path.join(ROOT, SIDE, 'index.html');
+const harStatisk = () => /<!-- STATISK-TABELL -->/.test(fs.readFileSync(SIDEFIL, 'utf8'));
+// Tabellen slik siden tegner den med filen i bruk: radene, overskriftene for
+// sjansene og navnene på dem. Venter til merkene (matematisk avgjort, "–" og
+// "100 %") er regnet for denne stillingen.
+async function hentStatisk(page) {
+  await page.waitForFunction('lastMCFinal===true && lastYtterSig===badgeSignatureOf(compute().rows, matches.filter(isEmpty).map(m=>[m.home,m.away]))',
+    {timeout: 120000, polling: 100});
+  return page.evaluate(() => {
+    const k = ['gullHeader', 'europaHeader', 'nedHeader'].map(id => document.getElementById(id));
+    const navn = ['gull', 'europa', 'ned'].map(key => (LEAGUE.cols.find(c => c.key === key) || {}).head);
+    return {status: GRUNNLAG_STATUS, sesonger: lastMCN, lag: TEAMS.length, kolonner: k.map(el => el.outerHTML).join('\n          '),
+      navn, tabell: document.querySelector('#tbl tbody').innerHTML, rader: document.querySelectorAll('#tbl tbody tr').length};
+  });
+}
+// "20. oktober 2026 kl. 02.52", norsk tid.
+function norskTid(iso) {
+  const del = new Intl.DateTimeFormat('nb-NO', {timeZone: 'Europe/Oslo', day: 'numeric', month: 'long', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23'}).formatToParts(new Date(iso));
+  const g = t => del.find(x => x.type === t).value;
+  return `${g('day')}. ${g('month')} ${g('year')} kl. ${g('hour')}.${g('minute')}`;
+}
+function skrivStatisk(s, laget, N) {
+  if (s.status !== 'i bruk' || s.sesonger !== N || s.rader !== s.lag)
+    throw new Error(`siden viste ikke tabellen fra filen (${s.status}, ${s.sesonger} sesonger, ${s.rader} av ${s.lag} rader)`);
+  const sjanser = s.navn.map(x => x.charAt(0).toLowerCase() + x.slice(1));
+  const regioner = {KOLONNER: s.kolonner, TABELL: s.tabell,
+    OPPDATERT: `Oppdatert ${norskTid(laget)}. Sjansene for ${sjanser.slice(0, -1).join(', ')} og ${sjanser.at(-1)} er regnet fra ${s.sesonger.toLocaleString('nb-NO')} simulerte sesonger.`};
+  const gml = fs.readFileSync(SIDEFIL, 'utf8');
+  const ny = gml.replace(STATISK_RE, (m, a, navn, _, b) => a + (regioner[navn] != null ? regioner[navn] : '') + b);
+  if (ny === gml) { console.log(`Den statiske tabellen i ${SIDE}/index.html var uendret.`); return; }
+  fs.writeFileSync(SIDEFIL, ny);
+  console.log(`Skrev den statiske tabellen i ${SIDE}/index.html (${s.rader} lag, ${regioner.OPPDATERT})`);
+}
+
 function skrivBanner(key) {
   const KEYMATCH = path.join(UT, 'keymatch.json');
   if (!key) { console.log('Ingen viktigste kamp å lagre (ingen runde igjen, eller ingen kamp flytter nok).'); return; }
@@ -165,6 +214,16 @@ function skrivBanner(key) {
     args: ['--no-sandbox', '--disable-setuid-sandbox']});
   const feil = [];
   try {
+    if (BARE_STATISK) {
+      if (!harStatisk()) throw new Error(`${SIDE}/index.html har ingen statisk tabell`);
+      const fil = JSON.parse(fs.readFileSync(FIL, 'utf8'));
+      const ps = await aapne(browser, port, feil);
+      await ps.waitForFunction('GRUNNLAG_STATUS!=="venter"', {timeout: 60000, polling: 50});
+      skrivStatisk(await hentStatisk(ps), fil.laget, fil.sesonger);
+      await ps.close();
+      if (feil.length) throw new Error(`JS-feil på siden: ${feil.slice(0, 3).join('; ')}`);
+      return;
+    }
     const page = await aapne(browser, port, feil);
     const t0 = Date.now();
     const r = await page.evaluate(async N => ({...await grunnlagRegn(N == null ? undefined : N), soner: innsiktSoner()}), TEST_N);
@@ -206,7 +265,7 @@ function skrivBanner(key) {
     // kampene "Hvilke kamper betyr mest?" velger), og siden med den ferdige
     // filen: den skal godta den, svaret skal komme helt fra filen, og banneret
     // regnes fra den.
-    let key;
+    let key, statisk = null;
     if (TEST_N == null) {
       const p0 = await browser.newPage();
       await p0.goto(`http://127.0.0.1:${port}/${SIDE}/`, {waitUntil: 'domcontentloaded'});
@@ -245,6 +304,15 @@ function skrivBanner(key) {
         return {status, N: lastMCN, bom, key: keymatchFra(await qaKeyRoundData())};
       });
       await pv.close();
+      // Den statiske tabellen, fra en ny lasting med den ferdige filen.
+      if (harStatisk()) {
+        try {
+          const ps = await aapne(browser, port, []);
+          await ps.waitForFunction('GRUNNLAG_STATUS!=="venter"', {timeout: 60000, polling: 50});
+          statisk = await hentStatisk(ps);
+          await ps.close();
+        } catch (e) { console.log(`ADVARSEL: den statiske tabellen ble ikke hentet: ${e.message || e}`); }
+      }
       OVERSTYR.delete(sti);
       if (v.status !== 'i bruk') throw new Error(`siden godtok ikke den ferdige filen (${v.status})`);
       if (v.bom) throw new Error(`"Hvilke kamper betyr mest?" kom ikke helt fra filen (${v.bom} kall regnet på siden)`);
@@ -262,6 +330,11 @@ function skrivBanner(key) {
     fs.renameSync(tmp, FIL);
     console.log(`Skrev ${FIL.startsWith(ROOT) ? path.relative(ROOT, FIL) : FIL} (${(fs.statSync(FIL).size / 1024).toFixed(0)} KB).`);
     if (TEST_N == null) skrivBanner(key);
+    if (statisk) {
+      const laget = JSON.parse(tekst).laget;
+      try { skrivStatisk(statisk, laget, r.sesonger); }
+      catch (e) { console.log(`ADVARSEL: den statiske tabellen ble ikke skrevet: ${e.message || e}`); }
+    }
     if (process.env.GITHUB_STEP_SUMMARY)
       fs.appendFileSync(process.env.GITHUB_STEP_SUMMARY, `- ${SIDE}: ${r.oppgaver.length} oppgaver x ${r.sesonger} sesonger på ${sek.toFixed(0)} s\n`);
   } finally {

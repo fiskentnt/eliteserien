@@ -146,6 +146,13 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "$UT/grunnlag.json"
           [ -f "$UT/keymatch.json" ] && git add "$UT/keymatch.json"
+          # Den statiske tabellen (STATISK-* i ligasiden, skrevet av
+          # lag_grunnlag.js, 20.10.2026) i samme commit som filen. Pushen
+          # bruker GITHUB_TOKEN og starter derfor ingen push-workflows ("Bygg
+          # ligasidene", grunnlag), og regionene teller ikke i porten.
+          git add "${{ matrix.liga }}/index.html"
           if git diff --cached --quiet; then echo "Uendret."; exit 0; fi
           git commit -q -m "Grunnlag (${{ matrix.liga }}) $(date -u +%Y-%m-%dT%H:%MZ)"
           bash scripts/push_med_rebase.sh
+          # lastmod i sitemap.xml: når tabellen sist ble regnet.
+          bash scripts/push_sitemap.sh || echo "::warning::sitemap.xml ble ikke oppdatert"

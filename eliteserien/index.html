@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <!-- LIGA-HEAD: byttes ut per liga av scripts/build_league.py -->
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Eliteserien 2026: tabellkalkulator med sjanse for gull, Europa og nedrykk</title>
+<title>Tabellkalkulator Eliteserien 2026: sjanse for gull, Europa og nedrykk</title>
 <meta name="description" content="Tabellkalkulator for Eliteserien: fyll inn resultater og se sannsynlighet for gull, Europa og nedrykk for alle lag. Modellen oppdateres etter hver kamp.">
 <link rel="canonical" href="https://tabellkalkulator.no/eliteserien/">
 <meta name="theme-color" content="#13305f">
@@ -535,6 +535,7 @@
   .panel > h2{font:700 22px/1 var(--cond);margin:0;padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
   .panel > h2 .count{font:500 14px var(--body);color:var(--muted)}
   .simnote{margin:-4px 16px 10px;color:var(--muted);font-size:12.5px}
+  .statisk-note{margin:-4px 16px 10px;color:var(--muted);font-size:12.5px}
   .scenario-line{margin:-4px 16px 10px;color:var(--ink);font-size:12.5px;font-weight:600}
 
   /* Tabell */
@@ -1224,6 +1225,14 @@
         <p class="round-note" id="roundNote" hidden></p>
         <p class="scenario-line" id="scenarioLine" hidden></p>
         <p class="simnote" id="simNote" hidden>Prosentene bygger på resultatene i kamplisten, også de simulerte.</p>
+        <!-- DEN STATISKE TABELLEN (20.10.2026): regionene STATISK-* skrives av
+             scripts/lag_grunnlag.js i grunnlag-workflowen, fra siden selv i Chrome
+             med den nye grunnlagsfilen: overskriftene for sjansene, radene med tall
+             og sjanser, og når det ble regnet. Da står tabellen i HTML-en for
+             søkemotorer og uten JavaScript; render() bygger tabellen på nytt og
+             fjerner merknaden. Regionene teller ikke i grunnlag-porten
+             (grunnlag_port.py), og build_league.py beholder OBOS-sidens egne. -->
+        <p class="statisk-note" id="statiskNote"><!-- STATISK-OPPDATERT -->Oppdatert 20. oktober 2026 kl. 02.52. Sjansene for gull, topp 4 og nedrykk er regnet fra 100 000 simulerte sesonger.<!-- /STATISK-OPPDATERT --></p>
         <div class="tblwrap">
       <table id="tbl">
         <thead><tr>
@@ -1232,11 +1241,75 @@
           <th class="hide-diff">Diff</th><th class="pts">P</th>
           <th class="sortable hh formcol" id="formHeader" title="Styrke: modellens vurdering av hvor sterkt laget er, over hele sesongen. 5 er et gjennomsnittslag. Klikk for å sortere.">Styrke</th>
           <th class="sortable hide-s" id="form5Header" data-sort="form5" title="Formen nå: vanlige poeng i de fem siste seriekampene (3 for seier, 1 for uavgjort), regnet om til skalaen 0 til 10. Fem seirer gir 15 av 15 poeng, altså 10,0. Resultatene står til høyre, eldst først. Klikk for å sortere.">Form</th>
-          <th class="sortable hide-xs hh" id="gullHeader" data-sort="gull" ></th>
-          <th class="sortable hh" id="europaHeader" data-sort="europa" ></th>
-          <th class="sortable hh" id="nedHeader" data-sort="ned" ></th>
+          <!-- STATISK-KOLONNER --><th class="sortable hide-xs hh" id="gullHeader" data-sort="gull" title="Sannsynlighet for å vinne serien. Klikk for å sortere.">Gull</th>
+          <th class="sortable hh" id="europaHeader" data-sort="europa" title="Sannsynlighet for 1. til 4. plass, altså Champions League- eller Conference League-kvalifisering. Europa kan også nås gjennom cupen, og det er ikke med i tallet. Klikk for å sortere.">Topp 4</th>
+          <th class="sortable hh" id="nedHeader" data-sort="ned" title="Sannsynlighet for 15. eller 16. plass. Kvalik på 14. plass er ikke regnet med. Klikk for å sortere."><span class="lg">Nedrykk</span><span class="sm"> Nedr.</span></th><!-- /STATISK-KOLONNER -->
         </tr></thead>
-        <tbody></tbody>
+        <tbody><!-- STATISK-TABELL --><tr data-team="Bodø/Glimt" class="cl"><td class="pos" title="Champions League: playoff-runden">1</td><td class="team"><span class="teamname" data-team="Bodø/Glimt" role="button" tabindex="0" title="Følg Bodø/Glimt"><span class="lg">Bodø/Glimt</span><span class="sm"> Glimt</span></span><span class="badge safe" title="Sikret plass: kan verken rykke ned eller havne i kvalik." role="button" tabindex="0" aria-label="Sikret plass: kan verken rykke ned eller havne i kvalik."><span class="bi" aria-hidden="true"></span><span class="bt">Sikret plass</span></span></td><td class="spilt">23</td>
+      <td class="hide-s">18</td><td class="hide-s">2</td><td class="hide-s">3</td><td class="hide-s">58-20</td>
+      <td class="gd hide-diff">+38</td><td class="pts" title="56 poeng nå. Maks mulig sluttsum: 77.">56</td>
+      <td class="formcol"><button type="button" class="formbox green" data-team="Bodø/Glimt" title="7,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 7,4 av 10 for Bodø/Glimt. Vis styrkegrafen.">7,4</button></td>
+      <td class="hide-s"><span class="form"><b class="W" title="Seier"></b><b class="W" title="Seier"></b><b class="L" title="Tap"></b><b class="W" title="Seier"></b><b class="W" title="Seier"></b></span><b class="form5" title="12 av 15 poeng i de fem siste">8,0</b></td><td class="odds gull hide-xs pc-hi">69 %</td><td class="odds p3 pc-hi">&gt;99 %</td><td class="odds ned pc-zero">–</td></tr><tr data-team="Viking" class="cl"><td class="pos" title="Champions League: andre kvalifiseringsrunde">2</td><td class="team"><span class="teamname" data-team="Viking" role="button" tabindex="0" title="Følg Viking"><span class="lg">Viking</span><span class="sm"> Viking</span></span><span class="badge safe" title="Sikret plass: kan verken rykke ned eller havne i kvalik." role="button" tabindex="0" aria-label="Sikret plass: kan verken rykke ned eller havne i kvalik."><span class="bi" aria-hidden="true"></span><span class="bt">Sikret plass</span></span></td><td class="spilt">23</td>
+      <td class="hide-s">18</td><td class="hide-s">2</td><td class="hide-s">3</td><td class="hide-s">59-22</td>
+      <td class="gd hide-diff">+37</td><td class="pts" title="56 poeng nå. Maks mulig sluttsum: 77.">56</td>
+      <td class="formcol"><button type="button" class="formbox green" data-team="Viking" title="6,7 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 6,7 av 10 for Viking. Vis styrkegrafen.">6,7</button></td>
+      <td class="hide-s"><span class="form"><b class="D" title="Uavgjort"></b><b class="W" title="Seier"></b><b class="W" title="Seier"></b><b class="W" title="Seier"></b><b class="W" title="Seier"></b></span><b class="form5" title="13 av 15 poeng i de fem siste">8,7</b></td><td class="odds gull hide-xs pc-mid">31 %</td><td class="odds p3 pc-hi">&gt;99 %</td><td class="odds ned pc-zero">–</td></tr><tr data-team="Molde" class="eu"><td class="pos" title="Conference League: andre kvalifiseringsrunde">3</td><td class="team"><span class="teamname" data-team="Molde" role="button" tabindex="0" title="Følg Molde"><span class="lg">Molde</span><span class="sm"> Molde</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">12</td><td class="hide-s">4</td><td class="hide-s">7</td><td class="hide-s">52-35</td>
+      <td class="gd hide-diff">+17</td><td class="pts" title="40 poeng nå. Maks mulig sluttsum: 61.">40</td>
+      <td class="formcol"><button type="button" class="formbox lightgreen" data-team="Molde" title="5,9 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 5,9 av 10 for Molde. Vis styrkegrafen.">5,9</button></td>
+      <td class="hide-s"><span class="form"><b class="W" title="Seier"></b><b class="W" title="Seier"></b><b class="L" title="Tap"></b><b class="D" title="Uavgjort"></b><b class="W" title="Seier"></b></span><b class="form5" title="10 av 15 poeng i de fem siste">6,7</b></td><td class="odds gull hide-xs pc-zero">&lt;1 %</td><td class="odds p3 pc-hi">64 %</td><td class="odds ned pc-zero">&lt;1 %</td></tr><tr data-team="Tromsø" class="eu  cut"><td class="pos" title="Conference League: kvalifisering">4</td><td class="team"><span class="teamname" data-team="Tromsø" role="button" tabindex="0" title="Følg Tromsø"><span class="lg">Tromsø</span><span class="sm"> Tromsø</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">11</td><td class="hide-s">7</td><td class="hide-s">5</td><td class="hide-s">42-31</td>
+      <td class="gd hide-diff">+11</td><td class="pts" title="40 poeng nå. Maks mulig sluttsum: 61.">40</td>
+      <td class="formcol"><button type="button" class="formbox yellow" data-team="Tromsø" title="5,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 5,4 av 10 for Tromsø. Vis styrkegrafen.">5,4</button></td>
+      <td class="hide-s"><span class="form"><b class="L" title="Tap"></b><b class="L" title="Tap"></b><b class="W" title="Seier"></b><b class="D" title="Uavgjort"></b><b class="D" title="Uavgjort"></b></span><b class="form5" title="5 av 15 poeng i de fem siste">3,3</b></td><td class="odds gull hide-xs pc-zero">&lt;1 %</td><td class="odds p3 pc-mid">43 %</td><td class="odds ned pc-zero">&lt;1 %</td></tr><tr data-team="Rosenborg" class=""><td class="pos">5</td><td class="team"><span class="teamname" data-team="Rosenborg" role="button" tabindex="0" title="Følg Rosenborg"><span class="lg">Rosenborg</span><span class="sm"> RBK</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">11</td><td class="hide-s">4</td><td class="hide-s">8</td><td class="hide-s">43-31</td>
+      <td class="gd hide-diff">+12</td><td class="pts" title="37 poeng nå. Maks mulig sluttsum: 58.">37</td>
+      <td class="formcol"><button type="button" class="formbox lightgreen" data-team="Rosenborg" title="5,9 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 5,9 av 10 for Rosenborg. Vis styrkegrafen.">5,9</button></td>
+      <td class="hide-s"><span class="form"><b class="W" title="Seier"></b><b class="W" title="Seier"></b><b class="W" title="Seier"></b><b class="D" title="Uavgjort"></b><b class="W" title="Seier"></b></span><b class="form5" title="13 av 15 poeng i de fem siste">8,7</b></td><td class="odds gull hide-xs pc-zero">&lt;1 %</td><td class="odds p3 pc-hi">65 %</td><td class="odds ned pc-zero">&lt;1 %</td></tr><tr data-team="Lillestrøm" class=""><td class="pos">6</td><td class="team"><span class="teamname" data-team="Lillestrøm" role="button" tabindex="0" title="Følg Lillestrøm"><span class="lg">Lillestrøm</span><span class="sm"> LSK</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">11</td><td class="hide-s">3</td><td class="hide-s">9</td><td class="hide-s">32-31</td>
+      <td class="gd hide-diff">+1</td><td class="pts" title="36 poeng nå. Maks mulig sluttsum: 57.">36</td>
+      <td class="formcol"><button type="button" class="formbox yellow" data-team="Lillestrøm" title="5,0 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 5,0 av 10 for Lillestrøm. Vis styrkegrafen.">5,0</button></td>
+      <td class="hide-s"><span class="form"><b class="W" title="Seier"></b><b class="W" title="Seier"></b><b class="L" title="Tap"></b><b class="D" title="Uavgjort"></b><b class="W" title="Seier"></b></span><b class="form5" title="10 av 15 poeng i de fem siste">6,7</b></td><td class="odds gull hide-xs pc-zero">&lt;1 %</td><td class="odds p3 pc-mid">25 %</td><td class="odds ned pc-zero">&lt;1 %</td></tr><tr data-team="Brann" class=""><td class="pos">7</td><td class="team"><span class="teamname" data-team="Brann" role="button" tabindex="0" title="Følg Brann"><span class="lg">Brann</span><span class="sm"> Brann</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">9</td><td class="hide-s">2</td><td class="hide-s">12</td><td class="hide-s">40-37</td>
+      <td class="gd hide-diff">+3</td><td class="pts" title="29 poeng nå. Maks mulig sluttsum: 50.">29</td>
+      <td class="formcol"><button type="button" class="formbox yellow" data-team="Brann" title="5,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 5,4 av 10 for Brann. Vis styrkegrafen.">5,4</button></td>
+      <td class="hide-s"><span class="form"><b class="L" title="Tap"></b><b class="L" title="Tap"></b><b class="W" title="Seier"></b><b class="L" title="Tap"></b><b class="L" title="Tap"></b></span><b class="form5" title="3 av 15 poeng i de fem siste">2,0</b></td><td class="odds gull hide-xs pc-zero">–</td><td class="odds p3 pc-mid">1 %</td><td class="odds ned pc-zero">&lt;1 %</td></tr><tr data-team="Fredrikstad" class=""><td class="pos">8</td><td class="team"><span class="teamname" data-team="Fredrikstad" role="button" tabindex="0" title="Følg Fredrikstad"><span class="lg">Fredrikstad</span><span class="sm"> FFK</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">8</td><td class="hide-s">5</td><td class="hide-s">10</td><td class="hide-s">28-36</td>
+      <td class="gd hide-diff">-8</td><td class="pts" title="29 poeng nå. Maks mulig sluttsum: 50.">29</td>
+      <td class="formcol"><button type="button" class="formbox yellow" data-team="Fredrikstad" title="4,5 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 4,5 av 10 for Fredrikstad. Vis styrkegrafen.">4,5</button></td>
+      <td class="hide-s"><span class="form"><b class="L" title="Tap"></b><b class="D" title="Uavgjort"></b><b class="D" title="Uavgjort"></b><b class="D" title="Uavgjort"></b><b class="L" title="Tap"></b></span><b class="form5" title="3 av 15 poeng i de fem siste">2,0</b></td><td class="odds gull hide-xs pc-zero">–</td><td class="odds p3 pc-zero">&lt;1 %</td><td class="odds ned pc-zero">&lt;1 %</td></tr><tr data-team="KFUM Oslo" class=""><td class="pos">9</td><td class="team"><span class="teamname" data-team="KFUM Oslo" role="button" tabindex="0" title="Følg KFUM Oslo"><span class="lg">KFUM Oslo</span><span class="sm"> KFUM</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">8</td><td class="hide-s">5</td><td class="hide-s">10</td><td class="hide-s">28-37</td>
+      <td class="gd hide-diff">-9</td><td class="pts" title="29 poeng nå. Maks mulig sluttsum: 50.">29</td>
+      <td class="formcol"><button type="button" class="formbox yellow" data-team="KFUM Oslo" title="4,0 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 4,0 av 10 for KFUM Oslo. Vis styrkegrafen.">4,0</button></td>
+      <td class="hide-s"><span class="form"><b class="L" title="Tap"></b><b class="W" title="Seier"></b><b class="W" title="Seier"></b><b class="W" title="Seier"></b><b class="D" title="Uavgjort"></b></span><b class="form5" title="10 av 15 poeng i de fem siste">6,7</b></td><td class="odds gull hide-xs pc-zero">–</td><td class="odds p3 pc-zero">&lt;1 %</td><td class="odds ned pc-mid">1 %</td></tr><tr data-team="Sarpsborg 08" class=""><td class="pos">10</td><td class="team"><span class="teamname" data-team="Sarpsborg 08" role="button" tabindex="0" title="Følg Sarpsborg 08"><span class="lg">Sarpsborg 08</span><span class="sm"> S08</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">7</td><td class="hide-s">7</td><td class="hide-s">9</td><td class="hide-s">28-34</td>
+      <td class="gd hide-diff">-6</td><td class="pts" title="28 poeng nå. Maks mulig sluttsum: 49.">28</td>
+      <td class="formcol"><button type="button" class="formbox yellow" data-team="Sarpsborg 08" title="4,8 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 4,8 av 10 for Sarpsborg 08. Vis styrkegrafen.">4,8</button></td>
+      <td class="hide-s"><span class="form"><b class="D" title="Uavgjort"></b><b class="D" title="Uavgjort"></b><b class="L" title="Tap"></b><b class="W" title="Seier"></b><b class="L" title="Tap"></b></span><b class="form5" title="5 av 15 poeng i de fem siste">3,3</b></td><td class="odds gull hide-xs pc-zero">–</td><td class="odds p3 pc-zero">&lt;1 %</td><td class="odds ned pc-zero">&lt;1 %</td></tr><tr data-team="Vålerenga" class=""><td class="pos">11</td><td class="team"><span class="teamname" data-team="Vålerenga" role="button" tabindex="0" title="Følg Vålerenga"><span class="lg">Vålerenga</span><span class="sm"> VIF</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">7</td><td class="hide-s">5</td><td class="hide-s">11</td><td class="hide-s">38-46</td>
+      <td class="gd hide-diff">-8</td><td class="pts" title="26 poeng nå. Maks mulig sluttsum: 47.">26</td>
+      <td class="formcol"><button type="button" class="formbox yellow" data-team="Vålerenga" title="4,9 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 4,9 av 10 for Vålerenga. Vis styrkegrafen.">4,9</button></td>
+      <td class="hide-s"><span class="form"><b class="D" title="Uavgjort"></b><b class="L" title="Tap"></b><b class="D" title="Uavgjort"></b><b class="L" title="Tap"></b><b class="W" title="Seier"></b></span><b class="form5" title="5 av 15 poeng i de fem siste">3,3</b></td><td class="odds gull hide-xs pc-zero">–</td><td class="odds p3 pc-zero">&lt;1 %</td><td class="odds ned pc-mid">3 %</td></tr><tr data-team="HamKam" class=""><td class="pos">12</td><td class="team"><span class="teamname" data-team="HamKam" role="button" tabindex="0" title="Følg HamKam"><span class="lg">HamKam</span><span class="sm"> HamKam</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">7</td><td class="hide-s">5</td><td class="hide-s">11</td><td class="hide-s">33-48</td>
+      <td class="gd hide-diff">-15</td><td class="pts" title="26 poeng nå. Maks mulig sluttsum: 47.">26</td>
+      <td class="formcol"><button type="button" class="formbox red" data-team="HamKam" title="3,9 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 3,9 av 10 for HamKam. Vis styrkegrafen.">3,9</button></td>
+      <td class="hide-s"><span class="form"><b class="L" title="Tap"></b><b class="L" title="Tap"></b><b class="L" title="Tap"></b><b class="W" title="Seier"></b><b class="L" title="Tap"></b></span><b class="form5" title="3 av 15 poeng i de fem siste">2,0</b></td><td class="odds gull hide-xs pc-zero">–</td><td class="odds p3 pc-zero">&lt;1 %</td><td class="odds ned pc-mid">6 %</td></tr><tr data-team="Sandefjord" class="cut"><td class="pos">13</td><td class="team"><span class="teamname" data-team="Sandefjord" role="button" tabindex="0" title="Følg Sandefjord"><span class="lg">Sandefjord</span><span class="sm"> Sandefjord</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">6</td><td class="hide-s">6</td><td class="hide-s">11</td><td class="hide-s">22-30</td>
+      <td class="gd hide-diff">-8</td><td class="pts" title="24 poeng nå. Maks mulig sluttsum: 45.">24</td>
+      <td class="formcol"><button type="button" class="formbox yellow" data-team="Sandefjord" title="4,2 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 4,2 av 10 for Sandefjord. Vis styrkegrafen.">4,2</button></td>
+      <td class="hide-s"><span class="form"><b class="D" title="Uavgjort"></b><b class="L" title="Tap"></b><b class="W" title="Seier"></b><b class="D" title="Uavgjort"></b><b class="L" title="Tap"></b></span><b class="form5" title="5 av 15 poeng i de fem siste">3,3</b></td><td class="odds gull hide-xs pc-zero">–</td><td class="odds p3 pc-zero">&lt;1 %</td><td class="odds ned pc-mid">10 %</td></tr><tr data-team="Aalesund" class="playoff"><td class="pos">14</td><td class="team"><span class="teamname" data-team="Aalesund" role="button" tabindex="0" title="Følg Aalesund"><span class="lg">Aalesund</span><span class="sm"> Aalesund</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">5</td><td class="hide-s">9</td><td class="hide-s">9</td><td class="hide-s">39-51</td>
+      <td class="gd hide-diff">-12</td><td class="pts" title="24 poeng nå. Maks mulig sluttsum: 45.">24</td>
+      <td class="formcol"><button type="button" class="formbox yellow" data-team="Aalesund" title="4,3 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 4,3 av 10 for Aalesund. Vis styrkegrafen.">4,3</button></td>
+      <td class="hide-s"><span class="form"><b class="W" title="Seier"></b><b class="L" title="Tap"></b><b class="W" title="Seier"></b><b class="L" title="Tap"></b><b class="W" title="Seier"></b></span><b class="form5" title="9 av 15 poeng i de fem siste">6,0</b></td><td class="odds gull hide-xs pc-zero">–</td><td class="odds p3 pc-zero">&lt;1 %</td><td class="odds ned pc-mid">15 %</td></tr><tr data-team="Kristiansund" class="ned"><td class="pos">15</td><td class="team"><span class="teamname" data-team="Kristiansund" role="button" tabindex="0" title="Følg Kristiansund"><span class="lg">Kristiansund</span><span class="sm"> KBK</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">5</td><td class="hide-s">4</td><td class="hide-s">14</td><td class="hide-s">23-47</td>
+      <td class="gd hide-diff">-24</td><td class="pts" title="19 poeng nå. Maks mulig sluttsum: 40.">19</td>
+      <td class="formcol"><button type="button" class="formbox red" data-team="Kristiansund" title="3,6 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 3,6 av 10 for Kristiansund. Vis styrkegrafen.">3,6</button></td>
+      <td class="hide-s"><span class="form"><b class="W" title="Seier"></b><b class="L" title="Tap"></b><b class="L" title="Tap"></b><b class="L" title="Tap"></b><b class="L" title="Tap"></b></span><b class="form5" title="3 av 15 poeng i de fem siste">2,0</b></td><td class="odds gull hide-xs pc-zero">–</td><td class="odds p3 pc-zero">&lt;1 %</td><td class="odds ned pc-hi">76 %</td></tr><tr data-team="Start" class="ned"><td class="pos">16</td><td class="team"><span class="teamname" data-team="Start" role="button" tabindex="0" title="Følg Start"><span class="lg">Start</span><span class="sm"> Start</span></span><span class="badge"></span></td><td class="spilt">23</td>
+      <td class="hide-s">4</td><td class="hide-s">4</td><td class="hide-s">15</td><td class="hide-s">25-54</td>
+      <td class="gd hide-diff">-29</td><td class="pts" title="16 poeng nå. Maks mulig sluttsum: 37.">16</td>
+      <td class="formcol"><button type="button" class="formbox yellow" data-team="Start" title="4,2 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen." aria-label="Styrke 4,2 av 10 for Start. Vis styrkegrafen.">4,2</button></td>
+      <td class="hide-s"><span class="form"><b class="L" title="Tap"></b><b class="W" title="Seier"></b><b class="L" title="Tap"></b><b class="L" title="Tap"></b><b class="L" title="Tap"></b></span><b class="form5" title="3 av 15 poeng i de fem siste">2,0</b></td><td class="odds gull hide-xs pc-zero">–</td><td class="odds p3 pc-zero">–</td><td class="odds ned pc-hi">90 %</td></tr><!-- /STATISK-TABELL --></tbody>
       </table>
         </div>
         <div class="badge-tip" id="badgeTip" hidden></div>
@@ -1830,8 +1903,12 @@ function probOf(team,key){
   return medStatus(zoneSum(d, key), soneStatus(team, key));
 }
 // Kolonnenavnene i tabellen, både som overskrift og når kolonnen er sortert.
+// Fullt og kort navn (lg/sm) har et mellomrom først i det korte, så teksten
+// søkemotorer leser, er "Nedrykk Nedr." og "Rosenborg RBK", ikke ett ord
+// (20.10.2026). CSS viser bare det ene, og et mellomrom først på linja synes
+// ikke; mellom spanene ville det gitt et mellomrom før merket på PC.
 const SORT_LABELS = Object.assign({form:'Styrke', form5:'Form'}, Object.fromEntries(LEAGUE.cols.map(c =>
-  [c.key, c.headSm ? `<span class="lg">${c.head}</span><span class="sm">${c.headSm}</span>` : c.head])));
+  [c.key, c.headSm ? `<span class="lg">${c.head}</span><span class="sm"> ${c.headSm}</span>` : c.head])));
 // Fyller inn alt i markupen som er ligaspesifikt: kolonneoverskrifter,
 // fargeforklaringen under tabellen og titlene på oppsummeringskortene.
 // Ligaene på nettstedet. Står her, utenfor den byttede regionen, så begge
@@ -8050,6 +8127,9 @@ function updateToolButtons(){
   else line.hidden=true;
 }
 function render(){
+  // Den statiske tabellen i HTML-en er tatt over: merknaden om når den ble
+  // regnet, hører til den (se STATISK-* over tabellen).
+  const statiskNote = document.getElementById('statiskNote'); if(statiskNote) statiskNote.remove();
   refreshLiveState();
   renderModelTbl();
   fillProb();
@@ -8103,7 +8183,7 @@ function render(){
       // Modellkolonnene (Form, Gull, Europa, Ned) og merkene gjelder bare nå-situasjonen.
       tr.dataset.team=r.name;
       tr.className=[bandClass(pos),r.name===SELECTED_TEAM?'followed':'',LEAGUE.cuts.includes(pos)?'cut':''].join(' ').trim();
-      tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="spilt">${r.p}</td>
+      tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm"> ${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="spilt">${r.p}</td>
         <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
         <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts"${r.just?` title="${justTittel(r.pts, r.just)}"`:''}>${poengMedMerke(r.pts, r.just)}</td>
         <td class="formcol hh"></td><td class="hide-s">${femSisteHtml(somListe(r.results))}${form5Html(form5AvListe(somListe(r.results)), somListe(r.results))}</td><td class="odds gull hide-xs hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
@@ -8119,7 +8199,7 @@ function render(){
     const changeTxt = r.formChange>=0.05?`Opp ${f1(r.formChange)} siden forrige modelloppdatering.`
       : r.formChange<=-0.05?`Ned ${f1(Math.abs(r.formChange))} siden forrige modelloppdatering.`
       : 'Uendret siden forrige modelloppdatering.';
-    tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm">${shortTeam(r.name)}</span></span><span class="badge"></span>${diff}</td><td class="spilt">${r.p}</td>
+    tr.innerHTML=`<td class="pos"${posTitle?` title="${posTitle}"`:''}>${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm"> ${shortTeam(r.name)}</span></span><span class="badge"></span>${diff}</td><td class="spilt">${r.p}</td>
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
       <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.just?justTittel(r.pts, r.just):`${r.pts} poeng nå.`} Maks mulig sluttsum: ${r.max}.">${poengMedMerke(r.pts, r.just)}</td>
       <td class="formcol"><button type="button" class="formbox ${formCls}" data-team="${r.name}" title="${f1(r.form)} av 10. ${changeTxt} Trykk for styrkegrafen." aria-label="Styrke ${f1(r.form)} av 10 for ${r.name}. Vis styrkegrafen.">${f1(r.form)}</button></td>

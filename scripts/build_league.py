@@ -15,6 +15,8 @@ sjekker at den delte delen er identisk.
 import sys
 from pathlib import Path
 
+from statisk_region import med_statiske, statiske
+
 ROOT = Path(__file__).parent.parent
 SRC = ROOT / "eliteserien" / "index.html"
 
@@ -64,7 +66,15 @@ def render(league):
     doctype = "<!DOCTYPE html>\n"
     if out.startswith(doctype):
         out = doctype + BANNER.format(dir=league) + out[len(doctype):]
-    return out
+    # Den statiske tabellen (STATISK-*, scripts/statisk_region.py): ligaens
+    # egen, fra siden slik den står, ikke Eliteserien-sidens. Mangler en region
+    # der, eller er den tom: tom, bortsett fra STATISK-KOLONNER, som har
+    # overskriftscellene siden trenger og tas fra kilden (uten dem stopper JS,
+    # 20.10.2026).
+    dest = ROOT / league / "index.html"
+    egne = statiske(dest.read_text(encoding="utf-8")) if dest.exists() else {}
+    kilde = {k: (v if k == "KOLONNER" else "") for k, v in statiske(out).items()}
+    return med_statiske(out, {**kilde, **{k: v for k, v in egne.items() if v.strip()}})
 
 
 def build(league, check=False):

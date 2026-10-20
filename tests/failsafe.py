@@ -5,6 +5,7 @@ Kjøres av tests/run.sh, uten nett og uten nøkkel: kildene simuleres.
 """
 import json
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -877,10 +878,48 @@ def main():
     check("grunnlag.yml: porten sjekkes på nytt i regnejobben før Chrome, så regnes og lagres det",
           0 < i_p2 < i_nd < i_rg < i_lg and "concurrency:\n      group: grunnlag-${{ matrix.liga }}\n      cancel-in-progress: false" in gw
           and "if: needs.port.outputs.ligaer != '[]'" in gw, f"{i_p2} {i_nd} {i_rg} {i_lg}")
-    check("grunnlag.yml: fast N (ingen --n), filen der porten sier, og bare grunnlagsfilen og banneret committes",
+    check("grunnlag.yml: fast N (ingen --n), filen der porten sier, og bare grunnlagsfilen, banneret og ligasiden (den statiske tabellen) committes, så sitemap.xml",
           i_rg > 0 and "--n" not in gst[i_rg] and '--ut "$UT"' in gst[i_rg] and "UT: ${{ steps.port.outputs.ut }}" in gst[i_rg]
           and 'git add "$UT/grunnlag.json"\n' in gst[i_lg] and '[ -f "$UT/keymatch.json" ] && git add "$UT/keymatch.json"' in gst[i_lg]
-          and gst[i_lg].count("git add") == 2 and "bash scripts/push_med_rebase.sh" in gst[i_lg])
+          and 'git add "${{ matrix.liga }}/index.html"' in gst[i_lg]
+          and gst[i_lg].count("git add") == 3 and "bash scripts/push_med_rebase.sh" in gst[i_lg]
+          and gst[i_lg].index("bash scripts/push_med_rebase.sh") < gst[i_lg].index("bash scripts/push_sitemap.sh"))
+    # Google (20.10.2026): den statiske tabellen. lag_grunnlag.js skriver
+    # regionene STATISK-* fra siden selv; porten ser bort fra dem, bygget
+    # beholder ligaens egne, og sitemap.xml har én skriver (push_sitemap.sh i
+    # grunnlag.yml), med lastmod fra når tabellen ble regnet.
+    import shutil, tempfile
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import grunnlag_port, statisk_region
+    for liga in ("eliteserien", "obos"):
+        t = (ROOT / liga / "index.html").read_text(encoding="utf-8")
+        r = statisk_region.statiske(t)
+        check(f"statisk tabell: {liga}/index.html har regionene KOLONNER, OPPDATERT og TABELL, med overskriftscellene og rader",
+              set(r) == {"KOLONNER", "OPPDATERT", "TABELL"} and all(f'id="{x}"' in r["KOLONNER"] for x in ("gullHeader", "europaHeader", "nedHeader"))
+              and r["TABELL"].count("<tr ") == 16 and r["OPPDATERT"].startswith("Oppdatert "), {k: len(v) for k, v in r.items()})
+        with tempfile.TemporaryDirectory() as tmp:
+            c = grunnlag_port.SIDER[liga]
+            for rel in {c["side"], c["modell"], "scripts/lag_grunnlag.js"}:
+                (Path(tmp) / rel).parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy(ROOT / rel, Path(tmp) / rel)
+            shutil.copytree(ROOT / c["data"], Path(tmp) / c["data"], dirs_exist_ok=True)
+            h1 = grunnlag_port.inndata(liga, Path(tmp))
+            (Path(tmp) / c["side"]).write_text(statisk_region.med_statiske(t, {**r, "TABELL": "<tr><td>annet</td></tr>", "OPPDATERT": "Oppdatert i går"}), encoding="utf-8")
+            h2 = grunnlag_port.inndata(liga, Path(tmp))
+            (Path(tmp) / c["side"]).write_text(t + "\n<!-- endret kode -->\n", encoding="utf-8")
+            h3 = grunnlag_port.inndata(liga, Path(tmp))
+        check(f"statisk tabell: grunnlag-porten for {liga} ser bort fra den statiske tabellen, men ikke fra koden", h1 == h2 and h1 != h3)
+    eli_lag = set(re.findall(r'data-team="([^"]+)"', statisk_region.statiske((ROOT / "eliteserien" / "index.html").read_text(encoding="utf-8"))["TABELL"]))
+    obos_lag = set(re.findall(r'data-team="([^"]+)"', statisk_region.statiske((ROOT / "obos" / "index.html").read_text(encoding="utf-8"))["TABELL"]))
+    check("statisk tabell: OBOS-siden har sin egen tabell, ikke Eliteserien-sidens", obos_lag and not (obos_lag & eli_lag))
+    uw = (ROOT / ".github" / "workflows" / "update-data.yml").read_text(encoding="utf-8")
+    ms = (ROOT / "scripts" / "make_sitemap.py").read_text(encoding="utf-8")
+    check("sitemap.xml: én skriver (push_sitemap.sh i grunnlag.yml), ikke update-data.yml, og lastmod fra grunnlagsfilen",
+          "make_sitemap.py" not in "\n".join(l for l in uw.splitlines() if not l.lstrip().startswith("#")) and "sitemap.xml" not in uw.split("git add eliteserien/og.png")[1].split("\n")[0]
+          and 'grunnlag.json' in ms and '"laget"' in ms and "make_sitemap.py" in (ROOT / "scripts" / "push_sitemap.sh").read_text(encoding="utf-8"))
+    for liga, navn in (("eliteserien", "Eliteserien"), ("obos", "OBOS-ligaen")):
+        tit = re.search(r"<title>(.*?)</title>", (ROOT / liga / "index.html").read_text(encoding="utf-8")).group(1)
+        check(f"søk: tittelen på {liga}/index.html begynner med «Tabellkalkulator {navn} 2026: sjanse for»", tit.startswith(f"Tabellkalkulator {navn} 2026: sjanse for"), tit)
     # Banneret (keymatch.json) har én skriver: lag_grunnlag.js, fra
     # grunnlagsfilen, i grunnlag.yml. To jobber som committer samme fil, kan
     # gi rebasekonflikt, og da kan en datajobb miste commiten sin.

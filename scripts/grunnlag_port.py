@@ -44,6 +44,9 @@ import os
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from statisk_region import uten_statisk  # noqa: E402
+
 ROOT = Path(__file__).parent.parent
 # Per side: siden, mappen med kampdata og odds, modellfilen, feltene i den
 # som teller (None: alle unntatt tidsstempel og note), og mappen filen ligger i.
@@ -76,7 +79,9 @@ def inndata(side, root=ROOT):
 
     felt = c["felt"]
     deler = {
-        "side": hashlib.sha256((root / c["side"]).read_bytes()).hexdigest(),
+        # Den statiske tabellen (STATISK-*) skrives av lag_grunnlag.js selv og
+        # er ikke noe siden regner med: den teller ikke (20.10.2026).
+        "side": hashlib.sha256(uten_statisk((root / c["side"]).read_text(encoding="utf-8")).encode("utf-8")).hexdigest(),
         "skript": hashlib.sha256((root / "scripts" / "lag_grunnlag.js").read_bytes()).hexdigest(),
         "modell": les(root / c["modell"], lambda m: {k: m.get(k) for k in felt} if felt
                       else {k: v for k, v in m.items() if k not in UTEN}),

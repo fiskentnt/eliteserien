@@ -108,12 +108,13 @@ jobs:
         continue-on-error: true  # skal aldri stoppe datoppdateringen
         run: python3 scripts/accuracy_log.py eliteserien
 
-      - name: Lag delingsbilde (toppen av tabellen) og sitemap
+      - name: Lag delingsbilde (toppen av tabellen)
         if: ${{ !cancelled() && steps.gate.outputs.should_fetch == 'true' && (steps.oppdater.outcome == 'success' || steps.oppdater.outputs.data_skrevet == 'true') }}
         continue-on-error: true  # et feilet bilde skal ikke stoppe datoppdateringen
         run: |
           python3 scripts/make_og.py --league
-          python3 scripts/make_sitemap.py
+          # sitemap.xml lages av grunnlag-workflowen (scripts/push_sitemap.sh),
+          # med lastmod fra når tabellen sist ble regnet (20.10.2026).
 
       - name: Daglig revisjon av terminlisten mot kalenderfeeden
         id: revisjon
@@ -229,7 +230,7 @@ jobs:
           [ -f eliteserien/data/lastmatch.json ] && git add eliteserien/data/lastmatch.json
           [ -f eliteserien/data/prekick.json ] && git add eliteserien/data/prekick.json
           [ -f eliteserien/data/accuracy.json ] && git add eliteserien/data/accuracy.json
-          git add eliteserien/og.png sitemap.xml
+          git add eliteserien/og.png
           if git diff --cached --quiet; then
             echo "Ingen endringer i kampdata."
           else
