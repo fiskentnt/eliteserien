@@ -884,7 +884,8 @@ def main():
           and i_rg < i_ls < i_lg and "continue-on-error: true" in gst[i_ls]
           and 'git add "$UT/grunnlag.json"\n' in gst[i_lg] and '[ -f "$UT/keymatch.json" ] && git add "$UT/keymatch.json"' in gst[i_lg]
           and '[ -f "$UT/tekster.json" ] && git add "$UT/tekster.json"' in gst[i_lg] and 'git add "${{ matrix.liga }}/index.html"' in gst[i_lg]
-          and gst[i_lg].count("git add") == 4 and "bash scripts/push_med_rebase.sh" in gst[i_lg]
+          and "git add index.html" in gst[i_lg]
+          and gst[i_lg].count("git add") == 5 and "bash scripts/push_med_rebase.sh" in gst[i_lg]
           and gst[i_lg].index("bash scripts/push_med_rebase.sh") < gst[i_lg].index("bash scripts/push_sitemap.sh"))
     # Google (20.10.2026): den statiske tabellen. lag_grunnlag.js skriver
     # regionene STATISK-* fra siden selv; porten ser bort fra dem, bygget
@@ -902,11 +903,18 @@ def main():
               and all(set(r["sjanser"]) == {"gull", "europa", "ned"} and all("vist" in v and "andel" in v for v in r["sjanser"].values()) for r in rd)
               and [k["key"] for k in tk["tabell"]["kolonner"]] == ["gull", "europa", "ned"] and tk["tabell"]["rader_html"].count("<tr ") == 16)
         check(f"lag_sider.py: {liga}/index.html er laget fra tekster.json (lag_sider.py --check)", lag_sider.ligaside(liga) == (ROOT / liga / "index.html").read_text(encoding="utf-8"))
+        op = statisk_region.statiske((ROOT / liga / "index.html").read_text(encoding="utf-8")).get("OPPSUMMERING", "")
+        check(f"oppsummering: {liga}/index.html har setningene øverst (ledere, nærmest nedrykk, rundens viktigste kamp) med «Oppdatert»",
+              rd[0]["lag"] in op and "ligger nærmest" in op and 'class="opps-kamp"' in op and 'class="opps-dato">Oppdatert ' in op, op[:120])
+    fs_ = statisk_region.statiske((ROOT / "index.html").read_text(encoding="utf-8"))
+    check("oppsummering: forsiden har den korte oppsummeringen for begge ligaene, laget fra tekster.json",
+          all(fs_.get(k, "").count("Oppdatert ") == 1 and "ligger nærmest" in fs_.get(k, "") for k in ("ELITESERIEN", "OBOS"))
+          and lag_sider.forside() == (ROOT / "index.html").read_text(encoding="utf-8"), {k: len(fs_.get(k, "")) for k in ("ELITESERIEN", "OBOS")})
     for liga in ("eliteserien", "obos"):
         t = (ROOT / liga / "index.html").read_text(encoding="utf-8")
         r = statisk_region.statiske(t)
-        check(f"statisk tabell: {liga}/index.html har regionene KOLONNER, OPPDATERT og TABELL, med overskriftscellene og rader",
-              set(r) == {"KOLONNER", "OPPDATERT", "TABELL"} and all(f'id="{x}"' in r["KOLONNER"] for x in ("gullHeader", "europaHeader", "nedHeader"))
+        check(f"statisk tabell: {liga}/index.html har regionene KOLONNER, OPPDATERT, TABELL og OPPSUMMERING, med overskriftscellene og rader",
+              set(r) == {"KOLONNER", "OPPDATERT", "TABELL", "OPPSUMMERING"} and all(f'id="{x}"' in r["KOLONNER"] for x in ("gullHeader", "europaHeader", "nedHeader"))
               and r["TABELL"].count("<tr ") == 16 and r["OPPDATERT"].startswith("Oppdatert "), {k: len(v) for k, v in r.items()})
         with tempfile.TemporaryDirectory() as tmp:
             c = grunnlag_port.SIDER[liga]

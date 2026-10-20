@@ -4546,6 +4546,30 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       check(`${side}: tabellen uten JavaScript er den i tekster.json (lag, poeng og sjanser)`,
         JSON.stringify(u.lag) === JSON.stringify(tk.map(r => r.lag)) && JSON.stringify(u.poeng) === JSON.stringify(tk.map(r => r.poeng_vist))
           && JSON.stringify(u.tall) === JSON.stringify(tk.map(r => ['gull', 'europa', 'ned'].map(k => r.sjanser[k].vist))), JSON.stringify({u: u.lag.slice(0, 3), tk: tk.slice(0, 3).map(r => r.lag)}));
+      // Oppsummeringen øverst (fase 1a): tallene er de samme som i tabellen i
+      // tekster.json, med rundens viktigste kamp og «Oppdatert».
+      const tkHel = JSON.parse(fs.readFileSync(path.join(ROOT, side, 'data', 'tekster.json'), 'utf8'));
+      const oppsFeil = (tekst, ventetKamp) => {
+        const f = [];
+        for (const r of tkHel.tabell.rader) {
+          const esc = r.lag.replace(/[.*+?^${}()|[\]\\/]/g, '\\$&');
+          for (const m of tekst.matchAll(new RegExp(`${esc} \\(?(\\S+)\u00a0%`, 'g')))
+            if (!Object.values(r.sjanser).some(s => s.vist === `${m[1]} %`)) f.push(`${r.lag} ${m[1]} %`);
+        }
+        if (!/Oppdatert \d+\. \S+ \d{4} kl\. \d\d\.\d\d\./.test(tekst)) f.push('uten «Oppdatert»');
+        if (ventetKamp && tkHel.viktigste && !tekst.includes(tkHel.viktigste.banner)) f.push('uten rundens viktigste kamp');
+        return f;
+      };
+      const opsU = await (async () => { const pu = await browser.newPage(); await pu.setJavaScriptEnabled(false);
+        await pu.goto(url, {waitUntil: 'domcontentloaded'}); const t = await pu.evaluate(() => (document.getElementById('oppsummering') || {}).textContent || '');
+        await pu.goto(base.replace('/eliteserien/', '/'), {waitUntil: 'domcontentloaded'});
+        const f = await pu.evaluate(s => { const p = [...document.querySelectorAll('p.naa')]; return p.map(x => x.textContent); }, side);
+        await pu.close(); return {t, forside: f}; })();
+      check(`${side}: uten JavaScript står oppsummeringen øverst, med de samme tallene som tabellen i tekster.json («${opsU.t.slice(0, 60)}...»)`,
+        opsU.t.length > 40 && !oppsFeil(opsU.t, true).length, oppsFeil(opsU.t, true).join('; '));
+      const fsTekst = opsU.forside[side === 'eliteserien' ? 0 : 1] || '';
+      check(`forsiden: uten JavaScript står den korte oppsummeringen for ${side}, med de samme tallene`, fsTekst.length > 30 && !oppsFeil(fsTekst, false).length,
+        oppsFeil(fsTekst, false).join('; ') + ' ' + fsTekst.slice(0, 80));
       check(`${side}: uten JavaScript står tabellen med ${u.rader} lag, poeng og tre sjanser per lag, overskriftene (${u.kol.join(', ')}) og «${u.note.slice(0, 45)}...»`,
         u.rader === 16 && new Set(u.lag).size === 16 && u.poeng.every(p => /^\*?\d+$/.test(p)) && u.tall.every(t => t.length === 3 && t.every(x => /%|–/.test(x)))
           && u.kol.every(k => k.length > 1) && /^Oppdatert \d+\. \S+ \d{4} kl\. \d\d\.\d\d\. Sjansene for /.test(u.note), JSON.stringify(u).slice(0, 400));
@@ -4554,6 +4578,20 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await settle(med);
       const m = await med.evaluate(() => ({rader: document.querySelectorAll('#tbl tbody tr').length, note: !!document.getElementById('statiskNote'),
         forst: (document.querySelector('#tbl tbody tr') || {dataset: {}}).dataset.team, sidenForst: compute().rows[0].name}));
+      // Med JavaScript står oppsummeringen; rundens viktigste kamp skjules der
+      // bare når banneret rett under viser den samme setningen.
+      const ok = await med.evaluate(async () => {
+        const k = document.querySelector('#oppsummering .opps-kamp'), b = document.getElementById('qaHighlight');
+        const foer = {finnes: !!document.getElementById('oppsummering'), skjult: !!(k && k.hidden), lik: !!(k && b.dataset.qid === 'keyround' && b.textContent.trim() === k.textContent.trim())};
+        // Samme setning i begge: skjult (testdataene har en annen kamp i banneret).
+        const gml = k.textContent; k.textContent = b.textContent.trim(); renderQaHighlight(); await new Promise(r => setTimeout(r, 0));
+        const sammeSkjult = k.hidden; k.textContent = gml;
+        const sel = document.getElementById('teamSelect'); sel.value = TEAMS[0]; sel.dispatchEvent(new Event('change'));
+        await new Promise(r => setTimeout(r, 300));
+        return {...foer, sammeSkjult, etterLag: !!(k && k.hidden)};
+      });
+      check(`${side}: med JavaScript står oppsummeringen; kampen skjules bare når banneret sier det samme (${ok.lik ? 'skjult' : 'vist'}), og vises med et lag valgt`,
+        ok.finnes && ok.skjult === ok.lik && ok.sammeSkjult && !ok.etterLag, JSON.stringify(ok));
       await med.close();
       check(`${side}: med JavaScript tar tabellen over (${m.rader} rader, først ${m.forst}), og merknaden fra den statiske tabellen er borte`,
         m.rader === 16 && !m.note && m.forst === m.sidenForst, JSON.stringify(m));

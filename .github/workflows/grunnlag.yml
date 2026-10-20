@@ -160,6 +160,8 @@ jobs:
           # ligasidene", grunnlag), og ingen av dem teller i porten.
           [ -f "$UT/tekster.json" ] && git add "$UT/tekster.json"
           git add "${{ matrix.liga }}/index.html"
+          # Forsiden har ligaens korte oppsummering (STATISK-<LIGA>, fase 1a).
+          git add index.html
           if git diff --cached --quiet; then echo "Uendret."; exit 0; fi
           git commit -q -m "Grunnlag (${{ matrix.liga }}) $(date -u +%Y-%m-%dT%H:%MZ)"
           bash scripts/push_med_rebase.sh

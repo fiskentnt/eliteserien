@@ -117,6 +117,9 @@
   .steps{margin:0;padding-left:20px;color:var(--muted);max-width:62ch}
   .steps li{margin:4px 0}
   footer{margin-top:44px;color:var(--muted);font-size:13.5px}
+  .naa-liga{font:700 17px/1.2 "Barlow Condensed","Arial Narrow",sans-serif;margin:16px 0 4px}
+  .naa{color:var(--ink)}
+  .naa .opps-dato{color:var(--muted);font-size:13.5px;white-space:nowrap}
   a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 </head>
@@ -147,6 +150,16 @@
         </a>
       </li>
     </ul>
+
+    <!-- Akkurat nå (fase 1a, 20.10.2026): den korte oppsummeringen for hver
+         liga, skrevet av scripts/lag_sider.py fra <liga>/data/tekster.json.
+         Én region per liga, med fast tekst imellom, så de to grunnlag-jobbene
+         aldri endrer tilstøtende linjer. -->
+    <h2>Akkurat nå</h2>
+    <h3 class="naa-liga">Eliteserien</h3>
+    <p class="naa"><!-- STATISK-ELITESERIEN -->Bodø/Glimt har 69 % sjanse for gull og Viking 31 %. Start (90 %) og Kristiansund (76 %) ligger nærmest nedrykk. <span class="opps-dato">Oppdatert 20. oktober 2026 kl. 04.42.</span><!-- /STATISK-ELITESERIEN --></p>
+    <h3 class="naa-liga">OBOS-ligaen</h3>
+    <p class="naa"><!-- STATISK-OBOS -->Strømsgodset har 84 % sjanse for opprykk, Haugesund 74 % og Kongsvinger 42 %. Raufoss (94 %) og Åsane (93 %) ligger nærmest nedrykk. <span class="opps-dato">Oppdatert 20. oktober 2026 kl. 04.38.</span><!-- /STATISK-OBOS --></p>
 
     <h2>Slik bruker du den</h2>
     <ol class="steps">

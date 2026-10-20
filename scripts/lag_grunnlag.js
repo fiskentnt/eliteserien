@@ -46,8 +46,8 @@
  * utenfor kalkulatoren trenger, slik siden selv viser det, og skrives til
  * <ut>/tekster.json: tabellen (radene i #tbl som HTML, sortert med innbyrdes
  * oppgjør, og de samme tallene strukturert: poeng, kamper, sjansene med vist
- * tekst og andel) og overskriftene for sjansene, med når filen ble regnet og
- * antall sesonger. Chrome henter, Python lager sidene: scripts/lag_sider.py
+ * tekst og andel) og overskriftene for sjansene, rundens viktigste kamp
+ * (bannerteksten), med når filen ble regnet og antall sesonger. Chrome henter, Python lager sidene: scripts/lag_sider.py
  * skriver de statiske delene av sidene fra tekster.json, uten Chrome. Ingen
  * tall regnes utenfor siden. tekster.json teller ikke i grunnlag-porten.
  * Feiler dette, skrives grunnlagsfilen likevel, med en advarsel. Testsiden
@@ -166,7 +166,11 @@ const harStatisk = () => /<!-- STATISK-TABELL -->/.test(fs.readFileSync(SIDEFIL,
 async function hentTekster(page) {
   await page.waitForFunction('lastMCFinal===true && lastYtterSig===badgeSignatureOf(compute().rows, matches.filter(isEmpty).map(m=>[m.home,m.away]))',
     {timeout: 120000, polling: 100});
-  return page.evaluate(() => {
+  return page.evaluate(async () => {
+    // Rundens viktigste kamp: bannerteksten slik siden lager den fra filen
+    // (samme som keymatch.json), til oppsummeringen (fase 1a).
+    let viktigste = null;
+    try { const k = keymatchFra(await qaKeyRoundData()); if (k) viktigste = {banner: k.banner, runde: k.round, sone: k.zone}; } catch (e) {}
     const kolonner = ['gull', 'europa', 'ned'].map(key => { const c = LEAGUE.cols.find(x => x.key === key) || {};
       return {key, navn: c.head, kort: c.headSm || null}; });
     const tb = document.querySelector('#tbl tbody'), rad = Object.fromEntries(compute().rows.map(r => [r.name, r]));
@@ -177,7 +181,7 @@ async function hentTekster(page) {
         sjanser: Object.fromEntries(kolonner.map(c => { const v = zoneSum(d, c.key), st = soneStatus(r.name, c.key);
           return [c.key, {vist: sjanseCelle(v, st).tekst, andel: Math.round(v * 1e6) / 1e6, avgjort: st}]; }))};
     });
-    return {status: GRUNNLAG_STATUS, sesonger: lastMCN, lag: TEAMS.length, tabell: {kolonner,
+    return {status: GRUNNLAG_STATUS, sesonger: lastMCN, lag: TEAMS.length, viktigste, tabell: {kolonner,
       kolonner_html: ['gullHeader', 'europaHeader', 'nedHeader'].map(id => document.getElementById(id).outerHTML).join('\n          '),
       rader_html: tb.innerHTML, rader}};
   });
@@ -187,7 +191,7 @@ function skrivTekster(t, laget, N) {
     throw new Error(`siden viste ikke tabellen fra filen (${t.status}, ${t.sesonger} sesonger, ${t.tabell.rader.length} av ${t.lag} rader)`);
   const ut = {versjon: 1, side: SIDE, laget, sesonger: t.sesonger,
     note: 'Hentet av scripts/lag_grunnlag.js fra siden selv med grunnlagsfilen i bruk. scripts/lag_sider.py lager de statiske sidene fra denne filen.',
-    tabell: t.tabell};
+    tabell: t.tabell, viktigste: t.viktigste};
   const json = JSON.stringify(ut, null, 1) + '\n', midl = TEKSTER + '.tmp';
   fs.writeFileSync(midl, json); JSON.parse(fs.readFileSync(midl, 'utf8')); fs.renameSync(midl, TEKSTER);
   console.log(`Skrev ${path.relative(ROOT, TEKSTER)} (${t.tabell.rader.length} lag, ${(json.length / 1024).toFixed(0)} KB).`);

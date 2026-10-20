@@ -258,17 +258,22 @@
   /* Sidehode: tittel, undertittel, stempel og blikkfang-spørsmålet -- nøytralt,
      ikke lenger et fargefelt i lagets farge (laget viser seg i aksenten i
      navigasjonen og i markeringen i tabellen). */
-  .pagehead{max-width:1380px;margin:0 auto;padding:22px 24px 4px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title pick" "sub pick" "qa qa";column-gap:24px;align-items:start}
+  .pagehead{max-width:1380px;margin:0 auto;padding:22px 24px 4px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title pick" "sub pick" "opps opps" "qa qa";column-gap:24px;align-items:start}
   .pagehead .titlerow{grid-area:title}
   .pagehead .subline{grid-area:sub}
   .pagehead .qa-highlight{grid-area:qa}
+  .pagehead .oppsummering{grid-area:opps}
+  .oppsummering{margin:10px 0 0;max-width:86ch;font-size:14px;line-height:1.45;color:var(--ink)}
+  .oppsummering:empty{display:none}
+  .oppsummering .opps-dato{color:var(--muted);font-size:12.5px;white-space:nowrap}
+  @media (max-width:760px){.oppsummering{font-size:13.5px}}
   /* Lagvelgeren: tydelig etikett og ramme i lagets farge, så den er lett å finne. */
   .followpick{grid-area:pick;display:flex;align-items:center;gap:10px;align-self:center;margin:0}
   .followpick label{font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap}
   .followpick select{font:inherit;font-weight:700;font-size:15px;color:var(--ink);background:var(--panel);border:2px solid var(--team-fill);border-radius:10px;padding:8px 12px;min-width:190px;cursor:pointer}
   .followpick select:hover{background:var(--input-bg)}
   @media (max-width:760px){
-    .pagehead{padding:16px 16px 0;grid-template-columns:minmax(0,1fr);grid-template-areas:"title" "sub" "pick" "qa"}
+    .pagehead{padding:16px 16px 0;grid-template-columns:minmax(0,1fr);grid-template-areas:"title" "sub" "opps" "pick" "qa"}
     .followpick{margin:10px 0 0;align-self:start}
     .followpick select{flex:1;min-width:0}
   }
