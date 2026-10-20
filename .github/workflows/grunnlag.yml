@@ -162,6 +162,8 @@ jobs:
           git add "${{ matrix.liga }}/index.html"
           # Forsiden har ligaens korte oppsummering (STATISK-<LIGA>, fase 1a).
           git add index.html
+          # Spørsmålssidene (fase 2), når ligaen har dem.
+          git add "${{ matrix.liga }}"/hvem-*/index.html 2>/dev/null || true
           if git diff --cached --quiet; then echo "Uendret."; exit 0; fi
           git commit -q -m "Grunnlag (${{ matrix.liga }}) $(date -u +%Y-%m-%dT%H:%MZ)"
           bash scripts/push_med_rebase.sh

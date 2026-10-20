@@ -4,6 +4,11 @@
  "laget": "2026-10-20T03:37:24Z",
  "sesonger": 100000,
  "note": "Hentet av scripts/lag_grunnlag.js fra siden selv med grunnlagsfilen i bruk. scripts/lag_sider.py lager de statiske sidene fra denne filen.",
+ "liga": {
+  "navn": "Eliteserien",
+  "sesong": 2026,
+  "ferdig": false
+ },
  "tabell": {
   "kolonner": [
    {
@@ -565,5 +570,53 @@
   "banner": "Viking mot Tromsø påvirker kampen om topp 4 mest denne runden.",
   "runde": 12,
   "sone": "europa"
+ },
+ "sporsmal": {
+  "gull": {
+   "kolonne": "gull",
+   "lag": [
+    {
+     "lag": "Bodø/Glimt",
+     "sporsmal": "Hvorfor har Bodø/Glimt 69 % sjanse for gull?",
+     "hvorfor": "Bodø/Glimt har like mange poeng som Viking på andreplassen og er litt sterkere ifølge modellen (7,4 mot 6,7). Bodø/Glimt har også et lettere restprogram: motstanderne har i snitt 15 % vinnersjanse, mot 24 % for Viking.\n\nI simuleringene ender Bodø/Glimt i snitt på 72 poeng mot 69 for Viking, og vinner serien i 69 % av dem.",
+     "kamper": "Disse kampene påvirker Bodø/Glimts gullsjanse mest. Nå: 69 %\n\nBodø/Glimt mot Viking, runde 25, fredag 30. okt\nSeier: 87 % (+18 prosentpoeng)\nUavgjort: 63 % (−6 prosentpoeng)\nTap: 33 % (−36 prosentpoeng)\n\nBodø/Glimt mot Vålerenga, runde 12, lørdag 24. okt\nSeier: 72 % (+3 prosentpoeng)\nUavgjort: 55 % (−14 prosentpoeng)\nTap: 46 % (−23 prosentpoeng)\n\nBodø/Glimt mot KFUM Oslo, runde 28, lørdag 28. nov\nSeier: 72 % (+3 prosentpoeng)\nUavgjort: 56 % (−13 prosentpoeng)\nTap: 48 % (−21 prosentpoeng)"
+    },
+    {
+     "lag": "Viking",
+     "sporsmal": "Hvorfor har Viking 31 % sjanse for gull?",
+     "hvorfor": "Viking har like mange poeng som serieleder Bodø/Glimt og er litt svakere ifølge modellen (6,7 mot 7,4). Viking har også et tøffere restprogram: motstanderne har i snitt 24 % vinnersjanse, mot 15 % for Bodø/Glimt.\n\nI simuleringene ender Viking i snitt på 69 poeng mot 72 for Bodø/Glimt, og vinner serien i 31 % av dem.",
+     "kamper": "Disse kampene påvirker Vikings gullsjanse mest. Nå: 31 %\n\nBodø/Glimt mot Viking, runde 25, fredag 30. okt\nSeier: 67 % (+36 prosentpoeng)\nUavgjort: 37 % (+6 prosentpoeng)\nTap: 13 % (−18 prosentpoeng)\n\nBodø/Glimt mot Vålerenga, runde 12, lørdag 24. okt\nBodø/Glimt vinner: 28 % (−3 prosentpoeng)\nUavgjort: 45 % (+14 prosentpoeng)\nVålerenga vinner: 54 % (+23 prosentpoeng)\n\nBodø/Glimt mot KFUM Oslo, runde 28, lørdag 28. nov\nBodø/Glimt vinner: 28 % (−3 prosentpoeng)\nUavgjort: 44 % (+13 prosentpoeng)\nKFUM Oslo vinner: 52 % (+21 prosentpoeng)"
+    }
+   ]
+  },
+  "nedrykk": {
+   "kolonne": "ned",
+   "lag": [
+    {
+     "lag": "Start",
+     "sporsmal": "Hvorfor har Start 90 % sjanse for nedrykk?",
+     "hvorfor": "Start ligger åtte poeng bak Sandefjord på 13. plass og er omtrent like sterke ifølge modellen (4,2 mot 4,2). Aalesund og Kristiansund er også med i kampen om å unngå nedrykk.\n\nI simuleringene ender Start i snitt på 24 poeng mot 33 for Sandefjord, og rykker ned direkte i 90 % av dem.",
+     "kamper": "Disse kampene påvirker Starts nedrykksfare mest. Nå: 90 %\n\nRosenborg mot Start, runde 26, lørdag 7. nov\nSeier: 73 % (−17 prosentpoeng)\nUavgjort: 87 % (−3 prosentpoeng)\nTap: 93 % (+3 prosentpoeng)\n\nVålerenga mot Start, runde 27, lørdag 21. nov\nSeier: 76 % (−14 prosentpoeng)\nUavgjort: 90 % (endrer lite)\nTap: 94 % (+4 prosentpoeng)\n\nTromsø mot Start, runde 29, søndag 6. des\nSeier: 77 % (−13 prosentpoeng)\nUavgjort: 89 % (endrer lite)\nTap: 93 % (+3 prosentpoeng)"
+    },
+    {
+     "lag": "Kristiansund",
+     "sporsmal": "Hvorfor har Kristiansund 76 % sjanse for nedrykk?",
+     "hvorfor": "Kristiansund ligger fem poeng bak Sandefjord på 13. plass og er litt svakere ifølge modellen (3,6 mot 4,2). Aalesund er også med i kampen om å unngå nedrykk. Kristiansund har også et tøffere restprogram: motstanderne har i snitt 49 % vinnersjanse, mot 43 % for Sandefjord.\n\nI simuleringene ender Kristiansund i snitt på 27 poeng mot 33 for Sandefjord, og rykker ned direkte i 76 % av dem.",
+     "kamper": "Disse kampene påvirker Kristiansunds nedrykksfare mest. Nå: 76 %\n\nSarpsborg 08 mot Kristiansund, runde 25, søndag 1. nov\nSeier: 55 % (−21 prosentpoeng)\nUavgjort: 73 % (−3 prosentpoeng)\nTap: 82 % (+6 prosentpoeng)\n\nStart mot Kristiansund, runde 30, søndag 13. des\nSeier: 56 % (−20 prosentpoeng)\nUavgjort: 75 % (endrer lite)\nTap: 83 % (+7 prosentpoeng)\n\nKristiansund mot Sandefjord, runde 27, søndag 22. nov\nSeier: 61 % (−15 prosentpoeng)\nUavgjort: 81 % (+5 prosentpoeng)\nTap: 89 % (+13 prosentpoeng)"
+    },
+    {
+     "lag": "Aalesund",
+     "sporsmal": "Hvorfor har Aalesund 15 % sjanse for nedrykk?",
+     "hvorfor": "Aalesund har like mange poeng som Sandefjord på 13. plass og er omtrent like sterke ifølge modellen (4,3 mot 4,2). Aalesund har også et tøffere restprogram: motstanderne har i snitt 52 % vinnersjanse, mot 43 % for Sandefjord.\n\nI simuleringene ender Aalesund i snitt på 31 poeng mot 33 for Sandefjord, og rykker ned direkte i 15 % av dem.",
+     "kamper": "Disse kampene påvirker Aalesunds nedrykksfare mest. Nå: 15 %\n\nAalesund mot Sandefjord, runde 25, lørdag 31. okt\nSeier: 5 % (−10 prosentpoeng)\nUavgjort: 17 % (+2 prosentpoeng)\nTap: 27 % (+12 prosentpoeng)\n\nAalesund mot Rosenborg, runde 27, søndag 22. nov\nSeier: 5 % (−10 prosentpoeng)\nUavgjort: 13 % (−2 prosentpoeng)\nTap: 21 % (+6 prosentpoeng)\n\nFredrikstad mot Aalesund, runde 28, søndag 29. nov\nSeier: 5 % (−10 prosentpoeng)\nUavgjort: 14 % (endrer lite)\nTap: 22 % (+7 prosentpoeng)"
+    },
+    {
+     "lag": "Sandefjord",
+     "sporsmal": "Hvorfor har Sandefjord 10 % sjanse for nedrykk?",
+     "hvorfor": "Sandefjord har like mange poeng som Aalesund på 14. plass og er omtrent like sterke ifølge modellen (4,2 mot 4,3). Kristiansund og Start er også med i kampen om å unngå nedrykk. Sandefjord har også et lettere restprogram: motstanderne har i snitt 43 % vinnersjanse, mot 52 % for Aalesund.\n\nI simuleringene ender Sandefjord i snitt på 33 poeng mot 31 for Aalesund, og rykker ned direkte i 10 % av dem.",
+     "kamper": "Disse kampene påvirker Sandefjords nedrykksfare mest. Nå: 10 %\n\nKristiansund mot Sandefjord, runde 27, søndag 22. nov\nSeier: 2 % (−8 prosentpoeng)\nUavgjort: 8 % (−2 prosentpoeng)\nTap: 18 % (+8 prosentpoeng)\n\nAalesund mot Sandefjord, runde 25, lørdag 31. okt\nSeier: 2 % (−8 prosentpoeng)\nUavgjort: 8 % (−2 prosentpoeng)\nTap: 15 % (+5 prosentpoeng)\n\nStart mot Sandefjord, runde 12, søndag 25. okt\nSeier: 2 % (−8 prosentpoeng)\nUavgjort: 8 % (−2 prosentpoeng)\nTap: 16 % (+6 prosentpoeng)"
+    }
+   ]
+  }
  }
 }

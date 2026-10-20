@@ -184,7 +184,30 @@ async function hentTekster(page) {
         sjanser: Object.fromEntries(kolonner.map(c => { const v = zoneSum(d, c.key), st = soneStatus(r.name, c.key);
           return [c.key, {vist: sjanseCelle(v, st).tekst, andel: Math.round(v * 1e6) / 1e6, avgjort: st}]; }))};
     });
-    return {status: GRUNNLAG_STATUS, sesonger: lastMCN, lag: TEAMS.length, viktigste, tabell: {kolonner,
+    // Spørsmålssidene (fase 2): for toppsonen (gull; OBOS: direkte opprykk)
+    // og nedrykk de aktuelle lagene (sikret, eller minst 1 % i tabellen,
+    // størst først, høyst fire) med "Hvorfor"-svaret i Spør om tabellen for
+    // den sonen og "Hvilke kamper betyr mest" med sonen satt, for alle (det er
+    // ofte lag tre og fire det står om; qaTargetZone byttes bare mens svaret
+    // regnes).
+    const sporsmal = {};
+    for (const [kol, sone] of [['gull', 'gull'], ['ned', 'nedrykk']]) {
+      const sikret = r => r.sjanser[kol].avgjort === 1;
+      const aktuelle = rader.filter(r => sikret(r) || r.sjanser[kol].andel >= 0.01)
+        .sort((a, b) => (sikret(b) - sikret(a)) || (b.sjanser[kol].andel - a.sjanser[kol].andel)).slice(0, 4);
+      const lag = [];
+      for (const r of aktuelle) {
+        let sp, svar, kamper = null;
+        qaWhyZoneOverride = sone;
+        try { sp = qaWhyLabel(r.lag); svar = await qaWhy(r.lag); } finally { qaWhyZoneOverride = null; }
+        const ekte = qaTargetZone; qaTargetZone = t => qaZoneByKey(t, sone);
+        try { kamper = await qaKeyMatches(r.lag); } finally { qaTargetZone = ekte; }
+        lag.push({lag: r.lag, sporsmal: sp, hvorfor: svar, kamper});
+      }
+      sporsmal[sone] = {kolonne: kol, lag};
+    }
+    return {status: GRUNNLAG_STATUS, sesonger: lastMCN, lag: TEAMS.length, viktigste,
+      liga: {navn: LEAGUE.name, sesong: LEAGUE.season, ferdig: !matches.some(isEmpty)}, sporsmal, tabell: {kolonner,
       kolonner_html: ['gullHeader', 'europaHeader', 'nedHeader'].map(id => document.getElementById(id).outerHTML).join('\n          '),
       rader_html: tb.innerHTML, rader}};
   });
@@ -194,7 +217,7 @@ function skrivTekster(t, laget, N) {
     throw new Error(`siden viste ikke tabellen fra filen (${t.status}, ${t.sesonger} sesonger, ${t.tabell.rader.length} av ${t.lag} rader)`);
   const ut = {versjon: 1, side: SIDE, laget, sesonger: t.sesonger,
     note: 'Hentet av scripts/lag_grunnlag.js fra siden selv med grunnlagsfilen i bruk. scripts/lag_sider.py lager de statiske sidene fra denne filen.',
-    tabell: t.tabell, viktigste: t.viktigste};
+    liga: t.liga, tabell: t.tabell, viktigste: t.viktigste, sporsmal: t.sporsmal};
   const json = JSON.stringify(ut, null, 1) + '\n', midl = TEKSTER + '.tmp';
   fs.writeFileSync(midl, json); JSON.parse(fs.readFileSync(midl, 'utf8')); fs.renameSync(midl, TEKSTER);
   console.log(`Skrev ${path.relative(ROOT, TEKSTER)} (${t.tabell.rader.length} lag, ${(json.length / 1024).toFixed(0)} KB).`);

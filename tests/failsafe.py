@@ -884,8 +884,8 @@ def main():
           and i_rg < i_ls < i_lg and "continue-on-error: true" in gst[i_ls]
           and 'git add "$UT/grunnlag.json"\n' in gst[i_lg] and '[ -f "$UT/keymatch.json" ] && git add "$UT/keymatch.json"' in gst[i_lg]
           and '[ -f "$UT/tekster.json" ] && git add "$UT/tekster.json"' in gst[i_lg] and 'git add "${{ matrix.liga }}/index.html"' in gst[i_lg]
-          and "git add index.html" in gst[i_lg]
-          and gst[i_lg].count("git add") == 5 and "bash scripts/push_med_rebase.sh" in gst[i_lg]
+          and "git add index.html" in gst[i_lg] and 'git add "${{ matrix.liga }}"/hvem-*/index.html' in gst[i_lg]
+          and gst[i_lg].count("git add") == 6 and "bash scripts/push_med_rebase.sh" in gst[i_lg]
           and gst[i_lg].index("bash scripts/push_med_rebase.sh") < gst[i_lg].index("bash scripts/push_sitemap.sh"))
     # Google (20.10.2026): den statiske tabellen. lag_grunnlag.js skriver
     # regionene STATISK-* fra siden selv; porten ser bort fra dem, bygget
@@ -906,6 +906,22 @@ def main():
         op = statisk_region.statiske((ROOT / liga / "index.html").read_text(encoding="utf-8")).get("OPPSUMMERING", "")
         check(f"oppsummering: {liga}/index.html har setningene øverst (ledere, nærmest nedrykk, rundens viktigste kamp) med «Oppdatert»",
               rd[0]["lag"] in op and "ligger nærmest" in op and 'class="opps-kamp"' in op and 'class="opps-dato">Oppdatert ' in op, op[:120])
+    # Spørsmålssidene (fase 2): laget fra tekster.json, med tittel, canonical og
+    # beskrivelse, i sitemap og lenket fra ligasiden og forsiden.
+    sm_ = (ROOT / "sitemap.xml").read_text(encoding="utf-8")
+    for liga, sider in lag_sider.SPORSMAL.items():
+        tk = lag_sider.les(liga)
+        for sti, sone in sider:
+            f_ = ROOT / liga / sti / "index.html"
+            t_ = f_.read_text(encoding="utf-8") if f_.exists() else ""
+            tit = lag_sider.sporsmal_tittel(tk, sti)
+            check(f"spørsmålsside: /{liga}/{sti}/ er laget fra tekster.json, med tittelen «{tit}», canonical og beskrivelse (svaret)",
+                  t_ == lag_sider.sporsmal_side(liga, sti, sone, tk) and f"<title>{tit}</title>" in t_
+                  and f'<link rel="canonical" href="https://tabellkalkulator.no/{liga}/{sti}/">' in t_ and '<meta name="description" content="' in t_)
+            check(f"spørsmålsside: /{liga}/{sti}/ er i sitemap.xml og lenket fra ligasiden og forsiden",
+                  f"<loc>https://tabellkalkulator.no/{liga}/{sti}/</loc>" in sm_
+                  and f'href="/{liga}/{sti}/"' in statisk_region.statiske((ROOT / liga / "index.html").read_text(encoding="utf-8"))["OPPSUMMERING"]
+                  and f'href="/{liga}/{sti}/"' in statisk_region.statiske((ROOT / "index.html").read_text(encoding="utf-8"))[liga.upper()])
     fs_ = statisk_region.statiske((ROOT / "index.html").read_text(encoding="utf-8"))
     check("oppsummering: forsiden har den korte oppsummeringen for begge ligaene, laget fra tekster.json",
           all(fs_.get(k, "").count("Oppdatert ") == 1 and "ligger nærmest" in fs_.get(k, "") for k in ("ELITESERIEN", "OBOS"))

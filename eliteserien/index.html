@@ -300,6 +300,8 @@
   .oppsummering:empty{display:none}
   .oppsummering .opps-dato{color:var(--muted);font-size:12.5px;white-space:nowrap}
   @media (max-width:760px){.oppsummering{font-size:13.5px}}
+  .oppsummering .opps-lenker{font-size:13px}
+  .oppsummering a{color:var(--team-text);font-weight:600}
   /* Lagvelgeren: tydelig etikett og ramme i lagets farge, så den er lett å finne. */
   .followpick{grid-area:pick;display:flex;align-items:center;gap:10px;align-self:center;margin:0}
   .followpick label{font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap}
@@ -1181,7 +1183,7 @@
        kamp, som setninger i HTML-en. Skrevet av scripts/lag_sider.py fra
        data/tekster.json; den viser den virkelige stillingen, også når et
        scenario er fylt inn, og har når det ble regnet. -->
-  <p class="oppsummering" id="oppsummering"><!-- STATISK-OPPSUMMERING -->Bodø/Glimt har 69 % sjanse for gull og Viking 31 %. I kampen om topp 4 har Rosenborg 65 %, Molde 64 %, Tromsø 43 %, Lillestrøm 25 % og Brann 1 %. Start (90 %) og Kristiansund (76 %) ligger nærmest nedrykk. <span class="opps-kamp">Viking mot Tromsø påvirker kampen om topp 4 mest denne runden.</span> <span class="opps-dato">Oppdatert 20. oktober 2026 kl. 05.37.</span><!-- /STATISK-OPPSUMMERING --></p>
+  <p class="oppsummering" id="oppsummering"><!-- STATISK-OPPSUMMERING -->Bodø/Glimt har 69 % sjanse for gull og Viking 31 %. I kampen om topp 4 har Rosenborg 65 %, Molde 64 %, Tromsø 43 %, Lillestrøm 25 % og Brann 1 %. Start (90 %) og Kristiansund (76 %) ligger nærmest nedrykk. <span class="opps-kamp">Viking mot Tromsø påvirker kampen om topp 4 mest denne runden.</span> <span class="opps-dato">Oppdatert 20. oktober 2026 kl. 05.37.</span> <span class="opps-lenker">Les mer: <a href="/eliteserien/hvem-vinner/">Hvem vinner Eliteserien 2026?</a> · <a href="/eliteserien/hvem-rykker-ned/">Hvem rykker ned fra Eliteserien 2026?</a></span><!-- /STATISK-OPPSUMMERING --></p>
   <div class="followpick">
     <label for="teamSelect">Følg laget ditt</label>
     <select id="teamSelect"><option value="">Alle lag</option></select>

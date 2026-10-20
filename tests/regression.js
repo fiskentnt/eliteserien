@@ -4573,6 +4573,32 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       check(`${side}: uten JavaScript står tabellen med ${u.rader} lag, poeng og tre sjanser per lag, overskriftene (${u.kol.join(', ')}) og «${u.note.slice(0, 45)}...»`,
         u.rader === 16 && new Set(u.lag).size === 16 && u.poeng.every(p => /^\*?\d+$/.test(p)) && u.tall.every(t => t.length === 3 && t.every(x => /%|–/.test(x)))
           && u.kol.every(k => k.length > 1) && /^Oppdatert \d+\. \S+ \d{4} kl\. \d\d\.\d\d\. Sjansene for /.test(u.note), JSON.stringify(u).slice(0, 400));
+      // Spørsmålssidene (fase 2): uten JavaScript står svaret med de samme
+      // tallene som tabellen i tekster.json, «Hvorfor» for hvert aktuelt lag,
+      // tabellutsnittet og kampene; med JavaScript ingen JS-feil, og lenkene
+      // fra ligasiden og forsiden finnes.
+      for (const [sti, sone] of ({eliteserien: [['hvem-vinner', 'gull'], ['hvem-rykker-ned', 'nedrykk']]})[side] || []) {
+        const sideUrl = base.replace('/eliteserien/', `/${side}/${sti}/`);
+        const sp = tkHel.sporsmal[sone];
+        const pu = await browser.newPage(); await pu.setJavaScriptEnabled(false);
+        await pu.goto(sideUrl, {waitUntil: 'domcontentloaded'});
+        const s = await pu.evaluate(() => ({h1: document.querySelector('h1').textContent, svar: document.querySelector('.svar').textContent,
+          h3: [...document.querySelectorAll('h3')].map(h => h.textContent), utsnitt: [...document.querySelectorAll('.utsnitt tbody tr')].map(tr => tr.children[1].textContent),
+          dato: (document.querySelector('.dato') || {}).textContent || '', kamper: document.querySelectorAll('.kamper li').length,
+          lenker: [...document.querySelectorAll('a')].map(a => a.getAttribute('href'))}));
+        await pu.close();
+        const sFeil = oppsFeil(s.svar + ' ' + s.dato.replace('Sjansene er', ''), false);
+        check(`${side}/${sti}: uten JavaScript svarer siden med lag og prosent som i tekster.json («${s.svar.slice(0, 60)}...»), «Hvorfor» for ${sp.lag.length} lag, tabellutsnittet og ${s.kamper} kamper`,
+          /^Hvem /.test(s.h1) && !sFeil.length && sp.lag.every(x => s.h3.includes(x.sporsmal)) && sp.lag.every(x => s.utsnitt.includes(x.lag))
+            && s.kamper > 0 && s.lenker.includes(`/${side}/`), JSON.stringify({sFeil, h1: s.h1, h3: s.h3.slice(0, 3)}));
+        const pj = await browser.newPage(); const jsFeil = []; pj.on('pageerror', e => jsFeil.push(e.message));
+        await pj.goto(sideUrl, {waitUntil: 'networkidle0'}); await pj.close();
+        const ligaLenke = await (async () => { const pl = await browser.newPage(); await pl.setJavaScriptEnabled(false);
+          await pl.goto(url, {waitUntil: 'domcontentloaded'}); const a = await pl.evaluate(h => !!document.querySelector(`#oppsummering a[href="${h}"]`), `/${side}/${sti}/`);
+          await pl.goto(base.replace('/eliteserien/', '/'), {waitUntil: 'domcontentloaded'}); const b = await pl.evaluate(h => !!document.querySelector(`p.naa a[href="${h}"]`), `/${side}/${sti}/`);
+          await pl.close(); return a && b; })();
+        check(`${side}/${sti}: med JavaScript ingen JS-feil, og siden er lenket fra ligasiden og forsiden`, !jsFeil.length && ligaLenke, jsFeil.join('; '));
+      }
       // Med JavaScript: render() tar over, og merknaden er borte.
       const med = await open(1400, 900, url);
       await settle(med);

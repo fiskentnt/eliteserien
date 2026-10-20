@@ -11,11 +11,19 @@ den endret seg ikke med odds og flyttede kamper. Uten grunnlagsfil: datoen for
 siste spilte kamp. Forsiden har ingen lastmod (den er valgfri) siden den ikke
 endrer seg med dataene.
 
+Spørsmålssidene (fase 2, scripts/lag_sider.py SPORSMAL, for eksempel
+/eliteserien/hvem-vinner/) er med, med samme lastmod som ligaen: de lages fra
+de samme tallene.
+
 Kjøres av grunnlag-workflowen via scripts/push_sitemap.sh, etter at
 grunnlagsfilen og siden er pushet.
 """
 import json
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from lag_sider import SPORSMAL  # noqa: E402
 
 ROOT = Path(__file__).parent.parent
 BASE = "https://tabellkalkulator.no"
@@ -42,6 +50,9 @@ def main():
     for name, last in leagues():
         lm = f"<lastmod>{last}</lastmod>" if last else ""
         urls.append(f"  <url><loc>{BASE}/{name}/</loc>{lm}</url>")
+        for sti, _ in SPORSMAL.get(name, []):
+            if (ROOT / name / sti / "index.html").exists():
+                urls.append(f"  <url><loc>{BASE}/{name}/{sti}/</loc>{lm}</url>")
     xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
            + "\n".join(urls) + "\n</urlset>\n")
