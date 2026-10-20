@@ -9,12 +9,13 @@ skriver ut fra den, uten Chrome og uten å regne noe:
   <liga>/index.html  regionene STATISK-KOLONNER, STATISK-TABELL og
                      STATISK-OPPDATERT (scripts/statisk_region.py): tabellen
                      med tall og sjanser i HTML-en, for søkemotorer og uten
-                     JavaScript; render() på siden tar over
-                     STATISK-OPPSUMMERING øverst (fase 1a): hvem som leder i
-                     hver sone, hvem som ligger nærmest nedrykk, og rundens
-                     viktigste kamp, som setninger, med når det ble regnet
-  index.html         (forsiden) STATISK-ELITESERIEN og STATISK-OBOS: den
-                     samme oppsummeringen, kort, for hver liga
+                     JavaScript; render() på siden tar over. OPPDATERT er en
+                     liten linje nederst ved «Om modellen». STATISK-LIGAMENY,
+                     -STEMPEL, -FORKLARING og -KORT* (20.10.2026): det JS
+                     fyller over og under tabellen, slik siden viste det, så
+                     ingenting flytter seg ved lasting. Ingen oppsummering.
+  index.html         (forsiden) STATISK-ELITESERIEN og STATISK-OBOS: de
+                     samme setningene under «Akkurat nå», for hver liga
   <liga>/<spørsmål>/index.html  spørsmålssidene (fase 2, SPORSMAL): «Hvem
                      vinner Eliteserien 2026?» osv., med svaret først, «Hvorfor»
                      fra Spør om tabellen, tabellutsnitt og kampene som avgjør
@@ -81,9 +82,9 @@ def les(liga, root=ROOT):
 
 
 def oppdatert(t):
-    navn = [k["navn"][0].lower() + k["navn"][1:] for k in t["tabell"]["kolonner"]]
-    return (f"Oppdatert {norsk_tid(t['laget'])}. Sjansene for {liste(navn)} er regnet fra "
-            f"{tall(t['sesonger'])} simulerte sesonger.")
+    """Den lille linja nederst ved «Om modellen» (20.10.2026; før en merknad
+    over tabellen, som forsvant når JS tok over og flyttet siden)."""
+    return f"Oppdatert {norsk_tid(t['laget'])}, {tall(t['sesonger'])} simulerte sesonger."
 
 
 def sone_navn(t, key):
@@ -137,14 +138,6 @@ def topp_setning(t):
     return " ".join(deler)
 
 
-def midt_setning(t):
-    """«I kampen om topp 4 har Rosenborg 65 %, Molde 64 % ... og Brann 1 %.» Åpne lag med 1 til 99 %."""
-    aapne = [r for r in _aapne(t, "europa", 0.01) if r["sjanser"]["europa"]["andel"] <= 0.99][:5]   # etter sjanse
-    if not aapne:
-        return ""
-    return f"I kampen om {sone_navn(t, 'europa')} har {liste([_lag_pst(r, 'europa') for r in aapne])}."
-
-
 def bunn_setning(t):
     """«Start (90 %) og Kristiansund (76 %) ligger nærmest nedrykk.» Avgjort: «X er rykket ned.»"""
     deler = []
@@ -166,14 +159,10 @@ def _lenker(liga, t):
     return f' <span class="opps-lenker">Les mer: {a}</span>'
 
 
-def oppsummering(t, kort=False):
-    """Setningene øverst på ligasiden (kort: på forsiden, uten midten og kampen)."""
-    deler = [topp_setning(t)] + ([] if kort else [midt_setning(t)]) + [bunn_setning(t)]
-    tekst = " ".join(html.escape(d, quote=False) for d in deler if d)
-    # Rundens viktigste kamp: i en egen span, som siden skjuler når banneret
-    # rett under viser den samme setningen (renderQaHighlight).
-    if not kort and t.get("viktigste") and t["viktigste"].get("banner"):
-        tekst += f' <span class="opps-kamp">{html.escape(t["viktigste"]["banner"], quote=False)}</span>'
+def oppsummering(t):
+    """Den korte oppsummeringen på forsiden («Akkurat nå»): lederne og hvem som
+    ligger nærmest nedrykk, når det ble regnet, og lenkene til spørsmålssidene."""
+    tekst = " ".join(html.escape(d, quote=False) for d in (topp_setning(t), bunn_setning(t)) if d)
     return f'{tekst} <span class="opps-dato">Oppdatert {norsk_tid(t["laget"])}.</span>{_lenker(t.get("_liga", ""), t)}'
 
 
@@ -395,7 +384,7 @@ def forside(root=ROOT, ligaer=LIGAER):
     regioner = statiske(side)
     for liga in ligaer:
         if (root / liga / "data" / "tekster.json").exists():
-            regioner[liga.upper()] = oppsummering(les(liga, root), kort=True)
+            regioner[liga.upper()] = oppsummering(les(liga, root))
     return med_statiske(side, regioner)
 
 
@@ -407,7 +396,18 @@ def ligaside(liga, root=ROOT):
                                "KOLONNER": t["tabell"]["kolonner_html"],
                                "TABELL": t["tabell"]["rader_html"],
                                "OPPDATERT": oppdatert(t),
-                               "OPPSUMMERING": oppsummering(t)})
+                               **_side_statisk(t)})
+
+
+def _side_statisk(t):
+    """Ligamenyen, stempelet, fargeforklaringen og de fire boksene slik siden
+    viste dem (tekster.json «statisk», 20.10.2026). Mangler de, står regionene
+    som de er."""
+    st = t.get("statisk")
+    if not st:
+        return {}
+    return {"LIGAMENY": st["ligameny"], "STEMPEL": st["stempel"], "FORKLARING": st["forklaring"],
+            **{f"KORT{k.upper()}": st["kort"][k] for k in ("gull", "europa", "ned", "form")}}
 
 
 def main(argv):

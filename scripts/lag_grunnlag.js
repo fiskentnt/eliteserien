@@ -184,6 +184,11 @@ async function hentTekster(page) {
         sjanser: Object.fromEntries(kolonner.map(c => { const v = zoneSum(d, c.key), st = soneStatus(r.name, c.key);
           return [c.key, {vist: sjanseCelle(v, st).tekst, andel: Math.round(v * 1e6) / 1e6, avgjort: st}]; }))};
     });
+    // Det JS fyller over og under tabellen (20.10.2026), slik siden viser det
+    // uten lag valgt (statiskeDeler() på siden): ligamenyen, stempelet,
+    // fargeforklaringen og de fire boksene. lag_sider.py setter det inn i
+    // HTML-en, så ingenting flytter seg når JS tar over.
+    const statisk = statiskeDeler();
     // Spørsmålssidene (fase 2): for toppsonen (gull; OBOS: direkte opprykk)
     // og nedrykk de aktuelle lagene (sikret, eller minst 1 % i tabellen,
     // størst først, høyst fire) med "Hvorfor"-svaret i Spør om tabellen for
@@ -207,7 +212,7 @@ async function hentTekster(page) {
       sporsmal[sone] = {kolonne: kol, lag};
     }
     return {status: GRUNNLAG_STATUS, sesonger: lastMCN, lag: TEAMS.length, viktigste,
-      liga: {navn: LEAGUE.name, sesong: LEAGUE.season, ferdig: !matches.some(isEmpty)}, sporsmal, tabell: {kolonner,
+      liga: {navn: LEAGUE.name, sesong: LEAGUE.season, ferdig: !matches.some(isEmpty)}, sporsmal, statisk, tabell: {kolonner,
       kolonner_html: ['gullHeader', 'europaHeader', 'nedHeader'].map(id => document.getElementById(id).outerHTML).join('\n          '),
       rader_html: tb.innerHTML, rader}};
   });
@@ -217,7 +222,7 @@ function skrivTekster(t, laget, N) {
     throw new Error(`siden viste ikke tabellen fra filen (${t.status}, ${t.sesonger} sesonger, ${t.tabell.rader.length} av ${t.lag} rader)`);
   const ut = {versjon: 1, side: SIDE, laget, sesonger: t.sesonger,
     note: 'Hentet av scripts/lag_grunnlag.js fra siden selv med grunnlagsfilen i bruk. scripts/lag_sider.py lager de statiske sidene fra denne filen.',
-    liga: t.liga, tabell: t.tabell, viktigste: t.viktigste, sporsmal: t.sporsmal};
+    liga: t.liga, tabell: t.tabell, viktigste: t.viktigste, sporsmal: t.sporsmal, statisk: t.statisk};
   const json = JSON.stringify(ut, null, 1) + '\n', midl = TEKSTER + '.tmp';
   fs.writeFileSync(midl, json); JSON.parse(fs.readFileSync(midl, 'utf8')); fs.renameSync(midl, TEKSTER);
   console.log(`Skrev ${path.relative(ROOT, TEKSTER)} (${t.tabell.rader.length} lag, ${(json.length / 1024).toFixed(0)} KB).`);

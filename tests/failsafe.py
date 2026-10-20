@@ -903,9 +903,30 @@ def main():
               and all(set(r["sjanser"]) == {"gull", "europa", "ned"} and all("vist" in v and "andel" in v for v in r["sjanser"].values()) for r in rd)
               and [k["key"] for k in tk["tabell"]["kolonner"]] == ["gull", "europa", "ned"] and tk["tabell"]["rader_html"].count("<tr ") == 16)
         check(f"lag_sider.py: {liga}/index.html er laget fra tekster.json (lag_sider.py --check)", lag_sider.ligaside(liga) == (ROOT / liga / "index.html").read_text(encoding="utf-8"))
-        op = statisk_region.statiske((ROOT / liga / "index.html").read_text(encoding="utf-8")).get("OPPSUMMERING", "")
-        check(f"oppsummering: {liga}/index.html har setningene øverst (ledere, nærmest nedrykk, rundens viktigste kamp) med «Oppdatert»",
-              rd[0]["lag"] in op and "ligger nærmest" in op and 'class="opps-kamp"' in op and 'class="opps-dato">Oppdatert ' in op, op[:120])
+        side_ = (ROOT / liga / "index.html").read_text(encoding="utf-8")
+        r_ = statisk_region.statiske(side_)
+        # Ligasiden (20.10.2026): ingen oppsummering, verken øverst eller
+        # nederst; «Oppdatert» er en liten linje nederst ved «Om modellen».
+        check(f"ligaside: {liga}/index.html har ingen oppsummeringssetning, og «Oppdatert <dato>, N simulerte sesonger» står nederst etter «Om modellen»",
+              "OPPSUMMERING" not in r_ and 'class="oppsummering"' not in side_ and "grid-area:opps" not in side_ and 'id="bunntekst"' not in side_
+              and re.fullmatch(r"Oppdatert \d+\. \S+ \d{4} kl\. \d\d\.\d\d, [\d\u00a0 ]+ simulerte sesonger\.", r_.get("OPPDATERT", ""))
+              and side_.index('id="omModellen"') < side_.index("<!-- STATISK-OPPDATERT -->"), r_.get("OPPDATERT", "")[:80])
+        # Det JS fyller over og under tabellen står i HTML-en (tekster.json
+        # «statisk», statiskeDeler() på siden): menyen, stempelet,
+        # fargeforklaringen og boksene med tall og «Se alle →» til
+        # spørsmålssidene for toppsonen og nedrykk.
+        st_ = tk.get("statisk") or {}
+        sider_ = dict((s, sti) for sti, s in lag_sider.SPORSMAL.get(liga, []))
+        check(f"ligaside: {liga}/index.html har menyen, stempelet, fargeforklaringen og de fire boksene med tall fra tekster.json, og «Se alle →» til spørsmålssidene",
+              all(r_.get(k) for k in ("LIGAMENY", "STEMPEL", "FORKLARING", "KORTGULL", "KORTEUROPA", "KORTNED", "KORTFORM"))
+              and r_["LIGAMENY"] == st_.get("ligameny") and r_["STEMPEL"] == st_.get("stempel") and r_["FORKLARING"] == st_.get("forklaring")
+              and all(r_[f"KORT{k.upper()}"] == st_["kort"][k] and r_[f"KORT{k.upper()}"].count("<li") >= 1 for k in ("gull", "europa", "ned", "form"))
+              and f'href="/{liga}/{sider_.get("gull")}/"' in r_["KORTGULL"] and f'href="/{liga}/{sider_.get("nedrykk")}/"' in r_["KORTNED"]
+              and 'aria-current="page"' in r_["LIGAMENY"] and r_["STEMPEL"].strip(), {k: len(v) for k, v in r_.items()})
+        check(f"hopp: {liga}/index.html: qaHighlight har fast høyde (én linje, to på mobil) og skjules ikke når den er tom, og menylinja er fast 56 px",
+              ".qa-highlight{min-height:1.25em}" in side_ and "@media (max-width:760px){.qa-highlight{min-height:2.5em}}" in side_
+              and ".qa-highlight:empty" not in side_ and "height:56px;display:flex;align-items:center;gap:20px}" in side_
+              and 'id="statiskNote"' not in side_)
     # Spørsmålssidene (fase 2): laget fra tekster.json, med tittel, canonical og
     # beskrivelse, i sitemap og lenket fra ligasiden og forsiden.
     sm_ = (ROOT / "sitemap.xml").read_text(encoding="utf-8")
@@ -920,7 +941,7 @@ def main():
                   and f'<link rel="canonical" href="https://tabellkalkulator.no/{liga}/{sti}/">' in t_ and '<meta name="description" content="' in t_)
             check(f"spørsmålsside: /{liga}/{sti}/ er i sitemap.xml og lenket fra ligasiden og forsiden",
                   f"<loc>https://tabellkalkulator.no/{liga}/{sti}/</loc>" in sm_
-                  and f'href="/{liga}/{sti}/"' in statisk_region.statiske((ROOT / liga / "index.html").read_text(encoding="utf-8"))["OPPSUMMERING"]
+                  and f'href="/{liga}/{sti}/"' in "".join(v for k, v in statisk_region.statiske((ROOT / liga / "index.html").read_text(encoding="utf-8")).items() if k.startswith("KORT"))
                   and f'href="/{liga}/{sti}/"' in statisk_region.statiske((ROOT / "index.html").read_text(encoding="utf-8"))[liga.upper()])
     # Rekkefølgen (20.10.2026): lag nevnes i tabellens rekkefølge, nedrykk
     # nedenfra, så tekst og tabell aldri sier noe ulikt om plassene.
@@ -952,8 +973,8 @@ def main():
     for liga in ("eliteserien", "obos"):
         t = (ROOT / liga / "index.html").read_text(encoding="utf-8")
         r = statisk_region.statiske(t)
-        check(f"statisk tabell: {liga}/index.html har regionene KOLONNER, OPPDATERT, TABELL og OPPSUMMERING, med overskriftscellene og rader",
-              set(r) == {"KOLONNER", "OPPDATERT", "TABELL", "OPPSUMMERING"} and all(f'id="{x}"' in r["KOLONNER"] for x in ("gullHeader", "europaHeader", "nedHeader"))
+        check(f"statisk tabell: {liga}/index.html har regionene KOLONNER, TABELL, OPPDATERT, menyen, stempelet, fargeforklaringen og boksene, med overskriftscellene og rader",
+              set(r) == {"KOLONNER", "OPPDATERT", "TABELL", "LIGAMENY", "STEMPEL", "FORKLARING", "KORTGULL", "KORTEUROPA", "KORTNED", "KORTFORM"} and all(f'id="{x}"' in r["KOLONNER"] for x in ("gullHeader", "europaHeader", "nedHeader"))
               and r["TABELL"].count("<tr ") == 16 and r["OPPDATERT"].startswith("Oppdatert "), {k: len(v) for k, v in r.items()})
         with tempfile.TemporaryDirectory() as tmp:
             c = grunnlag_port.SIDER[liga]

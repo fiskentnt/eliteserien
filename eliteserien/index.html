@@ -229,7 +229,10 @@
      hopplenkene ikke legger overskriften bak linja. */
   :root{--nav-h:56px}
   .topnav{position:sticky;top:0;z-index:30;background:var(--panel);border-bottom:2px solid var(--team-fill);padding-top:env(safe-area-inset-top,0px)}
-  .nav-in{max-width:1380px;margin:0 auto;padding:0 24px;height:var(--nav-h);display:flex;align-items:center;gap:20px}
+  /* Fast 56 px, ikke var(--nav-h) (20.10.2026): maalNavHoyde() setter --nav-h
+     til hele linja med kanten (58), og da vokste linja 2 px ved lasting og 2
+     til ved hver resize. --nav-h er bare til scroll-margin-top. */
+  .nav-in{max-width:1380px;margin:0 auto;padding:0 24px;height:56px;display:flex;align-items:center;gap:20px}
   .brand{display:inline-flex;align-items:center;gap:10px;font:800 21px/1 var(--cond);letter-spacing:.02em;color:var(--ink);text-decoration:none;white-space:nowrap}
   .brand-mark{flex:none;display:block}
   /* Ligafanene: rett til høyre for logoen, tydelig hvilken som er aktiv.
@@ -291,24 +294,17 @@
   /* Sidehode: tittel, undertittel, stempel og blikkfang-spørsmålet -- nøytralt,
      ikke lenger et fargefelt i lagets farge (laget viser seg i aksenten i
      navigasjonen og i markeringen i tabellen). */
-  .pagehead{max-width:1380px;margin:0 auto;padding:22px 24px 4px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title pick" "sub pick" "opps opps" "qa qa";column-gap:24px;align-items:start}
+  .pagehead{max-width:1380px;margin:0 auto;padding:22px 24px 4px;display:grid;grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"title pick" "sub pick" "qa qa";column-gap:24px;align-items:start}
   .pagehead .titlerow{grid-area:title}
   .pagehead .subline{grid-area:sub}
   .pagehead .qa-highlight{grid-area:qa}
-  .pagehead .oppsummering{grid-area:opps}
-  .oppsummering{margin:10px 0 0;max-width:86ch;font-size:14px;line-height:1.45;color:var(--ink)}
-  .oppsummering:empty{display:none}
-  .oppsummering .opps-dato{color:var(--muted);font-size:12.5px;white-space:nowrap}
-  @media (max-width:760px){.oppsummering{font-size:13.5px}}
-  .oppsummering .opps-lenker{font-size:13px}
-  .oppsummering a{color:var(--team-text);font-weight:600}
   /* Lagvelgeren: tydelig etikett og ramme i lagets farge, så den er lett å finne. */
   .followpick{grid-area:pick;display:flex;align-items:center;gap:10px;align-self:center;margin:0}
   .followpick label{font-weight:700;font-size:14px;color:var(--ink);white-space:nowrap}
   .followpick select{font:inherit;font-weight:700;font-size:15px;color:var(--ink);background:var(--panel);border:2px solid var(--team-fill);border-radius:10px;padding:8px 12px;min-width:190px;cursor:pointer}
   .followpick select:hover{background:var(--input-bg)}
   @media (max-width:760px){
-    .pagehead{padding:16px 16px 0;grid-template-columns:minmax(0,1fr);grid-template-areas:"title" "sub" "opps" "pick" "qa"}
+    .pagehead{padding:16px 16px 0;grid-template-columns:minmax(0,1fr);grid-template-areas:"title" "sub" "pick" "qa"}
     .followpick{margin:10px 0 0;align-self:start}
     .followpick select{flex:1;min-width:0}
   }
@@ -334,7 +330,11 @@
   .qa-highlight.plain::after{content:"\00A0\00A0\2192"}
   .qa-highlight::after{content:'"\00A0\00A0\2192'}
   .qa-highlight:hover,.qa-highlight:focus-visible{text-decoration:underline;text-decoration-thickness:2px;text-underline-offset:4px}
-  .qa-highlight:empty{display:none}
+  /* Fast høyde (20.10.2026): knappen er tom i HTML-en og fylles av JS; uten
+     høyde flyttet alt under seg 24 px (PC) og 48 px (mobil, to linjer) ved
+     lasting. Én linje på PC, to på mobil. */
+  .qa-highlight{min-height:1.25em}
+  @media (max-width:760px){.qa-highlight{min-height:2.5em}}
   /* Lagboksen (når et lag følges): et kort øverst i høyrekolonnen. */
   .status{background:linear-gradient(var(--team-soft),var(--team-soft)),var(--panel);color:var(--ink);border:1px solid var(--line);border-top:5px solid var(--team-fill);border-radius:12px;padding:14px 16px}
   .status .teamname-lg{display:block;font:800 clamp(18px,2vw,22px)/1.1 var(--cond);color:var(--team-text);margin:0 0 6px}
@@ -542,7 +542,7 @@
   .panel > h2{font:700 22px/1 var(--cond);margin:0;padding:16px 16px 12px;display:flex;justify-content:space-between;align-items:baseline;gap:12px}
   .panel > h2 .count{font:500 14px var(--body);color:var(--muted)}
   .simnote{margin:-4px 16px 10px;color:var(--muted);font-size:12.5px}
-  .statisk-note{margin:-4px 16px 10px;color:var(--muted);font-size:12.5px}
+  .oppdatert-linje{margin:0;color:var(--muted);font-size:12.5px;line-height:1.45}
   .scenario-line{margin:-4px 16px 10px;color:var(--ink);font-size:12.5px;font-weight:600}
 
   /* Tabell */
@@ -742,6 +742,8 @@
      høyde flyttet alt under seg 17 px når man byttet lag. Plass til to linjer
      (padding 6 + kant 1 + 2 x 1,35em) holder boksen like høy for alle lag. */
   @media (min-width:1100px){ .status .lastmatch{min-height:calc(7px + 2.7em)} }
+  /* Kjernen av «Hvorfor»-svaret under «Forrige kamp» (lagKjerneOppdater). */
+  .status .lag-kjerne{margin:6px 0 0;font-size:12.5px;line-height:1.35;color:var(--muted)}
   .status .lastmatch b.good{color:var(--eu-text)}
   .status .lastmatch b.bad{color:var(--accent-text)}
   .status .lastmatch:hover,.status .lastmatch:focus-visible{text-decoration:underline}
@@ -1153,7 +1155,7 @@
 <nav class="topnav" aria-label="Hovedmeny">
   <div class="nav-in">
     <a class="brand" href="#tabell" aria-label="Tabellkalkulator"><svg class="brand-mark" viewBox="0 0 16 16" width="28" height="28" aria-hidden="true"><rect x=".5" y=".5" width="15" height="15" rx="3.5" fill="#13305f" stroke="#4f7fc4" stroke-opacity=".6"/><rect x="3" y="4" width="10" height="2" rx="1" fill="#34d399"/><rect x="3" y="7" width="7" height="2" rx="1" fill="#e8f0fc"/><rect x="3" y="10" width="5" height="2" rx="1" fill="#e8f0fc"/></svg><span>Tabellkalkulator</span></a>
-    <div class="league-tabs" id="leagueTabs" role="navigation" aria-label="Velg liga"></div>
+    <div class="league-tabs" id="leagueTabs" role="navigation" aria-label="Velg liga"><!-- STATISK-LIGAMENY --><a href="/eliteserien/" aria-current="page">Eliteserien</a><a href="/obos/" data-league="obos" title="Opprykk, opprykkskvalifisering og nedrykk">OBOS-ligaen</a><!-- /STATISK-LIGAMENY --></div>
     <div class="nav-links" id="navLinks">
       <a href="#tabell" data-target="tabell" class="active">Tabell</a>
       <a href="#fxPanel" data-target="fxPanel"><span class="lg">Legg inn resultater</span><span class="sm"> Resultater</span></a>
@@ -1177,13 +1179,7 @@
     <span class="subtitle" id="leagueSub">Tabellkalkulator for Eliteserien</span>
   </div>
   <!-- /LIGA-TITTEL -->
-  <p class="subline"><span class="stamp"></span></p>
-  <!-- Oppsummeringen (fase 1a, 20.10.2026): hvem som leder, kampen om
-       europaplassene, hvem som ligger nærmest nedrykk og rundens viktigste
-       kamp, som setninger i HTML-en. Skrevet av scripts/lag_sider.py fra
-       data/tekster.json; den viser den virkelige stillingen, også når et
-       scenario er fylt inn, og har når det ble regnet. -->
-  <p class="oppsummering" id="oppsummering"><!-- STATISK-OPPSUMMERING -->Bodø/Glimt har 69 % sjanse for gull og Viking 31 %. I kampen om topp 4 har Rosenborg 65 %, Molde 64 %, Tromsø 43 %, Lillestrøm 25 % og Brann 1 %. Start (90 %) og Kristiansund (76 %) ligger nærmest nedrykk. <span class="opps-kamp">Viking mot Tromsø påvirker kampen om topp 4 mest denne runden.</span> <span class="opps-dato">Oppdatert 20. oktober 2026 kl. 11.10.</span> <span class="opps-lenker">Les mer: <a href="/eliteserien/hvem-vinner/">Hvem vinner Eliteserien 2026?</a> · <a href="/eliteserien/hvem-rykker-ned/">Hvem rykker ned fra Eliteserien 2026?</a></span><!-- /STATISK-OPPSUMMERING --></p>
+  <p class="subline"><span class="stamp"><!-- STATISK-STEMPEL -->Alle kamper til og med søndag 18. oktober er lagt inn. Neste sjekk etter kampen Glimt-VIF lørdag 24. oktober kl. 16.00.<!-- /STATISK-STEMPEL --></span></p>
   <div class="followpick">
     <label for="teamSelect">Følg laget ditt</label>
     <select id="teamSelect"><option value="">Alle lag</option></select>
@@ -1242,10 +1238,10 @@
              scripts/lag_grunnlag.js i grunnlag-workflowen, fra siden selv i Chrome
              med den nye grunnlagsfilen: overskriftene for sjansene, radene med tall
              og sjanser, og når det ble regnet. Da står tabellen i HTML-en for
-             søkemotorer og uten JavaScript; render() bygger tabellen på nytt og
-             fjerner merknaden. Regionene teller ikke i grunnlag-porten
+             søkemotorer og uten JavaScript; render() bygger tabellen på nytt.
+             Når den ble regnet, står nederst ved «Om modellen»
+             (STATISK-OPPDATERT). Regionene teller ikke i grunnlag-porten
              (grunnlag_port.py), og build_league.py beholder OBOS-sidens egne. -->
-        <p class="statisk-note" id="statiskNote"><!-- STATISK-OPPDATERT -->Oppdatert 20. oktober 2026 kl. 11.10. Sjansene for gull, topp 4 og nedrykk er regnet fra 100 000 simulerte sesonger.<!-- /STATISK-OPPDATERT --></p>
         <div class="tblwrap">
       <table id="tbl">
         <thead><tr>
@@ -1326,24 +1322,27 @@
       </table>
         </div>
         <div class="badge-tip" id="badgeTip" hidden></div>
-        <div class="legend" id="legend"></div>
+        <div class="legend" id="legend"><!-- STATISK-FORKLARING --><span class="cl"><i></i>Champions League-kvalifisering (1 og 2)</span><span class="eu"><i></i>Conference League-kvalifisering (3 og 4)</span><span class="q"><i></i>Kvalik (14)</span><span class="n"><i></i>Nedrykk (15 og 16)</span><span class="lnote">Europa League-plassen går til cupvinneren, ikke til en tabellplassering.</span><!-- /STATISK-FORKLARING --></div>
       </section>
+      <!-- Boksene (20.10.2026): fylt i HTML-en av lag_sider.py, slik siden
+           viste dem (STATISK-KORT*); JS fyller listene på nytt. «Se alle →» i
+           toppsonen og nedrykk lenker til spørsmålssidene (LEAGUE.cols side). -->
       <div class="cards" id="summaryCards">
       <div class="card c-gull" data-card="gull">
-        <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"/><path d="M8 6H5a2 2 0 0 0 2 4M16 6h3a2 2 0 0 1-2 4M12 13v4M8.5 20h7M10 17h4"/></svg><span class="card-title">Seriemester</span><button type="button" class="card-link" data-sort="gull">Se alle →</button></div>
-        <ul class="card-list"></ul>
+        <!-- STATISK-KORTGULL --><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M8 4h8v5a4 4 0 0 1-8 0V4Z"></path><path d="M8 6H5a2 2 0 0 0 2 4M16 6h3a2 2 0 0 1-2 4M12 13v4M8.5 20h7M10 17h4"></path></svg><span class="card-title">Seriemester</span><a class="card-link" data-side="gull" href="/eliteserien/hvem-vinner/">Se alle →</a></div>
+        <ul class="card-list"><li><span class="card-team">Bodø/Glimt</span><b class="card-pct">69 %</b></li><li><span class="card-team">Viking</span><b class="card-pct">31 %</b></li></ul><!-- /STATISK-KORTGULL -->
       </div>
       <div class="card c-eu" data-card="europa">
-        <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8ZM12 3.5V8M20 10.2l-4.4.4M17 18.4l-2.8-3.6M7 18.4l2.8-3.6M4 10.2l4.4.4"/></svg><span class="card-title">Topp 4</span><button type="button" class="card-link" data-sort="europa">Se alle →</button></div>
-        <ul class="card-list"></ul>
+        <!-- STATISK-KORTEUROPA --><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8ZM12 3.5V8M20 10.2l-4.4.4M17 18.4l-2.8-3.6M7 18.4l2.8-3.6M4 10.2l4.4.4"></path></svg><span class="card-title">Topp 4</span><button type="button" class="card-link" data-sort="europa">Se alle →</button></div>
+        <ul class="card-list"><li><span class="card-team">Rosenborg</span><b class="card-pct">65 %</b></li><li><span class="card-team">Molde</span><b class="card-pct">64 %</b></li><li><span class="card-team">Tromsø</span><b class="card-pct">43 %</b></li></ul><!-- /STATISK-KORTEUROPA -->
       </div>
       <div class="card c-ned" data-card="ned">
-        <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v8M8.5 12.5 12 16l3.5-3.5"/></svg><span class="card-title">Nedrykk</span><button type="button" class="card-link" data-sort="ned">Se alle →</button></div>
-        <ul class="card-list"></ul>
+        <!-- STATISK-KORTNED --><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="M12 7.5v8M8.5 12.5 12 16l3.5-3.5"></path></svg><span class="card-title">Nedrykk</span><a class="card-link" data-side="ned" href="/eliteserien/hvem-rykker-ned/">Se alle →</a></div>
+        <ul class="card-list"><li><span class="card-team">Start</span><b class="card-pct">90 %</b></li><li><span class="card-team">Kristiansund</span><b class="card-pct">76 %</b></li><li><span class="card-team">Aalesund</span><b class="card-pct">14 %</b></li></ul><!-- /STATISK-KORTNED -->
       </div>
       <div class="card c-form" data-card="form">
-        <div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 16.5 5.5-5.5 3.5 3.5 7.5-8"/><path d="M15.5 6.5h5v5"/></svg><span class="card-title">Styrke</span><button type="button" class="card-link" data-sort="form">Se alle →</button></div>
-        <ul class="card-list"></ul>
+        <!-- STATISK-KORTFORM --><div class="card-h"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="m3.5 16.5 5.5-5.5 3.5 3.5 7.5-8"></path><path d="M15.5 6.5h5v5"></path></svg><span class="card-title">Styrke</span><button type="button" class="card-link" data-sort="form">Se alle →</button></div>
+        <ul class="card-list"><li><span class="card-team">Bodø/Glimt</span><b class="card-pct">7,4</b></li><li><span class="card-team">Viking</span><b class="card-pct">6,7</b></li><li><span class="card-team">Rosenborg</span><b class="card-pct">5,9</b></li></ul><!-- /STATISK-KORTFORM -->
       </div>
       </div>
      </div>
@@ -1513,6 +1512,8 @@
   <h2>Ofte spurt</h2>
   <div class="faq-list" id="faqList"></div>
 </section>
+<!-- Når tallene i HTML-en ble regnet (STATISK-OPPDATERT, lag_sider.py). -->
+<p class="oppdatert-linje" id="oppdatertLinje"><!-- STATISK-OPPDATERT -->Oppdatert 20. oktober 2026 kl. 11.10, 100 000 simulerte sesonger.<!-- /STATISK-OPPDATERT --></p>
 </div>
 
 
@@ -1575,11 +1576,11 @@ const LEAGUE = {
               3: 'Conference League: andre kvalifiseringsrunde', 4: 'Conference League: kvalifisering'},
   // Sannsynlighetskolonnene i tabellen og kortene under den.
   cols: [
-    {key: 'gull', head: 'Gull', card: 'Seriemester', cls: 'gull',
+    {key: 'gull', head: 'Gull', card: 'Seriemester', cls: 'gull', side: 'hvem-vinner',
      title: 'Sannsynlighet for å vinne serien. Klikk for å sortere.'},
     {key: 'europa', head: 'Topp 4', card: 'Topp 4', cls: 'p3',
      title: 'Sannsynlighet for 1. til 4. plass, altså Champions League- eller Conference League-kvalifisering. Europa kan også nås gjennom cupen, og det er ikke med i tallet. Klikk for å sortere.'},
-    {key: 'ned', head: 'Nedrykk', headSm: 'Nedr.', card: 'Nedrykk', cls: 'ned',
+    {key: 'ned', head: 'Nedrykk', headSm: 'Nedr.', card: 'Nedrykk', cls: 'ned', side: 'hvem-rykker-ned',
      title: 'Sannsynlighet for 15. eller 16. plass. Kvalik på 14. plass er ikke regnet med. Klikk for å sortere.'},
   ],
   // Sonene spørsmålene og lagboksen bruker. lo/hi er plasseringer; boundary er
@@ -1961,6 +1962,18 @@ function buildLeagueMenu(){
     });
   });
 }
+// Det JS fyller som også står i HTML-en (20.10.2026): ligamenyen, stempelet,
+// fargeforklaringen og de fire boksene, slik siden viser dem nå.
+// scripts/lag_grunnlag.js tar dem inn i tekster.json, og scripts/lag_sider.py
+// skriver dem i regionene STATISK-LIGAMENY, -STEMPEL, -FORKLARING og -KORT*,
+// så ingenting flytter seg når JS tar over. Boksene som barna, uten
+// STATISK-merkene i kortet. Regresjonen «statisk» bruker den samme.
+function statiskeDeler(){
+  const barn = el => [...el.children].map(c => c.outerHTML).join('\n        ');
+  return {ligameny: document.getElementById('leagueTabs').innerHTML, stempel: document.querySelector('.stamp').innerHTML,
+    forklaring: document.getElementById('legend').innerHTML,
+    kort: Object.fromEntries(['gull', 'europa', 'ned', 'form'].map(k => [k, barn(document.querySelector(`.card[data-card="${k}"]`))]))};
+}
 function applyLeagueToDom(){
   buildLeagueMenu();
   const hdr = {gull:'gullHeader', europa:'europaHeader', ned:'nedHeader'};
@@ -1979,6 +1992,10 @@ function applyLeagueToDom(){
   LEAGUE.cols.forEach(c=>{
     const t = document.querySelector(`.card[data-card="${c.key==='ned'?'ned':c.key}"] .card-title`);
     if(t) t.textContent = c.card;
+    // «Se alle →» til spørsmålssiden for sonen. setAttribute, ikke .href: da
+    // står stien slik den er når lag_grunnlag.js tar boksene inn i HTML-en.
+    const a = document.querySelector(`.card[data-card="${c.key}"] a.card-link`);
+    if(a && c.side) a.setAttribute('href', `${LEAGUE.path}${c.side}/`);
   });
   document.querySelectorAll('[data-league-name]').forEach(el=>{ el.textContent = LEAGUE.name; });
 }
@@ -3849,8 +3866,30 @@ function fillOdds(){
     <div class="hist-l">${d.map((v,i)=>`<span>${i+1}</span>`).join('')}</div>`
     : '')
     + scenarioSum
-    + (lm ? `<button class="lastmatch" title="Se hva kampen betydde">${lm.html}</button>` : '');
+    + (lm ? `<button class="lastmatch" title="Se hva kampen betydde">${lm.html}</button>` : '')
+    + `<p class="lag-kjerne" id="lagKjerne"></p>`;
   forrigeLinjeOppdater();
+  lagKjerneOppdater();
+}
+// Kjernen av «Hvorfor»-svaret under «Forrige kamp» (20.10.2026): poengene og
+// styrken mot nærmeste konkurrent, fra svaret selv (qaWhy med kjerne), ingen
+// egen tekst. Regnes når simuleringen av scenarioet er ferdig, som linja over,
+// og huskes til laget, scenarioet eller tallene endres.
+let lagKjerne = null, lagKjerneVenter = null;
+function lagKjerneOppdater(){
+  const team = SELECTED_TEAM, scen = qaScenarioKey(), el = document.getElementById('lagKjerne');
+  if(!team || !el) return;
+  const key = `${team}|${scen}|${lastMCVersjon}`;
+  if(lagKjerne && lagKjerne.key===key){ el.textContent = lagKjerne.tekst; return; }
+  if(!lastMCFinal || lastMCScenarioKey!==scen || lagKjerneVenter===key) return;
+  lagKjerneVenter = key;
+  qaWhy(team, 'why', true).then(t=>{
+    if(lagKjerneVenter!==key) return;
+    lagKjerneVenter = null;
+    lagKjerne = {key, tekst: t && t!=='Ingen data å regne på ennå.' ? t : ''};
+    const e = document.getElementById('lagKjerne');
+    if(e && SELECTED_TEAM===team && qaScenarioKey()===scen) e.textContent = lagKjerne.tekst;
+  }).catch(()=>{ if(lagKjerneVenter===key) lagKjerneVenter = null; });
 }
 let stripeVist = {lag:null, vist:false};
 // Sonene lagboksen viser for en fordeling. boxAlways: vises uansett verdi
@@ -4382,7 +4421,7 @@ function updateSummaryCards(){
 {
   const cards = document.getElementById('summaryCards');
   cards.addEventListener('click', e=>{
-    const b = e.target.closest('.card-link'); if(!b) return;
+    const b = e.target.closest('button.card-link'); if(!b) return;   // lenkene går til spørsmålssidene
     tableSort = {key:b.dataset.sort, dir:1};
     render();
     scrollToSection('tabell');
@@ -5178,7 +5217,8 @@ function qaSettled(team, zone){
 // (safe~/out~) kan fortsatt skje: "under 1 % av simuleringene". Sonene foran
 // og bak regnes likt, med plassen som grense. konklusjon=false på "Hvorfor
 // ...?", der spørsmålet alt sier konklusjonen.
-function qaSettledText(team, zone, st, konklusjon=true){
+// kjerne: bare stillingen mot laget som avgjør (start), til lagboksen.
+function qaSettledText(team, zone, st, konklusjon=true, kjerne=false){
   const safeP = QA_SAFE_PHRASE[zone.key], reach = QA_REACH_PHRASE[zone.key];
   const back = zone.dir==='back';
   if(st.kind==='done'){
@@ -5218,6 +5258,7 @@ function qaSettledText(team, zone, st, konklusjon=true){
   const diff = me.pts - ref.pts;
   const start = `${team} ligger på ${pos}. plass med ${poengTxt(me.pts)}, ` +
     (diff===0 ? `like mange som ${ref.name} ${refPlass}. ` : `${qaAntall(Math.abs(diff))} ${diff>0?'foran':'bak'} ${ref.name} ${refPlass}. `);
+  if(kjerne) return start.trim();
   // Å falle ut av sonen, sett fra et lag som er innenfor: infinitiv og presens.
   const [falle, faller] = back ? (kvalikPlass ? ['havne på kvalikplass', 'havner på kvalikplass'] : [`havne lavere enn ${b}. plass`, `havner lavere enn ${b}. plass`])
     : b===1 ? ['miste 1. plassen', 'mister 1. plassen']
@@ -7130,11 +7171,13 @@ function qaWhyLabel(team, rolle='why'){
   if(st.kind==='out~') return `Hvorfor har ${team} så godt som ingen mulighet til å ${QA_REACH_PHRASE[z.key]}?`;
   return `Hvorfor kan ${team} ikke lenger ${QA_REACH_PHRASE[z.key]}?`;
 }
-async function qaWhy(team, rolle='why'){
+// kjerne (20.10.2026): bare første del av svaret, poengene og styrken mot
+// nærmeste konkurrent (part1), til lagboksen under «Forrige kamp».
+async function qaWhy(team, rolle='why', kjerne=false){
   const zone = qaWhyZoneOverride && rolle==='why' ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team, rolle);
   if(!zone) return 'Ingen data å regne på ennå.';
   const st = qaSettled(team, zone);
-  if(st) return qaSettledText(team, zone, st, false);
+  if(st) return qaSettledText(team, zone, st, false, kjerne);
   const field = qaFieldInWay(team, zone);
   const rival = field ? {t:field.nearest} : qaFindRival(team, zone);
   const A = await innsiktData();
@@ -7208,6 +7251,7 @@ async function qaWhy(team, rolle='why'){
     part1 = qaIngenSpilt() ? `Ingen kamper er spilt ennå, og ${team} har ${kampTxt(row.left)} igjen.`
       : `${team} ligger på ${pos}. plass med ${poengTxt(row.pts)} og ${kampTxt(row.left)} igjen.`;
   }
+  if(kjerne) return part1;
 
   let part2;
   if(field){
@@ -7841,10 +7885,6 @@ function renderQaButtons(){
 function renderQaHighlight(){
   const el = document.getElementById('qaHighlight');
   if(!el) return;
-  // Rundens viktigste kamp står også i oppsummeringen øverst (lag_sider.py):
-  // den skjules der når banneret rett under viser den samme setningen.
-  queueMicrotask(()=>{ const k = document.querySelector('#oppsummering .opps-kamp');
-    if(k) k.hidden = el.dataset.qid==='keyround' && el.textContent.trim()===k.textContent.trim(); });
   if(!SELECTED_TEAM){
     // Rundens viktigste kamp når den er regnet ut og fersk, ellers hell/uhell.
     if(!qaKeyBannerStale()){
@@ -8144,9 +8184,6 @@ function updateToolButtons(){
   else line.hidden=true;
 }
 function render(){
-  // Den statiske tabellen i HTML-en er tatt over: merknaden om når den ble
-  // regnet, hører til den (se STATISK-* over tabellen).
-  const statiskNote = document.getElementById('statiskNote'); if(statiskNote) statiskNote.remove();
   refreshLiveState();
   renderModelTbl();
   fillProb();

@@ -4536,7 +4536,11 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       const u = await uten.evaluate(() => {
         const rader = [...document.querySelectorAll('#tbl tbody tr')];
         return {rader: rader.length, lag: rader.map(r => r.dataset.team), tall: rader.map(r => [...r.querySelectorAll('td.odds')].map(td => td.textContent)),
-          poeng: rader.map(r => (r.querySelector('td.pts') || {}).textContent), note: (document.getElementById('statiskNote') || {}).textContent || '',
+          poeng: rader.map(r => (r.querySelector('td.pts') || {}).textContent), note: (document.getElementById('oppdatertLinje') || {}).textContent || '',
+          oppsummering: !!document.querySelector('#oppsummering, .oppsummering, #bunntekst'),
+          kort: Object.fromEntries(['gull', 'europa', 'ned'].map(k => [k, [...document.querySelectorAll(`.card[data-card="${k}"] .card-list li`)].map(li => [
+            (li.querySelector('.card-team') || {}).textContent, (li.querySelector('.card-pct') || {}).textContent])])),
+          seAlle: [...document.querySelectorAll('#summaryCards a.card-link')].map(a => a.getAttribute('href')),
           kol: ['gullHeader', 'europaHeader', 'nedHeader'].map(id => document.getElementById(id).textContent.trim()), tittel: document.title};
       });
       await uten.close();
@@ -4546,8 +4550,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       check(`${side}: tabellen uten JavaScript er den i tekster.json (lag, poeng og sjanser)`,
         JSON.stringify(u.lag) === JSON.stringify(tk.map(r => r.lag)) && JSON.stringify(u.poeng) === JSON.stringify(tk.map(r => r.poeng_vist))
           && JSON.stringify(u.tall) === JSON.stringify(tk.map(r => ['gull', 'europa', 'ned'].map(k => r.sjanser[k].vist))), JSON.stringify({u: u.lag.slice(0, 3), tk: tk.slice(0, 3).map(r => r.lag)}));
-      // Oppsummeringen øverst (fase 1a): tallene er de samme som i tabellen i
-      // tekster.json, med rundens viktigste kamp og «Oppdatert».
+      // Bunnteksten nederst (fra 20.10.2026; før oppsummeringen øverst): tallene
+      // er de samme som i tabellen i tekster.json, med «Oppdatert».
       const tkHel = JSON.parse(fs.readFileSync(path.join(ROOT, side, 'data', 'tekster.json'), 'utf8'));
       const oppsFeil = (tekst, ventetKamp) => {
         const f = [];
@@ -4561,18 +4565,24 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         return f;
       };
       const opsU = await (async () => { const pu = await browser.newPage(); await pu.setJavaScriptEnabled(false);
-        await pu.goto(url, {waitUntil: 'domcontentloaded'}); const t = await pu.evaluate(() => (document.getElementById('oppsummering') || {}).textContent || '');
         await pu.goto(base.replace('/eliteserien/', '/'), {waitUntil: 'domcontentloaded'});
         const f = await pu.evaluate(s => { const p = [...document.querySelectorAll('p.naa')]; return p.map(x => x.textContent); }, side);
-        await pu.close(); return {t, forside: f}; })();
-      check(`${side}: uten JavaScript står oppsummeringen øverst, med de samme tallene som tabellen i tekster.json («${opsU.t.slice(0, 60)}...»)`,
-        opsU.t.length > 40 && !oppsFeil(opsU.t, true).length, oppsFeil(opsU.t, true).join('; '));
+        await pu.close(); return {forside: f}; })();
+      // Ligasiden (20.10.2026): ingen oppsummeringssetning; boksene har tallene
+      // fra tabellen i tekster.json, og «Se alle →» i toppsonen og nedrykk går
+      // til spørsmålssidene.
+      const kortFeil = Object.entries(u.kort).flatMap(([k, li]) => !li.length ? [`${k} tom`]
+        : li.filter(([lag, pst]) => { const r = tkHel.tabell.rader.find(x => x.lag === lag); return !r || r.sjanser[k].vist !== (pst || '').replace(/\u00a0/g, ' '); })
+          .map(([lag, pst]) => `${k}: ${lag} ${pst}`));
+      const sider = ({eliteserien: ['hvem-vinner', 'hvem-rykker-ned'], obos: ['hvem-rykker-opp', 'hvem-rykker-ned']})[side];
+      check(`${side}: uten JavaScript har ligasiden ingen oppsummering, boksene har tallene fra tekster.json, og «Se alle →» går til ${sider.join(' og ')}`,
+        !u.oppsummering && !kortFeil.length && JSON.stringify(u.seAlle) === JSON.stringify(sider.map(s => `/${side}/${s}/`)), JSON.stringify({kortFeil, seAlle: u.seAlle}));
       const fsTekst = opsU.forside[side === 'eliteserien' ? 0 : 1] || '';
       check(`forsiden: uten JavaScript står den korte oppsummeringen for ${side}, med de samme tallene`, fsTekst.length > 30 && !oppsFeil(fsTekst, false).length,
         oppsFeil(fsTekst, false).join('; ') + ' ' + fsTekst.slice(0, 80));
       check(`${side}: uten JavaScript står tabellen med ${u.rader} lag, poeng og tre sjanser per lag, overskriftene (${u.kol.join(', ')}) og «${u.note.slice(0, 45)}...»`,
         u.rader === 16 && new Set(u.lag).size === 16 && u.poeng.every(p => /^\*?\d+$/.test(p)) && u.tall.every(t => t.length === 3 && t.every(x => /%|–/.test(x)))
-          && u.kol.every(k => k.length > 1) && /^Oppdatert \d+\. \S+ \d{4} kl\. \d\d\.\d\d\. Sjansene for /.test(u.note), JSON.stringify(u).slice(0, 400));
+          && u.kol.every(k => k.length > 1) && /^Oppdatert \d+\. \S+ \d{4} kl\. \d\d\.\d\d, [\d\u00a0 ]+ simulerte sesonger\.$/.test(u.note), JSON.stringify(u).slice(0, 400));
       // Spørsmålssidene (fase 2): uten JavaScript står svaret med de samme
       // tallene som tabellen i tekster.json, «Hvorfor» for hvert aktuelt lag,
       // tabellutsnittet og kampene; med JavaScript ingen JS-feil, og lenkene
@@ -4594,33 +4604,66 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const pj = await browser.newPage(); const jsFeil = []; pj.on('pageerror', e => jsFeil.push(e.message));
         await pj.goto(sideUrl, {waitUntil: 'networkidle0'}); await pj.close();
         const ligaLenke = await (async () => { const pl = await browser.newPage(); await pl.setJavaScriptEnabled(false);
-          await pl.goto(url, {waitUntil: 'domcontentloaded'}); const a = await pl.evaluate(h => !!document.querySelector(`#oppsummering a[href="${h}"]`), `/${side}/${sti}/`);
+          await pl.goto(url, {waitUntil: 'domcontentloaded'}); const a = await pl.evaluate(h => !!document.querySelector(`#summaryCards a[href="${h}"]`), `/${side}/${sti}/`);
           await pl.goto(base.replace('/eliteserien/', '/'), {waitUntil: 'domcontentloaded'}); const b = await pl.evaluate(h => !!document.querySelector(`p.naa a[href="${h}"]`), `/${side}/${sti}/`);
           await pl.close(); return a && b; })();
         check(`${side}/${sti}: med JavaScript ingen JS-feil, og siden er lenket fra ligasiden og forsiden`, !jsFeil.length && ligaLenke, jsFeil.join('; '));
       }
-      // Med JavaScript: render() tar over, og merknaden er borte.
+      // Med JavaScript: render() tar over, og «Oppdatert»-linja nederst står.
       const med = await open(1400, 900, url);
       await settle(med);
-      const m = await med.evaluate(() => ({rader: document.querySelectorAll('#tbl tbody tr').length, note: !!document.getElementById('statiskNote'),
+      const m = await med.evaluate(() => ({rader: document.querySelectorAll('#tbl tbody tr').length, note: (document.getElementById('oppdatertLinje') || {}).textContent || '',
         forst: (document.querySelector('#tbl tbody tr') || {dataset: {}}).dataset.team, sidenForst: compute().rows[0].name}));
-      // Med JavaScript står oppsummeringen; rundens viktigste kamp skjules der
-      // bare når banneret rett under viser den samme setningen.
-      const ok = await med.evaluate(async () => {
-        const k = document.querySelector('#oppsummering .opps-kamp'), b = document.getElementById('qaHighlight');
-        const foer = {finnes: !!document.getElementById('oppsummering'), skjult: !!(k && k.hidden), lik: !!(k && b.dataset.qid === 'keyround' && b.textContent.trim() === k.textContent.trim())};
-        // Samme setning i begge: skjult (testdataene har en annen kamp i banneret).
-        const gml = k.textContent; k.textContent = b.textContent.trim(); renderQaHighlight(); await new Promise(r => setTimeout(r, 0));
-        const sammeSkjult = k.hidden; k.textContent = gml;
-        const sel = document.getElementById('teamSelect'); sel.value = TEAMS[0]; sel.dispatchEvent(new Event('change'));
-        await new Promise(r => setTimeout(r, 300));
-        return {...foer, sammeSkjult, etterLag: !!(k && k.hidden)};
+      // Lagboksen (20.10.2026): under «Forrige kamp» står kjernen av
+      // «Hvorfor»-svaret, fra svaret selv: svaret begynner med den.
+      const lk = await med.evaluate(async () => {
+        const sel = document.getElementById('teamSelect'), ut = [];
+        for (const t of [0, 6, 12].map(i => compute().rows[i].name)) {
+          sel.value = t; sel.dispatchEvent(new Event('change'));
+          const t0 = Date.now(); let k = '';
+          while (Date.now() - t0 < 60000) { k = (document.getElementById('lagKjerne') || {}).textContent || ''; if (k) break; await new Promise(r => setTimeout(r, 200)); }
+          const hel = await qaWhy(t), box = document.getElementById('odds');
+          const lm = box.querySelector('.lastmatch'), el = box.querySelector('.lag-kjerne');
+          ut.push({t, k, ok: !!k && hel.startsWith(k), under: !!el && (!lm || !!(lm.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING))});
+        }
+        sel.value = ''; sel.dispatchEvent(new Event('change'));
+        return ut;
       });
-      check(`${side}: med JavaScript står oppsummeringen; kampen skjules bare når banneret sier det samme (${ok.lik ? 'skjult' : 'vist'}), og vises med et lag valgt`,
-        ok.finnes && ok.skjult === ok.lik && ok.sammeSkjult && !ok.etterLag, JSON.stringify(ok));
+      check(`${side}: lagboksen har kjernen av «Hvorfor»-svaret under «Forrige kamp» (${lk.map(x => x.t).join(', ')}), og svaret begynner med den`,
+        lk.length === 3 && lk.every(x => x.ok && x.under), JSON.stringify(lk).slice(0, 400));
       await med.close();
-      check(`${side}: med JavaScript tar tabellen over (${m.rader} rader, først ${m.forst}), og merknaden fra den statiske tabellen er borte`,
-        m.rader === 16 && !m.note && m.forst === m.sidenForst, JSON.stringify(m));
+      check(`${side}: med JavaScript tar tabellen over (${m.rader} rader, først ${m.forst}), og «Oppdatert»-linja står nederst`,
+        m.rader === 16 && /^Oppdatert /.test(m.note) && m.forst === m.sidenForst, JSON.stringify(m));
+      // Hoppet ved lasting (20.10.2026): det JS fyller, står i HTML-en
+      // (tabellen og statiskeDeler()), så ingenting fra menyen ned til boksene
+      // flytter seg eller endrer høyde når JS tar over. Siden uten JavaScript
+      // lages av det JS viser her (testdataene), slik lag_sider.py gjør fra
+      // tekster.json, og måles mot siden med JavaScript, på PC og mobil, uten
+      // lag fulgt (et fulgt lag gir lagboksen, som ikke kan stå i HTML-en).
+      const MAAL = ['#leagueTabs', '.pagehead', '.stamp', '#qaHighlight', '#tbl', '#legend', '#summaryCards'];
+      const maal = pg => pg.evaluate(M => M.map(sel => { const e = document.querySelector(sel); if (!e) return null;
+        const r = e.getBoundingClientRect(); return [Math.round(r.top + scrollY), Math.round(r.height)]; }), MAAL);
+      const kildeSide = fs.readFileSync(path.join(ROOT, side, 'index.html'), 'utf8');
+      for (const [b, h, navn] of [[1400, 900, 'PC'], [390, 844, 'mobil']]) {
+        const pj = await browser.newPage(); await pj.evaluateOnNewDocument(() => { try { localStorage.clear(); } catch (e) {} });
+        await pj.setViewport({width: b, height: h});
+        await pj.goto(url, {waitUntil: 'networkidle0'});
+        await settle(pj); await pj.evaluate(() => document.fonts.ready); await new Promise(r => setTimeout(r, 800));
+        const etter = await maal(pj);
+        const deler = await pj.evaluate(() => ({...statiskeDeler(), tabell: document.querySelector('#tbl tbody').innerHTML,
+          kolonner: ['gullHeader', 'europaHeader', 'nedHeader'].map(id => document.getElementById(id).outerHTML).join('\n          ')}));
+        await pj.close();
+        const reg = {LIGAMENY: deler.ligameny, STEMPEL: deler.stempel, FORKLARING: deler.forklaring, KOLONNER: deler.kolonner, TABELL: deler.tabell,
+          ...Object.fromEntries(Object.entries(deler.kort).map(([k, v]) => ['KORT' + k.toUpperCase(), v]))};
+        const statiskHtml = kildeSide.replace(/(<!-- STATISK-([A-Z]+) -->)([\s\S]*?)(<!-- \/STATISK-\2 -->)/g, (m0, a, k, inn, z) => k in reg ? a + reg[k] + z : m0);
+        const pu = await browser.newPage(); await pu.setJavaScriptEnabled(false); await pu.setViewport({width: b, height: h});
+        await pu.setRequestInterception(true);
+        pu.on('request', r => r.url() === url ? r.respond({status: 200, contentType: 'text/html; charset=utf-8', body: statiskHtml}) : r.continue());
+        await pu.goto(url, {waitUntil: 'networkidle0'}); await pu.evaluate(() => document.fonts.ready);
+        const foer = await maal(pu); await pu.close();
+        const avvik = MAAL.map((s, i) => !foer[i] || !etter[i] || foer[i][0] !== etter[i][0] || foer[i][1] !== etter[i][1] ? `${s} ${JSON.stringify(foer[i])} -> ${JSON.stringify(etter[i])}` : null).filter(Boolean);
+        check(`${side} ${navn}: ingenting fra menyen ned til boksene flytter seg eller endrer høyde når JS tar over`, !avvik.length, avvik.join('; '));
+      }
     }
   };
   // Innbyrdes oppgjør i tabellen (16.10.2026, NFFs kampreglement § 5-3):
