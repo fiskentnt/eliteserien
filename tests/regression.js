@@ -155,6 +155,8 @@ const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
 const SETTLED = /(sikret|kan ikke lenger|Sesongen er ferdig|så godt som|ingen gjenstående|Ingen kamper igjen|Ingen data|betydde lite|betyr lite|ingen spilte kamper|ingen runde|har ingen|Alle kampene|Ingen av de|Ingen kamp i|Ingenting er i spill|Det er matematisk avgjort|under 1 % av simuleringene)/i;
 const QA_EXPECT = {
   why:        {what: 'prosent',       pat: new RegExp(PCT)},
+  // "Hvorfor" om den andre retningen (regel 1, under Flere spørsmål, 20.10.2026).
+  whyandre:   {what: 'prosent',       pat: new RegExp(PCT)},
   howto:      {what: 'poeng',         pat: /\d+ (?:av \d+ mulige )?poeng|poengsummer/},
   keymatches: {what: 'prosentpoeng',  pat: new RegExp(PP)},
   runin:      {what: 'prosent',       pat: new RegExp(PCT)},
@@ -3598,7 +3600,19 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         qaSetOpen(true);
         const ut = {};
         const NB = '\u00a0';
-        for (const q of QA_QUESTIONS) {
+        // Spørsmålene som vises for Viking (qaSynligeSporsmal), og "Hvorfor" om
+        // den andre retningen (whyandre) for et lag i regel 1, Tromsø i
+        // testdataene, så det nye spørsmålet også får sjekket utseendet
+        // (20.10.2026). Før gikk testen gjennom alle i QA_QUESTIONS, og et
+        // spørsmål som ikke vises, har ingen svarboks.
+        const regel1 = qaRetninger('Tromsø').regel === 1 ? 'Tromsø' : TEAMS.find(t => qaRetninger(t).regel === 1);
+        const kjoring = qaSynligeSporsmal('Viking').map(q => [q, 'Viking']).concat(regel1 ? [[QA_QUESTIONS.find(q => q.id === 'whyandre'), regel1]] : []);
+        ut._regel1 = regel1 || null;
+        for (const [q, lag] of kjoring) {
+          if (SELECTED_TEAM !== lag) {
+            const sel = document.getElementById('teamSelect'); sel.value = lag; sel.dispatchEvent(new Event('change'));
+            await new Promise(r => setTimeout(r, 300));
+          }
           await runQaQuestion(q.id, false, true);
           const a = document.getElementById('qaAnswer'), kopi = a.querySelector('.qa-kopi');
           const innhold = [...a.children].filter(e => !e.classList.contains('qa-kopi') && !e.classList.contains('qa-merke'));
@@ -3620,10 +3634,12 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
             ren: (() => { const deler = []; const gaa = n => { if (n.nodeType === 3) deler.push(n.nodeValue);
               else if (n.nodeType === 1 && getComputedStyle(n).display !== 'none') n.childNodes.forEach(gaa); };
               a.querySelectorAll('.qr').forEach(gaa); return deler.join(''); })(),
-            sporsmal: q.label('Viking'), kort: Object.fromEntries(TEAMS.map(t => [t, shortTeam(t)]))};
+            sporsmal: q.label(lag), kort: Object.fromEntries(TEAMS.map(t => [t, shortTeam(t)]))};
         }
         return ut;
       });
+      const regel1Lag = r._regel1; delete r._regel1;
+      check(`${form}: "Hvorfor" om den andre retningen er med for et lag i regel 1 (${regel1Lag})`, !!regel1Lag && !!r.whyandre && !!r.whyandre.tekst, '');
       const nb = /(\d|<1|>99) %|\d poeng/;
       const alle = Object.entries(r);
       check(`${form}: alle svarene vises som avsnitt (.qt) eller rader (.qr), ingen rå tekst`, alle.every(([, x]) => x.qt || x.qr), alle.filter(([, x]) => !x.qt && !x.qr).map(([k]) => k).join(', '));
@@ -4376,9 +4392,12 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
   // matStatus (qaRetninger): opp er den matematisk åpne sonen foran der
   // utfallet er mest åpent, ned er 13. plass eller bedre så lenge den ikke er
   // matematisk avgjort.
-  //   1  begge åpne: "Hva må", "Hvorfor" og "Hvilke kamper betyr mest"
-  //      øverst; "Hva må" og kampene følger den mest åpne retningen,
-  //      "Hvorfor" den andre, og de tre svarene er ulike
+  //   1  begge åpne, regel 1 (sjansen for det minst sannsynlige utfallet i
+  //      den mest åpne retningen er over 5 %, 20.10.2026): som 2 for den, og
+  //      "Hvorfor" om den andre retningen først under Flere spørsmål
+  //   1  regel 2 (5 % eller mindre, Brann): "Hva må", "Hvorfor" og "Hvilke
+  //      kamper betyr mest" øverst; "Hva må" og kampene følger den mest åpne
+  //      retningen, "Hvorfor" den andre, og de tre svarene er ulike
   //   2  én åpen: de vanlige spørsmålene, alle om den
   //   3  midtsone: "Hvilken plass ender X på?", "Hvem kjemper X mot om
   //      plassene?" og "Hvilken kamp blir vanskeligst" øverst, ingen spørsmål
@@ -4391,7 +4410,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     setGroup('Spør om tabellen: tre tilstander per lag (begge retninger åpne, én avgjort, midtsone)');
     const merker = pg => pg.waitForFunction('lastYtterSig===badgeSignatureOf(compute().rows, matches.filter(isEmpty).map(m=>[m.home,m.away]))', {timeout: 60000});
     const vurder = pg => pg.evaluate(async () => {
-      const {rows} = compute(), y = ytterNaa(), feil = [], antall = {1: 0, 2: 0, 3: 0}, naer = p => Math.abs(p - 0.5);
+      const {rows} = compute(), y = ytterNaa(), feil = [], antall = {1: 0, 2: 0, 3: 0, regel1: 0, regel2: 0}, naer = p => Math.abs(p - 0.5);
       const b13 = LEAGUE.zones.kvalik.boundary;
       for (const [i, row] of rows.entries()) {
         const t = row.name, r = qaRetninger(t), f = m => feil.push(`${t}: ${m}`);
@@ -4403,10 +4422,22 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         if (r.tilstand !== (r.opp && r.ned ? 1 : r.opp || r.ned ? 2 : 3)) f(`tilstand ${r.tilstand}`);
         const ids = qaSynligeSporsmal(t).map(q => q.id), topp = ids.slice(0, QA_TOP_N);
         const sone = rolle => (qaTargetZone(t, rolle) || {}).key;
+        if (r.tilstand !== 1 && ids.includes('whyandre')) f('"Hvorfor" om den andre retningen utenfor tilstand 1');
         if (r.tilstand === 1) {
           const andre = r.aapnest === r.opp ? r.ned : r.opp;
-          if (topp.join() !== 'howto,why,keymatches') f(`øverst: ${topp}`);
-          if (sone('howto') !== r.aapnest.key || sone() !== r.aapnest.key || sone('why') !== andre.key) f(`sonene: howto ${sone('howto')}, why ${sone('why')}, kampene ${sone()}`);
+          // Regel: sjansen for det minst sannsynlige utfallet i den mest åpne retningen.
+          const p = r.aapnest === r.opp ? r.opp.pct : lastMC[t].slice(0, b13).reduce((a, x) => a + x, 0);
+          const regel = Math.min(p, 1 - p) > 0.05 ? 1 : 2;
+          antall[`regel${regel}`]++;
+          if (r.regel !== regel || r.andre !== andre) f(`regel ${r.regel}, ventet ${regel}`);
+          if (regel === 1) {
+            if (topp.join() !== 'why,howto,keymatches' || ids[QA_TOP_N] !== 'whyandre') f(`regel 1, øverst: ${ids.slice(0, QA_TOP_N + 1)}`);
+            if ([sone('howto'), sone('why'), sone()].some(k => k !== r.aapnest.key) || sone('whyandre') !== andre.key) f(`regel 1, sonene: why ${sone('why')}, andre ${sone('whyandre')}`);
+            if (qaWhyLabel(t, 'whyandre') === qaWhyLabel(t)) f('regel 1: de to "Hvorfor" er like');
+          } else {
+            if (topp.join() !== 'howto,why,keymatches' || ids.includes('whyandre')) f(`regel 2, øverst: ${topp}`);
+            if (sone('howto') !== r.aapnest.key || sone() !== r.aapnest.key || sone('why') !== andre.key) f(`regel 2, sonene: howto ${sone('howto')}, why ${sone('why')}, kampene ${sone()}`);
+          }
         } else if (r.tilstand === 2) {
           if (topp.join() !== 'why,howto,keymatches') f(`øverst: ${topp}`);
           if ([sone('howto'), sone('why'), sone()].some(k => k !== r.aapnest.key)) f('sonene følger ikke den åpne retningen');
@@ -4427,7 +4458,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       }
       return {feil, antall};
     });
-    const sett = {1: 0, 2: 0, 3: 0};
+    const sett = {1: 0, 2: 0, 3: 0, regel1: 0, regel2: 0};
     for (const side of ['eliteserien', 'obos']) {
       const url = base.replace('/eliteserien/', `/${side}/`);
       const pg = await open(1400, 900, url);
@@ -4444,29 +4475,33 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         }
         const v = await vurder(pg);
         [1, 2, 3].forEach(k => { sett[k] += v.antall[k]; });
-        check(`${side}, ${hvor}: tilstand 1 for ${v.antall[1]}, 2 for ${v.antall[2]} og 3 for ${v.antall[3]} lag; retningene, sonene og spørsmålene stemmer for alle`,
+        sett.regel1 += v.antall.regel1; sett.regel2 += v.antall.regel2;
+        check(`${side}, ${hvor}: tilstand 1 for ${v.antall[1]} (regel 1: ${v.antall.regel1}, regel 2: ${v.antall.regel2}), 2 for ${v.antall[2]} og 3 for ${v.antall[3]} lag; retningene, sonene og spørsmålene stemmer for alle`,
           !v.feil.length, v.feil.slice(0, 4).join(' | '));
         // Banneret og de tre øverste svarene for ett lag i hver tilstand.
-        const valg = await pg.evaluate(() => [1, 2, 3].map(k => (compute().rows.find(r => qaRetninger(r.name).tilstand === k) || {}).name).filter(Boolean));
+        const valg = await pg.evaluate(() => [[1, 1], [1, 2], [2, null], [3, null]].map(([k, g]) =>
+          (compute().rows.find(r => { const x = qaRetninger(r.name); return x.tilstand === k && x.regel === g; }) || {}).name).filter(Boolean));
         for (const lag of valg) {
           await pg.select('#teamSelect', lag);
           await settle(pg);
           const b = await pg.evaluate(async t => {
             const r = qaRetninger(t), el = document.getElementById('qaHighlight');
-            const topp = qaSynligeSporsmal(t).slice(0, QA_TOP_N).filter(q => q.id !== 'keymatches');
+            const qs = qaSynligeSporsmal(t);
+            const topp = qs.slice(0, QA_TOP_N).filter(q => q.id !== 'keymatches').concat(qs.filter(q => q.id === 'whyandre'));
             const svar = [];
             for (const q of topp) svar.push(await q.run(t, () => {}));
-            return {tilstand: r.tilstand, banner: el.textContent, qid: el.dataset.qid, svar,
-              forventet: r.tilstand === 3 ? `Hvilken plass ender ${t} på?` : r.tilstand === 1 ? QA_QUESTIONS.find(q => q.id === 'howto').label(t) : null};
+            return {tilstand: r.tilstand, regel: r.regel, banner: el.textContent, qid: el.dataset.qid, svar,
+              forventet: r.tilstand === 3 ? `Hvilken plass ender ${t} på?` : r.regel === 2 ? QA_QUESTIONS.find(q => q.id === 'howto').label(t) : null};
           }, lag);
-          check(`${side}, ${hvor}: ${lag} (tilstand ${b.tilstand}): banneret «${b.banner}», og svarene øverst er ulike og uten feil`,
+          check(`${side}, ${hvor}: ${lag} (tilstand ${b.tilstand}${b.regel ? `, regel ${b.regel}` : ''}): banneret «${b.banner}», og svarene øverst er ulike og uten feil`,
             (!b.forventet || b.banner === b.forventet) && new Set(b.svar).size === b.svar.length
               && b.svar.every(s => s.length > 20 && !/undefined|NaN|\[object|^Klarte ikke/.test(s)), JSON.stringify(b).slice(0, 600));
         }
       }
       await pg.close();
     }
-    check(`alle tre tilstandene er prøvd (1: ${sett[1]}, 2: ${sett[2]}, 3: ${sett[3]} lag)`, sett[1] > 0 && sett[2] > 0 && sett[3] > 0, '');
+    check(`alle tre tilstandene og begge reglene er prøvd (1: ${sett[1]}, regel 1: ${sett.regel1}, regel 2: ${sett.regel2}, 2: ${sett[2]}, 3: ${sett[3]} lag)`,
+      sett[1] > 0 && sett[2] > 0 && sett[3] > 0 && sett.regel1 > 0 && sett.regel2 > 0, '');
   };
   // Innbyrdes oppgjør i tabellen (16.10.2026, NFFs kampreglement § 5-3):
   // poeng, målforskjell, scorede mål, så en minitabell av kampene mellom lagene

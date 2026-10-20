@@ -4950,20 +4950,34 @@ function qaRetninger(team){
   const ned = matStatus(team, 1, b)===0 ? qaZoneByKey(team, pctOf('nedrykk')>0.05 ? 'nedrykk' : 'kvalik') : null;
   const pNed = d.slice(0, b).reduce((x,y)=>x+y, 0);
   const aapnest = opp && ned ? (naer(opp.pct)<=naer(pNed) ? opp : ned) : (opp || ned);
-  return {tilstand: opp && ned ? 1 : opp || ned ? 2 : 3, opp, ned, aapnest};
+  // Hvor åpen den mest åpne retningen er: sjansen for det minst sannsynlige
+  // utfallet i den (topp 4 for Lillestrøm, kvalik eller nedrykk for
+  // Sandefjord). Over 5 %: regel 1, alle tre spørsmålene øverst om den, og
+  // den andre retningen under Flere spørsmål (Lillestrøm, 12 poeng foran
+  // kvalik, fikk "Hvorfor er Lillestrøm så godt som sikret ...?" øverst).
+  // 5 % eller mindre (ingenmannsland, Brann): regel 2, "Hvorfor" om den andre
+  // (20.10.2026).
+  const p = aapnest ? (aapnest===opp ? opp.pct : pNed) : null;
+  const aapen = p==null ? null : Math.min(p, 1-p);
+  const tilstand = opp && ned ? 1 : opp || ned ? 2 : 3;
+  return {tilstand, opp, ned, aapnest, aapen, regel: tilstand===1 ? (aapen>QA_REGEL_GRENSE ? 1 : 2) : null,
+    andre: tilstand===1 ? (aapnest===opp ? ned : opp) : null};
 }
+const QA_REGEL_GRENSE = 0.05;
 // Sonen spørsmålene handler om. Når begge retningene er åpne: "Hva må X
 // gjøre" (rolle 'howto') og alt uten rolle ("Hvilke kamper betyr mest", neste
 // kamp, heie på, forrige kamp, kortet) følger den mest åpne retningen, og
-// "Hvorfor" (rolle 'why') den andre. Brann: "Hva må" om topp 4, "Hvorfor" om
-// kvalik; Sandefjord: "Hva må" om kvalik, "Hvorfor" om topp 4 (brukeren
-// 19.10.2026). Én åpen retning: den. Midtsone og ferdig
+// "Hvorfor" (rolle 'why') den andre i regel 2 (Brann: "Hva må" om topp 4,
+// "Hvorfor" om kvalik), men den mest åpne i regel 1 (Lillestrøm: alle tre om
+// topp 4), der den andre retningen er rolle 'whyandre' under Flere spørsmål
+// (20.10.2026). Én åpen retning: den. Midtsone og ferdig
 // sesong: som før (gull, Europa, nedrykk over 5 %, ellers kvalik), men i
 // midtsonen vises ikke spørsmålene som bruker sonen (qaSynligeSporsmal).
 function qaTargetZone(team, rolle){
   const r = qaRetninger(team);
   if(!r) return null;
-  if(r.tilstand===1) return rolle==='why' ? (r.aapnest===r.opp ? r.ned : r.opp) : r.aapnest;
+  // 'whyandre': den andre retningen, under Flere spørsmål i regel 1.
+  if(r.tilstand===1) return rolle==='whyandre' || (rolle==='why' && r.regel===2) ? r.andre : r.aapnest;
   if(r.tilstand===2) return r.aapnest;
   const d = lastMC[team];
   const pctOf = key => { const z = LEAGUE.zones[key]; if(!z) return 0;
@@ -7015,8 +7029,8 @@ function listNames(shown, more){
 // simulerte utfallet -- egne poeng mot konkurrentens, og den faktiske
 // sjansen (samme tall som knappeteksten), ikke en betinget telling.
 // Spørsmålsteksten for spørsmål 1: sier ikke "0 %/100 % sjanse" når saken er avgjort.
-function qaWhyLabel(team){
-  const z = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team, 'why');
+function qaWhyLabel(team, rolle='why'){
+  const z = qaWhyZoneOverride && rolle==='why' ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team, rolle);
   if(!z) return `Hvorfor har ${team} den sjansen den har?`;
   const st = qaSettled(team, z);
   if(!st) return `Hvorfor har ${team} ${pctTxt(z.pct, z.mat)} sjanse for ${z.label}?`;
@@ -7026,8 +7040,8 @@ function qaWhyLabel(team){
   if(st.kind==='out~') return `Hvorfor har ${team} så godt som ingen mulighet til å ${QA_REACH_PHRASE[z.key]}?`;
   return `Hvorfor kan ${team} ikke lenger ${QA_REACH_PHRASE[z.key]}?`;
 }
-async function qaWhy(team){
-  const zone = qaWhyZoneOverride ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team, 'why');
+async function qaWhy(team, rolle='why'){
+  const zone = qaWhyZoneOverride && rolle==='why' ? qaZoneByKey(team, qaWhyZoneOverride) : qaTargetZone(team, rolle);
   if(!zone) return 'Ingen data å regne på ennå.';
   const st = qaSettled(team, zone);
   if(st) return qaSettledText(team, zone, st, false);
@@ -7625,12 +7639,15 @@ function qaPlassRivaler(team, rows, idx){
 // gamle svaret når det kommer (qaRequestSeq), så et sent svar ikke dukker
 // opp over et nyere spørsmål. ----
 const QA_QUESTIONS = [
-  {id:'why', needsTeam:true, run:qaWhy, label:qaWhyLabel},
+  // Bare laget: run kalles med (lag, onPartial), og qaWhy tar rollen som andre argument.
+  {id:'why', needsTeam:true, run:team=>qaWhy(team), label:team=>qaWhyLabel(team)},
   {id:'howto', needsTeam:true, run:qaHowTo, label:team=>{
     const z=qaTargetZone(team, 'howto');
     return `Hva må ${team} gjøre for å ${z?qaReachQuestion(z.key):'nå målet'}?`;
   }},
   {id:'keymatches', needsTeam:true, run:qaKeyMatches, label:team=>`Hvilke kamper betyr mest for ${team}?`},
+  // Den andre retningen i regel 1 (qaRetninger), øverst under Flere spørsmål.
+  {id:'whyandre', needsTeam:true, run:team=>qaWhy(team, 'whyandre'), label:team=>qaWhyLabel(team, 'whyandre')},
   {id:'keyround', needsTeam:false, run:(team,onPartial)=>qaKeyRound(), label:()=>'Hva er rundens viktigste kamp i ligaen?'},
   {id:'runin', needsTeam:false, run:()=>qaToughestRunIn(), label:()=>'Hvem har det tøffeste restprogrammet?'},
   {id:'lastmatch', needsTeam:true, run:qaLastMatch, label:team=>`Hva betydde ${forrigeSimulert(team) ? 'simulert forrige kamp' : 'forrige kamp'} for ${team}?`},
@@ -7643,19 +7660,21 @@ const QA_QUESTIONS = [
   {id:'luck', needsTeam:false, run:()=>qaLuck(), label:()=>'Hvem har vært heldig eller uheldig?'},
 ];
 const QA_TOP_N = 3;
-// Spørsmålene for laget, i rekkefølge etter tilstanden (qaRetninger). 1: "Hva
-// må" og "Hvilke kamper betyr mest" (den mest åpne retningen) og "Hvorfor"
-// (den andre) øverst. 3
+// Spørsmålene for laget, i rekkefølge etter tilstanden (qaRetninger). 1,
+// regel 1: som 2 for den mest åpne retningen, og "Hvorfor" om den andre
+// først under Flere spørsmål. 1, regel 2: "Hva må" og "Hvilke kamper betyr
+// mest" (den mest åpne retningen) og "Hvorfor" (den andre) øverst. 3
 // (midtsone): "Hvilken plass ender X på?", "Hvem kjemper X mot om
 // plassene?" og "Hvilken kamp blir vanskeligst" øverst, og spørsmålene som bare kan svare med noe som er
 // avgjort, er borte. 2 og ferdig sesong: som før.
 const qaMidtsone = team => { const r = team && qaRetninger(team); return !!r && r.tilstand===3; };
-const QA_BARE_SONE = new Set(['why','howto','keymatches','nextmatch','lastmatch','cheer','decided']);
+const QA_BARE_SONE = new Set(['why','howto','keymatches','whyandre','nextmatch','lastmatch','cheer','decided']);
 function qaSynligeSporsmal(team){
-  const alle = QA_QUESTIONS.filter(q => team ? true : !q.needsTeam);
   const r = team && qaRetninger(team);
+  // "Hvorfor" om den andre retningen bare i regel 1, der den er flyttet ned.
+  const alle = QA_QUESTIONS.filter(q => (team ? true : !q.needsTeam) && (q.id!=='whyandre' || (r && r.regel===1)));
   if(!r || r.tilstand===0 || r.tilstand===2) return alle;
-  const forst = r.tilstand===1 ? ['howto','why','keymatches'] : ['range','rivals','hardest'];
+  const forst = r.regel===1 ? ['why','howto','keymatches','whyandre'] : r.tilstand===1 ? ['howto','why','keymatches'] : ['range','rivals','hardest'];
   return forst.map(id=>alle.find(q=>q.id===id))
     .concat(alle.filter(q=>!forst.includes(q.id) && !(r.tilstand===3 && QA_BARE_SONE.has(q.id))));
 }
@@ -7748,14 +7767,15 @@ function renderQaHighlight(){
   el.classList.remove('plain');
   const zone = qaTargetZone(SELECTED_TEAM);
   // Tre tilstander (qaRetninger): midtsonen spør om plassen; begge retninger
-  // åpne spør "Hva må", som følger den mest åpne.
+  // åpne i regel 2 spør "Hva må", som følger den mest åpne; regel 1 som én
+  // åpen retning (under).
   const r = zone && qaRetninger(SELECTED_TEAM);
   if(r && r.tilstand===3){
     el.textContent = `Hvilken plass ender ${SELECTED_TEAM} på?`;
     el.dataset.qid = 'range';
     return;
   }
-  if(r && r.tilstand===1){
+  if(r && r.tilstand===1 && r.regel===2){
     el.textContent = QA_QUESTIONS.find(q=>q.id==='howto').label(SELECTED_TEAM);
     el.dataset.qid = 'howto';
     return;
@@ -7792,11 +7812,17 @@ document.getElementById('qaHighlight').addEventListener('click', ()=>{
 async function runQaQuestion(id, keepZoneOverride, noScroll){
   const q = QA_QUESTIONS.find(x=>x.id===id);
   if(!q) return;
+  // Spørsmålet vises ikke for laget (qaSynligeSporsmal): lista kan ha endret
+  // seg mellom visning og trykk, når tilstanden til laget endres. Da gjøres
+  // ingenting; før stoppet det med en feil, for svarboksen fantes ikke
+  // (20.10.2026).
+  if(!qaSynligeSporsmal(SELECTED_TEAM).some(x=>x.id===id)) return;
   if(!keepZoneOverride) qaWhyZoneOverride = null;
   qaActiveId = id;
   qaAnswerKey = qaStateKey(); qaAnswerTeam = SELECTED_TEAM;
   renderQaButtons();
   const answerEl = document.getElementById('qaAnswer');
+  if(!answerEl) return;
   answerEl.className = 'qa-answer loading';
   answerEl.innerHTML = `<span class="qa-spinner"></span> Regner svaret…`;
   const myRequestId = ++qaRequestSeq;
