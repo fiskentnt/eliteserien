@@ -922,6 +922,29 @@ def main():
                   f"<loc>https://tabellkalkulator.no/{liga}/{sti}/</loc>" in sm_
                   and f'href="/{liga}/{sti}/"' in statisk_region.statiske((ROOT / liga / "index.html").read_text(encoding="utf-8"))["OPPSUMMERING"]
                   and f'href="/{liga}/{sti}/"' in statisk_region.statiske((ROOT / "index.html").read_text(encoding="utf-8"))[liga.upper()])
+    # Rekkefølgen (20.10.2026): lag nevnes i tabellens rekkefølge, nedrykk
+    # nedenfra, så tekst og tabell aldri sier noe ulikt om plassene.
+    for liga, sider in lag_sider.SPORSMAL.items():
+        tk = lag_sider.les(liga)
+        plass = {r["lag"]: r["plass"] for r in tk["tabell"]["rader"]}
+        for sti, sone in sider:
+            t_ = (ROOT / liga / sti / "index.html").read_text(encoding="utf-8")
+            orden = [plass[n] for n in re.findall(r"Kampene som betyr mest for ([^<]+)</h3>", t_)]
+            ned = tk["sporsmal"][sone]["kolonne"] == "ned"
+            # Svarsetningen: etter sjanse, høyest først; nedrykk nedenfra.
+            rad = {r["lag"]: r for r in tk["tabell"]["rader"]}
+            svar = re.search(r'<p class="svar">(.*?)</p>', t_).group(1)
+            i_svar = sorted((svar.index(x["lag"]), x["lag"]) for x in tk["sporsmal"][sone]["lag"] if x["lag"] in svar)
+            sv_lag = [n for _, n in i_svar]
+            ventet = sorted(sv_lag, key=lambda n: -rad[n]["plass"]) if ned else sorted(sv_lag, key=lambda n: -rad[n]["sjanser"]["gull"]["andel"])
+            check(f"rekkefølge: /{liga}/{sti}/: «Hvorfor» og kampene i tabellens rekkefølge{' nedenfra' if ned else ''} ({orden}), svaret {'nedenfra' if ned else 'etter sjanse'} ({', '.join(sv_lag)})",
+                  orden == sorted(orden, reverse=ned) and len(orden) == len(tk["sporsmal"][sone]["lag"]) and sv_lag == ventet)
+    for liga in ("eliteserien", "obos"):
+        tk = lag_sider.les(liga)
+        topp = lag_sider.topp_setning(tk)
+        i_ = sorted((topp.index(r["lag"]), r) for r in tk["tabell"]["rader"] if r["lag"] in topp)
+        andeler = [r["sjanser"]["gull"]["andel"] for _, r in i_ if r["sjanser"]["gull"]["avgjort"] == 0]
+        check(f"rekkefølge: oppsummeringen for {liga} nevner lederne etter sjanse, høyest først", andeler == sorted(andeler, reverse=True), topp[:80])
     fs_ = statisk_region.statiske((ROOT / "index.html").read_text(encoding="utf-8"))
     check("oppsummering: forsiden har den korte oppsummeringen for begge ligaene, laget fra tekster.json",
           all(fs_.get(k, "").count("Oppdatert ") == 1 and "ligger nærmest" in fs_.get(k, "") for k in ("ELITESERIEN", "OBOS"))

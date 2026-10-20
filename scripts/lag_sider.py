@@ -102,6 +102,16 @@ def _lag_pst(r, key, parentes=False):
     return f"{r['lag']} ({_vist(r, key)})" if parentes else f"{r['lag']} {_vist(r, key)}"
 
 
+def _tabellorden(rader, nedenfra=False):
+    """Lagene i tabellens rekkefølge (rangert som på siden, § 5-3), for
+    «Hvorfor», utsnittet og kampene, så de aldri sier noe annet om plassene
+    enn tabellen (OBOS 20.10.2026: Kongsvinger er nr. 2 på målforskjell, men
+    Haugesund har større sjanse). Svarsetningen og oppsummeringen står etter
+    sjanse, høyest først (brukeren 20.10.2026). Nedrykk leses nedenfra (16.,
+    15., ...), også i setningene: da kommer laget nærmest først."""
+    return sorted(rader, key=lambda r: r["plass"], reverse=nedenfra)
+
+
 def _aapne(t, key, minst):
     """Lagene der sonen fortsatt er åpen og sjansen er minst «minst», størst først."""
     rader = [r for r in t["tabell"]["rader"] if r["sjanser"][key]["avgjort"] == 0 and r["sjanser"][key]["andel"] >= minst]
@@ -118,7 +128,7 @@ def topp_setning(t):
     sikre = _sikre(t, "gull")
     if sikre:
         deler.append(f"{liste(sikre)} har sikret {navn}.")
-    aapne = _aapne(t, "gull", 0.005)[:3]
+    aapne = _aapne(t, "gull", 0.005)[:3]   # etter sjanse, høyest først
     if aapne:
         resten = [_lag_pst(r, "gull") for r in aapne[1:]]
         deler.append(f"{aapne[0]['lag']} har {_vist(aapne[0], 'gull')} sjanse for {navn}"
@@ -128,7 +138,7 @@ def topp_setning(t):
 
 def midt_setning(t):
     """«I kampen om topp 4 har Rosenborg 65 %, Molde 64 % ... og Brann 1 %.» Åpne lag med 1 til 99 %."""
-    aapne = [r for r in _aapne(t, "europa", 0.01) if r["sjanser"]["europa"]["andel"] <= 0.99][:5]
+    aapne = [r for r in _aapne(t, "europa", 0.01) if r["sjanser"]["europa"]["andel"] <= 0.99][:5]   # etter sjanse
     if not aapne:
         return ""
     return f"I kampen om {sone_navn(t, 'europa')} har {liste([_lag_pst(r, 'europa') for r in aapne])}."
@@ -140,7 +150,7 @@ def bunn_setning(t):
     sikre = _sikre(t, "ned")
     if sikre:
         deler.append(f"{liste(sikre)} er rykket ned.")
-    aapne = _aapne(t, "ned", 0.01)[:2]
+    aapne = _tabellorden(_aapne(t, "ned", 0.01)[:2], nedenfra=True)
     if aapne:
         deler.append(f"{liste([_lag_pst(r, 'ned', True) for r in aapne])} ligger nærmest {sone_navn(t, 'ned')}.")
     return " ".join(deler)
@@ -199,7 +209,9 @@ def sporsmal_svar(t, sti, sone):
     liga, aar, ferdig = t["liga"]["navn"], t["liga"]["sesong"], t["liga"]["ferdig"]
     kol = t["sporsmal"][sone]["kolonne"]
     rader = {r["lag"]: r for r in t["tabell"]["rader"]}
+    # Svaret: etter sjanse, høyest først; nedrykk nedenfra i tabellen.
     lag = [rader[x["lag"]] for x in t["sporsmal"][sone]["lag"]]
+    lag = _tabellorden(lag, nedenfra=True) if kol == "ned" else sorted(lag, key=lambda r: -r["sjanser"][kol]["andel"])
     sikre = [r["lag"] for r in lag if r["sjanser"][kol]["avgjort"] == 1]
     aapne = [r for r in lag if r["sjanser"][kol]["avgjort"] == 0]
     sikret_txt = {"hvem-vinner": ("er seriemester", "vant " + f"{liga} {aar}"),
@@ -308,7 +320,9 @@ def sporsmal_side(liga, sti, sone, t):
     tittel = sporsmal_tittel(t, sti)
     svar = sporsmal_svar(t, sti, sone)
     url = f"{VERT}/{liga}/{sti}/"
-    sp = t["sporsmal"][sone]
+    sp = dict(t["sporsmal"][sone])
+    plass = {r["lag"]: r["plass"] for r in t["tabell"]["rader"]}
+    sp["lag"] = sorted(sp["lag"], key=lambda x: plass[x["lag"]], reverse=(sp["kolonne"] == "ned"))   # tabellens rekkefølge
     kol = sp["kolonne"]
     k = next(x for x in t["tabell"]["kolonner"] if x["key"] == kol)
     om = (k.get("tittel") or "").replace(" Klikk for å sortere.", "").strip()
