@@ -4577,7 +4577,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       // tallene som tabellen i tekster.json, «Hvorfor» for hvert aktuelt lag,
       // tabellutsnittet og kampene; med JavaScript ingen JS-feil, og lenkene
       // fra ligasiden og forsiden finnes.
-      for (const [sti, sone] of ({eliteserien: [['hvem-vinner', 'gull'], ['hvem-rykker-ned', 'nedrykk']]})[side] || []) {
+      for (const [sti, sone] of ({eliteserien: [['hvem-vinner', 'gull'], ['hvem-rykker-ned', 'nedrykk']], obos: [['hvem-rykker-opp', 'gull'], ['hvem-rykker-ned', 'nedrykk']]})[side] || []) {
         const sideUrl = base.replace('/eliteserien/', `/${side}/${sti}/`);
         const sp = tkHel.sporsmal[sone];
         const pu = await browser.newPage(); await pu.setJavaScriptEnabled(false);

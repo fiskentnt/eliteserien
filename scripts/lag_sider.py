@@ -43,9 +43,10 @@ ROOT = Path(__file__).resolve().parent.parent
 LIGAER = ("eliteserien", "obos")
 VERT = "https://tabellkalkulator.no"
 # Spørsmålssidene (fase 2): faste adresser som lever hele sesongen og videre,
-# (sti, sone). OBOS kommer når Eliteserien-sidene er godkjent.
+# (sti, sone). I OBOS er toppsonen direkte opprykk.
 SPORSMAL = {
     "eliteserien": [("hvem-vinner", "gull"), ("hvem-rykker-ned", "nedrykk")],
+    "obos": [("hvem-rykker-opp", "gull"), ("hvem-rykker-ned", "nedrykk")],
 }
 
 
