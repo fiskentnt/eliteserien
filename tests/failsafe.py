@@ -936,6 +936,10 @@ def main():
     check("sitemap.xml: én skriver (push_sitemap.sh i grunnlag.yml), ikke update-data.yml, og lastmod fra grunnlagsfilen",
           "make_sitemap.py" not in "\n".join(l for l in uw.splitlines() if not l.lstrip().startswith("#")) and "sitemap.xml" not in uw.split("git add eliteserien/og.png")[1].split("\n")[0]
           and 'grunnlag.json' in ms and '"laget"' in ms and "make_sitemap.py" in (ROOT / "scripts" / "push_sitemap.sh").read_text(encoding="utf-8"))
+    for liga in ("eliteserien", "obos"):
+        uten = re.findall(r'<span class="sm">(?! )[^<]{0,20}', (ROOT / liga / "index.html").read_text(encoding="utf-8"))
+        check(f"søk: {liga}/index.html: fullt og kort navn har mellomrom først i det korte («Legg inn resultater Resultater», «Rosenborg RBK»), i markupen og i JS",
+              not uten, uten[:4])
     for liga, navn in (("eliteserien", "Eliteserien"), ("obos", "OBOS-ligaen")):
         tit = re.search(r"<title>(.*?)</title>", (ROOT / liga / "index.html").read_text(encoding="utf-8")).group(1)
         check(f"søk: tittelen på {liga}/index.html begynner med «Tabellkalkulator {navn} 2026: sjanse for»", tit.startswith(f"Tabellkalkulator {navn} 2026: sjanse for"), tit)

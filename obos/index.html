@@ -1170,9 +1170,9 @@
     <div class="league-tabs" id="leagueTabs" role="navigation" aria-label="Velg liga"></div>
     <div class="nav-links" id="navLinks">
       <a href="#tabell" data-target="tabell" class="active">Tabell</a>
-      <a href="#fxPanel" data-target="fxPanel"><span class="lg">Legg inn resultater</span><span class="sm">Resultater</span></a>
-      <a href="#qaPanel" data-target="qaPanel"><span class="lg">Spør om tabellen</span><span class="sm">Spør</span></a>
-      <a href="#omModellen" data-target="omModellen"><span class="lg">Om modellen</span><span class="sm">Modellen</span></a>
+      <a href="#fxPanel" data-target="fxPanel"><span class="lg">Legg inn resultater</span><span class="sm"> Resultater</span></a>
+      <a href="#qaPanel" data-target="qaPanel"><span class="lg">Spør om tabellen</span><span class="sm"> Spør</span></a>
+      <a href="#omModellen" data-target="omModellen"><span class="lg">Om modellen</span><span class="sm"> Modellen</span></a>
     </div>
     <button class="theme-toggle" id="themeToggle" type="button" aria-label="Bytt til mørkt tema" title="Bytt til mørkt tema">
       <svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"></path></svg>
@@ -4905,13 +4905,13 @@ function computeBadgesAsync(rows){
 // statiske tallene fra data/model.json.
 function renderModelTbl(){
   const {mu,H}=MODEL, {att,con,ha,hc}=LIVE;
-  const ppk='<span class="lg">P per kamp</span><span class="sm">P/kamp</span>';
-  let h='<thead><tr><th class="team"></th><th class="mtx"></th><th class="grp" colspan="2">Hjemme</th><th class="grp" colspan="2">Borte</th><th class="grp" colspan="2"><span class="lg">Modell, forventet mål</span><span class="sm">Forv. mål</span></th></tr>'+
+  const ppk='<span class="lg">P per kamp</span><span class="sm"> P/kamp</span>';
+  let h='<thead><tr><th class="team"></th><th class="mtx"></th><th class="grp" colspan="2">Hjemme</th><th class="grp" colspan="2">Borte</th><th class="grp" colspan="2"><span class="lg">Modell, forventet mål</span><span class="sm"> Forv. mål</span></th></tr>'+
         `<tr><th class="team">Lag</th><th class="mtx">Siste 5</th><th>${ppk}</th><th>Mål</th><th>${ppk}</th><th>Mål</th><th>Hjemme</th><th>Borte</th></tr></thead><tbody>`;
   TEAMS.forEach(t=>{ const i=TI[t], S=STATS[t];
     const hf=Math.exp(mu+H+att[i]+ha[i]), hm=Math.exp(mu+con[i]+hc[i]);
     const bf=Math.exp(mu+att[i]-ha[i]), bm=Math.exp(mu+H+con[i]-hc[i]);
-    h+=`<tr${t===SELECTED_TEAM?' style="background:var(--team-soft)"':''}><td class="team"><span class="lg">${t}</span><span class="sm">${shortTeam(t)}</span></td><td class="mtx">${formHtml(t)}</td>
+    h+=`<tr${t===SELECTED_TEAM?' style="background:var(--team-soft)"':''}><td class="team"><span class="lg">${t}</span><span class="sm"> ${shortTeam(t)}</span></td><td class="mtx">${formHtml(t)}</td>
       <td>${f2(S.h[1]/S.h[0])}</td><td>${S.h[2]}-${S.h[3]}</td><td>${f2(S.b[1]/S.b[0])}</td><td>${S.b[2]}-${S.b[3]}</td>
       <td>${f1(hf)}-${f1(hm)}</td><td>${f1(bf)}-${f1(bm)}</td></tr>`; });
   document.getElementById('modelTbl').innerHTML=h+'</tbody>';
