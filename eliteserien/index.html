@@ -543,6 +543,14 @@
   .panel > h2 .count{font:500 14px var(--body);color:var(--muted)}
   .simnote{margin:-4px 16px 10px;color:var(--muted);font-size:12.5px}
   .oppdatert-linje{margin:0;max-width:68ch;color:var(--muted);font-size:12.5px;line-height:1.45}
+  /* Nederst ved «Om modellen»: lista over lagsidene og når tallene ble regnet. */
+  .sidefot{display:grid;gap:6px}
+  .lagsider-linje{margin:0;max-width:68ch;color:var(--muted);font-size:12.5px;line-height:1.7}
+  .lagsider-linje a{color:var(--team-text);font-weight:600;white-space:nowrap}
+  /* «Mer om <lag> →» nederst i lagboksen, til venstre for «Kopier tekst». */
+  .lagboks-kopi{justify-content:space-between;align-items:center}
+  .lag-mer{font:700 14px/1.2 var(--body);color:var(--team-text);text-decoration:none;padding:4px 0}
+  .lag-mer:hover{text-decoration:underline}
   .scenario-line{margin:-4px 16px 10px;color:var(--ink);font-size:12.5px;font-weight:600}
 
   /* Tabell */
@@ -1512,8 +1520,12 @@
   <h2>Ofte spurt</h2>
   <div class="faq-list" id="faqList"></div>
 </section>
-<!-- Når tallene i HTML-en ble regnet (STATISK-OPPDATERT, lag_sider.py). -->
+<!-- Lista over lagsidene (STATISK-LAGSIDER, fase 3) og når tallene i HTML-en
+     ble regnet (STATISK-OPPDATERT), begge fra lag_sider.py. -->
+<div class="sidefot">
+<p class="lagsider-linje" id="lagsider"><!-- STATISK-LAGSIDER -->Lagsidene: <a href="/eliteserien/bodo-glimt/">Bodø/Glimt</a> · <a href="/eliteserien/viking/">Viking</a> · <a href="/eliteserien/molde/">Molde</a> · <a href="/eliteserien/tromso/">Tromsø</a> · <a href="/eliteserien/rosenborg/">Rosenborg</a> · <a href="/eliteserien/lillestrom/">Lillestrøm</a> · <a href="/eliteserien/brann/">Brann</a> · <a href="/eliteserien/fredrikstad/">Fredrikstad</a> · <a href="/eliteserien/kfum-oslo/">KFUM Oslo</a> · <a href="/eliteserien/sarpsborg-08/">Sarpsborg 08</a> · <a href="/eliteserien/valerenga/">Vålerenga</a> · <a href="/eliteserien/hamkam/">HamKam</a> · <a href="/eliteserien/sandefjord/">Sandefjord</a> · <a href="/eliteserien/aalesund/">Aalesund</a> · <a href="/eliteserien/kristiansund/">Kristiansund</a> · <a href="/eliteserien/start/">Start</a><!-- /STATISK-LAGSIDER --></p>
 <p class="oppdatert-linje" id="oppdatertLinje"><!-- STATISK-OPPDATERT -->Oppdatert 20. oktober 2026 kl. 14.20, 100 000 simulerte sesonger.<!-- /STATISK-OPPDATERT --></p>
+</div>
 </div>
 
 
@@ -1962,6 +1974,11 @@ function buildLeagueMenu(){
     });
   });
 }
+// Adressen til lagsiden (fase 3, 20.10.2026), som lag_slug i
+// scripts/lag_sider.py: små bokstaver, æ/ø/å som ae/o/a, mellomrom og / som
+// bindestrek (Bodø/Glimt blir bodo-glimt). Lenken «Mer om <lag> →» nederst i
+// lagboksen går dit; klikk på laget i tabellen følger laget som før.
+const lagSlug = t => t.toLowerCase().replace(/æ/g, 'ae').replace(/ø/g, 'o').replace(/å/g, 'a').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 // Det JS fyller som også står i HTML-en (20.10.2026): ligamenyen, stempelet,
 // fargeforklaringen og de fire boksene, slik siden viser dem nå.
 // scripts/lag_grunnlag.js tar dem inn i tekster.json, og scripts/lag_sider.py
@@ -8363,7 +8380,7 @@ function render(){
       `<span class="teamname-lg">${SELECTED_TEAM}</span>
        <div class="posline"${line2Title?` title="${line2Title}"`:''}>${posLine}</div>
        <div class="odds-box"><div id="odds"></div></div>
-       <div class="qa-kopi lagboks-kopi">${KOPI_TEKST_KNAPP('lagboks')}</div>`;
+       <div class="qa-kopi lagboks-kopi"><a class="lag-mer" href="${LEAGUE.path}${lagSlug(SELECTED_TEAM)}/">Mer om ${SELECTED_TEAM} →</a>${KOPI_TEKST_KNAPP('lagboks')}</div>`;
   }
   fillOdds(); scheduleMC();
   updateFollowFit();

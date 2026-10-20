@@ -879,12 +879,12 @@ def main():
           0 < i_p2 < i_nd < i_rg < i_lg and "concurrency:\n      group: grunnlag-${{ matrix.liga }}\n      cancel-in-progress: false" in gw
           and "if: needs.port.outputs.ligaer != '[]'" in gw, f"{i_p2} {i_nd} {i_rg} {i_lg}")
     i_ls = gi("lag_sider.py")
-    check("grunnlag.yml: fast N (ingen --n), filen der porten sier, sidene lages fra tekster.json (lag_sider.py, kan ikke stoppe lagringen), og bare grunnlagsfilen, banneret, tekster.json og ligasiden committes, så sitemap.xml",
+    check("grunnlag.yml: fast N (ingen --n), filen der porten sier, sidene lages fra tekster.json (lag_sider.py, kan ikke stoppe lagringen), og bare grunnlagsfilen, banneret, tekster.json, ligasiden, forsiden og undersidene committes, så sitemap.xml",
           i_rg > 0 and "--n" not in gst[i_rg] and '--ut "$UT"' in gst[i_rg] and "UT: ${{ steps.port.outputs.ut }}" in gst[i_rg]
           and i_rg < i_ls < i_lg and "continue-on-error: true" in gst[i_ls]
           and 'git add "$UT/grunnlag.json"\n' in gst[i_lg] and '[ -f "$UT/keymatch.json" ] && git add "$UT/keymatch.json"' in gst[i_lg]
           and '[ -f "$UT/tekster.json" ] && git add "$UT/tekster.json"' in gst[i_lg] and 'git add "${{ matrix.liga }}/index.html"' in gst[i_lg]
-          and "git add index.html" in gst[i_lg] and 'git add "${{ matrix.liga }}"/hvem-*/index.html' in gst[i_lg]
+          and "git add index.html" in gst[i_lg] and 'python3 scripts/lag_sider.py --filer "${{ matrix.liga }}" | xargs -r git add --' in gst[i_lg]
           and gst[i_lg].count("git add") == 6 and "bash scripts/push_med_rebase.sh" in gst[i_lg]
           and gst[i_lg].index("bash scripts/push_med_rebase.sh") < gst[i_lg].index("bash scripts/push_sitemap.sh"))
     # Google (20.10.2026): den statiske tabellen. lag_grunnlag.js skriver
@@ -943,6 +943,50 @@ def main():
                   f"<loc>https://tabellkalkulator.no/{liga}/{sti}/</loc>" in sm_
                   and f'href="/{liga}/{sti}/"' in "".join(v for k, v in statisk_region.statiske((ROOT / liga / "index.html").read_text(encoding="utf-8")).items() if k.startswith("KORT"))
                   and f'href="/{liga}/{sti}/"' in statisk_region.statiske((ROOT / "index.html").read_text(encoding="utf-8"))[liga.upper()])
+    # Lagsidene (fase 3): laget fra tekster.json for hvert lag, med tittel,
+    # canonical og knappen til kalkulatoren, lenket fra lista nederst på
+    # ligasiden, med i sitemap-adressene, og funnet av lag_sider.py --filer
+    # (git add i grunnlag-workflowen).
+    import html as _html
+    from urllib.parse import quote as _quote
+    import make_sitemap
+    sm_lag = "\n".join(make_sitemap.adresser())
+    for liga in ("eliteserien", "obos"):
+        tk = lag_sider.les(liga)
+        lagt = tk.get("lag", {})
+        check(f"tekster.json: {liga} har «lag» for alle 16 lagene (de øverste spørsmålene med svar, plassen, kampene som er igjen, sonene)",
+              len(lagt) == 16 and set(lagt) == {r["lag"] for r in tk["tabell"]["rader"]} and all(
+                  1 <= len(d["topp"]) <= 3 and all(q["id"] and q["sporsmal"] and q["svar"] for q in d["topp"])
+                  and d["plass"]["sporsmal"] and d["plass"]["svar"]
+                  and all({"naar", "motstander", "hjemme", "seier", "uavgjort", "tap"} <= set(k) for k in d["rest"])
+                  and {"gull", "europa", "kvalik", "nedrykk"} <= {s["key"] for s in d["soner"]} for d in lagt.values()))
+        side_ = (ROOT / liga / "index.html").read_text(encoding="utf-8")
+        lagsider_ = statisk_region.statiske(side_).get("LAGSIDER", "")
+        slugs, feil = [lag_sider.lag_slug(lag) for lag in lagt], []
+        for lag in lagt:
+            sl = lag_sider.lag_slug(lag)
+            f_ = ROOT / liga / sl / "index.html"
+            t_ = f_.read_text(encoding="utf-8") if f_.exists() else ""
+            if not (t_ == lag_sider.lag_side(liga, lag, tk) and f"<title>{_html.escape(lag_sider.lag_tittel(tk, lag))}</title>" in t_
+                    and f'<link rel="canonical" href="https://tabellkalkulator.no/{liga}/{sl}/">' in t_
+                    and f'href="/{liga}/#team={_quote(lag, safe="")}"' in t_ and f'href="/{liga}/{sl}/"' in lagsider_
+                    and f"<loc>https://tabellkalkulator.no/{liga}/{sl}/</loc>" in sm_lag):
+                feil.append(lag)
+        forst = next(iter(lagt), "")
+        check(f"lagside: alle {len(lagt)} lagsidene i {liga} er laget fra tekster.json, med tittel («{lag_sider.lag_tittel(tk, forst) if forst else ''}» ...), "
+              "canonical og knappen #team=, lenket fra lista nederst på ligasiden og med i sitemap", lagt and not feil, feil)
+        check(f"lagside: adressene i {liga} er unike og kolliderer ikke med andre mapper (data, modellsjekk, spørsmålssidene)",
+              len(set(slugs)) == len(slugs) and not set(slugs) & {"data", "modellsjekk", *(s for s, _ in lag_sider.SPORSMAL.get(liga, []))})
+        check(f"lagside: «Lagsidene: ...» står nederst på {liga}/index.html ved «Om modellen», ikke i tabellen, og lagboksen har «Mer om <lag> →»; klikk på laget i tabellen følger fortsatt laget",
+              side_.index('id="omModellen"') < side_.index("<!-- STATISK-LAGSIDER -->") < side_.index("<!-- STATISK-OPPDATERT -->")
+              and lagsider_.startswith("Lagsidene: ") and lagsider_.count("<a ") == 16 and "<a " not in statisk_region.statiske(side_)["TABELL"]
+              and 'class="lag-mer" href="${LEAGUE.path}${lagSlug(SELECTED_TEAM)}/">Mer om ${SELECTED_TEAM} →</a>' in side_
+              and "if(el) followTeamToggle(el.dataset.team);" in side_)
+        filer = lag_sider.undersider(liga)
+        check(f"lagside: lag_sider.py --filer finner spørsmåls- og lagsidene i {liga} ({len(filer)}), ikke modellsjekk",
+              set(filer) == {f"{liga}/{s}/index.html" for s in slugs} | {f"{liga}/{s}/index.html" for s, _ in lag_sider.SPORSMAL.get(liga, [])})
+    check("lagside: grunnlag.yml legger undersidene lag_sider.py har laget (--filer) i grunnlag-commiten",
+          'python3 scripts/lag_sider.py --filer "${{ matrix.liga }}" | xargs -r git add --' in (ROOT / ".github" / "workflows" / "grunnlag.yml").read_text(encoding="utf-8"))
     # Rekkefølgen (20.10.2026): lag nevnes i tabellens rekkefølge, nedrykk
     # nedenfra, så tekst og tabell aldri sier noe ulikt om plassene.
     for liga, sider in lag_sider.SPORSMAL.items():
@@ -973,8 +1017,8 @@ def main():
     for liga in ("eliteserien", "obos"):
         t = (ROOT / liga / "index.html").read_text(encoding="utf-8")
         r = statisk_region.statiske(t)
-        check(f"statisk tabell: {liga}/index.html har regionene KOLONNER, TABELL, OPPDATERT, menyen, stempelet, fargeforklaringen og boksene, med overskriftscellene og rader",
-              set(r) == {"KOLONNER", "OPPDATERT", "TABELL", "LIGAMENY", "STEMPEL", "FORKLARING", "KORTGULL", "KORTEUROPA", "KORTNED", "KORTFORM"} and all(f'id="{x}"' in r["KOLONNER"] for x in ("gullHeader", "europaHeader", "nedHeader"))
+        check(f"statisk tabell: {liga}/index.html har regionene KOLONNER, TABELL, OPPDATERT, menyen, stempelet, fargeforklaringen, boksene og lagsidene, med overskriftscellene og rader",
+              set(r) == {"KOLONNER", "OPPDATERT", "TABELL", "LIGAMENY", "STEMPEL", "FORKLARING", "KORTGULL", "KORTEUROPA", "KORTNED", "KORTFORM", "LAGSIDER"} and all(f'id="{x}"' in r["KOLONNER"] for x in ("gullHeader", "europaHeader", "nedHeader"))
               and r["TABELL"].count("<tr ") == 16 and r["OPPDATERT"].startswith("Oppdatert "), {k: len(v) for k, v in r.items()})
         with tempfile.TemporaryDirectory() as tmp:
             c = grunnlag_port.SIDER[liga]

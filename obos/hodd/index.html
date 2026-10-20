@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Laget av scripts/lag_sider.py fra obos/data/tekster.json. Ikke rediger:
+     siden lages på nytt hver gang tallene regnes. -->
+<script>
+  (function(){
+    if(location.hostname !== 'tabellkalkulator.no') return;
+    var s = document.createElement('script');
+    s.async = true; s.src = '//gc.zgo.at/count.js';
+    s.setAttribute('data-goatcounter', 'https://tabellkalkulator.goatcounter.com/count');
+    s.onerror = function(){}; document.head.appendChild(s);
+  })();
+</script>
+<title>Hødd 2026: sjanse for topp 6</title>
+<meta name="description" content="Hødd ligger på 7. plass i OBOS-ligaen 2026 med 38 poeng etter 27 kamper. Sjansen for topp 6 er 12 %.">
+<link rel="canonical" href="https://tabellkalkulator.no/obos/hodd/">
+<meta name="theme-color" content="#13305f">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Tabellkalkulator">
+<meta property="og:locale" content="nb_NO">
+<meta property="og:url" content="https://tabellkalkulator.no/obos/hodd/">
+<meta property="og:title" content="Hødd 2026: sjanse for topp 6">
+<meta property="og:description" content="Hødd ligger på 7. plass i OBOS-ligaen 2026 med 38 poeng etter 27 kamper. Sjansen for topp 6 er 12 %.">
+<meta property="og:image" content="https://tabellkalkulator.no/obos/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#eef2f7;--panel:#ffffff;--ink:#0f1b2d;--muted:#56667d;--line:#d8e0ec;--accent:#2f6fed;--accent-text:#1f5fd6;--knapp-tekst:#ffffff}
+  @media (prefers-color-scheme: dark){:root{--bg:#0a1220;--panel:#111c2e;--ink:#e9eff8;--muted:#93a3ba;--line:#2a3a54;--accent:#7aa8ff;--accent-text:#7aa8ff;--knapp-tekst:#0a1220}}
+  a{color:var(--accent-text)}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px 16px 56px}
+  header{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+  header a{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none}
+  header svg{width:30px;height:30px;display:block;flex:none}
+  .brand{font:800 21px/1 "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.02em}
+  .sti{font-size:14px;color:var(--muted);margin:0 0 8px}
+  .sti a{color:var(--accent-text)}
+  h1{font:800 clamp(28px,5vw,40px)/1.08 "Barlow Condensed","Arial Narrow",sans-serif;margin:0 0 14px;letter-spacing:-.01em;text-wrap:balance}
+  h2{font:700 22px/1.2 "Barlow Condensed","Arial Narrow",sans-serif;margin:30px 0 10px}
+  h3{font:700 18px/1.25 "Barlow Condensed","Arial Narrow",sans-serif;margin:20px 0 6px}
+  p{margin:0 0 12px;max-width:68ch}
+  .svar{font-size:19px;font-weight:600}
+  .dato,.om{color:var(--muted);font-size:14px}
+  .utsnitt{border-collapse:collapse;width:100%;max-width:560px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .utsnitt th,.utsnitt td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  .utsnitt th:nth-child(2),.utsnitt td:nth-child(2){text-align:left}
+  .utsnitt th{font-size:13px;color:var(--muted);font-weight:600}
+  .utsnitt tr.aktuell td{font-weight:700}
+  .kamper{list-style:none;margin:0;padding:0;display:grid;gap:10px;max-width:68ch}
+  .kamper li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .utfall{color:var(--muted);font-size:14.5px}
+  .knapp{display:inline-block;margin:8px 10px 0 0;padding:10px 16px;border-radius:10px;background:var(--accent);color:var(--knapp-tekst);font-weight:700;text-decoration:none}
+  .knapp.lys{background:transparent;color:var(--accent-text);border:1px solid var(--line)}
+  footer{margin-top:40px;color:var(--muted);font-size:13.5px}
+  footer a{color:var(--accent-text)}
+  a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .utsnitt.lag th,.utsnitt.lag td{padding:7px 8px}
+  .andre-lag{line-height:1.9}
+  .andre-lag a,.lagnavn{white-space:nowrap}
+  @media (max-width:520px){.utsnitt.lag th:nth-child(3),.utsnitt.lag td:nth-child(3){display:none}.utsnitt.lag th,.utsnitt.lag td{padding:6px 5px;font-size:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a href="/"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x=".5" y=".5" width="15" height="15" rx="3.5" fill="#13305f" stroke="#4f7fc4" stroke-opacity=".6"/><rect x="3" y="4" width="10" height="2" rx="1" fill="#34d399"/><rect x="3" y="7" width="7" height="2" rx="1" fill="#e8f0fc"/><rect x="3" y="10" width="5" height="2" rx="1" fill="#e8f0fc"/></svg><span class="brand">Tabellkalkulator</span></a></header>
+  <p class="sti"><a href="/obos/">OBOS-ligaen 2026</a></p>
+  <h1>Hødd 2026: sjanse for topp 6</h1>
+  <p class="svar">Hødd ligger på 7. plass i OBOS-ligaen 2026 med 38 poeng etter 27 kamper. Sjansen for topp 6 er 12 %.</p>
+  <p class="dato">Oppdatert 20. oktober 2026 kl. 14.17. Sjansene er regnet fra 100 000 simulerte sesonger.</p>
+  <table class="utsnitt lag"><thead><tr><th>Plass</th><th>Lag</th><th>Kamper</th><th>Poeng</th><th>Opprykk</th><th>Topp 6</th><th>Nedrykk</th></tr></thead><tbody><tr><td>5</td><td><a href="/obos/odd/">Odd</a></td><td>27</td><td>45</td><td>–</td><td>&gt;99 %</td><td>–</td></tr><tr><td>6</td><td><a href="/obos/bryne/">Bryne</a></td><td>27</td><td>39</td><td>–</td><td>75 %</td><td>–</td></tr><tr class="aktuell"><td>7</td><td>Hødd</td><td>27</td><td>38</td><td>–</td><td>12 %</td><td>–</td></tr><tr><td>8</td><td><a href="/obos/ranheim/">Ranheim</a></td><td>27</td><td>35</td><td>–</td><td>10 %</td><td>–</td></tr><tr><td>9</td><td><a href="/obos/egersund/">Egersund</a></td><td>27</td><td>34</td><td>–</td><td>3 %</td><td>–</td></tr></tbody></table>
+  <p class="om">Sjansene for direkte opprykk, topp 6 og nedrykk er de samme som i tabellen på ligasiden. «–» betyr at det ikke lenger er mulig.</p>
+  <h2>Spør om tabellen</h2>
+  <h3>Hvorfor har Hødd 12 % sjanse for topp 6?</h3><p>Hødd ligger ett poeng bak Bryne på 6. plass og er litt svakere ifølge modellen (4,0 mot 5,4). Hødd har også et tøffere restprogram: motstanderne har i snitt 60 % vinnersjanse, mot 30 % for Bryne.</p><p>I simuleringene ender Hødd i snitt på 40 poeng mot 44 for Bryne, og havner i topp 6 i 12 % av dem.</p>
+  <h3>Hva må Hødd gjøre for å nå topp 6?</h3><p>Det skal mye til: Hødd ender i topp 6 i rundt 12 % av simuleringene. De må ta seks av de ni poengene som er igjen for å komme opp på 44. Ender de på 44 poeng, er sjansen omtrent 64 %. Med 47 poeng er den over 99 %. Det er fordi Bryne vanligvis ender på 44 poeng.</p>
+  <h3>Hvilke kamper betyr mest for Hødd?</h3><p>Disse kampene påvirker Hødds topp 6-sjanse mest. Nå: 12 %</p><ul class="kamper"><li><strong>Haugesund mot Hødd, runde 28, søndag 25. okt</strong><br><span class="utfall">Seier: 35 % (+23 prosentpoeng) · Uavgjort: 15 % (+3 prosentpoeng) · Tap: 9 % (−3 prosentpoeng)</span></li><li><strong>Hødd mot Bryne, runde 29, søndag 1. nov</strong><br><span class="utfall">Seier: 34 % (+22 prosentpoeng) · Uavgjort: 7 % (−5 prosentpoeng) · Tap: 1 % (−11 prosentpoeng)</span></li><li><strong>Sogndal mot Hødd, runde 30, søndag 8. nov</strong><br><span class="utfall">Seier: 27 % (+15 prosentpoeng) · Uavgjort: 9 % (−3 prosentpoeng) · Tap: 5 % (−7 prosentpoeng)</span></li></ul>
+  <h3>Hvilken plass ender Hødd på?</h3><p>Hødd ligger på 7. plass med 38 poeng. Matematisk kan de ende fra 5. til 12. plass. Oftest blir det 8. plass (33 %), og i minst 90 % av simuleringene ender de mellom 6. og 9. plass.</p>
+  <h2>Kampene som er igjen</h2>
+  <p>Sjansen for seier, uavgjort og tap i hver kamp, slik kalkulatoren regner den.</p>
+  <ul class="kamper rest"><li><strong>Runde 28, søndag 25. okt</strong>: borte mot <span class="lagnavn">Haugesund</span><br><span class="utfall">Seier 8 % · uavgjort 12 % · tap 80 %</span></li><li><strong>Runde 29, søndag 1. nov</strong>: hjemme mot <span class="lagnavn">Bryne</span><br><span class="utfall">Seier 29 % · uavgjort 24 % · tap 48 %</span></li><li><strong>Runde 30, søndag 8. nov</strong>: borte mot <span class="lagnavn">Sogndal</span><br><span class="utfall">Seier 27 % · uavgjort 23 % · tap 51 %</span></li></ul>
+  <p><a class="knapp" href="/obos/#team=H%C3%B8dd">Følg Hødd i tabellkalkulatoren</a></p>
+  <h2>Lagene i OBOS-ligaen</h2>
+  <p class="andre-lag"><a href="/obos/stromsgodset/">Strømsgodset</a> · <a href="/obos/kongsvinger/">Kongsvinger</a> · <a href="/obos/haugesund/">Haugesund</a> · <a href="/obos/stabaek/">Stabæk</a> · <a href="/obos/odd/">Odd</a> · <a href="/obos/bryne/">Bryne</a> · <strong>Hødd</strong> · <a href="/obos/ranheim/">Ranheim</a> · <a href="/obos/egersund/">Egersund</a> · <a href="/obos/strommen/">Strømmen</a> · <a href="/obos/lyn/">Lyn</a> · <a href="/obos/moss/">Moss</a> · <a href="/obos/sandnes-ulf/">Sandnes Ulf</a> · <a href="/obos/sogndal/">Sogndal</a> · <a href="/obos/asane/">Åsane</a> · <a href="/obos/raufoss/">Raufoss</a></p>
+  <p>Se også: <a href="/obos/hvem-rykker-opp/">Hvem rykker opp fra OBOS-ligaen 2026?</a> · <a href="/obos/hvem-rykker-ned/">Hvem rykker ned fra OBOS-ligaen 2026?</a></p>
+  <footer><a href="/">Tabellkalkulator</a> viser tabellen og sjansene for Eliteserien og OBOS-ligaen.</footer>
+</div>
+</body>
+</html>

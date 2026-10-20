@@ -635,5 +635,1351 @@
    "ned": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"8.5\"></circle><path d=\"M12 7.5v8M8.5 12.5 12 16l3.5-3.5\"></path></svg><span class=\"card-title\">Nedrykk</span><a class=\"card-link\" data-side=\"ned\" href=\"/obos/hvem-rykker-ned/\">Se alle →</a></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Raufoss</span><b class=\"card-pct\">95 %</b></li><li><span class=\"card-team\">Åsane</span><b class=\"card-pct\">94 %</b></li><li><span class=\"card-team\">Sogndal</span><b class=\"card-pct\">7 %</b></li></ul>",
    "form": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m3.5 16.5 5.5-5.5 3.5 3.5 7.5-8\"></path><path d=\"M15.5 6.5h5v5\"></path></svg><span class=\"card-title\">Styrke</span><button type=\"button\" class=\"card-link\" data-sort=\"form\">Se alle →</button></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Strømsgodset</span><b class=\"card-pct\">7,0</b></li><li><span class=\"card-team\">Haugesund</span><b class=\"card-pct\">6,6</b></li><li><span class=\"card-team\">Kongsvinger</span><b class=\"card-pct\">6,3</b></li></ul>"
   }
+ },
+ "lag": {
+  "Bryne": {
+   "kort": "Bryne",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "europa",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Bryne 75 % sjanse for topp 6?",
+     "svar": "Bryne ligger ett poeng foran Hødd på 7. plass og er litt sterkere ifølge modellen (5,4 mot 4,0). Ranheim er også med i kampen om topp 6-plassene. Bryne har også et lettere restprogram: motstanderne har i snitt 30 % vinnersjanse, mot 60 % for Hødd.\n\nI simuleringene ender Bryne i snitt på 44 poeng mot 40 for Hødd, og havner i topp 6 i 75 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Bryne gjøre for å nå topp 6?",
+     "svar": "Bryne må ta fire av de ni poengene som er igjen for å komme opp på 43. Ender de på 43 poeng, er sjansen for topp 6 rundt 78 %. Med 46 poeng er den over 99 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Bryne?",
+     "svar": "Disse kampene påvirker Brynes topp 6-sjanse mest. Nå: 75 %\n\nHødd mot Bryne, runde 29, søndag 1. nov\nSeier: 93 % (+18 prosentpoeng)\nUavgjort: 74 % (endrer lite)\nTap: 46 % (−29 prosentpoeng)\n\nBryne mot Egersund, runde 28, søndag 25. okt\nSeier: 89 % (+14 prosentpoeng)\nUavgjort: 66 % (−9 prosentpoeng)\nTap: 50 % (−25 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nSeier: 91 % (+16 prosentpoeng)\nUavgjort: 72 % (−3 prosentpoeng)\nTap: 63 % (−12 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Bryne på?",
+    "svar": "Bryne ligger på 6. plass med 39 poeng. Matematisk kan de ende fra 5. til 11. plass. Oftest blir det 6. plass (72 %), og i minst 90 % av simuleringene ender de mellom 6. og 8. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Egersund",
+     "hjemme": true,
+     "seier": "56 %",
+     "uavgjort": "23 %",
+     "tap": "21 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Hødd",
+     "hjemme": false,
+     "seier": "48 %",
+     "uavgjort": "24 %",
+     "tap": "29 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Kongsvinger",
+     "hjemme": true,
+     "seier": "36 %",
+     "uavgjort": "25 %",
+     "tap": "40 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "75 %",
+     "andel": 0.75144,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    }
+   ]
+  },
+  "Egersund": {
+   "kort": "Egersund",
+   "tilstand": 1,
+   "regel": 2,
+   "aapnest": "europa",
+   "topp": [
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Egersund gjøre for å nå topp 6?",
+     "svar": "Det skal mye til: Egersund ender i topp 6 i rundt 3 % av simuleringene. De kan ikke sikre topp 6 med egne resultater alene. Selv om de tar alle poengene som er igjen og ender på 43, er sjansen omtrent 48 %. Da må Bryne, Hødd og Ranheim alle ende på 43 poeng eller færre."
+    },
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor er Egersund så godt som sikret mot både nedrykk og kvalik?",
+     "svar": "Egersund ligger på 9. plass med 34 poeng, 10 foran Sogndal på kvalikplass. Det gjenstår tre kamper, men for at Egersund skal havne på kvalikplass, må alle de fem lagene som kan nå 34 poeng, passere dem. Det skjer i under 1 % av simuleringene."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Egersund?",
+     "svar": "Disse kampene påvirker Egersunds topp 6-sjanse mest. Nå: 3 %\n\nBryne mot Egersund, runde 28, søndag 25. okt\nSeier: 14 % (+11 prosentpoeng)\nUavgjort: <1 % (−3 prosentpoeng)\nTap: <1 % (−3 prosentpoeng)\n\nRaufoss mot Egersund, runde 30, søndag 8. nov\nSeier: 6 % (+3 prosentpoeng)\nUavgjort: 1 % (−2 prosentpoeng)\nTap: <1 % (−3 prosentpoeng)\n\nEgersund mot Strømmen, runde 29, søndag 1. nov\nSeier: 5 % (+2 prosentpoeng)\nUavgjort: 1 % (−2 prosentpoeng)\nTap: <1 % (−3 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Egersund på?",
+    "svar": "Egersund ligger på 9. plass med 34 poeng. Matematisk kan de ende fra 6. til 14. plass. Oftest blir det 9. plass (30 %), og i minst 90 % av simuleringene ender de mellom 7. og 11. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Bryne",
+     "hjemme": false,
+     "seier": "21 %",
+     "uavgjort": "23 %",
+     "tap": "56 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Strømmen",
+     "hjemme": true,
+     "seier": "54 %",
+     "uavgjort": "21 %",
+     "tap": "25 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Raufoss",
+     "hjemme": false,
+     "seier": "45 %",
+     "uavgjort": "25 %",
+     "tap": "31 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "3 %",
+     "andel": 0.03067,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "<1 %",
+     "andel": 0.00001,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    }
+   ]
+  },
+  "Haugesund": {
+   "kort": "FKH",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "gull",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Haugesund 73 % sjanse for direkte opprykk?",
+     "svar": "Haugesund har like mange poeng som Kongsvinger på andreplassen og er litt sterkere ifølge modellen (6,6 mot 6,3). Haugesund har også et lettere restprogram: motstanderne har i snitt 15 % vinnersjanse, mot 31 % for Kongsvinger.\n\nI simuleringene ender Haugesund i snitt på 66 poeng mot 64 for Kongsvinger, og rykker direkte opp i 73 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Haugesund gjøre for å rykke direkte opp?",
+     "svar": "Haugesund må ta fem av de ni poengene som er igjen for å komme opp på 64. Ender de på 64 poeng, er sjansen for direkte opprykk rundt 54 %. Det er fordi Kongsvinger vanligvis ender på 64 poeng."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Haugesund?",
+     "svar": "Disse kampene påvirker Haugesunds opprykkssjanse mest. Nå: 73 %\n\nHaugesund mot Hødd, runde 28, søndag 25. okt\nSeier: 79 % (+6 prosentpoeng)\nUavgjort: 53 % (−20 prosentpoeng)\nTap: 36 % (−37 prosentpoeng)\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nSeier: 82 % (+9 prosentpoeng)\nUavgjort: 59 % (−14 prosentpoeng)\nTap: 42 % (−31 prosentpoeng)\n\nHaugesund mot Odd, runde 30, søndag 8. nov\nSeier: 86 % (+13 prosentpoeng)\nUavgjort: 64 % (−9 prosentpoeng)\nTap: 47 % (−26 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Haugesund på?",
+    "svar": "Haugesund ligger på 3. plass med 59 poeng. Matematisk kan de ende fra 1. til 4. plass. Oftest blir det 2. plass (40 %), og i minst 90 % av simuleringene ender de mellom 1. og 3. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Hødd",
+     "hjemme": true,
+     "seier": "80 %",
+     "uavgjort": "12 %",
+     "tap": "8 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Åsane",
+     "hjemme": false,
+     "seier": "69 %",
+     "uavgjort": "17 %",
+     "tap": "14 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Odd",
+     "hjemme": true,
+     "seier": "57 %",
+     "uavgjort": "21 %",
+     "tap": "22 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "73 %",
+     "andel": 0.72694,
+     "avgjort": 0
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "100 %",
+     "andel": 1,
+     "avgjort": 1
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    }
+   ]
+  },
+  "Hødd": {
+   "kort": "Hødd",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "europa",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Hødd 12 % sjanse for topp 6?",
+     "svar": "Hødd ligger ett poeng bak Bryne på 6. plass og er litt svakere ifølge modellen (4,0 mot 5,4). Hødd har også et tøffere restprogram: motstanderne har i snitt 60 % vinnersjanse, mot 30 % for Bryne.\n\nI simuleringene ender Hødd i snitt på 40 poeng mot 44 for Bryne, og havner i topp 6 i 12 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Hødd gjøre for å nå topp 6?",
+     "svar": "Det skal mye til: Hødd ender i topp 6 i rundt 12 % av simuleringene. De må ta seks av de ni poengene som er igjen for å komme opp på 44. Ender de på 44 poeng, er sjansen omtrent 64 %. Med 47 poeng er den over 99 %. Det er fordi Bryne vanligvis ender på 44 poeng."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Hødd?",
+     "svar": "Disse kampene påvirker Hødds topp 6-sjanse mest. Nå: 12 %\n\nHaugesund mot Hødd, runde 28, søndag 25. okt\nSeier: 35 % (+23 prosentpoeng)\nUavgjort: 15 % (+3 prosentpoeng)\nTap: 9 % (−3 prosentpoeng)\n\nHødd mot Bryne, runde 29, søndag 1. nov\nSeier: 34 % (+22 prosentpoeng)\nUavgjort: 7 % (−5 prosentpoeng)\nTap: 1 % (−11 prosentpoeng)\n\nSogndal mot Hødd, runde 30, søndag 8. nov\nSeier: 27 % (+15 prosentpoeng)\nUavgjort: 9 % (−3 prosentpoeng)\nTap: 5 % (−7 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Hødd på?",
+    "svar": "Hødd ligger på 7. plass med 38 poeng. Matematisk kan de ende fra 5. til 12. plass. Oftest blir det 8. plass (33 %), og i minst 90 % av simuleringene ender de mellom 6. og 9. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Haugesund",
+     "hjemme": false,
+     "seier": "8 %",
+     "uavgjort": "12 %",
+     "tap": "80 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Bryne",
+     "hjemme": true,
+     "seier": "29 %",
+     "uavgjort": "24 %",
+     "tap": "48 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Sogndal",
+     "hjemme": false,
+     "seier": "27 %",
+     "uavgjort": "23 %",
+     "tap": "51 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "12 %",
+     "andel": 0.11687,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    }
+   ]
+  },
+  "Kongsvinger": {
+   "kort": "KIL",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "gull",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Kongsvinger 42 % sjanse for direkte opprykk?",
+     "svar": "Kongsvinger har like mange poeng som Haugesund på tredjeplassen og er litt svakere ifølge modellen (6,3 mot 6,6). Kongsvinger har også et tøffere restprogram: motstanderne har i snitt 31 % vinnersjanse, mot 15 % for Haugesund.\n\nI simuleringene ender Kongsvinger i snitt på 64 poeng mot 66 for Haugesund, og rykker direkte opp i 42 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Kongsvinger gjøre for å rykke direkte opp?",
+     "svar": "Kongsvinger må ta seks av de ni poengene som er igjen for å komme opp på 65. Ender de på 65 poeng, er sjansen for direkte opprykk rundt 58 %. Med 68 poeng er den 99 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Kongsvinger?",
+     "svar": "Disse kampene påvirker Kongsvingers opprykkssjanse mest. Nå: 42 %\n\nSogndal mot Kongsvinger, runde 28, søndag 25. okt\nSeier: 58 % (+16 prosentpoeng)\nUavgjort: 28 % (−14 prosentpoeng)\nTap: 17 % (−25 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nSeier: 64 % (+22 prosentpoeng)\nUavgjort: 35 % (−7 prosentpoeng)\nTap: 23 % (−19 prosentpoeng)\n\nKongsvinger mot Stabæk, runde 29, mandag 2. nov\nSeier: 62 % (+20 prosentpoeng)\nUavgjort: 33 % (−9 prosentpoeng)\nTap: 21 % (−21 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Kongsvinger på?",
+    "svar": "Kongsvinger ligger på 2. plass med 59 poeng. Matematisk kan de ende fra 1. til 4. plass. Oftest blir det 3. plass (56 %), og i minst 90 % av simuleringene ender de mellom 1. og 3. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Sogndal",
+     "hjemme": false,
+     "seier": "57 %",
+     "uavgjort": "20 %",
+     "tap": "23 %"
+    },
+    {
+     "naar": "Runde 29, mandag 2. nov",
+     "motstander": "Stabæk",
+     "hjemme": true,
+     "seier": "45 %",
+     "uavgjort": "21 %",
+     "tap": "34 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Bryne",
+     "hjemme": false,
+     "seier": "40 %",
+     "uavgjort": "25 %",
+     "tap": "36 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "42 %",
+     "andel": 0.42447,
+     "avgjort": 0
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "100 %",
+     "andel": 1,
+     "avgjort": 1
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    }
+   ]
+  },
+  "Lyn": {
+   "kort": "Lyn",
+   "tilstand": 1,
+   "regel": 2,
+   "aapnest": "kvalik",
+   "topp": [
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Lyn gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Lyn unngår både nedrykk og kvalik i nesten alle simuleringene. Tar de to av de ni poengene som er igjen, er sjansen rundt 98 %."
+    },
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Lyn så godt som ingen mulighet til å nå topp 6?",
+     "svar": "Lyn ligger på 11. plass med 31 poeng, åtte bak Bryne på 6. plass. Det gjenstår tre kamper, men for at Lyn skal nå topp 6, må de passere alle de fem lagene de kan nå. Det skjer i under 1 % av simuleringene."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Lyn?",
+     "svar": "Disse kampene påvirker Lyns kvalikfare mest. Nå: 1 %\n\nLyn mot Raufoss, runde 29, søndag 1. nov\nSeier: <1 % (endrer lite)\nUavgjort: 2 % (endrer lite)\nTap: 5 % (+4 prosentpoeng)\n\nSandnes Ulf mot Lyn, runde 28, søndag 25. okt\nSeier: <1 % (endrer lite)\nUavgjort: <1 % (endrer lite)\nTap: 3 % (+2 prosentpoeng)\n\nStrømmen mot Lyn, runde 30, søndag 8. nov\nSeier: <1 % (endrer lite)\nUavgjort: 1 % (endrer lite)\nTap: 3 % (+2 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Lyn på?",
+    "svar": "Lyn ligger på 11. plass med 31 poeng. Matematisk kan de ende fra 6. til 16. plass. Oftest blir det 10. plass (29 %), og i minst 90 % av simuleringene ender de mellom 8. og 13. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Sandnes Ulf",
+     "hjemme": false,
+     "seier": "34 %",
+     "uavgjort": "25 %",
+     "tap": "41 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Raufoss",
+     "hjemme": true,
+     "seier": "62 %",
+     "uavgjort": "19 %",
+     "tap": "19 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Strømmen",
+     "hjemme": false,
+     "seier": "36 %",
+     "uavgjort": "22 %",
+     "tap": "41 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "1 %",
+     "andel": 0.01387,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "<1 %",
+     "andel": 0.00003,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Moss": {
+   "kort": "Moss",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "kvalik",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Moss 8 % sjanse for kvalik?",
+     "svar": "Moss ligger fem poeng foran Sogndal på 14. plass. Sogndal har en kamp til gode. Lagene er omtrent like sterke ifølge modellen (4,6 mot 4,4). Sandnes Ulf og Åsane er også med i kampen om å unngå kvalik.\n\nI simuleringene ender Moss i snitt på 33 poeng mot 30 for Sogndal, og havner i kvalik i 8 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Moss gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Moss må ta ett av de ni poengene som er igjen for å komme opp på 30. Ender de på 30 poeng, er sjansen for å unngå både nedrykk og kvalik rundt 68 %. Med 33 poeng er den 99 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Moss?",
+     "svar": "Disse kampene påvirker Moss' kvalikfare mest. Nå: 8 %\n\nMoss mot Åsane, runde 28, søndag 25. okt\nSeier: 2 % (−6 prosentpoeng)\nUavgjort: 12 % (+4 prosentpoeng)\nTap: 23 % (+15 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nSeier: 1 % (−7 prosentpoeng)\nUavgjort: 8 % (endrer lite)\nTap: 15 % (+7 prosentpoeng)\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nSeier: 1 % (−7 prosentpoeng)\nUavgjort: 4 % (−4 prosentpoeng)\nTap: 9 % (endrer lite)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Moss på?",
+    "svar": "Moss ligger på 12. plass med 29 poeng. Matematisk kan de ende fra 7. til 16. plass. Oftest blir det 12. plass (40 %), og i minst 90 % av simuleringene ender de mellom 10. og 14. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Åsane",
+     "hjemme": true,
+     "seier": "61 %",
+     "uavgjort": "20 %",
+     "tap": "19 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Strømsgodset",
+     "hjemme": false,
+     "seier": "12 %",
+     "uavgjort": "17 %",
+     "tap": "72 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Ranheim",
+     "hjemme": true,
+     "seier": "42 %",
+     "uavgjort": "23 %",
+     "tap": "34 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "8 %",
+     "andel": 0.07541,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "<1 %",
+     "andel": 0.0017,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Odd": {
+   "kort": "Odd",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "europa",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor er Odd så godt som sikret topp 6?",
+     "svar": "Odd ligger på 5. plass med 45 poeng, sju foran Hødd på 7. plass. Det gjenstår tre kamper, men for at Odd skal falle ut av topp 6, må både Bryne og Hødd passere dem. Det skjer i under 1 % av simuleringene."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Odd gjøre for å nå topp 6?",
+     "svar": "Odd er så godt som sikret topp 6. Odd ligger på 5. plass med 45 poeng, sju foran Hødd på 7. plass. Det gjenstår tre kamper, men for at Odd skal falle ut av topp 6, må både Bryne og Hødd passere dem. Det skjer i under 1 % av simuleringene."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Odd?",
+     "svar": "Odd er så godt som sikret topp 6. Odd ligger på 5. plass med 45 poeng, sju foran Hødd på 7. plass. Det gjenstår tre kamper, men for at Odd skal falle ut av topp 6, må både Bryne og Hødd passere dem. Det skjer i under 1 % av simuleringene."
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Odd på?",
+    "svar": "Odd ligger på 5. plass med 45 poeng. Matematisk kan de ende fra 4. til 7. plass. Oftest blir det 5. plass (95 %)."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Stabæk",
+     "hjemme": false,
+     "seier": "27 %",
+     "uavgjort": "22 %",
+     "tap": "51 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Sandnes Ulf",
+     "hjemme": true,
+     "seier": "61 %",
+     "uavgjort": "20 %",
+     "tap": "19 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Haugesund",
+     "hjemme": false,
+     "seier": "22 %",
+     "uavgjort": "21 %",
+     "tap": "57 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": ">99 %",
+     "andel": 1,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    }
+   ]
+  },
+  "Ranheim": {
+   "kort": "Ranheim",
+   "tilstand": 1,
+   "regel": 1,
+   "aapnest": "europa",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Ranheim 10 % sjanse for topp 6?",
+     "svar": "Ranheim ligger fire poeng bak Bryne på 6. plass og er litt svakere ifølge modellen (4,9 mot 5,4). Hødd er også med i kampen om topp 6-plassene.\n\nI simuleringene ender Ranheim i snitt på 40 poeng mot 44 for Bryne, og havner i topp 6 i 10 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Ranheim gjøre for å nå topp 6?",
+     "svar": "Det skal mye til: Ranheim ender i topp 6 i rundt 10 % av simuleringene. De må ta alle de ni poengene som er igjen for å komme opp på 44. Ender de på 44 poeng, er sjansen omtrent 53 %. Det er fordi Bryne vanligvis ender på 44 poeng."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Ranheim?",
+     "svar": "Disse kampene påvirker Ranheims topp 6-sjanse mest. Nå: 10 %\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nSeier: 22 % (+12 prosentpoeng)\nUavgjort: 6 % (−4 prosentpoeng)\nTap: 2 % (−8 prosentpoeng)\n\nRaufoss mot Ranheim, runde 28, lørdag 24. okt\nSeier: 16 % (+6 prosentpoeng)\nUavgjort: 4 % (−6 prosentpoeng)\nTap: 1 % (−9 prosentpoeng)\n\nRanheim mot Sogndal, runde 29, søndag 1. nov\nSeier: 16 % (+6 prosentpoeng)\nUavgjort: 4 % (−6 prosentpoeng)\nTap: 1 % (−9 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Ranheim på?",
+    "svar": "Ranheim ligger på 8. plass med 35 poeng. Matematisk kan de ende fra 6. til 14. plass. Oftest blir det 7. plass (39 %), og i minst 90 % av simuleringene ender de mellom 6. og 10. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, lørdag 24. okt",
+     "motstander": "Raufoss",
+     "hjemme": false,
+     "seier": "56 %",
+     "uavgjort": "21 %",
+     "tap": "24 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Sogndal",
+     "hjemme": true,
+     "seier": "56 %",
+     "uavgjort": "19 %",
+     "tap": "26 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Moss",
+     "hjemme": false,
+     "seier": "34 %",
+     "uavgjort": "23 %",
+     "tap": "42 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "10 %",
+     "andel": 0.09986,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    }
+   ]
+  },
+  "Raufoss": {
+   "kort": "Raufoss",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "nedrykk",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Raufoss så godt som ingen mulighet til å unngå både nedrykk og kvalik?",
+     "svar": "Raufoss ligger på 16. plass med 20 poeng, seks bak Sandnes Ulf på 13. plass. Det gjenstår fire kamper, men for at Raufoss skal unngå både nedrykk og kvalik, må de passere hele tre av de fem lagene de kan nå. Det skjer i under 1 % av simuleringene."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Raufoss gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Raufoss har så godt som ingen mulighet til å unngå både nedrykk og kvalik lenger. Raufoss ligger på 16. plass med 20 poeng, seks bak Sandnes Ulf på 13. plass. Det gjenstår fire kamper, men for at Raufoss skal unngå både nedrykk og kvalik, må de passere hele tre av de fem lagene de kan nå. Det skjer i under 1 % av simuleringene."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Raufoss?",
+     "svar": "Raufoss har så godt som ingen mulighet til å unngå både nedrykk og kvalik lenger. Raufoss ligger på 16. plass med 20 poeng, seks bak Sandnes Ulf på 13. plass. Det gjenstår fire kamper, men for at Raufoss skal unngå både nedrykk og kvalik, må de passere hele tre av de fem lagene de kan nå. Det skjer i under 1 % av simuleringene."
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Raufoss på?",
+    "svar": "Raufoss ligger på 16. plass med 20 poeng. Matematisk kan de ende fra 11. til 16. plass. Oftest blir det 16. plass (63 %), og i minst 90 % av simuleringene ender de mellom 14. og 16. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 24, onsdag 21. okt",
+     "motstander": "Sogndal",
+     "hjemme": false,
+     "seier": "17 %",
+     "uavgjort": "19 %",
+     "tap": "64 %"
+    },
+    {
+     "naar": "Runde 28, lørdag 24. okt",
+     "motstander": "Ranheim",
+     "hjemme": true,
+     "seier": "24 %",
+     "uavgjort": "21 %",
+     "tap": "56 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Lyn",
+     "hjemme": false,
+     "seier": "19 %",
+     "uavgjort": "19 %",
+     "tap": "62 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Egersund",
+     "hjemme": true,
+     "seier": "31 %",
+     "uavgjort": "25 %",
+     "tap": "45 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "5 %",
+     "andel": 0.04533,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "95 %",
+     "andel": 0.94554,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Sandnes Ulf": {
+   "kort": "Sandnes",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "kvalik",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Sandnes Ulf 39 % sjanse for kvalik?",
+     "svar": "Sandnes Ulf ligger to poeng foran Sogndal på 14. plass. Sogndal har en kamp til gode. Lagene er omtrent like sterke ifølge modellen (4,4 mot 4,4). Åsane er også med i kampen om å unngå kvalik.\n\nI simuleringene ender Sandnes Ulf i snitt på 30 poeng mot 30 for Sogndal, og havner i kvalik i 39 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Sandnes Ulf gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Sandnes Ulf må ta fire av de ni poengene som er igjen for å komme opp på 30. Ender de på 30 poeng, er sjansen for å unngå både nedrykk og kvalik rundt 57 %. Med 33 poeng er den 97 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Sandnes Ulf?",
+     "svar": "Disse kampene påvirker Sandnes Ulfs kvalikfare mest. Nå: 39 %\n\nOdd mot Sandnes Ulf, runde 29, søndag 1. nov\nSeier: 16 % (−23 prosentpoeng)\nUavgjort: 35 % (−4 prosentpoeng)\nTap: 47 % (+8 prosentpoeng)\n\nSogndal mot Raufoss, runde 24, onsdag 21. okt\nSogndal vinner: 47 % (+8 prosentpoeng)\nUavgjort: 27 % (−12 prosentpoeng)\nRaufoss vinner: 20 % (−19 prosentpoeng)\n\nSandnes Ulf mot Lyn, runde 28, søndag 25. okt\nSeier: 21 % (−18 prosentpoeng)\nUavgjort: 44 % (+5 prosentpoeng)\nTap: 55 % (+16 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Sandnes Ulf på?",
+    "svar": "Sandnes Ulf ligger på 13. plass med 26 poeng. Matematisk kan de ende fra 8. til 16. plass. Oftest blir det 14. plass (39 %), og i minst 90 % av simuleringene ender de mellom 11. og 14. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Lyn",
+     "hjemme": true,
+     "seier": "41 %",
+     "uavgjort": "25 %",
+     "tap": "34 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Odd",
+     "hjemme": false,
+     "seier": "19 %",
+     "uavgjort": "20 %",
+     "tap": "61 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Åsane",
+     "hjemme": true,
+     "seier": "56 %",
+     "uavgjort": "22 %",
+     "tap": "22 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "39 %",
+     "andel": 0.38556,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "5 %",
+     "andel": 0.04683,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Sogndal": {
+   "kort": "Sogndal",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "nedrykk",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Sogndal 7 % sjanse for nedrykk?",
+     "svar": "Sogndal leder Åsane 24-22 i poeng og har i tillegg en kamp til gode. Sogndal har 4 kamper igjen. Modellen gir Sogndal et lite overtak (styrke 4,4 mot 3,4). Formen nå er 1,3 mot 2,0 av 10. Sogndal har også et lettere restprogram: motstanderne har i snitt 39 % vinnersjanse, mot 62 % for Åsane.\n\nI simuleringene ender Sogndal i snitt på 30 poeng mot 24 for Åsane, og rykker ned direkte i 7 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Sogndal gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Sogndal må ta seks av de 12 poengene som er igjen for å komme opp på 30. Ender de på 30 poeng, er sjansen for å unngå både nedrykk og kvalik rundt 59 %. Med 33 poeng er den 98 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Sogndal?",
+     "svar": "Disse kampene påvirker Sogndals nedrykksfare mest. Nå: 7 %\n\nSogndal mot Raufoss, runde 24, onsdag 21. okt\nSeier: 1 % (−6 prosentpoeng)\nUavgjort: 9 % (+2 prosentpoeng)\nTap: 29 % (+22 prosentpoeng)\n\nSogndal mot Hødd, runde 30, søndag 8. nov\nSeier: 2 % (−5 prosentpoeng)\nUavgjort: 9 % (+2 prosentpoeng)\nTap: 14 % (+7 prosentpoeng)\n\nRanheim mot Sogndal, runde 29, søndag 1. nov\nSeier: 1 % (−6 prosentpoeng)\nUavgjort: 6 % (endrer lite)\nTap: 10 % (+3 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Sogndal på?",
+    "svar": "Sogndal ligger på 14. plass med 24 poeng. Matematisk kan de ende fra 8. til 16. plass. Oftest blir det 14. plass (43 %), og i minst 90 % av simuleringene ender de mellom 11. og 15. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 24, onsdag 21. okt",
+     "motstander": "Raufoss",
+     "hjemme": true,
+     "seier": "64 %",
+     "uavgjort": "19 %",
+     "tap": "17 %"
+    },
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Kongsvinger",
+     "hjemme": true,
+     "seier": "23 %",
+     "uavgjort": "20 %",
+     "tap": "57 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Ranheim",
+     "hjemme": false,
+     "seier": "26 %",
+     "uavgjort": "19 %",
+     "tap": "56 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Hødd",
+     "hjemme": true,
+     "seier": "51 %",
+     "uavgjort": "23 %",
+     "tap": "27 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "43 %",
+     "andel": 0.4281,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "7 %",
+     "andel": 0.07076,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Stabæk": {
+   "kort": "Stabæk",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "gull",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Stabæk så godt som ingen mulighet til å rykke direkte opp?",
+     "svar": "Stabæk ligger på 4. plass med 52 poeng, sju bak Kongsvinger på 2. plass. Det gjenstår tre kamper, men for at Stabæk skal rykke direkte opp, må de passere to av lagene Strømsgodset, Kongsvinger og Haugesund. Det skjer i under 1 % av simuleringene."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Stabæk gjøre for å rykke direkte opp?",
+     "svar": "Det skal mye til: Stabæk rykker direkte opp i under 1 % av simuleringene. De kan ikke sikre direkte opprykk med egne resultater alene. Selv om de tar alle poengene som er igjen og ender på 61, er sjansen bare rundt 1 %. Da kan høyst ett av lagene Strømsgodset, Kongsvinger og Haugesund ende over 61 poeng."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Stabæk?",
+     "svar": "Stabæk har så godt som ingen mulighet til å rykke direkte opp lenger. Stabæk ligger på 4. plass med 52 poeng, sju bak Kongsvinger på 2. plass. Det gjenstår tre kamper, men for at Stabæk skal rykke direkte opp, må de passere to av lagene Strømsgodset, Kongsvinger og Haugesund. Det skjer i under 1 % av simuleringene."
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Stabæk på?",
+    "svar": "Stabæk ligger på 4. plass med 52 poeng. Matematisk kan de ende fra 1. til 5. plass. Oftest blir det 4. plass (96 %)."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Odd",
+     "hjemme": true,
+     "seier": "51 %",
+     "uavgjort": "22 %",
+     "tap": "27 %"
+    },
+    {
+     "naar": "Runde 29, mandag 2. nov",
+     "motstander": "Kongsvinger",
+     "hjemme": false,
+     "seier": "34 %",
+     "uavgjort": "21 %",
+     "tap": "45 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Strømsgodset",
+     "hjemme": true,
+     "seier": "36 %",
+     "uavgjort": "21 %",
+     "tap": "43 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "<1 %",
+     "andel": 0.00079,
+     "avgjort": 0
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "100 %",
+     "andel": 1,
+     "avgjort": 1
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    }
+   ]
+  },
+  "Strømmen": {
+   "kort": "Strømmen",
+   "tilstand": 1,
+   "regel": 2,
+   "aapnest": "kvalik",
+   "topp": [
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Strømmen gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Strømmen er så godt som sikret mot både nedrykk og kvalik. Strømmen ligger på 10. plass med 33 poeng, ni foran Sogndal på kvalikplass. Det gjenstår tre kamper, men for at Strømmen skal havne på kvalikplass, må alle de fire lagene som kan nå 33 poeng, passere dem. Det skjer i under 1 % av simuleringene."
+    },
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Strømmen så godt som ingen mulighet til å nå topp 6?",
+     "svar": "Strømmen ligger på 10. plass med 33 poeng, seks bak Bryne på 6. plass. Det gjenstår tre kamper, men for at Strømmen skal nå topp 6, må de passere alle de fire lagene de kan nå. Det skjer i under 1 % av simuleringene."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Strømmen?",
+     "svar": "Strømmen er så godt som sikret mot både nedrykk og kvalik. Strømmen ligger på 10. plass med 33 poeng, ni foran Sogndal på kvalikplass. Det gjenstår tre kamper, men for at Strømmen skal havne på kvalikplass, må alle de fire lagene som kan nå 33 poeng, passere dem. Det skjer i under 1 % av simuleringene."
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Strømmen på?",
+    "svar": "Strømmen ligger på 10. plass med 33 poeng. Matematisk kan de ende fra 6. til 14. plass. Oftest blir det 10. plass (30 %), og i minst 90 % av simuleringene ender de mellom 8. og 12. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Strømsgodset",
+     "hjemme": true,
+     "seier": "14 %",
+     "uavgjort": "16 %",
+     "tap": "69 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Egersund",
+     "hjemme": false,
+     "seier": "25 %",
+     "uavgjort": "21 %",
+     "tap": "54 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Lyn",
+     "hjemme": true,
+     "seier": "41 %",
+     "uavgjort": "22 %",
+     "tap": "36 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "<1 %",
+     "andel": 0.00116,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "<1 %",
+     "andel": 0.00171,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    }
+   ]
+  },
+  "Strømsgodset": {
+   "kort": "Godset",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "gull",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Strømsgodset 85 % sjanse for direkte opprykk?",
+     "svar": "Strømsgodset ligger ett poeng foran Haugesund på tredjeplassen og er litt sterkere ifølge modellen (7,0 mot 6,6). Kongsvinger er også med i kampen om de to opprykksplassene. Strømsgodset har også et tøffere restprogram: motstanderne har i snitt 21 % vinnersjanse, mot 15 % for Haugesund.\n\nI simuleringene ender Strømsgodset i snitt på 66 poeng mot 66 for Haugesund, og rykker direkte opp i 85 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Strømsgodset gjøre for å rykke direkte opp?",
+     "svar": "Strømsgodset må ta tre av de ni poengene som er igjen for å komme opp på 63. Ender de på 63 poeng, er sjansen for direkte opprykk rundt 53 %. Med 66 poeng er den 96 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Strømsgodset?",
+     "svar": "Disse kampene påvirker Strømsgodsets opprykkssjanse mest. Nå: 85 %\n\nStrømmen mot Strømsgodset, runde 28, søndag 25. okt\nSeier: 92 % (+7 prosentpoeng)\nUavgjort: 73 % (−12 prosentpoeng)\nTap: 61 % (−24 prosentpoeng)\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nSeier: 91 % (+6 prosentpoeng)\nUavgjort: 72 % (−13 prosentpoeng)\nTap: 62 % (−23 prosentpoeng)\n\nStabæk mot Strømsgodset, runde 30, søndag 8. nov\nSeier: 96 % (+11 prosentpoeng)\nUavgjort: 83 % (−2 prosentpoeng)\nTap: 74 % (−11 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Strømsgodset på?",
+    "svar": "Strømsgodset ligger på 1. plass med 60 poeng. Matematisk kan de ende fra 1. til 4. plass. Oftest blir det 1. plass (53 %), og i minst 90 % av simuleringene ender de mellom 1. og 3. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Strømmen",
+     "hjemme": false,
+     "seier": "69 %",
+     "uavgjort": "16 %",
+     "tap": "14 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Moss",
+     "hjemme": true,
+     "seier": "72 %",
+     "uavgjort": "17 %",
+     "tap": "12 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Stabæk",
+     "hjemme": false,
+     "seier": "43 %",
+     "uavgjort": "21 %",
+     "tap": "36 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "85 %",
+     "andel": 0.8478,
+     "avgjort": 0
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "100 %",
+     "andel": 1,
+     "avgjort": 1
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    }
+   ]
+  },
+  "Åsane": {
+   "kort": "Åsane",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "nedrykk",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Åsane 94 % sjanse for nedrykk?",
+     "svar": "Åsane ligger fire poeng bak Sandnes Ulf på 13. plass og er litt svakere ifølge modellen (3,4 mot 4,4). Sogndal er også med i kampen om å unngå nedrykk. Åsane har også et tøffere restprogram: motstanderne har i snitt 62 % vinnersjanse, mot 39 % for Sandnes Ulf.\n\nI simuleringene ender Åsane i snitt på 24 poeng mot 30 for Sandnes Ulf, og rykker ned direkte i 94 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Åsane gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Det skal mye til: Åsane unngår både nedrykk og kvalik i rundt 1 % av simuleringene. De må ta alle de ni poengene som er igjen for å komme opp på 31. Ender de på 31 poeng, er sjansen omtrent 75 %.\n\nÅsane når minst kvalikplass i 6 % av simuleringene. De må ta sju av de ni poengene som er igjen for å komme opp på 29. Ender de på 29 poeng, er sjansen for minst kvalikplass 71 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Åsane?",
+     "svar": "Disse kampene påvirker Åsanes nedrykksfare mest. Nå: 94 %\n\nSandnes Ulf mot Åsane, runde 30, søndag 8. nov\nSeier: 78 % (−16 prosentpoeng)\nUavgjort: 97 % (+3 prosentpoeng)\nTap: 99 % (+5 prosentpoeng)\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nSeier: 78 % (−16 prosentpoeng)\nUavgjort: 93 % (endrer lite)\nTap: 97 % (+3 prosentpoeng)\n\nMoss mot Åsane, runde 28, søndag 25. okt\nSeier: 79 % (−15 prosentpoeng)\nUavgjort: 94 % (endrer lite)\nTap: 98 % (+4 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Åsane på?",
+    "svar": "Åsane ligger på 15. plass med 22 poeng. Matematisk kan de ende fra 11. til 16. plass. Oftest blir det 15. plass (58 %), og i minst 90 % av simuleringene ender de mellom 14. og 16. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 28, søndag 25. okt",
+     "motstander": "Moss",
+     "hjemme": false,
+     "seier": "19 %",
+     "uavgjort": "20 %",
+     "tap": "61 %"
+    },
+    {
+     "naar": "Runde 29, søndag 1. nov",
+     "motstander": "Haugesund",
+     "hjemme": true,
+     "seier": "14 %",
+     "uavgjort": "17 %",
+     "tap": "69 %"
+    },
+    {
+     "naar": "Runde 30, søndag 8. nov",
+     "motstander": "Sandnes Ulf",
+     "hjemme": false,
+     "seier": "22 %",
+     "uavgjort": "22 %",
+     "tap": "56 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "direkte opprykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 6",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "5 %",
+     "andel": 0.05001,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "94 %",
+     "andel": 0.93514,
+     "avgjort": 0
+    }
+   ]
+  }
  }
 }

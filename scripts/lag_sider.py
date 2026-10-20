@@ -14,11 +14,17 @@ skriver ut fra den, uten Chrome og uten å regne noe:
                      -STEMPEL, -FORKLARING og -KORT* (20.10.2026): det JS
                      fyller over og under tabellen, slik siden viste det, så
                      ingenting flytter seg ved lasting. Ingen oppsummering.
+                     STATISK-LAGSIDER (fase 3): en enkel liste over lagsidene
+                     nederst ved «Om modellen»
   index.html         (forsiden) STATISK-ELITESERIEN og STATISK-OBOS: de
                      samme setningene under «Akkurat nå», for hver liga
   <liga>/<spørsmål>/index.html  spørsmålssidene (fase 2, SPORSMAL): «Hvem
                      vinner Eliteserien 2026?» osv., med svaret først, «Hvorfor»
                      fra Spør om tabellen, tabellutsnitt og kampene som avgjør
+  <liga>/<lag>/index.html  lagsidene (fase 3, lag_slug): «Brann 2026: sjanse
+                     for topp 4» med plassen og sjansene, de tre øverste svarene
+                     i Spør om tabellen for laget, hvilken plass laget ender på,
+                     og kampene som er igjen med sjansen i hver
 
 Setningene bygges av tallene slik siden viste dem (vist tekst og status for
 hver sone); ingenting regnes.
@@ -27,6 +33,8 @@ Kjøres av grunnlag-workflowen etter lag_grunnlag.js, og alt committes sammen.
 
   python3 scripts/lag_sider.py [liga ...]          skriv (standard: begge)
   python3 scripts/lag_sider.py --check [liga ...]  er sidene laget fra filen?
+  python3 scripts/lag_sider.py --filer [liga ...]  undersidene skriptet har laget
+                     (spørsmåls- og lagsidene), til git add i workflowen
 """
 import html
 import json
@@ -249,7 +257,7 @@ def _utsnitt_html(t, sone):
     linjer = []
     for r in rader:
         klasse = ' class="aktuell"' if r["lag"] in aktuelle else ""
-        linjer.append(f'<tr{klasse}><td>{r["plass"]}</td><td>{html.escape(r["lag"])}</td><td>{r["kamper"]}</td>'
+        linjer.append(f'<tr{klasse}><td>{r["plass"]}</td><td>{_laglenke(t, r["lag"])}</td><td>{r["kamper"]}</td>'
                       f'<td>{html.escape(r["poeng_vist"])}</td><td>{_nb(html.escape(r["sjanser"][kol]["vist"]))}</td></tr>')
     tr = "".join(linjer)
     return (f'<table class="utsnitt"><thead><tr><th>Plass</th><th>Lag</th><th>Kamper</th><th>Poeng</th>'
@@ -378,6 +386,175 @@ def sporsmal_side(liga, sti, sone, t):
 """
 
 
+# ---- Lagsidene (fase 3) ----
+def lag_slug(lag):
+    """Adressen til lagsiden: små bokstaver, æ/ø/å som ae/o/a, mellomrom og / som
+    bindestrek (Bodø/Glimt blir bodo-glimt, Sarpsborg 08 blir sarpsborg-08)."""
+    s = lag.lower().replace("æ", "ae").replace("ø", "o").replace("å", "a")
+    return re.sub(r"[^a-z0-9]+", "-", s).strip("-")
+
+
+def _laglenke(t, lag):
+    return f'<a href="/{t["_liga"]}/{lag_slug(lag)}/">{html.escape(lag)}</a>'
+
+
+def lagsider(t):
+    """Den enkle lista over lagsidene nederst på ligasiden, i tabellens rekkefølge."""
+    return "Lagsidene: " + " · ".join(_laglenke(t, r["lag"]) for r in t["tabell"]["rader"])
+
+
+def _lagets_soner(d):
+    """Sonene laget kjemper om: de med 1 til 99 % sjanse, ellers den mest åpne."""
+    soner = [s for s in d["soner"] if s["avgjort"] == 0 and s["vist"] not in ("<1 %", ">99 %")]
+    return soner or [s for s in d["soner"] if s["key"] == d.get("aapnest")]
+
+
+def _rad(t, lag):
+    return next(r for r in t["tabell"]["rader"] if r["lag"] == lag)
+
+
+def lag_tittel(t, lag):
+    aar = t["liga"]["sesong"]
+    if t["liga"]["ferdig"]:
+        return f"{lag} {aar}: endte på {_rad(t, lag)['plass']}. plass"
+    soner = _lagets_soner(t["lag"][lag])
+    return f"{lag} {aar}: sjanse for {liste([s['navn'] for s in soner])}" if soner else f"{lag} {aar}: tabellen og sjansene"
+
+
+def lag_svar(t, lag):
+    """Første setning(er): plassen, poengene og sjansen i sonene i tittelen."""
+    r, liga = _rad(t, lag), f'{t["liga"]["navn"]} {t["liga"]["sesong"]}'
+    if t["liga"]["ferdig"]:
+        return f"{lag} endte på {r['plass']}. plass i {liga} med {r['poeng']} poeng."
+    deler = [f"{lag} ligger på {r['plass']}. plass i {liga} med {r['poeng']} poeng etter {r['kamper']} kamper."]
+    soner = _lagets_soner(t["lag"][lag])
+    if soner:
+        deler.append(_rekke(f"Sjansen for {soner[0]['navn']} er {_prosa(soner[0]['vist'])}",
+                            [f"for {s['navn']} {_prosa(s['vist'])}" for s in soner[1:]]) + ".")
+    return " ".join(deler)
+
+
+def _avsnitt(tekst):
+    return "".join(f"<p>{_nb(html.escape(p))}</p>" for p in tekst.split("\n\n") if p.strip())
+
+
+def _lag_sporsmal_html(d):
+    """De tre øverste spørsmålene i Spør om tabellen for laget. Et svar som bare
+    gjentar et svar over (et avgjort lag får samme forklaring på flere spørsmål),
+    vises én gang. «Hvilken plass ender X på?» til slutt hvis det ikke var med."""
+    vist, ut = [], []
+    for q in d["topp"] + ([] if any(q["id"] == "range" for q in d["topp"]) else [dict(d["plass"], id="range")]):
+        svar = q["svar"].strip()
+        if not svar or any(svar.endswith(v) or v.endswith(svar) for v in vist):
+            continue
+        vist.append(svar)
+        kamper = q["id"] == "keymatches" and any("\n" in b for b in svar.split("\n\n")[1:])
+        ut.append(f'<h3>{html.escape(q["sporsmal"])}</h3>{_kamper_html(svar) if kamper else _avsnitt(svar)}')
+    return "\n  ".join(ut)
+
+
+def _lag_utsnitt_html(t, lag):
+    """Tabellen rundt laget (to plasser over og under), med sjansene slik tabellen viser dem."""
+    rader, p = t["tabell"]["rader"], _rad(t, lag)["plass"]
+    fra = max(1, min(p - 2, len(rader) - 4))
+    kol = t["tabell"]["kolonner"]
+    linjer = []
+    for r in rader[fra - 1:fra + 4]:
+        klasse = ' class="aktuell"' if r["lag"] == lag else ""
+        celler = "".join(f'<td>{_nb(html.escape(r["sjanser"][k["key"]]["vist"]))}</td>' for k in kol)
+        navn = html.escape(r["lag"]) if r["lag"] == lag else _laglenke(t, r["lag"])
+        linjer.append(f'<tr{klasse}><td>{r["plass"]}</td><td>{navn}</td><td>{r["kamper"]}</td>'
+                      f'<td>{html.escape(r["poeng_vist"])}</td>{celler}</tr>')
+    hode = "".join(f"<th>{html.escape(k['navn'])}</th>" for k in kol)
+    return (f'<table class="utsnitt lag"><thead><tr><th>Plass</th><th>Lag</th><th>Kamper</th><th>Poeng</th>{hode}</tr></thead>'
+            f'<tbody>{"".join(linjer)}</tbody></table>')
+
+
+def _rest_html(d):
+    li = []
+    for k in d["rest"]:
+        utfall = _nb(f"Seier {k['seier']} · uavgjort {k['uavgjort']} · tap {k['tap']}")
+        li.append(f'<li><strong>{html.escape(k["naar"])}</strong>: {"hjemme" if k["hjemme"] else "borte"} '
+                  f'mot <span class="lagnavn">{html.escape(k["motstander"])}</span><br><span class="utfall">{utfall}</span></li>')
+    return f'<ul class="kamper rest">{"".join(li)}</ul>' if li else ""
+
+
+def lag_side(liga, lag, t):
+    """Hele lagsiden som HTML, bare fra tekster.json."""
+    d = t["lag"][lag]
+    tittel, svar = lag_tittel(t, lag), lag_svar(t, lag)
+    url = f"{VERT}/{liga}/{lag_slug(lag)}/"
+    liganavn = f'{t["liga"]["navn"]} {t["liga"]["sesong"]}'
+    andre_lag = " · ".join(f'<a href="/{liga}/{lag_slug(r["lag"])}/">{html.escape(r["lag"])}</a>' if r["lag"] != lag
+                           else f'<strong>{html.escape(r["lag"])}</strong>' for r in t["tabell"]["rader"])
+    sporsmal = " · ".join(f'<a href="/{liga}/{s2}/">{html.escape(sporsmal_tittel(t, s2))}</a>' for s2, _ in SPORSMAL.get(liga, []))
+    rest = _rest_html(d)
+    rest_del = ("<h2>Kampene som er igjen</h2>\n  <p>Sjansen for seier, uavgjort og tap i hver kamp, slik kalkulatoren "
+                f"regner den.</p>\n  {rest}") if rest else ""
+    utsnitt = _lag_utsnitt_html(t, lag)
+    om = (f"Sjansene for {liste([sone_navn(t, k['key']) for k in t['tabell']['kolonner']])} er de samme som i tabellen på "
+          "ligasiden." + (" «–» betyr at det ikke lenger er mulig." if "<td>–</td>" in utsnitt else ""))
+    beskrivelse = html.escape(svar, quote=True)
+    return f"""<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Laget av scripts/lag_sider.py fra {liga}/data/tekster.json. Ikke rediger:
+     siden lages på nytt hver gang tallene regnes. -->
+{TELLING}
+<title>{html.escape(tittel)}</title>
+<meta name="description" content="{beskrivelse}">
+<link rel="canonical" href="{url}">
+<meta name="theme-color" content="#13305f">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Tabellkalkulator">
+<meta property="og:locale" content="nb_NO">
+<meta property="og:url" content="{url}">
+<meta property="og:title" content="{html.escape(tittel, quote=True)}">
+<meta property="og:description" content="{beskrivelse}">
+<meta property="og:image" content="{VERT}/{liga}/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>{SPORSMAL_CSS}{LAG_CSS}</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a href="/">{LOGO}<span class="brand">Tabellkalkulator</span></a></header>
+  <p class="sti"><a href="/{liga}/">{html.escape(liganavn)}</a></p>
+  <h1>{html.escape(tittel)}</h1>
+  <p class="svar">{_nb(html.escape(svar))}</p>
+  <p class="dato">Oppdatert {norsk_tid(t["laget"])}. Sjansene er regnet fra {tall(t["sesonger"])} simulerte sesonger.</p>
+  {utsnitt}
+  <p class="om">{html.escape(om)}</p>
+  <h2>Spør om tabellen</h2>
+  {_lag_sporsmal_html(d)}
+  {rest_del}
+  <p><a class="knapp" href="/{liga}/#team={quote(lag, safe="")}">Følg {html.escape(lag)} i tabellkalkulatoren</a></p>
+  <h2>Lagene i {html.escape(t["liga"]["navn"])}</h2>
+  <p class="andre-lag">{andre_lag}</p>
+  {f'<p>Se også: {sporsmal}</p>' if sporsmal else ''}
+  <footer><a href="/">Tabellkalkulator</a> viser tabellen og sjansene for Eliteserien og OBOS-ligaen.</footer>
+</div>
+</body>
+</html>
+"""
+
+
+LAG_CSS = """
+  .utsnitt.lag th,.utsnitt.lag td{padding:7px 8px}
+  .andre-lag{line-height:1.9}
+  .andre-lag a,.lagnavn{white-space:nowrap}
+  @media (max-width:520px){.utsnitt.lag th:nth-child(3),.utsnitt.lag td:nth-child(3){display:none}.utsnitt.lag th,.utsnitt.lag td{padding:6px 5px;font-size:14px}}
+"""
+
+
 def forside(root=ROOT, ligaer=LIGAER):
     """Forsiden med den korte oppsummeringen for hver liga som har tekster.json."""
     side = (root / "index.html").read_text(encoding="utf-8")
@@ -396,6 +573,7 @@ def ligaside(liga, root=ROOT):
                                "KOLONNER": t["tabell"]["kolonner_html"],
                                "TABELL": t["tabell"]["rader_html"],
                                "OPPDATERT": oppdatert(t),
+                               "LAGSIDER": lagsider(t),
                                **_side_statisk(t)})
 
 
@@ -410,15 +588,31 @@ def _side_statisk(t):
             **{f"KORT{k.upper()}": st["kort"][k] for k in ("gull", "europa", "ned", "form")}}
 
 
+MERKE = "<!-- Laget av scripts/lag_sider.py fra "
+
+
+def undersider(liga, root=ROOT):
+    """Undersidene til ligaen som dette skriptet har laget (spørsmåls- og
+    lagsidene), funnet på merket øverst i filen, ikke på tekster.json: da kan
+    workflowen legge dem til også når lag_sider.py feilet."""
+    return sorted(f.relative_to(root).as_posix() for f in (root / liga).glob("*/index.html")
+                  if MERKE in f.read_text(encoding="utf-8")[:2000])
+
+
 def main(argv):
     sjekk = "--check" in argv
     ligaer = [a for a in argv if not a.startswith("-")] or list(LIGAER)
+    if "--filer" in argv:
+        print("\n".join(f for liga in ligaer for f in undersider(liga)))
+        return 0
     feil = 0
     # Forsiden har én region per liga; hver liga skriver bare sin egen, så de
     # to grunnlag-jobbene ikke endrer de samme linjene.
     sider = [(f"{liga}/index.html", ROOT / liga / "index.html", ligaside(liga)) for liga in ligaer]
     sider += [(f"{liga}/{sti}/index.html", ROOT / liga / sti / "index.html", sporsmal_side(liga, sti, sone, les(liga)))
               for liga in ligaer for sti, sone in SPORSMAL.get(liga, [])]
+    sider += [(f"{liga}/{lag_slug(lag)}/index.html", ROOT / liga / lag_slug(lag) / "index.html", lag_side(liga, lag, t))
+              for liga in ligaer for t in [les(liga)] for lag in t.get("lag", {})]
     sider += [("index.html (forsiden)", ROOT / "index.html", forside(ligaer=ligaer))]
     for navn, fil, ny in sider:
         gml = fil.read_text(encoding="utf-8") if fil.exists() else None

@@ -13,7 +13,8 @@ endrer seg med dataene.
 
 Spørsmålssidene (fase 2, scripts/lag_sider.py SPORSMAL, for eksempel
 /eliteserien/hvem-vinner/) er med, med samme lastmod som ligaen: de lages fra
-de samme tallene.
+de samme tallene. Det samme gjelder lagsidene (fase 3, /eliteserien/brann/),
+i tabellens rekkefølge, for lagene i ligaens tekster.json.
 
 Kjøres av grunnlag-workflowen via scripts/push_sitemap.sh, etter at
 grunnlagsfilen og siden er pushet.
@@ -23,7 +24,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-from lag_sider import SPORSMAL  # noqa: E402
+from lag_sider import SPORSMAL, lag_slug  # noqa: E402
 
 ROOT = Path(__file__).parent.parent
 BASE = "https://tabellkalkulator.no"
@@ -45,7 +46,8 @@ def leagues():
     return out
 
 
-def main():
+def adresser():
+    """<url>-linjene i sitemap.xml (failsafe sjekker dem uten å skrive filen)."""
     urls = [f"  <url><loc>{BASE}/</loc></url>"]
     for name, last in leagues():
         lm = f"<lastmod>{last}</lastmod>" if last else ""
@@ -53,6 +55,16 @@ def main():
         for sti, _ in SPORSMAL.get(name, []):
             if (ROOT / name / sti / "index.html").exists():
                 urls.append(f"  <url><loc>{BASE}/{name}/{sti}/</loc>{lm}</url>")
+        tekster = ROOT / name / "data" / "tekster.json"
+        t = json.loads(tekster.read_text(encoding="utf-8")) if tekster.exists() else {}
+        for r in t.get("tabell", {}).get("rader", []):
+            if r["lag"] in t.get("lag", {}) and (ROOT / name / lag_slug(r["lag"]) / "index.html").exists():
+                urls.append(f"  <url><loc>{BASE}/{name}/{lag_slug(r['lag'])}/</loc>{lm}</url>")
+    return urls
+
+
+def main():
+    urls = adresser()
     xml = ('<?xml version="1.0" encoding="UTF-8"?>\n'
            '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n'
            + "\n".join(urls) + "\n</urlset>\n")

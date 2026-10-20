@@ -189,6 +189,9 @@ async function hentTekster(page) {
     // fargeforklaringen og de fire boksene. lag_sider.py setter det inn i
     // HTML-en, så ingenting flytter seg når JS tar over.
     const statisk = statiskeDeler();
+    // Tabellen som HTML, før noe lag velges under (valgt lag gir markering i radene).
+    const kolonnerHtml = ['gullHeader', 'europaHeader', 'nedHeader'].map(id => document.getElementById(id).outerHTML).join('\n          ');
+    const raderHtml = tb.innerHTML;
     // Spørsmålssidene (fase 2): for toppsonen (gull; OBOS: direkte opprykk)
     // og nedrykk de aktuelle lagene (sikret, eller minst 1 % i tabellen,
     // størst først, høyst fire) med "Hvorfor"-svaret i Spør om tabellen for
@@ -211,10 +214,31 @@ async function hentTekster(page) {
       }
       sporsmal[sone] = {kolonne: kol, lag};
     }
+    // Lagsidene (fase 3): for hvert lag, valgt i lagvelgeren som en besøkende
+    // ville gjort, de tre øverste spørsmålene i Spør om tabellen med svarene,
+    // «Hvilken plass ender X på?», restprogrammet (sjansene i hver kamp slik
+    // kamplisten regner dem) og sjansen i hver sone med matematisk status.
+    const sel = document.getElementById('teamSelect'), velg = async v => { sel.value = v; sel.dispatchEvent(new Event('change')); await new Promise(r => setTimeout(r, 30)); };
+    const lagTekst = {}, rq = QA_QUESTIONS.find(q => q.id === 'range');
+    try {
+      for (const t of TEAMS) {
+        await velg(t);
+        const x = qaRetninger(t), topp = [];
+        for (const q of qaSynligeSporsmal(t).slice(0, QA_TOP_N)) topp.push({id: q.id, sporsmal: q.label(t), svar: await q.run(t, () => {})});
+        const rest = matches.filter(m => isEmpty(m) && (m.home === t || m.away === t)).sort((a, b) => a.date.localeCompare(b.date)).map(m => {
+          const [lh, la] = rateFor(m.home, m.away), o = outcome(lh, la), hjemme = m.home === t;
+          return {naar: qaKampNaar(m), motstander: hjemme ? m.away : m.home, hjemme,
+            seier: pctTxt(hjemme ? o.H : o.B), uavgjort: pctTxt(o.U), tap: pctTxt(hjemme ? o.B : o.H)};
+        });
+        const soner = ZONE_KEYS.filter(k => LEAGUE.zones[k]).map(k => { const z = qaZoneByKey(t, k);
+          return {key: k, navn: LEAGUE.zones[k].label, vist: pctTxt(z.pct, z.mat), andel: Math.round(z.pct * 1e6) / 1e6, avgjort: z.mat}; });
+        lagTekst[t] = {kort: shortTeam(t), tilstand: x.tilstand, regel: x.regel, aapnest: x.aapnest ? x.aapnest.key : null,
+          topp, plass: {sporsmal: rq.label(t), svar: qaRange(t)}, rest, soner};
+      }
+    } finally { await velg(''); }
     return {status: GRUNNLAG_STATUS, sesonger: lastMCN, lag: TEAMS.length, viktigste,
-      liga: {navn: LEAGUE.name, sesong: LEAGUE.season, ferdig: !matches.some(isEmpty)}, sporsmal, statisk, tabell: {kolonner,
-      kolonner_html: ['gullHeader', 'europaHeader', 'nedHeader'].map(id => document.getElementById(id).outerHTML).join('\n          '),
-      rader_html: tb.innerHTML, rader}};
+      liga: {navn: LEAGUE.name, sesong: LEAGUE.season, ferdig: !matches.some(isEmpty)}, sporsmal, statisk, lagTekst, tabell: {kolonner,
+      kolonner_html: kolonnerHtml, rader_html: raderHtml, rader}};
   });
 }
 function skrivTekster(t, laget, N) {
@@ -222,7 +246,7 @@ function skrivTekster(t, laget, N) {
     throw new Error(`siden viste ikke tabellen fra filen (${t.status}, ${t.sesonger} sesonger, ${t.tabell.rader.length} av ${t.lag} rader)`);
   const ut = {versjon: 1, side: SIDE, laget, sesonger: t.sesonger,
     note: 'Hentet av scripts/lag_grunnlag.js fra siden selv med grunnlagsfilen i bruk. scripts/lag_sider.py lager de statiske sidene fra denne filen.',
-    liga: t.liga, tabell: t.tabell, viktigste: t.viktigste, sporsmal: t.sporsmal, statisk: t.statisk};
+    liga: t.liga, tabell: t.tabell, viktigste: t.viktigste, sporsmal: t.sporsmal, statisk: t.statisk, lag: t.lagTekst};
   const json = JSON.stringify(ut, null, 1) + '\n', midl = TEKSTER + '.tmp';
   fs.writeFileSync(midl, json); JSON.parse(fs.readFileSync(midl, 'utf8')); fs.renameSync(midl, TEKSTER);
   console.log(`Skrev ${path.relative(ROOT, TEKSTER)} (${t.tabell.rader.length} lag, ${(json.length / 1024).toFixed(0)} KB).`);

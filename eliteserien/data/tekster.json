@@ -629,5 +629,1959 @@
    "ned": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"8.5\"></circle><path d=\"M12 7.5v8M8.5 12.5 12 16l3.5-3.5\"></path></svg><span class=\"card-title\">Nedrykk</span><a class=\"card-link\" data-side=\"ned\" href=\"/eliteserien/hvem-rykker-ned/\">Se alle →</a></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Start</span><b class=\"card-pct\">90 %</b></li><li><span class=\"card-team\">Kristiansund</span><b class=\"card-pct\">76 %</b></li><li><span class=\"card-team\">Aalesund</span><b class=\"card-pct\">14 %</b></li></ul>",
    "form": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m3.5 16.5 5.5-5.5 3.5 3.5 7.5-8\"></path><path d=\"M15.5 6.5h5v5\"></path></svg><span class=\"card-title\">Styrke</span><button type=\"button\" class=\"card-link\" data-sort=\"form\">Se alle →</button></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Bodø/Glimt</span><b class=\"card-pct\">7,4</b></li><li><span class=\"card-team\">Viking</span><b class=\"card-pct\">6,7</b></li><li><span class=\"card-team\">Rosenborg</span><b class=\"card-pct\">5,9</b></li></ul>"
   }
+ },
+ "lag": {
+  "Bodø/Glimt": {
+   "kort": "Glimt",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "gull",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Bodø/Glimt 69 % sjanse for gull?",
+     "svar": "Bodø/Glimt har like mange poeng som Viking på andreplassen og er litt sterkere ifølge modellen (7,4 mot 6,7). Bodø/Glimt har også et lettere restprogram: motstanderne har i snitt 15 % vinnersjanse, mot 24 % for Viking.\n\nI simuleringene ender Bodø/Glimt i snitt på 72 poeng mot 69 for Viking, og vinner serien i 69 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Bodø/Glimt gjøre for å vinne serien?",
+     "svar": "Bodø/Glimt må ta 14 av de 21 poengene som er igjen for å komme opp på 70. Ender de på 70 poeng, er sjansen for gull rundt 57 %. Med 73 poeng er den 92 %. Det er fordi Viking vanligvis ender på 69 poeng."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Bodø/Glimt?",
+     "svar": "Disse kampene påvirker Bodø/Glimts gullsjanse mest. Nå: 69 %\n\nBodø/Glimt mot Viking, runde 25, fredag 30. okt\nSeier: 87 % (+18 prosentpoeng)\nUavgjort: 63 % (−6 prosentpoeng)\nTap: 34 % (−35 prosentpoeng)\n\nBodø/Glimt mot Vålerenga, runde 12, lørdag 24. okt\nSeier: 73 % (+4 prosentpoeng)\nUavgjort: 55 % (−14 prosentpoeng)\nTap: 46 % (−23 prosentpoeng)\n\nBodø/Glimt mot KFUM Oslo, runde 28, lørdag 28. nov\nSeier: 72 % (+3 prosentpoeng)\nUavgjort: 56 % (−13 prosentpoeng)\nTap: 48 % (−21 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Bodø/Glimt på?",
+    "svar": "Bodø/Glimt ligger på 1. plass med 56 poeng. Matematisk kan de ende fra 1. til 6. plass. Oftest blir det 1. plass (69 %), og i minst 90 % av simuleringene ender de mellom 1. og 2. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, lørdag 24. okt",
+     "motstander": "Vålerenga",
+     "hjemme": true,
+     "seier": "84 %",
+     "uavgjort": "10 %",
+     "tap": "6 %"
+    },
+    {
+     "naar": "Runde 25, fredag 30. okt",
+     "motstander": "Viking",
+     "hjemme": true,
+     "seier": "55 %",
+     "uavgjort": "21 %",
+     "tap": "24 %"
+    },
+    {
+     "naar": "Runde 26, søndag 8. nov",
+     "motstander": "Tromsø",
+     "hjemme": false,
+     "seier": "54 %",
+     "uavgjort": "23 %",
+     "tap": "23 %"
+    },
+    {
+     "naar": "Runde 27, fredag 20. nov",
+     "motstander": "Molde",
+     "hjemme": false,
+     "seier": "53 %",
+     "uavgjort": "21 %",
+     "tap": "26 %"
+    },
+    {
+     "naar": "Runde 28, lørdag 28. nov",
+     "motstander": "KFUM Oslo",
+     "hjemme": true,
+     "seier": "85 %",
+     "uavgjort": "10 %",
+     "tap": "5 %"
+    },
+    {
+     "naar": "Runde 29, lørdag 5. des",
+     "motstander": "Aalesund",
+     "hjemme": false,
+     "seier": "74 %",
+     "uavgjort": "15 %",
+     "tap": "12 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Sarpsborg 08",
+     "hjemme": true,
+     "seier": "79 %",
+     "uavgjort": "13 %",
+     "tap": "8 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "69 %",
+     "andel": 0.69162,
+     "avgjort": 0
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": ">99 %",
+     "andel": 0.99999,
+     "avgjort": 0
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": ">99 %",
+     "andel": 1,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    }
+   ]
+  },
+  "Brann": {
+   "kort": "Brann",
+   "tilstand": 1,
+   "regel": 2,
+   "aapnest": "europa",
+   "topp": [
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Brann gjøre for å nå topp 4?",
+     "svar": "Det skal mye til: Brann ender i topp 4 i rundt 1 % av simuleringene. De må ta alle de 21 poengene som er igjen for å komme opp på 50. Ender de på 50 poeng, er sjansen omtrent 64 %. Da kan høyst ett av lagene Molde, Tromsø, Rosenborg og Lillestrøm ende over 50 poeng."
+    },
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor er Brann så godt som sikret mot både nedrykk og kvalik?",
+     "svar": "Brann ligger på 7. plass med 29 poeng, fem foran Aalesund på kvalikplass. Det gjenstår sju kamper, men for at Brann skal havne på kvalikplass, må hele sju av de ni lagene bak passere dem. Det skjer i under 1 % av simuleringene."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Brann?",
+     "svar": "Disse kampene påvirker Branns topp 4-sjanse mest. Nå: 1 %\n\nLillestrøm mot Brann, runde 12, søndag 25. okt\nSeier: 3 % (+2 prosentpoeng)\nUavgjort: 1 % (endrer lite)\nTap: <1 % (endrer lite)\n\nBrann mot Molde, runde 25, søndag 1. nov\nSeier: 3 % (+2 prosentpoeng)\nUavgjort: 1 % (endrer lite)\nTap: <1 % (endrer lite)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Brann på?",
+    "svar": "Brann ligger på 7. plass med 29 poeng. Matematisk kan de ende fra 3. til 16. plass. Oftest blir det 7. plass (38 %), og i minst 90 % av simuleringene ender de mellom 6. og 11. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, søndag 25. okt",
+     "motstander": "Lillestrøm",
+     "hjemme": false,
+     "seier": "34 %",
+     "uavgjort": "25 %",
+     "tap": "41 %"
+    },
+    {
+     "naar": "Runde 25, søndag 1. nov",
+     "motstander": "Molde",
+     "hjemme": true,
+     "seier": "39 %",
+     "uavgjort": "22 %",
+     "tap": "39 %"
+    },
+    {
+     "naar": "Runde 26, søndag 8. nov",
+     "motstander": "Fredrikstad",
+     "hjemme": false,
+     "seier": "45 %",
+     "uavgjort": "26 %",
+     "tap": "29 %"
+    },
+    {
+     "naar": "Runde 27, søndag 22. nov",
+     "motstander": "KFUM Oslo",
+     "hjemme": false,
+     "seier": "47 %",
+     "uavgjort": "25 %",
+     "tap": "28 %"
+    },
+    {
+     "naar": "Runde 28, søndag 29. nov",
+     "motstander": "Kristiansund",
+     "hjemme": true,
+     "seier": "66 %",
+     "uavgjort": "18 %",
+     "tap": "16 %"
+    },
+    {
+     "naar": "Runde 29, søndag 6. des",
+     "motstander": "Sarpsborg 08",
+     "hjemme": false,
+     "seier": "39 %",
+     "uavgjort": "25 %",
+     "tap": "37 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Aalesund",
+     "hjemme": true,
+     "seier": "56 %",
+     "uavgjort": "21 %",
+     "tap": "23 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "1 %",
+     "andel": 0.01297,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "<1 %",
+     "andel": 0.00212,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "<1 %",
+     "andel": 0.00031,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Fredrikstad": {
+   "kort": "FFK",
+   "tilstand": 1,
+   "regel": 2,
+   "aapnest": "kvalik",
+   "topp": [
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Fredrikstad gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Fredrikstad unngår både nedrykk og kvalik i nesten alle simuleringene. Tar de fire av de 21 poengene som er igjen, er sjansen rundt 96 %."
+    },
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Fredrikstad så godt som ingen mulighet til å nå topp 4?",
+     "svar": "Fredrikstad ligger på 8. plass med 29 poeng, 11 bak Tromsø på 4. plass. Det gjenstår sju kamper, men for at Fredrikstad skal nå topp 4, må de passere hele fire av de fem lagene de kan nå. Det skjer i under 1 % av simuleringene."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Fredrikstad?",
+     "svar": "Disse kampene påvirker Fredrikstads kvalikfare mest. Nå: 2 %\n\nFredrikstad mot Aalesund, runde 28, søndag 29. nov\nSeier: <1 % (−2 prosentpoeng)\nUavgjort: 2 % (endrer lite)\nTap: 5 % (+3 prosentpoeng)\n\nHamKam mot Fredrikstad, runde 27, lørdag 21. nov\nSeier: <1 % (−2 prosentpoeng)\nUavgjort: 2 % (endrer lite)\nTap: 5 % (+3 prosentpoeng)\n\nKFUM Oslo mot Fredrikstad, runde 29, søndag 6. des\nSeier: <1 % (−2 prosentpoeng)\nUavgjort: 2 % (endrer lite)\nTap: 4 % (+2 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Fredrikstad på?",
+    "svar": "Fredrikstad ligger på 8. plass med 29 poeng. Matematisk kan de ende fra 3. til 16. plass. Oftest blir det 8. plass (20 %), og i minst 90 % av simuleringene ender de mellom 7. og 13. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, søndag 25. okt",
+     "motstander": "Molde",
+     "hjemme": false,
+     "seier": "16 %",
+     "uavgjort": "19 %",
+     "tap": "64 %"
+    },
+    {
+     "naar": "Runde 25, lørdag 31. okt",
+     "motstander": "Rosenborg",
+     "hjemme": true,
+     "seier": "29 %",
+     "uavgjort": "25 %",
+     "tap": "46 %"
+    },
+    {
+     "naar": "Runde 26, søndag 8. nov",
+     "motstander": "Brann",
+     "hjemme": true,
+     "seier": "29 %",
+     "uavgjort": "26 %",
+     "tap": "45 %"
+    },
+    {
+     "naar": "Runde 27, lørdag 21. nov",
+     "motstander": "HamKam",
+     "hjemme": false,
+     "seier": "40 %",
+     "uavgjort": "25 %",
+     "tap": "35 %"
+    },
+    {
+     "naar": "Runde 28, søndag 29. nov",
+     "motstander": "Aalesund",
+     "hjemme": true,
+     "seier": "44 %",
+     "uavgjort": "25 %",
+     "tap": "32 %"
+    },
+    {
+     "naar": "Runde 29, søndag 6. des",
+     "motstander": "KFUM Oslo",
+     "hjemme": false,
+     "seier": "36 %",
+     "uavgjort": "27 %",
+     "tap": "38 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Molde",
+     "hjemme": true,
+     "seier": "28 %",
+     "uavgjort": "23 %",
+     "tap": "49 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "<1 %",
+     "andel": 0.00133,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "2 %",
+     "andel": 0.02352,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "<1 %",
+     "andel": 0.003,
+     "avgjort": 0
+    }
+   ]
+  },
+  "HamKam": {
+   "kort": "HamKam",
+   "tilstand": 1,
+   "regel": 1,
+   "aapnest": "nedrykk",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har HamKam 6 % sjanse for nedrykk?",
+     "svar": "HamKam ligger to poeng foran Aalesund på 14. plass og er litt svakere ifølge modellen (3,9 mot 4,3). Sandefjord, Kristiansund og Start er også med i kampen om å unngå nedrykk.\n\nI simuleringene ender HamKam i snitt på 33 poeng mot 31 for Aalesund, og rykker ned direkte i 6 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må HamKam gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "HamKam må ta fem av de 21 poengene som er igjen for å komme opp på 31. Ender de på 31 poeng, er sjansen for å unngå både nedrykk og kvalik rundt 62 %. Med 34 poeng er den 98 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for HamKam?",
+     "svar": "Disse kampene påvirker HamKams nedrykksfare mest. Nå: 6 %\n\nHamKam mot Sandefjord, runde 29, søndag 6. des\nSeier: 1 % (−5 prosentpoeng)\nUavgjort: 6 % (endrer lite)\nTap: 12 % (+6 prosentpoeng)\n\nHamKam mot Sarpsborg 08, runde 26, søndag 8. nov\nSeier: 1 % (−5 prosentpoeng)\nUavgjort: 6 % (endrer lite)\nTap: 11 % (+5 prosentpoeng)\n\nHamKam mot Fredrikstad, runde 27, lørdag 21. nov\nSeier: 1 % (−5 prosentpoeng)\nUavgjort: 6 % (endrer lite)\nTap: 10 % (+4 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender HamKam på?",
+    "svar": "HamKam ligger på 12. plass med 26 poeng. Matematisk kan de ende fra 3. til 16. plass. Oftest blir det 13. plass (21 %), og i minst 90 % av simuleringene ender de mellom 8. og 15. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, lørdag 24. okt",
+     "motstander": "Rosenborg",
+     "hjemme": true,
+     "seier": "20 %",
+     "uavgjort": "22 %",
+     "tap": "58 %"
+    },
+    {
+     "naar": "Runde 25, søndag 1. nov",
+     "motstander": "KFUM Oslo",
+     "hjemme": false,
+     "seier": "28 %",
+     "uavgjort": "24 %",
+     "tap": "48 %"
+    },
+    {
+     "naar": "Runde 26, søndag 8. nov",
+     "motstander": "Sarpsborg 08",
+     "hjemme": true,
+     "seier": "35 %",
+     "uavgjort": "24 %",
+     "tap": "41 %"
+    },
+    {
+     "naar": "Runde 27, lørdag 21. nov",
+     "motstander": "Fredrikstad",
+     "hjemme": true,
+     "seier": "35 %",
+     "uavgjort": "25 %",
+     "tap": "40 %"
+    },
+    {
+     "naar": "Runde 28, mandag 30. nov",
+     "motstander": "Lillestrøm",
+     "hjemme": false,
+     "seier": "18 %",
+     "uavgjort": "19 %",
+     "tap": "63 %"
+    },
+    {
+     "naar": "Runde 29, søndag 6. des",
+     "motstander": "Sandefjord",
+     "hjemme": true,
+     "seier": "41 %",
+     "uavgjort": "25 %",
+     "tap": "34 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Viking",
+     "hjemme": false,
+     "seier": "8 %",
+     "uavgjort": "11 %",
+     "tap": "81 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "<1 %",
+     "andel": 0.00003,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "18 %",
+     "andel": 0.18146,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "6 %",
+     "andel": 0.06251,
+     "avgjort": 0
+    }
+   ]
+  },
+  "KFUM Oslo": {
+   "kort": "KFUM",
+   "tilstand": 1,
+   "regel": 1,
+   "aapnest": "kvalik",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har KFUM Oslo 5 % sjanse for kvalik?",
+     "svar": "KFUM Oslo ligger fem poeng foran Aalesund på 14. plass og er omtrent like sterke ifølge modellen (4,0 mot 4,3). Vålerenga, HamKam, Sandefjord og to andre er også med i kampen om å unngå kvalik.\n\nI simuleringene ender KFUM Oslo i snitt på 36 poeng mot 31 for Aalesund, og havner i kvalik i 5 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må KFUM Oslo gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "KFUM Oslo må ta to av de 21 poengene som er igjen for å komme opp på 31. Ender de på 31 poeng, er sjansen for å unngå både nedrykk og kvalik rundt 69 %. Med 34 poeng er den 99 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for KFUM Oslo?",
+     "svar": "Disse kampene påvirker KFUM Oslos kvalikfare mest. Nå: 5 %\n\nKFUM Oslo mot HamKam, runde 25, søndag 1. nov\nSeier: 1 % (−4 prosentpoeng)\nUavgjort: 5 % (endrer lite)\nTap: 12 % (+7 prosentpoeng)\n\nKristiansund mot KFUM Oslo, runde 12, søndag 25. okt\nSeier: 1 % (−4 prosentpoeng)\nUavgjort: 4 % (endrer lite)\nTap: 8 % (+3 prosentpoeng)\n\nKFUM Oslo mot Fredrikstad, runde 29, søndag 6. des\nSeier: 1 % (−4 prosentpoeng)\nUavgjort: 5 % (endrer lite)\nTap: 9 % (+4 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender KFUM Oslo på?",
+    "svar": "KFUM Oslo ligger på 9. plass med 29 poeng. Matematisk kan de ende fra 3. til 16. plass. Oftest blir det 11. plass (19 %), og i minst 90 % av simuleringene ender de mellom 7. og 14. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, søndag 25. okt",
+     "motstander": "Kristiansund",
+     "hjemme": false,
+     "seier": "32 %",
+     "uavgjort": "26 %",
+     "tap": "42 %"
+    },
+    {
+     "naar": "Runde 25, søndag 1. nov",
+     "motstander": "HamKam",
+     "hjemme": true,
+     "seier": "48 %",
+     "uavgjort": "24 %",
+     "tap": "28 %"
+    },
+    {
+     "naar": "Runde 26, søndag 8. nov",
+     "motstander": "Viking",
+     "hjemme": false,
+     "seier": "9 %",
+     "uavgjort": "14 %",
+     "tap": "78 %"
+    },
+    {
+     "naar": "Runde 27, søndag 22. nov",
+     "motstander": "Brann",
+     "hjemme": true,
+     "seier": "28 %",
+     "uavgjort": "25 %",
+     "tap": "47 %"
+    },
+    {
+     "naar": "Runde 28, lørdag 28. nov",
+     "motstander": "Bodø/Glimt",
+     "hjemme": false,
+     "seier": "5 %",
+     "uavgjort": "10 %",
+     "tap": "85 %"
+    },
+    {
+     "naar": "Runde 29, søndag 6. des",
+     "motstander": "Fredrikstad",
+     "hjemme": true,
+     "seier": "38 %",
+     "uavgjort": "27 %",
+     "tap": "36 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Rosenborg",
+     "hjemme": false,
+     "seier": "11 %",
+     "uavgjort": "17 %",
+     "tap": "72 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "<1 %",
+     "andel": 0.00005,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "5 %",
+     "andel": 0.04816,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "1 %",
+     "andel": 0.0087,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Kristiansund": {
+   "kort": "KBK",
+   "tilstand": 1,
+   "regel": 1,
+   "aapnest": "nedrykk",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Kristiansund 76 % sjanse for nedrykk?",
+     "svar": "Kristiansund ligger fem poeng bak Sandefjord på 13. plass og er litt svakere ifølge modellen (3,6 mot 4,2). Aalesund er også med i kampen om å unngå nedrykk. Kristiansund har også et tøffere restprogram: motstanderne har i snitt 49 % vinnersjanse, mot 43 % for Sandefjord.\n\nI simuleringene ender Kristiansund i snitt på 27 poeng mot 33 for Sandefjord, og rykker ned direkte i 76 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Kristiansund gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Det skal mye til: Kristiansund unngår både nedrykk og kvalik i rundt 11 % av simuleringene. De må ta 13 av de 21 poengene som er igjen for å komme opp på 32. Ender de på 32 poeng, er sjansen omtrent 68 %. Med 35 poeng er den over 99 %.\n\nKristiansund når minst kvalikplass i 24 % av simuleringene. De må ta 11 av de 21 poengene som er igjen for å komme opp på 30. Ender de på 30 poeng, er sjansen for minst kvalikplass 67 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Kristiansund?",
+     "svar": "Disse kampene påvirker Kristiansunds nedrykksfare mest. Nå: 76 %\n\nSarpsborg 08 mot Kristiansund, runde 25, søndag 1. nov\nSeier: 55 % (−21 prosentpoeng)\nUavgjort: 73 % (−3 prosentpoeng)\nTap: 82 % (+6 prosentpoeng)\n\nStart mot Kristiansund, runde 30, søndag 13. des\nSeier: 56 % (−20 prosentpoeng)\nUavgjort: 75 % (endrer lite)\nTap: 83 % (+7 prosentpoeng)\n\nKristiansund mot Sandefjord, runde 27, søndag 22. nov\nSeier: 61 % (−15 prosentpoeng)\nUavgjort: 81 % (+5 prosentpoeng)\nTap: 89 % (+13 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Kristiansund på?",
+    "svar": "Kristiansund ligger på 15. plass med 19 poeng. Matematisk kan de ende fra 3. til 16. plass. Oftest blir det 15. plass (42 %), og i minst 90 % av simuleringene ender de mellom 12. og 16. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, søndag 25. okt",
+     "motstander": "KFUM Oslo",
+     "hjemme": true,
+     "seier": "42 %",
+     "uavgjort": "26 %",
+     "tap": "32 %"
+    },
+    {
+     "naar": "Runde 25, søndag 1. nov",
+     "motstander": "Sarpsborg 08",
+     "hjemme": false,
+     "seier": "17 %",
+     "uavgjort": "20 %",
+     "tap": "63 %"
+    },
+    {
+     "naar": "Runde 26, lørdag 7. nov",
+     "motstander": "Vålerenga",
+     "hjemme": true,
+     "seier": "32 %",
+     "uavgjort": "23 %",
+     "tap": "45 %"
+    },
+    {
+     "naar": "Runde 27, søndag 22. nov",
+     "motstander": "Sandefjord",
+     "hjemme": true,
+     "seier": "39 %",
+     "uavgjort": "25 %",
+     "tap": "36 %"
+    },
+    {
+     "naar": "Runde 28, søndag 29. nov",
+     "motstander": "Brann",
+     "hjemme": false,
+     "seier": "16 %",
+     "uavgjort": "18 %",
+     "tap": "66 %"
+    },
+    {
+     "naar": "Runde 29, søndag 6. des",
+     "motstander": "Lillestrøm",
+     "hjemme": true,
+     "seier": "31 %",
+     "uavgjort": "24 %",
+     "tap": "45 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Start",
+     "hjemme": false,
+     "seier": "22 %",
+     "uavgjort": "20 %",
+     "tap": "59 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "13 %",
+     "andel": 0.13426,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "76 %",
+     "andel": 0.75668,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Lillestrøm": {
+   "kort": "LSK",
+   "tilstand": 1,
+   "regel": 1,
+   "aapnest": "europa",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Lillestrøm 25 % sjanse for topp 4?",
+     "svar": "Lillestrøm ligger fire poeng bak Tromsø på fjerdeplassen og er litt svakere ifølge modellen (5,0 mot 5,4). Rosenborg er også med i kampen om topp 4-plassene. Lillestrøm har også et lettere restprogram: motstanderne har i snitt 32 % vinnersjanse, mot 43 % for Tromsø.\n\nI simuleringene ender Lillestrøm i snitt på 47 poeng mot 49 for Tromsø, og havner i topp 4 i 25 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Lillestrøm gjøre for å nå topp 4?",
+     "svar": "Lillestrøm må ta 14 av de 21 poengene som er igjen for å komme opp på 50. Ender de på 50 poeng, er sjansen for topp 4 rundt 50 %. Med 53 poeng er den 91 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Lillestrøm?",
+     "svar": "Disse kampene påvirker Lillestrøms topp 4-sjanse mest. Nå: 25 %\n\nLillestrøm mot Tromsø, runde 30, søndag 13. des\nSeier: 39 % (+14 prosentpoeng)\nUavgjort: 19 % (−6 prosentpoeng)\nTap: 9 % (−16 prosentpoeng)\n\nStart mot Lillestrøm, runde 25, søndag 1. nov\nSeier: 39 % (+14 prosentpoeng)\nUavgjort: 22 % (−3 prosentpoeng)\nTap: 15 % (−10 prosentpoeng)\n\nLillestrøm mot Brann, runde 12, søndag 25. okt\nSeier: 38 % (+13 prosentpoeng)\nUavgjort: 21 % (−4 prosentpoeng)\nTap: 14 % (−11 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Lillestrøm på?",
+    "svar": "Lillestrøm ligger på 6. plass med 36 poeng. Matematisk kan de ende fra 1. til 16. plass. Oftest blir det 6. plass (36 %), og i minst 90 % av simuleringene ender de mellom 3. og 7. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, søndag 25. okt",
+     "motstander": "Brann",
+     "hjemme": true,
+     "seier": "41 %",
+     "uavgjort": "25 %",
+     "tap": "34 %"
+    },
+    {
+     "naar": "Runde 25, søndag 1. nov",
+     "motstander": "Start",
+     "hjemme": false,
+     "seier": "36 %",
+     "uavgjort": "23 %",
+     "tap": "41 %"
+    },
+    {
+     "naar": "Runde 26, søndag 8. nov",
+     "motstander": "Aalesund",
+     "hjemme": true,
+     "seier": "57 %",
+     "uavgjort": "21 %",
+     "tap": "22 %"
+    },
+    {
+     "naar": "Runde 27, søndag 22. nov",
+     "motstander": "Sarpsborg 08",
+     "hjemme": false,
+     "seier": "30 %",
+     "uavgjort": "24 %",
+     "tap": "46 %"
+    },
+    {
+     "naar": "Runde 28, mandag 30. nov",
+     "motstander": "HamKam",
+     "hjemme": true,
+     "seier": "63 %",
+     "uavgjort": "19 %",
+     "tap": "18 %"
+    },
+    {
+     "naar": "Runde 29, søndag 6. des",
+     "motstander": "Kristiansund",
+     "hjemme": false,
+     "seier": "45 %",
+     "uavgjort": "24 %",
+     "tap": "31 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Tromsø",
+     "hjemme": true,
+     "seier": "45 %",
+     "uavgjort": "24 %",
+     "tap": "30 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "25 %",
+     "andel": 0.25344,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Molde": {
+   "kort": "Molde",
+   "tilstand": 1,
+   "regel": 1,
+   "aapnest": "europa",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Molde 64 % sjanse for topp 4?",
+     "svar": "Molde ligger tre poeng foran Rosenborg på femteplassen og er omtrent like sterke ifølge modellen (5,9 mot 5,9). Tromsø og Lillestrøm er også med i kampen om topp 4-plassene. Molde har også et tøffere restprogram: motstanderne har i snitt 37 % vinnersjanse, mot 24 % for Rosenborg.\n\nI simuleringene ender Molde i snitt på 50 poeng mot 50 for Rosenborg, og havner i topp 4 i 64 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Molde gjøre for å nå topp 4?",
+     "svar": "Molde må ta ni av de 21 poengene som er igjen for å komme opp på 49. Ender de på 49 poeng, er sjansen for topp 4 rundt 58 %. Med 52 poeng er den 93 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Molde?",
+     "svar": "Disse kampene påvirker Moldes topp 4-sjanse mest. Nå: 64 %\n\nRosenborg mot Molde, runde 28, lørdag 28. nov\nSeier: 86 % (+22 prosentpoeng)\nUavgjort: 69 % (+5 prosentpoeng)\nTap: 52 % (−12 prosentpoeng)\n\nMolde mot Fredrikstad, runde 12, søndag 25. okt\nSeier: 73 % (+9 prosentpoeng)\nUavgjort: 54 % (−10 prosentpoeng)\nTap: 44 % (−20 prosentpoeng)\n\nBrann mot Molde, runde 25, søndag 1. nov\nSeier: 80 % (+16 prosentpoeng)\nUavgjort: 62 % (−2 prosentpoeng)\nTap: 50 % (−14 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Molde på?",
+    "svar": "Molde ligger på 3. plass med 40 poeng. Matematisk kan de ende fra 1. til 15. plass. Oftest blir det 3. plass (37 %), og i minst 90 % av simuleringene ender de mellom 3. og 6. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, søndag 25. okt",
+     "motstander": "Fredrikstad",
+     "hjemme": true,
+     "seier": "64 %",
+     "uavgjort": "19 %",
+     "tap": "16 %"
+    },
+    {
+     "naar": "Runde 25, søndag 1. nov",
+     "motstander": "Brann",
+     "hjemme": false,
+     "seier": "39 %",
+     "uavgjort": "22 %",
+     "tap": "39 %"
+    },
+    {
+     "naar": "Runde 26, søndag 8. nov",
+     "motstander": "Sandefjord",
+     "hjemme": false,
+     "seier": "49 %",
+     "uavgjort": "23 %",
+     "tap": "28 %"
+    },
+    {
+     "naar": "Runde 27, fredag 20. nov",
+     "motstander": "Bodø/Glimt",
+     "hjemme": true,
+     "seier": "26 %",
+     "uavgjort": "21 %",
+     "tap": "53 %"
+    },
+    {
+     "naar": "Runde 28, lørdag 28. nov",
+     "motstander": "Rosenborg",
+     "hjemme": false,
+     "seier": "26 %",
+     "uavgjort": "20 %",
+     "tap": "54 %"
+    },
+    {
+     "naar": "Runde 29, fredag 4. des",
+     "motstander": "Viking",
+     "hjemme": true,
+     "seier": "36 %",
+     "uavgjort": "22 %",
+     "tap": "42 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Fredrikstad",
+     "hjemme": false,
+     "seier": "49 %",
+     "uavgjort": "23 %",
+     "tap": "28 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "<1 %",
+     "andel": 0.00008,
+     "avgjort": 0
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "64 %",
+     "andel": 0.64237,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Rosenborg": {
+   "kort": "RBK",
+   "tilstand": 1,
+   "regel": 1,
+   "aapnest": "europa",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Rosenborg 65 % sjanse for topp 4?",
+     "svar": "Rosenborg ligger tre poeng bak Tromsø på fjerdeplassen og er litt sterkere ifølge modellen (5,9 mot 5,4). Rosenborg har også et lettere restprogram: motstanderne har i snitt 24 % vinnersjanse, mot 43 % for Tromsø.\n\nI simuleringene ender Rosenborg i snitt på 50 poeng mot 49 for Tromsø, og havner i topp 4 i 65 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Rosenborg gjøre for å nå topp 4?",
+     "svar": "Rosenborg må ta 12 av de 21 poengene som er igjen for å komme opp på 49. Ender de på 49 poeng, er sjansen for topp 4 rundt 59 %. Med 52 poeng er den 94 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Rosenborg?",
+     "svar": "Disse kampene påvirker Rosenborgs topp 4-sjanse mest. Nå: 65 %\n\nRosenborg mot Start, runde 26, lørdag 7. nov\nSeier: 72 % (+7 prosentpoeng)\nUavgjort: 52 % (−13 prosentpoeng)\nTap: 42 % (−23 prosentpoeng)\n\nRosenborg mot Molde, runde 28, lørdag 28. nov\nSeier: 79 % (+14 prosentpoeng)\nUavgjort: 58 % (−7 prosentpoeng)\nTap: 43 % (−22 prosentpoeng)\n\nHamKam mot Rosenborg, runde 12, lørdag 24. okt\nSeier: 76 % (+11 prosentpoeng)\nUavgjort: 57 % (−8 prosentpoeng)\nTap: 46 % (−19 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Rosenborg på?",
+    "svar": "Rosenborg ligger på 5. plass med 37 poeng. Matematisk kan de ende fra 1. til 16. plass. Oftest blir det 3. plass (37 %), og i minst 90 % av simuleringene ender de mellom 3. og 6. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, lørdag 24. okt",
+     "motstander": "HamKam",
+     "hjemme": false,
+     "seier": "58 %",
+     "uavgjort": "22 %",
+     "tap": "20 %"
+    },
+    {
+     "naar": "Runde 25, lørdag 31. okt",
+     "motstander": "Fredrikstad",
+     "hjemme": false,
+     "seier": "46 %",
+     "uavgjort": "25 %",
+     "tap": "29 %"
+    },
+    {
+     "naar": "Runde 26, lørdag 7. nov",
+     "motstander": "Start",
+     "hjemme": true,
+     "seier": "74 %",
+     "uavgjort": "14 %",
+     "tap": "11 %"
+    },
+    {
+     "naar": "Runde 27, søndag 22. nov",
+     "motstander": "Aalesund",
+     "hjemme": false,
+     "seier": "50 %",
+     "uavgjort": "21 %",
+     "tap": "30 %"
+    },
+    {
+     "naar": "Runde 28, lørdag 28. nov",
+     "motstander": "Molde",
+     "hjemme": true,
+     "seier": "54 %",
+     "uavgjort": "20 %",
+     "tap": "26 %"
+    },
+    {
+     "naar": "Runde 29, lørdag 5. des",
+     "motstander": "Vålerenga",
+     "hjemme": false,
+     "seier": "38 %",
+     "uavgjort": "22 %",
+     "tap": "39 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "KFUM Oslo",
+     "hjemme": true,
+     "seier": "72 %",
+     "uavgjort": "17 %",
+     "tap": "11 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "<1 %",
+     "andel": 0.00001,
+     "avgjort": 0
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "65 %",
+     "andel": 0.6549,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Sandefjord": {
+   "kort": "Sandefjord",
+   "tilstand": 1,
+   "regel": 1,
+   "aapnest": "nedrykk",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Sandefjord 10 % sjanse for nedrykk?",
+     "svar": "Sandefjord har like mange poeng som Aalesund på 14. plass og er omtrent like sterke ifølge modellen (4,2 mot 4,3). Kristiansund og Start er også med i kampen om å unngå nedrykk. Sandefjord har også et lettere restprogram: motstanderne har i snitt 43 % vinnersjanse, mot 52 % for Aalesund.\n\nI simuleringene ender Sandefjord i snitt på 33 poeng mot 31 for Aalesund, og rykker ned direkte i 10 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Sandefjord gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Sandefjord må ta sju av de 21 poengene som er igjen for å komme opp på 31. Ender de på 31 poeng, er sjansen for å unngå både nedrykk og kvalik rundt 72 %. Med 34 poeng er den 99 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Sandefjord?",
+     "svar": "Disse kampene påvirker Sandefjords nedrykksfare mest. Nå: 10 %\n\nKristiansund mot Sandefjord, runde 27, søndag 22. nov\nSeier: 2 % (−8 prosentpoeng)\nUavgjort: 8 % (−2 prosentpoeng)\nTap: 18 % (+8 prosentpoeng)\n\nAalesund mot Sandefjord, runde 25, lørdag 31. okt\nSeier: 2 % (−8 prosentpoeng)\nUavgjort: 8 % (−2 prosentpoeng)\nTap: 16 % (+6 prosentpoeng)\n\nStart mot Sandefjord, runde 12, søndag 25. okt\nSeier: 2 % (−8 prosentpoeng)\nUavgjort: 8 % (−2 prosentpoeng)\nTap: 16 % (+6 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Sandefjord på?",
+    "svar": "Sandefjord ligger på 13. plass med 24 poeng. Matematisk kan de ende fra 3. til 16. plass. Oftest blir det 13. plass (18 %), og i minst 90 % av simuleringene ender de mellom 8. og 15. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, søndag 25. okt",
+     "motstander": "Start",
+     "hjemme": false,
+     "seier": "30 %",
+     "uavgjort": "24 %",
+     "tap": "46 %"
+    },
+    {
+     "naar": "Runde 25, lørdag 31. okt",
+     "motstander": "Aalesund",
+     "hjemme": false,
+     "seier": "30 %",
+     "uavgjort": "22 %",
+     "tap": "48 %"
+    },
+    {
+     "naar": "Runde 26, søndag 8. nov",
+     "motstander": "Molde",
+     "hjemme": true,
+     "seier": "28 %",
+     "uavgjort": "23 %",
+     "tap": "49 %"
+    },
+    {
+     "naar": "Runde 27, søndag 22. nov",
+     "motstander": "Kristiansund",
+     "hjemme": false,
+     "seier": "36 %",
+     "uavgjort": "25 %",
+     "tap": "39 %"
+    },
+    {
+     "naar": "Runde 28, søndag 29. nov",
+     "motstander": "Tromsø",
+     "hjemme": true,
+     "seier": "33 %",
+     "uavgjort": "26 %",
+     "tap": "41 %"
+    },
+    {
+     "naar": "Runde 29, søndag 6. des",
+     "motstander": "HamKam",
+     "hjemme": false,
+     "seier": "34 %",
+     "uavgjort": "25 %",
+     "tap": "41 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Vålerenga",
+     "hjemme": true,
+     "seier": "38 %",
+     "uavgjort": "26 %",
+     "tap": "36 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "17 %",
+     "andel": 0.17073,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "10 %",
+     "andel": 0.09856,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Sarpsborg 08": {
+   "kort": "S08",
+   "tilstand": 1,
+   "regel": 2,
+   "aapnest": "kvalik",
+   "topp": [
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Sarpsborg 08 gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Sarpsborg 08 unngår både nedrykk og kvalik i nesten alle simuleringene. Tar de fem av de 21 poengene som er igjen, er sjansen rundt 98 %."
+    },
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Sarpsborg 08 så godt som ingen mulighet til å nå topp 4?",
+     "svar": "Sarpsborg 08 ligger på 10. plass med 28 poeng, 12 bak Tromsø på 4. plass. Det gjenstår sju kamper, men for at Sarpsborg 08 skal nå topp 4, må de passere hele seks av de sju lagene de kan nå. Det skjer i under 1 % av simuleringene."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Sarpsborg 08?",
+     "svar": "Disse kampene påvirker Sarpsborg 08s kvalikfare mest. Nå: 1 %\n\nSarpsborg 08 mot Aalesund, runde 12, søndag 25. okt\nSeier: <1 % (endrer lite)\nUavgjort: 1 % (endrer lite)\nTap: 4 % (+3 prosentpoeng)\n\nSarpsborg 08 mot Kristiansund, runde 25, søndag 1. nov\nSeier: <1 % (endrer lite)\nUavgjort: 2 % (endrer lite)\nTap: 4 % (+3 prosentpoeng)\n\nHamKam mot Sarpsborg 08, runde 26, søndag 8. nov\nSeier: <1 % (endrer lite)\nUavgjort: 1 % (endrer lite)\nTap: 3 % (+2 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Sarpsborg 08 på?",
+    "svar": "Sarpsborg 08 ligger på 10. plass med 28 poeng. Matematisk kan de ende fra 3. til 16. plass. Oftest blir det 8. plass (25 %), og i minst 90 % av simuleringene ender de mellom 7. og 13. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, søndag 25. okt",
+     "motstander": "Aalesund",
+     "hjemme": true,
+     "seier": "53 %",
+     "uavgjort": "22 %",
+     "tap": "25 %"
+    },
+    {
+     "naar": "Runde 25, søndag 1. nov",
+     "motstander": "Kristiansund",
+     "hjemme": true,
+     "seier": "63 %",
+     "uavgjort": "20 %",
+     "tap": "17 %"
+    },
+    {
+     "naar": "Runde 26, søndag 8. nov",
+     "motstander": "HamKam",
+     "hjemme": false,
+     "seier": "41 %",
+     "uavgjort": "24 %",
+     "tap": "35 %"
+    },
+    {
+     "naar": "Runde 27, søndag 22. nov",
+     "motstander": "Lillestrøm",
+     "hjemme": true,
+     "seier": "46 %",
+     "uavgjort": "24 %",
+     "tap": "30 %"
+    },
+    {
+     "naar": "Runde 28, søndag 29. nov",
+     "motstander": "Start",
+     "hjemme": false,
+     "seier": "35 %",
+     "uavgjort": "23 %",
+     "tap": "43 %"
+    },
+    {
+     "naar": "Runde 29, søndag 6. des",
+     "motstander": "Brann",
+     "hjemme": true,
+     "seier": "37 %",
+     "uavgjort": "25 %",
+     "tap": "39 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Bodø/Glimt",
+     "hjemme": false,
+     "seier": "8 %",
+     "uavgjort": "13 %",
+     "tap": "79 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "<1 %",
+     "andel": 0.00076,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "1 %",
+     "andel": 0.01404,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "<1 %",
+     "andel": 0.00327,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Start": {
+   "kort": "Start",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "nedrykk",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Start 90 % sjanse for nedrykk?",
+     "svar": "Start ligger åtte poeng bak Sandefjord på 13. plass og er omtrent like sterke ifølge modellen (4,2 mot 4,2). Aalesund og Kristiansund er også med i kampen om å unngå nedrykk.\n\nI simuleringene ender Start i snitt på 24 poeng mot 33 for Sandefjord, og rykker ned direkte i 90 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Start gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Det skal mye til: Start unngår både nedrykk og kvalik i rundt 3 % av simuleringene. De må ta 16 av de 21 poengene som er igjen for å komme opp på 32. Ender de på 32 poeng, er sjansen omtrent 64 %. Med 35 poeng er den over 99 %.\n\nStart når minst kvalikplass i 10 % av simuleringene. De må ta 14 av de 21 poengene som er igjen for å komme opp på 30. Ender de på 30 poeng, er sjansen for minst kvalikplass 64 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Start?",
+     "svar": "Disse kampene påvirker Starts nedrykksfare mest. Nå: 90 %\n\nRosenborg mot Start, runde 26, lørdag 7. nov\nSeier: 73 % (−17 prosentpoeng)\nUavgjort: 87 % (−3 prosentpoeng)\nTap: 93 % (+3 prosentpoeng)\n\nVålerenga mot Start, runde 27, lørdag 21. nov\nSeier: 76 % (−14 prosentpoeng)\nUavgjort: 90 % (endrer lite)\nTap: 94 % (+4 prosentpoeng)\n\nTromsø mot Start, runde 29, søndag 6. des\nSeier: 77 % (−13 prosentpoeng)\nUavgjort: 89 % (endrer lite)\nTap: 93 % (+3 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Start på?",
+    "svar": "Start ligger på 16. plass med 16 poeng. Matematisk kan de ende fra 5. til 16. plass. Oftest blir det 16. plass (62 %), og i minst 90 % av simuleringene ender de mellom 14. og 16. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, søndag 25. okt",
+     "motstander": "Sandefjord",
+     "hjemme": true,
+     "seier": "46 %",
+     "uavgjort": "24 %",
+     "tap": "30 %"
+    },
+    {
+     "naar": "Runde 25, søndag 1. nov",
+     "motstander": "Lillestrøm",
+     "hjemme": true,
+     "seier": "41 %",
+     "uavgjort": "23 %",
+     "tap": "36 %"
+    },
+    {
+     "naar": "Runde 26, lørdag 7. nov",
+     "motstander": "Rosenborg",
+     "hjemme": false,
+     "seier": "11 %",
+     "uavgjort": "14 %",
+     "tap": "74 %"
+    },
+    {
+     "naar": "Runde 27, lørdag 21. nov",
+     "motstander": "Vålerenga",
+     "hjemme": false,
+     "seier": "20 %",
+     "uavgjort": "19 %",
+     "tap": "61 %"
+    },
+    {
+     "naar": "Runde 28, søndag 29. nov",
+     "motstander": "Sarpsborg 08",
+     "hjemme": true,
+     "seier": "43 %",
+     "uavgjort": "23 %",
+     "tap": "35 %"
+    },
+    {
+     "naar": "Runde 29, søndag 6. des",
+     "motstander": "Tromsø",
+     "hjemme": false,
+     "seier": "16 %",
+     "uavgjort": "19 %",
+     "tap": "65 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Kristiansund",
+     "hjemme": true,
+     "seier": "59 %",
+     "uavgjort": "20 %",
+     "tap": "22 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "7 %",
+     "andel": 0.06879,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "90 %",
+     "andel": 0.89646,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Tromsø": {
+   "kort": "Tromsø",
+   "tilstand": 1,
+   "regel": 1,
+   "aapnest": "europa",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Tromsø 43 % sjanse for topp 4?",
+     "svar": "Tromsø ligger tre poeng foran Rosenborg på femteplassen og er litt svakere ifølge modellen (5,4 mot 5,9). Lillestrøm er også med i kampen om topp 4-plassene. Tromsø har også et tøffere restprogram: motstanderne har i snitt 43 % vinnersjanse, mot 24 % for Rosenborg.\n\nI simuleringene ender Tromsø i snitt på 49 poeng mot 50 for Rosenborg, og havner i topp 4 i 43 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Tromsø gjøre for å nå topp 4?",
+     "svar": "Tromsø må ta 10 av de 21 poengene som er igjen for å komme opp på 50. Ender de på 50 poeng, er sjansen for topp 4 rundt 59 %. Med 53 poeng er den 93 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Tromsø?",
+     "svar": "Disse kampene påvirker Tromsøs topp 4-sjanse mest. Nå: 43 %\n\nViking mot Tromsø, runde 12, søndag 25. okt\nSeier: 68 % (+25 prosentpoeng)\nUavgjort: 48 % (+5 prosentpoeng)\nTap: 36 % (−7 prosentpoeng)\n\nLillestrøm mot Tromsø, runde 30, søndag 13. des\nSeier: 65 % (+22 prosentpoeng)\nUavgjort: 44 % (endrer lite)\nTap: 29 % (−14 prosentpoeng)\n\nVålerenga mot Tromsø, runde 25, søndag 1. nov\nSeier: 61 % (+18 prosentpoeng)\nUavgjort: 41 % (−2 prosentpoeng)\nTap: 31 % (−12 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Tromsø på?",
+    "svar": "Tromsø ligger på 4. plass med 40 poeng. Matematisk kan de ende fra 1. til 15. plass. Oftest blir det 5. plass (29 %), og i minst 90 % av simuleringene ender de mellom 3. og 6. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, søndag 25. okt",
+     "motstander": "Viking",
+     "hjemme": false,
+     "seier": "16 %",
+     "uavgjort": "19 %",
+     "tap": "65 %"
+    },
+    {
+     "naar": "Runde 25, søndag 1. nov",
+     "motstander": "Vålerenga",
+     "hjemme": false,
+     "seier": "33 %",
+     "uavgjort": "23 %",
+     "tap": "44 %"
+    },
+    {
+     "naar": "Runde 26, søndag 8. nov",
+     "motstander": "Bodø/Glimt",
+     "hjemme": true,
+     "seier": "23 %",
+     "uavgjort": "23 %",
+     "tap": "54 %"
+    },
+    {
+     "naar": "Runde 27, lørdag 21. nov",
+     "motstander": "Viking",
+     "hjemme": true,
+     "seier": "31 %",
+     "uavgjort": "25 %",
+     "tap": "44 %"
+    },
+    {
+     "naar": "Runde 28, søndag 29. nov",
+     "motstander": "Sandefjord",
+     "hjemme": false,
+     "seier": "41 %",
+     "uavgjort": "26 %",
+     "tap": "33 %"
+    },
+    {
+     "naar": "Runde 29, søndag 6. des",
+     "motstander": "Start",
+     "hjemme": true,
+     "seier": "65 %",
+     "uavgjort": "19 %",
+     "tap": "16 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Lillestrøm",
+     "hjemme": false,
+     "seier": "30 %",
+     "uavgjort": "24 %",
+     "tap": "45 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "<1 %",
+     "andel": 0.00003,
+     "avgjort": 0
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "43 %",
+     "andel": 0.43412,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Viking": {
+   "kort": "Viking",
+   "tilstand": 2,
+   "regel": null,
+   "aapnest": "gull",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Viking 31 % sjanse for gull?",
+     "svar": "Viking har like mange poeng som serieleder Bodø/Glimt og er litt svakere ifølge modellen (6,7 mot 7,4). Viking har også et tøffere restprogram: motstanderne har i snitt 24 % vinnersjanse, mot 15 % for Bodø/Glimt.\n\nI simuleringene ender Viking i snitt på 69 poeng mot 72 for Bodø/Glimt, og vinner serien i 31 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Viking gjøre for å vinne serien?",
+     "svar": "Viking må ta 16 av de 21 poengene som er igjen for å komme opp på 72. Ender de på 72 poeng, er sjansen for gull rundt 54 %. Med 75 poeng er den 97 %. Det er fordi Bodø/Glimt vanligvis ender på 72 poeng."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Viking?",
+     "svar": "Disse kampene påvirker Vikings gullsjanse mest. Nå: 31 %\n\nBodø/Glimt mot Viking, runde 25, fredag 30. okt\nSeier: 66 % (+35 prosentpoeng)\nUavgjort: 37 % (+6 prosentpoeng)\nTap: 13 % (−18 prosentpoeng)\n\nBodø/Glimt mot Vålerenga, runde 12, lørdag 24. okt\nBodø/Glimt vinner: 27 % (−4 prosentpoeng)\nUavgjort: 45 % (+14 prosentpoeng)\nVålerenga vinner: 54 % (+23 prosentpoeng)\n\nBodø/Glimt mot KFUM Oslo, runde 28, lørdag 28. nov\nBodø/Glimt vinner: 28 % (−3 prosentpoeng)\nUavgjort: 44 % (+13 prosentpoeng)\nKFUM Oslo vinner: 52 % (+21 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Viking på?",
+    "svar": "Viking ligger på 2. plass med 56 poeng. Matematisk kan de ende fra 1. til 6. plass. Oftest blir det 2. plass (69 %), og i minst 90 % av simuleringene ender de mellom 1. og 2. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, søndag 25. okt",
+     "motstander": "Tromsø",
+     "hjemme": true,
+     "seier": "65 %",
+     "uavgjort": "19 %",
+     "tap": "16 %"
+    },
+    {
+     "naar": "Runde 25, fredag 30. okt",
+     "motstander": "Bodø/Glimt",
+     "hjemme": false,
+     "seier": "24 %",
+     "uavgjort": "21 %",
+     "tap": "55 %"
+    },
+    {
+     "naar": "Runde 26, søndag 8. nov",
+     "motstander": "KFUM Oslo",
+     "hjemme": true,
+     "seier": "78 %",
+     "uavgjort": "14 %",
+     "tap": "9 %"
+    },
+    {
+     "naar": "Runde 27, lørdag 21. nov",
+     "motstander": "Tromsø",
+     "hjemme": false,
+     "seier": "44 %",
+     "uavgjort": "25 %",
+     "tap": "31 %"
+    },
+    {
+     "naar": "Runde 28, søndag 29. nov",
+     "motstander": "Vålerenga",
+     "hjemme": true,
+     "seier": "71 %",
+     "uavgjort": "16 %",
+     "tap": "14 %"
+    },
+    {
+     "naar": "Runde 29, fredag 4. des",
+     "motstander": "Molde",
+     "hjemme": false,
+     "seier": "42 %",
+     "uavgjort": "22 %",
+     "tap": "36 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "HamKam",
+     "hjemme": true,
+     "seier": "81 %",
+     "uavgjort": "11 %",
+     "tap": "8 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "31 %",
+     "andel": 0.30838,
+     "avgjort": 0
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": ">99 %",
+     "andel": 0.99989,
+     "avgjort": 0
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": ">99 %",
+     "andel": 1,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    }
+   ]
+  },
+  "Vålerenga": {
+   "kort": "VIF",
+   "tilstand": 1,
+   "regel": 1,
+   "aapnest": "kvalik",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Vålerenga 7 % sjanse for kvalik?",
+     "svar": "Vålerenga ligger to poeng foran Aalesund på 14. plass og er litt sterkere ifølge modellen (4,9 mot 4,3). HamKam, Sandefjord, Kristiansund og én annen er også med i kampen om å unngå kvalik. Vålerenga har også et lettere restprogram: motstanderne har i snitt 45 % vinnersjanse, mot 52 % for Aalesund.\n\nI simuleringene ender Vålerenga i snitt på 35 poeng mot 31 for Aalesund, og havner i kvalik i 7 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Vålerenga gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Vålerenga må ta fire av de 21 poengene som er igjen for å komme opp på 30. Ender de på 30 poeng, er sjansen for å unngå både nedrykk og kvalik rundt 53 %. Med 33 poeng er den 97 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Vålerenga?",
+     "svar": "Disse kampene påvirker Vålerengas kvalikfare mest. Nå: 7 %\n\nVålerenga mot Start, runde 27, lørdag 21. nov\nSeier: 3 % (−4 prosentpoeng)\nUavgjort: 10 % (+3 prosentpoeng)\nTap: 14 % (+7 prosentpoeng)\n\nKristiansund mot Vålerenga, runde 26, lørdag 7. nov\nSeier: 2 % (−5 prosentpoeng)\nUavgjort: 8 % (endrer lite)\nTap: 12 % (+5 prosentpoeng)\n\nSandefjord mot Vålerenga, runde 30, søndag 13. des\nSeier: 2 % (−5 prosentpoeng)\nUavgjort: 6 % (endrer lite)\nTap: 12 % (+5 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Vålerenga på?",
+    "svar": "Vålerenga ligger på 11. plass med 26 poeng. Matematisk kan de ende fra 3. til 16. plass. Oftest blir det 10. plass (17 %), og i minst 90 % av simuleringene ender de mellom 8. og 14. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, lørdag 24. okt",
+     "motstander": "Bodø/Glimt",
+     "hjemme": false,
+     "seier": "6 %",
+     "uavgjort": "10 %",
+     "tap": "84 %"
+    },
+    {
+     "naar": "Runde 25, søndag 1. nov",
+     "motstander": "Tromsø",
+     "hjemme": true,
+     "seier": "44 %",
+     "uavgjort": "23 %",
+     "tap": "33 %"
+    },
+    {
+     "naar": "Runde 26, lørdag 7. nov",
+     "motstander": "Kristiansund",
+     "hjemme": false,
+     "seier": "45 %",
+     "uavgjort": "23 %",
+     "tap": "32 %"
+    },
+    {
+     "naar": "Runde 27, lørdag 21. nov",
+     "motstander": "Start",
+     "hjemme": true,
+     "seier": "61 %",
+     "uavgjort": "19 %",
+     "tap": "20 %"
+    },
+    {
+     "naar": "Runde 28, søndag 29. nov",
+     "motstander": "Viking",
+     "hjemme": false,
+     "seier": "14 %",
+     "uavgjort": "16 %",
+     "tap": "71 %"
+    },
+    {
+     "naar": "Runde 29, lørdag 5. des",
+     "motstander": "Rosenborg",
+     "hjemme": true,
+     "seier": "39 %",
+     "uavgjort": "22 %",
+     "tap": "38 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Sandefjord",
+     "hjemme": false,
+     "seier": "36 %",
+     "uavgjort": "26 %",
+     "tap": "38 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "<1 %",
+     "andel": 0.00003,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "7 %",
+     "andel": 0.06984,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "3 %",
+     "andel": 0.02673,
+     "avgjort": 0
+    }
+   ]
+  },
+  "Aalesund": {
+   "kort": "Aalesund",
+   "tilstand": 1,
+   "regel": 1,
+   "aapnest": "nedrykk",
+   "topp": [
+    {
+     "id": "why",
+     "sporsmal": "Hvorfor har Aalesund 14 % sjanse for nedrykk?",
+     "svar": "Aalesund har like mange poeng som Sandefjord på 13. plass og er omtrent like sterke ifølge modellen (4,3 mot 4,2). Aalesund har også et tøffere restprogram: motstanderne har i snitt 52 % vinnersjanse, mot 43 % for Sandefjord.\n\nI simuleringene ender Aalesund i snitt på 31 poeng mot 33 for Sandefjord, og rykker ned direkte i 14 % av dem."
+    },
+    {
+     "id": "howto",
+     "sporsmal": "Hva må Aalesund gjøre for å unngå både nedrykk og kvalik?",
+     "svar": "Aalesund må ta sju av de 21 poengene som er igjen for å komme opp på 31. Ender de på 31 poeng, er sjansen for å unngå både nedrykk og kvalik rundt 63 %. Med 34 poeng er den 99 %."
+    },
+    {
+     "id": "keymatches",
+     "sporsmal": "Hvilke kamper betyr mest for Aalesund?",
+     "svar": "Disse kampene påvirker Aalesunds nedrykksfare mest. Nå: 14 %\n\nAalesund mot Sandefjord, runde 25, lørdag 31. okt\nSeier: 5 % (−9 prosentpoeng)\nUavgjort: 17 % (+3 prosentpoeng)\nTap: 27 % (+13 prosentpoeng)\n\nSarpsborg 08 mot Aalesund, runde 12, søndag 25. okt\nSeier: 4 % (−10 prosentpoeng)\nUavgjort: 12 % (−2 prosentpoeng)\nTap: 20 % (+6 prosentpoeng)\n\nFredrikstad mot Aalesund, runde 28, søndag 29. nov\nSeier: 5 % (−9 prosentpoeng)\nUavgjort: 14 % (endrer lite)\nTap: 21 % (+7 prosentpoeng)"
+    }
+   ],
+   "plass": {
+    "sporsmal": "Hvilken plass ender Aalesund på?",
+    "svar": "Aalesund ligger på 14. plass med 24 poeng. Matematisk kan de ende fra 3. til 16. plass. Oftest blir det 14. plass (29 %), og i minst 90 % av simuleringene ender de mellom 9. og 15. plass."
+   },
+   "rest": [
+    {
+     "naar": "Runde 12, søndag 25. okt",
+     "motstander": "Sarpsborg 08",
+     "hjemme": false,
+     "seier": "25 %",
+     "uavgjort": "22 %",
+     "tap": "53 %"
+    },
+    {
+     "naar": "Runde 25, lørdag 31. okt",
+     "motstander": "Sandefjord",
+     "hjemme": true,
+     "seier": "48 %",
+     "uavgjort": "22 %",
+     "tap": "30 %"
+    },
+    {
+     "naar": "Runde 26, søndag 8. nov",
+     "motstander": "Lillestrøm",
+     "hjemme": false,
+     "seier": "22 %",
+     "uavgjort": "21 %",
+     "tap": "57 %"
+    },
+    {
+     "naar": "Runde 27, søndag 22. nov",
+     "motstander": "Rosenborg",
+     "hjemme": true,
+     "seier": "30 %",
+     "uavgjort": "21 %",
+     "tap": "50 %"
+    },
+    {
+     "naar": "Runde 28, søndag 29. nov",
+     "motstander": "Fredrikstad",
+     "hjemme": false,
+     "seier": "32 %",
+     "uavgjort": "25 %",
+     "tap": "44 %"
+    },
+    {
+     "naar": "Runde 29, lørdag 5. des",
+     "motstander": "Bodø/Glimt",
+     "hjemme": true,
+     "seier": "12 %",
+     "uavgjort": "15 %",
+     "tap": "74 %"
+    },
+    {
+     "naar": "Runde 30, søndag 13. des",
+     "motstander": "Brann",
+     "hjemme": false,
+     "seier": "23 %",
+     "uavgjort": "21 %",
+     "tap": "56 %"
+    }
+   ],
+   "soner": [
+    {
+     "key": "gull",
+     "navn": "gull",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "cl",
+     "navn": "Champions League",
+     "vist": "0 %",
+     "andel": 0,
+     "avgjort": -1
+    },
+    {
+     "key": "europa",
+     "navn": "topp 4",
+     "vist": "<1 %",
+     "andel": 0,
+     "avgjort": 0
+    },
+    {
+     "key": "kvalik",
+     "navn": "kvalik",
+     "vist": "29 %",
+     "andel": 0.28708,
+     "avgjort": 0
+    },
+    {
+     "key": "nedrykk",
+     "navn": "nedrykk",
+     "vist": "14 %",
+     "andel": 0.14378,
+     "avgjort": 0
+    }
+   ]
+  }
  }
 }

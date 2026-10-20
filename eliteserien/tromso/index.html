@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<!-- Laget av scripts/lag_sider.py fra eliteserien/data/tekster.json. Ikke rediger:
+     siden lages på nytt hver gang tallene regnes. -->
+<script>
+  (function(){
+    if(location.hostname !== 'tabellkalkulator.no') return;
+    var s = document.createElement('script');
+    s.async = true; s.src = '//gc.zgo.at/count.js';
+    s.setAttribute('data-goatcounter', 'https://tabellkalkulator.goatcounter.com/count');
+    s.onerror = function(){}; document.head.appendChild(s);
+  })();
+</script>
+<title>Tromsø 2026: sjanse for topp 4</title>
+<meta name="description" content="Tromsø ligger på 4. plass i Eliteserien 2026 med 40 poeng etter 23 kamper. Sjansen for topp 4 er 43 %.">
+<link rel="canonical" href="https://tabellkalkulator.no/eliteserien/tromso/">
+<meta name="theme-color" content="#13305f">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon-32.png" type="image/png" sizes="32x32">
+<link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<meta property="og:type" content="article">
+<meta property="og:site_name" content="Tabellkalkulator">
+<meta property="og:locale" content="nb_NO">
+<meta property="og:url" content="https://tabellkalkulator.no/eliteserien/tromso/">
+<meta property="og:title" content="Tromsø 2026: sjanse for topp 4">
+<meta property="og:description" content="Tromsø ligger på 4. plass i Eliteserien 2026 med 40 poeng etter 23 kamper. Sjansen for topp 4 er 43 %.">
+<meta property="og:image" content="https://tabellkalkulator.no/eliteserien/og.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--bg:#eef2f7;--panel:#ffffff;--ink:#0f1b2d;--muted:#56667d;--line:#d8e0ec;--accent:#2f6fed;--accent-text:#1f5fd6;--knapp-tekst:#ffffff}
+  @media (prefers-color-scheme: dark){:root{--bg:#0a1220;--panel:#111c2e;--ink:#e9eff8;--muted:#93a3ba;--line:#2a3a54;--accent:#7aa8ff;--accent-text:#7aa8ff;--knapp-tekst:#0a1220}}
+  a{color:var(--accent-text)}
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  .wrap{max-width:760px;margin:0 auto;padding:24px 16px 56px}
+  header{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+  header a{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none}
+  header svg{width:30px;height:30px;display:block;flex:none}
+  .brand{font:800 21px/1 "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.02em}
+  .sti{font-size:14px;color:var(--muted);margin:0 0 8px}
+  .sti a{color:var(--accent-text)}
+  h1{font:800 clamp(28px,5vw,40px)/1.08 "Barlow Condensed","Arial Narrow",sans-serif;margin:0 0 14px;letter-spacing:-.01em;text-wrap:balance}
+  h2{font:700 22px/1.2 "Barlow Condensed","Arial Narrow",sans-serif;margin:30px 0 10px}
+  h3{font:700 18px/1.25 "Barlow Condensed","Arial Narrow",sans-serif;margin:20px 0 6px}
+  p{margin:0 0 12px;max-width:68ch}
+  .svar{font-size:19px;font-weight:600}
+  .dato,.om{color:var(--muted);font-size:14px}
+  .utsnitt{border-collapse:collapse;width:100%;max-width:560px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .utsnitt th,.utsnitt td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+  .utsnitt th:nth-child(2),.utsnitt td:nth-child(2){text-align:left}
+  .utsnitt th{font-size:13px;color:var(--muted);font-weight:600}
+  .utsnitt tr.aktuell td{font-weight:700}
+  .kamper{list-style:none;margin:0;padding:0;display:grid;gap:10px;max-width:68ch}
+  .kamper li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
+  .utfall{color:var(--muted);font-size:14.5px}
+  .knapp{display:inline-block;margin:8px 10px 0 0;padding:10px 16px;border-radius:10px;background:var(--accent);color:var(--knapp-tekst);font-weight:700;text-decoration:none}
+  .knapp.lys{background:transparent;color:var(--accent-text);border:1px solid var(--line)}
+  footer{margin-top:40px;color:var(--muted);font-size:13.5px}
+  footer a{color:var(--accent-text)}
+  a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+  .utsnitt.lag th,.utsnitt.lag td{padding:7px 8px}
+  .andre-lag{line-height:1.9}
+  .andre-lag a,.lagnavn{white-space:nowrap}
+  @media (max-width:520px){.utsnitt.lag th:nth-child(3),.utsnitt.lag td:nth-child(3){display:none}.utsnitt.lag th,.utsnitt.lag td{padding:6px 5px;font-size:14px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header><a href="/"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x=".5" y=".5" width="15" height="15" rx="3.5" fill="#13305f" stroke="#4f7fc4" stroke-opacity=".6"/><rect x="3" y="4" width="10" height="2" rx="1" fill="#34d399"/><rect x="3" y="7" width="7" height="2" rx="1" fill="#e8f0fc"/><rect x="3" y="10" width="5" height="2" rx="1" fill="#e8f0fc"/></svg><span class="brand">Tabellkalkulator</span></a></header>
+  <p class="sti"><a href="/eliteserien/">Eliteserien 2026</a></p>
+  <h1>Tromsø 2026: sjanse for topp 4</h1>
+  <p class="svar">Tromsø ligger på 4. plass i Eliteserien 2026 med 40 poeng etter 23 kamper. Sjansen for topp 4 er 43 %.</p>
+  <p class="dato">Oppdatert 20. oktober 2026 kl. 14.20. Sjansene er regnet fra 100 000 simulerte sesonger.</p>
+  <table class="utsnitt lag"><thead><tr><th>Plass</th><th>Lag</th><th>Kamper</th><th>Poeng</th><th>Gull</th><th>Topp 4</th><th>Nedrykk</th></tr></thead><tbody><tr><td>2</td><td><a href="/eliteserien/viking/">Viking</a></td><td>23</td><td>56</td><td>31 %</td><td>&gt;99 %</td><td>–</td></tr><tr><td>3</td><td><a href="/eliteserien/molde/">Molde</a></td><td>23</td><td>40</td><td>&lt;1 %</td><td>64 %</td><td>&lt;1 %</td></tr><tr class="aktuell"><td>4</td><td>Tromsø</td><td>23</td><td>40</td><td>&lt;1 %</td><td>43 %</td><td>&lt;1 %</td></tr><tr><td>5</td><td><a href="/eliteserien/rosenborg/">Rosenborg</a></td><td>23</td><td>37</td><td>&lt;1 %</td><td>65 %</td><td>&lt;1 %</td></tr><tr><td>6</td><td><a href="/eliteserien/lillestrom/">Lillestrøm</a></td><td>23</td><td>36</td><td>&lt;1 %</td><td>25 %</td><td>&lt;1 %</td></tr></tbody></table>
+  <p class="om">Sjansene for gull, topp 4 og nedrykk er de samme som i tabellen på ligasiden. «–» betyr at det ikke lenger er mulig.</p>
+  <h2>Spør om tabellen</h2>
+  <h3>Hvorfor har Tromsø 43 % sjanse for topp 4?</h3><p>Tromsø ligger tre poeng foran Rosenborg på femteplassen og er litt svakere ifølge modellen (5,4 mot 5,9). Lillestrøm er også med i kampen om topp 4-plassene. Tromsø har også et tøffere restprogram: motstanderne har i snitt 43 % vinnersjanse, mot 24 % for Rosenborg.</p><p>I simuleringene ender Tromsø i snitt på 49 poeng mot 50 for Rosenborg, og havner i topp 4 i 43 % av dem.</p>
+  <h3>Hva må Tromsø gjøre for å nå topp 4?</h3><p>Tromsø må ta 10 av de 21 poengene som er igjen for å komme opp på 50. Ender de på 50 poeng, er sjansen for topp 4 rundt 59 %. Med 53 poeng er den 93 %.</p>
+  <h3>Hvilke kamper betyr mest for Tromsø?</h3><p>Disse kampene påvirker Tromsøs topp 4-sjanse mest. Nå: 43 %</p><ul class="kamper"><li><strong>Viking mot Tromsø, runde 12, søndag 25. okt</strong><br><span class="utfall">Seier: 68 % (+25 prosentpoeng) · Uavgjort: 48 % (+5 prosentpoeng) · Tap: 36 % (−7 prosentpoeng)</span></li><li><strong>Lillestrøm mot Tromsø, runde 30, søndag 13. des</strong><br><span class="utfall">Seier: 65 % (+22 prosentpoeng) · Uavgjort: 44 % (endrer lite) · Tap: 29 % (−14 prosentpoeng)</span></li><li><strong>Vålerenga mot Tromsø, runde 25, søndag 1. nov</strong><br><span class="utfall">Seier: 61 % (+18 prosentpoeng) · Uavgjort: 41 % (−2 prosentpoeng) · Tap: 31 % (−12 prosentpoeng)</span></li></ul>
+  <h3>Hvilken plass ender Tromsø på?</h3><p>Tromsø ligger på 4. plass med 40 poeng. Matematisk kan de ende fra 1. til 15. plass. Oftest blir det 5. plass (29 %), og i minst 90 % av simuleringene ender de mellom 3. og 6. plass.</p>
+  <h2>Kampene som er igjen</h2>
+  <p>Sjansen for seier, uavgjort og tap i hver kamp, slik kalkulatoren regner den.</p>
+  <ul class="kamper rest"><li><strong>Runde 12, søndag 25. okt</strong>: borte mot <span class="lagnavn">Viking</span><br><span class="utfall">Seier 16 % · uavgjort 19 % · tap 65 %</span></li><li><strong>Runde 25, søndag 1. nov</strong>: borte mot <span class="lagnavn">Vålerenga</span><br><span class="utfall">Seier 33 % · uavgjort 23 % · tap 44 %</span></li><li><strong>Runde 26, søndag 8. nov</strong>: hjemme mot <span class="lagnavn">Bodø/Glimt</span><br><span class="utfall">Seier 23 % · uavgjort 23 % · tap 54 %</span></li><li><strong>Runde 27, lørdag 21. nov</strong>: hjemme mot <span class="lagnavn">Viking</span><br><span class="utfall">Seier 31 % · uavgjort 25 % · tap 44 %</span></li><li><strong>Runde 28, søndag 29. nov</strong>: borte mot <span class="lagnavn">Sandefjord</span><br><span class="utfall">Seier 41 % · uavgjort 26 % · tap 33 %</span></li><li><strong>Runde 29, søndag 6. des</strong>: hjemme mot <span class="lagnavn">Start</span><br><span class="utfall">Seier 65 % · uavgjort 19 % · tap 16 %</span></li><li><strong>Runde 30, søndag 13. des</strong>: borte mot <span class="lagnavn">Lillestrøm</span><br><span class="utfall">Seier 30 % · uavgjort 24 % · tap 45 %</span></li></ul>
+  <p><a class="knapp" href="/eliteserien/#team=Troms%C3%B8">Følg Tromsø i tabellkalkulatoren</a></p>
+  <h2>Lagene i Eliteserien</h2>
+  <p class="andre-lag"><a href="/eliteserien/bodo-glimt/">Bodø/Glimt</a> · <a href="/eliteserien/viking/">Viking</a> · <a href="/eliteserien/molde/">Molde</a> · <strong>Tromsø</strong> · <a href="/eliteserien/rosenborg/">Rosenborg</a> · <a href="/eliteserien/lillestrom/">Lillestrøm</a> · <a href="/eliteserien/brann/">Brann</a> · <a href="/eliteserien/fredrikstad/">Fredrikstad</a> · <a href="/eliteserien/kfum-oslo/">KFUM Oslo</a> · <a href="/eliteserien/sarpsborg-08/">Sarpsborg 08</a> · <a href="/eliteserien/valerenga/">Vålerenga</a> · <a href="/eliteserien/hamkam/">HamKam</a> · <a href="/eliteserien/sandefjord/">Sandefjord</a> · <a href="/eliteserien/aalesund/">Aalesund</a> · <a href="/eliteserien/kristiansund/">Kristiansund</a> · <a href="/eliteserien/start/">Start</a></p>
+  <p>Se også: <a href="/eliteserien/hvem-vinner/">Hvem vinner Eliteserien 2026?</a> · <a href="/eliteserien/hvem-rykker-ned/">Hvem rykker ned fra Eliteserien 2026?</a></p>
+  <footer><a href="/">Tabellkalkulator</a> viser tabellen og sjansene for Eliteserien og OBOS-ligaen.</footer>
+</div>
+</body>
+</html>

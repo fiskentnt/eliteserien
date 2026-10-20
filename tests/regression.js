@@ -4609,6 +4609,62 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           await pl.close(); return a && b; })();
         check(`${side}/${sti}: med JavaScript ingen JS-feil, og siden er lenket fra ligasiden og forsiden`, !jsFeil.length && ligaLenke, jsFeil.join('; '));
       }
+      // Lagsidene (fase 3): uten JavaScript står plassen og sjansene, tabell-
+      // utsnittet med de samme tallene som tabellen på ligasiden (begge laget
+      // fra tekster.json), svarene fra Spør om tabellen og kampene som er igjen,
+      // og ligasiden lenker til alle i lista nederst. Med JavaScript: ingen
+      // JS-feil, og «Følg <lag>» åpner ligasiden med laget valgt.
+      const slug = s => s.toLowerCase().replace(/æ/g, 'ae').replace(/ø/g, 'o').replace(/å/g, 'a').replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+      const nb = s => s.replace(/\u00a0/g, ' ');
+      const ligaUten = u.lag.reduce((o, lag, i) => (o[lag] = u.tall[i].map(nb), o), {});
+      const lagLenker = await (async () => { const pu = await browser.newPage(); await pu.setJavaScriptEnabled(false);
+        await pu.goto(url, {waitUntil: 'domcontentloaded'});
+        const l = await pu.evaluate(() => [...document.querySelectorAll('#lagsider a')].map(a => a.getAttribute('href'))); await pu.close(); return l; })();
+      const lagFeil = [];
+      for (const r of tkHel.tabell.rader) {
+        const d = tkHel.lag[r.lag], sti = `/${side}/${slug(r.lag)}/`;
+        const pu = await browser.newPage(); await pu.setJavaScriptEnabled(false);
+        await pu.goto(base.replace('/eliteserien/', sti), {waitUntil: 'domcontentloaded'});
+        const s = await pu.evaluate(() => ({h1: (document.querySelector('h1') || {}).textContent || '', tittel: document.title,
+          svar: (document.querySelector('.svar') || {}).textContent || '',
+          utsnitt: [...document.querySelectorAll('.utsnitt tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim())),
+          h3: [...document.querySelectorAll('h3')].map(h => h.textContent), rest: [...document.querySelectorAll('ul.rest li')].map(li => li.textContent),
+          lenker: [...document.querySelectorAll('a')].map(a => a.getAttribute('href'))}));
+        await pu.close();
+        const f = [];
+        if (s.h1 !== s.tittel || !s.h1.startsWith(`${r.lag} ${tkHel.liga.sesong}: `)) f.push(`tittel «${s.h1}»`);
+        if (!nb(s.svar).includes(`${r.plass}. plass`) || !nb(s.svar).includes(`${r.poeng} poeng`)) f.push(`svar «${s.svar.slice(0, 60)}»`);
+        // Sjansene i første setning er de samme som sonene i tekster.json.
+        const prosa = v => ({'>99 %': 'over 99 %', '<1 %': 'under 1 %'})[v] || v;
+        for (const m of nb(s.svar).matchAll(/for (.+?) (?:er )?((?:over |under )?\d+ %)/g)) {
+          const z = d.soner.find(x => x.navn === m[1]);
+          if (!z || prosa(z.vist) !== m[2]) f.push(`sone ${m[1]} ${m[2]}`);
+        }
+        // Utsnittet: hvert lag har de samme sjansene som tabellen på ligasiden.
+        for (const rad of s.utsnitt) if (JSON.stringify(rad.slice(4).map(nb)) !== JSON.stringify(ligaUten[rad[1]])) f.push(`utsnitt ${rad[1]} ${rad.slice(4).join('/')}`);
+        if (!s.utsnitt.some(rad => rad[1] === r.lag)) f.push('laget mangler i utsnittet');
+        const lov = new Set([...d.topp.map(q => q.sporsmal), d.plass.sporsmal]);
+        if (s.h3.length < 2 || s.h3.some(h => !lov.has(h))) f.push(`spørsmål ${s.h3.join(' | ')}`);
+        if (s.rest.length !== d.rest.length || d.rest.some((k, i) => !nb(s.rest[i] || '').includes(`Seier ${k.seier}`) || !(s.rest[i] || '').includes(k.motstander)))
+          f.push(`kamper ${s.rest.length}/${d.rest.length}`);
+        if (!s.lenker.includes(`/${side}/`) || !s.lenker.includes(`/${side}/#team=${encodeURIComponent(r.lag)}`)) f.push('lenker');
+        if (!lagLenker.includes(sti)) f.push('ikke lenket fra ligasiden');
+        if (f.length) lagFeil.push(`${r.lag}: ${f.join(', ')}`);
+      }
+      check(`${side}: uten JavaScript har alle ${tkHel.tabell.rader.length} lagsidene plassen og sjansene fra tekster.json, utsnittet med de samme tallene som ligasiden, svarene og kampene som er igjen, og er lenket fra lista nederst på ligasiden`,
+        tkHel.tabell.rader.length === 16 && !lagFeil.length, lagFeil.slice(0, 4).join('; '));
+      for (const r of [tkHel.tabell.rader[0], tkHel.tabell.rader[6]]) {
+        const pj = await browser.newPage(); const jsFeil = []; pj.on('pageerror', e => jsFeil.push(e.message));
+        await pj.goto(base.replace('/eliteserien/', `/${side}/${slug(r.lag)}/`), {waitUntil: 'networkidle0'});
+        await Promise.all([pj.waitForNavigation({waitUntil: 'load'}), pj.click('a.knapp')]);
+        let valgt = '';
+        try { await pj.waitForFunction(l => typeof SELECTED_TEAM !== 'undefined' && SELECTED_TEAM === l, {timeout: 60000}, r.lag); valgt = r.lag; }
+        catch (e) { valgt = await pj.evaluate(() => typeof SELECTED_TEAM !== 'undefined' ? String(SELECTED_TEAM) : 'ukjent'); }
+        const sti = await pj.evaluate(() => location.pathname);
+        await pj.close();
+        check(`${side}/${slug(r.lag)}: med JavaScript ingen JS-feil, og «Følg ${r.lag}» åpner ligasiden med laget valgt (${sti}, ${valgt})`,
+          !jsFeil.length && sti === `/${side}/` && valgt === r.lag, jsFeil.join('; '));
+      }
       // Med JavaScript: render() tar over, og «Oppdatert»-linja nederst står.
       const med = await open(1400, 900, url);
       await settle(med);
@@ -4623,14 +4679,16 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           const t0 = Date.now(); let k = '';
           while (Date.now() - t0 < 60000) { k = (document.getElementById('lagKjerne') || {}).textContent || ''; if (k) break; await new Promise(r => setTimeout(r, 200)); }
           const hel = await qaWhy(t), box = document.getElementById('odds');
-          const lm = box.querySelector('.lastmatch'), el = box.querySelector('.lag-kjerne');
-          ut.push({t, k, ok: !!k && hel.startsWith(k), under: !!el && (!lm || !!(lm.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING))});
+          const lm = box.querySelector('.lastmatch'), el = box.querySelector('.lag-kjerne'), mer = document.querySelector('.lagboks-kopi a.lag-mer');
+          ut.push({t, k, ok: !!k && hel.startsWith(k), under: !!el && (!lm || !!(lm.compareDocumentPosition(el) & Node.DOCUMENT_POSITION_FOLLOWING)),
+            mer: !!mer && mer.textContent === `Mer om ${t} →` && mer.getAttribute('href') === `${LEAGUE.path}${lagSlug(t)}/` && mer.getBoundingClientRect().height > 0});
         }
         sel.value = ''; sel.dispatchEvent(new Event('change'));
         return ut;
       });
       check(`${side}: lagboksen har kjernen av «Hvorfor»-svaret under «Forrige kamp» (${lk.map(x => x.t).join(', ')}), og svaret begynner med den`,
         lk.length === 3 && lk.every(x => x.ok && x.under), JSON.stringify(lk).slice(0, 400));
+      check(`${side}: lagboksen har «Mer om <lag> →» nederst, synlig, til lagsiden (${lk.map(x => x.t).join(', ')})`, lk.length === 3 && lk.every(x => x.mer), JSON.stringify(lk).slice(0, 300));
       await med.close();
       check(`${side}: med JavaScript tar tabellen over (${m.rader} rader, først ${m.forst}), og «Oppdatert»-linja står nederst`,
         m.rader === 16 && /^Oppdatert /.test(m.note) && m.forst === m.sidenForst, JSON.stringify(m));
