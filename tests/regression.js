@@ -4540,6 +4540,12 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           kol: ['gullHeader', 'europaHeader', 'nedHeader'].map(id => document.getElementById(id).textContent.trim()), tittel: document.title};
       });
       await uten.close();
+      // Det samme som tekster.json (lag_sider.py skriver tabellen fra den): lag,
+      // poeng og sjanser i samme rekkefølge, lest fra filen i repoet.
+      const tk = JSON.parse(fs.readFileSync(path.join(ROOT, side, 'data', 'tekster.json'), 'utf8')).tabell.rader;
+      check(`${side}: tabellen uten JavaScript er den i tekster.json (lag, poeng og sjanser)`,
+        JSON.stringify(u.lag) === JSON.stringify(tk.map(r => r.lag)) && JSON.stringify(u.poeng) === JSON.stringify(tk.map(r => r.poeng_vist))
+          && JSON.stringify(u.tall) === JSON.stringify(tk.map(r => ['gull', 'europa', 'ned'].map(k => r.sjanser[k].vist))), JSON.stringify({u: u.lag.slice(0, 3), tk: tk.slice(0, 3).map(r => r.lag)}));
       check(`${side}: uten JavaScript står tabellen med ${u.rader} lag, poeng og tre sjanser per lag, overskriftene (${u.kol.join(', ')}) og «${u.note.slice(0, 45)}...»`,
         u.rader === 16 && new Set(u.lag).size === 16 && u.poeng.every(p => /^\*?\d+$/.test(p)) && u.tall.every(t => t.length === 3 && t.every(x => /%|–/.test(x)))
           && u.kol.every(k => k.length > 1) && /^Oppdatert \d+\. \S+ \d{4} kl\. \d\d\.\d\d\. Sjansene for /.test(u.note), JSON.stringify(u).slice(0, 400));

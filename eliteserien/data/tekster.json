@@ -1,0 +1,558 @@
+{
+ "versjon": 1,
+ "side": "eliteserien",
+ "laget": "2026-10-20T02:42:09Z",
+ "sesonger": 100000,
+ "note": "Hentet av scripts/lag_grunnlag.js fra siden selv med grunnlagsfilen i bruk. scripts/lag_sider.py lager de statiske sidene fra denne filen.",
+ "tabell": {
+  "kolonner": [
+   {
+    "key": "gull",
+    "navn": "Gull",
+    "kort": null
+   },
+   {
+    "key": "europa",
+    "navn": "Topp 4",
+    "kort": null
+   },
+   {
+    "key": "ned",
+    "navn": "Nedrykk",
+    "kort": "Nedr."
+   }
+  ],
+  "kolonner_html": "<th class=\"sortable hide-xs hh\" id=\"gullHeader\" data-sort=\"gull\" title=\"Sannsynlighet for å vinne serien. Klikk for å sortere.\">Gull</th>\n          <th class=\"sortable hh\" id=\"europaHeader\" data-sort=\"europa\" title=\"Sannsynlighet for 1. til 4. plass, altså Champions League- eller Conference League-kvalifisering. Europa kan også nås gjennom cupen, og det er ikke med i tallet. Klikk for å sortere.\">Topp 4</th>\n          <th class=\"sortable hh\" id=\"nedHeader\" data-sort=\"ned\" title=\"Sannsynlighet for 15. eller 16. plass. Kvalik på 14. plass er ikke regnet med. Klikk for å sortere.\"><span class=\"lg\">Nedrykk</span><span class=\"sm\"> Nedr.</span></th>",
+  "rader_html": "<tr data-team=\"Bodø/Glimt\" class=\"cl\"><td class=\"pos\" title=\"Champions League: playoff-runden\">1</td><td class=\"team\"><span class=\"teamname\" data-team=\"Bodø/Glimt\" role=\"button\" tabindex=\"0\" title=\"Følg Bodø/Glimt\"><span class=\"lg\">Bodø/Glimt</span><span class=\"sm\"> Glimt</span></span><span class=\"badge safe\" title=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret plass</span></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">18</td><td class=\"hide-s\">2</td><td class=\"hide-s\">3</td><td class=\"hide-s\">58-20</td>\n      <td class=\"gd hide-diff\">+38</td><td class=\"pts\" title=\"56 poeng nå. Maks mulig sluttsum: 77.\">56</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox green\" data-team=\"Bodø/Glimt\" title=\"7,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 7,4 av 10 for Bodø/Glimt. Vis styrkegrafen.\">7,4</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"12 av 15 poeng i de fem siste\">8,0</b></td><td class=\"odds gull hide-xs pc-hi\">69 %</td><td class=\"odds p3 pc-hi\">&gt;99 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Viking\" class=\"cl\"><td class=\"pos\" title=\"Champions League: andre kvalifiseringsrunde\">2</td><td class=\"team\"><span class=\"teamname\" data-team=\"Viking\" role=\"button\" tabindex=\"0\" title=\"Følg Viking\"><span class=\"lg\">Viking</span><span class=\"sm\"> Viking</span></span><span class=\"badge safe\" title=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret plass</span></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">18</td><td class=\"hide-s\">2</td><td class=\"hide-s\">3</td><td class=\"hide-s\">59-22</td>\n      <td class=\"gd hide-diff\">+37</td><td class=\"pts\" title=\"56 poeng nå. Maks mulig sluttsum: 77.\">56</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox green\" data-team=\"Viking\" title=\"6,7 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 6,7 av 10 for Viking. Vis styrkegrafen.\">6,7</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"13 av 15 poeng i de fem siste\">8,7</b></td><td class=\"odds gull hide-xs pc-mid\">31 %</td><td class=\"odds p3 pc-hi\">&gt;99 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Molde\" class=\"eu\"><td class=\"pos\" title=\"Conference League: andre kvalifiseringsrunde\">3</td><td class=\"team\"><span class=\"teamname\" data-team=\"Molde\" role=\"button\" tabindex=\"0\" title=\"Følg Molde\"><span class=\"lg\">Molde</span><span class=\"sm\"> Molde</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">12</td><td class=\"hide-s\">4</td><td class=\"hide-s\">7</td><td class=\"hide-s\">52-35</td>\n      <td class=\"gd hide-diff\">+17</td><td class=\"pts\" title=\"40 poeng nå. Maks mulig sluttsum: 61.\">40</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox lightgreen\" data-team=\"Molde\" title=\"5,9 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,9 av 10 for Molde. Vis styrkegrafen.\">5,9</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"10 av 15 poeng i de fem siste\">6,7</b></td><td class=\"odds gull hide-xs pc-zero\">&lt;1 %</td><td class=\"odds p3 pc-hi\">64 %</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"Tromsø\" class=\"eu  cut\"><td class=\"pos\" title=\"Conference League: kvalifisering\">4</td><td class=\"team\"><span class=\"teamname\" data-team=\"Tromsø\" role=\"button\" tabindex=\"0\" title=\"Følg Tromsø\"><span class=\"lg\">Tromsø</span><span class=\"sm\"> Tromsø</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">11</td><td class=\"hide-s\">7</td><td class=\"hide-s\">5</td><td class=\"hide-s\">42-31</td>\n      <td class=\"gd hide-diff\">+11</td><td class=\"pts\" title=\"40 poeng nå. Maks mulig sluttsum: 61.\">40</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Tromsø\" title=\"5,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,4 av 10 for Tromsø. Vis styrkegrafen.\">5,4</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"5 av 15 poeng i de fem siste\">3,3</b></td><td class=\"odds gull hide-xs pc-zero\">&lt;1 %</td><td class=\"odds p3 pc-mid\">43 %</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"Rosenborg\" class=\"\"><td class=\"pos\">5</td><td class=\"team\"><span class=\"teamname\" data-team=\"Rosenborg\" role=\"button\" tabindex=\"0\" title=\"Følg Rosenborg\"><span class=\"lg\">Rosenborg</span><span class=\"sm\"> RBK</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">11</td><td class=\"hide-s\">4</td><td class=\"hide-s\">8</td><td class=\"hide-s\">43-31</td>\n      <td class=\"gd hide-diff\">+12</td><td class=\"pts\" title=\"37 poeng nå. Maks mulig sluttsum: 58.\">37</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox lightgreen\" data-team=\"Rosenborg\" title=\"5,9 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,9 av 10 for Rosenborg. Vis styrkegrafen.\">5,9</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"13 av 15 poeng i de fem siste\">8,7</b></td><td class=\"odds gull hide-xs pc-zero\">&lt;1 %</td><td class=\"odds p3 pc-hi\">65 %</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"Lillestrøm\" class=\"\"><td class=\"pos\">6</td><td class=\"team\"><span class=\"teamname\" data-team=\"Lillestrøm\" role=\"button\" tabindex=\"0\" title=\"Følg Lillestrøm\"><span class=\"lg\">Lillestrøm</span><span class=\"sm\"> LSK</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">11</td><td class=\"hide-s\">3</td><td class=\"hide-s\">9</td><td class=\"hide-s\">32-31</td>\n      <td class=\"gd hide-diff\">+1</td><td class=\"pts\" title=\"36 poeng nå. Maks mulig sluttsum: 57.\">36</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Lillestrøm\" title=\"5,0 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,0 av 10 for Lillestrøm. Vis styrkegrafen.\">5,0</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"10 av 15 poeng i de fem siste\">6,7</b></td><td class=\"odds gull hide-xs pc-zero\">&lt;1 %</td><td class=\"odds p3 pc-mid\">25 %</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"Brann\" class=\"\"><td class=\"pos\">7</td><td class=\"team\"><span class=\"teamname\" data-team=\"Brann\" role=\"button\" tabindex=\"0\" title=\"Følg Brann\"><span class=\"lg\">Brann</span><span class=\"sm\"> Brann</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">9</td><td class=\"hide-s\">2</td><td class=\"hide-s\">12</td><td class=\"hide-s\">40-37</td>\n      <td class=\"gd hide-diff\">+3</td><td class=\"pts\" title=\"29 poeng nå. Maks mulig sluttsum: 50.\">29</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Brann\" title=\"5,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,4 av 10 for Brann. Vis styrkegrafen.\">5,4</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"3 av 15 poeng i de fem siste\">2,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-mid\">1 %</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"Fredrikstad\" class=\"\"><td class=\"pos\">8</td><td class=\"team\"><span class=\"teamname\" data-team=\"Fredrikstad\" role=\"button\" tabindex=\"0\" title=\"Følg Fredrikstad\"><span class=\"lg\">Fredrikstad</span><span class=\"sm\"> FFK</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">5</td><td class=\"hide-s\">10</td><td class=\"hide-s\">28-36</td>\n      <td class=\"gd hide-diff\">-8</td><td class=\"pts\" title=\"29 poeng nå. Maks mulig sluttsum: 50.\">29</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Fredrikstad\" title=\"4,5 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,5 av 10 for Fredrikstad. Vis styrkegrafen.\">4,5</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"3 av 15 poeng i de fem siste\">2,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">&lt;1 %</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"KFUM Oslo\" class=\"\"><td class=\"pos\">9</td><td class=\"team\"><span class=\"teamname\" data-team=\"KFUM Oslo\" role=\"button\" tabindex=\"0\" title=\"Følg KFUM Oslo\"><span class=\"lg\">KFUM Oslo</span><span class=\"sm\"> KFUM</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">5</td><td class=\"hide-s\">10</td><td class=\"hide-s\">28-37</td>\n      <td class=\"gd hide-diff\">-9</td><td class=\"pts\" title=\"29 poeng nå. Maks mulig sluttsum: 50.\">29</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"KFUM Oslo\" title=\"4,0 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,0 av 10 for KFUM Oslo. Vis styrkegrafen.\">4,0</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"10 av 15 poeng i de fem siste\">6,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">&lt;1 %</td><td class=\"odds ned pc-mid\">1 %</td></tr><tr data-team=\"Sarpsborg 08\" class=\"\"><td class=\"pos\">10</td><td class=\"team\"><span class=\"teamname\" data-team=\"Sarpsborg 08\" role=\"button\" tabindex=\"0\" title=\"Følg Sarpsborg 08\"><span class=\"lg\">Sarpsborg 08</span><span class=\"sm\"> S08</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">7</td><td class=\"hide-s\">7</td><td class=\"hide-s\">9</td><td class=\"hide-s\">28-34</td>\n      <td class=\"gd hide-diff\">-6</td><td class=\"pts\" title=\"28 poeng nå. Maks mulig sluttsum: 49.\">28</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Sarpsborg 08\" title=\"4,8 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,8 av 10 for Sarpsborg 08. Vis styrkegrafen.\">4,8</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"5 av 15 poeng i de fem siste\">3,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">&lt;1 %</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"Vålerenga\" class=\"\"><td class=\"pos\">11</td><td class=\"team\"><span class=\"teamname\" data-team=\"Vålerenga\" role=\"button\" tabindex=\"0\" title=\"Følg Vålerenga\"><span class=\"lg\">Vålerenga</span><span class=\"sm\"> VIF</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">7</td><td class=\"hide-s\">5</td><td class=\"hide-s\">11</td><td class=\"hide-s\">38-46</td>\n      <td class=\"gd hide-diff\">-8</td><td class=\"pts\" title=\"26 poeng nå. Maks mulig sluttsum: 47.\">26</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Vålerenga\" title=\"4,9 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,9 av 10 for Vålerenga. Vis styrkegrafen.\">4,9</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"5 av 15 poeng i de fem siste\">3,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">&lt;1 %</td><td class=\"odds ned pc-mid\">3 %</td></tr><tr data-team=\"HamKam\" class=\"\"><td class=\"pos\">12</td><td class=\"team\"><span class=\"teamname\" data-team=\"HamKam\" role=\"button\" tabindex=\"0\" title=\"Følg HamKam\"><span class=\"lg\">HamKam</span><span class=\"sm\"> HamKam</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">7</td><td class=\"hide-s\">5</td><td class=\"hide-s\">11</td><td class=\"hide-s\">33-48</td>\n      <td class=\"gd hide-diff\">-15</td><td class=\"pts\" title=\"26 poeng nå. Maks mulig sluttsum: 47.\">26</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox red\" data-team=\"HamKam\" title=\"3,9 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 3,9 av 10 for HamKam. Vis styrkegrafen.\">3,9</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"3 av 15 poeng i de fem siste\">2,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">&lt;1 %</td><td class=\"odds ned pc-mid\">6 %</td></tr><tr data-team=\"Sandefjord\" class=\"cut\"><td class=\"pos\">13</td><td class=\"team\"><span class=\"teamname\" data-team=\"Sandefjord\" role=\"button\" tabindex=\"0\" title=\"Følg Sandefjord\"><span class=\"lg\">Sandefjord</span><span class=\"sm\"> Sandefjord</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">6</td><td class=\"hide-s\">6</td><td class=\"hide-s\">11</td><td class=\"hide-s\">22-30</td>\n      <td class=\"gd hide-diff\">-8</td><td class=\"pts\" title=\"24 poeng nå. Maks mulig sluttsum: 45.\">24</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Sandefjord\" title=\"4,2 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,2 av 10 for Sandefjord. Vis styrkegrafen.\">4,2</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"5 av 15 poeng i de fem siste\">3,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">&lt;1 %</td><td class=\"odds ned pc-mid\">10 %</td></tr><tr data-team=\"Aalesund\" class=\"playoff\"><td class=\"pos\">14</td><td class=\"team\"><span class=\"teamname\" data-team=\"Aalesund\" role=\"button\" tabindex=\"0\" title=\"Følg Aalesund\"><span class=\"lg\">Aalesund</span><span class=\"sm\"> Aalesund</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">5</td><td class=\"hide-s\">9</td><td class=\"hide-s\">9</td><td class=\"hide-s\">39-51</td>\n      <td class=\"gd hide-diff\">-12</td><td class=\"pts\" title=\"24 poeng nå. Maks mulig sluttsum: 45.\">24</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Aalesund\" title=\"4,3 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,3 av 10 for Aalesund. Vis styrkegrafen.\">4,3</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"9 av 15 poeng i de fem siste\">6,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">&lt;1 %</td><td class=\"odds ned pc-mid\">15 %</td></tr><tr data-team=\"Kristiansund\" class=\"ned\"><td class=\"pos\">15</td><td class=\"team\"><span class=\"teamname\" data-team=\"Kristiansund\" role=\"button\" tabindex=\"0\" title=\"Følg Kristiansund\"><span class=\"lg\">Kristiansund</span><span class=\"sm\"> KBK</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">5</td><td class=\"hide-s\">4</td><td class=\"hide-s\">14</td><td class=\"hide-s\">23-47</td>\n      <td class=\"gd hide-diff\">-24</td><td class=\"pts\" title=\"19 poeng nå. Maks mulig sluttsum: 40.\">19</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox red\" data-team=\"Kristiansund\" title=\"3,6 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 3,6 av 10 for Kristiansund. Vis styrkegrafen.\">3,6</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"3 av 15 poeng i de fem siste\">2,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">&lt;1 %</td><td class=\"odds ned pc-hi\">76 %</td></tr><tr data-team=\"Start\" class=\"ned\"><td class=\"pos\">16</td><td class=\"team\"><span class=\"teamname\" data-team=\"Start\" role=\"button\" tabindex=\"0\" title=\"Følg Start\"><span class=\"lg\">Start</span><span class=\"sm\"> Start</span></span><span class=\"badge\"></span></td><td class=\"spilt\">23</td>\n      <td class=\"hide-s\">4</td><td class=\"hide-s\">4</td><td class=\"hide-s\">15</td><td class=\"hide-s\">25-54</td>\n      <td class=\"gd hide-diff\">-29</td><td class=\"pts\" title=\"16 poeng nå. Maks mulig sluttsum: 37.\">16</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Start\" title=\"4,2 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,2 av 10 for Start. Vis styrkegrafen.\">4,2</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"3 av 15 poeng i de fem siste\">2,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-hi\">90 %</td></tr>",
+  "rader": [
+   {
+    "plass": 1,
+    "lag": "Bodø/Glimt",
+    "kort": "Glimt",
+    "kamper": 23,
+    "v": 18,
+    "u": 2,
+    "t": 3,
+    "maal_for": 58,
+    "maal_mot": 20,
+    "diff": 38,
+    "poeng": 56,
+    "poeng_vist": "56",
+    "igjen": 7,
+    "maks": 77,
+    "sjanser": {
+     "gull": {
+      "vist": "69 %",
+      "andel": 0.69059,
+      "avgjort": 0
+     },
+     "europa": {
+      "vist": ">99 %",
+      "andel": 1,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "–",
+      "andel": 0,
+      "avgjort": -1
+     }
+    }
+   },
+   {
+    "plass": 2,
+    "lag": "Viking",
+    "kort": "Viking",
+    "kamper": 23,
+    "v": 18,
+    "u": 2,
+    "t": 3,
+    "maal_for": 59,
+    "maal_mot": 22,
+    "diff": 37,
+    "poeng": 56,
+    "poeng_vist": "56",
+    "igjen": 7,
+    "maks": 77,
+    "sjanser": {
+     "gull": {
+      "vist": "31 %",
+      "andel": 0.30941,
+      "avgjort": 0
+     },
+     "europa": {
+      "vist": ">99 %",
+      "andel": 1,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "–",
+      "andel": 0,
+      "avgjort": -1
+     }
+    }
+   },
+   {
+    "plass": 3,
+    "lag": "Molde",
+    "kort": "Molde",
+    "kamper": 23,
+    "v": 12,
+    "u": 4,
+    "t": 7,
+    "maal_for": 52,
+    "maal_mot": 35,
+    "diff": 17,
+    "poeng": 40,
+    "poeng_vist": "40",
+    "igjen": 7,
+    "maks": 61,
+    "sjanser": {
+     "gull": {
+      "vist": "<1 %",
+      "andel": 0,
+      "avgjort": 0
+     },
+     "europa": {
+      "vist": "64 %",
+      "andel": 0.64407,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "<1 %",
+      "andel": 0,
+      "avgjort": 0
+     }
+    }
+   },
+   {
+    "plass": 4,
+    "lag": "Tromsø",
+    "kort": "Tromsø",
+    "kamper": 23,
+    "v": 11,
+    "u": 7,
+    "t": 5,
+    "maal_for": 42,
+    "maal_mot": 31,
+    "diff": 11,
+    "poeng": 40,
+    "poeng_vist": "40",
+    "igjen": 7,
+    "maks": 61,
+    "sjanser": {
+     "gull": {
+      "vist": "<1 %",
+      "andel": 0,
+      "avgjort": 0
+     },
+     "europa": {
+      "vist": "43 %",
+      "andel": 0.43386,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "<1 %",
+      "andel": 0,
+      "avgjort": 0
+     }
+    }
+   },
+   {
+    "plass": 5,
+    "lag": "Rosenborg",
+    "kort": "RBK",
+    "kamper": 23,
+    "v": 11,
+    "u": 4,
+    "t": 8,
+    "maal_for": 43,
+    "maal_mot": 31,
+    "diff": 12,
+    "poeng": 37,
+    "poeng_vist": "37",
+    "igjen": 7,
+    "maks": 58,
+    "sjanser": {
+     "gull": {
+      "vist": "<1 %",
+      "andel": 0,
+      "avgjort": 0
+     },
+     "europa": {
+      "vist": "65 %",
+      "andel": 0.65388,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "<1 %",
+      "andel": 0,
+      "avgjort": 0
+     }
+    }
+   },
+   {
+    "plass": 6,
+    "lag": "Lillestrøm",
+    "kort": "LSK",
+    "kamper": 23,
+    "v": 11,
+    "u": 3,
+    "t": 9,
+    "maal_for": 32,
+    "maal_mot": 31,
+    "diff": 1,
+    "poeng": 36,
+    "poeng_vist": "36",
+    "igjen": 7,
+    "maks": 57,
+    "sjanser": {
+     "gull": {
+      "vist": "<1 %",
+      "andel": 0,
+      "avgjort": 0
+     },
+     "europa": {
+      "vist": "25 %",
+      "andel": 0.25277,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "<1 %",
+      "andel": 0,
+      "avgjort": 0
+     }
+    }
+   },
+   {
+    "plass": 7,
+    "lag": "Brann",
+    "kort": "Brann",
+    "kamper": 23,
+    "v": 9,
+    "u": 2,
+    "t": 12,
+    "maal_for": 40,
+    "maal_mot": 37,
+    "diff": 3,
+    "poeng": 29,
+    "poeng_vist": "29",
+    "igjen": 7,
+    "maks": 50,
+    "sjanser": {
+     "gull": {
+      "vist": "–",
+      "andel": 0,
+      "avgjort": -1
+     },
+     "europa": {
+      "vist": "1 %",
+      "andel": 0.01317,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "<1 %",
+      "andel": 0.0003,
+      "avgjort": 0
+     }
+    }
+   },
+   {
+    "plass": 8,
+    "lag": "Fredrikstad",
+    "kort": "FFK",
+    "kamper": 23,
+    "v": 8,
+    "u": 5,
+    "t": 10,
+    "maal_for": 28,
+    "maal_mot": 36,
+    "diff": -8,
+    "poeng": 29,
+    "poeng_vist": "29",
+    "igjen": 7,
+    "maks": 50,
+    "sjanser": {
+     "gull": {
+      "vist": "–",
+      "andel": 0,
+      "avgjort": -1
+     },
+     "europa": {
+      "vist": "<1 %",
+      "andel": 0.00134,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "<1 %",
+      "andel": 0.00304,
+      "avgjort": 0
+     }
+    }
+   },
+   {
+    "plass": 9,
+    "lag": "KFUM Oslo",
+    "kort": "KFUM",
+    "kamper": 23,
+    "v": 8,
+    "u": 5,
+    "t": 10,
+    "maal_for": 28,
+    "maal_mot": 37,
+    "diff": -9,
+    "poeng": 29,
+    "poeng_vist": "29",
+    "igjen": 7,
+    "maks": 50,
+    "sjanser": {
+     "gull": {
+      "vist": "–",
+      "andel": 0,
+      "avgjort": -1
+     },
+     "europa": {
+      "vist": "<1 %",
+      "andel": 0.00006,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "1 %",
+      "andel": 0.00884,
+      "avgjort": 0
+     }
+    }
+   },
+   {
+    "plass": 10,
+    "lag": "Sarpsborg 08",
+    "kort": "S08",
+    "kamper": 23,
+    "v": 7,
+    "u": 7,
+    "t": 9,
+    "maal_for": 28,
+    "maal_mot": 34,
+    "diff": -6,
+    "poeng": 28,
+    "poeng_vist": "28",
+    "igjen": 7,
+    "maks": 49,
+    "sjanser": {
+     "gull": {
+      "vist": "–",
+      "andel": 0,
+      "avgjort": -1
+     },
+     "europa": {
+      "vist": "<1 %",
+      "andel": 0.00079,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "<1 %",
+      "andel": 0.00313,
+      "avgjort": 0
+     }
+    }
+   },
+   {
+    "plass": 11,
+    "lag": "Vålerenga",
+    "kort": "VIF",
+    "kamper": 23,
+    "v": 7,
+    "u": 5,
+    "t": 11,
+    "maal_for": 38,
+    "maal_mot": 46,
+    "diff": -8,
+    "poeng": 26,
+    "poeng_vist": "26",
+    "igjen": 7,
+    "maks": 47,
+    "sjanser": {
+     "gull": {
+      "vist": "–",
+      "andel": 0,
+      "avgjort": -1
+     },
+     "europa": {
+      "vist": "<1 %",
+      "andel": 0.00002,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "3 %",
+      "andel": 0.02692,
+      "avgjort": 0
+     }
+    }
+   },
+   {
+    "plass": 12,
+    "lag": "HamKam",
+    "kort": "HamKam",
+    "kamper": 23,
+    "v": 7,
+    "u": 5,
+    "t": 11,
+    "maal_for": 33,
+    "maal_mot": 48,
+    "diff": -15,
+    "poeng": 26,
+    "poeng_vist": "26",
+    "igjen": 7,
+    "maks": 47,
+    "sjanser": {
+     "gull": {
+      "vist": "–",
+      "andel": 0,
+      "avgjort": -1
+     },
+     "europa": {
+      "vist": "<1 %",
+      "andel": 0.00004,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "6 %",
+      "andel": 0.06231,
+      "avgjort": 0
+     }
+    }
+   },
+   {
+    "plass": 13,
+    "lag": "Sandefjord",
+    "kort": "Sandefjord",
+    "kamper": 23,
+    "v": 6,
+    "u": 6,
+    "t": 11,
+    "maal_for": 22,
+    "maal_mot": 30,
+    "diff": -8,
+    "poeng": 24,
+    "poeng_vist": "24",
+    "igjen": 7,
+    "maks": 45,
+    "sjanser": {
+     "gull": {
+      "vist": "–",
+      "andel": 0,
+      "avgjort": -1
+     },
+     "europa": {
+      "vist": "<1 %",
+      "andel": 0,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "10 %",
+      "andel": 0.0983,
+      "avgjort": 0
+     }
+    }
+   },
+   {
+    "plass": 14,
+    "lag": "Aalesund",
+    "kort": "Aalesund",
+    "kamper": 23,
+    "v": 5,
+    "u": 9,
+    "t": 9,
+    "maal_for": 39,
+    "maal_mot": 51,
+    "diff": -12,
+    "poeng": 24,
+    "poeng_vist": "24",
+    "igjen": 7,
+    "maks": 45,
+    "sjanser": {
+     "gull": {
+      "vist": "–",
+      "andel": 0,
+      "avgjort": -1
+     },
+     "europa": {
+      "vist": "<1 %",
+      "andel": 0,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "15 %",
+      "andel": 0.14526,
+      "avgjort": 0
+     }
+    }
+   },
+   {
+    "plass": 15,
+    "lag": "Kristiansund",
+    "kort": "KBK",
+    "kamper": 23,
+    "v": 5,
+    "u": 4,
+    "t": 14,
+    "maal_for": 23,
+    "maal_mot": 47,
+    "diff": -24,
+    "poeng": 19,
+    "poeng_vist": "19",
+    "igjen": 7,
+    "maks": 40,
+    "sjanser": {
+     "gull": {
+      "vist": "–",
+      "andel": 0,
+      "avgjort": -1
+     },
+     "europa": {
+      "vist": "<1 %",
+      "andel": 0,
+      "avgjort": 0
+     },
+     "ned": {
+      "vist": "76 %",
+      "andel": 0.75581,
+      "avgjort": 0
+     }
+    }
+   },
+   {
+    "plass": 16,
+    "lag": "Start",
+    "kort": "Start",
+    "kamper": 23,
+    "v": 4,
+    "u": 4,
+    "t": 15,
+    "maal_for": 25,
+    "maal_mot": 54,
+    "diff": -29,
+    "poeng": 16,
+    "poeng_vist": "16",
+    "igjen": 7,
+    "maks": 37,
+    "sjanser": {
+     "gull": {
+      "vist": "–",
+      "andel": 0,
+      "avgjort": -1
+     },
+     "europa": {
+      "vist": "–",
+      "andel": 0,
+      "avgjort": -1
+     },
+     "ned": {
+      "vist": "90 %",
+      "andel": 0.89609,
+      "avgjort": 0
+     }
+    }
+   }
+  ]
+ }
+}

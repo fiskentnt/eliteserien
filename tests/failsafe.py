@@ -878,11 +878,13 @@ def main():
     check("grunnlag.yml: porten sjekkes på nytt i regnejobben før Chrome, så regnes og lagres det",
           0 < i_p2 < i_nd < i_rg < i_lg and "concurrency:\n      group: grunnlag-${{ matrix.liga }}\n      cancel-in-progress: false" in gw
           and "if: needs.port.outputs.ligaer != '[]'" in gw, f"{i_p2} {i_nd} {i_rg} {i_lg}")
-    check("grunnlag.yml: fast N (ingen --n), filen der porten sier, og bare grunnlagsfilen, banneret og ligasiden (den statiske tabellen) committes, så sitemap.xml",
+    i_ls = gi("lag_sider.py")
+    check("grunnlag.yml: fast N (ingen --n), filen der porten sier, sidene lages fra tekster.json (lag_sider.py, kan ikke stoppe lagringen), og bare grunnlagsfilen, banneret, tekster.json og ligasiden committes, så sitemap.xml",
           i_rg > 0 and "--n" not in gst[i_rg] and '--ut "$UT"' in gst[i_rg] and "UT: ${{ steps.port.outputs.ut }}" in gst[i_rg]
+          and i_rg < i_ls < i_lg and "continue-on-error: true" in gst[i_ls]
           and 'git add "$UT/grunnlag.json"\n' in gst[i_lg] and '[ -f "$UT/keymatch.json" ] && git add "$UT/keymatch.json"' in gst[i_lg]
-          and 'git add "${{ matrix.liga }}/index.html"' in gst[i_lg]
-          and gst[i_lg].count("git add") == 3 and "bash scripts/push_med_rebase.sh" in gst[i_lg]
+          and '[ -f "$UT/tekster.json" ] && git add "$UT/tekster.json"' in gst[i_lg] and 'git add "${{ matrix.liga }}/index.html"' in gst[i_lg]
+          and gst[i_lg].count("git add") == 4 and "bash scripts/push_med_rebase.sh" in gst[i_lg]
           and gst[i_lg].index("bash scripts/push_med_rebase.sh") < gst[i_lg].index("bash scripts/push_sitemap.sh"))
     # Google (20.10.2026): den statiske tabellen. lag_grunnlag.js skriver
     # regionene STATISK-* fra siden selv; porten ser bort fra dem, bygget
@@ -890,7 +892,16 @@ def main():
     # grunnlag.yml), med lastmod fra når tabellen ble regnet.
     import shutil, tempfile
     sys.path.insert(0, str(ROOT / "scripts"))
-    import grunnlag_port, statisk_region
+    import grunnlag_port, statisk_region, lag_sider
+    for liga in ("eliteserien", "obos"):
+        tk = lag_sider.les(liga)
+        rd = tk["tabell"]["rader"]
+        check(f"tekster.json: {liga} har tabellen fra siden (16 lag med poeng og tre sjanser, overskriftene), når og hvor mange sesonger",
+              tk.get("versjon") == 1 and tk.get("side") == liga and tk.get("laget") and tk.get("sesonger") == 100000
+              and len(rd) == 16 and [r["plass"] for r in rd] == list(range(1, 17))
+              and all(set(r["sjanser"]) == {"gull", "europa", "ned"} and all("vist" in v and "andel" in v for v in r["sjanser"].values()) for r in rd)
+              and [k["key"] for k in tk["tabell"]["kolonner"]] == ["gull", "europa", "ned"] and tk["tabell"]["rader_html"].count("<tr ") == 16)
+        check(f"lag_sider.py: {liga}/index.html er laget fra tekster.json (lag_sider.py --check)", lag_sider.ligaside(liga) == (ROOT / liga / "index.html").read_text(encoding="utf-8"))
     for liga in ("eliteserien", "obos"):
         t = (ROOT / liga / "index.html").read_text(encoding="utf-8")
         r = statisk_region.statiske(t)

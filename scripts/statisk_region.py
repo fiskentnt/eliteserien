@@ -1,10 +1,11 @@
 """Regionene STATISK-* i ligasidene (20.10.2026).
 
-scripts/lag_grunnlag.js skriver dem i grunnlag-workflowen, fra siden selv i
-Chrome med den nye grunnlagsfilen: overskriftene for sjansene
-(STATISK-KOLONNER), når det ble regnet (STATISK-OPPDATERT) og radene i tabellen
-med tall og sjanser (STATISK-TABELL). Da står tabellen i HTML-en for
-søkemotorer og uten JavaScript.
+scripts/lag_sider.py skriver dem i grunnlag-workflowen fra <liga>/data/
+tekster.json, som scripts/lag_grunnlag.js henter fra siden selv i Chrome med
+den nye grunnlagsfilen: overskriftene for sjansene (STATISK-KOLONNER), når det
+ble regnet (STATISK-OPPDATERT) og radene i tabellen med tall og sjanser
+(STATISK-TABELL). Da står tabellen i HTML-en for søkemotorer og uten
+JavaScript.
 
   build_league.py  beholder regionene fra den eksisterende ligasiden, så
                    OBOS-siden ikke får Eliteserien-sidens tabell

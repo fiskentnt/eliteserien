@@ -137,6 +137,14 @@ jobs:
           CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
           NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/lag_grunnlag.js "${{ matrix.liga }}" --ut "$UT" --inndata "$INNDATA"
 
+      # Chrome henter, Python lager sidene (20.10.2026): lag_grunnlag.js har
+      # skrevet tekster.json fra siden; lag_sider.py skriver de statiske delene
+      # av sidene fra den. Feiler det, lagres grunnlagsfilen likevel.
+      - name: Lag sidene fra tekster.json
+        if: steps.port.outputs.ligaer != '[]'
+        continue-on-error: true
+        run: python3 scripts/lag_sider.py "${{ matrix.liga }}"
+
       - name: Lagre
         if: steps.port.outputs.ligaer != '[]'
         env:
@@ -146,10 +154,11 @@ jobs:
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add "$UT/grunnlag.json"
           [ -f "$UT/keymatch.json" ] && git add "$UT/keymatch.json"
-          # Den statiske tabellen (STATISK-* i ligasiden, skrevet av
-          # lag_grunnlag.js, 20.10.2026) i samme commit som filen. Pushen
-          # bruker GITHUB_TOKEN og starter derfor ingen push-workflows ("Bygg
-          # ligasidene", grunnlag), og regionene teller ikke i porten.
+          # tekster.json og sidene laget fra den (STATISK-* i ligasiden,
+          # lag_sider.py, 20.10.2026) i samme commit som filen. Pushen bruker
+          # GITHUB_TOKEN og starter derfor ingen push-workflows ("Bygg
+          # ligasidene", grunnlag), og ingen av dem teller i porten.
+          [ -f "$UT/tekster.json" ] && git add "$UT/tekster.json"
           git add "${{ matrix.liga }}/index.html"
           if git diff --cached --quiet; then echo "Uendret."; exit 0; fi
           git commit -q -m "Grunnlag (${{ matrix.liga }}) $(date -u +%Y-%m-%dT%H:%MZ)"
