@@ -4601,6 +4601,24 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         check(`${side}/${sti}: uten JavaScript svarer siden med lag og prosent som i tekster.json («${s.svar.slice(0, 60)}...»), «Hvorfor» for ${sp.lag.length} lag, tabellutsnittet og ${s.kamper} kamper`,
           /^Hvem /.test(s.h1) && !sFeil.length && sp.lag.every(x => s.h3.includes(x.sporsmal)) && sp.lag.every(x => s.utsnitt.includes(x.lag))
             && s.kamper > 0 && s.lenker.includes(`/${side}/`), JSON.stringify({sFeil, h1: s.h1, h3: s.h3.slice(0, 3)}));
+        // Regelsvarene (20.10.2026): synlige uten JavaScript, med plassene fra
+        // tekster.json «regler» (LEAGUE) i svaret.
+        const regelSp = ({eliteserien: {'hvem-rykker-ned': ['Hvor mange rykker ned fra Eliteserien?', 'Når avsluttes Eliteserien?']},
+          obos: {'hvem-rykker-opp': ['Hvor mange rykker opp fra OBOS-ligaen?', 'Hvordan fungerer kvaliken?'],
+                 'hvem-rykker-ned': ['Hvor mange rykker ned fra OBOS-ligaen?', 'Hvordan fungerer kvaliken?']}})[side][sti] || [];
+        if (regelSp.length) {
+          const rg = tkHel.regler, ned = rg.soner.nedrykk, opp = rg.soner.gull;
+          const pr = await (async () => { const pu = await browser.newPage(); await pu.setJavaScriptEnabled(false);
+            await pu.goto(sideUrl, {waitUntil: 'domcontentloaded'});
+            const x = await pu.evaluate(sp => sp.map(q => { const h = [...document.querySelectorAll('h3')].find(e => e.textContent === q);
+              const p = h && h.nextElementSibling; return p && p.tagName === 'P' && p.offsetHeight > 0 ? p.textContent.replace(/\u00a0/g, ' ') : null; }), regelSp);
+            await pu.close(); return x; })();
+          const forste = sti === 'hvem-rykker-opp' ? `nummer ${opp.lo} og ${opp.hi}` : `nummer ${ned.lo} og ${ned.hi}`;
+          const tallOk = pr[0] && pr[0].includes(forste) && pr[1] && (side === 'eliteserien' ? pr[1].includes(`runde ${rg.siste_runde}`) : pr[1].includes('Eliteserien'))
+            && !pr.some(x => x && x.includes('2. divisjon'));
+          check(`${side}/${sti}: uten JavaScript står regelsvarene (${regelSp.join(' og ')}) synlig, med plassene fra tekster.json`,
+            pr.every(Boolean) && tallOk, JSON.stringify(pr).slice(0, 300));
+        }
         const pj = await browser.newPage(); const jsFeil = []; pj.on('pageerror', e => jsFeil.push(e.message));
         await pj.goto(sideUrl, {waitUntil: 'networkidle0'}); await pj.close();
         const ligaLenke = await (async () => { const pl = await browser.newPage(); await pl.setJavaScriptEnabled(false);

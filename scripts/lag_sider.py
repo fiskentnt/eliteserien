@@ -313,6 +313,79 @@ TELLING = """<script>
 </script>"""
 
 
+# Regelsvarene (20.10.2026): korte svar om reglene på spørsmålssidene, med
+# plassene fra LEAGUE og siste runde fra terminlisten (tekster.json «regler»).
+REGLER = {
+    "eliteserien": {"hvem-rykker-ned": ("ned", "slutt")},
+    "obos": {"hvem-rykker-opp": ("opp", "kvalik"), "hvem-rykker-ned": ("ned", "kvalik")},
+}
+# Hvem nummer 14 møter i kvaliken, der det er bekreftet; ellers står bare at
+# laget spiller kvalik (OBOS mot 2. divisjon er ikke bekreftet for 2026).
+KVALIK_MOT = {"eliteserien": "mot et lag fra OBOS-ligaen om plassen i Eliteserien"}
+UKEDAGER = ("mandag", "tirsdag", "onsdag", "torsdag", "fredag", "lørdag", "søndag")
+TALLORD = {1: "ett", 2: "to", 3: "tre", 4: "fire"}
+
+
+def _plasser(lo, hi):
+    """«nummer 15 og 16», «nummer 3 til 6», «nummer 14»."""
+    return f"nummer {lo}" if lo == hi else f"nummer {lo} og {hi}" if hi == lo + 1 else f"nummer {lo} til {hi}"
+
+
+def _dag(iso):
+    """'2026-12-13' -> 'søndag 13. desember'."""
+    d = datetime.fromisoformat(iso)
+    return f"{UKEDAGER[d.weekday()]} {d.day}. {MAANEDER[d.month - 1]}"
+
+
+def _stor(s):
+    return s[0].upper() + s[1:]
+
+
+def regelsvar(t, nokkel, root=ROOT):
+    """(spørsmål, svar) for ett regelspørsmål: høyst to setninger, svaret først."""
+    r, liga, aar, ferdig = t["regler"], t["liga"]["navn"], t["liga"]["sesong"], t["liga"]["ferdig"]
+    soner, baand = r["soner"], {b["cls"]: b for b in r["baand"]}
+    kv = soner["kvalik"]["lo"]
+    if nokkel == "ned":
+        ned = soner["nedrykk"]
+        antall = ned["hi"] - ned["lo"] + 1
+        return (f"Hvor mange rykker ned fra {liga}?",
+                f"{_stor(TALLORD.get(antall, str(antall)))} lag rykker direkte ned fra {liga}: {_plasser(ned['lo'], ned['hi'])}. "
+                f"{_stor(_plasser(kv, kv))} spiller kvalik{' ' + KVALIK_MOT[t['_liga']] if t.get('_liga') in KVALIK_MOT else ''}.")
+    if nokkel == "slutt":
+        siste, dag = r["siste_runde"], _dag(r["siste_dato"])
+        hvor = (f"med runde {siste}, den siste i terminlisten" if siste in r["runder_siste_dato"]
+                else "med den siste kampen i terminlisten")
+        return (f"Når avsluttes {liga}?",
+                f"{liga} {aar} {'ble avsluttet' if ferdig else 'avsluttes'} {dag} {hvor}. "
+                f"Da {'var' if ferdig else 'er'} alle de {r['kamper']} kampene spilt, og kvaliken for {_plasser(kv, kv)} kommer etterpå.")
+    if nokkel == "opp":
+        opp, eu = soner["gull"], baand["eu"]
+        antall = opp["hi"] - opp["lo"] + 1
+        return (f"Hvor mange rykker opp fra {liga}?",
+                f"{_stor(TALLORD.get(antall, str(antall)))} lag rykker direkte opp fra {liga}: {_plasser(opp['lo'], opp['hi'])}. "
+                f"Ett lag til kan rykke opp gjennom kvaliken, der lagene på {eu['lo']}. til {eu['hi']}. plass er med.")
+    if nokkel == "kvalik":
+        eu = baand["eu"]
+        es = root / "eliteserien" / "data" / "tekster.json"
+        es_r = json.loads(es.read_text(encoding="utf-8")).get("regler") if es.exists() else None
+        es_kv = es_r["soner"]["kvalik"]["lo"] if es_r else kv
+        return ("Hvordan fungerer kvaliken?",
+                f"Lagene på {eu['lo']}. til {eu['hi']}. plass spiller opprykkskvalifisering, og vinneren møter "
+                f"{_plasser(es_kv, es_kv)} i Eliteserien om en plass der.")
+    raise KeyError(nokkel)
+
+
+def _regler_html(liga, sti, t):
+    """«Om reglene» på spørsmålssiden (tom når siden ikke har regelsvar)."""
+    nokler = REGLER.get(liga, {}).get(sti, ())
+    if not nokler or not t.get("regler"):
+        return ""
+    deler = [regelsvar(t, n) for n in nokler]
+    return "<h2>Om reglene</h2>\n  " + "".join(
+        f"<h3>{html.escape(sp)}</h3><p>{_nb(html.escape(sv))}</p>\n  " for sp, sv in deler)
+
+
 def sporsmal_side(liga, sti, sone, t):
     """Hele spørsmålssiden som HTML, bare fra tekster.json."""
     tittel = sporsmal_tittel(t, sti)
@@ -377,7 +450,7 @@ def sporsmal_side(liga, sti, sone, t):
   <p class="om">{html.escape(om)}</p>
   <h2>Kampene som avgjør</h2>
   {kamper}
-  <p>{knapper}</p>
+  {_regler_html(liga, sti, t)}<p>{knapper}</p>
   {f'<p>Se også: {andre}</p>' if andre else ''}
   <footer><a href="/">Tabellkalkulator</a> viser tabellen og sjansene for Eliteserien og OBOS-ligaen.</footer>
 </div>

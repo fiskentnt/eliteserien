@@ -636,6 +636,63 @@
    "form": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m3.5 16.5 5.5-5.5 3.5 3.5 7.5-8\"></path><path d=\"M15.5 6.5h5v5\"></path></svg><span class=\"card-title\">Styrke</span><button type=\"button\" class=\"card-link\" data-sort=\"form\">Se alle →</button></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Strømsgodset</span><b class=\"card-pct\">7,0</b></li><li><span class=\"card-team\">Haugesund</span><b class=\"card-pct\">6,6</b></li><li><span class=\"card-team\">Kongsvinger</span><b class=\"card-pct\">6,3</b></li></ul>"
   }
  },
+ "regler": {
+  "soner": {
+   "gull": {
+    "lo": 1,
+    "hi": 2,
+    "label": "direkte opprykk"
+   },
+   "europa": {
+    "lo": 1,
+    "hi": 6,
+    "label": "topp 6"
+   },
+   "kvalik": {
+    "lo": 14,
+    "hi": 14,
+    "label": "kvalik"
+   },
+   "nedrykk": {
+    "lo": 15,
+    "hi": 16,
+    "label": "nedrykk"
+   }
+  },
+  "baand": [
+   {
+    "cls": "cl",
+    "lo": 1,
+    "hi": 2,
+    "tekst": "Direkte opprykk (1 og 2)"
+   },
+   {
+    "cls": "eu",
+    "lo": 3,
+    "hi": 6,
+    "tekst": "Opprykkskvalifisering (3 til 6)"
+   },
+   {
+    "cls": "playoff",
+    "lo": 14,
+    "hi": 14,
+    "tekst": "Kvalik (14)"
+   },
+   {
+    "cls": "ned",
+    "lo": 15,
+    "hi": 16,
+    "tekst": "Nedrykk (15 og 16)"
+   }
+  ],
+  "lag": 16,
+  "kamper": 240,
+  "siste_runde": 30,
+  "siste_dato": "2026-11-08",
+  "runder_siste_dato": [
+   30
+  ]
+ },
  "lag": {
   "Bryne": {
    "kort": "Bryne",

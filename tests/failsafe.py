@@ -987,6 +987,30 @@ def main():
               set(filer) == {f"{liga}/{s}/index.html" for s in slugs} | {f"{liga}/{s}/index.html" for s, _ in lag_sider.SPORSMAL.get(liga, [])})
     check("lagside: grunnlag.yml legger undersidene lag_sider.py har laget (--filer) i grunnlag-commiten",
           'python3 scripts/lag_sider.py --filer "${{ matrix.liga }}" | xargs -r git add --' in (ROOT / ".github" / "workflows" / "grunnlag.yml").read_text(encoding="utf-8"))
+    # Regelsvarene (20.10.2026): synlige i HTML-en på spørsmålssidene i
+    # lag_sider.REGLER, med plassene fra LEAGUE og siste runde, dato og antall
+    # kamper fra terminlisten (matches.json og fixtures.json, ikke hardkodet).
+    for liga, sider in lag_sider.REGLER.items():
+        tk = lag_sider.les(liga)
+        rg = tk.get("regler") or {}
+        kamper = {(m["home"], m["away"]): m for m in json.loads((ROOT / liga / "data" / "matches.json").read_text(encoding="utf-8"))}
+        for rd_ in json.loads((ROOT / liga / "data" / "fixtures.json").read_text(encoding="utf-8")):
+            for m in rd_["matches"]:
+                kamper.setdefault((m["home"], m["away"]), {**m, "round": rd_["round"]})
+        siste = max(m["date"] for m in kamper.values())
+        check(f"regelsvar: tekster.json for {liga} har siste runde {rg.get('siste_runde')}, {rg.get('siste_dato')} og {rg.get('kamper')} kamper, som terminlisten (matches.json og fixtures.json)",
+              rg.get("siste_dato") == siste and rg.get("siste_runde") == max(m["round"] for m in kamper.values()) and rg.get("kamper") == len(kamper)
+              and rg.get("runder_siste_dato") == sorted({m["round"] for m in kamper.values() if m["date"] == siste}), {k: rg.get(k) for k in ("siste_runde", "siste_dato", "kamper")})
+        kilde = (ROOT / ("eliteserien/index.html" if liga == "eliteserien" else f"{liga}/page/league.js")).read_text(encoding="utf-8")
+        soner_ok = all(re.search(rf"\b{k}: \{{lo: {v['lo']}, hi: {v['hi']}\b", kilde) for k, v in rg.get("soner", {}).items())
+        check(f"regelsvar: plassene i tekster.json for {liga} er de samme som i LEAGUE (sonene)", bool(rg.get("soner")) and soner_ok, rg.get("soner"))
+        for sti, nokler in sider.items():
+            t_ = (ROOT / liga / sti / "index.html").read_text(encoding="utf-8")
+            svar = [lag_sider.regelsvar(tk, n) for n in nokler]
+            check(f"regelsvar: /{liga}/{sti}/ har {', '.join(f'«{sp}»' for sp, _ in svar)} synlig i HTML-en, høyst to setninger hver, og ikke «2. divisjon» (ikke bekreftet)",
+                  "<h2>Om reglene</h2>" in t_ and all(f"<h3>{sp}</h3><p>{lag_sider._nb(sv)}</p>" in t_ and 1 <= len(re.findall(r"[.?!](?= [A-ZÆØÅ]|$)", sv)) <= 2 for sp, sv in svar)
+                  and "2. divisjon" not in t_,
+                  [sv for _, sv in svar])
     # Rekkefølgen (20.10.2026): lag nevnes i tabellens rekkefølge, nedrykk
     # nedenfra, så tekst og tabell aldri sier noe ulikt om plassene.
     for liga, sider in lag_sider.SPORSMAL.items():

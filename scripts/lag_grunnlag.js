@@ -189,6 +189,15 @@ async function hentTekster(page) {
     // fargeforklaringen og de fire boksene. lag_sider.py setter det inn i
     // HTML-en, så ingenting flytter seg når JS tar over.
     const statisk = statiskeDeler();
+    // Regelsvarene på spørsmålssidene (20.10.2026): plassene fra LEAGUE
+    // (sonene og fargeforklaringen) og siste runde og dato fra terminlisten
+    // slik siden har den: de spilte (MATCHES) og de som gjenstår (matches).
+    // Soner ligaen ikke har (Champions League i OBOS), er null og hoppes over.
+    const terminliste = MATCHES.concat(matches), sisteDato = terminliste.reduce((a, m) => (m.date > a ? m.date : a), '');
+    const regler = {soner: Object.fromEntries(Object.entries(LEAGUE.zones).filter(([, z]) => z).map(([k, z]) => [k, {lo: z.lo, hi: z.hi, label: z.label}])),
+      baand: LEAGUE.bands.map(b => ({cls: b.cls, lo: b.lo, hi: b.hi, tekst: b.legend})),
+      lag: TEAMS.length, kamper: terminliste.length, siste_runde: Math.max(...terminliste.map(m => m.round)), siste_dato: sisteDato,
+      runder_siste_dato: [...new Set(terminliste.filter(m => m.date === sisteDato).map(m => m.round))].sort((a, b) => a - b)};
     // Tabellen som HTML, før noe lag velges under (valgt lag gir markering i radene).
     const kolonnerHtml = ['gullHeader', 'europaHeader', 'nedHeader'].map(id => document.getElementById(id).outerHTML).join('\n          ');
     const raderHtml = tb.innerHTML;
@@ -237,7 +246,7 @@ async function hentTekster(page) {
       }
     } finally { await velg(''); }
     return {status: GRUNNLAG_STATUS, sesonger: lastMCN, lag: TEAMS.length, viktigste,
-      liga: {navn: LEAGUE.name, sesong: LEAGUE.season, ferdig: !matches.some(isEmpty)}, sporsmal, statisk, lagTekst, tabell: {kolonner,
+      liga: {navn: LEAGUE.name, sesong: LEAGUE.season, ferdig: !matches.some(isEmpty)}, sporsmal, statisk, regler, lagTekst, tabell: {kolonner,
       kolonner_html: kolonnerHtml, rader_html: raderHtml, rader}};
   });
 }
@@ -246,7 +255,7 @@ function skrivTekster(t, laget, N) {
     throw new Error(`siden viste ikke tabellen fra filen (${t.status}, ${t.sesonger} sesonger, ${t.tabell.rader.length} av ${t.lag} rader)`);
   const ut = {versjon: 1, side: SIDE, laget, sesonger: t.sesonger,
     note: 'Hentet av scripts/lag_grunnlag.js fra siden selv med grunnlagsfilen i bruk. scripts/lag_sider.py lager de statiske sidene fra denne filen.',
-    liga: t.liga, tabell: t.tabell, viktigste: t.viktigste, sporsmal: t.sporsmal, statisk: t.statisk, lag: t.lagTekst};
+    liga: t.liga, tabell: t.tabell, viktigste: t.viktigste, sporsmal: t.sporsmal, statisk: t.statisk, regler: t.regler, lag: t.lagTekst};
   const json = JSON.stringify(ut, null, 1) + '\n', midl = TEKSTER + '.tmp';
   fs.writeFileSync(midl, json); JSON.parse(fs.readFileSync(midl, 'utf8')); fs.renameSync(midl, TEKSTER);
   console.log(`Skrev ${path.relative(ROOT, TEKSTER)} (${t.tabell.rader.length} lag, ${(json.length / 1024).toFixed(0)} KB).`);
