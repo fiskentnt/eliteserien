@@ -1,32 +1,21 @@
 {
- "checked_at": "2026-10-21T19:01:45+00:00",
+ "checked_at": "2026-10-21T19:11:42+00:00",
  "checked_date": "2026-10-21",
- "kjoring": "39657825202-1",
+ "kjoring": "39659297397-1",
  "kilde": "https://www.obos-ligaen.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 1,
- "alle_like": false,
+ "warnings": 0,
+ "alle_like": true,
  "nye": [],
  "avvik": [],
- "advarsler": [
-  "Tabell: Sogndal-Raufoss mangler i tabellen på obos-ligaen.no. Hos oss 2-1, bekreftet av highlightly. Avspark 19:00, sjekkes på nytt i neste kjøring (frist 01:00)."
- ],
- "venter": [
-  {
-   "kamp": "Sogndal|Raufoss",
-   "resultat": [
-    2,
-    1
-   ],
-   "avspark": "2026-10-21T17:00:00+00:00",
-   "frist": "2026-10-21T23:00:00+00:00",
-   "kilder": [
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  }
- ],
- "siste_like": null
+ "advarsler": [],
+ "venter": [],
+ "siste_like": {
+  "checked_at": "2026-10-21T19:11:42+00:00",
+  "kjoring": "39659297397-1",
+  "kilde": "https://www.obos-ligaen.no/resultater",
+  "avtrykk": "f4b24334807f6599fe9771a64dc3e738305b35ffbda9ec71ecbd9709f63b1cf2"
+ }
 }
