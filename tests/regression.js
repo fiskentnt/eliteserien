@@ -4527,6 +4527,17 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     check(`forsiden: med tk:sisteLiga videresendes kjente til ligaen (obos: ${fo.sti}, eliteserien: ${fe.sti}); ukjent verdi blir på oversikten (${fx.sti})`,
       fo.sti === '/obos/' && fe.sti === '/eliteserien/' && fx.sti === '/', JSON.stringify({fo, fe, fx}));
     check(`forsiden: gamle delte lenker (#team=...) går fortsatt til Eliteserien (${fh.sti})`, fh.sti === '/eliteserien/#team=Brann', JSON.stringify(fh));
+    // Delingsbildet (23.10.2026): og:image og twitter:image peker på sidens
+    // eget bilde (<side>/og.png), som finnes, er 1200 x 630 og under 25 KB.
+    const bildeFeil = async (sti, og, tw) => {
+      const vent = `https://tabellkalkulator.no${sti}og.png`;
+      if (og !== vent || tw !== vent) return `meta ${og} ${tw}`;
+      try {
+        const r = await fetch(new URL(`${sti}og.png`, base).href), b = Buffer.from(await r.arrayBuffer());
+        if (r.status !== 200 || b.length < 24 || b.readUInt32BE(16) !== 1200 || b.readUInt32BE(20) !== 630 || b.length >= 25 * 1024) return `bilde ${r.status} ${b.length} B`;
+      } catch (e) { return `bilde ${e.message}`; }
+      return null;
+    };
     for (const side of ['eliteserien', 'obos']) {
       const url = base.replace('/eliteserien/', `/${side}/`);
       // Uten JavaScript: det søkemotorer og alle uten JS ser.
@@ -4595,9 +4606,12 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const s = await pu.evaluate(() => ({h1: document.querySelector('h1').textContent, svar: document.querySelector('.svar').textContent,
           h3: [...document.querySelectorAll('h3')].map(h => h.textContent), utsnitt: [...document.querySelectorAll('.utsnitt tbody tr')].map(tr => tr.children[1].textContent),
           dato: (document.querySelector('.dato') || {}).textContent || '', kamper: document.querySelectorAll('.kamper li').length,
-          lenker: [...document.querySelectorAll('a')].map(a => a.getAttribute('href'))}));
+          lenker: [...document.querySelectorAll('a')].map(a => a.getAttribute('href')),
+          og: (document.querySelector('meta[property="og:image"]') || {}).content, tw: (document.querySelector('meta[name="twitter:image"]') || {}).content}));
         await pu.close();
         const sFeil = oppsFeil(s.svar + ' ' + s.dato.replace('Sjansene er', ''), false);
+        const bF = await bildeFeil(`/${side}/${sti}/`, s.og, s.tw);
+        check(`${side}/${sti}: delingsbildet er sidens eget (og:image og twitter:image), 1200 x 630 og under 25 KB`, !bF, bF || '');
         check(`${side}/${sti}: uten JavaScript svarer siden med lag og prosent som i tekster.json («${s.svar.slice(0, 60)}...»), «Hvorfor» for ${sp.lag.length} lag, tabellutsnittet og ${s.kamper} kamper`,
           /^Hvem /.test(s.h1) && !sFeil.length && sp.lag.every(x => s.h3.includes(x.sporsmal)) && sp.lag.every(x => s.utsnitt.includes(x.lag))
             && s.kamper > 0 && s.lenker.includes(`/${side}/`), JSON.stringify({sFeil, h1: s.h1, h3: s.h3.slice(0, 3)}));
@@ -4647,7 +4661,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           svar: (document.querySelector('.svar') || {}).textContent || '',
           utsnitt: [...document.querySelectorAll('.utsnitt tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim())),
           h3: [...document.querySelectorAll('h3')].map(h => h.textContent), rest: [...document.querySelectorAll('ul.rest li')].map(li => li.textContent),
-          lenker: [...document.querySelectorAll('a')].map(a => a.getAttribute('href'))}));
+          lenker: [...document.querySelectorAll('a')].map(a => a.getAttribute('href')),
+          og: (document.querySelector('meta[property="og:image"]') || {}).content, tw: (document.querySelector('meta[name="twitter:image"]') || {}).content}));
         await pu.close();
         const f = [];
         if (s.h1 !== s.tittel || !s.h1.startsWith(`${r.lag} ${tkHel.liga.sesong}: `)) f.push(`tittel «${s.h1}»`);
@@ -4667,9 +4682,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           f.push(`kamper ${s.rest.length}/${d.rest.length}`);
         if (!s.lenker.includes(`/${side}/`) || !s.lenker.includes(`/${side}/#team=${encodeURIComponent(r.lag)}`)) f.push('lenker');
         if (!lagLenker.includes(sti)) f.push('ikke lenket fra ligasiden');
+        const bF = await bildeFeil(sti, s.og, s.tw); if (bF) f.push(`delingsbilde: ${bF}`);
         if (f.length) lagFeil.push(`${r.lag}: ${f.join(', ')}`);
       }
-      check(`${side}: uten JavaScript har alle ${tkHel.tabell.rader.length} lagsidene plassen og sjansene fra tekster.json, utsnittet med de samme tallene som ligasiden, svarene og kampene som er igjen, og er lenket fra lista nederst på ligasiden`,
+      check(`${side}: uten JavaScript har alle ${tkHel.tabell.rader.length} lagsidene plassen og sjansene fra tekster.json, utsnittet med de samme tallene som ligasiden, svarene og kampene som er igjen, eget delingsbilde, og er lenket fra lista nederst på ligasiden`,
         tkHel.tabell.rader.length === 16 && !lagFeil.length, lagFeil.slice(0, 4).join('; '));
       for (const r of [tkHel.tabell.rader[0], tkHel.tabell.rader[6]]) {
         const pj = await browser.newPage(); const jsFeil = []; pj.on('pageerror', e => jsFeil.push(e.message));

@@ -429,8 +429,11 @@ def sporsmal_side(liga, sti, sone, t):
 <meta property="og:url" content="{url}">
 <meta property="og:title" content="{html.escape(tittel, quote=True)}">
 <meta property="og:description" content="{beskrivelse}">
-<meta property="og:image" content="{VERT}/{liga}/og.png">
+<meta property="og:image" content="{url}og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{url}og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -590,8 +593,11 @@ def lag_side(liga, lag, t):
 <meta property="og:url" content="{url}">
 <meta property="og:title" content="{html.escape(tittel, quote=True)}">
 <meta property="og:description" content="{beskrivelse}">
-<meta property="og:image" content="{VERT}/{liga}/og.png">
+<meta property="og:image" content="{url}og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="{url}og.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -661,6 +667,72 @@ def _side_statisk(t):
             **{f"KORT{k.upper()}": st["kort"][k] for k in ("gull", "europa", "ned", "form")}}
 
 
+# ---- Delingsbildene (23.10.2026) ----
+# Ett bilde per lagside og spørsmålsside (<side>/og.png), tegnet av
+# scripts/og_bilder.py av innholdet under: de samme tallene som teksten på
+# siden. Innholdet lagres i PNG-filen (iTXt BILDE_NOKKEL), og filen skrives
+# bare på nytt når det er endret, så bare endrede bilder kommer med i
+# grunnlag-commiten.
+BILDE_NOKKEL = "tabellkalkulator"
+
+
+def bilde_lag(t, lag):
+    """Delingsbildet for lagsiden: lagnavnet, plass og poeng, og tallet fra
+    tittelen («1 %», «sjanse for topp 4»), som første setning på siden."""
+    r = _rad(t, lag)
+    b = {"art": "lag", "liga_id": t["_liga"], "liga": f'{t["liga"]["navn"]} {t["liga"]["sesong"]}', "navn": lag,
+         "tall_venstre": [[f"{r['plass']}.", "plass"], [str(r["poeng"]), "poeng"]]}
+    soner = [] if t["liga"]["ferdig"] else _lagets_soner(t["lag"][lag])
+    b["under"] = "Sesongen er ferdig." if t["liga"]["ferdig"] else f"etter {r['kamper']} kamper"
+    b["tall"] = ([{"tall": s["vist"], "tekst": f"sjanse for {s['navn']}", "sone": s["key"]} for s in soner]
+                 or [{"tall": f"{r['plass']}.", "tekst": "plass til slutt" if t["liga"]["ferdig"] else "plass nå", "sone": "plass"}])
+    return b
+
+
+def bilde_sporsmal(t, sti, sone):
+    """Delingsbildet for spørsmålssiden: spørsmålet og svaret, som på siden."""
+    return {"art": "sporsmal", "liga_id": t["_liga"], "liga": f'{t["liga"]["navn"]} {t["liga"]["sesong"]}',
+            "tittel": sporsmal_tittel(t, sti), "svar": sporsmal_svar(t, sti, sone), "sone": sone}
+
+
+def bilde_tekst(innhold):
+    """Innholdet som tekst, slik det lagres i bildet og sammenlignes."""
+    return json.dumps(innhold, ensure_ascii=False, sort_keys=True)
+
+
+def les_bilde(fil):
+    """Innholdet som er lagret i bildet (iTXt BILDE_NOKKEL), eller None. Leser
+    PNG-bitene selv, så --check og failsafe ikke trenger Pillow."""
+    try:
+        data = fil.read_bytes()
+    except OSError:
+        return None
+    i, merke = 8, BILDE_NOKKEL.encode() + b"\0"
+    while i + 8 <= len(data):
+        n = int.from_bytes(data[i:i + 4], "big")
+        typ, bit = data[i + 4:i + 8], data[i + 8:i + 8 + n]
+        if typ == b"iTXt" and bit.startswith(merke):
+            rest = bit[len(merke):]
+            if rest[0] != 0:
+                return None
+            rest = rest[2:]
+            rest = rest[rest.index(b"\0") + 1:]
+            rest = rest[rest.index(b"\0") + 1:]
+            return rest.decode("utf-8")
+        i += 12 + n
+    return None
+
+
+def bilder(ligaer=LIGAER, root=ROOT):
+    """(fil, innhold) for alle delingsbildene til ligaene."""
+    ut = []
+    for liga in ligaer:
+        t = les(liga, root)
+        ut += [(root / liga / sti / "og.png", bilde_sporsmal(t, sti, sone)) for sti, sone in SPORSMAL.get(liga, [])]
+        ut += [(root / liga / lag_slug(lag) / "og.png", bilde_lag(t, lag)) for lag in t.get("lag", {})]
+    return ut
+
+
 MERKE = "<!-- Laget av scripts/lag_sider.py fra "
 
 
@@ -668,8 +740,9 @@ def undersider(liga, root=ROOT):
     """Undersidene til ligaen som dette skriptet har laget (spørsmåls- og
     lagsidene), funnet på merket øverst i filen, ikke på tekster.json: da kan
     workflowen legge dem til også når lag_sider.py feilet."""
-    return sorted(f.relative_to(root).as_posix() for f in (root / liga).glob("*/index.html")
-                  if MERKE in f.read_text(encoding="utf-8")[:2000])
+    sider = [f for f in (root / liga).glob("*/index.html") if MERKE in f.read_text(encoding="utf-8")[:2000]]
+    # Delingsbildet ved siden av siden; git add tar bare med de endrede.
+    return sorted(g.relative_to(root).as_posix() for f in sider for g in (f, f.parent / "og.png") if g.exists())
 
 
 def main(argv):
@@ -702,6 +775,27 @@ def main(argv):
             print(f"Skrev {navn} fra tekster.json.")
         else:
             print(f"{navn} var uendret.")
+    # Delingsbildene: sammenlign innholdet før lagring, skriv bare de endrede.
+    try:
+        import og_bilder
+    except ImportError as e:
+        og_bilder = None
+        if not sjekk:
+            print(f"::warning::Delingsbildene ble ikke laget ({e}); sidene er skrevet.")
+    endret = 0
+    for fil, innhold in bilder(ligaer):
+        navn, tekst = fil.relative_to(ROOT).as_posix(), bilde_tekst(innhold)
+        if les_bilde(fil) == tekst:
+            continue
+        if sjekk:
+            print(f"{navn} er IKKE laget fra tekster.json.\n  Kjør: python3 scripts/lag_sider.py", file=sys.stderr)
+            feil = 1
+        elif og_bilder:
+            og_bilder.skriv(fil, innhold, BILDE_NOKKEL, tekst)
+            endret += 1
+            print(f"Skrev {navn} ({fil.stat().st_size // 1024} KB).")
+    if not sjekk:
+        print(f"Delingsbilder: {endret} endret.")
     return feil
 
 

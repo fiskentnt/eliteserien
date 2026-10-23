@@ -137,6 +137,18 @@ jobs:
           CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
           NODE_PATH="$RUNNER_TEMP/pp/node_modules" node scripts/lag_grunnlag.js "${{ matrix.liga }}" --ut "$UT" --inndata "$INNDATA"
 
+      # Delingsbildene per side (23.10.2026, scripts/og_bilder.py) trenger
+      # Pillow. Mangler det, lages sidene likevel (lag_sider.py advarer).
+      - uses: actions/setup-python@v7
+        if: steps.port.outputs.ligaer != '[]'
+        with:
+          python-version: "3.12"
+
+      - name: Installer Pillow (delingsbildene)
+        if: steps.port.outputs.ligaer != '[]'
+        continue-on-error: true
+        run: pip install Pillow
+
       # Chrome henter, Python lager sidene (20.10.2026): lag_grunnlag.js har
       # skrevet tekster.json fra siden; lag_sider.py skriver de statiske delene
       # av sidene fra den. Feiler det, lagres grunnlagsfilen likevel.
@@ -163,7 +175,9 @@ jobs:
           # Forsiden har ligaens korte oppsummering (STATISK-<LIGA>, fase 1a).
           git add index.html
           # Spørsmålssidene (fase 2) og lagsidene (fase 3): undersidene
-          # lag_sider.py har laget, funnet på merket øverst i filen.
+          # lag_sider.py har laget, funnet på merket øverst i filen, med
+          # delingsbildet (og.png) ved siden av. git add tar bare med filene
+          # som er endret, og bildene skrives bare når innholdet er endret.
           python3 scripts/lag_sider.py --filer "${{ matrix.liga }}" | xargs -r git add --
           if git diff --cached --quiet; then echo "Uendret."; exit 0; fi
           git commit -q -m "Grunnlag (${{ matrix.liga }}) $(date -u +%Y-%m-%dT%H:%MZ)"

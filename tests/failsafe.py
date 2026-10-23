@@ -983,8 +983,36 @@ def main():
               and 'class="lag-mer" href="${LEAGUE.path}${lagSlug(SELECTED_TEAM)}/">Mer om ${SELECTED_TEAM} →</a>' in side_
               and "if(el) followTeamToggle(el.dataset.team);" in side_)
         filer = lag_sider.undersider(liga)
-        check(f"lagside: lag_sider.py --filer finner spørsmåls- og lagsidene i {liga} ({len(filer)}), ikke modellsjekk",
-              set(filer) == {f"{liga}/{s}/index.html" for s in slugs} | {f"{liga}/{s}/index.html" for s, _ in lag_sider.SPORSMAL.get(liga, [])})
+        understi = list(slugs) + [s for s, _ in lag_sider.SPORSMAL.get(liga, [])]
+        check(f"lagside: lag_sider.py --filer finner spørsmåls- og lagsidene i {liga} med delingsbildet ({len(filer)}), ikke modellsjekk",
+              set(filer) == {f"{liga}/{s}/{f_}" for s in understi for f_ in ("index.html", "og.png")})
+        # Delingsbildene (23.10.2026): ett per side, 1200 x 630, under 25 KB, med
+        # innholdet lagret i bildet lik det lag_sider.py lager av tekster.json
+        # (de samme tallene som teksten på siden), og og:image og twitter:image
+        # på siden peker dit.
+        bfeil = []
+        for fil, innhold in lag_sider.bilder([liga]):
+            sti_ = fil.parent.relative_to(ROOT).as_posix()
+            side_t = (fil.parent / "index.html").read_text(encoding="utf-8")
+            data = fil.read_bytes() if fil.exists() else b""
+            mal = data[16:24] == (1200).to_bytes(4, "big") + (630).to_bytes(4, "big")
+            url_ = f"https://tabellkalkulator.no/{sti_}/og.png"
+            if innhold["art"] == "lag":
+                r_ = next(r for r in tk["tabell"]["rader"] if r["lag"] == innhold["navn"])
+                prosa = lambda v: {">99 %": "over 99 %", "<1 %": "under 1 %"}.get(v, v)
+                tall_ok = innhold["tall_venstre"] == [[f"{r_['plass']}.", "plass"], [str(r_["poeng"]), "poeng"]] and all(
+                    z["sone"] == "plass" or lag_sider._nb(prosa(z["tall"])) in side_t for z in innhold["tall"])
+            else:
+                tall_ok = f'<p class="svar">{lag_sider._nb(_html.escape(innhold["svar"]))}</p>' in side_t
+            if not (data.startswith(b"\x89PNG") and mal and len(data) < 25 * 1024 and lag_sider.les_bilde(fil) == lag_sider.bilde_tekst(innhold)
+                    and tall_ok and f'<meta property="og:image" content="{url_}">' in side_t and f'<meta name="twitter:image" content="{url_}">' in side_t):
+                bfeil.append(f"{sti_} ({len(data)} B, mål {mal}, tall {tall_ok})")
+        check(f"delingsbilde: hver lag- og spørsmålsside i {liga} har sitt eget bilde (1200 x 630, under 25 KB) med de samme tallene som siden, og og:image/twitter:image peker dit",
+              not bfeil, bfeil[:4])
+    gy_ = (ROOT / ".github" / "workflows" / "grunnlag.yml").read_text(encoding="utf-8")
+    check("delingsbilde: grunnlag.yml installerer Pillow før «Lag sidene», og lag_sider.py lager sidene også uten Pillow",
+          gy_.index("run: pip install Pillow") < gy_.index("- name: Lag sidene fra tekster.json")
+          and "except ImportError" in (ROOT / "scripts" / "lag_sider.py").read_text(encoding="utf-8"))
     check("lagside: grunnlag.yml legger undersidene lag_sider.py har laget (--filer) i grunnlag-commiten",
           'python3 scripts/lag_sider.py --filer "${{ matrix.liga }}" | xargs -r git add --' in (ROOT / ".github" / "workflows" / "grunnlag.yml").read_text(encoding="utf-8"))
     # Regelsvarene (20.10.2026): synlige i HTML-en på spørsmålssidene i
