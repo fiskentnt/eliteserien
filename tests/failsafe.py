@@ -885,7 +885,7 @@ def main():
           and 'git add "$UT/grunnlag.json"\n' in gst[i_lg] and '[ -f "$UT/keymatch.json" ] && git add "$UT/keymatch.json"' in gst[i_lg]
           and '[ -f "$UT/tekster.json" ] && git add "$UT/tekster.json"' in gst[i_lg] and 'git add "${{ matrix.liga }}/index.html"' in gst[i_lg]
           and "git add index.html" in gst[i_lg] and 'python3 scripts/lag_sider.py --filer "${{ matrix.liga }}" | xargs -r git add --' in gst[i_lg]
-          and gst[i_lg].count("git add") == 6 and "bash scripts/push_med_rebase.sh" in gst[i_lg]
+          and gst[i_lg].count("git add") == 7 and '[ -f "$UT/sjansehistorikk.json" ] && git add "$UT/sjansehistorikk.json"' in gst[i_lg] and "bash scripts/push_med_rebase.sh" in gst[i_lg]
           and gst[i_lg].index("bash scripts/push_med_rebase.sh") < gst[i_lg].index("bash scripts/push_sitemap.sh"))
     # Google (20.10.2026): den statiske tabellen. lag_grunnlag.js skriver
     # regionene STATISK-* fra siden selv; porten ser bort fra dem, bygget
@@ -1009,6 +1009,47 @@ def main():
                 bfeil.append(f"{sti_} ({len(data)} B, mål {mal}, tall {tall_ok})")
         check(f"delingsbilde: hver lag- og spørsmålsside i {liga} har sitt eget bilde (1200 x 630, under 25 KB) med de samme tallene som siden, og og:image/twitter:image peker dit",
               not bfeil, bfeil[:4])
+        # Lagsidene utvidet (23.10.2026). A: sjansehistorikk.json har ett punkt
+        # per runde i rundevelgerens rekkefølge, med alle lag og soner, og siste
+        # punkt er tallene i tekster.json når de er regnet etter runden. B:
+        # «Vanskeligst» er kampen med lavest sjanse for seier i lista, som i
+        # kalkulatoren. C: plassfordelingen summerer til 1.
+        import sjansehistorikk as _sh
+        hist = lag_sider.les_historikk(liga)
+        nr_ = [x["nr"] for x in hist]
+        soner_ = set(tk["regler"]["soner"])
+        struktur = bool(hist) and nr_ == sorted(set(nr_)) and all(set(x["lag"]) == set(lagt) and all(set(v) == soner_ for v in x["lag"].values()) for x in hist)
+        siste = hist[-1] if hist else {}
+        like = siste.get("laget") != tk["laget"] or all(abs(siste["lag"][lg][s_["key"]] - s_["andel"]) < 6e-5
+                                                         for lg, dd in lagt.items() for s_ in dd["soner"])
+        d_ = ROOT / liga / "data"
+        naa = _sh.punkt(_sh.terminliste(json.loads((d_ / "matches.json").read_text(encoding="utf-8")), json.loads((d_ / "fixtures.json").read_text(encoding="utf-8"))),
+                        json.loads((d_ / "grunnlag.json").read_text(encoding="utf-8")), tk["regler"]["soner"], tk["regler"].get("utsatte_runder", {}))
+        check(f"lagside: sjansehistorikk.json for {liga} har {len(hist)} runder ({', '.join(x['merke'] for x in hist)}) i rekkefølge med alle lag og soner, siste lik tekster.json og dagens runde",
+              struktur and like and (naa is None or (naa["nr"] == siste.get("nr") and naa["runde"] == siste.get("runde"))), {"struktur": struktur, "like": like, "naa": naa and naa["merke"]})
+        lfeil = []
+        for lag, dd in lagt.items():
+            t_ = (ROOT / liga / lag_sider.lag_slug(lag) / "index.html").read_text(encoding="utf-8")
+            soner_lag = lag_sider._lagets_soner(dd)
+            punkter = [x for x in hist if lag in x["lag"]]
+            if punkter and soner_lag:
+                if "de siste rundene</h2>" not in t_ or "gjennom sesongen" in t_ or '<p class="historikk">Etter runde ' not in t_:
+                    lfeil.append(f"{lag}: A")
+                if t_.count('<figure class="fig">') != (len(soner_lag) if len(punkter) >= lag_sider.HIST_MIN_FIGUR else 0):
+                    lfeil.append(f"{lag}: A figurer")
+            rp_ = dd.get("restprogram")
+            if rp_ and dd["rest"]:
+                tall_ = lambda v: 0 if v.startswith("<") else int(v.split()[0].lstrip(">"))
+                minst = min(tall_(k["seier"]) for k in dd["rest"])
+                merket = [k for k in dd["rest"] if k["naar"] == rp_["vanskeligst"]["naar"] and k["motstander"] == rp_["vanskeligst"]["motstander"]]
+                if (f"motstanderne har i snitt {lag_sider._nb(rp_['snitt'])} vinnersjanse" not in t_ or t_.count('class="vanskeligst"') != 1
+                        or len(merket) != 1 or tall_(merket[0]["seier"]) != minst or "vinner i snitt" in t_):
+                    lfeil.append(f"{lag}: B")
+            f_ = dd.get("fordeling") or []
+            if len(f_) != 16 or abs(sum(f_) - 1) > 1e-3 or t_.count('<figure class="fig fordeling">') != 1 or t_.count('role="img"') < 1:
+                lfeil.append(f"{lag}: C")
+        check(f"lagside: alle lagsidene i {liga} har historikken (tekst, figur fra {lag_sider.HIST_MIN_FIGUR} punkter), restprogrammet med «Vanskeligst» som kalkulatoren og plassfordelingen",
+              not lfeil, lfeil[:4])
     gy_ = (ROOT / ".github" / "workflows" / "grunnlag.yml").read_text(encoding="utf-8")
     check("delingsbilde: grunnlag.yml installerer Pillow før «Lag sidene», og lag_sider.py lager sidene også uten Pillow",
           gy_.index("run: pip install Pillow") < gy_.index("- name: Lag sidene fra tekster.json")

@@ -4662,9 +4662,19 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           utsnitt: [...document.querySelectorAll('.utsnitt tbody tr')].map(tr => [...tr.children].map(td => td.textContent.trim())),
           h3: [...document.querySelectorAll('h3')].map(h => h.textContent), rest: [...document.querySelectorAll('ul.rest li')].map(li => li.textContent),
           lenker: [...document.querySelectorAll('a')].map(a => a.getAttribute('href')),
-          og: (document.querySelector('meta[property="og:image"]') || {}).content, tw: (document.querySelector('meta[name="twitter:image"]') || {}).content}));
+          og: (document.querySelector('meta[property="og:image"]') || {}).content, tw: (document.querySelector('meta[name="twitter:image"]') || {}).content,
+          historikk: (document.querySelector('p.historikk') || {}).textContent || '', restprogram: (document.querySelector('p.restprogram') || {}).textContent || '',
+          figurer: [...document.querySelectorAll('svg[role="img"]')].map(v => { const b = v.getBoundingClientRect(), id = (v.getAttribute('aria-labelledby') || '').split(' ');
+            return {synlig: b.width > 100 && b.height > 40, tekst: id.every(x => x && (document.getElementById(x) || {}).textContent)}; }),
+          vanskeligst: document.querySelectorAll('ul.rest li.vanskeligst').length}));
         await pu.close();
         const f = [];
+        // Lagsidene utvidet (23.10.2026): historikken som tekst, restprogrammet
+        // med «Vanskeligst» merket i lista, og figurene synlige uten JavaScript
+        // med tekstalternativ (title og desc).
+        if (!/^Etter runde \d+/.test(s.historikk)) f.push('historikk');
+        if (d.restprogram && (!s.restprogram.includes('motstanderne har i snitt') || s.vanskeligst !== 1)) f.push('restprogram');
+        if (!s.figurer.length || !s.figurer.every(x => x.synlig && x.tekst)) f.push(`figurer ${JSON.stringify(s.figurer)}`);
         if (s.h1 !== s.tittel || !s.h1.startsWith(`${r.lag} ${tkHel.liga.sesong}: `)) f.push(`tittel «${s.h1}»`);
         if (!nb(s.svar).includes(`${r.plass}. plass`) || !nb(s.svar).includes(`${r.poeng} poeng`)) f.push(`svar «${s.svar.slice(0, 60)}»`);
         // Sjansene i første setning er de samme som sonene i tekster.json.

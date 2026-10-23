@@ -196,6 +196,7 @@ async function hentTekster(page) {
     const terminliste = MATCHES.concat(matches), sisteDato = terminliste.reduce((a, m) => (m.date > a ? m.date : a), '');
     const regler = {soner: Object.fromEntries(Object.entries(LEAGUE.zones).filter(([, z]) => z).map(([k, z]) => [k, {lo: z.lo, hi: z.hi, label: z.label}])),
       baand: LEAGUE.bands.map(b => ({cls: b.cls, lo: b.lo, hi: b.hi, tekst: b.legend})),
+      utsatte_runder: Object.fromEntries(Object.entries(LEAGUE.movedRounds || {}).map(([r, v]) => [r, v.label])),
       lag: TEAMS.length, kamper: terminliste.length, siste_runde: Math.max(...terminliste.map(m => m.round)), siste_dato: sisteDato,
       runder_siste_dato: [...new Set(terminliste.filter(m => m.date === sisteDato).map(m => m.round))].sort((a, b) => a - b)};
     // Tabellen som HTML, før noe lag velges under (valgt lag gir markering i radene).
@@ -229,6 +230,10 @@ async function hentTekster(page) {
     // kamplisten regner dem) og sjansen i hver sone med matematisk status.
     const sel = document.getElementById('teamSelect'), velg = async v => { sel.value = v; sel.dispatchEvent(new Event('change')); await new Promise(r => setTimeout(r, 30)); };
     const lagTekst = {}, rq = QA_QUESTIONS.find(q => q.id === 'range');
+    // Restprogrammet (23.10.2026): plassen blant lagene etter motstandernes
+    // vinnersjanse i snitt (restprogram(), som «Hvem har det tøffeste
+    // restprogrammet?»), og «Vanskeligst» som kalkulatoren (restKamperEtterSjanse).
+    const rp = restprogram().sort((a, b) => b.avg - a.avg);
     try {
       for (const t of TEAMS) {
         await velg(t);
@@ -241,8 +246,13 @@ async function hentTekster(page) {
         });
         const soner = ZONE_KEYS.filter(k => LEAGUE.zones[k]).map(k => { const z = qaZoneByKey(t, k);
           return {key: k, navn: LEAGUE.zones[k].label, vist: pctTxt(z.pct, z.mat), andel: Math.round(z.pct * 1e6) / 1e6, avgjort: z.mat}; });
+        const ri = rp.findIndex(r => r.team === t), v = restKamperEtterSjanse(t)[0];
+        const restprogram_ = ri < 0 ? null : {plass: ri + 1, av: rp.length, snitt: pctTxt(rp[ri].avg), andel: Math.round(rp[ri].avg * 1e6) / 1e6, kamper: rp[ri].n,
+          vanskeligst: v ? {motstander: v.opp, hjemme: v.hjemme, dato: v.m.date, dato_tekst: dateNoLong(v.m.date), naar: qaKampNaar(v.m), seier: pctTxt(v.p)} : null};
+        // Plassfordelingen (andel på hver plass, 1 til 16), som stripen i lagboksen.
+        const fordeling = (lastMC[t] || []).map(p => Math.round(p * 1e6) / 1e6);
         lagTekst[t] = {kort: shortTeam(t), tilstand: x.tilstand, regel: x.regel, aapnest: x.aapnest ? x.aapnest.key : null,
-          topp, plass: {sporsmal: rq.label(t), svar: qaRange(t)}, rest, soner};
+          topp, plass: {sporsmal: rq.label(t), svar: qaRange(t)}, rest, soner, restprogram: restprogram_, fordeling};
       }
     } finally { await velg(''); }
     return {status: GRUNNLAG_STATUS, sesonger: lastMCN, lag: TEAMS.length, viktigste,

@@ -514,7 +514,167 @@ def _avsnitt(tekst):
     return "".join(f"<p>{_nb(html.escape(p))}</p>" for p in tekst.split("\n\n") if p.strip())
 
 
-def _lag_sporsmal_html(d):
+# ---- Lagsidene utvidet (23.10.2026) ----
+# A: sjansen etter hver runde (data/sjansehistorikk.json, scripts/sjansehistorikk.py),
+# som tekst, og som figur fra fire punkter. B: restprogrammet blant alle lagene
+# og «Vanskeligst» som kalkulatoren. C: plassfordelingen 1 til 16. Figurene er
+# inline SVG med tekstalternativ (title og desc), uten JavaScript. Hver figur
+# viser én serie: to soner blir to figurer, så fargen aldri må skille dem.
+HIST_MIN_FIGUR = 4
+HIST_TEKST_MAKS = 6
+
+
+def _pst(andel):
+    """Andelen som siden viser den (pctTxt uten matematisk status)."""
+    if andel <= 0:
+        return "0 %"
+    if andel >= 1:
+        return "100 %"
+    if andel < 0.005:
+        return "<1 %"
+    if andel >= 0.995:
+        return ">99 %"
+    return f"{int(andel * 100 + 0.5)} %"
+
+
+def les_historikk(liga, root=ROOT):
+    f = root / liga / "data" / "sjansehistorikk.json"
+    return json.loads(f.read_text(encoding="utf-8"))["runder"] if f.exists() else []
+
+
+def _fig_farge(liga, sone):
+    """Klassen for sonens farge i figurene (fargene i LAG_CSS, validert for
+    lyst og mørkt tema): som delingsbildet, blått for direkte opprykk i OBOS."""
+    if sone == "nedrykk":
+        return "rod"
+    if sone == "kvalik":
+        return "gul"
+    if sone == "cl" or (sone == "gull" and liga == "obos"):
+        return "blaa"
+    return "gronn"
+
+
+def _y_topp(maks):
+    for t in (5, 10, 20, 25, 50, 100):
+        if maks * 100 <= t:
+            return t
+    return 100
+
+
+def _linje_svg(liga, sone, navn, punkter, tittel_id, bildetekst=True):
+    """Én sone etter hver runde: linje med punkter, siste verdi merket."""
+    w, h, x0, x1, y0, y1 = 600, 240, 64, 556, 24, 192
+    verdier = [a for _, a in punkter]
+    topp = _y_topp(max(verdier))
+    x = lambda i: x0 + (x1 - x0) * (i / max(1, len(punkter) - 1))
+    y = lambda a: y1 - (y1 - y0) * min(1, a * 100 / topp)
+    deler = []
+    for v in (0, topp / 2, topp):
+        yy = y(v / 100)
+        deler.append(f'<line class="rutenett" x1="{x0}" x2="{x1}" y1="{yy:.1f}" y2="{yy:.1f}"/>')
+        tekst = f"{v:g} %".replace(".", ",")
+        deler.append(f'<text class="akse" x="{x0 - 8}" y="{yy + 4:.1f}" text-anchor="end">{tekst}</text>')
+    hver = 1 if len(punkter) <= 10 else 2
+    for i, (merke, _) in enumerate(punkter):
+        if i % hver == 0 or i == len(punkter) - 1:
+            deler.append(f'<text class="akse" x="{x(i):.1f}" y="{h - 14}" text-anchor="middle">{html.escape(merke.split(" ")[0])}</text>')
+    farge = _fig_farge(liga, sone)
+    sti = " ".join(f"{x(i):.1f},{y(a):.1f}" for i, (_, a) in enumerate(punkter))
+    deler.append(f'<polyline class="linje {farge}" points="{sti}"/>')
+    for i, (_, a) in enumerate(punkter):
+        deler.append(f'<circle class="punkt {farge}" cx="{x(i):.1f}" cy="{y(a):.1f}" r="4.5"/>')
+    sx, sy = x(len(punkter) - 1), y(verdier[-1])
+    deler.append(f'<text class="verdi" x="{sx:.1f}" y="{sy - 12:.1f}" text-anchor="middle">{_nb(_pst(verdier[-1]))}</text>')
+    desc = " ".join(f"Etter runde {m}: {_pst(a)}." for m, a in punkter)
+    tekst_ = f'<figcaption>{html.escape(navn[0].upper() + navn[1:])}</figcaption>' if bildetekst else ""
+    return (f'<figure class="fig">{tekst_}'
+            f'<svg viewBox="0 0 {w} {h}" role="img" aria-labelledby="{tittel_id}-t {tittel_id}-d">'
+            f'<title id="{tittel_id}-t">Sjansen for {html.escape(navn)} etter hver runde</title>'
+            f'<desc id="{tittel_id}-d">{_nb(html.escape(desc))}</desc>{"".join(deler)}</svg></figure>')
+
+
+def _historikk_html(liga, t, lag, historikk):
+    """A: «Sjansen for topp 4 de siste rundene»: tekst, og figur fra fire punkter."""
+    d = t["lag"][lag]
+    soner = [] if t["liga"]["ferdig"] else _lagets_soner(d)
+    punkter = [x for x in historikk if lag in x["lag"]]
+    if not soner or not punkter:
+        return ""
+    navn = {s["key"]: s["navn"] for s in d["soner"]}
+    nokler = [s["key"] for s in soner]
+    tekst_punkter = punkter[-HIST_TEKST_MAKS:]
+    if len(nokler) == 1:
+        linjer = [f"Etter runde {p['merke']}: {_pst(p['lag'][lag][nokler[0]])}." for p in tekst_punkter]
+    else:
+        linjer = [f"Etter runde {p['merke']}: " + ", ".join(f"{navn[k]} {_pst(p['lag'][lag][k])}" for k in nokler) + "." for p in tekst_punkter]
+    # «Nå» bare når tallene er regnet på nytt etter siste punkt (en ny runde
+    # er i gang): ellers er siste punkt det siden viser nå.
+    if punkter[-1].get("laget") != t["laget"]:
+        linjer.append("Nå: " + ", ".join((f"{navn[k]} " if len(nokler) > 1 else "") + s["vist"] for k in nokler
+                                           for s in d["soner"] if s["key"] == k) + ".")
+    figurer = ""
+    if len(punkter) >= HIST_MIN_FIGUR:
+        figurer = '<div class="figurer">' + "".join(
+            _linje_svg(liga, k, navn[k], [(p["merke"], p["lag"][lag][k]) for p in punkter], f"hist-{k}", len(nokler) > 1)
+            for k in nokler) + "</div>\n  "
+    overskrift = f"Sjansen for {liste([navn[k] for k in nokler])} de siste rundene"
+    return f'<h2>{html.escape(overskrift)}</h2>\n  {figurer}<p class="historikk">{_nb(html.escape(" ".join(linjer)))}</p>'
+
+
+def _fordeling_svg(lag, d, plass_na):
+    """C: plassfordelingen 1 til 16 som søyler, høyeste søyle og dagens plass merket."""
+    f = d.get("fordeling") or []
+    if len(f) < 2 or not any(f):
+        return ""
+    n, w, h, x0, x1, base, topp = len(f), 640, 200, 20, 620, 158, 26
+    slot = (x1 - x0) / n
+    bw = min(24, slot - 6)
+    maks = max(f)
+    deler = [f'<line class="rutenett" x1="{x0}" x2="{x1}" y1="{base}" y2="{base}"/>']
+    for i, a in enumerate(f):
+        cx = x0 + slot * (i + 0.5)
+        if a > 0:
+            hh = max(2, (base - topp) * a / maks)
+            r = min(4, hh)
+            xl, xr, yt = cx - bw / 2, cx + bw / 2, base - hh
+            deler.append(f'<path class="soyle" d="M{xl:.1f},{base} V{yt + r:.1f} Q{xl:.1f},{yt:.1f} {xl + r:.1f},{yt:.1f} '
+                         f'H{xr - r:.1f} Q{xr:.1f},{yt:.1f} {xr:.1f},{yt + r:.1f} V{base} Z"/>')
+        klasse = "akse na" if i + 1 == plass_na else "akse"
+        deler.append(f'<text class="{klasse}" x="{cx:.1f}" y="{h - 22}" text-anchor="middle">{i + 1}</text>')
+    im = f.index(maks)
+    deler.append(f'<text class="verdi" x="{x0 + slot * (im + 0.5):.1f}" y="{base - (base - topp) - 8}" text-anchor="middle">{_nb(_pst(maks))}</text>')
+    storst = sorted(((a, i + 1) for i, a in enumerate(f) if a >= 0.005), reverse=True)[:5]
+    desc = ", ".join(f"{p}. plass {_pst(a)}" for a, p in storst) + "."
+    return (f'<figure class="fig fordeling"><svg viewBox="0 0 {w} {h}" role="img" aria-labelledby="ford-t ford-d">'
+            f'<title id="ford-t">Hvilken plass {html.escape(lag)} ender på, plass 1 til {n}</title>'
+            f'<desc id="ford-d">{_nb(html.escape(desc))}</desc>{"".join(deler)}</svg>'
+            f'<figcaption>Andelen av de simulerte sesongene på hver plass. Uthevet: plassen nå.</figcaption></figure>')
+
+
+def _restprogram_tekst(lag, d):
+    """B: plassen blant lagene etter motstandernes vinnersjanse, og «Vanskeligst»
+    som kalkulatoren (lagets sjanse for seier)."""
+    r = d.get("restprogram")
+    if not r:
+        return ""
+    # Øvre halvdel som tøffeste, nedre som letteste regnet nedenfra (brukeren
+    # 23.10.2026): med 16 lag er plass 13 «det 4. letteste».
+    if r["plass"] <= r["av"] // 2:
+        hvor = "det tøffeste restprogrammet" if r["plass"] == 1 else f"det {r['plass']}. tøffeste restprogrammet"
+    else:
+        fra_bunn = r["av"] - r["plass"] + 1
+        hvor = "det letteste restprogrammet" if fra_bunn == 1 else f"det {fra_bunn}. letteste restprogrammet"
+    av = f"av {r['av']} lag" if r["av"] == 16 else f"av de {r['av']} lagene som har kamper igjen"
+    tekst = f"{lag} har {hvor} {av}: motstanderne har i snitt {r['snitt']} vinnersjanse."
+    v = r.get("vanskeligst")
+    if v:
+        kamp = f"{'hjemme' if v['hjemme'] else 'borte'} mot {v['motstander']} {v['dato_tekst']}"
+        tekst += (f" Eneste kamp igjen er {kamp}, der modellen gir {v['seier']} sjanse for seier." if r["kamper"] == 1
+                  else f" Vanskeligst blir {kamp}, der modellen gir {v['seier']} sjanse for seier.")
+    return tekst
+
+
+def _lag_sporsmal_html(d, lag=None, plass_na=None):
     """De tre øverste spørsmålene i Spør om tabellen for laget. Et svar som bare
     gjentar et svar over (et avgjort lag får samme forklaring på flere spørsmål),
     vises én gang. «Hvilken plass ender X på?» til slutt hvis det ikke var med."""
@@ -525,7 +685,8 @@ def _lag_sporsmal_html(d):
             continue
         vist.append(svar)
         kamper = q["id"] == "keymatches" and any("\n" in b for b in svar.split("\n\n")[1:])
-        ut.append(f'<h3>{html.escape(q["sporsmal"])}</h3>{_kamper_html(svar) if kamper else _avsnitt(svar)}')
+        ut.append(f'<h3>{html.escape(q["sporsmal"])}</h3>{_kamper_html(svar) if kamper else _avsnitt(svar)}'
+                  + (_fordeling_svg(lag, d, plass_na) if q["id"] == "range" and lag else ""))
     return "\n  ".join(ut)
 
 
@@ -548,10 +709,13 @@ def _lag_utsnitt_html(t, lag):
 
 def _rest_html(d):
     li = []
+    v = (d.get("restprogram") or {}).get("vanskeligst") or {}
     for k in d["rest"]:
         utfall = _nb(f"Seier {k['seier']} · uavgjort {k['uavgjort']} · tap {k['tap']}")
-        li.append(f'<li><strong>{html.escape(k["naar"])}</strong>: {"hjemme" if k["hjemme"] else "borte"} '
-                  f'mot <span class="lagnavn">{html.escape(k["motstander"])}</span><br><span class="utfall">{utfall}</span></li>')
+        verst = k["naar"] == v.get("naar") and k["motstander"] == v.get("motstander")
+        li.append(f'<li{" class=" + chr(34) + "vanskeligst" + chr(34) if verst else ""}><strong>{html.escape(k["naar"])}</strong>: '
+                  f'{"hjemme" if k["hjemme"] else "borte"} mot <span class="lagnavn">{html.escape(k["motstander"])}</span>'
+                  f'{" <span class=" + chr(34) + "merke" + chr(34) + ">Vanskeligst</span>" if verst else ""}<br><span class="utfall">{utfall}</span></li>')
     return f'<ul class="kamper rest">{"".join(li)}</ul>' if li else ""
 
 
@@ -565,8 +729,12 @@ def lag_side(liga, lag, t):
                            else f'<strong>{html.escape(r["lag"])}</strong>' for r in t["tabell"]["rader"])
     sporsmal = " · ".join(f'<a href="/{liga}/{s2}/">{html.escape(sporsmal_tittel(t, s2))}</a>' for s2, _ in SPORSMAL.get(liga, []))
     rest = _rest_html(d)
-    rest_del = ("<h2>Kampene som er igjen</h2>\n  <p>Sjansen for seier, uavgjort og tap i hver kamp, slik kalkulatoren "
+    rp_tekst = _restprogram_tekst(lag, d)
+    rest_del = ("<h2>Kampene som er igjen</h2>\n  "
+                + (f'<p class="restprogram">{_nb(html.escape(rp_tekst))}</p>\n  ' if rp_tekst else "")
+                + "<p>Sjansen for seier, uavgjort og tap i hver kamp, slik kalkulatoren "
                 f"regner den.</p>\n  {rest}") if rest else ""
+    historikk = _historikk_html(liga, t, lag, les_historikk(liga))
     utsnitt = _lag_utsnitt_html(t, lag)
     om = (f"Sjansene for {liste([sone_navn(t, k['key']) for k in t['tabell']['kolonner']])} er de samme som i tabellen på "
           "ligasiden." + (" «–» betyr at det ikke lenger er mulig." if "<td>–</td>" in utsnitt else ""))
@@ -612,8 +780,9 @@ def lag_side(liga, lag, t):
   <p class="dato">Oppdatert {norsk_tid(t["laget"])}. Sjansene er regnet fra {tall(t["sesonger"])} simulerte sesonger.</p>
   {utsnitt}
   <p class="om">{html.escape(om)}</p>
+  {historikk}
   <h2>Spør om tabellen</h2>
-  {_lag_sporsmal_html(d)}
+  {_lag_sporsmal_html(d, lag, _rad(t, lag)["plass"])}
   {rest_del}
   <p><a class="knapp" href="/{liga}/#team={quote(lag, safe="")}">Følg {html.escape(lag)} i tabellkalkulatoren</a></p>
   <h2>Lagene i {html.escape(t["liga"]["navn"])}</h2>
@@ -627,6 +796,30 @@ def lag_side(liga, lag, t):
 
 
 LAG_CSS = """
+  :root{--fig-gronn:#0f8468;--fig-blaa:#1d5fb4;--fig-gul:#a8770a;--fig-rod:#c0135a;--fig-soyle:#2f6fed}
+  @media (prefers-color-scheme: dark){:root{--fig-gronn:#27a985;--fig-blaa:#4f8fe0;--fig-gul:#ad8f22;--fig-rod:#e04879;--fig-soyle:#7aa8ff}}
+  .figurer{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));max-width:720px}
+  .fig{margin:0 0 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px 6px;max-width:720px}
+  .fig figcaption{font-size:14px;color:var(--muted);margin:0 0 4px}
+  .fig.fordeling figcaption{margin:2px 0 4px}
+  .fig svg{display:block;width:100%;height:auto;overflow:visible}
+  .fig .rutenett{stroke:var(--line);stroke-width:1}
+  .fig .akse{fill:var(--muted);font:500 13px "Barlow",system-ui,sans-serif}
+  .fig .akse.na{fill:var(--ink);font-weight:700}
+  .fig .verdi{fill:var(--ink);font:700 15px "Barlow",system-ui,sans-serif}
+  .fig .linje{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+  .fig .punkt{stroke:var(--panel);stroke-width:2}
+  .fig .linje.gronn{stroke:var(--fig-gronn)}.fig .punkt.gronn{fill:var(--fig-gronn)}
+  .fig .linje.blaa{stroke:var(--fig-blaa)}.fig .punkt.blaa{fill:var(--fig-blaa)}
+  .fig .linje.gul{stroke:var(--fig-gul)}.fig .punkt.gul{fill:var(--fig-gul)}
+  .fig .linje.rod{stroke:var(--fig-rod)}.fig .punkt.rod{fill:var(--fig-rod)}
+  .fig .soyle{fill:var(--fig-soyle)}
+  /* Smal skjerm: figuren skaleres ned, så teksten får større skrift i
+     figurens egne enheter (her omtrent 12 px på skjermen). */
+  @media (max-width:520px){.fig .akse{font-size:23px}.fig .verdi{font-size:26px}.fig .punkt{stroke-width:3}}
+  .historikk{font-size:15px}
+  .kamper li.vanskeligst{border-color:var(--accent-text)}
+  .kamper .merke{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:12px;font-weight:700;color:var(--accent-text);border:1px solid var(--accent-text);vertical-align:1px}
   .utsnitt.lag th,.utsnitt.lag td{padding:7px 8px}
   .andre-lag{line-height:1.9}
   .andre-lag a,.lagnavn{white-space:nowrap}
