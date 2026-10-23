@@ -1033,9 +1033,15 @@ def main():
             soner_lag = lag_sider._lagets_soner(dd)
             punkter = [x for x in hist if lag in x["lag"]]
             if punkter and soner_lag:
-                if "de siste rundene</h2>" not in t_ or "gjennom sesongen" in t_ or '<p class="historikk">Etter runde ' not in t_:
+                figur = len(punkter) >= lag_sider.HIST_MIN_FIGUR
+                # Figur: egen seksjon med overskrift. Ellers én linje rett under
+                # tabellen, uten overskrift.
+                if (("de siste rundene</h2>" in t_) != figur or "gjennom sesongen" in t_ or ('<p class="historikk">' in t_) == figur
+                        or (not figur and t_.index('<p class="historikk">') > t_.index('<p class="om">'))):
                     lfeil.append(f"{lag}: A")
-                if t_.count('<figure class="fig">') != (len(soner_lag) if len(punkter) >= lag_sider.HIST_MIN_FIGUR else 0):
+                soyler = min(len(punkter), lag_sider.HIST_FIGUR_MAKS) * len(soner_lag)
+                if t_.count('<figure class="fig hist">') != (len(soner_lag) if figur else 0) or (figur and (
+                        t_.count(">Runde</text>") != soyler or "<polyline" in t_)):
                     lfeil.append(f"{lag}: A figurer")
             rp_ = dd.get("restprogram")
             if rp_ and dd["rest"]:
@@ -1046,11 +1052,77 @@ def main():
                         or len(merket) != 1 or tall_(merket[0]["seier"]) != minst or "vinner i snitt" in t_):
                     lfeil.append(f"{lag}: B")
             f_ = dd.get("fordeling") or []
-            if len(f_) != 16 or abs(sum(f_) - 1) > 1e-3 or t_.count('<figure class="fig fordeling">') != 1 or t_.count('role="img"') < 1:
+            if (len(f_) != 16 or abs(sum(f_) - 1) > 1e-3 or t_.count('<figure class="fig fordeling">') != 1 or t_.count('role="img"') < 1
+                    or not all(f'<li><i class="b-{b["cls"]}"></i>{b["tekst"].replace(" League-kvalifisering", " League")}</li>' in t_ for b in tk["regler"]["baand"])
+                    or "soyle b-" not in t_):
                 lfeil.append(f"{lag}: C")
-        check(f"lagside: alle lagsidene i {liga} har historikken (tekst, figur fra {lag_sider.HIST_MIN_FIGUR} punkter), restprogrammet med «Vanskeligst» som kalkulatoren og plassfordelingen",
+            # «Hvilke kamper betyr mest» bare når en kamp flytter sjansen mer enn
+            # 3 prosentpoeng (23.10.2026).
+            km = next((q for q in dd["topp"] if q["id"] == "keymatches"), None)
+            if km and "\n\n" in km["svar"]:
+                vises = f"<h3>{km['sporsmal']}</h3>" in t_
+                if vises != (lag_sider.kamper_flytter(km["svar"]) > lag_sider.KAMPER_MIN_PP):
+                    lfeil.append(f"{lag}: kamper ({lag_sider.kamper_flytter(km['svar'])} pp, vises {vises})")
+            # Heldig/uheldig (23.10.2026): én setning med det markedet ventet.
+            h_ = dd.get("heldig") or {}
+            if (not h_.get("kamper") or f"Ut fra oddsene før kampene ventet markedet {int(h_['forventet'] + 0.5)}" not in t_
+                    or f"<h3>Har {lag} vært heldig eller uheldig?</h3>" not in t_):
+                lfeil.append(f"{lag}: heldig")
+        check(f"lagside: alle lagsidene i {liga} har historikken (tekst under {lag_sider.HIST_MIN_FIGUR} punkter, ellers søyler), restprogrammet med «Vanskeligst» som kalkulatoren, plassfordelingen i sonefargene med navnene og setningen om heldig/uheldig",
               not lfeil, lfeil[:4])
+        # Heldig/uheldig fra sluttoddsen (23.10.2026): det lagsidene sier, regnet
+        # på nytt her fra odds_closing.json (marginen fjernet proporsjonalt, som
+        # CLOSING på siden) og football-data der den mangler.
+        kamper_ = json.loads((d_ / "matches.json").read_text(encoding="utf-8"))
+        slutt_ = json.loads((d_ / "odds_closing.json").read_text(encoding="utf-8"))["matches"]
+        fd_f = d_ / "odds_fd.json"
+        fd_ = {(m["home"], m["away"]): m for m in json.loads(fd_f.read_text(encoding="utf-8"))["matches"]} if fd_f.exists() else {}
+        regn = {lag: [0, 0.0, 0, 0] for lag in lagt}
+        for m in kamper_:
+            o = (slutt_.get(f"{tk['liga']['sesong']}|{m['home']}|{m['away']}") or {}).get("odds") or {}
+            if o.get("H") and o.get("U") and o.get("B"):
+                inv = 1 / o["H"] + 1 / o["U"] + 1 / o["B"]
+                pH, pU, pB = (1 / o["H"]) / inv, (1 / o["U"]) / inv, (1 / o["B"]) / inv
+            elif (m["home"], m["away"]) in fd_:
+                x_ = fd_[(m["home"], m["away"])]
+                pH, pU, pB = x_["H"], x_["D"], x_["A"]
+            else:
+                regn[m["home"]][3] += 1
+                regn[m["away"]][3] += 1
+                continue
+            hj, bo = (3, 0) if m["hg"] > m["ag"] else (0, 3) if m["hg"] < m["ag"] else (1, 1)
+            for lag_, po, ve in ((m["home"], hj, 3 * pH + pU), (m["away"], bo, 3 * pB + pU)):
+                regn[lag_][0] += po
+                regn[lag_][1] += ve
+                regn[lag_][2] += 1
+        avvik = [f"{lag}: {regn[lag]} mot {dd.get('heldig')}" for lag, dd in lagt.items()
+                 if not dd.get("heldig") or dd["heldig"]["faktisk"] != regn[lag][0] or abs(dd["heldig"]["forventet"] - regn[lag][1]) > 0.011
+                 or dd["heldig"]["kamper"] != regn[lag][2] or dd["heldig"]["uten"] != regn[lag][3]]
+        check(f"heldig: forventede poeng for alle lagene i {liga} er 3 x seier + uavgjort fra sluttoddsen uten margin (football-data der den mangler), som siden regner",
+              not avvik, avvik[:3])
     gy_ = (ROOT / ".github" / "workflows" / "grunnlag.yml").read_text(encoding="utf-8")
+    # Heldig/uheldig fra sluttoddsen (23.10.2026): «Om modellen» sier det, og
+    # Eliteserien har football-data som reserve.
+    for f_ in ("eliteserien/index.html", "obos/page/om.html"):
+        t_ = (ROOT / f_).read_text(encoding="utf-8")
+        check(f"heldig: «Om modellen» i {f_} forklarer heldig/uheldig fra oddsene før kampene, ikke modellens forventede poeng",
+              "minus det oddsene før kampene tilsa" in t_ and "modellens forventede poeng" not in t_)
+    es_ = (ROOT / "eliteserien" / "index.html").read_text(encoding="utf-8")
+    check("heldig: kalkulatoren regner fra sluttoddsen (CLOSING) med football-data som reserve, og lagsidene bruker samme heldigData()",
+          "reserveSluttodds: 'data/odds_fd.json'" in es_ and "function heldigData()" in es_ and "baseRate(" not in es_
+          and "heldigData()" in (ROOT / "scripts" / "lag_grunnlag.js").read_text(encoding="utf-8"))
+    # Temaet (23.10.2026): lag- og spørsmålssidene leser det lagrede valget i
+    # <head> før stilarket, har månknappen (skjult uten JS) og data-theme i CSS-en.
+    tfeil = []
+    for liga_ in ("eliteserien", "obos"):
+        for f_ in sorted((ROOT / liga_).glob("*/index.html")):
+            t_ = f_.read_text(encoding="utf-8")
+            if lag_sider.MERKE not in t_[:2000]:
+                continue
+            if not (t_.index("localStorage.getItem('theme')") < t_.index("<style>") and 'id="themeToggle"' in t_ and " hidden>" in t_
+                    and ':root[data-theme="dark"]' in t_ and ':root:not([data-theme="light"])' in t_ and "localStorage.setItem('theme', n)" in t_):
+                tfeil.append(f_.relative_to(ROOT).as_posix())
+    check("tema: alle lag- og spørsmålssidene har det lagrede temaet satt i <head>, månknappen og data-theme i CSS-en, som kalkulatoren", not tfeil, tfeil[:4])
     check("delingsbilde: grunnlag.yml installerer Pillow før «Lag sidene», og lag_sider.py lager sidene også uten Pillow",
           gy_.index("run: pip install Pillow") < gy_.index("- name: Lag sidene fra tekster.json")
           and "except ImportError" in (ROOT / "scripts" / "lag_sider.py").read_text(encoding="utf-8"))

@@ -7,6 +7,14 @@
      siden lages på nytt hver gang tallene regnes. -->
 <script>
   (function(){
+    try{
+      var s = localStorage.getItem('theme');
+      if(s==='dark'||s==='light') document.documentElement.dataset.theme = s;
+    }catch(e){}
+  })();
+</script>
+<script>
+  (function(){
     if(location.hostname !== 'tabellkalkulator.no') return;
     var s = document.createElement('script');
     s.async = true; s.src = '//gc.zgo.at/count.js';
@@ -37,30 +45,41 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#eef2f7;--panel:#ffffff;--ink:#0f1b2d;--muted:#56667d;--line:#d8e0ec;--accent:#2f6fed;--accent-text:#1f5fd6;--knapp-tekst:#ffffff}
-  @media (prefers-color-scheme: dark){:root{--bg:#0a1220;--panel:#111c2e;--ink:#e9eff8;--muted:#93a3ba;--line:#2a3a54;--accent:#7aa8ff;--accent-text:#7aa8ff;--knapp-tekst:#0a1220}}
+  /* Tema som kalkulatoren (23.10.2026): systemets innstilling til brukeren
+     har valgt med knappen (localStorage «theme», data-theme på <html>, satt i
+     <head> før siden tegnes); data-theme vinner over systemet. */
+  :root{--bg:#eef2f7;--panel:#ffffff;--ink:#0f1b2d;--muted:#56667d;--line:#d8e0ec;--accent:#2f6fed;--accent-text:#1f5fd6;--knapp-tekst:#ffffff;color-scheme:light}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0a1220;--panel:#111c2e;--ink:#e9eff8;--muted:#93a3ba;--line:#2a3a54;--accent:#7aa8ff;--accent-text:#7aa8ff;--knapp-tekst:#0a1220;color-scheme:dark}}
+  :root[data-theme="dark"]{--bg:#0a1220;--panel:#111c2e;--ink:#e9eff8;--muted:#93a3ba;--line:#2a3a54;--accent:#7aa8ff;--accent-text:#7aa8ff;--knapp-tekst:#0a1220;color-scheme:dark}
   a{color:var(--accent-text)}
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  .wrap{max-width:760px;margin:0 auto;padding:24px 16px 56px}
+  .wrap{max-width:672px;margin:0 auto;padding:24px 16px 56px}
   header{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+  .theme-toggle{margin-left:auto;flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .theme-toggle[hidden]{display:none}
+  .theme-toggle svg{width:18px;height:18px;display:block}
+  .theme-toggle .icon-moon{display:none}
+  :root[data-theme="dark"] .theme-toggle .icon-sun{display:none}
+  :root[data-theme="dark"] .theme-toggle .icon-moon{display:block}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .theme-toggle .icon-sun{display:none}:root:not([data-theme="light"]) .theme-toggle .icon-moon{display:block}}
   header a{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none}
   header svg{width:30px;height:30px;display:block;flex:none}
   .brand{font:800 21px/1 "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.02em}
   .sti{font-size:14px;color:var(--muted);margin:0 0 8px}
   .sti a{color:var(--accent-text)}
   h1{font:800 clamp(28px,5vw,40px)/1.08 "Barlow Condensed","Arial Narrow",sans-serif;margin:0 0 14px;letter-spacing:-.01em;text-wrap:balance}
-  h2{font:700 22px/1.2 "Barlow Condensed","Arial Narrow",sans-serif;margin:30px 0 10px}
-  h3{font:700 18px/1.25 "Barlow Condensed","Arial Narrow",sans-serif;margin:20px 0 6px}
-  p{margin:0 0 12px;max-width:68ch}
+  h2{font:700 22px/1.2 "Barlow Condensed","Arial Narrow",sans-serif;margin:36px 0 12px}
+  h3{font:700 18px/1.25 "Barlow Condensed","Arial Narrow",sans-serif;margin:22px 0 6px}
+  p{margin:0 0 12px}
   .svar{font-size:19px;font-weight:600}
   .dato,.om{color:var(--muted);font-size:14px}
-  .utsnitt{border-collapse:collapse;width:100%;max-width:560px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .utsnitt{border-collapse:collapse;width:100%;margin:0 0 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .utsnitt th,.utsnitt td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
   .utsnitt th:nth-child(2),.utsnitt td:nth-child(2){text-align:left}
   .utsnitt th{font-size:13px;color:var(--muted);font-weight:600}
   .utsnitt tr.aktuell td{font-weight:700}
-  .kamper{list-style:none;margin:0;padding:0;display:grid;gap:10px;max-width:68ch}
+  .kamper{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:10px}
   .kamper li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
   .utfall{color:var(--muted);font-size:14.5px}
   .knapp{display:inline-block;margin:8px 10px 0 0;padding:10px 16px;border-radius:10px;background:var(--accent);color:var(--knapp-tekst);font-weight:700;text-decoration:none}
@@ -69,10 +88,12 @@
   footer a{color:var(--accent-text)}
   a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
-  :root{--fig-gronn:#0f8468;--fig-blaa:#1d5fb4;--fig-gul:#a8770a;--fig-rod:#c0135a;--fig-soyle:#2f6fed}
-  @media (prefers-color-scheme: dark){:root{--fig-gronn:#27a985;--fig-blaa:#4f8fe0;--fig-gul:#ad8f22;--fig-rod:#e04879;--fig-soyle:#7aa8ff}}
-  .figurer{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));max-width:720px}
-  .fig{margin:0 0 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px 6px;max-width:720px}
+  :root{--fig-gronn:#0f8468;--fig-blaa:#1d5fb4;--fig-gul:#a8770a;--fig-rod:#c0135a;--fig-soyle:#2f6fed;--b-cl:#1d5fb4;--b-eu:#1d7a63;--b-q:#cf951a;--b-ned:#6c7479;--b-ingen:#a3afc0}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--fig-gronn:#27a985;--fig-blaa:#4f8fe0;--fig-gul:#ad8f22;--fig-rod:#e04879;--fig-soyle:#7aa8ff;--b-cl:#4f8fe0;--b-eu:#1d7a63;--b-q:#cf951a;--b-ned:#8b939a;--b-ingen:#3f5170}}
+  :root[data-theme="dark"]{--fig-gronn:#27a985;--fig-blaa:#4f8fe0;--fig-gul:#ad8f22;--fig-rod:#e04879;--fig-soyle:#7aa8ff;--b-cl:#4f8fe0;--b-eu:#1d7a63;--b-q:#cf951a;--b-ned:#8b939a;--b-ingen:#3f5170}
+  /* Alle boksene (tabell, figurer, kort) er like brede: kolonnen, 640 px på PC. */
+  .figurer{display:grid;gap:12px}
+  .fig{margin:0 0 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px 10px}
   .fig figcaption{font-size:14px;color:var(--muted);margin:0 0 4px}
   .fig.fordeling figcaption{margin:2px 0 4px}
   .fig svg{display:block;width:100%;height:auto;overflow:visible}
@@ -87,9 +108,20 @@
   .fig .linje.gul{stroke:var(--fig-gul)}.fig .punkt.gul{fill:var(--fig-gul)}
   .fig .linje.rod{stroke:var(--fig-rod)}.fig .punkt.rod{fill:var(--fig-rod)}
   .fig .soyle{fill:var(--fig-soyle)}
+  .fig .soyle.gronn{fill:var(--fig-gronn)}.fig .soyle.blaa{fill:var(--fig-blaa)}.fig .soyle.gul{fill:var(--fig-gul)}.fig .soyle.rod{fill:var(--fig-rod)}
+  /* Plassfordelingen i tabellens sonefarger, nedrykk skravert som i tabellen. */
+  .fig .soyle.b-cl{fill:var(--b-cl)}.fig .soyle.b-eu{fill:var(--b-eu)}.fig .soyle.b-playoff{fill:var(--b-q)}.fig .soyle.b-ingen{fill:var(--b-ingen)}
+  .fig .soyle.b-ned{fill:url(#skravur);stroke:var(--b-ned);stroke-width:1.5}
+  .fig .skravur{fill:var(--b-ned)}
+  .sonefarger{list-style:none;margin:8px 0 2px;padding:0;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--muted)}
+  .sonefarger li{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .sonefarger i{display:inline-block;width:12px;height:12px;border-radius:2px}
+  .sonefarger .b-cl{background:var(--b-cl)}.sonefarger .b-eu{background:var(--b-eu)}.sonefarger .b-playoff{background:var(--b-q)}
+  .sonefarger .b-ned{background:repeating-linear-gradient(135deg,var(--b-ned) 0 2px,transparent 2px 4px);border:1px solid var(--b-ned)}
+
   /* Smal skjerm: figuren skaleres ned, så teksten får større skrift i
      figurens egne enheter (her omtrent 12 px på skjermen). */
-  @media (max-width:520px){.fig .akse{font-size:23px}.fig .verdi{font-size:26px}.fig .punkt{stroke-width:3}}
+  @media (max-width:520px){.fig{padding:10px 10px 8px}.fig .akse{font-size:23px}.fig .verdi{font-size:26px}}
   .historikk{font-size:15px}
   .kamper li.vanskeligst{border-color:var(--accent-text)}
   .kamper .merke{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:12px;font-weight:700;color:var(--accent-text);border:1px solid var(--accent-text);vertical-align:1px}
@@ -101,7 +133,8 @@
 </head>
 <body>
 <div class="wrap">
-  <header><a href="/"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x=".5" y=".5" width="15" height="15" rx="3.5" fill="#13305f" stroke="#4f7fc4" stroke-opacity=".6"/><rect x="3" y="4" width="10" height="2" rx="1" fill="#34d399"/><rect x="3" y="7" width="7" height="2" rx="1" fill="#e8f0fc"/><rect x="3" y="10" width="5" height="2" rx="1" fill="#e8f0fc"/></svg><span class="brand">Tabellkalkulator</span></a></header>
+  <header><a href="/"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x=".5" y=".5" width="15" height="15" rx="3.5" fill="#13305f" stroke="#4f7fc4" stroke-opacity=".6"/><rect x="3" y="4" width="10" height="2" rx="1" fill="#34d399"/><rect x="3" y="7" width="7" height="2" rx="1" fill="#e8f0fc"/><rect x="3" y="10" width="5" height="2" rx="1" fill="#e8f0fc"/></svg><span class="brand">Tabellkalkulator</span></a><button class="theme-toggle" id="themeToggle" type="button" aria-label="Bytt til mørkt tema" title="Bytt til mørkt tema" hidden><svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"></path></svg>
+<svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a.6.6 0 0 0-.7-.8A9.5 9.5 0 1 0 21.3 15.3a.6.6 0 0 0-.8-.7Z"></path></svg></button></header>
   <p class="sti"><a href="/obos/">OBOS-ligaen 2026</a></p>
   <h1>Hødd 2026: sjanse for topp 6</h1>
   <p class="svar">Hødd ligger på 7. plass i OBOS-ligaen 2026 med 38 poeng etter 27 kamper. Sjansen for topp 6 er 12 %.</p>
@@ -109,13 +142,13 @@
   <table class="utsnitt lag"><thead><tr><th>Plass</th><th>Lag</th><th>Kamper</th><th>Poeng</th><th>Opprykk</th><th>Topp 6</th><th>Nedrykk</th></tr></thead><tbody><tr><td>5</td><td><a href="/obos/odd/">Odd</a></td><td>27</td><td>45</td><td>–</td><td>&gt;99 %</td><td>–</td></tr><tr><td>6</td><td><a href="/obos/bryne/">Bryne</a></td><td>27</td><td>39</td><td>–</td><td>75 %</td><td>–</td></tr><tr class="aktuell"><td>7</td><td>Hødd</td><td>27</td><td>38</td><td>–</td><td>12 %</td><td>–</td></tr><tr><td>8</td><td><a href="/obos/ranheim/">Ranheim</a></td><td>27</td><td>35</td><td>–</td><td>10 %</td><td>–</td></tr><tr><td>9</td><td><a href="/obos/egersund/">Egersund</a></td><td>27</td><td>34</td><td>–</td><td>3 %</td><td>–</td></tr></tbody></table>
   <p class="om">Sjansene for direkte opprykk, topp 6 og nedrykk er de samme som i tabellen på ligasiden. «–» betyr at det ikke lenger er mulig.</p>
   <h2>Sjansen for topp 6 de siste rundene</h2>
-  <div class="figurer"><figure class="fig"><svg viewBox="0 0 600 240" role="img" aria-labelledby="hist-europa-t hist-europa-d"><title id="hist-europa-t">Sjansen for topp 6 etter hver runde</title><desc id="hist-europa-d">Etter runde 23: 21 %. Etter runde 24: 7 %. Etter runde 25: 4 %. Etter runde 26: 5 %. Etter runde 27: 12 %.</desc><line class="rutenett" x1="64" x2="556" y1="192.0" y2="192.0"/><text class="akse" x="56" y="196.0" text-anchor="end">0 %</text><line class="rutenett" x1="64" x2="556" y1="108.0" y2="108.0"/><text class="akse" x="56" y="112.0" text-anchor="end">12,5 %</text><line class="rutenett" x1="64" x2="556" y1="24.0" y2="24.0"/><text class="akse" x="56" y="28.0" text-anchor="end">25 %</text><text class="akse" x="64.0" y="226" text-anchor="middle">23</text><text class="akse" x="187.0" y="226" text-anchor="middle">24</text><text class="akse" x="310.0" y="226" text-anchor="middle">25</text><text class="akse" x="433.0" y="226" text-anchor="middle">26</text><text class="akse" x="556.0" y="226" text-anchor="middle">27</text><polyline class="linje gronn" points="64.0,49.5 187.0,145.4 310.0,166.9 433.0,160.6 556.0,113.3"/><circle class="punkt gronn" cx="64.0" cy="49.5" r="4.5"/><circle class="punkt gronn" cx="187.0" cy="145.4" r="4.5"/><circle class="punkt gronn" cx="310.0" cy="166.9" r="4.5"/><circle class="punkt gronn" cx="433.0" cy="160.6" r="4.5"/><circle class="punkt gronn" cx="556.0" cy="113.3" r="4.5"/><text class="verdi" x="556.0" y="101.3" text-anchor="middle">12 %</text></svg></figure></div>
-  <p class="historikk">Etter runde 23: 21 %. Etter runde 24: 7 %. Etter runde 25: 4 %. Etter runde 26: 5 %. Etter runde 27: 12 %.</p>
+  <div class="figurer"><figure class="fig hist"><svg viewBox="0 0 640 172" role="img" aria-labelledby="hist-europa-t hist-europa-d"><title id="hist-europa-t">Sjansen for topp 6 etter hver runde</title><desc id="hist-europa-d">Etter runde 23: 21 %. Etter runde 24: 7 %. Etter runde 25: 4 %. Etter runde 26: 5 %. Etter runde 27: 12 %.</desc><line class="rutenett" x1="8" x2="632" y1="112" y2="112"/><path class="soyle gronn" d="M46.4,112 V44.8 Q46.4,40.8 50.4,40.8 H90.4 Q94.4,40.8 94.4,44.8 V112 Z"/><text class="verdi" x="70.4" y="32.8" text-anchor="middle">21 %</text><text class="akse" x="70.4" y="136" text-anchor="middle">Runde</text><text class="akse na" x="70.4" y="162" text-anchor="middle">23</text><path class="soyle gronn" d="M171.2,112 V92.7 Q171.2,88.7 175.2,88.7 H215.2 Q219.2,88.7 219.2,92.7 V112 Z"/><text class="verdi" x="195.2" y="80.7" text-anchor="middle">7 %</text><text class="akse" x="195.2" y="136" text-anchor="middle">Runde</text><text class="akse na" x="195.2" y="162" text-anchor="middle">24</text><path class="soyle gronn" d="M296.0,112 V103.4 Q296.0,99.4 300.0,99.4 H340.0 Q344.0,99.4 344.0,103.4 V112 Z"/><text class="verdi" x="320.0" y="91.4" text-anchor="middle">4 %</text><text class="akse" x="320.0" y="136" text-anchor="middle">Runde</text><text class="akse na" x="320.0" y="162" text-anchor="middle">25</text><path class="soyle gronn" d="M420.8,112 V100.3 Q420.8,96.3 424.8,96.3 H464.8 Q468.8,96.3 468.8,100.3 V112 Z"/><text class="verdi" x="444.8" y="88.3" text-anchor="middle">5 %</text><text class="akse" x="444.8" y="136" text-anchor="middle">Runde</text><text class="akse na" x="444.8" y="162" text-anchor="middle">26</text><path class="soyle gronn" d="M545.6,112 V76.7 Q545.6,72.7 549.6,72.7 H589.6 Q593.6,72.7 593.6,76.7 V112 Z"/><text class="verdi" x="569.6" y="64.7" text-anchor="middle">12 %</text><text class="akse" x="569.6" y="136" text-anchor="middle">Runde</text><text class="akse na" x="569.6" y="162" text-anchor="middle">27</text></svg></figure></div>
   <h2>Spør om tabellen</h2>
   <h3>Hvorfor har Hødd 12 % sjanse for topp 6?</h3><p>Hødd ligger ett poeng bak Bryne på 6. plass og er litt svakere ifølge modellen (4,0 mot 5,4). Hødd har også et tøffere restprogram: motstanderne har i snitt 60 % vinnersjanse, mot 30 % for Bryne.</p><p>I simuleringene ender Hødd i snitt på 40 poeng mot 44 for Bryne, og havner i topp 6 i 12 % av dem.</p>
   <h3>Hva må Hødd gjøre for å nå topp 6?</h3><p>Det skal mye til: Hødd ender i topp 6 i rundt 12 % av simuleringene. De må ta seks av de ni poengene som er igjen for å komme opp på 44. Ender de på 44 poeng, er sjansen omtrent 65 %. Med 47 poeng er den over 99 %. Det er fordi Bryne vanligvis ender på 44 poeng.</p>
   <h3>Hvilke kamper betyr mest for Hødd?</h3><p>Disse kampene påvirker Hødds topp 6-sjanse mest. Nå: 12 %</p><ul class="kamper"><li><strong>Haugesund mot Hødd, runde 28, søndag 25. okt</strong><br><span class="utfall">Seier: 35 % (+23 prosentpoeng) · Uavgjort: 15 % (+3 prosentpoeng) · Tap: 9 % (−3 prosentpoeng)</span></li><li><strong>Hødd mot Bryne, runde 29, søndag 1. nov</strong><br><span class="utfall">Seier: 34 % (+22 prosentpoeng) · Uavgjort: 7 % (−5 prosentpoeng) · Tap: 1 % (−11 prosentpoeng)</span></li><li><strong>Sogndal mot Hødd, runde 30, søndag 8. nov</strong><br><span class="utfall">Seier: 27 % (+15 prosentpoeng) · Uavgjort: 9 % (−3 prosentpoeng) · Tap: 5 % (−7 prosentpoeng)</span></li></ul>
-  <h3>Hvilken plass ender Hødd på?</h3><p>Hødd ligger på 7. plass med 38 poeng. Matematisk kan de ende fra 5. til 12. plass. Oftest blir det 8. plass (33 %), og i minst 90 % av simuleringene ender de mellom 6. og 9. plass.</p><figure class="fig fordeling"><svg viewBox="0 0 640 200" role="img" aria-labelledby="ford-t ford-d"><title id="ford-t">Hvilken plass Hødd ender på, plass 1 til 16</title><desc id="ford-d">8. plass 33 %, 7. plass 31 %, 9. plass 20 %, 6. plass 12 %, 10. plass 4 %.</desc><line class="rutenett" x1="20" x2="620" y1="158" y2="158"/><text class="akse" x="38.8" y="178" text-anchor="middle">1</text><text class="akse" x="76.2" y="178" text-anchor="middle">2</text><text class="akse" x="113.8" y="178" text-anchor="middle">3</text><text class="akse" x="151.2" y="178" text-anchor="middle">4</text><path class="soyle" d="M176.8,158 V158.0 Q176.8,156.0 178.8,156.0 H198.8 Q200.8,156.0 200.8,158.0 V158 Z"/><text class="akse" x="188.8" y="178" text-anchor="middle">5</text><path class="soyle" d="M214.2,158 V115.6 Q214.2,111.6 218.2,111.6 H234.2 Q238.2,111.6 238.2,115.6 V158 Z"/><text class="akse" x="226.2" y="178" text-anchor="middle">6</text><path class="soyle" d="M251.8,158 V38.7 Q251.8,34.7 255.8,34.7 H271.8 Q275.8,34.7 275.8,38.7 V158 Z"/><text class="akse na" x="263.8" y="178" text-anchor="middle">7</text><path class="soyle" d="M289.2,158 V30.0 Q289.2,26.0 293.2,26.0 H309.2 Q313.2,26.0 313.2,30.0 V158 Z"/><text class="akse" x="301.2" y="178" text-anchor="middle">8</text><path class="soyle" d="M326.8,158 V80.0 Q326.8,76.0 330.8,76.0 H346.8 Q350.8,76.0 350.8,80.0 V158 Z"/><text class="akse" x="338.8" y="178" text-anchor="middle">9</text><path class="soyle" d="M364.2,158 V145.8 Q364.2,141.8 368.2,141.8 H384.2 Q388.2,141.8 388.2,145.8 V158 Z"/><text class="akse" x="376.2" y="178" text-anchor="middle">10</text><path class="soyle" d="M401.8,158 V158.0 Q401.8,156.0 403.8,156.0 H423.8 Q425.8,156.0 425.8,158.0 V158 Z"/><text class="akse" x="413.8" y="178" text-anchor="middle">11</text><path class="soyle" d="M439.2,158 V158.0 Q439.2,156.0 441.2,156.0 H461.2 Q463.2,156.0 463.2,158.0 V158 Z"/><text class="akse" x="451.2" y="178" text-anchor="middle">12</text><text class="akse" x="488.8" y="178" text-anchor="middle">13</text><text class="akse" x="526.2" y="178" text-anchor="middle">14</text><text class="akse" x="563.8" y="178" text-anchor="middle">15</text><text class="akse" x="601.2" y="178" text-anchor="middle">16</text><text class="verdi" x="301.2" y="18" text-anchor="middle">33 %</text></svg><figcaption>Andelen av de simulerte sesongene på hver plass. Uthevet: plassen nå.</figcaption></figure>
+  <h3>Hvilken plass ender Hødd på?</h3><p>Hødd ligger på 7. plass med 38 poeng. Matematisk kan de ende fra 5. til 12. plass. Oftest blir det 8. plass (33 %), og i minst 90 % av simuleringene ender de mellom 6. og 9. plass.</p><figure class="fig fordeling"><svg viewBox="0 0 640 166" role="img" aria-labelledby="ford-t ford-d"><title id="ford-t">Hvilken plass Hødd ender på, plass 1 til 16</title><desc id="ford-d">8. plass 33 %, 7. plass 31 %, 9. plass 20 %, 6. plass 12 %, 10. plass 4 %.</desc><defs><pattern id="skravur" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect class="skravur" width="3" height="6"/></pattern></defs><line class="rutenett" x1="12" x2="628" y1="132" y2="132"/><text class="akse" x="31.2" y="158" text-anchor="middle">1</text><text class="akse" x="69.8" y="158" text-anchor="middle">2</text><text class="akse" x="108.2" y="158" text-anchor="middle">3</text><text class="akse" x="146.8" y="158" text-anchor="middle">4</text><path class="soyle b-eu" d="M173.2,132 V132.0 Q173.2,130.0 175.2,130.0 H195.2 Q197.2,130.0 197.2,132.0 V132 Z"/><text class="akse" x="185.2" y="158" text-anchor="middle">5</text><path class="soyle b-eu" d="M211.8,132 V98.0 Q211.8,94.0 215.8,94.0 H231.8 Q235.8,94.0 235.8,98.0 V132 Z"/><text class="akse" x="223.8" y="158" text-anchor="middle">6</text><path class="soyle b-ingen" d="M250.2,132 V35.1 Q250.2,31.1 254.2,31.1 H270.2 Q274.2,31.1 274.2,35.1 V132 Z"/><text class="akse na" x="262.2" y="158" text-anchor="middle">7</text><path class="soyle b-ingen" d="M288.8,132 V28.0 Q288.8,24.0 292.8,24.0 H308.8 Q312.8,24.0 312.8,28.0 V132 Z"/><text class="akse" x="300.8" y="158" text-anchor="middle">8</text><path class="soyle b-ingen" d="M327.2,132 V68.9 Q327.2,64.9 331.2,64.9 H347.2 Q351.2,64.9 351.2,68.9 V132 Z"/><text class="akse" x="339.2" y="158" text-anchor="middle">9</text><path class="soyle b-ingen" d="M365.8,132 V122.8 Q365.8,118.8 369.8,118.8 H385.8 Q389.8,118.8 389.8,122.8 V132 Z"/><text class="akse" x="377.8" y="158" text-anchor="middle">10</text><path class="soyle b-ingen" d="M404.2,132 V132.0 Q404.2,130.0 406.2,130.0 H426.2 Q428.2,130.0 428.2,132.0 V132 Z"/><text class="akse" x="416.2" y="158" text-anchor="middle">11</text><path class="soyle b-ingen" d="M442.8,132 V132.0 Q442.8,130.0 444.8,130.0 H464.8 Q466.8,130.0 466.8,132.0 V132 Z"/><text class="akse" x="454.8" y="158" text-anchor="middle">12</text><text class="akse" x="493.2" y="158" text-anchor="middle">13</text><text class="akse" x="531.8" y="158" text-anchor="middle">14</text><text class="akse" x="570.2" y="158" text-anchor="middle">15</text><text class="akse" x="608.8" y="158" text-anchor="middle">16</text><text class="verdi" x="300.8" y="16" text-anchor="middle">33 %</text></svg><ul class="sonefarger"><li><i class="b-cl"></i>Direkte opprykk (1 og 2)</li><li><i class="b-eu"></i>Opprykkskvalifisering (3 til 6)</li><li><i class="b-playoff"></i>Kvalik (14)</li><li><i class="b-ned"></i>Nedrykk (15 og 16)</li></ul><figcaption>Andelen av de simulerte sesongene på hver plass. Uthevet: plassen nå.</figcaption></figure>
+  <h3>Har Hødd vært heldig eller uheldig?</h3><p>Ut fra oddsene før kampene ventet markedet 28 poeng. Hødd har 38.</p>
   <h2>Kampene som er igjen</h2>
   <p class="restprogram">Hødd har det 2. tøffeste restprogrammet av 16 lag: motstanderne har i snitt 60 % vinnersjanse. Vanskeligst blir borte mot Haugesund 25. oktober, der modellen gir 8 % sjanse for seier.</p>
   <p>Sjansen for seier, uavgjort og tap i hver kamp, slik kalkulatoren regner den.</p>
@@ -126,5 +159,17 @@
   <p>Se også: <a href="/obos/hvem-rykker-opp/">Hvem rykker opp fra OBOS-ligaen 2026?</a> · <a href="/obos/hvem-rykker-ned/">Hvem rykker ned fra OBOS-ligaen 2026?</a></p>
   <footer><a href="/">Tabellkalkulator</a> viser tabellen og sjansene for Eliteserien og OBOS-ligaen.</footer>
 </div>
+<script>
+  (function(){
+    var b = document.getElementById('themeToggle'); if(!b) return;
+    function naa(){ var s = document.documentElement.dataset.theme;
+      if(s==='dark'||s==='light') return s;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    function etikett(){ var l = naa()==='dark' ? 'Bytt til lyst tema' : 'Bytt til mørkt tema'; b.setAttribute('aria-label', l); b.title = l; }
+    b.addEventListener('click', function(){ var n = naa()==='dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = n; try{ localStorage.setItem('theme', n); }catch(e){} etikett(); });
+    b.hidden = false; etikett();
+  })();
+</script>
 </body>
 </html>

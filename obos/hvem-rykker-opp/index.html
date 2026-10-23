@@ -7,6 +7,14 @@
      siden lages på nytt hver gang tallene regnes. -->
 <script>
   (function(){
+    try{
+      var s = localStorage.getItem('theme');
+      if(s==='dark'||s==='light') document.documentElement.dataset.theme = s;
+    }catch(e){}
+  })();
+</script>
+<script>
+  (function(){
     if(location.hostname !== 'tabellkalkulator.no') return;
     var s = document.createElement('script');
     s.async = true; s.src = '//gc.zgo.at/count.js';
@@ -37,30 +45,41 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  :root{--bg:#eef2f7;--panel:#ffffff;--ink:#0f1b2d;--muted:#56667d;--line:#d8e0ec;--accent:#2f6fed;--accent-text:#1f5fd6;--knapp-tekst:#ffffff}
-  @media (prefers-color-scheme: dark){:root{--bg:#0a1220;--panel:#111c2e;--ink:#e9eff8;--muted:#93a3ba;--line:#2a3a54;--accent:#7aa8ff;--accent-text:#7aa8ff;--knapp-tekst:#0a1220}}
+  /* Tema som kalkulatoren (23.10.2026): systemets innstilling til brukeren
+     har valgt med knappen (localStorage «theme», data-theme på <html>, satt i
+     <head> før siden tegnes); data-theme vinner over systemet. */
+  :root{--bg:#eef2f7;--panel:#ffffff;--ink:#0f1b2d;--muted:#56667d;--line:#d8e0ec;--accent:#2f6fed;--accent-text:#1f5fd6;--knapp-tekst:#ffffff;color-scheme:light}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0a1220;--panel:#111c2e;--ink:#e9eff8;--muted:#93a3ba;--line:#2a3a54;--accent:#7aa8ff;--accent-text:#7aa8ff;--knapp-tekst:#0a1220;color-scheme:dark}}
+  :root[data-theme="dark"]{--bg:#0a1220;--panel:#111c2e;--ink:#e9eff8;--muted:#93a3ba;--line:#2a3a54;--accent:#7aa8ff;--accent-text:#7aa8ff;--knapp-tekst:#0a1220;color-scheme:dark}
   a{color:var(--accent-text)}
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  .wrap{max-width:760px;margin:0 auto;padding:24px 16px 56px}
+  .wrap{max-width:672px;margin:0 auto;padding:24px 16px 56px}
   header{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+  .theme-toggle{margin-left:auto;flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .theme-toggle[hidden]{display:none}
+  .theme-toggle svg{width:18px;height:18px;display:block}
+  .theme-toggle .icon-moon{display:none}
+  :root[data-theme="dark"] .theme-toggle .icon-sun{display:none}
+  :root[data-theme="dark"] .theme-toggle .icon-moon{display:block}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .theme-toggle .icon-sun{display:none}:root:not([data-theme="light"]) .theme-toggle .icon-moon{display:block}}
   header a{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none}
   header svg{width:30px;height:30px;display:block;flex:none}
   .brand{font:800 21px/1 "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.02em}
   .sti{font-size:14px;color:var(--muted);margin:0 0 8px}
   .sti a{color:var(--accent-text)}
   h1{font:800 clamp(28px,5vw,40px)/1.08 "Barlow Condensed","Arial Narrow",sans-serif;margin:0 0 14px;letter-spacing:-.01em;text-wrap:balance}
-  h2{font:700 22px/1.2 "Barlow Condensed","Arial Narrow",sans-serif;margin:30px 0 10px}
-  h3{font:700 18px/1.25 "Barlow Condensed","Arial Narrow",sans-serif;margin:20px 0 6px}
-  p{margin:0 0 12px;max-width:68ch}
+  h2{font:700 22px/1.2 "Barlow Condensed","Arial Narrow",sans-serif;margin:36px 0 12px}
+  h3{font:700 18px/1.25 "Barlow Condensed","Arial Narrow",sans-serif;margin:22px 0 6px}
+  p{margin:0 0 12px}
   .svar{font-size:19px;font-weight:600}
   .dato,.om{color:var(--muted);font-size:14px}
-  .utsnitt{border-collapse:collapse;width:100%;max-width:560px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .utsnitt{border-collapse:collapse;width:100%;margin:0 0 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .utsnitt th,.utsnitt td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
   .utsnitt th:nth-child(2),.utsnitt td:nth-child(2){text-align:left}
   .utsnitt th{font-size:13px;color:var(--muted);font-weight:600}
   .utsnitt tr.aktuell td{font-weight:700}
-  .kamper{list-style:none;margin:0;padding:0;display:grid;gap:10px;max-width:68ch}
+  .kamper{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:10px}
   .kamper li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
   .utfall{color:var(--muted);font-size:14.5px}
   .knapp{display:inline-block;margin:8px 10px 0 0;padding:10px 16px;border-radius:10px;background:var(--accent);color:var(--knapp-tekst);font-weight:700;text-decoration:none}
@@ -72,7 +91,8 @@
 </head>
 <body>
 <div class="wrap">
-  <header><a href="/"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x=".5" y=".5" width="15" height="15" rx="3.5" fill="#13305f" stroke="#4f7fc4" stroke-opacity=".6"/><rect x="3" y="4" width="10" height="2" rx="1" fill="#34d399"/><rect x="3" y="7" width="7" height="2" rx="1" fill="#e8f0fc"/><rect x="3" y="10" width="5" height="2" rx="1" fill="#e8f0fc"/></svg><span class="brand">Tabellkalkulator</span></a></header>
+  <header><a href="/"><svg viewBox="0 0 16 16" aria-hidden="true"><rect x=".5" y=".5" width="15" height="15" rx="3.5" fill="#13305f" stroke="#4f7fc4" stroke-opacity=".6"/><rect x="3" y="4" width="10" height="2" rx="1" fill="#34d399"/><rect x="3" y="7" width="7" height="2" rx="1" fill="#e8f0fc"/><rect x="3" y="10" width="5" height="2" rx="1" fill="#e8f0fc"/></svg><span class="brand">Tabellkalkulator</span></a><button class="theme-toggle" id="themeToggle" type="button" aria-label="Bytt til mørkt tema" title="Bytt til mørkt tema" hidden><svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"></path></svg>
+<svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a.6.6 0 0 0-.7-.8A9.5 9.5 0 1 0 21.3 15.3a.6.6 0 0 0-.8-.7Z"></path></svg></button></header>
   <p class="sti"><a href="/obos/">OBOS-ligaen 2026</a></p>
   <h1>Hvem rykker opp fra OBOS-ligaen 2026?</h1>
   <p class="svar">Strømsgodset har 85 % sjanse for direkte opprykk, Haugesund 73 % og Kongsvinger 42 %.</p>
@@ -91,5 +111,17 @@
   <p>Se også: <a href="/obos/hvem-rykker-ned/">Hvem rykker ned fra OBOS-ligaen 2026?</a></p>
   <footer><a href="/">Tabellkalkulator</a> viser tabellen og sjansene for Eliteserien og OBOS-ligaen.</footer>
 </div>
+<script>
+  (function(){
+    var b = document.getElementById('themeToggle'); if(!b) return;
+    function naa(){ var s = document.documentElement.dataset.theme;
+      if(s==='dark'||s==='light') return s;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    function etikett(){ var l = naa()==='dark' ? 'Bytt til lyst tema' : 'Bytt til mørkt tema'; b.setAttribute('aria-label', l); b.title = l; }
+    b.addEventListener('click', function(){ var n = naa()==='dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = n; try{ localStorage.setItem('theme', n); }catch(e){} etikett(); });
+    b.hidden = false; etikett();
+  })();
+</script>
 </body>
 </html>

@@ -175,7 +175,7 @@ const QA_EXPECT = {
   rivals:     {what: 'prosent',       pat: new RegExp(PCT)},
   // Fortegnet er ute av ordlyden: tallet står nå som "9,3 poeng mer enn
   // modellen forventet" / "5,6 poeng under forventning".
-  luck:       {what: 'poengavvik',    pat: /\d+,\d poeng (mer enn modellen forventet|under forventning)/},
+  luck:       {what: 'poengavvik',    pat: /\d+,\d poeng (mer enn markedet ventet|under det markedet ventet)/},
 };
 
 async function main() {
@@ -559,7 +559,7 @@ async function main() {
         // ingen svar oppgir et avvik på 0,0 poeng som om det var et funn.
         check(`${side}: svarene om spilte kamper sier at ingen er spilt ennå (forrige kamp${r && r.svar.luck ? ', heldig eller uheldig' : ''}), og ingen oppgir 0,0 poeng`,
           !!r && /ingen spilte kamper ennå/.test(r.svar.lastmatch)
-            && (!('luck' in r.svar) || r.svar.luck === 'Ingen kamper er spilt ennå, så ingen har tatt flere eller færre poeng enn modellen forventet.')
+            && (!('luck' in r.svar) || r.svar.luck === 'Ingen kamper er spilt ennå, så ingen har tatt flere eller færre poeng enn markedet ventet.')
             && Object.values(r.svar).every(t => !/0,0 poeng/.test(t)),
           JSON.stringify(r && {lastmatch: r.svar.lastmatch, luck: r.svar.luck}));
         check(`${side}: for alle lagene nevner "Hvorfor har ...?" ikke tabellplassen, "Hvor kan ... ende?" ikke "ligger på X. plass nå", og "Hva må ... gjøre?" ikke "altså X poeng til"`,
@@ -3681,8 +3681,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       check(`${form}: restprogram: tette rader (høyst 30 piksler)`, ri.rader.every(x => x.rad.h <= 30), ri.rader.map(x => x.rad.h.toFixed(0)).join(' '));
       // Heldig eller uheldig: tre på hver side, poeng minus forventet er forskjellen.
       const lu = r.luck, tall = t => parseFloat(t.replace(',', '.').replace('−', '-'));
-      check(`${form}: heldig/uheldig: tre lag på hver side med Poeng, Forventet og Forskjell, og tallene går opp`,
-        lu.rader.length === 6 && lu.hode.join() === 'Poeng,Forventet,Forskjell' && lu.rader.every(x => Math.abs(tall(x.celler[0].p) - tall(x.celler[1].p) - tall(x.celler[2].p)) < 0.06)
+      check(`${form}: heldig/uheldig: tre lag på hver side med Poeng, Ventet og Forskjell, og tallene går opp`,
+        lu.rader.length === 6 && lu.hode.join() === 'Poeng,Ventet,Forskjell' && lu.rader.every(x => Math.abs(tall(x.celler[0].p) - tall(x.celler[1].p) - tall(x.celler[2].p)) < 0.06)
         && lu.rader.slice(0, 3).every(x => tall(x.celler[2].p) > 0) && lu.rader.slice(3).every(x => tall(x.celler[2].p) < 0),
         JSON.stringify(lu.rader.map(x => [x.navn, ...x.celler.map(c => c.p)])));
       // Rundens viktigste kamp: tekst, én rad med de tre utfallene, tekst.
@@ -4665,14 +4665,17 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           og: (document.querySelector('meta[property="og:image"]') || {}).content, tw: (document.querySelector('meta[name="twitter:image"]') || {}).content,
           historikk: (document.querySelector('p.historikk') || {}).textContent || '', restprogram: (document.querySelector('p.restprogram') || {}).textContent || '',
           figurer: [...document.querySelectorAll('svg[role="img"]')].map(v => { const b = v.getBoundingClientRect(), id = (v.getAttribute('aria-labelledby') || '').split(' ');
-            return {synlig: b.width > 100 && b.height > 40, tekst: id.every(x => x && (document.getElementById(x) || {}).textContent)}; }),
+            return {synlig: b.width > 100 && b.height > 40 && b.width <= 640, tekst: id.every(x => x && (document.getElementById(x) || {}).textContent),
+              hist: !!v.closest('figure.hist')}; }),
           vanskeligst: document.querySelectorAll('ul.rest li.vanskeligst').length}));
         await pu.close();
         const f = [];
         // Lagsidene utvidet (23.10.2026): historikken som tekst, restprogrammet
         // med «Vanskeligst» merket i lista, og figurene synlige uten JavaScript
         // med tekstalternativ (title og desc).
-        if (!/^Etter runde \d+/.test(s.historikk)) f.push('historikk');
+        // Historikken: søyler fra fire punkter (uten teksten under), ellers tekst.
+        const hp = (JSON.parse(fs.readFileSync(path.join(ROOT, side, 'data', 'sjansehistorikk.json'), 'utf8')).runder || []).filter(x => x.lag[r.lag]).length;
+        if (hp >= 4 ? (s.historikk || !s.figurer.some(x => x.hist)) : !/^(Sjansen for .+ var .+ etter runde \d+|Etter runde \d+ var sjansen)/.test(s.historikk)) f.push(`historikk ${hp}`);
         if (d.restprogram && (!s.restprogram.includes('motstanderne har i snitt') || s.vanskeligst !== 1)) f.push('restprogram');
         if (!s.figurer.length || !s.figurer.every(x => x.synlig && x.tekst)) f.push(`figurer ${JSON.stringify(s.figurer)}`);
         if (s.h1 !== s.tittel || !s.h1.startsWith(`${r.lag} ${tkHel.liga.sesong}: `)) f.push(`tittel «${s.h1}»`);
@@ -4686,7 +4689,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         // Utsnittet: hvert lag har de samme sjansene som tabellen på ligasiden.
         for (const rad of s.utsnitt) if (JSON.stringify(rad.slice(4).map(nb)) !== JSON.stringify(ligaUten[rad[1]])) f.push(`utsnitt ${rad[1]} ${rad.slice(4).join('/')}`);
         if (!s.utsnitt.some(rad => rad[1] === r.lag)) f.push('laget mangler i utsnittet');
-        const lov = new Set([...d.topp.map(q => q.sporsmal), d.plass.sporsmal]);
+        const lov = new Set([...d.topp.map(q => q.sporsmal), d.plass.sporsmal, `Har ${r.lag} vært heldig eller uheldig?`]);
         if (s.h3.length < 2 || s.h3.some(h => !lov.has(h))) f.push(`spørsmål ${s.h3.join(' | ')}`);
         if (s.rest.length !== d.rest.length || d.rest.some((k, i) => !nb(s.rest[i] || '').includes(`Seier ${k.seier}`) || !(s.rest[i] || '').includes(k.motstander)))
           f.push(`kamper ${s.rest.length}/${d.rest.length}`);
@@ -4697,6 +4700,30 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       }
       check(`${side}: uten JavaScript har alle ${tkHel.tabell.rader.length} lagsidene plassen og sjansene fra tekster.json, utsnittet med de samme tallene som ligasiden, svarene og kampene som er igjen, eget delingsbilde, og er lenket fra lista nederst på ligasiden`,
         tkHel.tabell.rader.length === 16 && !lagFeil.length, lagFeil.slice(0, 4).join('; '));
+      for (const sti_ of [`/${side}/${slug(tkHel.tabell.rader[0].lag)}/`, `/${side}/hvem-rykker-ned/`]) {
+        const tema = async (lagret, system) => {
+          const pt = await browser.newPage();
+          await pt.evaluateOnNewDocument(v => { try { localStorage.clear(); if (v) localStorage.setItem('theme', v); } catch (e) {} }, lagret);
+          await pt.emulateMediaFeatures([{name: 'prefers-color-scheme', value: system}]);
+          // Ved DOMContentLoaded: data-theme og bakgrunnen før noe annet har kjørt.
+          await pt.evaluateOnNewDocument(() => document.addEventListener('DOMContentLoaded', () => {
+            window.__tidlig = {tema: document.documentElement.dataset.theme || '', bg: getComputedStyle(document.body).backgroundColor}; }));
+          await pt.goto(base.replace('/eliteserien/', sti_), {waitUntil: 'networkidle0'});
+          const ut = await pt.evaluate(() => window.__tidlig);
+          const knapp = await pt.evaluate(() => { const b = document.getElementById('themeToggle'); return !!b && !b.hidden; });
+          await pt.click('#themeToggle');
+          const etter = await pt.evaluate(() => ({tema: document.documentElement.dataset.theme, lagret: localStorage.getItem('theme'), bg: getComputedStyle(document.body).backgroundColor}));
+          await pt.close();
+          return {...ut, knapp, etter};
+        };
+        const morkLagret = await tema('dark', 'light'), systemMork = await tema(null, 'dark'), lysLagret = await tema('light', 'dark');
+        const mork = bg => bg === 'rgb(10, 18, 32)', lys = bg => bg === 'rgb(238, 242, 247)';
+        check(`${sti_}: lagret tema settes før siden tegnes (mørkt lagret i lyst system, lyst lagret i mørkt), systemets tema uten lagret valg, og månknappen bytter og lagrer`,
+          morkLagret.tema === 'dark' && mork(morkLagret.bg) && morkLagret.knapp && morkLagret.etter.tema === 'light' && morkLagret.etter.lagret === 'light' && lys(morkLagret.etter.bg)
+            && systemMork.tema === '' && mork(systemMork.bg) && systemMork.etter.tema === 'light'
+            && lysLagret.tema === 'light' && lys(lysLagret.bg) && lysLagret.etter.lagret === 'dark',
+          JSON.stringify({morkLagret, systemMork, lysLagret}).slice(0, 400));
+      }
       for (const r of [tkHel.tabell.rader[0], tkHel.tabell.rader[6]]) {
         const pj = await browser.newPage(); const jsFeil = []; pj.on('pageerror', e => jsFeil.push(e.message));
         await pj.goto(base.replace('/eliteserien/', `/${side}/${slug(r.lag)}/`), {waitUntil: 'networkidle0'});

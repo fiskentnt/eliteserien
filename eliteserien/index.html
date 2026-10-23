@@ -1413,7 +1413,7 @@
       <h2 id="omSidenTittel">Om tabellkalkulatoren for Eliteserien</h2>
       <p>Tabellkalkulator for Eliteserien 2026 viser dagens tabell og sannsynligheten for at hvert lag vinner serien, tar en europaplass (topp 4), havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 100&nbsp;000 ganger.</p>
       <p>Du kan fylle inn egne resultater, la modellen simulere tomme kamper, følge ett lag og se hvordan tabellen og sjansene endrer seg. Tabellen viser både modellens styrkevurdering for hele sesongen og formen i de fem siste kampene, så du ser forskjellen på hvor sterkt et lag er og hvordan det går akkurat nå. Du kan også se tabellen etter en valgt runde, både for spilte runder og scenarier fremover. Tallene oppdateres automatisk etter hver kamp.</p>
-            <p>Tallene i "Hvem har vært heldig eller uheldig" er faktiske poeng minus modellens forventede poeng i de samme kampene. Modellen er tilpasset på nettopp de kampene, og den har derfor allerede tatt opp i seg en del av avviket. Tallene er altså trolig litt for <strong>små</strong>: et lag har sannsynligvis vært enda heldigere, eller enda uheldigere, enn tallet viser.</p>
+            <p>Tallene i "Hvem har vært heldig eller uheldig" er faktiske poeng minus det oddsene før kampene tilsa: tre ganger sjansen for seier pluss sjansen for uavgjort, fra sluttoddsen med bookmakernes margin fjernet. En kamp uten sluttodds er ikke med.</p>
       <noscript><p><strong>Tabellen og sannsynlighetene regnes ut i nettleseren og krever JavaScript.</strong> Slå på JavaScript for å bruke kalkulatoren.</p></noscript>
     </section>
     <!-- /LIGA-OM -->
@@ -1643,6 +1643,10 @@ const LEAGUE = {
   // rakk å fange -- derfor sto "vi vet ikke hva som var ventet" på kamper vi
   // faktisk hadde sluttodds for. odds_closing.json har 167 av 168.
   closingOddsFile: 'data/odds_closing.json',
+  // Reserve for sluttoddsen i «Hvem har vært heldig eller uheldig» (23.10.2026):
+  // football-data (Betfair Exchange, ellers snittet), der OddsPapi mangler en
+  // kamp (Brann-Sarpsborg 08 29.05). Ferdige sannsynligheter H/D/A.
+  reserveSluttodds: 'data/odds_fd.json',
   // Det tabellen viste etter hver oppdatering med nye resultater
   // (scripts/snapshot_probs.js). "Før kampen var den" i "Hva betydde forrige
   // kamp" er det siste bildet før avspark (tabellFoerAvspark, 7.10.2026).
@@ -5152,6 +5156,8 @@ let LASTMATCH = null;
 // Sannsynligheten for hvert utfall før avspark (data/prekick.json) og
 // sluttoddsen som reserve. Se preKickProbs().
 let PREKICK = null, CLOSING = null;
+// Sluttodds fra football-data der CLOSING mangler kampen (bare heldig/uheldig).
+let SLUTT_RESERVE = null;
 // Bildene av tabellen etter hver oppdatering med nye resultater
 // (LEAGUE.historyFile), til "Før kampen var den". Se tabellFoerAvspark().
 let HISTORIKK = null;
@@ -6699,48 +6705,49 @@ function qaRange(team){
     + `Oftest blir det ${mode+1}. plass (${pctTxt(d[mode])})`
     + (lo===hi ? '.' : `, og i minst 90 % av simuleringene ender de mellom ${lo}. og ${hi}. plass.`);
 }
-// ---- Spørsmål 8: hell/uhell -- ingen simulering. Sammenligner FAKTISKE
-// poeng i FAKTISK spilte kamper (MATCHES, ikke scenario-resultater -- "hell"
-// handler om det som virkelig skjedde) med forventet poengsum fra den
-// STATISKE modellen (MODEL.att/con/ha/hc, ikke LIVE -- LIVE er selv avledet
-// av blant annet disse resultatene, og ville gjort sammenligningen
-// sirkulær). Gjelder alle 16 lag. ----
-function baseRate(home,away){
-  const h=MTI[home], a=MTI[away];
-  let eh=MODEL.mu+MODEL.H+MODEL.att[h]+MODEL.ha[h]+MODEL.con[a]-MODEL.hc[a];
-  let ea=MODEL.mu+MODEL.att[a]-MODEL.ha[a]+MODEL.con[h]+MODEL.hc[h];
-  eh=Math.min(MAX_LAMBDA_LOG,Math.max(-9,eh)); ea=Math.min(MAX_LAMBDA_LOG,Math.max(-9,ea));
-  return [Math.exp(eh), Math.exp(ea)];
+// ---- Spørsmål 8: hell/uhell (23.10.2026: fra sluttoddsen, ikke modellen).
+// Sammenligner FAKTISKE poeng i FAKTISK spilte kamper (MATCHES, ikke
+// scenario-resultater: "hell" handler om det som virkelig skjedde) med det
+// oddsene før hver kamp tilsa: 3 x sjansen for seier + sjansen for uavgjort,
+// fra sluttoddsen med marginen fjernet (CLOSING, samme omregning som
+// "Sluttoddsen ga"). Mangler kampen der, brukes football-data
+// (SLUTT_RESERVE); mangler begge, er kampen ikke med på noen av sidene, og
+// det sies. Lagsidene bruker den samme (lag_grunnlag.js). Gjelder alle 16 lag. ----
+function heldigData(){
+  const faktisk={}, forventet={}, kamper={}, uten={}; TEAMS.forEach(t=>{faktisk[t]=0; forventet[t]=0; kamper[t]=0; uten[t]=0;});
+  const mangler = [];
+  MATCHES.forEach(m=>{
+    const k = `${m.home}|${m.away}`, p = (CLOSING && CLOSING[k]) || (SLUTT_RESERVE && SLUTT_RESERVE[k]);
+    if(!p){ mangler.push(m); uten[m.home]++; uten[m.away]++; return; }
+    if(m.hg>m.ag) faktisk[m.home]+=3; else if(m.hg<m.ag) faktisk[m.away]+=3; else { faktisk[m.home]++; faktisk[m.away]++; }
+    forventet[m.home]+=3*p.H+p.U; forventet[m.away]+=3*p.B+p.U; kamper[m.home]++; kamper[m.away]++;
+  });
+  return {rader: TEAMS.map(t=>({team:t, faktisk:faktisk[t], forventet:forventet[t], diff:faktisk[t]-forventet[t], kamper:kamper[t], uten:uten[t]})), mangler};
 }
 function qaLuck(){
   // Før første serierunde er alle avvikene 0,0, og "0,0 poeng mer enn
-  // modellen forventet, mest i ligaen" sier ingenting.
-  if(!MATCHES.length) return 'Ingen kamper er spilt ennå, så ingen har tatt flere eller færre poeng enn modellen forventet.';
-  const actual={}, expected={}; TEAMS.forEach(t=>{actual[t]=0; expected[t]=0;});
-  MATCHES.forEach(m=>{
-    if(m.hg>m.ag){ actual[m.home]+=3; } else if(m.hg<m.ag){ actual[m.away]+=3; } else { actual[m.home]++; actual[m.away]++; }
-    const [lh,la]=baseRate(m.home,m.away), o=outcome(lh,la);
-    expected[m.home]+=3*o.H+o.U; expected[m.away]+=3*o.B+o.U;
-  });
-  const rows = TEAMS.map(t=>({team:t, faktisk:actual[t], forventet:expected[t], diff: actual[t]-expected[t]}));
-  rows.sort((a,b)=>b.diff-a.diff);
+  // markedet ventet, mest i ligaen" sier ingenting.
+  if(!MATCHES.length) return 'Ingen kamper er spilt ennå, så ingen har tatt flere eller færre poeng enn markedet ventet.';
+  const {rader, mangler} = heldigData();
+  if(!rader.some(r=>r.kamper)) return 'Sluttoddsen for de spilte kampene er ikke lastet, så det kan ikke regnes nå.';
+  const rows = rader.slice().sort((a,b)=>b.diff-a.diff);
   const lucky=rows.slice(0,3), unlucky=rows.slice(-3).reverse();
   const tall = v => Math.abs(v).toFixed(1).replace('.',',');
-  // Forbeholdet -- at modellen er tilpasset på de samme kampene, og at
-  // avvikene derfor trolig er litt for SMÅ -- står i "Om modellen". Her ville
-  // det gjentatt "de samme kampene" to ganger og tynget svaret.
   const over = lucky[0], under = unlucky[0];
   const flere = (xs, tegn) => xs.length ? ` Deretter følger ${joinNames(xs.map(r=>`${r.team} (${tegn}${tall(r.diff)})`))}.` : '';
-  const tekst = `${over.team} har tatt ${tall(over.diff)} poeng mer enn modellen forventet, mest i ligaen.${flere(lucky.slice(1), '+')} `+
-    `${under.team} ligger ${tall(under.diff)} poeng under forventning.${flere(unlucky.slice(1), '−')} `+
-    `Det er forskjellen mellom faktiske og forventede poeng.`;
+  const uten = !mangler.length ? '' : mangler.length===1
+    ? ` ${mangler[0].home} mot ${mangler[0].away} ${dateNoLong(mangler[0].date)} har ikke sluttodds ennå og er ikke med.`
+    : ` ${mangler.length} kamper uten sluttodds er ikke med.`;
+  const tekst = `${over.team} har tatt ${tall(over.diff)} poeng mer enn markedet ventet ut fra oddsene før kampene, mest i ligaen.${flere(lucky.slice(1), '+')} `+
+    `${under.team} ligger ${tall(under.diff)} poeng under det markedet ventet.${flere(unlucky.slice(1), '−')} `+
+    `Ventet er tre ganger sjansen for seier pluss sjansen for uavgjort, fra sluttoddsen.${uten}`;
   // Visningen (5.10.2026): tre lag på hver side, med poeng, forventede poeng
   // og forskjellen i faste kolonner, så de er lette å sammenligne.
   const rad = r => ({navn:r.team, valgt:r.team===SELECTED_TEAM, celler:[{p:String(r.faktisk)}, {p:tall(r.forventet)},
     {p:`${r.diff>=0?'+':'−'}${tall(r.diff)}`}]});
-  return qaMedHtml(tekst, qaRaderHtml({intro:'Poeng mot det modellen forventet ut fra kampene som er spilt.', n:3, kol:'5.4em', kolMobil:'4.4em',
-    hode:['Poeng', 'Forventet', 'Forskjell'],
-    rader:[{gruppe:'Flere poeng enn forventet'}, ...lucky.map(rad), {gruppe:'Færre poeng enn forventet'}, ...unlucky.map(rad)]}));
+  return qaMedHtml(tekst, qaRaderHtml({intro:'Poeng mot det markedet ventet ut fra oddsene før kampene.', n:3, kol:'5.4em', kolMobil:'4.4em',
+    hode:['Poeng', 'Ventet', 'Forskjell'],
+    rader:[{gruppe:'Flere poeng enn ventet'}, ...lucky.map(rad), {gruppe:'Færre poeng enn ventet'}, ...unlucky.map(rad)]}));
 }
 
 // ---- Spørsmål 1, 2, 3, 6, 7: krever simulering, kjøres i Workeren (se
@@ -9251,6 +9258,8 @@ async function boot(){
   // Grunnlagsfilen hentes samtidig med de andre, men utenfor Promise.all:
   // siden venter ikke på den (se grunnlagMottatt).
   const GRUNNLAG_P = hentFersk(grunnlagFil()).then(r=>r.ok?r.json():null).catch(()=>null);
+  // Reserven for sluttoddsen (LEAGUE.reserveSluttodds), også utenfor Promise.all.
+  const RESERVE_P = LEAGUE.reserveSluttodds ? hentFersk(LEAGUE.reserveSluttodds).then(r=>r.ok?r.json():null).catch(()=>null) : Promise.resolve(null);
   try{
     [MATCHES_IN, FIXTURES_IN, MODEL_IN, ODDS_UP_IN, KEYMATCH_IN, LASTMATCH_IN, PREKICK_IN, CLOSING_IN, ACCURACY_IN, JUST_IN, HISTORY_IN] = await Promise.all([
       // Kampene og terminlisten huskes slik de ble lastet (hentSporet), så
@@ -9394,6 +9403,13 @@ async function boot(){
       }
     }
     if(Object.keys(ut).length) CLOSING = ut;
+  }
+  SLUTT_RESERVE = null;
+  const RESERVE_IN = await RESERVE_P;
+  if(RESERVE_IN && Array.isArray(RESERVE_IN.matches)){
+    const ut = {};
+    for(const m of RESERVE_IN.matches) if(m.H!=null && m.D!=null && m.A!=null) ut[`${m.home}|${m.away}`] = {H:m.H, U:m.D, B:m.A};
+    if(Object.keys(ut).length) SLUTT_RESERVE = ut;
   }
 
   // Stempel: dato for siste kamp som er lagt inn, pluss (asynkront, se

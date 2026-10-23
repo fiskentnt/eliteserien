@@ -234,6 +234,9 @@ async function hentTekster(page) {
     // vinnersjanse i snitt (restprogram(), som «Hvem har det tøffeste
     // restprogrammet?»), og «Vanskeligst» som kalkulatoren (restKamperEtterSjanse).
     const rp = restprogram().sort((a, b) => b.avg - a.avg);
+    // Heldig/uheldig fra sluttoddsen (heldigData(), som spørsmålet i
+    // kalkulatoren), med poengjusteringen, til én setning på lagsiden.
+    const hd = Object.fromEntries(heldigData().rader.map(r => [r.team, r]));
     try {
       for (const t of TEAMS) {
         await velg(t);
@@ -252,7 +255,8 @@ async function hentTekster(page) {
         // Plassfordelingen (andel på hver plass, 1 til 16), som stripen i lagboksen.
         const fordeling = (lastMC[t] || []).map(p => Math.round(p * 1e6) / 1e6);
         lagTekst[t] = {kort: shortTeam(t), tilstand: x.tilstand, regel: x.regel, aapnest: x.aapnest ? x.aapnest.key : null,
-          topp, plass: {sporsmal: rq.label(t), svar: qaRange(t)}, rest, soner, restprogram: restprogram_, fordeling};
+          topp, plass: {sporsmal: rq.label(t), svar: qaRange(t)}, rest, soner, restprogram: restprogram_, fordeling,
+          heldig: hd[t] ? {faktisk: hd[t].faktisk, forventet: Math.round(hd[t].forventet * 100) / 100, kamper: hd[t].kamper, uten: hd[t].uten, justering: poengJust(t)} : null};
       }
     } finally { await velg(''); }
     return {status: GRUNNLAG_STATUS, sesonger: lastMCN, lag: TEAMS.length, viktigste,

@@ -269,30 +269,41 @@ LOGO = ('<svg viewBox="0 0 16 16" aria-hidden="true"><rect x=".5" y=".5" width="
         'y="7" width="7" height="2" rx="1" fill="#e8f0fc"/><rect x="3" y="10" width="5" height="2" rx="1" fill="#e8f0fc"/></svg>')
 
 SPORSMAL_CSS = """
-  :root{--bg:#eef2f7;--panel:#ffffff;--ink:#0f1b2d;--muted:#56667d;--line:#d8e0ec;--accent:#2f6fed;--accent-text:#1f5fd6;--knapp-tekst:#ffffff}
-  @media (prefers-color-scheme: dark){:root{--bg:#0a1220;--panel:#111c2e;--ink:#e9eff8;--muted:#93a3ba;--line:#2a3a54;--accent:#7aa8ff;--accent-text:#7aa8ff;--knapp-tekst:#0a1220}}
+  /* Tema som kalkulatoren (23.10.2026): systemets innstilling til brukeren
+     har valgt med knappen (localStorage «theme», data-theme på <html>, satt i
+     <head> før siden tegnes); data-theme vinner over systemet. */
+  :root{--bg:#eef2f7;--panel:#ffffff;--ink:#0f1b2d;--muted:#56667d;--line:#d8e0ec;--accent:#2f6fed;--accent-text:#1f5fd6;--knapp-tekst:#ffffff;color-scheme:light}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--bg:#0a1220;--panel:#111c2e;--ink:#e9eff8;--muted:#93a3ba;--line:#2a3a54;--accent:#7aa8ff;--accent-text:#7aa8ff;--knapp-tekst:#0a1220;color-scheme:dark}}
+  :root[data-theme="dark"]{--bg:#0a1220;--panel:#111c2e;--ink:#e9eff8;--muted:#93a3ba;--line:#2a3a54;--accent:#7aa8ff;--accent-text:#7aa8ff;--knapp-tekst:#0a1220;color-scheme:dark}
   a{color:var(--accent-text)}
   *{box-sizing:border-box}
   html,body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 "Barlow",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
-  .wrap{max-width:760px;margin:0 auto;padding:24px 16px 56px}
+  .wrap{max-width:672px;margin:0 auto;padding:24px 16px 56px}
   header{display:flex;align-items:center;gap:10px;margin-bottom:22px}
+  .theme-toggle{margin-left:auto;flex:none;width:36px;height:36px;border-radius:50%;border:1px solid var(--line);background:transparent;color:var(--ink);display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .theme-toggle[hidden]{display:none}
+  .theme-toggle svg{width:18px;height:18px;display:block}
+  .theme-toggle .icon-moon{display:none}
+  :root[data-theme="dark"] .theme-toggle .icon-sun{display:none}
+  :root[data-theme="dark"] .theme-toggle .icon-moon{display:block}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .theme-toggle .icon-sun{display:none}:root:not([data-theme="light"]) .theme-toggle .icon-moon{display:block}}
   header a{display:flex;align-items:center;gap:10px;color:inherit;text-decoration:none}
   header svg{width:30px;height:30px;display:block;flex:none}
   .brand{font:800 21px/1 "Barlow Condensed","Arial Narrow",sans-serif;letter-spacing:.02em}
   .sti{font-size:14px;color:var(--muted);margin:0 0 8px}
   .sti a{color:var(--accent-text)}
   h1{font:800 clamp(28px,5vw,40px)/1.08 "Barlow Condensed","Arial Narrow",sans-serif;margin:0 0 14px;letter-spacing:-.01em;text-wrap:balance}
-  h2{font:700 22px/1.2 "Barlow Condensed","Arial Narrow",sans-serif;margin:30px 0 10px}
-  h3{font:700 18px/1.25 "Barlow Condensed","Arial Narrow",sans-serif;margin:20px 0 6px}
-  p{margin:0 0 12px;max-width:68ch}
+  h2{font:700 22px/1.2 "Barlow Condensed","Arial Narrow",sans-serif;margin:36px 0 12px}
+  h3{font:700 18px/1.25 "Barlow Condensed","Arial Narrow",sans-serif;margin:22px 0 6px}
+  p{margin:0 0 12px}
   .svar{font-size:19px;font-weight:600}
   .dato,.om{color:var(--muted);font-size:14px}
-  .utsnitt{border-collapse:collapse;width:100%;max-width:560px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .utsnitt{border-collapse:collapse;width:100%;margin:0 0 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .utsnitt th,.utsnitt td{padding:7px 10px;text-align:right;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
   .utsnitt th:nth-child(2),.utsnitt td:nth-child(2){text-align:left}
   .utsnitt th{font-size:13px;color:var(--muted);font-weight:600}
   .utsnitt tr.aktuell td{font-weight:700}
-  .kamper{list-style:none;margin:0;padding:0;display:grid;gap:10px;max-width:68ch}
+  .kamper{list-style:none;margin:0 0 12px;padding:0;display:grid;gap:10px}
   .kamper li{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px}
   .utfall{color:var(--muted);font-size:14.5px}
   .knapp{display:inline-block;margin:8px 10px 0 0;padding:10px 16px;border-radius:10px;background:var(--accent);color:var(--knapp-tekst);font-weight:700;text-decoration:none}
@@ -301,6 +312,34 @@ SPORSMAL_CSS = """
   footer a{color:var(--accent-text)}
   a:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 """
+
+# Temaet (23.10.2026): det lagrede valget settes i <head> før siden tegnes,
+# så den ikke blinker i systemfargen først, som i kalkulatoren.
+TEMA_HEAD = """<script>
+  (function(){
+    try{
+      var s = localStorage.getItem('theme');
+      if(s==='dark'||s==='light') document.documentElement.dataset.theme = s;
+    }catch(e){}
+  })();
+</script>"""
+# Månknappen øverst: skjult uten JavaScript (den gjør ingenting da), og bytter
+# og lagrer temaet som knappen i kalkulatoren.
+TEMA_KNAPP = ('<button class="theme-toggle" id="themeToggle" type="button" aria-label="Bytt til mørkt tema" title="Bytt til mørkt tema" hidden>'
+              + """<svg class="icon-sun" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="4.5"></circle><path d="M12 2.5v2.5M12 19v2.5M4.6 4.6l1.8 1.8M17.6 17.6l1.8 1.8M2.5 12H5M19 12h2.5M4.6 19.4l1.8-1.8M17.6 6.4l1.8-1.8"></path></svg>
+<svg class="icon-moon" viewBox="0 0 24 24" fill="currentColor"><path d="M20.5 14.6A8.5 8.5 0 0 1 9.4 3.5a.6.6 0 0 0-.7-.8A9.5 9.5 0 1 0 21.3 15.3a.6.6 0 0 0-.8-.7Z"></path></svg>""" + "</button>")
+TEMA_JS = """<script>
+  (function(){
+    var b = document.getElementById('themeToggle'); if(!b) return;
+    function naa(){ var s = document.documentElement.dataset.theme;
+      if(s==='dark'||s==='light') return s;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'; }
+    function etikett(){ var l = naa()==='dark' ? 'Bytt til lyst tema' : 'Bytt til mørkt tema'; b.setAttribute('aria-label', l); b.title = l; }
+    b.addEventListener('click', function(){ var n = naa()==='dark' ? 'light' : 'dark';
+      document.documentElement.dataset.theme = n; try{ localStorage.setItem('theme', n); }catch(e){} etikett(); });
+    b.hidden = false; etikett();
+  })();
+</script>"""
 
 TELLING = """<script>
   (function(){
@@ -414,6 +453,7 @@ def sporsmal_side(liga, sti, sone, t):
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Laget av scripts/lag_sider.py fra {liga}/data/tekster.json. Ikke rediger:
      siden lages på nytt hver gang tallene regnes. -->
+{TEMA_HEAD}
 {TELLING}
 <title>{html.escape(tittel)}</title>
 <meta name="description" content="{beskrivelse}">
@@ -441,7 +481,7 @@ def sporsmal_side(liga, sti, sone, t):
 </head>
 <body>
 <div class="wrap">
-  <header><a href="/">{LOGO}<span class="brand">Tabellkalkulator</span></a></header>
+  <header><a href="/">{LOGO}<span class="brand">Tabellkalkulator</span></a>{TEMA_KNAPP}</header>
   <p class="sti"><a href="/{liga}/">{html.escape(liganavn)}</a></p>
   <h1>{html.escape(tittel)}</h1>
   <p class="svar">{_nb(html.escape(svar))}</p>
@@ -457,6 +497,7 @@ def sporsmal_side(liga, sti, sone, t):
   {f'<p>Se også: {andre}</p>' if andre else ''}
   <footer><a href="/">Tabellkalkulator</a> viser tabellen og sjansene for Eliteserien og OBOS-ligaen.</footer>
 </div>
+{TEMA_JS}
 </body>
 </html>
 """
@@ -561,72 +602,89 @@ def _y_topp(maks):
     return 100
 
 
-def _linje_svg(liga, sone, navn, punkter, tittel_id, bildetekst=True):
-    """Én sone etter hver runde: linje med punkter, siste verdi merket."""
-    w, h, x0, x1, y0, y1 = 600, 240, 64, 556, 24, 192
-    verdier = [a for _, a in punkter]
-    topp = _y_topp(max(verdier))
-    x = lambda i: x0 + (x1 - x0) * (i / max(1, len(punkter) - 1))
-    y = lambda a: y1 - (y1 - y0) * min(1, a * 100 / topp)
-    deler = []
-    for v in (0, topp / 2, topp):
-        yy = y(v / 100)
-        deler.append(f'<line class="rutenett" x1="{x0}" x2="{x1}" y1="{yy:.1f}" y2="{yy:.1f}"/>')
-        tekst = f"{v:g} %".replace(".", ",")
-        deler.append(f'<text class="akse" x="{x0 - 8}" y="{yy + 4:.1f}" text-anchor="end">{tekst}</text>')
-    hver = 1 if len(punkter) <= 10 else 2
-    for i, (merke, _) in enumerate(punkter):
-        if i % hver == 0 or i == len(punkter) - 1:
-            deler.append(f'<text class="akse" x="{x(i):.1f}" y="{h - 14}" text-anchor="middle">{html.escape(merke.split(" ")[0])}</text>')
+def _soyle(cx, bw, base, hh, klasse):
+    """Søyle med 4 px avrundet topp og rett bunn, fra grunnlinjen."""
+    r = min(4, hh)
+    xl, xr, yt = cx - bw / 2, cx + bw / 2, base - hh
+    return (f'<path class="soyle {klasse}" d="M{xl:.1f},{base} V{yt + r:.1f} Q{xl:.1f},{yt:.1f} {xl + r:.1f},{yt:.1f} '
+            f'H{xr - r:.1f} Q{xr:.1f},{yt:.1f} {xr:.1f},{yt + r:.1f} V{base} Z"/>')
+
+
+HIST_FIGUR_MAKS = 8
+
+
+def _hist_svg(liga, sone, navn, punkter, tittel_id, bildetekst=True):
+    """Én sone etter hver runde (de siste åtte): én søyle per runde, tallet over
+    søylen og «Runde 23» under. Ingen y-akse; tallene står på søylene."""
+    vis = punkter[-HIST_FIGUR_MAKS:]
+    n, w, h, x0, x1, base, topp = len(vis), 640, 172, 8, 632, 112, 28
+    slot = (x1 - x0) / n
+    skala = _y_topp(max(a for _, a in vis))
     farge = _fig_farge(liga, sone)
-    sti = " ".join(f"{x(i):.1f},{y(a):.1f}" for i, (_, a) in enumerate(punkter))
-    deler.append(f'<polyline class="linje {farge}" points="{sti}"/>')
-    for i, (_, a) in enumerate(punkter):
-        deler.append(f'<circle class="punkt {farge}" cx="{x(i):.1f}" cy="{y(a):.1f}" r="4.5"/>')
-    sx, sy = x(len(punkter) - 1), y(verdier[-1])
-    deler.append(f'<text class="verdi" x="{sx:.1f}" y="{sy - 12:.1f}" text-anchor="middle">{_nb(_pst(verdier[-1]))}</text>')
-    desc = " ".join(f"Etter runde {m}: {_pst(a)}." for m, a in punkter)
+    deler = [f'<line class="rutenett" x1="{x0}" x2="{x1}" y1="{base}" y2="{base}"/>']
+    for i, (merke, a) in enumerate(vis):
+        cx = x0 + slot * (i + 0.5)
+        hh = (base - topp) * min(1, a * 100 / skala)
+        if a > 0:
+            hh = max(2, hh)
+            deler.append(_soyle(cx, min(48, slot * 0.45), base, hh, farge))
+        deler.append(f'<text class="verdi" x="{cx:.1f}" y="{base - hh - 8:.1f}" text-anchor="middle">{_nb(_pst(a))}</text>')
+        deler.append(f'<text class="akse" x="{cx:.1f}" y="{base + 24}" text-anchor="middle">Runde</text>')
+        deler.append(f'<text class="akse na" x="{cx:.1f}" y="{base + 50}" text-anchor="middle">{html.escape(merke)}</text>')
+    desc = " ".join(f"Etter runde {m}: {_pst(a)}." for m, a in vis)
     tekst_ = f'<figcaption>{html.escape(navn[0].upper() + navn[1:])}</figcaption>' if bildetekst else ""
-    return (f'<figure class="fig">{tekst_}'
+    return (f'<figure class="fig hist">{tekst_}'
             f'<svg viewBox="0 0 {w} {h}" role="img" aria-labelledby="{tittel_id}-t {tittel_id}-d">'
             f'<title id="{tittel_id}-t">Sjansen for {html.escape(navn)} etter hver runde</title>'
             f'<desc id="{tittel_id}-d">{_nb(html.escape(desc))}</desc>{"".join(deler)}</svg></figure>')
 
 
 def _historikk_html(liga, t, lag, historikk):
-    """A: «Sjansen for topp 4 de siste rundene»: tekst, og figur fra fire punkter."""
+    """A: sjansen etter hver runde, som (linje, seksjon). Fra fire punkter en
+    seksjon «Sjansen for topp 4 de siste rundene» med søylene; før det én
+    setning rett under tabellen, uten overskrift (brukeren 23.10.2026)."""
     d = t["lag"][lag]
     soner = [] if t["liga"]["ferdig"] else _lagets_soner(d)
     punkter = [x for x in historikk if lag in x["lag"]]
     if not soner or not punkter:
-        return ""
+        return "", ""
     navn = {s["key"]: s["navn"] for s in d["soner"]}
     nokler = [s["key"] for s in soner]
-    tekst_punkter = punkter[-HIST_TEKST_MAKS:]
-    if len(nokler) == 1:
-        linjer = [f"Etter runde {p['merke']}: {_pst(p['lag'][lag][nokler[0]])}." for p in tekst_punkter]
-    else:
-        linjer = [f"Etter runde {p['merke']}: " + ", ".join(f"{navn[k]} {_pst(p['lag'][lag][k])}" for k in nokler) + "." for p in tekst_punkter]
+    if len(punkter) >= HIST_MIN_FIGUR:
+        overskrift = f"Sjansen for {liste([navn[k] for k in nokler])} de siste rundene"
+        figurer = '<div class="figurer">' + "".join(
+            _hist_svg(liga, k, navn[k], [(p["merke"], p["lag"][lag][k]) for p in punkter], f"hist-{k}", len(nokler) > 1)
+            for k in nokler) + "</div>"
+        return "", f'<h2>{html.escape(overskrift)}</h2>\n  {figurer}'
+    vist_naa = {s["key"]: s["vist"] for s in d["soner"]}
     # «Nå» bare når tallene er regnet på nytt etter siste punkt (en ny runde
     # er i gang): ellers er siste punkt det siden viser nå.
-    if punkter[-1].get("laget") != t["laget"]:
-        linjer.append("Nå: " + ", ".join((f"{navn[k]} " if len(nokler) > 1 else "") + s["vist"] for k in nokler
-                                           for s in d["soner"] if s["key"] == k) + ".")
-    figurer = ""
-    if len(punkter) >= HIST_MIN_FIGUR:
-        figurer = '<div class="figurer">' + "".join(
-            _linje_svg(liga, k, navn[k], [(p["merke"], p["lag"][lag][k]) for p in punkter], f"hist-{k}", len(nokler) > 1)
-            for k in nokler) + "</div>\n  "
-    overskrift = f"Sjansen for {liste([navn[k] for k in nokler])} de siste rundene"
-    return f'<h2>{html.escape(overskrift)}</h2>\n  {figurer}<p class="historikk">{_nb(html.escape(" ".join(linjer)))}</p>'
+    nyere = punkter[-1].get("laget") != t["laget"]
+    if len(nokler) == 1:
+        k = nokler[0]
+        deler = [f"{_pst(p['lag'][lag][k])} etter runde {p['merke']}" for p in punkter]
+        tekst = f"Sjansen for {navn[k]} var " + _rekke(deler[0], deler[1:]) + "."
+        if nyere:
+            tekst += f" Nå er den {vist_naa[k]}."
+    else:
+        a, b = nokler[0], nokler[1]
+        forste, resten = punkter[0], punkter[1:]
+        tekst = (f"Etter runde {forste['merke']} var sjansen for {navn[a]} {_pst(forste['lag'][lag][a])} "
+                 f"og for {navn[b]} {_pst(forste['lag'][lag][b])}.")
+        tekst += "".join(f" Etter runde {p['merke']}: {_pst(p['lag'][lag][a])} og {_pst(p['lag'][lag][b])}." for p in resten)
+        if nyere:
+            tekst += f" Nå: {vist_naa[a]} og {vist_naa[b]}."
+    return f'<p class="historikk">{_nb(html.escape(tekst))}</p>\n  ', ""
 
 
-def _fordeling_svg(lag, d, plass_na):
-    """C: plassfordelingen 1 til 16 som søyler, høyeste søyle og dagens plass merket."""
+def _fordeling_svg(lag, d, plass_na, baand=()):
+    """C: plassfordelingen 1 til 16 som søyler i tabellens sonefarger (nedrykk
+    skravert), med fargeforklaringens navn under aksen, og høyeste søyle og
+    dagens plass merket."""
     f = d.get("fordeling") or []
     if len(f) < 2 or not any(f):
         return ""
-    n, w, h, x0, x1, base, topp = len(f), 640, 200, 20, 620, 158, 26
+    n, w, h, x0, x1, base, topp = len(f), 640, 166, 12, 628, 132, 24
     slot = (x1 - x0) / n
     bw = min(24, slot - 6)
     maks = max(f)
@@ -635,20 +693,40 @@ def _fordeling_svg(lag, d, plass_na):
         cx = x0 + slot * (i + 0.5)
         if a > 0:
             hh = max(2, (base - topp) * a / maks)
-            r = min(4, hh)
-            xl, xr, yt = cx - bw / 2, cx + bw / 2, base - hh
-            deler.append(f'<path class="soyle" d="M{xl:.1f},{base} V{yt + r:.1f} Q{xl:.1f},{yt:.1f} {xl + r:.1f},{yt:.1f} '
-                         f'H{xr - r:.1f} Q{xr:.1f},{yt:.1f} {xr:.1f},{yt + r:.1f} V{base} Z"/>')
+            sone_ = next((b["cls"] for b in baand if b["lo"] <= i + 1 <= b["hi"]), "ingen")
+            deler.append(_soyle(cx, bw, base, hh, f"b-{sone_}"))
         klasse = "akse na" if i + 1 == plass_na else "akse"
-        deler.append(f'<text class="{klasse}" x="{cx:.1f}" y="{h - 22}" text-anchor="middle">{i + 1}</text>')
+        deler.append(f'<text class="{klasse}" x="{cx:.1f}" y="{base + 26}" text-anchor="middle">{i + 1}</text>')
     im = f.index(maks)
     deler.append(f'<text class="verdi" x="{x0 + slot * (im + 0.5):.1f}" y="{base - (base - topp) - 8}" text-anchor="middle">{_nb(_pst(maks))}</text>')
     storst = sorted(((a, i + 1) for i, a in enumerate(f) if a >= 0.005), reverse=True)[:5]
     desc = ", ".join(f"{p}. plass {_pst(a)}" for a, p in storst) + "."
+    skravur = ('<defs><pattern id="skravur" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">'
+               '<rect class="skravur" width="3" height="6"/></pattern></defs>')
+    # Korte navn, så forklaringen står på én linje på PC: «Champions League
+    # (1 og 2)» for «Champions League-kvalifisering (1 og 2)».
+    forklaring = ('<ul class="sonefarger">' + "".join(f'<li><i class="b-{b["cls"]}"></i>{html.escape(b["tekst"].replace(" League-kvalifisering", " League"))}</li>' for b in baand)
+                  + "</ul>") if baand else ""
     return (f'<figure class="fig fordeling"><svg viewBox="0 0 {w} {h}" role="img" aria-labelledby="ford-t ford-d">'
             f'<title id="ford-t">Hvilken plass {html.escape(lag)} ender på, plass 1 til {n}</title>'
-            f'<desc id="ford-d">{_nb(html.escape(desc))}</desc>{"".join(deler)}</svg>'
+            f'<desc id="ford-d">{_nb(html.escape(desc))}</desc>{skravur}{"".join(deler)}</svg>{forklaring}'
             f'<figcaption>Andelen av de simulerte sesongene på hver plass. Uthevet: plassen nå.</figcaption></figure>')
+
+
+def _heldig_tekst(lag, d, r):
+    """Heldig/uheldig fra sluttoddsen (heldigData() i kalkulatoren): det
+    markedet ventet ut fra oddsene før kampene, og poengene laget har."""
+    h = d.get("heldig")
+    if not h or not h.get("kamper"):
+        return ""
+    ventet = int(h["forventet"] + 0.5)
+    if h.get("uten"):
+        return (f"Ut fra oddsene før kampene ventet markedet {ventet} poeng i de {h['kamper']} kampene som har sluttodds. "
+                f"{lag} tok {h['faktisk']} poeng i de samme kampene.")
+    if h.get("justering"):
+        return (f"Ut fra oddsene før kampene ventet markedet {ventet} poeng. {lag} har {h['faktisk']} poeng fra kampene "
+                f"({r['poeng']} i tabellen etter {'trekket' if h['justering'] < 0 else 'tillegget'}).")
+    return f"Ut fra oddsene før kampene ventet markedet {ventet} poeng. {lag} har {h['faktisk']}."
 
 
 def _restprogram_tekst(lag, d):
@@ -674,7 +752,18 @@ def _restprogram_tekst(lag, d):
     return tekst
 
 
-def _lag_sporsmal_html(d, lag=None, plass_na=None):
+KAMPER_MIN_PP = 3
+
+
+def kamper_flytter(svar):
+    """Største endring (prosentpoeng) et utfall gir i «Hvilke kamper betyr mest»,
+    lest av svaret slik kalkulatoren skriver det («(+2 prosentpoeng)»; «endrer
+    lite» er under grensen)."""
+    tall_ = [abs(int(x.replace("−", "-"))) for x in re.findall(r"\(([+−-]?\d+) prosentpoeng\)", svar)]
+    return max(tall_, default=0)
+
+
+def _lag_sporsmal_html(d, lag=None, plass_na=None, baand=(), heldig=""):
     """De tre øverste spørsmålene i Spør om tabellen for laget. Et svar som bare
     gjentar et svar over (et avgjort lag får samme forklaring på flere spørsmål),
     vises én gang. «Hvilken plass ender X på?» til slutt hvis det ikke var med."""
@@ -683,10 +772,17 @@ def _lag_sporsmal_html(d, lag=None, plass_na=None):
         svar = q["svar"].strip()
         if not svar or any(svar.endswith(v) or v.endswith(svar) for v in vist):
             continue
-        vist.append(svar)
         kamper = q["id"] == "keymatches" and any("\n" in b for b in svar.split("\n\n")[1:])
+        # Ingen kamp flytter sjansen mer enn 3 prosentpoeng: spørsmålet sier
+        # ingenting (tre like kort med «endrer lite»), og står ikke (23.10.2026).
+        if kamper and kamper_flytter(svar) <= KAMPER_MIN_PP:
+            continue
+        vist.append(svar)
         ut.append(f'<h3>{html.escape(q["sporsmal"])}</h3>{_kamper_html(svar) if kamper else _avsnitt(svar)}'
-                  + (_fordeling_svg(lag, d, plass_na) if q["id"] == "range" and lag else ""))
+                  + (_fordeling_svg(lag, d, plass_na, baand) if q["id"] == "range" and lag else ""))
+    # Heldig/uheldig fra sluttoddsen, i samme stil som de andre (brukeren 23.10.2026).
+    if heldig and lag:
+        ut.append(f'<h3>Har {html.escape(lag)} vært heldig eller uheldig?</h3><p>{_nb(html.escape(heldig))}</p>')
     return "\n  ".join(ut)
 
 
@@ -734,7 +830,8 @@ def lag_side(liga, lag, t):
                 + (f'<p class="restprogram">{_nb(html.escape(rp_tekst))}</p>\n  ' if rp_tekst else "")
                 + "<p>Sjansen for seier, uavgjort og tap i hver kamp, slik kalkulatoren "
                 f"regner den.</p>\n  {rest}") if rest else ""
-    historikk = _historikk_html(liga, t, lag, les_historikk(liga))
+    hist_linje, historikk = _historikk_html(liga, t, lag, les_historikk(liga))
+    heldig_ = _heldig_tekst(lag, d, _rad(t, lag))
     utsnitt = _lag_utsnitt_html(t, lag)
     om = (f"Sjansene for {liste([sone_navn(t, k['key']) for k in t['tabell']['kolonner']])} er de samme som i tabellen på "
           "ligasiden." + (" «–» betyr at det ikke lenger er mulig." if "<td>–</td>" in utsnitt else ""))
@@ -746,6 +843,7 @@ def lag_side(liga, lag, t):
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <!-- Laget av scripts/lag_sider.py fra {liga}/data/tekster.json. Ikke rediger:
      siden lages på nytt hver gang tallene regnes. -->
+{TEMA_HEAD}
 {TELLING}
 <title>{html.escape(tittel)}</title>
 <meta name="description" content="{beskrivelse}">
@@ -773,16 +871,16 @@ def lag_side(liga, lag, t):
 </head>
 <body>
 <div class="wrap">
-  <header><a href="/">{LOGO}<span class="brand">Tabellkalkulator</span></a></header>
+  <header><a href="/">{LOGO}<span class="brand">Tabellkalkulator</span></a>{TEMA_KNAPP}</header>
   <p class="sti"><a href="/{liga}/">{html.escape(liganavn)}</a></p>
   <h1>{html.escape(tittel)}</h1>
   <p class="svar">{_nb(html.escape(svar))}</p>
   <p class="dato">Oppdatert {norsk_tid(t["laget"])}. Sjansene er regnet fra {tall(t["sesonger"])} simulerte sesonger.</p>
   {utsnitt}
-  <p class="om">{html.escape(om)}</p>
+  {hist_linje}<p class="om">{html.escape(om)}</p>
   {historikk}
   <h2>Spør om tabellen</h2>
-  {_lag_sporsmal_html(d, lag, _rad(t, lag)["plass"])}
+  {_lag_sporsmal_html(d, lag, _rad(t, lag)["plass"], (t.get("regler") or {}).get("baand", []), heldig_)}
   {rest_del}
   <p><a class="knapp" href="/{liga}/#team={quote(lag, safe="")}">Følg {html.escape(lag)} i tabellkalkulatoren</a></p>
   <h2>Lagene i {html.escape(t["liga"]["navn"])}</h2>
@@ -790,16 +888,19 @@ def lag_side(liga, lag, t):
   {f'<p>Se også: {sporsmal}</p>' if sporsmal else ''}
   <footer><a href="/">Tabellkalkulator</a> viser tabellen og sjansene for Eliteserien og OBOS-ligaen.</footer>
 </div>
+{TEMA_JS}
 </body>
 </html>
 """
 
 
 LAG_CSS = """
-  :root{--fig-gronn:#0f8468;--fig-blaa:#1d5fb4;--fig-gul:#a8770a;--fig-rod:#c0135a;--fig-soyle:#2f6fed}
-  @media (prefers-color-scheme: dark){:root{--fig-gronn:#27a985;--fig-blaa:#4f8fe0;--fig-gul:#ad8f22;--fig-rod:#e04879;--fig-soyle:#7aa8ff}}
-  .figurer{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));max-width:720px}
-  .fig{margin:0 0 10px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px 6px;max-width:720px}
+  :root{--fig-gronn:#0f8468;--fig-blaa:#1d5fb4;--fig-gul:#a8770a;--fig-rod:#c0135a;--fig-soyle:#2f6fed;--b-cl:#1d5fb4;--b-eu:#1d7a63;--b-q:#cf951a;--b-ned:#6c7479;--b-ingen:#a3afc0}
+  @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--fig-gronn:#27a985;--fig-blaa:#4f8fe0;--fig-gul:#ad8f22;--fig-rod:#e04879;--fig-soyle:#7aa8ff;--b-cl:#4f8fe0;--b-eu:#1d7a63;--b-q:#cf951a;--b-ned:#8b939a;--b-ingen:#3f5170}}
+  :root[data-theme="dark"]{--fig-gronn:#27a985;--fig-blaa:#4f8fe0;--fig-gul:#ad8f22;--fig-rod:#e04879;--fig-soyle:#7aa8ff;--b-cl:#4f8fe0;--b-eu:#1d7a63;--b-q:#cf951a;--b-ned:#8b939a;--b-ingen:#3f5170}
+  /* Alle boksene (tabell, figurer, kort) er like brede: kolonnen, 640 px på PC. */
+  .figurer{display:grid;gap:12px}
+  .fig{margin:0 0 12px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px 10px}
   .fig figcaption{font-size:14px;color:var(--muted);margin:0 0 4px}
   .fig.fordeling figcaption{margin:2px 0 4px}
   .fig svg{display:block;width:100%;height:auto;overflow:visible}
@@ -814,9 +915,20 @@ LAG_CSS = """
   .fig .linje.gul{stroke:var(--fig-gul)}.fig .punkt.gul{fill:var(--fig-gul)}
   .fig .linje.rod{stroke:var(--fig-rod)}.fig .punkt.rod{fill:var(--fig-rod)}
   .fig .soyle{fill:var(--fig-soyle)}
+  .fig .soyle.gronn{fill:var(--fig-gronn)}.fig .soyle.blaa{fill:var(--fig-blaa)}.fig .soyle.gul{fill:var(--fig-gul)}.fig .soyle.rod{fill:var(--fig-rod)}
+  /* Plassfordelingen i tabellens sonefarger, nedrykk skravert som i tabellen. */
+  .fig .soyle.b-cl{fill:var(--b-cl)}.fig .soyle.b-eu{fill:var(--b-eu)}.fig .soyle.b-playoff{fill:var(--b-q)}.fig .soyle.b-ingen{fill:var(--b-ingen)}
+  .fig .soyle.b-ned{fill:url(#skravur);stroke:var(--b-ned);stroke-width:1.5}
+  .fig .skravur{fill:var(--b-ned)}
+  .sonefarger{list-style:none;margin:8px 0 2px;padding:0;display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12.5px;color:var(--muted)}
+  .sonefarger li{display:inline-flex;align-items:center;gap:6px;white-space:nowrap}
+  .sonefarger i{display:inline-block;width:12px;height:12px;border-radius:2px}
+  .sonefarger .b-cl{background:var(--b-cl)}.sonefarger .b-eu{background:var(--b-eu)}.sonefarger .b-playoff{background:var(--b-q)}
+  .sonefarger .b-ned{background:repeating-linear-gradient(135deg,var(--b-ned) 0 2px,transparent 2px 4px);border:1px solid var(--b-ned)}
+
   /* Smal skjerm: figuren skaleres ned, så teksten får større skrift i
      figurens egne enheter (her omtrent 12 px på skjermen). */
-  @media (max-width:520px){.fig .akse{font-size:23px}.fig .verdi{font-size:26px}.fig .punkt{stroke-width:3}}
+  @media (max-width:520px){.fig{padding:10px 10px 8px}.fig .akse{font-size:23px}.fig .verdi{font-size:26px}}
   .historikk{font-size:15px}
   .kamper li.vanskeligst{border-color:var(--accent-text)}
   .kamper .merke{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:999px;font-size:12px;font-weight:700;color:var(--accent-text);border:1px solid var(--accent-text);vertical-align:1px}
