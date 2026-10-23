@@ -83,7 +83,7 @@ const isoSek = ms => new Date(ms).toISOString().replace(/\.\d+Z$/, 'Z');
 const HISTORY = path.join(UT, 'history.json');
 const LASTMATCH = path.join(UT, 'lastmatch.json');
 const PREKICK = path.join(UT, 'prekick.json');
-const MIME = {'.html':'text/html; charset=utf-8','.js':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.ttf':'font/ttf'};
+const MIME = {'.html':'text/html; charset=utf-8','.js':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.ttf':'font/ttf','.woff2':'font/woff2'};
 
 function serve() {
   const server = http.createServer((req, res) => {

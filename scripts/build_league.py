@@ -68,12 +68,14 @@ def render(league):
         out = doctype + BANNER.format(dir=league) + out[len(doctype):]
     # Den statiske tabellen (STATISK-*, scripts/statisk_region.py): ligaens
     # egen, fra siden slik den står, ikke Eliteserien-sidens. Mangler en region
-    # der, eller er den tom: tom, bortsett fra STATISK-KOLONNER og boksene
-    # (STATISK-KORT*), som har markup siden trenger og tas fra kilden (uten
-    # overskriftscellene stopper JS, og uten boksene blir de tomme, 20.10.2026).
+    # der, eller er den tom: tom, bortsett fra STATISK-KOLONNER, boksene
+    # (STATISK-KORT*), «Neste kamp» (STATISK-NESTEKAMP), banneret og
+    # rundetallet (STATISK-BANNER, -RUNDE), som har markup siden trenger og tas
+    # fra kilden (uten overskriftscellene stopper JS, og uten boksene blir de
+    # tomme, 20.10.2026; uten «Neste kamp» og banneret finnes ikke elementene).
     dest = ROOT / league / "index.html"
     egne = statiske(dest.read_text(encoding="utf-8")) if dest.exists() else {}
-    kilde = {k: (v if k == "KOLONNER" or k.startswith("KORT") else "") for k, v in statiske(out).items()}
+    kilde = {k: (v if k in ("KOLONNER", "NESTEKAMP", "BANNER", "RUNDE") or k.startswith("KORT") else "") for k, v in statiske(out).items()}
     return med_statiske(out, {**kilde, **{k: v for k, v in egne.items() if v.strip()}})
 
 

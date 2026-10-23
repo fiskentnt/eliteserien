@@ -25,6 +25,9 @@ import re
 import sys
 from pathlib import Path
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import skrifter  # noqa: E402
+
 ROOT = Path(__file__).resolve().parent.parent
 LIGAER = {"eliteserien": "Eliteserien", "obos": "OBOS-ligaen"}
 
@@ -64,8 +67,9 @@ def render(liga):
     side = (ROOT / liga / "index.html").read_text(encoding="utf-8")
     tema = _ett(r"<script>\n// Kjøres synkront i <head>.*?</script>", side, "temaskriptet")
     telling = _ett(r"<!-- Besøksstatistikk.*?</script>", side, "besøkstellingen")
-    fonter = _ett(r'<link rel="preconnect" href="https://fonts.googleapis.com">.*?rel="stylesheet">', side, "fontene")
-    stil = _ett(r"<style>.*?</style>", side, "stilarket")
+    fonter = skrifter.blokk(skrifter.MODELLSJEKK)
+    # Stilarket er første <style> utenom skriftblokken (scripts/skrifter.py).
+    stil = _ett(r"<style>.*?</style>", re.sub(r"<!-- SKRIFTER -->.*?<!-- /SKRIFTER -->", "", side, flags=re.S), "stilarket")
     stil = stil[:-len("</style>")] + EKSTRA_CSS + "</style>"
     innhold = (ROOT / "modellsjekk" / f"{liga}.html").read_text(encoding="utf-8").strip()
     js = (ROOT / "modellsjekk" / "treffsikkerhet.js").read_text(encoding="utf-8").strip()

@@ -28,7 +28,7 @@ const path = require('path');
 
 const ROOT = path.join(__dirname, '..');
 const MIME = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json',
-  '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.ttf': 'font/ttf'};
+  '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.ttf': 'font/ttf', '.woff2': 'font/woff2'};
 
 // Grunnlagsfilen (<liga>/data/grunnlag.json) svarer 404 som standard, så
 // testene prøver sidens egen regning, som før filen fantes (den brukes fortsatt
@@ -176,7 +176,8 @@ const QA_EXPECT = {
   // Fortegnet er ute av ordlyden: tallet står nå som "9,3 poeng mer enn
   // modellen forventet" / "5,6 poeng under forventning".
   luck:       {what: 'poengavvik',    pat: /\d+,\d poeng (mer enn markedet ventet|under det markedet ventet)/},
-  // «Har X vært heldig eller uheldig?» (23.10.2026): konklusjonen først, mot det
+  // «Har X tatt flere eller færre poeng enn ventet?» (23.10.2026, nytt navn
+  // 24.10.): konklusjonen først, mot det
   // oddsene før kampene ga.
   teamluck:   {what: 'poeng mot markedet', pat: /(flere|færre) enn markedet ventet|like mange poeng som markedet ventet|ingen spilte kamper med sluttodds/},
 };
@@ -560,7 +561,7 @@ async function main() {
           JSON.stringify(r && r.svar).slice(0, 500));
         // Svarene som bygger på spilte kamper, sier at ingen er spilt, og
         // ingen svar oppgir et avvik på 0,0 poeng som om det var et funn.
-        check(`${side}: svarene om spilte kamper sier at ingen er spilt ennå (forrige kamp${r && r.svar.luck ? ', heldig eller uheldig' : ''}), og ingen oppgir 0,0 poeng`,
+        check(`${side}: svarene om spilte kamper sier at ingen er spilt ennå (forrige kamp${r && r.svar.luck ? ', slått oddsene eller skuffet' : ''}), og ingen oppgir 0,0 poeng`,
           !!r && /ingen spilte kamper ennå/.test(r.svar.lastmatch)
             && (!('luck' in r.svar) || r.svar.luck === 'Ingen kamper er spilt ennå, så ingen har tatt flere eller færre poeng enn markedet ventet.')
             && Object.values(r.svar).every(t => !/0,0 poeng/.test(t)),
@@ -3725,6 +3726,11 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       const rolig = () => pg.waitForFunction(() => typeof lastMCFinal !== 'undefined' && lastMCFinal && lastMCScenarioKey === qaScenarioKey()
         && !document.getElementById('nmImpact').classList.contains('venter') && !plassHold, {timeout: 120000, polling: 50});
       await rolig();
+      // Plassen som holdes av ved fulgt lag (data-fulgt, 24.10.2026) tar opp
+      // høydeendringene i lagboksen og «Neste kamp», så ingenting over knappen
+      // endret høyde (0 av 40 trykk). Den slås av her, så testen fortsatt
+      // prøver at siden holder knappen på plass når noe over faktisk endrer høyde.
+      await pg.evaluate(() => { delete document.documentElement.dataset.fulgt; });
       // Åtte kamper lagt inn for hånd: Brann taper noen, rivalene om topp 4
       // vinner noen, resten uavgjort. Oppsettet velges slik at Brann ligger
       // rundt 1 % topp 4-sjanse når runde 23 er simulert: da kommer og går
@@ -4692,7 +4698,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         // Utsnittet: hvert lag har de samme sjansene som tabellen på ligasiden.
         for (const rad of s.utsnitt) if (JSON.stringify(rad.slice(4).map(nb)) !== JSON.stringify(ligaUten[rad[1]])) f.push(`utsnitt ${rad[1]} ${rad.slice(4).join('/')}`);
         if (!s.utsnitt.some(rad => rad[1] === r.lag)) f.push('laget mangler i utsnittet');
-        const lov = new Set([...d.topp.map(q => q.sporsmal), d.plass.sporsmal, `Har ${r.lag} vært heldig eller uheldig?`]);
+        const lov = new Set([...d.topp.map(q => q.sporsmal), d.plass.sporsmal, `Har ${r.lag} tatt flere eller færre poeng enn ventet?`]);
         if (s.h3.length < 2 || s.h3.some(h => !lov.has(h))) f.push(`spørsmål ${s.h3.join(' | ')}`);
         if (s.rest.length !== d.rest.length || d.rest.some((k, i) => !nb(s.rest[i] || '').includes(`Seier ${k.seier}`) || !(s.rest[i] || '').includes(k.motstander)))
           f.push(`kamper ${s.rest.length}/${d.rest.length}`);
@@ -4959,6 +4965,66 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       }
     }
   };
+  // ---- CLS: sidene hopper ikke ved lasting (24.10.2026) ----
+  // Layout-skift (PerformanceObserver, layout-shift) fra siden åpnes til den er
+  // ferdig regnet, med Chromes CLS: største sesjonsvindu (under 1 s mellom
+  // skiftene, høyst 5 s). Grensen er 0,1 (Googles «god»), og den stopper
+  // for_push. Ligasidene uten lagret lag, med fulgt lag, og med fulgt lag og
+  // panelene («Spør om tabellen» og «Forrige runde») i motsatt stilling av
+  // standarden, og en delt lenke med #team=; forsiden, to lagsider og en
+  // spørsmålsside. PC og mobil. Med
+  // dagens filer (DATA_DAG = null), som den statiske HTML-en er laget av, og
+  // uten hurtigbuffer, som et første besøk (skriftene hentes på nytt).
+  const CLS_GRENSE = 0.1;
+  const cls = async () => {
+    setGroup(`CLS: sidene hopper ikke ved lasting (under ${String(CLS_GRENSE).replace('.', ',')}, PC og mobil, første besøk)`);
+    const bilde = DATA_DAG;
+    DATA_DAG = null;
+    try {
+      const rot = base.replace(/\/eliteserien\/$/, '');
+      const sider = [];
+      for (const [liga, lag] of [['eliteserien', 'Brann'], ['obos', 'Odd']]) {
+        sider.push({sti: `/${liga}/`, navn: `${liga} uten lag`, ls: () => ({}), liga: true});
+        sider.push({sti: `/${liga}/`, navn: `${liga} fulgt ${lag}`, ls: () => ({[`${liga}:followTeam`]: lag}), liga: true});
+        sider.push({sti: `/${liga}/`, navn: `${liga} fulgt ${lag}, panelene snudd`, liga: true,
+          ls: pc => ({[`${liga}:followTeam`]: lag, [`${liga}:qaOpen`]: pc ? '0' : '1', [`${liga}:recentOpen`]: '1'})});
+      }
+      // En delt lenke med laget i adressen, uten lagret lag.
+      sider.push({sti: '/eliteserien/#team=Brann', navn: 'eliteserien, delt lenke #team=Brann', ls: () => ({}), liga: true});
+      for (const sti of ['/', '/eliteserien/brann/', '/obos/odd/', '/eliteserien/hvem-rykker-ned/']) sider.push({sti, navn: sti, ls: () => ({})});
+      for (const s of sider) {
+        for (const [w, h, form] of [[1400, 900, 'PC'], [390, 844, 'mobil']]) {
+          const pg = await browser.newPage();
+          const feil0 = errors.length;
+          pg.on('pageerror', e => errors.push(`${s.sti}: ${e.message}`));
+          await pg.setCacheEnabled(false);
+          await pg.evaluateOnNewDocument(ls => {
+            try { localStorage.clear(); for (const [k, v] of Object.entries(ls)) localStorage.setItem(k, v); } catch (e) {}
+            window.__skift = [];
+            const navn = n => !n ? '?' : n.id ? '#' + n.id : n.className && typeof n.className === 'string' ? `${n.tagName.toLowerCase()}.${n.className.split(' ')[0]}` : (n.tagName || n.nodeName || '?').toLowerCase();
+            new PerformanceObserver(l => {
+              for (const e of l.getEntries()) window.__skift.push({v: e.value, t: e.startTime, input: e.hadRecentInput,
+                kilder: (e.sources || []).map(k => `${navn(k.node)} y${Math.round(k.previousRect.y)}->${Math.round(k.currentRect.y)} h${Math.round(k.previousRect.height)}->${Math.round(k.currentRect.height)}`)});
+            }).observe({type: 'layout-shift', buffered: true});
+          }, s.ls(form === 'PC'));
+          await pg.setViewport({width: w, height: h});
+          await pg.goto(rot + s.sti, {waitUntil: 'networkidle0'});
+          if (s.liga) await pg.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true', {timeout: 120000});
+          await sleep(1500);
+          const skift = (await pg.evaluate(() => window.__skift)).filter(x => !x.input);
+          await pg.close();
+          let maks = 0, sum = 0, start = -1, forrige = -1, vindu = [], verst = [];
+          for (const x of skift) {
+            if (start < 0 || x.t - forrige > 1000 || x.t - start > 5000) { sum = 0; start = x.t; vindu = []; }
+            sum += x.v; forrige = x.t; vindu.push(x);
+            if (sum > maks) { maks = sum; verst = [...vindu]; }
+          }
+          check(`${s.navn}, ${form}: CLS ${maks.toFixed(3).replace('.', ',')}`, maks < CLS_GRENSE && errors.length === feil0,
+            [...verst.map(x => `t=${Math.round(x.t)} ms ${x.v.toFixed(3)}: ${x.kilder.join(', ')}`), ...errors.slice(feil0)].join(' | '));
+        }
+      }
+    } finally { DATA_DAG = bilde; }
+  };
   const BARE = process.argv.includes('--bare') ? process.argv[process.argv.indexOf('--bare') + 1] : null;
 
   try {
@@ -5000,7 +5066,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       else if (BARE === 'avgjort') await avgjort();
       else if (BARE === 'tilstander') await tilstander();
       else if (BARE === 'statisk') await statisk();
-      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort, trekning, forkampen, blandet, stempel)`);
+      else if (BARE === 'cls') await cls();
+      else throw new Error(`--bare: ukjent gruppe ${BARE} (kjent: treffsikkerhet, sesongstart, hvamaa, del, telefon, forrige, neste, nestelinje, nullstill, betinget, rundemerknad, kanter, nederst, tidsrekkefolge, fyllrunden, rundeslutt, tabellbilde, nyedata, forrigedelt, matstatus, flyttede, justering, tilgode, betyrmest, rulling, svarstil, uavgjort, trekning, forkampen, blandet, stempel, statisk, cls)`);
     } else {
     // ---- 0. dagens data ----
     // Resten av suiten kjører mot det frosne bildet (DATA_DAG). Her lastes de
@@ -8540,6 +8607,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     await avgjort();
     await tilstander();
     await statisk();
+    await cls();
 
     // ---- Svarene: vist nivå minus vist nå = vist differanse ----
     // Svarene viser nivået avrundet og differansen i parentes. Ble differansen

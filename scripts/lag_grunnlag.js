@@ -69,7 +69,7 @@ const TEST_N = flagg('--n') != null ? +flagg('--n') : null;
 const BARE_TEKSTER = ARGS.includes('--bare-tekster');
 if (TEST_N != null && !(Number.isInteger(TEST_N) && TEST_N > 0)) { console.error(`--n: ugyldig ${flagg('--n')}`); process.exit(2); }
 const MIME = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css',
-  '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.ttf': 'font/ttf'};
+  '.svg': 'image/svg+xml', '.png': 'image/png', '.ico': 'image/x-icon', '.ttf': 'font/ttf', '.woff2': 'font/woff2'};
 
 function chromePath() {
   const c = [process.env.CHROME_PATH, '/usr/bin/google-chrome', '/usr/bin/google-chrome-stable', '/usr/bin/chromium', '/usr/bin/chromium-browser',
@@ -234,7 +234,7 @@ async function hentTekster(page) {
     // vinnersjanse i snitt (restprogram(), som «Hvem har det tøffeste
     // restprogrammet?»), og «Vanskeligst» som kalkulatoren (restKamperEtterSjanse).
     const rp = restprogram().sort((a, b) => b.avg - a.avg);
-    // «Har X vært heldig eller uheldig?» (lagspørsmålet i kalkulatoren,
+    // «Har X tatt flere eller færre poeng enn ventet?» (lagspørsmålet i kalkulatoren,
     // qaTeamLuck): lagsiden viser svaret derfra, så det regnes ett sted.
     const tl = QA_QUESTIONS.find(q => q.id === 'teamluck');
     try {

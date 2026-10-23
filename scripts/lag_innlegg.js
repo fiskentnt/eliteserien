@@ -25,7 +25,7 @@ const path = require('path');
 const ROOT = path.join(__dirname, '..');
 const UT = path.join(ROOT, 'innlegg');
 const TILSTAND = path.join(UT, 'tilstand.json');   // hvilke lag som er brukt
-const MIME = {'.html':'text/html; charset=utf-8','.js':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.ttf':'font/ttf'};
+const MIME = {'.html':'text/html; charset=utf-8','.js':'text/javascript','.json':'application/json','.css':'text/css','.svg':'image/svg+xml','.png':'image/png','.ico':'image/x-icon','.ttf':'font/ttf','.woff2':'font/woff2'};
 
 // Klubbene med størst supportermiljø, brukt BARE til å skille to endringer
 // som er omtrent like store (innenfor to prosentpoeng).

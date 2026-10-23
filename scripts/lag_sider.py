@@ -47,6 +47,7 @@ from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from statisk_region import med_statiske, statiske  # noqa: E402
+import skrifter  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 LIGAER = ("eliteserien", "obos")
@@ -474,9 +475,7 @@ def sporsmal_side(liga, sti, sone, t):
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="{url}og.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+{skrifter.blokk(skrifter.SPORSMAL)}
 <style>{SPORSMAL_CSS}</style>
 </head>
 <body>
@@ -764,7 +763,7 @@ def _lag_sporsmal_html(d, lag=None, plass_na=None, baand=(), heldig=None):
         vist.append(svar)
         ut.append(f'<h3>{html.escape(q["sporsmal"])}</h3>{_kamper_html(svar) if kamper else _avsnitt(svar)}'
                   + (_fordeling_svg(lag, d, plass_na, baand) if q["id"] == "range" and lag else ""))
-    # «Har X vært heldig eller uheldig?»: lagspørsmålet i kalkulatoren, hentet
+    # «Har X tatt flere eller færre poeng enn ventet?»: lagspørsmålet i kalkulatoren, hentet
     # via tekster.json som de andre (23.10.2026).
     if heldig and heldig.get("svar"):
         ut.append(f'<h3>{html.escape(heldig["sporsmal"])}</h3>{_avsnitt(heldig["svar"])}')
@@ -848,9 +847,7 @@ def lag_side(liga, lag, t):
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="{url}og.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+{skrifter.blokk(skrifter.LAGSIDE)}
 <style>{SPORSMAL_CSS}{LAG_CSS}</style>
 </head>
 <body>
@@ -947,12 +944,17 @@ def ligaside(liga, root=ROOT):
 
 def _side_statisk(t):
     """Ligamenyen, stempelet, fargeforklaringen og de fire boksene slik siden
-    viste dem (tekster.json «statisk», 20.10.2026). Mangler de, står regionene
-    som de er."""
+    viste dem (tekster.json «statisk», 20.10.2026), og fra 24.10.2026 «Neste
+    kamp», spørsmålslista, «Forrige runde», de to første rundene i kamplista,
+    banneret, «etter ...» ved tabelltittelen, rundetallet og tellerne, uten
+    lag. Mangler de, står regionene som de er."""
     st = t.get("statisk")
     if not st:
         return {}
-    return {"LIGAMENY": st["ligameny"], "STEMPEL": st["stempel"], "FORKLARING": st["forklaring"],
+    ekstra = {k: st[n] for k, n in (("NESTEKAMP", "nestekamp"), ("SPORSMALSLISTE", "sporsmalsliste"),
+                                    ("FORRIGERUNDE", "forrigerunde"), ("RUNDER", "runder"), ("BANNER", "banner")) if st.get(n)}
+    ekstra.update({k.upper(): v for k, v in (st.get("tekster") or {}).items()})
+    return {**ekstra, "LIGAMENY": st["ligameny"], "STEMPEL": st["stempel"], "FORKLARING": st["forklaring"],
             **{f"KORT{k.upper()}": st["kort"][k] for k in ("gull", "europa", "ned", "form")}}
 
 

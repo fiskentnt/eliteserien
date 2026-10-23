@@ -41,9 +41,13 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://tabellkalkulator.no/obos/hvem-rykker-ned/og.png">
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- SKRIFTER --><!-- Fra eget domene med font-display: optional, så teksten ikke tegnes om (scripts/skrifter.py). -->
+<link rel="preload" href="/assets/fonts/Barlow-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/Barlow-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/Barlow-Bold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/BarlowCondensed-Bold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/BarlowCondensed-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
+<style>@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:optional;src:url(/assets/fonts/Barlow-Regular.woff2) format('woff2')}@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:optional;src:url(/assets/fonts/Barlow-Medium.woff2) format('woff2')}@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:optional;src:url(/assets/fonts/Barlow-SemiBold.woff2) format('woff2')}@font-face{font-family:'Barlow';font-style:normal;font-weight:700;font-display:optional;src:url(/assets/fonts/Barlow-Bold.woff2) format('woff2')}@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:optional;src:url(/assets/fonts/BarlowCondensed-Medium.woff2) format('woff2')}@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:optional;src:url(/assets/fonts/BarlowCondensed-SemiBold.woff2) format('woff2')}@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:700;font-display:optional;src:url(/assets/fonts/BarlowCondensed-Bold.woff2) format('woff2')}@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:800;font-display:optional;src:url(/assets/fonts/BarlowCondensed-ExtraBold.woff2) format('woff2')}</style><!-- /SKRIFTER -->
 <style>
   /* Tema som kalkulatoren (23.10.2026): systemets innstilling til brukeren
      har valgt med knappen (localStorage «theme», data-theme på <html>, satt i

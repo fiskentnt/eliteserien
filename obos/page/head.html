@@ -51,6 +51,13 @@
   try{
     const saved = localStorage.getItem('theme');
     if(saved==='dark'||saved==='light') document.documentElement.dataset.theme = saved;
+    // Ligaen og et fulgt lag (24.10.2026): leses også før siden tegnes, så
+    // plassen til lagboksen holdes av og «Spør om tabellen» står åpen eller
+    // lukket fra start, og siden ikke hopper når JS tar over (CLS).
+    document.documentElement.dataset.liga = 'obos';
+    // En delt lenke med #team= vinner over det lagrede, som i JS.
+    const lenke = location.hash.match(/[#&]team=([^&]*)/);
+    if(lenke ? lenke[1] !== '' : localStorage.getItem('obos:followTeam')) document.documentElement.dataset.fulgt = '1';
   }catch(e){}
 })();
 </script>

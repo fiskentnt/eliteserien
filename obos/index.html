@@ -71,6 +71,13 @@
   try{
     const saved = localStorage.getItem('theme');
     if(saved==='dark'||saved==='light') document.documentElement.dataset.theme = saved;
+    // Ligaen og et fulgt lag (24.10.2026): leses også før siden tegnes, så
+    // plassen til lagboksen holdes av og «Spør om tabellen» står åpen eller
+    // lukket fra start, og siden ikke hopper når JS tar over (CLS).
+    document.documentElement.dataset.liga = 'obos';
+    // En delt lenke med #team= vinner over det lagrede, som i JS.
+    const lenke = location.hash.match(/[#&]team=([^&]*)/);
+    if(lenke ? lenke[1] !== '' : localStorage.getItem('obos:followTeam')) document.documentElement.dataset.fulgt = '1';
   }catch(e){}
 })();
 </script>
@@ -110,9 +117,16 @@
     document.head.appendChild(s);
   })();
 </script>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Barlow:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- SKRIFTER --><!-- Fra eget domene med font-display: optional, så teksten ikke tegnes om (scripts/skrifter.py). -->
+<link rel="preload" href="/assets/fonts/Barlow-Regular.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/Barlow-Medium.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/Barlow-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/Barlow-Bold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/BarlowCondensed-Medium.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/BarlowCondensed-SemiBold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/BarlowCondensed-Bold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="/assets/fonts/BarlowCondensed-ExtraBold.woff2" as="font" type="font/woff2" crossorigin>
+<style>@font-face{font-family:'Barlow';font-style:normal;font-weight:400;font-display:optional;src:url(/assets/fonts/Barlow-Regular.woff2) format('woff2')}@font-face{font-family:'Barlow';font-style:normal;font-weight:500;font-display:optional;src:url(/assets/fonts/Barlow-Medium.woff2) format('woff2')}@font-face{font-family:'Barlow';font-style:normal;font-weight:600;font-display:optional;src:url(/assets/fonts/Barlow-SemiBold.woff2) format('woff2')}@font-face{font-family:'Barlow';font-style:normal;font-weight:700;font-display:optional;src:url(/assets/fonts/Barlow-Bold.woff2) format('woff2')}@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:500;font-display:optional;src:url(/assets/fonts/BarlowCondensed-Medium.woff2) format('woff2')}@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:600;font-display:optional;src:url(/assets/fonts/BarlowCondensed-SemiBold.woff2) format('woff2')}@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:700;font-display:optional;src:url(/assets/fonts/BarlowCondensed-Bold.woff2) format('woff2')}@font-face{font-family:'Barlow Condensed';font-style:normal;font-weight:800;font-display:optional;src:url(/assets/fonts/BarlowCondensed-ExtraBold.woff2) format('woff2')}</style><!-- /SKRIFTER -->
 <style>
   :root{
     --bg:#eef2f7; --panel:#ffffff; --ink:#0f1b2d; --muted:#56667d; --line:#d8e0ec; --line-soft:#e8edf5;
@@ -331,7 +345,7 @@
   .stamp{display:inline-block;background:var(--input-bg);border:1px solid var(--line);color:var(--ink);border-radius:999px;padding:2px 10px;font-weight:600}
   .stamp .warn{color:var(--accent-text)}
   .stamp .stale{color:inherit}
-  /* Det mest aktuelle spørsmålet for valgt lag (eller "heldig/uheldig" uten
+  /* Det mest aktuelle spørsmålet for valgt lag (eller "slått oddsene" uten
      lag) -- se qaHighlightUpdate(). Egen knapp, ikke del av .team-picker sin
      flex-rad, siden spørsmålsteksten kan bli lang og trenger egen linje. */
   /* Blikkfang: viser hva siden kan. Samme kondenserte skrift som tittelen,
@@ -353,6 +367,24 @@
   @media (max-width:760px){.qa-highlight{min-height:2.5em}}
   /* Lagboksen (når et lag følges): et kort øverst i høyrekolonnen. */
   .status{background:linear-gradient(var(--team-soft),var(--team-soft)),var(--panel);color:var(--ink);border:1px solid var(--line);border-top:5px solid var(--team-fill);border-radius:12px;padding:14px 16px}
+  /* Ingen hopp ved lasting (24.10.2026). Følger man et lag (data-fulgt, satt i
+     <head>), holdes plassen til lagboksen og de lagavhengige delene av før JS
+     fyller dem: høydene er de største målt for alle lagene (PC 1400 px og
+     mobil 390 px). Uten lag står «Neste kamp», spørsmålslista, «Forrige
+     runde» og de to første rundene ferdig i HTML-en (STATISK-NESTEKAMP,
+     -SPORSMALSLISTE, -FORRIGERUNDE og -RUNDER), og banneret, «etter ...»,
+     rundetallet og tellerne (STATISK-BANNER, -TABELLINFO, -RUNDE,
+     -FORRIGEINFO, -KAMPINFO). */
+  /* Lagboksen er en kolonne med lenkeraden nederst, så plassen som holdes av
+     havner over «Mer om ...» i stedet for som et tomt felt under. */
+  .wrap > .status{display:flex;flex-direction:column}
+  .wrap > .status[hidden]{display:none}
+  .wrap > .status > .lagboks-kopi{margin-top:auto}
+  :root[data-fulgt] .wrap > .status[hidden]{display:flex;visibility:hidden}
+  :root[data-fulgt] .wrap > .status{min-height:264px}
+  :root[data-fulgt] #nextMatch{min-height:217px}
+  :root[data-fulgt] #qaPanel[open] #qaButtons{min-height:212px}
+  @media (max-width:1099px){:root[data-fulgt] .wrap > .status{min-height:240px}}
   .status .teamname-lg{display:block;font:800 clamp(18px,2vw,22px)/1.1 var(--cond);color:var(--team-text);margin:0 0 6px}
   .status .posline{font:700 14.5px/1.3 var(--body);color:var(--ink)}
   .status .posline b{font:800 17px/1 var(--cond);color:var(--ink);margin-right:2px}
@@ -525,8 +557,13 @@
   #verdict{grid-column:2;grid-row:1;margin-bottom:20px}
   .wrap > .leftcol{grid-column:1;grid-row:1 / span 2}
   .wrap > .rightcol{grid-column:2;grid-row:2}
+  /* Rad 2 er fleksibel (24.10.2026): da får rad 1 bare lagboksens høyde, og
+     høyrekolonnen står rett under den. Med to auto-rader delte nettleseren
+     venstrekolonnens høyde på begge radene så lenge høyrekolonnen var kortere,
+     og høyrekolonnen sto langt nede til kamplista var fylt, og hoppet så opp. */
+  .wrap{grid-template-rows:auto 1fr}
   @media (max-width:1099px){
-    .wrap{grid-template-columns:minmax(0,1fr);row-gap:20px}
+    .wrap{grid-template-columns:minmax(0,1fr);grid-template-rows:none;row-gap:20px}
     #verdict,.wrap > .leftcol,.wrap > .rightcol{grid-column:auto;grid-row:auto;margin-bottom:0}
   }
   .rightcol,.leftcol{display:flex;flex-direction:column;gap:20px;min-width:0}
@@ -1207,7 +1244,7 @@
     <label for="teamSelect">Følg laget ditt</label>
     <select id="teamSelect"><option value="">Alle lag</option></select>
   </div>
-  <button class="qa-highlight" id="qaHighlight" title="Hopp til Spør om tabellen"></button>
+  <!-- STATISK-BANNER --><button class="qa-highlight plain" id="qaHighlight" title="Hopp til Spør om tabellen" data-qid="keyround">Sogndal mot Kongsvinger påvirker opprykksstriden mest denne runden.</button><!-- /STATISK-BANNER -->
 </header>
 
 <div class="wrap">
@@ -1219,7 +1256,7 @@
      <div class="followbox">
       <section class="panel tblpanel" id="tabell">
         <div class="panel-head">
-          <h2>Tabell <span class="count" id="tblInfo"></span></h2>
+          <h2>Tabell <span class="count" id="tblInfo"><!-- STATISK-TABELLINFO -->etter onsdag 21. oktober<!-- /STATISK-TABELLINFO --></span></h2>
           <div class="head-tools">
             <button type="button" id="headReset" class="head-reset" hidden
               aria-label="Nullstill scenarioet"
@@ -1243,7 +1280,7 @@
             <button type="button" id="imageDownload" class="head-link" hidden>Last ned</button>
             <div class="roundnav" id="roundNav" aria-label="Velg runde">
               <button type="button" id="roundPrev" aria-label="Forrige runde">‹</button>
-              <span id="roundLabel">Runde av 30</span>
+              <span id="roundLabel"><!-- STATISK-RUNDE -->Runde 27 av 30<!-- /STATISK-RUNDE --></span>
               <button type="button" id="roundNext" aria-label="Neste runde">›</button>
               <button type="button" id="roundReset" class="head-link" hidden>Til gjeldende</button>
             </div>
@@ -1374,39 +1411,57 @@
 
   <div class="rightcol">
 
-    <section class="panel nextmatch" id="nextMatch" hidden>
+    <!-- STATISK-NESTEKAMP --><section class="panel nextmatch" id="nextMatch" data-id="m28_0">
       <div class="panel-head">
-        <h2><span class="h-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"/><path d="m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8Z"/></svg></span>Neste kamp</h2>
+        <h2><span class="h-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="8.5"></circle><path d="m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8Z"></path></svg></span>Neste kamp</h2>
         <button type="button" class="head-link" id="nmAll">Se alle kamper →</button>
       </div>
       <div class="nm-body">
-        <p class="nm-res" id="nmRes" hidden></p>
-        <p class="nm-when" id="nmWhen"></p>
-        <div class="nm-teams"><span id="nmHome"></span><span class="nm-dash">–</span><span id="nmAway"></span></div>
+        <p class="nm-res" id="nmRes" hidden=""></p>
+        <p class="nm-when" id="nmWhen">Lørdag 24. oktober kl. 14:00 · runde 28</p>
+        <div class="nm-teams"><span id="nmHome">Raufoss</span><span class="nm-dash">–</span><span id="nmAway">Ranheim</span></div>
         <div class="nm-hub" id="nmHub">
-          <button type="button" data-q="H"></button><button type="button" data-q="U"></button><button type="button" data-q="B"></button>
+          <button type="button" data-q="H">H 26 %</button><button type="button" data-q="U">U 21 %</button><button type="button" data-q="B">B 53 %</button>
         </div>
-        <p class="nm-impact" id="nmImpact" hidden></p>
+        <p class="nm-impact" id="nmImpact" hidden=""></p>
       </div>
-    </section>
+    </section><!-- /STATISK-NESTEKAMP -->
 
     <details class="panel qa" id="qaPanel">
       <summary>Spør om tabellen</summary>
-      <div class="qa-list" id="qaButtons"></div>
+      <div class="qa-list" id="qaButtons"><!-- STATISK-SPORSMALSLISTE --><div class="qa-item"><button data-id="keyround">Hva er rundens viktigste kamp i ligaen?</button></div><div class="qa-item"><button data-id="runin">Hvem har det tøffeste restprogrammet?</button></div><div class="qa-item"><button data-id="luck">Hvem har slått oddsene, og hvem har skuffet?</button></div><!-- /STATISK-SPORSMALSLISTE --></div>
     </details>
+    <script>
+    // Panelene åpne eller lukket før siden tegnes (24.10.2026), som JS gjør
+    // senere (qaApplyDefault() og «Forrige runde»): lagret valg, ellers
+    // standarden. Ellers åpnet JS dem etter første tegning, og alt under
+    // hoppet. Hendelsen dette gir, stoppes, så den ikke lagres som brukerens
+    // eget valg. Eliteserien har også de gamle nøklene uten liga (lsGet()).
+    function apneFoerTegning(id, navn, standard){
+      try{
+        var d = document.getElementById(id), liga = document.documentElement.dataset.liga;
+        var v = localStorage.getItem(liga + ':' + navn);
+        if(v===null && liga==='eliteserien') v = localStorage.getItem(navn);
+        var apen = v===null ? standard : v==='1';
+        if(d.open !== apen){ d.addEventListener('toggle', function(e){ e.stopImmediatePropagation(); }, {once:true}); d.open = apen; }
+      }catch(e){}
+    }
+    apneFoerTegning('qaPanel', 'qaOpen', window.matchMedia('(min-width:1100px)').matches);
+    </script>
 
     <section class="kamper" id="kamper">
       <details class="panel recent" id="recentPanel">
-      <summary>Forrige runde <span class="count" id="lastRoundInfo"></span></summary>
-      <div class="rounds" id="lastRound"></div>
+      <summary>Forrige runde <span class="count" id="lastRoundInfo"><!-- STATISK-FORRIGEINFO -->Runde 27, og én flyttet kamp<!-- /STATISK-FORRIGEINFO --></span></summary>
+      <div class="rounds" id="lastRound"><!-- STATISK-FORRIGERUNDE --><div class="round"><div class="match played" data-home="Egersund" data-away="Sogndal" title="Spilt søndag 18. oktober, ligger i tabellen"><span class="when"><span class="t">14:30</span></span><span class="home">Egersund</span><span class="score">3</span><span class="colon">-</span><span class="score">3</span><span class="away">Sogndal</span><span class="done">18. okt</span></div><div class="match played" data-home="Strømsgodset" data-away="Haugesund" title="Spilt søndag 18. oktober, ligger i tabellen"><span class="when"><span class="t">14:30</span></span><span class="home">Godset</span><span class="score">5</span><span class="colon">-</span><span class="score">0</span><span class="away">FKH</span><span class="done">18. okt</span></div><div class="match played" data-home="Hødd" data-away="Raufoss" title="Spilt søndag 18. oktober, ligger i tabellen"><span class="when"><span class="t">17:00</span></span><span class="home">Hødd</span><span class="score">5</span><span class="colon">-</span><span class="score">1</span><span class="away">Raufoss</span><span class="done">18. okt</span></div><div class="match played" data-home="Kongsvinger" data-away="Sandnes Ulf" title="Spilt søndag 18. oktober, ligger i tabellen"><span class="when"><span class="t">17:00</span></span><span class="home">KIL</span><span class="score">4</span><span class="colon">-</span><span class="score">0</span><span class="away">Sandnes</span><span class="done">18. okt</span></div><div class="match played" data-home="Lyn" data-away="Moss" title="Spilt søndag 18. oktober, ligger i tabellen"><span class="when"><span class="t">17:00</span></span><span class="home">Lyn</span><span class="score">1</span><span class="colon">-</span><span class="score">0</span><span class="away">Moss</span><span class="done">18. okt</span></div><div class="match played" data-home="Odd" data-away="Strømmen" title="Spilt søndag 18. oktober, ligger i tabellen"><span class="when"><span class="t">17:00</span></span><span class="home">Odd</span><span class="score">1</span><span class="colon">-</span><span class="score">2</span><span class="away">Strømmen</span><span class="done">18. okt</span></div><div class="match played" data-home="Ranheim" data-away="Bryne" title="Spilt søndag 18. oktober, ligger i tabellen"><span class="when"><span class="t">17:00</span></span><span class="home">Ranheim</span><span class="score">4</span><span class="colon">-</span><span class="score">2</span><span class="away">Bryne</span><span class="done">18. okt</span></div><div class="match played" data-home="Åsane" data-away="Stabæk" title="Spilt søndag 18. oktober, ligger i tabellen"><span class="when"><span class="t">17:00</span></span><span class="home">Åsane</span><span class="score">0</span><span class="colon">-</span><span class="score">1</span><span class="away">Stabæk</span><span class="done">18. okt</span></div><div class="dayhead flyttet">Utsatt kamp fra runde 24</div><div class="match played" data-home="Sogndal" data-away="Raufoss" title="Spilt onsdag 21. oktober, ligger i tabellen"><span class="when"><span class="t">19:00</span></span><span class="home">Sogndal</span><span class="score">2</span><span class="colon">-</span><span class="score">1</span><span class="away">Raufoss</span><span class="done">21. okt</span></div></div><!-- /STATISK-FORRIGERUNDE --></div>
     </details>
+      <script>apneFoerTegning('recentPanel', 'recentOpen', false);</script>
       <section class="panel" id="fxPanel">
-      <h2>Gjenstående kamper <span class="count" id="fxInfo"></span></h2>
+      <h2>Gjenstående kamper <span class="count" id="fxInfo"><!-- STATISK-KAMPINFO -->24 av 24 uten resultat<!-- /STATISK-KAMPINFO --></span></h2>
       <!-- Knappene står her, rett over kampene de virker på, i stedet for øverst
            i hele "kamper"-seksjonen (der de lå over "Forrige runde"). -->
       <div class="tools">
-        <button id="followWin"></button>
-        <button id="followLose"></button>
+        <button id="followWin" hidden></button>
+        <button id="followLose" hidden></button>
         <button id="simRest" title="Fyller inn et plausibelt resultat i alle tomme kamper">Simuler tomme kamper</button>
         <button class="reset" id="reset" title="Fjerner alle resultater du har fylt inn">Nullstill</button>
         <button class="share" id="share" title="Kopierer en lenke som gjenskaper dette scenarioet">Del scenario</button>
@@ -1419,7 +1474,119 @@
       <label class="autofill" id="autoFillLabel" title="De andre kampene i samme runde simuleres, så alle lagene har spilt like mange og tabellen er sammenlignbar.">
         <input type="checkbox" id="autoFillToggle" checked> Fyll ut runden når jeg legger inn et resultat
     </label>
-      <div class="rounds" id="rounds"></div>
+      <div class="rounds" id="rounds"><!-- STATISK-RUNDER --><div class="round" data-round="28"><h3><span>Runde 28</span><span class="when-row"><span class="when">24. og 25. okt</span><button class="round-sim" data-round="28">Simuler runden</button></span></h3><div class="dayhead">Lørdag 24. oktober</div><div class="match" data-id="m28_0" data-home="Raufoss" data-away="Ranheim">
+        <span class="when"><span class="t">14:00</span></span>
+        <span class="home">Raufoss</span>
+        <input inputmode="numeric" data-side="h" aria-label="Raufoss mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Ranheim mål">
+        <span class="away">Ranheim</span>
+        <span class="quick" title="Raufoss seier 26 %, uavgjort 21 %, Ranheim seier 53 %. Forventede mål 1,5-2,2. Blandet 70 % odds (OddsPapi: pinnacle, hentet fredag 23.10 kl. 09.12: 24/21/55) og 30 % modell (29/21/50)."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct" data-o="H">26 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">21 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct best" data-o="B">53 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src odds" role="button" tabindex="0" aria-label="Vis oddsen for Raufoss mot Ranheim" data-mid="m28_0">odds</i></span></span></div><div class="dayhead">Søndag 25. oktober</div><div class="match" data-id="m28_1" data-home="Strømmen" data-away="Strømsgodset">
+        <span class="when"><span class="t">13:00</span></span>
+        <span class="home">Strømmen</span>
+        <input inputmode="numeric" data-side="h" aria-label="Strømmen mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Strømsgodset mål">
+        <span class="away">Godset</span>
+        <span class="quick" title="Strømmen seier 14 %, uavgjort 16 %, Strømsgodset seier 69 %. Forventede mål 1,2-2,8. Blandet 70 % odds (OddsPapi: pinnacle, hentet fredag 23.10 kl. 09.12: 13/16/70) og 30 % modell (17/17/66)."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct" data-o="H">14 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">16 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct best" data-o="B">69 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src odds" role="button" tabindex="0" aria-label="Vis oddsen for Strømmen mot Strømsgodset" data-mid="m28_1">odds</i></span></span></div><div class="match" data-id="m28_2" data-home="Haugesund" data-away="Hødd">
+        <span class="when"><span class="t">14:30</span></span>
+        <span class="home">FKH</span>
+        <input inputmode="numeric" data-side="h" aria-label="Haugesund mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Hødd mål">
+        <span class="away">Hødd</span>
+        <span class="quick" title="Haugesund seier 81 %, uavgjort 11 %, Hødd seier 8 %. Forventede mål 3,5-1,1. Blandet 70 % odds (OddsPapi: pinnacle, hentet fredag 23.10 kl. 09.12: 81/11/8) og 30 % modell (80/12/8)."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct best" data-o="H">81 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">11 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct" data-o="B">8 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src odds" role="button" tabindex="0" aria-label="Vis oddsen for Haugesund mot Hødd" data-mid="m28_2">odds</i></span></span></div><div class="match" data-id="m28_3" data-home="Sandnes Ulf" data-away="Lyn">
+        <span class="when"><span class="t">14:30</span></span>
+        <span class="home">Sandnes</span>
+        <input inputmode="numeric" data-side="h" aria-label="Sandnes Ulf mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Lyn mål">
+        <span class="away">Lyn</span>
+        <span class="quick" title="Sandnes Ulf seier 41 %, uavgjort 25 %, Lyn seier 34 %. Forventede mål 1,5-1,4. Blandet 70 % odds (OddsPapi: pinnacle, hentet fredag 23.10 kl. 09.12: 41/26/34) og 30 % modell (41/25/34)."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct best" data-o="H">41 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">25 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct" data-o="B">34 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src odds" role="button" tabindex="0" aria-label="Vis oddsen for Sandnes Ulf mot Lyn" data-mid="m28_3">odds</i></span></span></div><div class="match" data-id="m28_4" data-home="Bryne" data-away="Egersund">
+        <span class="when"><span class="t">17:00</span></span>
+        <span class="home">Bryne</span>
+        <input inputmode="numeric" data-side="h" aria-label="Bryne mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Egersund mål">
+        <span class="away">Egersund</span>
+        <span class="quick" title="Bryne seier 55 %, uavgjort 24 %, Egersund seier 22 %. Forventede mål 1,8-1,1. Blandet 70 % odds (OddsPapi: pinnacle, hentet fredag 23.10 kl. 09.12: 56/23/21) og 30 % modell (53/25/22)."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct best" data-o="H">55 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">24 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct" data-o="B">22 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src odds" role="button" tabindex="0" aria-label="Vis oddsen for Bryne mot Egersund" data-mid="m28_4">odds</i></span></span></div><div class="match" data-id="m28_5" data-home="Moss" data-away="Åsane">
+        <span class="when"><span class="t">17:00</span></span>
+        <span class="home">Moss</span>
+        <input inputmode="numeric" data-side="h" aria-label="Moss mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Åsane mål">
+        <span class="away">Åsane</span>
+        <span class="quick" title="Moss seier 60 %, uavgjort 20 %, Åsane seier 19 %. Forventede mål 2,3-1,2. Blandet 70 % odds (OddsPapi: pinnacle, hentet torsdag 22.10 kl. 18.04: 62/20/18) og 30 % modell (56/23/21)."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct best" data-o="H">60 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">20 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct" data-o="B">19 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src odds" role="button" tabindex="0" aria-label="Vis oddsen for Moss mot Åsane" data-mid="m28_5">odds</i></span></span></div><div class="match" data-id="m28_6" data-home="Sogndal" data-away="Kongsvinger">
+        <span class="when"><span class="t">17:00</span></span>
+        <span class="home">Sogndal</span>
+        <input inputmode="numeric" data-side="h" aria-label="Sogndal mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Kongsvinger mål">
+        <span class="away">KIL</span>
+        <span class="quick" title="Sogndal seier 23 %, uavgjort 21 %, Kongsvinger seier 56 %. Forventede mål 1,4-2,3. Blandet 70 % odds (OddsPapi: pinnacle, hentet fredag 23.10 kl. 09.12: 23/20/57) og 30 % modell (25/22/53)."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct" data-o="H">23 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">21 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct best" data-o="B">56 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src odds" role="button" tabindex="0" aria-label="Vis oddsen for Sogndal mot Kongsvinger" data-mid="m28_6">odds</i></span></span></div><div class="match" data-id="m28_7" data-home="Stabæk" data-away="Odd">
+        <span class="when"><span class="t">17:00</span></span>
+        <span class="home">Stabæk</span>
+        <input inputmode="numeric" data-side="h" aria-label="Stabæk mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Odd mål">
+        <span class="away">Odd</span>
+        <span class="quick" title="Stabæk seier 51 %, uavgjort 22 %, Odd seier 27 %. Forventede mål 2,1-1,5. Blandet 70 % odds (OddsPapi: pinnacle, hentet fredag 23.10 kl. 09.12: 53/21/26) og 30 % modell (49/22/30)."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct best" data-o="H">51 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">22 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct" data-o="B">27 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src odds" role="button" tabindex="0" aria-label="Vis oddsen for Stabæk mot Odd" data-mid="m28_7">odds</i></span></span></div></div><div class="round" data-round="29"><h3><span>Runde 29</span><span class="when-row"><span class="when">1. og 2. nov</span><button class="round-sim" data-round="29">Simuler runden</button></span></h3><div class="dayhead">Søndag 1. november</div><div class="match" data-id="m29_0" data-home="Ranheim" data-away="Sogndal">
+        <span class="when"><span class="t">14:30</span></span>
+        <span class="home">Ranheim</span>
+        <input inputmode="numeric" data-side="h" aria-label="Ranheim mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Sogndal mål">
+        <span class="away">Sogndal</span>
+        <span class="quick" title="Ranheim seier 56 %, uavgjort 19 %, Sogndal seier 26 %. Forventede mål 2,6-1,8."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct best" data-o="H">56 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">19 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct" data-o="B">26 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src"></i></span></span></div><div class="match" data-id="m29_1" data-home="Egersund" data-away="Strømmen">
+        <span class="when"><span class="t">17:00</span></span>
+        <span class="home">Egersund</span>
+        <input inputmode="numeric" data-side="h" aria-label="Egersund mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Strømmen mål">
+        <span class="away">Strømmen</span>
+        <span class="quick" title="Egersund seier 54 %, uavgjort 21 %, Strømmen seier 25 %. Forventede mål 2,2-1,5."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct best" data-o="H">54 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">21 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct" data-o="B">25 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src"></i></span></span></div><div class="match" data-id="m29_2" data-home="Hødd" data-away="Bryne">
+        <span class="when"><span class="t">17:00</span></span>
+        <span class="home">Hødd</span>
+        <input inputmode="numeric" data-side="h" aria-label="Hødd mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Bryne mål">
+        <span class="away">Bryne</span>
+        <span class="quick" title="Hødd seier 29 %, uavgjort 23 %, Bryne seier 48 %. Forventede mål 1,4-1,8."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct" data-o="H">29 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">23 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct best" data-o="B">48 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src"></i></span></span></div><div class="match" data-id="m29_3" data-home="Lyn" data-away="Raufoss">
+        <span class="when"><span class="t">17:00</span></span>
+        <span class="home">Lyn</span>
+        <input inputmode="numeric" data-side="h" aria-label="Lyn mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Raufoss mål">
+        <span class="away">Raufoss</span>
+        <span class="quick" title="Lyn seier 62 %, uavgjort 19 %, Raufoss seier 19 %. Forventede mål 2,5-1,3."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct best" data-o="H">62 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">19 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct" data-o="B">19 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src"></i></span></span></div><div class="match" data-id="m29_4" data-home="Odd" data-away="Sandnes Ulf">
+        <span class="when"><span class="t">17:00</span></span>
+        <span class="home">Odd</span>
+        <input inputmode="numeric" data-side="h" aria-label="Odd mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Sandnes Ulf mål">
+        <span class="away">Sandnes</span>
+        <span class="quick" title="Odd seier 61 %, uavgjort 20 %, Sandnes Ulf seier 19 %. Forventede mål 2,2-1,2."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct best" data-o="H">61 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">20 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct" data-o="B">19 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src"></i></span></span></div><div class="match" data-id="m29_5" data-home="Strømsgodset" data-away="Moss">
+        <span class="when"><span class="t">17:00</span></span>
+        <span class="home">Godset</span>
+        <input inputmode="numeric" data-side="h" aria-label="Strømsgodset mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Moss mål">
+        <span class="away">Moss</span>
+        <span class="quick" title="Strømsgodset seier 72 %, uavgjort 17 %, Moss seier 12 %. Forventede mål 2,6-1,0."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct best" data-o="H">72 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">17 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct" data-o="B">12 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src"></i></span></span></div><div class="match" data-id="m29_6" data-home="Åsane" data-away="Haugesund">
+        <span class="when"><span class="t">17:00</span></span>
+        <span class="home">Åsane</span>
+        <input inputmode="numeric" data-side="h" aria-label="Åsane mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Haugesund mål">
+        <span class="away">FKH</span>
+        <span class="quick" title="Åsane seier 14 %, uavgjort 17 %, Haugesund seier 69 %. Forventede mål 1,1-2,6."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct" data-o="H">14 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">17 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct best" data-o="B">69 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src"></i></span></span></div><div class="dayhead">Mandag 2. november</div><div class="match" data-id="m29_7" data-home="Kongsvinger" data-away="Stabæk">
+        <span class="when"><span class="t">19:00</span></span>
+        <span class="home">KIL</span>
+        <input inputmode="numeric" data-side="h" aria-label="Kongsvinger mål">
+        <span class="colon">-</span>
+        <input inputmode="numeric" data-side="a" aria-label="Stabæk mål">
+        <span class="away">Stabæk</span>
+        <span class="quick" title="Kongsvinger seier 45 %, uavgjort 21 %, Stabæk seier 34 %. Forventede mål 2,2-1,9."><span class="q"><button data-q="H" title="Hjemmeseier, simulert resultat">H</button><i class="pct best" data-o="H">45 %</i></span><span class="q"><button data-q="U" title="Uavgjort, simulert resultat">U</button><i class="pct" data-o="U">21 %</i></span><span class="q"><button data-q="B" title="Borteseier, simulert resultat">B</button><i class="pct" data-o="B">34 %</i></span><span class="q"><button data-q="X" class="x" title="Tøm">×</button><i class="pct src"></i></span></span></div></div><!-- /STATISK-RUNDER --></div>
       <button class="showAll" id="showAllRounds" hidden>Vis alle runder</button>
     </section>
     </section>
@@ -1429,7 +1596,7 @@
       <p>Tabellkalkulator for OBOS-ligaen 2026 viser dagens tabell og sannsynligheten for at hvert lag rykker direkte opp, havner i topp 6 og får spille opprykkskvalifisering, havner i kvalik eller rykker ned. Sannsynlighetene regnes ut med en modell som bygger på resultater og odds, og resten av sesongen simuleres 100&nbsp;000 ganger.</p>
       <p>De to øverste rykker direkte opp i Eliteserien. Lagene på 3. til 6. plass spiller opprykkskvalifisering, og de kampene er ikke regnet inn her: siden sier hvor sannsynlig det er å komme dit, ikke hvor sannsynlig det er å vinne det. 14. plass må spille kvalik, og de to nederste rykker ned.</p>
       <p>Du kan fylle inn egne resultater, la modellen simulere tomme kamper, følge ett lag og se hvordan tabellen og sjansene endrer seg. Tabellen viser både modellens styrkevurdering for hele sesongen og formen i de fem siste kampene, så du ser forskjellen på hvor sterkt et lag er og hvordan det går akkurat nå. Tallene oppdateres automatisk etter hver kamp.</p>
-            <p>Tallene i "Hvem har vært heldig eller uheldig" er faktiske poeng minus det oddsene før kampene tilsa: tre ganger sjansen for seier pluss sjansen for uavgjort, fra sluttoddsen med bookmakernes margin fjernet. En kamp uten sluttodds er ikke med.</p>
+            <p>Tallene i "Hvem har slått oddsene, og hvem har skuffet?" og i lagspørsmålet "Har laget tatt flere eller færre poeng enn ventet?" er faktiske poeng minus det oddsene før kampene tilsa: tre ganger sjansen for seier pluss sjansen for uavgjort, fra sluttoddsen med bookmakernes margin fjernet. En kamp uten sluttodds er ikke med. Svarene måler poeng mot oddsene, ikke flaks: et lag over det ventede kan like gjerne ha spilt bedre enn markedet trodde.</p>
       <noscript><p><strong>Tabellen og sannsynlighetene regnes ut i nettleseren og krever JavaScript.</strong> Slå på JavaScript for å bruke kalkulatoren.</p></noscript>
     </section>
     <!-- /LIGA-OM -->
@@ -1994,6 +2161,18 @@ function statiskeDeler(){
   const barn = el => [...el.children].map(c => c.outerHTML).join('\n        ');
   return {ligameny: document.getElementById('leagueTabs').innerHTML, stempel: document.querySelector('.stamp').innerHTML,
     forklaring: document.getElementById('legend').innerHTML,
+    // Høyre kolonne uten lag (24.10.2026): «Neste kamp» (hele, med hidden),
+    // spørsmålslista, «Forrige runde» og de to første rundene i kamplista (de
+    // andre står bak «Vis alle runder», og på PC under det synlige).
+    nestekamp: document.getElementById('nextMatch').outerHTML, sporsmalsliste: document.getElementById('qaButtons').innerHTML,
+    forrigerunde: document.getElementById('lastRound').innerHTML,
+    // Det JS skriver i det synlige ellers (24.10.2026): banneret øverst (hele
+    // knappen, med klasse og spørsmål), «etter ...» ved tabelltittelen,
+    // rundetallet og tellerne på «Forrige runde» og «Gjenstående kamper».
+    banner: document.getElementById('qaHighlight').outerHTML,
+    tekster: Object.fromEntries([['tabellinfo', 'tblInfo'], ['runde', 'roundLabel'], ['forrigeinfo', 'lastRoundInfo'], ['kampinfo', 'fxInfo']]
+      .map(([k, id]) => [k, document.getElementById(id).innerHTML])),
+    runder: [...document.getElementById('rounds').children].filter(c => c.id !== 'hiddenRounds').map(c => c.outerHTML).join(''),
     kort: Object.fromEntries(['gull', 'europa', 'ned', 'form'].map(k => [k, barn(document.querySelector(`.card[data-card="${k}"]`))]))};
 }
 function applyLeagueToDom(){
@@ -4252,6 +4431,7 @@ document.getElementById('autoFillToggle').addEventListener('change',async ()=>{ 
 document.getElementById('teamSelect').addEventListener('change', e=>{
   SELECTED_TEAM = e.target.value;
   lsSet('followTeam', SELECTED_TEAM);
+  if(SELECTED_TEAM) document.documentElement.dataset.fulgt = '1'; else delete document.documentElement.dataset.fulgt;
   applyTeamColors();
   render();
 });
@@ -6725,7 +6905,8 @@ function heldigData(){
   });
   return {rader: TEAMS.map(t=>({team:t, faktisk:faktisk[t], forventet:forventet[t], diff:faktisk[t]-forventet[t], kamper:kamper[t], uten:uten[t]})), mangler};
 }
-// ---- Lagspørsmål: har laget vært heldig eller uheldig? (23.10.2026)
+// ---- Lagspørsmål: har laget tatt flere eller færre poeng enn ventet? (23.10.2026;
+// het «vært heldig eller uheldig» til 24.10.2026: svaret måler poeng mot oddsene, ikke flaks)
 // Alt fra sluttoddsen (CLOSING, med SLUTT_RESERVE der den mangler), som
 // heldigData(): poengene mot det markedet ventet, kamper og seire som
 // favoritt og underdog (favoritt = laget hadde størst seierssjanse; like
@@ -7862,8 +8043,8 @@ const QA_QUESTIONS = [
   {id:'range', needsTeam:true, run:qaRange, label:team=>`Hvilken plass ender ${team} på?`},
   {id:'decided', needsTeam:true, run:qaWhenDecided, label:()=>'Når kan det være avgjort?'},
   {id:'rivals', needsTeam:true, run:qaRivals, label:team=>qaMidtsone(team) ? `Hvem kjemper ${team} mot om plassene?` : `Hvem kjemper ${team} mot?`},
-  {id:'teamluck', needsTeam:true, run:team=>qaTeamLuck(team), label:team=>`Har ${team} vært heldig eller uheldig?`},
-  {id:'luck', needsTeam:false, run:()=>qaLuck(), label:()=>'Hvem har vært heldig eller uheldig?'},
+  {id:'teamluck', needsTeam:true, run:team=>qaTeamLuck(team), label:team=>`Har ${team} tatt flere eller færre poeng enn ventet?`},
+  {id:'luck', needsTeam:false, run:()=>qaLuck(), label:()=>'Hvem har slått oddsene, og hvem har skuffet?'},
 ];
 const QA_TOP_N = 3;
 // Spørsmålene for laget, i rekkefølge etter tilstanden (qaRetninger). 1,
@@ -7964,7 +8145,7 @@ function renderQaHighlight(){
       el.dataset.qid = 'keyround';
       el.classList.add('plain'); // hel setning: ingen «...» rundt
     } else {
-      el.textContent = 'Hvem har vært heldig eller uheldig?';
+      el.textContent = 'Hvem har slått oddsene, og hvem har skuffet?';
       el.dataset.qid = 'luck';
       el.classList.remove('plain');
     }
@@ -7990,7 +8171,7 @@ function renderQaHighlight(){
     // lastMC ikke klar ennå (rett etter sideinnlasting) -- vis samme
     // fallback som uten lag til den er det, i stedet for en tom knapp.
     if(!qaKeyBannerStale()){ el.textContent = KEYMATCH.banner; el.dataset.qid = 'keyround'; el.classList.add('plain'); }
-    else { el.textContent = 'Hvem har vært heldig eller uheldig?'; el.dataset.qid = 'luck'; }
+    else { el.textContent = 'Hvem har slått oddsene, og hvem har skuffet?'; el.dataset.qid = 'luck'; }
     return;
   }
   // Front-soner og avgjorte saker: spørsmål 1 ("Hvorfor …"), med tekst som ikke
@@ -9088,17 +9269,23 @@ function findPendingAndNext(fixturesIn){
 // should_fetch.py avsluttet tidlig) og legger det til i stempelet. Kjøres
 // uavhengig av resten av boot() (venter ikke på svar) — finnes ikke
 // status.json ennå, vises bare datoteksten som allerede står der.
-async function updateCheckStamp(fixturesIn){
+// Stempelet skrives én gang, med sjekken (24.10.2026): før ble datoen satt
+// først og «Neste sjekk ...» lagt til litt senere, og på mobil gikk stempelet
+// fra to linjer til én og tilbake, så hele siden hoppet. Til da står teksten
+// fra HTML-en (STATISK-STEMPEL).
+async function updateCheckStamp(fixturesIn, base){
+  const stampEl = document.querySelector('.stamp');
+  const skriv = html => { stampEl.textContent = base; if(html) stampEl.insertAdjacentHTML('beforeend', ` ${html}`); };
   try{
     const res = await hentFersk('data/status.json');
-    if(!res.ok) return;
+    if(!res.ok) return skriv('');
     const status = await res.json();
     const t = new Date(status.last_checked);
     // En feilet sjekk vises ALDRI for besøkende (10.10.2026). Den står i
     // status.json og går til varslingen; siden viser da bare datoen og siste
     // resultat, som når status.json mangler. Før sto "Siste automatiske sjekk
     // feilet" i rødt, også når feilen var vår egen kontroll mot en kilde.
-    if(status.ok === false) return;
+    if(status.ok === false) return skriv('');
     const {anyStarted, next} = findPendingAndNext(fixturesIn);
     const clause = (!anyStarted && next)
       ? `Neste sjekk etter kampen ${shortTeam(next.home)}-${shortTeam(next.away)} ${formatDateNo(next.date)} kl. ${next.time.replace(':','.')}.`
@@ -9107,8 +9294,8 @@ async function updateCheckStamp(fixturesIn){
     // i tooltipen.
     const stale = checkIsStale(t);
     const html = stale ? `<span class="stale" title="Siste sjekk er noen timer gammel.">${clause}</span>` : clause;
-    document.querySelector('.stamp').insertAdjacentHTML('beforeend', ` ${html}`);
-  }catch(_){ /* status.json ikke tilgjengelig — stempelet viser bare datoen, som før */ }
+    skriv(html);
+  }catch(_){ skriv(''); /* status.json ikke tilgjengelig: stempelet viser bare datoen, som før */ }
 }
 
 // The Odds API-kvoten: hvis den nylig ble lav (data/odds_quota.json, skrevet
@@ -9372,6 +9559,9 @@ async function boot(){
     const t = decodeURIComponent(hashTeam[1]);
     if(t==='' || TEAMS.includes(t)) SELECTED_TEAM = t;
   }
+  // data-fulgt (satt i <head>) følger laget siden faktisk viser, så et lag som
+  // ikke finnes her ikke etterlater plassen til lagboksen tom (24.10.2026).
+  if(SELECTED_TEAM) document.documentElement.dataset.fulgt = '1'; else delete document.documentElement.dataset.fulgt;
   const teamSelect = document.getElementById('teamSelect');
   TEAMS.forEach(t=>{
     const opt=document.createElement('option'); opt.value=t; opt.textContent=t;
@@ -9521,12 +9711,12 @@ async function boot(){
   // kamp å vise. Før sto siden fast her (last.date), og tabellen ble aldri
   // regnet.
   const dayComplete = last && FIXTURES_IN.every(r => r.matches.every(m => m.date !== last.date || m.played));
-  stampEl.textContent = !last ? 'Ingen kamper er spilt ennå.'
+  const stempel = !last ? 'Ingen kamper er spilt ennå.'
     : dayComplete
     ? `Alle kamper til og med ${formatDateNo(last.date)} er lagt inn.`
     : `Siste resultat: ${last.home} ${last.hg}-${last.ag} ${last.away}, ${weekdayShortDate(last.date)}.`;
   stampEl.title = ODDS_FETCHED_AT !== 'ukjent tidspunkt' ? `Odds hentet ${ODDS_FETCHED_AT}.` : '';
-  updateCheckStamp(FIXTURES_IN);
+  updateCheckStamp(FIXTURES_IN, stempel);
   updateOddsQuotaNote();
 
 
@@ -9541,6 +9731,7 @@ async function boot(){
   // LEAGUE.movedRounds. De to første gruppene vises åpent, resten bak "Vis
   // alle runder".
   const hiddenRounds = document.createElement('div'); hiddenRounds.hidden = true; hiddenRounds.id = 'hiddenRounds';
+  roundsEl.replaceChildren(); // de to første rundene fra HTML-en (STATISK-RUNDER)
   const grupper = [];
   kampliste.forEach(({r, sorted})=>{
     const gruppe = ({m}) => kampGruppe({...m, round:r.round});

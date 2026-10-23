@@ -1063,10 +1063,11 @@ def main():
                 vises = f"<h3>{km['sporsmal']}</h3>" in t_
                 if vises != (lag_sider.kamper_flytter(km["svar"]) > lag_sider.KAMPER_MIN_PP):
                     lfeil.append(f"{lag}: kamper ({lag_sider.kamper_flytter(km['svar'])} pp, vises {vises})")
-            # «Har X vært heldig eller uheldig?»: svaret fra kalkulatoren via
+            # «Har X tatt flere eller færre poeng enn ventet?» (het «Har X vært
+            # heldig eller uheldig?» til 24.10.2026): svaret fra kalkulatoren via
             # tekster.json, som de andre spørsmålene (23.10.2026).
             h_ = dd.get("heldig") or {}
-            if (h_.get("sporsmal") != f"Har {lag} vært heldig eller uheldig?" or f"<h3>{h_['sporsmal']}</h3>" not in t_
+            if (h_.get("sporsmal") != f"Har {lag} tatt flere eller færre poeng enn ventet?" or f"<h3>{h_['sporsmal']}</h3>" not in t_
                     or lag_sider._avsnitt(h_.get("svar", "")) not in t_):
                 lfeil.append(f"{lag}: heldig")
         check(f"lagside: alle lagsidene i {liga} har historikken (tekst under {lag_sider.HIST_MIN_FIGUR} punkter, ellers søyler), restprogrammet med «Vanskeligst» som kalkulatoren, plassfordelingen i sonefargene med navnene og setningen om heldig/uheldig",
@@ -1098,7 +1099,7 @@ def main():
                 regn[lag_][1] += ve
                 regn[lag_][2] += 1
                 regn[lag_][4].append({"egen": egen, "mot": mot, "vant": po == 3, "tapte": po == 0, "hjemme": hjemme, "opp": opp, "dato": m["date"]})
-        # Svaret på «Har X vært heldig eller uheldig?» regnet på nytt her: det
+        # Svaret på «Har X tatt flere eller færre poeng enn ventet?» regnet på nytt her: det
         # markedet ventet, favoritt/underdog, største overraskelse og skuffelse.
         dato_ = lambda iso: f"{int(iso[8:10])}. {lag_sider.MAANEDER[int(iso[5:7]) - 1]}"
         hvor_ = lambda x: f"{'hjemme' if x['hjemme'] else 'borte'} mot {x['opp']} {dato_(x['dato'])}"
@@ -1126,7 +1127,7 @@ def main():
             setninger = len(re.findall(r"[.?!](?= [A-ZÆØÅ]|$)", svar_))
             if mangler_ or setninger > 4 or (uten_ and f"i de {n_} kampene som har sluttodds" not in svar_):
                 avvik.append(f"{lag}: mangler {mangler_}, {setninger} setninger")
-        check(f"heldig: «Har X vært heldig eller uheldig?» for alle lagene i {liga} stemmer med sluttoddsen (3 x seier + uavgjort uten margin, football-data der den mangler): ventet, favoritt/underdog, overraskelse og skuffelse, høyst fire setninger",
+        check(f"heldig: «Har X tatt flere eller færre poeng enn ventet?» for alle lagene i {liga} stemmer med sluttoddsen (3 x seier + uavgjort uten margin, football-data der den mangler): ventet, favoritt/underdog, overraskelse og skuffelse, høyst fire setninger",
               not avvik, avvik[:3])
     gy_ = (ROOT / ".github" / "workflows" / "grunnlag.yml").read_text(encoding="utf-8")
     # Heldig/uheldig fra sluttoddsen (23.10.2026): «Om modellen» sier det, og
@@ -1211,9 +1212,18 @@ def main():
     for liga in ("eliteserien", "obos"):
         t = (ROOT / liga / "index.html").read_text(encoding="utf-8")
         r = statisk_region.statiske(t)
-        check(f"statisk tabell: {liga}/index.html har regionene KOLONNER, TABELL, OPPDATERT, menyen, stempelet, fargeforklaringen, boksene og lagsidene, med overskriftscellene og rader",
-              set(r) == {"KOLONNER", "OPPDATERT", "TABELL", "LIGAMENY", "STEMPEL", "FORKLARING", "KORTGULL", "KORTEUROPA", "KORTNED", "KORTFORM", "LAGSIDER"} and all(f'id="{x}"' in r["KOLONNER"] for x in ("gullHeader", "europaHeader", "nedHeader"))
-              and r["TABELL"].count("<tr ") == 16 and r["OPPDATERT"].startswith("Oppdatert "), {k: len(v) for k, v in r.items()})
+        # Fra 24.10.2026 også høyre kolonne uten lag (ingen hopp ved lasting):
+        # «Neste kamp» (hele seksjonen, JS fyller den), spørsmålslista,
+        # «Forrige runde» og de to første rundene i kamplista; banneret,
+        # «etter ...», rundetallet og tellerne.
+        check(f"statisk tabell: {liga}/index.html har regionene KOLONNER, TABELL, OPPDATERT, menyen, stempelet, fargeforklaringen, boksene, lagsidene, «Neste kamp», spørsmålslista, «Forrige runde», kamplista, banneret, «etter ...», rundetallet og tellerne, med overskriftscellene og rader",
+              set(r) == {"KOLONNER", "OPPDATERT", "TABELL", "LIGAMENY", "STEMPEL", "FORKLARING", "KORTGULL", "KORTEUROPA", "KORTNED", "KORTFORM", "LAGSIDER",
+                         "NESTEKAMP", "SPORSMALSLISTE", "FORRIGERUNDE", "RUNDER", "BANNER", "TABELLINFO", "RUNDE", "FORRIGEINFO", "KAMPINFO"} and all(f'id="{x}"' in r["KOLONNER"] for x in ("gullHeader", "europaHeader", "nedHeader"))
+              and r["TABELL"].count("<tr ") == 16 and r["OPPDATERT"].startswith("Oppdatert ")
+              and r["NESTEKAMP"].lstrip().startswith('<section class="panel nextmatch" id="nextMatch"') and all(f'id="{x}"' in r["NESTEKAMP"] for x in ("nmWhen", "nmHome", "nmAway", "nmHub", "nmImpact", "nmRes"))
+              and 'class="qa-item' in r["SPORSMALSLISTE"] and 1 <= r["RUNDER"].count('<div class="round') <= 2 and "hiddenRounds" not in r["RUNDER"]
+              and 'id="qaHighlight"' in r["BANNER"] and re.fullmatch(r"Runde \d+.* av \d+", r["RUNDE"]) and r["TABELLINFO"].strip() and r["KAMPINFO"].strip(),
+              {k: len(v) for k, v in r.items()})
         with tempfile.TemporaryDirectory() as tmp:
             c = grunnlag_port.SIDER[liga]
             for rel in {c["side"], c["modell"], "scripts/lag_grunnlag.js"}:
@@ -1229,6 +1239,20 @@ def main():
     eli_lag = set(re.findall(r'data-team="([^"]+)"', statisk_region.statiske((ROOT / "eliteserien" / "index.html").read_text(encoding="utf-8"))["TABELL"]))
     obos_lag = set(re.findall(r'data-team="([^"]+)"', statisk_region.statiske((ROOT / "obos" / "index.html").read_text(encoding="utf-8"))["TABELL"]))
     check("statisk tabell: OBOS-siden har sin egen tabell, ikke Eliteserien-sidens", obos_lag and not (obos_lag & eli_lag))
+    # Skriftene fra eget domene (24.10.2026, scripts/skrifter.py): blokken er
+    # lik blokk() med sidens vekter, filene finnes, og ingen publisert side
+    # henter dem fra Google Fonts lenger (skriftbyttet der flyttet teksten).
+    sys.path.insert(0, str(ROOT / "scripts"))
+    import skrifter
+    sk_ = {"index.html": skrifter.FORSIDE, "eliteserien/index.html": skrifter.LIGA, "obos/index.html": skrifter.LIGA,
+           "eliteserien/brann/index.html": skrifter.LAGSIDE, "obos/odd/index.html": skrifter.LAGSIDE,
+           "eliteserien/hvem-vinner/index.html": skrifter.SPORSMAL, "eliteserien/modellsjekk/index.html": skrifter.MODELLSJEKK}
+    sk_feil = [f for f, v in sk_.items() if skrifter.blokk(v) not in (ROOT / f).read_text(encoding="utf-8")]
+    sk_feil += [fil for fil in skrifter.FILER.values() if not (ROOT / "assets" / "fonts" / fil).is_file()]
+    sk_feil += [str(f.relative_to(ROOT)) for f in [ROOT / "index.html", *ROOT.glob("eliteserien/**/index.html"), *ROOT.glob("obos/**/index.html")]
+                if "fonts.googleapis.com" in f.read_text(encoding="utf-8")]
+    check("skriftene: fra assets/fonts/ med preload og font-display: optional (scripts/skrifter.py) på forsiden, ligasidene, lagsidene, spørsmålssidene og modellsjekk, ingen fra Google Fonts",
+          not sk_feil, sk_feil[:5])
     uw = (ROOT / ".github" / "workflows" / "update-data.yml").read_text(encoding="utf-8")
     ms = (ROOT / "scripts" / "make_sitemap.py").read_text(encoding="utf-8")
     check("sitemap.xml: én skriver (push_sitemap.sh i grunnlag.yml), ikke update-data.yml, og lastmod fra grunnlagsfilen",
