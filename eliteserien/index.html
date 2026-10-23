@@ -6724,6 +6724,44 @@ function heldigData(){
   });
   return {rader: TEAMS.map(t=>({team:t, faktisk:faktisk[t], forventet:forventet[t], diff:faktisk[t]-forventet[t], kamper:kamper[t], uten:uten[t]})), mangler};
 }
+// ---- Lagspørsmål: har laget vært heldig eller uheldig? (23.10.2026)
+// Alt fra sluttoddsen (CLOSING, med SLUTT_RESERVE der den mangler), som
+// heldigData(): poengene mot det markedet ventet, kamper og seire som
+// favoritt og underdog (favoritt = laget hadde størst seierssjanse; like
+// sjanser teller ikke), største overraskelse (seieren med lavest
+// seierssjanse) og største skuffelse (tapet med høyest). Høyst fire
+// setninger; en del uten kamper droppes. Lagsiden henter svaret herfra
+// (lag_grunnlag.js), så det regnes ett sted. ----
+function heldigKamper(team){
+  return MATCHES.filter(m=>m.home===team || m.away===team).map(m=>{
+    const k = `${m.home}|${m.away}`, p = (CLOSING && CLOSING[k]) || (SLUTT_RESERVE && SLUTT_RESERVE[k]);
+    if(!p) return null;
+    const hjemme = m.home===team, [gf, ga] = hjemme ? [m.hg, m.ag] : [m.ag, m.hg];
+    return {m, hjemme, opp: hjemme ? m.away : m.home, egen: hjemme ? p.H : p.B, mot: hjemme ? p.B : p.H, vant: gf>ga, tapte: gf<ga};
+  }).filter(Boolean);
+}
+function qaTeamLuck(team){
+  const r = heldigData().rader.find(x=>x.team===team);
+  if(!r || !r.kamper) return `${team} har ingen spilte kamper med sluttodds ennå.`;
+  const ventet = Math.round(r.forventet), d = r.faktisk - ventet, just = poengJust(team);
+  const i = r.uten ? ` i de ${r.kamper} kampene som har sluttodds` : '';
+  const har = r.uten ? `${team} tok ${r.faktisk}`
+    : just ? `${team} har ${r.faktisk} fra kampene (${r.faktisk + just} i tabellen etter ${just<0 ? 'trekket' : 'tillegget'})`
+    : `${team} har ${r.faktisk}`;
+  const s1 = (d===0 ? `${team} har like mange poeng som markedet ventet${i}`
+    : `${team} har ${Math.abs(d)} poeng ${d>0 ? 'flere' : 'færre'} enn markedet ventet${i}`)
+    + `: oddsene før kampene ga ${ventet} poeng, og ${har}.`;
+  const k = heldigKamper(team), fav = k.filter(x=>x.egen>x.mot), und = k.filter(x=>x.egen<x.mot);
+  const seire = xs => xs.filter(x=>x.vant).length, kamp = n => n===1 ? 'kamp' : 'kamper';
+  const s2 = fav.length && und.length ? `${team} var favoritt i ${fav.length} ${kamp(fav.length)} og vant ${seire(fav)}, og underdog i ${und.length} og vant ${seire(und)}.`
+    : fav.length ? `${team} var favoritt i ${fav.length} ${kamp(fav.length)} og vant ${seire(fav)}.`
+    : und.length ? `${team} var underdog i ${und.length} ${kamp(und.length)} og vant ${seire(und)}.` : '';
+  const hvor = x => `${x.hjemme ? 'hjemme' : 'borte'} mot ${x.opp} ${dateNoLong(x.m.date)}`;
+  const seier = k.filter(x=>x.vant).sort((a,b)=>a.egen-b.egen)[0], tap = k.filter(x=>x.tapte).sort((a,b)=>b.egen-a.egen)[0];
+  const s3 = seier ? `Største overraskelse var seieren ${hvor(seier)} (${pctTxt(seier.egen)} sjanse for seier).` : '';
+  const s4 = tap ? `Største skuffelse var tapet ${hvor(tap)} (${pctTxt(tap.egen)}${s3 ? '' : ' sjanse for seier'}).` : '';
+  return [s1, s2, s3, s4].filter(Boolean).join(' ');
+}
 function qaLuck(){
   // Før første serierunde er alle avvikene 0,0, og "0,0 poeng mer enn
   // markedet ventet, mest i ligaen" sier ingenting.
@@ -7823,6 +7861,7 @@ const QA_QUESTIONS = [
   {id:'range', needsTeam:true, run:qaRange, label:team=>`Hvilken plass ender ${team} på?`},
   {id:'decided', needsTeam:true, run:qaWhenDecided, label:()=>'Når kan det være avgjort?'},
   {id:'rivals', needsTeam:true, run:qaRivals, label:team=>qaMidtsone(team) ? `Hvem kjemper ${team} mot om plassene?` : `Hvem kjemper ${team} mot?`},
+  {id:'teamluck', needsTeam:true, run:team=>qaTeamLuck(team), label:team=>`Har ${team} vært heldig eller uheldig?`},
   {id:'luck', needsTeam:false, run:()=>qaLuck(), label:()=>'Hvem har vært heldig eller uheldig?'},
 ];
 const QA_TOP_N = 3;

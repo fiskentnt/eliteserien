@@ -176,6 +176,9 @@ const QA_EXPECT = {
   // Fortegnet er ute av ordlyden: tallet står nå som "9,3 poeng mer enn
   // modellen forventet" / "5,6 poeng under forventning".
   luck:       {what: 'poengavvik',    pat: /\d+,\d poeng (mer enn markedet ventet|under det markedet ventet)/},
+  // «Har X vært heldig eller uheldig?» (23.10.2026): konklusjonen først, mot det
+  // oddsene før kampene ga.
+  teamluck:   {what: 'poeng mot markedet', pat: /(flere|færre) enn markedet ventet|like mange poeng som markedet ventet|ingen spilte kamper med sluttodds/},
 };
 
 async function main() {

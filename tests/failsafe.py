@@ -1037,7 +1037,7 @@ def main():
                 # Figur: egen seksjon med overskrift. Ellers én linje rett under
                 # tabellen, uten overskrift.
                 if (("de siste rundene</h2>" in t_) != figur or "gjennom sesongen" in t_ or ('<p class="historikk">' in t_) == figur
-                        or (not figur and t_.index('<p class="historikk">') > t_.index('<p class="om">'))):
+                        or (not figur and t_.index('<p class="historikk">') < t_.index('<p class="om">'))):
                     lfeil.append(f"{lag}: A")
                 soyler = min(len(punkter), lag_sider.HIST_FIGUR_MAKS) * len(soner_lag)
                 if t_.count('<figure class="fig hist">') != (len(soner_lag) if figur else 0) or (figur and (
@@ -1063,10 +1063,11 @@ def main():
                 vises = f"<h3>{km['sporsmal']}</h3>" in t_
                 if vises != (lag_sider.kamper_flytter(km["svar"]) > lag_sider.KAMPER_MIN_PP):
                     lfeil.append(f"{lag}: kamper ({lag_sider.kamper_flytter(km['svar'])} pp, vises {vises})")
-            # Heldig/uheldig (23.10.2026): én setning med det markedet ventet.
+            # «Har X vært heldig eller uheldig?»: svaret fra kalkulatoren via
+            # tekster.json, som de andre spørsmålene (23.10.2026).
             h_ = dd.get("heldig") or {}
-            if (not h_.get("kamper") or f"Ut fra oddsene før kampene ventet markedet {int(h_['forventet'] + 0.5)}" not in t_
-                    or f"<h3>Har {lag} vært heldig eller uheldig?</h3>" not in t_):
+            if (h_.get("sporsmal") != f"Har {lag} vært heldig eller uheldig?" or f"<h3>{h_['sporsmal']}</h3>" not in t_
+                    or lag_sider._avsnitt(h_.get("svar", "")) not in t_):
                 lfeil.append(f"{lag}: heldig")
         check(f"lagside: alle lagsidene i {liga} har historikken (tekst under {lag_sider.HIST_MIN_FIGUR} punkter, ellers søyler), restprogrammet med «Vanskeligst» som kalkulatoren, plassfordelingen i sonefargene med navnene og setningen om heldig/uheldig",
               not lfeil, lfeil[:4])
@@ -1077,7 +1078,7 @@ def main():
         slutt_ = json.loads((d_ / "odds_closing.json").read_text(encoding="utf-8"))["matches"]
         fd_f = d_ / "odds_fd.json"
         fd_ = {(m["home"], m["away"]): m for m in json.loads(fd_f.read_text(encoding="utf-8"))["matches"]} if fd_f.exists() else {}
-        regn = {lag: [0, 0.0, 0, 0] for lag in lagt}
+        regn = {lag: [0, 0.0, 0, 0, []] for lag in lagt}
         for m in kamper_:
             o = (slutt_.get(f"{tk['liga']['sesong']}|{m['home']}|{m['away']}") or {}).get("odds") or {}
             if o.get("H") and o.get("U") and o.get("B"):
@@ -1091,14 +1092,41 @@ def main():
                 regn[m["away"]][3] += 1
                 continue
             hj, bo = (3, 0) if m["hg"] > m["ag"] else (0, 3) if m["hg"] < m["ag"] else (1, 1)
-            for lag_, po, ve in ((m["home"], hj, 3 * pH + pU), (m["away"], bo, 3 * pB + pU)):
+            for lag_, po, ve, egen, mot, hjemme, opp in ((m["home"], hj, 3 * pH + pU, pH, pB, True, m["away"]),
+                                                         (m["away"], bo, 3 * pB + pU, pB, pH, False, m["home"])):
                 regn[lag_][0] += po
                 regn[lag_][1] += ve
                 regn[lag_][2] += 1
-        avvik = [f"{lag}: {regn[lag]} mot {dd.get('heldig')}" for lag, dd in lagt.items()
-                 if not dd.get("heldig") or dd["heldig"]["faktisk"] != regn[lag][0] or abs(dd["heldig"]["forventet"] - regn[lag][1]) > 0.011
-                 or dd["heldig"]["kamper"] != regn[lag][2] or dd["heldig"]["uten"] != regn[lag][3]]
-        check(f"heldig: forventede poeng for alle lagene i {liga} er 3 x seier + uavgjort fra sluttoddsen uten margin (football-data der den mangler), som siden regner",
+                regn[lag_][4].append({"egen": egen, "mot": mot, "vant": po == 3, "tapte": po == 0, "hjemme": hjemme, "opp": opp, "dato": m["date"]})
+        # Svaret på «Har X vært heldig eller uheldig?» regnet på nytt her: det
+        # markedet ventet, favoritt/underdog, største overraskelse og skuffelse.
+        dato_ = lambda iso: f"{int(iso[8:10])}. {lag_sider.MAANEDER[int(iso[5:7]) - 1]}"
+        hvor_ = lambda x: f"{'hjemme' if x['hjemme'] else 'borte'} mot {x['opp']} {dato_(x['dato'])}"
+        avvik = []
+        for lag, dd in lagt.items():
+            svar_ = (dd.get("heldig") or {}).get("svar", "")
+            faktisk, forventet, n_, uten_, ks = regn[lag]
+            if not n_:
+                continue
+            ventet = int(forventet + 0.5)
+            fav = [x for x in ks if x["egen"] > x["mot"]]
+            und = [x for x in ks if x["egen"] < x["mot"]]
+            seier = min((x for x in ks if x["vant"]), key=lambda x: x["egen"], default=None)
+            tap = max((x for x in ks if x["tapte"]), key=lambda x: x["egen"], default=None)
+            krav = [f"ga {ventet} poeng", f"{lag} {'tok' if uten_ else 'har'} {faktisk}"]
+            if fav:
+                krav.append(f"favoritt i {len(fav)} {'kamp' if len(fav) == 1 else 'kamper'} og vant {sum(x['vant'] for x in fav)}")
+            if und:
+                krav.append(f"underdog i {len(und)}")
+            if seier:
+                krav.append(f"Største overraskelse var seieren {hvor_(seier)}")
+            if tap:
+                krav.append(f"Største skuffelse var tapet {hvor_(tap)}")
+            mangler_ = [k for k in krav if k not in svar_]
+            setninger = len(re.findall(r"[.?!](?= [A-ZÆØÅ]|$)", svar_))
+            if mangler_ or setninger > 4 or (uten_ and f"i de {n_} kampene som har sluttodds" not in svar_):
+                avvik.append(f"{lag}: mangler {mangler_}, {setninger} setninger")
+        check(f"heldig: «Har X vært heldig eller uheldig?» for alle lagene i {liga} stemmer med sluttoddsen (3 x seier + uavgjort uten margin, football-data der den mangler): ventet, favoritt/underdog, overraskelse og skuffelse, høyst fire setninger",
               not avvik, avvik[:3])
     gy_ = (ROOT / ".github" / "workflows" / "grunnlag.yml").read_text(encoding="utf-8")
     # Heldig/uheldig fra sluttoddsen (23.10.2026): «Om modellen» sier det, og
@@ -1110,7 +1138,8 @@ def main():
     es_ = (ROOT / "eliteserien" / "index.html").read_text(encoding="utf-8")
     check("heldig: kalkulatoren regner fra sluttoddsen (CLOSING) med football-data som reserve, og lagsidene bruker samme heldigData()",
           "reserveSluttodds: 'data/odds_fd.json'" in es_ and "function heldigData()" in es_ and "baseRate(" not in es_
-          and "heldigData()" in (ROOT / "scripts" / "lag_grunnlag.js").read_text(encoding="utf-8"))
+          and "{id:'teamluck', needsTeam:true, run:team=>qaTeamLuck(team)" in es_
+          and "QA_QUESTIONS.find(q => q.id === 'teamluck')" in (ROOT / "scripts" / "lag_grunnlag.js").read_text(encoding="utf-8"))
     # Temaet (23.10.2026): lag- og spørsmålssidene leser det lagrede valget i
     # <head> før stilarket, har månknappen (skjult uten JS) og data-theme i CSS-en.
     tfeil = []

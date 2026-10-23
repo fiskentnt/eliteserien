@@ -234,9 +234,9 @@ async function hentTekster(page) {
     // vinnersjanse i snitt (restprogram(), som «Hvem har det tøffeste
     // restprogrammet?»), og «Vanskeligst» som kalkulatoren (restKamperEtterSjanse).
     const rp = restprogram().sort((a, b) => b.avg - a.avg);
-    // Heldig/uheldig fra sluttoddsen (heldigData(), som spørsmålet i
-    // kalkulatoren), med poengjusteringen, til én setning på lagsiden.
-    const hd = Object.fromEntries(heldigData().rader.map(r => [r.team, r]));
+    // «Har X vært heldig eller uheldig?» (lagspørsmålet i kalkulatoren,
+    // qaTeamLuck): lagsiden viser svaret derfra, så det regnes ett sted.
+    const tl = QA_QUESTIONS.find(q => q.id === 'teamluck');
     try {
       for (const t of TEAMS) {
         await velg(t);
@@ -256,7 +256,7 @@ async function hentTekster(page) {
         const fordeling = (lastMC[t] || []).map(p => Math.round(p * 1e6) / 1e6);
         lagTekst[t] = {kort: shortTeam(t), tilstand: x.tilstand, regel: x.regel, aapnest: x.aapnest ? x.aapnest.key : null,
           topp, plass: {sporsmal: rq.label(t), svar: qaRange(t)}, rest, soner, restprogram: restprogram_, fordeling,
-          heldig: hd[t] ? {faktisk: hd[t].faktisk, forventet: Math.round(hd[t].forventet * 100) / 100, kamper: hd[t].kamper, uten: hd[t].uten, justering: poengJust(t)} : null};
+          heldig: {sporsmal: tl.label(t), svar: await tl.run(t)}};
       }
     } finally { await velg(''); }
     return {status: GRUNNLAG_STATUS, sesonger: lastMCN, lag: TEAMS.length, viktigste,

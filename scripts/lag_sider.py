@@ -713,22 +713,6 @@ def _fordeling_svg(lag, d, plass_na, baand=()):
             f'<figcaption>Andelen av de simulerte sesongene på hver plass. Uthevet: plassen nå.</figcaption></figure>')
 
 
-def _heldig_tekst(lag, d, r):
-    """Heldig/uheldig fra sluttoddsen (heldigData() i kalkulatoren): det
-    markedet ventet ut fra oddsene før kampene, og poengene laget har."""
-    h = d.get("heldig")
-    if not h or not h.get("kamper"):
-        return ""
-    ventet = int(h["forventet"] + 0.5)
-    if h.get("uten"):
-        return (f"Ut fra oddsene før kampene ventet markedet {ventet} poeng i de {h['kamper']} kampene som har sluttodds. "
-                f"{lag} tok {h['faktisk']} poeng i de samme kampene.")
-    if h.get("justering"):
-        return (f"Ut fra oddsene før kampene ventet markedet {ventet} poeng. {lag} har {h['faktisk']} poeng fra kampene "
-                f"({r['poeng']} i tabellen etter {'trekket' if h['justering'] < 0 else 'tillegget'}).")
-    return f"Ut fra oddsene før kampene ventet markedet {ventet} poeng. {lag} har {h['faktisk']}."
-
-
 def _restprogram_tekst(lag, d):
     """B: plassen blant lagene etter motstandernes vinnersjanse, og «Vanskeligst»
     som kalkulatoren (lagets sjanse for seier)."""
@@ -763,7 +747,7 @@ def kamper_flytter(svar):
     return max(tall_, default=0)
 
 
-def _lag_sporsmal_html(d, lag=None, plass_na=None, baand=(), heldig=""):
+def _lag_sporsmal_html(d, lag=None, plass_na=None, baand=(), heldig=None):
     """De tre øverste spørsmålene i Spør om tabellen for laget. Et svar som bare
     gjentar et svar over (et avgjort lag får samme forklaring på flere spørsmål),
     vises én gang. «Hvilken plass ender X på?» til slutt hvis det ikke var med."""
@@ -780,9 +764,10 @@ def _lag_sporsmal_html(d, lag=None, plass_na=None, baand=(), heldig=""):
         vist.append(svar)
         ut.append(f'<h3>{html.escape(q["sporsmal"])}</h3>{_kamper_html(svar) if kamper else _avsnitt(svar)}'
                   + (_fordeling_svg(lag, d, plass_na, baand) if q["id"] == "range" and lag else ""))
-    # Heldig/uheldig fra sluttoddsen, i samme stil som de andre (brukeren 23.10.2026).
-    if heldig and lag:
-        ut.append(f'<h3>Har {html.escape(lag)} vært heldig eller uheldig?</h3><p>{_nb(html.escape(heldig))}</p>')
+    # «Har X vært heldig eller uheldig?»: lagspørsmålet i kalkulatoren, hentet
+    # via tekster.json som de andre (23.10.2026).
+    if heldig and heldig.get("svar"):
+        ut.append(f'<h3>{html.escape(heldig["sporsmal"])}</h3>{_avsnitt(heldig["svar"])}')
     return "\n  ".join(ut)
 
 
@@ -831,7 +816,6 @@ def lag_side(liga, lag, t):
                 + "<p>Sjansen for seier, uavgjort og tap i hver kamp, slik kalkulatoren "
                 f"regner den.</p>\n  {rest}") if rest else ""
     hist_linje, historikk = _historikk_html(liga, t, lag, les_historikk(liga))
-    heldig_ = _heldig_tekst(lag, d, _rad(t, lag))
     utsnitt = _lag_utsnitt_html(t, lag)
     om = (f"Sjansene for {liste([sone_navn(t, k['key']) for k in t['tabell']['kolonner']])} er de samme som i tabellen på "
           "ligasiden." + (" «–» betyr at det ikke lenger er mulig." if "<td>–</td>" in utsnitt else ""))
@@ -877,10 +861,10 @@ def lag_side(liga, lag, t):
   <p class="svar">{_nb(html.escape(svar))}</p>
   <p class="dato">Oppdatert {norsk_tid(t["laget"])}. Sjansene er regnet fra {tall(t["sesonger"])} simulerte sesonger.</p>
   {utsnitt}
-  {hist_linje}<p class="om">{html.escape(om)}</p>
-  {historikk}
+  <p class="om">{html.escape(om)}</p>
+  {hist_linje}{historikk}
   <h2>Spør om tabellen</h2>
-  {_lag_sporsmal_html(d, lag, _rad(t, lag)["plass"], (t.get("regler") or {}).get("baand", []), heldig_)}
+  {_lag_sporsmal_html(d, lag, _rad(t, lag)["plass"], (t.get("regler") or {}).get("baand", []), d.get("heldig"))}
   {rest_del}
   <p><a class="knapp" href="/{liga}/#team={quote(lag, safe="")}">Følg {html.escape(lag)} i tabellkalkulatoren</a></p>
   <h2>Lagene i {html.escape(t["liga"]["navn"])}</h2>
