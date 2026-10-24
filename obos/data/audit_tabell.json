@@ -1,21 +1,33 @@
 {
- "checked_at": "2026-10-24T13:52:05+00:00",
+ "checked_at": "2026-10-24T14:02:17+00:00",
  "checked_date": "2026-10-24",
- "kjoring": "40099899260-1",
+ "kjoring": "40100635068-1",
  "kilde": "https://www.obos-ligaen.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-10-24T13:52:05+00:00",
-  "kjoring": "40099899260-1",
-  "kilde": "https://www.obos-ligaen.no/resultater",
-  "avtrykk": "f4b24334807f6599fe9771a64dc3e738305b35ffbda9ec71ecbd9709f63b1cf2"
- }
+ "advarsler": [
+  "Tabell: Raufoss-Ranheim mangler i tabellen på obos-ligaen.no. Hos oss 1-3, bekreftet av highlightly og wikipedia. Avspark 14:00, sjekkes på nytt i neste kjøring (frist 20:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Raufoss|Ranheim",
+   "resultat": [
+    1,
+    3
+   ],
+   "avspark": "2026-10-24T12:00:00+00:00",
+   "frist": "2026-10-24T18:00:00+00:00",
+   "kilder": [
+    "highlightly",
+    "wikipedia"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
