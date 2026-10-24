@@ -1,21 +1,33 @@
 {
- "checked_at": "2026-10-24T17:51:06+00:00",
+ "checked_at": "2026-10-24T18:01:12+00:00",
  "checked_date": "2026-10-24",
- "kjoring": "40117981840-1",
+ "kjoring": "40118737450-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-10-24T17:51:06+00:00",
-  "kjoring": "40117981840-1",
-  "kilde": "https://www.eliteserien.no/resultater",
-  "avtrykk": "618b1719501e6468d806577c3c166c961f1297ea5ee098f75391a341435c715c"
- }
+ "advarsler": [
+  "Tabell: HamKam-Rosenborg mangler i tabellen på eliteserien.no. Hos oss 0-3, bekreftet av espn og highlightly. Avspark 18:00, sjekkes på nytt i neste kjøring (frist 00:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "HamKam|Rosenborg",
+   "resultat": [
+    0,
+    3
+   ],
+   "avspark": "2026-10-24T16:00:00+00:00",
+   "frist": "2026-10-24T22:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
