@@ -1346,18 +1346,12 @@
    "away": "Egersund",
    "date": "2026-10-25",
    "round": 28,
-   "H": 0.5416,
-   "U": 0.2421,
-   "B": 0.2162,
-   "kilde": "odds+modell",
-   "oddsvekt": 0.7,
-   "odds": {
-    "H": 0.5487,
-    "U": 0.239,
-    "B": 0.2123,
-    "bookmaker": "pinnacle",
-    "priced_at": "2026-10-25T14:47:47.333Z"
-   },
+   "H": 0.5258,
+   "U": 0.2492,
+   "B": 0.225,
+   "kilde": "modell",
+   "oddsvekt": 0,
+   "odds": null,
    "modell": {
     "H": 0.5258,
     "U": 0.2492,
@@ -1366,18 +1360,18 @@
    "sjanser": {
     "Bryne": {
      "gull": 0,
-     "europa": 0.7061,
+     "europa": 0.7037,
      "kvalik": 0,
      "nedrykk": 0
     },
     "Egersund": {
      "gull": 0,
-     "europa": 0.0267,
-     "kvalik": 0.0001,
+     "europa": 0.0276,
+     "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-25T15:00:56Z"
+   "stamp": "2026-10-25T15:10:57Z"
   },
   "2026|Moss|Åsane": {
    "home": "Moss",
@@ -1405,34 +1399,35 @@
     "Moss": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.0979,
-     "nedrykk": 0.002
+     "kvalik": 0.0953,
+     "nedrykk": 0.0015
     },
     "Åsane": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.042,
-     "nedrykk": 0.9471
+     "kvalik": 0.0428,
+     "nedrykk": 0.9451
     }
    },
-   "stamp": "2026-10-25T15:00:56Z"
+   "stamp": "2026-10-25T15:10:57Z"
   },
   "2026|Sogndal|Kongsvinger": {
    "home": "Sogndal",
    "away": "Kongsvinger",
    "date": "2026-10-25",
    "round": 28,
-   "H": 0.2148,
-   "U": 0.1963,
-   "B": 0.5889,
+   "H": 0.2173,
+   "U": 0.181,
+   "B": 0.6017,
    "kilde": "odds+modell",
    "oddsvekt": 0.7,
    "odds": {
-    "H": 0.1998,
-    "U": 0.1874,
-    "B": 0.6127,
-    "bookmaker": "pinnacle",
-    "priced_at": "2026-10-25T14:04:33.711Z"
+    "H": 0.2043,
+    "U": 0.1648,
+    "B": 0.6309,
+    "bookmaker": "bet365",
+    "priced_at": "2026-10-25T15:02:19.685Z",
+    "minutter_for": 57.7
    },
    "modell": {
     "H": 0.2493,
@@ -1443,34 +1438,35 @@
     "Sogndal": {
      "gull": 0,
      "europa": 0,
-     "kvalik": 0.4017,
-     "nedrykk": 0.0095
+     "kvalik": 0.4094,
+     "nedrykk": 0.0089
     },
     "Kongsvinger": {
-     "gull": 0.5637,
+     "gull": 0.5682,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-25T15:00:56Z"
+   "stamp": "2026-10-25T15:10:57Z"
   },
   "2026|Stabæk|Odd": {
    "home": "Stabæk",
    "away": "Odd",
    "date": "2026-10-25",
    "round": 28,
-   "H": 0.5168,
-   "U": 0.2139,
-   "B": 0.2694,
+   "H": 0.5199,
+   "U": 0.2149,
+   "B": 0.2653,
    "kilde": "odds+modell",
    "oddsvekt": 0.7,
    "odds": {
-    "H": 0.5292,
+    "H": 0.534,
     "U": 0.2136,
-    "B": 0.2572,
-    "bookmaker": "pinnacle",
-    "priced_at": "2026-10-25T14:03:45.031Z"
+    "B": 0.2524,
+    "bookmaker": "bet365",
+    "priced_at": "2026-10-25T15:02:05.642Z",
+    "minutter_for": 57.9
    },
    "modell": {
     "H": 0.4885,
@@ -1479,7 +1475,7 @@
    },
    "sjanser": {
     "Stabæk": {
-     "gull": 0.0021,
+     "gull": 0.0024,
      "europa": 1,
      "kvalik": 0,
      "nedrykk": 0
@@ -1491,7 +1487,7 @@
      "nedrykk": 0
     }
    },
-   "stamp": "2026-10-25T15:00:56Z"
+   "stamp": "2026-10-25T15:10:57Z"
   },
   "2026|Egersund|Strømmen": {
    "home": "Egersund",
