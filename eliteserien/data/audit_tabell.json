@@ -1,21 +1,78 @@
 {
- "checked_at": "2026-10-25T17:51:07+00:00",
+ "checked_at": "2026-10-25T18:01:09+00:00",
  "checked_date": "2026-10-25",
- "kjoring": "40218424678-1",
+ "kjoring": "40219211647-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 4,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-10-25T17:51:07+00:00",
-  "kjoring": "40218424678-1",
-  "kilde": "https://www.eliteserien.no/resultater",
-  "avtrykk": "4afc4d4839b651e7b0ddc05a586f7ee40b909b6eb9b9bd7e2f257306ae6e6ddf"
- }
+ "advarsler": [
+  "Tabell: Kristiansund-KFUM Oslo mangler i tabellen på eliteserien.no. Hos oss 2-2, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00).",
+  "Tabell: Lillestrøm-Brann mangler i tabellen på eliteserien.no. Hos oss 3-2, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00).",
+  "Tabell: Sarpsborg 08-Aalesund mangler i tabellen på eliteserien.no. Hos oss 2-1, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00).",
+  "Tabell: Start-Sandefjord mangler i tabellen på eliteserien.no. Hos oss 1-0, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Kristiansund|KFUM Oslo",
+   "resultat": [
+    2,
+    2
+   ],
+   "avspark": "2026-10-25T16:00:00+00:00",
+   "frist": "2026-10-25T22:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  },
+  {
+   "kamp": "Lillestrøm|Brann",
+   "resultat": [
+    3,
+    2
+   ],
+   "avspark": "2026-10-25T16:00:00+00:00",
+   "frist": "2026-10-25T22:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  },
+  {
+   "kamp": "Sarpsborg 08|Aalesund",
+   "resultat": [
+    2,
+    1
+   ],
+   "avspark": "2026-10-25T16:00:00+00:00",
+   "frist": "2026-10-25T22:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  },
+  {
+   "kamp": "Start|Sandefjord",
+   "resultat": [
+    1,
+    0
+   ],
+   "avspark": "2026-10-25T16:00:00+00:00",
+   "frist": "2026-10-25T22:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
