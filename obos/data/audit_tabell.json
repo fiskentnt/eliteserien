@@ -1,21 +1,32 @@
 {
- "checked_at": "2026-10-25T16:11:12+00:00",
+ "checked_at": "2026-10-25T17:51:20+00:00",
  "checked_date": "2026-10-25",
- "kjoring": "40210435537-1",
+ "kjoring": "40218426584-1",
  "kilde": "https://www.obos-ligaen.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-10-25T16:11:12+00:00",
-  "kjoring": "40210435537-1",
-  "kilde": "https://www.obos-ligaen.no/resultater",
-  "avtrykk": "6fb060ba34ea4ab841b7eafaf329f88b98e1921d54742d0f1966d49d4d13d468"
- }
+ "advarsler": [
+  "Tabell: Stabæk-Odd mangler i tabellen på obos-ligaen.no. Hos oss 2-0, bekreftet av highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Stabæk|Odd",
+   "resultat": [
+    2,
+    0
+   ],
+   "avspark": "2026-10-25T16:00:00+00:00",
+   "frist": "2026-10-25T22:00:00+00:00",
+   "kilder": [
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
