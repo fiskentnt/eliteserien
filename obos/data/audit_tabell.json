@@ -1,21 +1,32 @@
 {
- "checked_at": "2026-10-25T13:51:48+00:00",
+ "checked_at": "2026-10-25T14:02:22+00:00",
  "checked_date": "2026-10-25",
- "kjoring": "40199486307-1",
+ "kjoring": "40200259167-1",
  "kilde": "https://www.obos-ligaen.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-10-25T13:51:48+00:00",
-  "kjoring": "40199486307-1",
-  "kilde": "https://www.obos-ligaen.no/resultater",
-  "avtrykk": "c8f2e87bddf36e67d6ff0fad5e05b23035e74d42f55475ce84e62dcd139bac8f"
- }
+ "advarsler": [
+  "Tabell: Strømmen-Strømsgodset mangler i tabellen på obos-ligaen.no. Hos oss 1-0, bekreftet av highlightly. Avspark 13:00, sjekkes på nytt i neste kjøring (frist 19:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Strømmen|Strømsgodset",
+   "resultat": [
+    1,
+    0
+   ],
+   "avspark": "2026-10-25T12:00:00+00:00",
+   "frist": "2026-10-25T18:00:00+00:00",
+   "kilder": [
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }

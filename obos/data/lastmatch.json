@@ -14,11 +14,11 @@
    "actual": "loss",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": -16,
+   "pp": -15,
    "good": false,
    "basis": "avspark",
    "foer": 0.8604,
-   "expected": 0.8443
+   "expected": 0.8465
   },
   "Egersund": {
    "date": "2026-10-18",
@@ -36,7 +36,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0498,
-   "expected": 0.0566
+   "expected": 0.0568
   },
   "Haugesund": {
    "date": "2026-10-18",
@@ -50,11 +50,11 @@
    "actual": "loss",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": -16,
+   "pp": -7,
    "good": false,
    "basis": "avspark",
    "foer": 0.885,
-   "expected": 0.8302
+   "expected": 0.8943
   },
   "Hødd": {
    "date": "2026-10-18",
@@ -72,7 +72,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0457,
-   "expected": 0.0619
+   "expected": 0.0624
   },
   "Kongsvinger": {
    "date": "2026-10-18",
@@ -86,11 +86,11 @@
    "actual": "win",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": 6,
+   "pp": 18,
    "good": true,
    "basis": "avspark",
    "foer": 0.3799,
-   "expected": 0.3568
+   "expected": 0.4696
   },
   "Lyn": {
    "date": "2026-10-18",
@@ -108,7 +108,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0858,
-   "expected": 0.086
+   "expected": 0.0885
   },
   "Moss": {
    "date": "2026-10-18",
@@ -126,7 +126,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0579,
-   "expected": 0.0528
+   "expected": 0.0531
   },
   "Odd": {
    "date": "2026-10-18",
@@ -162,7 +162,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0936,
-   "expected": 0.0958
+   "expected": 0.094
   },
   "Raufoss": {
    "date": "2026-10-24",
@@ -180,7 +180,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.9937,
-   "expected": 0.993
+   "expected": 0.9931
   },
   "Sandnes Ulf": {
    "date": "2026-10-18",
@@ -194,11 +194,11 @@
    "actual": "loss",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": 16,
+   "pp": 15,
    "good": false,
    "basis": "avspark",
    "foer": 0.275,
-   "expected": 0.3718
+   "expected": 0.3677
   },
   "Sogndal": {
    "date": "2026-10-21",
@@ -216,7 +216,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.4383,
-   "expected": 0.4763
+   "expected": 0.4775
   },
   "Stabæk": {
    "date": "2026-10-18",
@@ -234,43 +234,43 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.004,
-   "expected": 0.0006
+   "expected": 0.0016
   },
   "Strømmen": {
-   "date": "2026-10-18",
-   "home": "Odd",
-   "away": "Strømmen",
+   "date": "2026-10-25",
+   "home": "Strømmen",
+   "away": "Strømsgodset",
    "hg": 1,
-   "ag": 2,
-   "opp": "Odd",
-   "gf": 2,
-   "ga": 1,
-   "actual": "win",
-   "zone": "kvalik",
-   "chance": "kvaliksjansen",
-   "pp": -5,
-   "good": true,
-   "basis": "avspark",
-   "foer": 0.0535,
-   "expected": 0.0545
-  },
-  "Strømsgodset": {
-   "date": "2026-10-18",
-   "home": "Strømsgodset",
-   "away": "Haugesund",
-   "hg": 5,
    "ag": 0,
-   "opp": "Haugesund",
-   "gf": 5,
+   "opp": "Strømsgodset",
+   "gf": 1,
    "ga": 0,
    "actual": "win",
-   "zone": "gull",
-   "chance": "opprykkssjansen",
-   "pp": 10,
+   "zone": "europa",
+   "chance": "topp 6-sjansen",
+   "pp": 1,
    "good": true,
    "basis": "avspark",
-   "foer": 0.7277,
-   "expected": 0.6592
+   "foer": 0.0005,
+   "expected": 0.0009
+  },
+  "Strømsgodset": {
+   "date": "2026-10-25",
+   "home": "Strømmen",
+   "away": "Strømsgodset",
+   "hg": 1,
+   "ag": 0,
+   "opp": "Strømmen",
+   "gf": 0,
+   "ga": 1,
+   "actual": "loss",
+   "zone": "gull",
+   "chance": "opprykkssjansen",
+   "pp": -24,
+   "good": false,
+   "basis": "avspark",
+   "foer": 0.8493,
+   "expected": 0.8489
   },
   "Åsane": {
    "date": "2026-10-18",
@@ -284,12 +284,12 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 5,
+   "pp": 4,
    "good": false,
    "basis": "avspark",
    "foer": 0.9017,
-   "expected": 0.9139
+   "expected": 0.9115
   }
  },
- "updated": "2026-10-25T13:52:14Z"
+ "updated": "2026-10-25T14:02:39Z"
 }
