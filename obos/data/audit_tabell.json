@@ -1,24 +1,52 @@
 {
- "checked_at": "2026-10-25T17:51:20+00:00",
+ "checked_at": "2026-10-25T18:01:32+00:00",
  "checked_date": "2026-10-25",
- "kjoring": "40218426584-1",
+ "kjoring": "40219213723-1",
  "kilde": "https://www.obos-ligaen.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 1,
+ "warnings": 3,
  "alle_like": false,
  "nye": [],
  "avvik": [],
  "advarsler": [
-  "Tabell: Stabæk-Odd mangler i tabellen på obos-ligaen.no. Hos oss 2-0, bekreftet av highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00)."
+  "Tabell: Bryne-Egersund mangler i tabellen på obos-ligaen.no. Hos oss 3-3, bekreftet av highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00).",
+  "Tabell: Moss-Åsane mangler i tabellen på obos-ligaen.no. Hos oss 1-3, bekreftet av highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00).",
+  "Tabell: Sogndal-Kongsvinger mangler i tabellen på obos-ligaen.no. Hos oss 3-1, bekreftet av highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00)."
  ],
  "venter": [
   {
-   "kamp": "Stabæk|Odd",
+   "kamp": "Bryne|Egersund",
    "resultat": [
-    2,
-    0
+    3,
+    3
+   ],
+   "avspark": "2026-10-25T16:00:00+00:00",
+   "frist": "2026-10-25T22:00:00+00:00",
+   "kilder": [
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  },
+  {
+   "kamp": "Moss|Åsane",
+   "resultat": [
+    1,
+    3
+   ],
+   "avspark": "2026-10-25T16:00:00+00:00",
+   "frist": "2026-10-25T22:00:00+00:00",
+   "kilder": [
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  },
+  {
+   "kamp": "Sogndal|Kongsvinger",
+   "resultat": [
+    3,
+    1
    ],
    "avspark": "2026-10-25T16:00:00+00:00",
    "frist": "2026-10-25T22:00:00+00:00",
