@@ -4683,8 +4683,13 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         // med «Vanskeligst» merket i lista, og figurene synlige uten JavaScript
         // med tekstalternativ (title og desc).
         // Historikken: søyler fra fire punkter (uten teksten under), ellers tekst.
+        // Uten åpen sone (alt avgjort, som Odd og Raufoss etter 25.10.2026, eller
+        // sesongen ferdig) har lagsiden ingen historikk: samme regel som
+        // _lagets_soner i scripts/lag_sider.py og failsafe-sjekken.
+        const aapen = !tkHel.liga.ferdig && (d.soner || []).some(z => (z.avgjort === 0 && !['<1 %', '>99 %'].includes(z.vist)) || z.key === d.aapnest);
         const hp = (JSON.parse(fs.readFileSync(path.join(ROOT, side, 'data', 'sjansehistorikk.json'), 'utf8')).runder || []).filter(x => x.lag[r.lag]).length;
-        if (hp >= 4 ? (s.historikk || !s.figurer.some(x => x.hist)) : !/^(Sjansen for .+ var .+ etter runde \d+|Etter runde \d+ var sjansen)/.test(s.historikk)) f.push(`historikk ${hp}`);
+        if (!aapen ? (s.historikk || s.figurer.some(x => x.hist))
+            : hp >= 4 ? (s.historikk || !s.figurer.some(x => x.hist)) : !/^(Sjansen for .+ var .+ etter runde \d+|Etter runde \d+ var sjansen)/.test(s.historikk)) f.push(`historikk ${hp}${aapen ? '' : ' (ingen åpen sone)'}`);
         if (d.restprogram && (!s.restprogram.includes('motstanderne har i snitt') || s.vanskeligst !== 1)) f.push('restprogram');
         if (!s.figurer.length || !s.figurer.every(x => x.synlig && x.tekst)) f.push(`figurer ${JSON.stringify(s.figurer)}`);
         if (s.h1 !== s.tittel || !s.h1.startsWith(`${r.lag} ${tkHel.liga.sesong}: `)) f.push(`tittel «${s.h1}»`);
