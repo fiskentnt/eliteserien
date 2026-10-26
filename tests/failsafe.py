@@ -1584,6 +1584,15 @@ def main():
               not _rene30 and "const hentFersk = (url, opt) => fetch(url, {cache:'no-cache'" in _t30
               and "hentSporet(" in _t30 and "startDataSjekk();" in _t30, str(_rene30[:3]))
 
+    # Push-konflikt i de genererte filene (26.10.2026): resultatene kommer
+    # alltid med. Konflikt laget med vilje i et midlertidig git-oppsett
+    # (tests/push_konflikt.py): odds-filene beholder mains versjon,
+    # prekick.json og OddsPapi-telleren flettes, andre konflikter feiler som før.
+    sys.path.insert(0, str(ROOT / "tests"))
+    import push_konflikt
+    for _navn, _ok, _detalj in push_konflikt.tester():
+        check(_navn, _ok, _detalj)
+
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare
     # kall som aldri skjedde, av selve testene.
