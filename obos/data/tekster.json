@@ -1,7 +1,7 @@
 {
  "versjon": 1,
  "side": "obos",
- "laget": "2026-10-26T15:34:00Z",
+ "laget": "2026-10-27T11:43:28Z",
  "sesonger": 100000,
  "note": "Hentet av scripts/lag_grunnlag.js fra siden selv med grunnlagsfilen i bruk. scripts/lag_sider.py lager de statiske sidene fra denne filen.",
  "liga": {
@@ -34,7 +34,7 @@
    }
   ],
   "kolonner_html": "<th class=\"sortable hide-xs hh\" id=\"gullHeader\" data-sort=\"gull\" title=\"Sannsynlighet for direkte opprykk, altså 1. eller 2. plass. Klikk for å sortere.\"><span class=\"lg\">Opprykk</span><span class=\"sm\"> Oppr.</span></th>\n          <th class=\"sortable hh\" id=\"europaHeader\" data-sort=\"europa\" title=\"Sannsynlighet for 1. til 6. plass, altså direkte opprykk eller opprykkskvalifisering. Klikk for å sortere.\">Topp 6</th>\n          <th class=\"sortable hh\" id=\"nedHeader\" data-sort=\"ned\" title=\"Sannsynlighet for 15. eller 16. plass. Kvalik på 14. plass er ikke regnet med. Klikk for å sortere.\"><span class=\"lg\">Nedrykk</span><span class=\"sm\"> Nedr.</span></th>",
-  "rader_html": "<tr data-team=\"Haugesund\" class=\"cl\"><td class=\"pos\" title=\"Direkte opprykk til Eliteserien\">1</td><td class=\"team\"><span class=\"teamname\" data-team=\"Haugesund\" role=\"button\" tabindex=\"0\" title=\"Følg Haugesund\"><span class=\"lg\">Haugesund</span><span class=\"sm\"> FKH</span></span><span class=\"badge europe\" title=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 6</span></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">20</td><td class=\"hide-s\">2</td><td class=\"hide-s\">6</td><td class=\"hide-s\">81-47</td>\n      <td class=\"gd hide-diff\">+34</td><td class=\"pts\" title=\"62 poeng nå. Maks mulig sluttsum: 68.\">62</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox green\" data-team=\"Haugesund\" title=\"6,6 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 6,6 av 10 for Haugesund. Vis styrkegrafen.\">6,6</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"10 av 15 poeng i de fem siste\">6,7</b></td><td class=\"odds gull hide-xs pc-hi\">94 %</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Strømsgodset\" class=\"cl  cut\"><td class=\"pos\" title=\"Direkte opprykk til Eliteserien\">2</td><td class=\"team\"><span class=\"teamname\" data-team=\"Strømsgodset\" role=\"button\" tabindex=\"0\" title=\"Følg Strømsgodset\"><span class=\"lg\">Strømsgodset</span><span class=\"sm\"> Godset</span></span><span class=\"badge europe\" title=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 6</span></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">18</td><td class=\"hide-s\">6</td><td class=\"hide-s\">4</td><td class=\"hide-s\">76-34</td>\n      <td class=\"gd hide-diff\">+42</td><td class=\"pts\" title=\"60 poeng nå. Maks mulig sluttsum: 66.\">60</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox green\" data-team=\"Strømsgodset\" title=\"7,1 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 7,1 av 10 for Strømsgodset. Vis styrkegrafen.\">7,1</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"12 av 15 poeng i de fem siste\">8,0</b></td><td class=\"odds gull hide-xs pc-hi\">79 %</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Kongsvinger\" class=\"eu\"><td class=\"pos\" title=\"Opprykkskvalifisering\">3</td><td class=\"team\"><span class=\"teamname\" data-team=\"Kongsvinger\" role=\"button\" tabindex=\"0\" title=\"Følg Kongsvinger\"><span class=\"lg\">Kongsvinger</span><span class=\"sm\"> KIL</span></span><span class=\"badge europe\" title=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 6</span></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">18</td><td class=\"hide-s\">5</td><td class=\"hide-s\">5</td><td class=\"hide-s\">82-45</td>\n      <td class=\"gd hide-diff\">+37</td><td class=\"pts\" title=\"59 poeng nå. Maks mulig sluttsum: 65.\">59</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox lightgreen\" data-team=\"Kongsvinger\" title=\"6,3 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 6,3 av 10 for Kongsvinger. Vis styrkegrafen.\">6,3</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"9 av 15 poeng i de fem siste\">6,0</b></td><td class=\"odds gull hide-xs pc-mid\">26 %</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Stabæk\" class=\"eu\"><td class=\"pos\" title=\"Opprykkskvalifisering\">4</td><td class=\"team\"><span class=\"teamname\" data-team=\"Stabæk\" role=\"button\" tabindex=\"0\" title=\"Følg Stabæk\"><span class=\"lg\">Stabæk</span><span class=\"sm\"> Stabæk</span></span><span class=\"badge europe\" title=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 6</span></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">17</td><td class=\"hide-s\">4</td><td class=\"hide-s\">7</td><td class=\"hide-s\">66-34</td>\n      <td class=\"gd hide-diff\">+32</td><td class=\"pts\" title=\"55 poeng nå. Maks mulig sluttsum: 61.\">55</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox lightgreen\" data-team=\"Stabæk\" title=\"6,2 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 6,2 av 10 for Stabæk. Vis styrkegrafen.\">6,2</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"10 av 15 poeng i de fem siste\">6,7</b></td><td class=\"odds gull hide-xs pc-mid\">1 %</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Odd\" class=\"eu\"><td class=\"pos\" title=\"Opprykkskvalifisering\">5</td><td class=\"team\"><span class=\"teamname\" data-team=\"Odd\" role=\"button\" tabindex=\"0\" title=\"Følg Odd\"><span class=\"lg\">Odd</span><span class=\"sm\"> Odd</span></span><span class=\"badge europe\" title=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 6</span></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">13</td><td class=\"hide-s\">6</td><td class=\"hide-s\">9</td><td class=\"hide-s\">54-43</td>\n      <td class=\"gd hide-diff\">+11</td><td class=\"pts\" title=\"45 poeng nå. Maks mulig sluttsum: 51.\">45</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox lightgreen\" data-team=\"Odd\" title=\"5,7 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,7 av 10 for Odd. Vis styrkegrafen.\">5,7</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"9 av 15 poeng i de fem siste\">6,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Bryne\" class=\"eu  cut\"><td class=\"pos\" title=\"Opprykkskvalifisering\">6</td><td class=\"team\"><span class=\"teamname\" data-team=\"Bryne\" role=\"button\" tabindex=\"0\" title=\"Følg Bryne\"><span class=\"lg\">Bryne</span><span class=\"sm\"> Bryne</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">12</td><td class=\"hide-s\">4</td><td class=\"hide-s\">12</td><td class=\"hide-s\">40-41</td>\n      <td class=\"gd hide-diff\">-1</td><td class=\"pts\" title=\"40 poeng nå. Maks mulig sluttsum: 46.\">40</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Bryne\" title=\"5,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,4 av 10 for Bryne. Vis styrkegrafen.\">5,4</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"5 av 15 poeng i de fem siste\">3,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-hi\">61 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Ranheim\" class=\"\"><td class=\"pos\">7</td><td class=\"team\"><span class=\"teamname\" data-team=\"Ranheim\" role=\"button\" tabindex=\"0\" title=\"Følg Ranheim\"><span class=\"lg\">Ranheim</span><span class=\"sm\"> Ranheim</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">11</td><td class=\"hide-s\">5</td><td class=\"hide-s\">12</td><td class=\"hide-s\">71-68</td>\n      <td class=\"gd hide-diff\">+3</td><td class=\"pts\" title=\"38 poeng nå. Maks mulig sluttsum: 44.\">38</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Ranheim\" title=\"4,9 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,9 av 10 for Ranheim. Vis styrkegrafen.\">4,9</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"10 av 15 poeng i de fem siste\">6,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-mid\">26 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Hødd\" class=\"\"><td class=\"pos\">8</td><td class=\"team\"><span class=\"teamname\" data-team=\"Hødd\" role=\"button\" tabindex=\"0\" title=\"Følg Hødd\"><span class=\"lg\">Hødd</span><span class=\"sm\"> Hødd</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">11</td><td class=\"hide-s\">5</td><td class=\"hide-s\">12</td><td class=\"hide-s\">49-56</td>\n      <td class=\"gd hide-diff\">-7</td><td class=\"pts\" title=\"38 poeng nå. Maks mulig sluttsum: 44.\">38</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox red\" data-team=\"Hødd\" title=\"4,0 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,0 av 10 for Hødd. Vis styrkegrafen.\">4,0</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"4 av 15 poeng i de fem siste\">2,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-mid\">12 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Strømmen\" class=\"\"><td class=\"pos\">9</td><td class=\"team\"><span class=\"teamname\" data-team=\"Strømmen\" role=\"button\" tabindex=\"0\" title=\"Følg Strømmen\"><span class=\"lg\">Strømmen</span><span class=\"sm\"> Strømmen</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">10</td><td class=\"hide-s\">6</td><td class=\"hide-s\">12</td><td class=\"hide-s\">49-59</td>\n      <td class=\"gd hide-diff\">-10</td><td class=\"pts\" title=\"36 poeng nå. Maks mulig sluttsum: 42.\">36</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Strømmen\" title=\"4,2 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,2 av 10 for Strømmen. Vis styrkegrafen.\">4,2</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"11 av 15 poeng i de fem siste\">7,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-mid\">1 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Egersund\" class=\"\"><td class=\"pos\">10</td><td class=\"team\"><span class=\"teamname\" data-team=\"Egersund\" role=\"button\" tabindex=\"0\" title=\"Følg Egersund\"><span class=\"lg\">Egersund</span><span class=\"sm\"> Egersund</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">9</td><td class=\"hide-s\">8</td><td class=\"hide-s\">11</td><td class=\"hide-s\">45-56</td>\n      <td class=\"gd hide-diff\">-11</td><td class=\"pts\" title=\"35 poeng nå. Maks mulig sluttsum: 41.\">35</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Egersund\" title=\"4,8 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,8 av 10 for Egersund. Vis styrkegrafen.\">4,8</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"6 av 15 poeng i de fem siste\">4,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">&lt;1 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Lyn\" class=\"\"><td class=\"pos\">11</td><td class=\"team\"><span class=\"teamname\" data-team=\"Lyn\" role=\"button\" tabindex=\"0\" title=\"Følg Lyn\"><span class=\"lg\">Lyn</span><span class=\"sm\"> Lyn</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">9</td><td class=\"hide-s\">4</td><td class=\"hide-s\">15</td><td class=\"hide-s\">42-59</td>\n      <td class=\"gd hide-diff\">-17</td><td class=\"pts\" title=\"31 poeng nå. Maks mulig sluttsum: 37.\">31</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Lyn\" title=\"4,6 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,6 av 10 for Lyn. Vis styrkegrafen.\">4,6</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"3 av 15 poeng i de fem siste\">2,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"Sogndal\" class=\"\"><td class=\"pos\">12</td><td class=\"team\"><span class=\"teamname\" data-team=\"Sogndal\" role=\"button\" tabindex=\"0\" title=\"Følg Sogndal\"><span class=\"lg\">Sogndal</span><span class=\"sm\"> Sogndal</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">6</td><td class=\"hide-s\">14</td><td class=\"hide-s\">47-61</td>\n      <td class=\"gd hide-diff\">-14</td><td class=\"pts\" title=\"30 poeng nå. Maks mulig sluttsum: 36.\">30</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Sogndal\" title=\"4,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,4 av 10 for Sogndal. Vis styrkegrafen.\">4,4</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"7 av 15 poeng i de fem siste\">4,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"Sandnes Ulf\" class=\"cut\"><td class=\"pos\">13</td><td class=\"team\"><span class=\"teamname\" data-team=\"Sandnes Ulf\" role=\"button\" tabindex=\"0\" title=\"Følg Sandnes Ulf\"><span class=\"lg\">Sandnes Ulf</span><span class=\"sm\"> Sandnes</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">5</td><td class=\"hide-s\">15</td><td class=\"hide-s\">39-55</td>\n      <td class=\"gd hide-diff\">-16</td><td class=\"pts\" title=\"29 poeng nå. Maks mulig sluttsum: 35.\">29</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Sandnes Ulf\" title=\"4,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,4 av 10 for Sandnes Ulf. Vis styrkegrafen.\">4,4</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"5 av 15 poeng i de fem siste\">3,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-mid\">2 %</td></tr><tr data-team=\"Moss\" class=\"playoff\"><td class=\"pos\" title=\"Kvalik mot nedrykk\">14</td><td class=\"team\"><span class=\"teamname\" data-team=\"Moss\" role=\"button\" tabindex=\"0\" title=\"Følg Moss\"><span class=\"lg\">Moss</span><span class=\"sm\"> Moss</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">5</td><td class=\"hide-s\">15</td><td class=\"hide-s\">41-59</td>\n      <td class=\"gd hide-diff\">-18</td><td class=\"pts\" title=\"29 poeng nå. Maks mulig sluttsum: 35.\">29</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Moss\" title=\"4,6 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,6 av 10 for Moss. Vis styrkegrafen.\">4,6</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"4 av 15 poeng i de fem siste\">2,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-mid\">2 %</td></tr><tr data-team=\"Åsane\" class=\"ned\"><td class=\"pos\">15</td><td class=\"team\"><span class=\"teamname\" data-team=\"Åsane\" role=\"button\" tabindex=\"0\" title=\"Følg Åsane\"><span class=\"lg\">Åsane</span><span class=\"sm\"> Åsane</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">7</td><td class=\"hide-s\">5</td><td class=\"hide-s\">16</td><td class=\"hide-s\">40-62</td>\n      <td class=\"gd hide-diff\">-22</td><td class=\"pts\" title=\"25 poeng, etter trekk på et poeng fra NFF. Maks mulig sluttsum: 31.\"><span class=\"pjust\"><span class=\"just\" aria-hidden=\"true\">*</span>25</span></td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox red\" data-team=\"Åsane\" title=\"3,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 3,4 av 10 for Åsane. Vis styrkegrafen.\">3,4</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"6 av 15 poeng i de fem siste\">4,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-hi\">95 %</td></tr><tr data-team=\"Raufoss\" class=\"ned\"><td class=\"pos\">16</td><td class=\"team\"><span class=\"teamname\" data-team=\"Raufoss\" role=\"button\" tabindex=\"0\" title=\"Følg Raufoss\"><span class=\"lg\">Raufoss</span><span class=\"sm\"> Raufoss</span></span><span class=\"badge relegated\" title=\"Rykket ned: kan ikke berge plassen.\" role=\"button\" tabindex=\"0\" aria-label=\"Rykket ned: kan ikke berge plassen.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Rykket ned</span></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">6</td><td class=\"hide-s\">2</td><td class=\"hide-s\">20</td><td class=\"hide-s\">31-74</td>\n      <td class=\"gd hide-diff\">-43</td><td class=\"pts\" title=\"20 poeng nå. Maks mulig sluttsum: 26.\">20</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox red\" data-team=\"Raufoss\" title=\"3,3 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 3,3 av 10 for Raufoss. Vis styrkegrafen.\">3,3</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"1 av 15 poeng i de fem siste\">0,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-hi\">100 %</td></tr>",
+  "rader_html": "<tr data-team=\"Haugesund\" class=\"cl\"><td class=\"pos\" title=\"Direkte opprykk til Eliteserien\">1</td><td class=\"team\"><span class=\"teamname\" data-team=\"Haugesund\" role=\"button\" tabindex=\"0\" title=\"Følg Haugesund\"><span class=\"lg\">Haugesund</span><span class=\"sm\"> FKH</span></span><span class=\"badge europe\" title=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 6</span></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">20</td><td class=\"hide-s\">2</td><td class=\"hide-s\">6</td><td class=\"hide-s\">81-47</td>\n      <td class=\"gd hide-diff\">+34</td><td class=\"pts\" title=\"62 poeng nå. Maks mulig sluttsum: 68.\">62</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox green\" data-team=\"Haugesund\" title=\"6,6 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 6,6 av 10 for Haugesund. Vis styrkegrafen.\">6,6</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"10 av 15 poeng i de fem siste\">6,7</b></td><td class=\"odds gull hide-xs pc-hi\">94 %</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Strømsgodset\" class=\"cl  cut\"><td class=\"pos\" title=\"Direkte opprykk til Eliteserien\">2</td><td class=\"team\"><span class=\"teamname\" data-team=\"Strømsgodset\" role=\"button\" tabindex=\"0\" title=\"Følg Strømsgodset\"><span class=\"lg\">Strømsgodset</span><span class=\"sm\"> Godset</span></span><span class=\"badge europe\" title=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 6</span></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">18</td><td class=\"hide-s\">6</td><td class=\"hide-s\">4</td><td class=\"hide-s\">76-34</td>\n      <td class=\"gd hide-diff\">+42</td><td class=\"pts\" title=\"60 poeng nå. Maks mulig sluttsum: 66.\">60</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox green\" data-team=\"Strømsgodset\" title=\"7,1 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 7,1 av 10 for Strømsgodset. Vis styrkegrafen.\">7,1</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"12 av 15 poeng i de fem siste\">8,0</b></td><td class=\"odds gull hide-xs pc-hi\">81 %</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Kongsvinger\" class=\"eu\"><td class=\"pos\" title=\"Opprykkskvalifisering\">3</td><td class=\"team\"><span class=\"teamname\" data-team=\"Kongsvinger\" role=\"button\" tabindex=\"0\" title=\"Følg Kongsvinger\"><span class=\"lg\">Kongsvinger</span><span class=\"sm\"> KIL</span></span><span class=\"badge europe\" title=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 6</span></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">18</td><td class=\"hide-s\">5</td><td class=\"hide-s\">5</td><td class=\"hide-s\">82-45</td>\n      <td class=\"gd hide-diff\">+37</td><td class=\"pts\" title=\"59 poeng nå. Maks mulig sluttsum: 65.\">59</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox lightgreen\" data-team=\"Kongsvinger\" title=\"6,3 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 6,3 av 10 for Kongsvinger. Vis styrkegrafen.\">6,3</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"9 av 15 poeng i de fem siste\">6,0</b></td><td class=\"odds gull hide-xs pc-mid\">24 %</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Stabæk\" class=\"eu\"><td class=\"pos\" title=\"Opprykkskvalifisering\">4</td><td class=\"team\"><span class=\"teamname\" data-team=\"Stabæk\" role=\"button\" tabindex=\"0\" title=\"Følg Stabæk\"><span class=\"lg\">Stabæk</span><span class=\"sm\"> Stabæk</span></span><span class=\"badge europe\" title=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 6</span></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">17</td><td class=\"hide-s\">4</td><td class=\"hide-s\">7</td><td class=\"hide-s\">66-34</td>\n      <td class=\"gd hide-diff\">+32</td><td class=\"pts\" title=\"55 poeng nå. Maks mulig sluttsum: 61.\">55</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox lightgreen\" data-team=\"Stabæk\" title=\"6,2 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 6,2 av 10 for Stabæk. Vis styrkegrafen.\">6,2</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"10 av 15 poeng i de fem siste\">6,7</b></td><td class=\"odds gull hide-xs pc-mid\">1 %</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Odd\" class=\"eu\"><td class=\"pos\" title=\"Opprykkskvalifisering\">5</td><td class=\"team\"><span class=\"teamname\" data-team=\"Odd\" role=\"button\" tabindex=\"0\" title=\"Følg Odd\"><span class=\"lg\">Odd</span><span class=\"sm\"> Odd</span></span><span class=\"badge europe\" title=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 6</span></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">13</td><td class=\"hide-s\">6</td><td class=\"hide-s\">9</td><td class=\"hide-s\">54-43</td>\n      <td class=\"gd hide-diff\">+11</td><td class=\"pts\" title=\"45 poeng nå. Maks mulig sluttsum: 51.\">45</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox lightgreen\" data-team=\"Odd\" title=\"5,7 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,7 av 10 for Odd. Vis styrkegrafen.\">5,7</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"9 av 15 poeng i de fem siste\">6,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Bryne\" class=\"eu  cut\"><td class=\"pos\" title=\"Opprykkskvalifisering\">6</td><td class=\"team\"><span class=\"teamname\" data-team=\"Bryne\" role=\"button\" tabindex=\"0\" title=\"Følg Bryne\"><span class=\"lg\">Bryne</span><span class=\"sm\"> Bryne</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">12</td><td class=\"hide-s\">4</td><td class=\"hide-s\">12</td><td class=\"hide-s\">40-41</td>\n      <td class=\"gd hide-diff\">-1</td><td class=\"pts\" title=\"40 poeng nå. Maks mulig sluttsum: 46.\">40</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Bryne\" title=\"5,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,4 av 10 for Bryne. Vis styrkegrafen.\">5,4</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"5 av 15 poeng i de fem siste\">3,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-hi\">62 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Ranheim\" class=\"\"><td class=\"pos\">7</td><td class=\"team\"><span class=\"teamname\" data-team=\"Ranheim\" role=\"button\" tabindex=\"0\" title=\"Følg Ranheim\"><span class=\"lg\">Ranheim</span><span class=\"sm\"> Ranheim</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">11</td><td class=\"hide-s\">5</td><td class=\"hide-s\">12</td><td class=\"hide-s\">71-68</td>\n      <td class=\"gd hide-diff\">+3</td><td class=\"pts\" title=\"38 poeng nå. Maks mulig sluttsum: 44.\">38</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Ranheim\" title=\"4,9 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,9 av 10 for Ranheim. Vis styrkegrafen.\">4,9</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"10 av 15 poeng i de fem siste\">6,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-mid\">26 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Hødd\" class=\"\"><td class=\"pos\">8</td><td class=\"team\"><span class=\"teamname\" data-team=\"Hødd\" role=\"button\" tabindex=\"0\" title=\"Følg Hødd\"><span class=\"lg\">Hødd</span><span class=\"sm\"> Hødd</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">11</td><td class=\"hide-s\">5</td><td class=\"hide-s\">12</td><td class=\"hide-s\">49-56</td>\n      <td class=\"gd hide-diff\">-7</td><td class=\"pts\" title=\"38 poeng nå. Maks mulig sluttsum: 44.\">38</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox red\" data-team=\"Hødd\" title=\"4,0 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,0 av 10 for Hødd. Vis styrkegrafen.\">4,0</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"4 av 15 poeng i de fem siste\">2,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-mid\">11 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Strømmen\" class=\"\"><td class=\"pos\">9</td><td class=\"team\"><span class=\"teamname\" data-team=\"Strømmen\" role=\"button\" tabindex=\"0\" title=\"Følg Strømmen\"><span class=\"lg\">Strømmen</span><span class=\"sm\"> Strømmen</span></span><span class=\"badge safe\" title=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret plass</span></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">10</td><td class=\"hide-s\">6</td><td class=\"hide-s\">12</td><td class=\"hide-s\">49-59</td>\n      <td class=\"gd hide-diff\">-10</td><td class=\"pts\" title=\"36 poeng nå. Maks mulig sluttsum: 42.\">36</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Strømmen\" title=\"4,2 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,2 av 10 for Strømmen. Vis styrkegrafen.\">4,2</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"11 av 15 poeng i de fem siste\">7,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-mid\">1 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Egersund\" class=\"\"><td class=\"pos\">10</td><td class=\"team\"><span class=\"teamname\" data-team=\"Egersund\" role=\"button\" tabindex=\"0\" title=\"Følg Egersund\"><span class=\"lg\">Egersund</span><span class=\"sm\"> Egersund</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">9</td><td class=\"hide-s\">8</td><td class=\"hide-s\">11</td><td class=\"hide-s\">45-56</td>\n      <td class=\"gd hide-diff\">-11</td><td class=\"pts\" title=\"35 poeng nå. Maks mulig sluttsum: 41.\">35</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Egersund\" title=\"4,8 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,8 av 10 for Egersund. Vis styrkegrafen.\">4,8</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"6 av 15 poeng i de fem siste\">4,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">&lt;1 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Lyn\" class=\"\"><td class=\"pos\">11</td><td class=\"team\"><span class=\"teamname\" data-team=\"Lyn\" role=\"button\" tabindex=\"0\" title=\"Følg Lyn\"><span class=\"lg\">Lyn</span><span class=\"sm\"> Lyn</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">9</td><td class=\"hide-s\">4</td><td class=\"hide-s\">15</td><td class=\"hide-s\">42-59</td>\n      <td class=\"gd hide-diff\">-17</td><td class=\"pts\" title=\"31 poeng nå. Maks mulig sluttsum: 37.\">31</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Lyn\" title=\"4,6 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,6 av 10 for Lyn. Vis styrkegrafen.\">4,6</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"3 av 15 poeng i de fem siste\">2,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"Sogndal\" class=\"\"><td class=\"pos\">12</td><td class=\"team\"><span class=\"teamname\" data-team=\"Sogndal\" role=\"button\" tabindex=\"0\" title=\"Følg Sogndal\"><span class=\"lg\">Sogndal</span><span class=\"sm\"> Sogndal</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">6</td><td class=\"hide-s\">14</td><td class=\"hide-s\">47-61</td>\n      <td class=\"gd hide-diff\">-14</td><td class=\"pts\" title=\"30 poeng nå. Maks mulig sluttsum: 36.\">30</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Sogndal\" title=\"4,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,4 av 10 for Sogndal. Vis styrkegrafen.\">4,4</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"7 av 15 poeng i de fem siste\">4,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"Sandnes Ulf\" class=\"cut\"><td class=\"pos\">13</td><td class=\"team\"><span class=\"teamname\" data-team=\"Sandnes Ulf\" role=\"button\" tabindex=\"0\" title=\"Følg Sandnes Ulf\"><span class=\"lg\">Sandnes Ulf</span><span class=\"sm\"> Sandnes</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">5</td><td class=\"hide-s\">15</td><td class=\"hide-s\">39-55</td>\n      <td class=\"gd hide-diff\">-16</td><td class=\"pts\" title=\"29 poeng nå. Maks mulig sluttsum: 35.\">29</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Sandnes Ulf\" title=\"4,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,4 av 10 for Sandnes Ulf. Vis styrkegrafen.\">4,4</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"5 av 15 poeng i de fem siste\">3,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-mid\">2 %</td></tr><tr data-team=\"Moss\" class=\"playoff\"><td class=\"pos\" title=\"Kvalik mot nedrykk\">14</td><td class=\"team\"><span class=\"teamname\" data-team=\"Moss\" role=\"button\" tabindex=\"0\" title=\"Følg Moss\"><span class=\"lg\">Moss</span><span class=\"sm\"> Moss</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">5</td><td class=\"hide-s\">15</td><td class=\"hide-s\">41-59</td>\n      <td class=\"gd hide-diff\">-18</td><td class=\"pts\" title=\"29 poeng nå. Maks mulig sluttsum: 35.\">29</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Moss\" title=\"4,6 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,6 av 10 for Moss. Vis styrkegrafen.\">4,6</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"4 av 15 poeng i de fem siste\">2,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-mid\">2 %</td></tr><tr data-team=\"Åsane\" class=\"ned\"><td class=\"pos\">15</td><td class=\"team\"><span class=\"teamname\" data-team=\"Åsane\" role=\"button\" tabindex=\"0\" title=\"Følg Åsane\"><span class=\"lg\">Åsane</span><span class=\"sm\"> Åsane</span></span><span class=\"badge\"></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">7</td><td class=\"hide-s\">5</td><td class=\"hide-s\">16</td><td class=\"hide-s\">40-62</td>\n      <td class=\"gd hide-diff\">-22</td><td class=\"pts\" title=\"25 poeng, etter trekk på et poeng fra NFF. Maks mulig sluttsum: 31.\"><span class=\"pjust\"><span class=\"just\" aria-hidden=\"true\">*</span>25</span></td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox red\" data-team=\"Åsane\" title=\"3,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 3,4 av 10 for Åsane. Vis styrkegrafen.\">3,4</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"6 av 15 poeng i de fem siste\">4,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-hi\">95 %</td></tr><tr data-team=\"Raufoss\" class=\"ned\"><td class=\"pos\">16</td><td class=\"team\"><span class=\"teamname\" data-team=\"Raufoss\" role=\"button\" tabindex=\"0\" title=\"Følg Raufoss\"><span class=\"lg\">Raufoss</span><span class=\"sm\"> Raufoss</span></span><span class=\"badge relegated\" title=\"Rykket ned: kan ikke berge plassen.\" role=\"button\" tabindex=\"0\" aria-label=\"Rykket ned: kan ikke berge plassen.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Rykket ned</span></span></td><td class=\"spilt\">28</td>\n      <td class=\"hide-s\">6</td><td class=\"hide-s\">2</td><td class=\"hide-s\">20</td><td class=\"hide-s\">31-74</td>\n      <td class=\"gd hide-diff\">-43</td><td class=\"pts\" title=\"20 poeng nå. Maks mulig sluttsum: 26.\">20</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox red\" data-team=\"Raufoss\" title=\"3,3 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 3,3 av 10 for Raufoss. Vis styrkegrafen.\">3,3</button></td>\n      <td class=\"hide-s\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"1 av 15 poeng i de fem siste\">0,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-hi\">100 %</td></tr>",
   "rader": [
    {
     "plass": 1,
@@ -54,7 +54,7 @@
     "sjanser": {
      "gull": {
       "vist": "94 %",
-      "andel": 0.94411,
+      "andel": 0.94199,
       "avgjort": 0
      },
      "europa": {
@@ -86,8 +86,8 @@
     "maks": 66,
     "sjanser": {
      "gull": {
-      "vist": "79 %",
-      "andel": 0.78979,
+      "vist": "81 %",
+      "andel": 0.80828,
       "avgjort": 0
      },
      "europa": {
@@ -119,8 +119,8 @@
     "maks": 65,
     "sjanser": {
      "gull": {
-      "vist": "26 %",
-      "andel": 0.25807,
+      "vist": "24 %",
+      "andel": 0.24367,
       "avgjort": 0
      },
      "europa": {
@@ -153,7 +153,7 @@
     "sjanser": {
      "gull": {
       "vist": "1 %",
-      "andel": 0.00803,
+      "andel": 0.00606,
       "avgjort": 0
      },
      "europa": {
@@ -223,8 +223,8 @@
       "avgjort": -1
      },
      "europa": {
-      "vist": "61 %",
-      "andel": 0.60652,
+      "vist": "62 %",
+      "andel": 0.61723,
       "avgjort": 0
      },
      "ned": {
@@ -257,7 +257,7 @@
      },
      "europa": {
       "vist": "26 %",
-      "andel": 0.2608,
+      "andel": 0.25572,
       "avgjort": 0
      },
      "ned": {
@@ -289,8 +289,8 @@
       "avgjort": -1
      },
      "europa": {
-      "vist": "12 %",
-      "andel": 0.11838,
+      "vist": "11 %",
+      "andel": 0.11445,
       "avgjort": 0
      },
      "ned": {
@@ -323,7 +323,7 @@
      },
      "europa": {
       "vist": "1 %",
-      "andel": 0.01146,
+      "andel": 0.00996,
       "avgjort": 0
      },
      "ned": {
@@ -356,7 +356,7 @@
      },
      "europa": {
       "vist": "<1 %",
-      "andel": 0.00284,
+      "andel": 0.00264,
       "avgjort": 0
      },
      "ned": {
@@ -394,7 +394,7 @@
      },
      "ned": {
       "vist": "<1 %",
-      "andel": 0.00015,
+      "andel": 0.00019,
       "avgjort": 0
      }
     }
@@ -427,7 +427,7 @@
      },
      "ned": {
       "vist": "<1 %",
-      "andel": 0.00059,
+      "andel": 0.00083,
       "avgjort": 0
      }
     }
@@ -460,7 +460,7 @@
      },
      "ned": {
       "vist": "2 %",
-      "andel": 0.0239,
+      "andel": 0.02027,
       "avgjort": 0
      }
     }
@@ -493,7 +493,7 @@
      },
      "ned": {
       "vist": "2 %",
-      "andel": 0.02257,
+      "andel": 0.02425,
       "avgjort": 0
      }
     }
@@ -526,7 +526,7 @@
      },
      "ned": {
       "vist": "95 %",
-      "andel": 0.95279,
+      "andel": 0.95446,
       "avgjort": 0
      }
     }
@@ -579,19 +579,19 @@
      "lag": "Haugesund",
      "sporsmal": "Hvorfor har Haugesund 94 % sjanse for direkte opprykk?",
      "hvorfor": "Haugesund ligger tre poeng foran Kongsvinger på tredjeplassen og er litt sterkere ifølge modellen (6,6 mot 6,3). Strømsgodset er også med i kampen om de to opprykksplassene. Haugesund har også et lettere restprogram: motstanderne har i snitt 18 % vinnersjanse, mot 34 % for Kongsvinger.\n\nI simuleringene ender Haugesund i snitt på 66 poeng mot 62 for Kongsvinger, og rykker direkte opp i 94 % av dem.",
-     "kamper": "Disse kampene påvirker Haugesunds opprykkssjanse mest. Nå: 94 %\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nSeier: 99 % (+5 prosentpoeng)\nUavgjort: 91 % (−3 prosentpoeng)\nTap: 77 % (−17 prosentpoeng)\n\nHaugesund mot Odd, runde 30, søndag 8. nov\nSeier: 99 % (+5 prosentpoeng)\nUavgjort: 94 % (endrer lite)\nTap: 82 % (−12 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nBryne vinner: 99 % (+5 prosentpoeng)\nUavgjort: 96 % (+2 prosentpoeng)\nKongsvinger vinner: 90 % (−4 prosentpoeng)"
+     "kamper": "Disse kampene påvirker Haugesunds opprykkssjanse mest. Nå: 94 %\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nSeier: 99 % (+5 prosentpoeng)\nUavgjort: 90 % (−4 prosentpoeng)\nTap: 76 % (−18 prosentpoeng)\n\nHaugesund mot Odd, runde 30, søndag 8. nov\nSeier: 99 % (+5 prosentpoeng)\nUavgjort: 94 % (endrer lite)\nTap: 82 % (−12 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nBryne vinner: 99 % (+5 prosentpoeng)\nUavgjort: 96 % (+2 prosentpoeng)\nKongsvinger vinner: 89 % (−5 prosentpoeng)"
     },
     {
      "lag": "Strømsgodset",
-     "sporsmal": "Hvorfor har Strømsgodset 79 % sjanse for direkte opprykk?",
-     "hvorfor": "Strømsgodset ligger ett poeng foran Kongsvinger på tredjeplassen og er litt sterkere ifølge modellen (7,1 mot 6,3). Strømsgodset har også et lettere restprogram: motstanderne har i snitt 24 % vinnersjanse, mot 34 % for Kongsvinger.\n\nI simuleringene ender Strømsgodset i snitt på 64 poeng mot 62 for Kongsvinger, og rykker direkte opp i 79 % av dem.",
-     "kamper": "Disse kampene påvirker Strømsgodsets opprykkssjanse mest. Nå: 79 %\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nSeier: 89 % (+10 prosentpoeng)\nUavgjort: 60 % (−19 prosentpoeng)\nTap: 43 % (−36 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nBryne vinner: 93 % (+14 prosentpoeng)\nUavgjort: 89 % (+10 prosentpoeng)\nKongsvinger vinner: 62 % (−17 prosentpoeng)\n\nStabæk mot Strømsgodset, runde 30, søndag 8. nov\nSeier: 95 % (+16 prosentpoeng)\nUavgjort: 73 % (−6 prosentpoeng)\nTap: 64 % (−15 prosentpoeng)"
+     "sporsmal": "Hvorfor har Strømsgodset 81 % sjanse for direkte opprykk?",
+     "hvorfor": "Strømsgodset ligger ett poeng foran Kongsvinger på tredjeplassen og er litt sterkere ifølge modellen (7,1 mot 6,3). Strømsgodset har også et lettere restprogram: motstanderne har i snitt 23 % vinnersjanse, mot 34 % for Kongsvinger.\n\nI simuleringene ender Strømsgodset i snitt på 64 poeng mot 62 for Kongsvinger, og rykker direkte opp i 81 % av dem.",
+     "kamper": "Disse kampene påvirker Strømsgodsets opprykkssjanse mest. Nå: 81 %\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nSeier: 89 % (+8 prosentpoeng)\nUavgjort: 59 % (−22 prosentpoeng)\nTap: 43 % (−38 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nBryne vinner: 94 % (+13 prosentpoeng)\nUavgjort: 91 % (+10 prosentpoeng)\nKongsvinger vinner: 64 % (−17 prosentpoeng)\n\nStabæk mot Strømsgodset, runde 30, søndag 8. nov\nSeier: 96 % (+15 prosentpoeng)\nUavgjort: 75 % (−6 prosentpoeng)\nTap: 67 % (−14 prosentpoeng)"
     },
     {
      "lag": "Kongsvinger",
-     "sporsmal": "Hvorfor har Kongsvinger 26 % sjanse for direkte opprykk?",
-     "hvorfor": "Kongsvinger ligger ett poeng bak Strømsgodset på andreplassen og er litt svakere ifølge modellen (6,3 mot 7,1). Kongsvinger har også et tøffere restprogram: motstanderne har i snitt 34 % vinnersjanse, mot 24 % for Strømsgodset.\n\nI simuleringene ender Kongsvinger i snitt på 62 poeng mot 64 for Strømsgodset, og rykker direkte opp i 26 % av dem.",
-     "kamper": "Disse kampene påvirker Kongsvingers opprykkssjanse mest. Nå: 26 %\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nStrømsgodset vinner: 17 % (−9 prosentpoeng)\nUavgjort: 43 % (+17 prosentpoeng)\nMoss vinner: 52 % (+26 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nSeier: 48 % (+22 prosentpoeng)\nUavgjort: 13 % (−13 prosentpoeng)\nTap: 7 % (−19 prosentpoeng)\n\nKongsvinger mot Stabæk, runde 29, mandag 2. nov\nSeier: 46 % (+20 prosentpoeng)\nUavgjort: 12 % (−14 prosentpoeng)\nTap: 7 % (−19 prosentpoeng)"
+     "sporsmal": "Hvorfor har Kongsvinger 24 % sjanse for direkte opprykk?",
+     "hvorfor": "Kongsvinger ligger ett poeng bak Strømsgodset på andreplassen og er litt svakere ifølge modellen (6,3 mot 7,1). Kongsvinger har også et tøffere restprogram: motstanderne har i snitt 34 % vinnersjanse, mot 23 % for Strømsgodset.\n\nI simuleringene ender Kongsvinger i snitt på 62 poeng mot 64 for Strømsgodset, og rykker direkte opp i 24 % av dem.",
+     "kamper": "Disse kampene påvirker Kongsvingers opprykkssjanse mest. Nå: 24 %\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nStrømsgodset vinner: 18 % (−6 prosentpoeng)\nUavgjort: 43 % (+19 prosentpoeng)\nMoss vinner: 53 % (+29 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nSeier: 46 % (+22 prosentpoeng)\nUavgjort: 12 % (−12 prosentpoeng)\nTap: 6 % (−18 prosentpoeng)\n\nKongsvinger mot Stabæk, runde 29, mandag 2. nov\nSeier: 44 % (+20 prosentpoeng)\nUavgjort: 11 % (−13 prosentpoeng)\nTap: 6 % (−18 prosentpoeng)"
     }
    ]
   },
@@ -607,20 +607,20 @@
     {
      "lag": "Åsane",
      "sporsmal": "Hvorfor har Åsane 95 % sjanse for nedrykk?",
-     "hvorfor": "Åsane leder Raufoss 25-20 i poeng, med 2 kamper igjen. Marginen er fem poeng (mer enn én seier), og styrken er lik (3,4 mot 3,3). Åsane har også et tøffere restprogram: motstanderne har i snitt 64 % vinnersjanse, mot 55 % for Raufoss.\n\nI simuleringene ender Åsane i snitt på 26 poeng mot 22 for Raufoss, og rykker ned direkte i 95 % av dem.",
-     "kamper": "Disse kampene påvirker Åsanes nedrykksfare mest. Nå: 95 %\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nSeier: 76 % (−19 prosentpoeng)\nUavgjort: 92 % (−3 prosentpoeng)\nTap: >99 % (+5 prosentpoeng)\n\nSandnes Ulf mot Åsane, runde 30, søndag 8. nov\nSeier: 80 % (−15 prosentpoeng)\nUavgjort: 97 % (+2 prosentpoeng)\nTap: >99 % (+5 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nMoss vinner: 97 % (+2 prosentpoeng)\nUavgjort: 96 % (endrer lite)\nRanheim vinner: 93 % (−2 prosentpoeng)"
-    },
-    {
-     "lag": "Sandnes Ulf",
-     "sporsmal": "Hvorfor har Sandnes Ulf 2 % sjanse for nedrykk?",
-     "hvorfor": "Sandnes Ulf leder Åsane 29-25 i poeng, med 2 kamper igjen. Marginen er fire poeng (mer enn én seier), og Sandnes Ulf er også sterkest ifølge modellen (4,4 mot 3,4). Sandnes Ulf har også et lettere restprogram: motstanderne har i snitt 41 % vinnersjanse, mot 64 % for Åsane.\n\nI simuleringene ender Sandnes Ulf i snitt på 32 poeng mot 26 for Åsane, og rykker ned direkte i 2 % av dem.",
-     "kamper": "Disse kampene påvirker Sandnes Ulfs nedrykksfare mest. Nå: 2 %\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nÅsane vinner: 12 % (+10 prosentpoeng)\nUavgjort: 4 % (+2 prosentpoeng)\nHaugesund vinner: <1 % (−2 prosentpoeng)\n\nSandnes Ulf mot Åsane, runde 30, søndag 8. nov\nSeier: <1 % (−2 prosentpoeng)\nUavgjort: <1 % (−2 prosentpoeng)\nTap: 11 % (+9 prosentpoeng)\n\nOdd mot Sandnes Ulf, runde 29, søndag 1. nov\nSeier: <1 % (−2 prosentpoeng)\nUavgjort: 1 % (endrer lite)\nTap: 4 % (+2 prosentpoeng)"
+     "hvorfor": "Åsane leder Raufoss 25-20 i poeng, med 2 kamper igjen. Marginen er fem poeng (mer enn én seier), og styrken er lik (3,4 mot 3,3). Åsane har også et tøffere restprogram: motstanderne har i snitt 64 % vinnersjanse, mot 58 % for Raufoss.\n\nI simuleringene ender Åsane i snitt på 26 poeng mot 22 for Raufoss, og rykker ned direkte i 95 % av dem.",
+     "kamper": "Disse kampene påvirker Åsanes nedrykksfare mest. Nå: 95 %\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nSeier: 76 % (−19 prosentpoeng)\nUavgjort: 92 % (−3 prosentpoeng)\nTap: >99 % (+5 prosentpoeng)\n\nSandnes Ulf mot Åsane, runde 30, søndag 8. nov\nSeier: 81 % (−14 prosentpoeng)\nUavgjort: 97 % (+2 prosentpoeng)\nTap: >99 % (+5 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nMoss vinner: 97 % (+2 prosentpoeng)\nUavgjort: 97 % (+2 prosentpoeng)\nRanheim vinner: 93 % (−2 prosentpoeng)"
     },
     {
      "lag": "Moss",
      "sporsmal": "Hvorfor har Moss 2 % sjanse for nedrykk?",
-     "hvorfor": "Moss leder Åsane 29-25 i poeng, med 2 kamper igjen. Marginen er fire poeng (mer enn én seier), og Moss er også sterkest ifølge modellen (4,6 mot 3,4). Moss har også et lettere restprogram: motstanderne har i snitt 53 % vinnersjanse, mot 64 % for Åsane.\n\nI simuleringene ender Moss i snitt på 31 poeng mot 26 for Åsane, og rykker ned direkte i 2 % av dem.",
-     "kamper": "Disse kampene påvirker Moss' nedrykksfare mest. Nå: 2 %\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nÅsane vinner: 11 % (+9 prosentpoeng)\nUavgjort: 4 % (+2 prosentpoeng)\nHaugesund vinner: <1 % (−2 prosentpoeng)\n\nSandnes Ulf mot Åsane, runde 30, søndag 8. nov\nSandnes Ulf vinner: <1 % (−2 prosentpoeng)\nUavgjort: 3 % (endrer lite)\nÅsane vinner: 8 % (+6 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nSeier: <1 % (−2 prosentpoeng)\nUavgjort: 1 % (endrer lite)\nTap: 6 % (+4 prosentpoeng)"
+     "hvorfor": "Moss leder Åsane 29-25 i poeng, med 2 kamper igjen. Marginen er fire poeng (mer enn én seier), og Moss er også sterkest ifølge modellen (4,6 mot 3,4). Moss har også et lettere restprogram: motstanderne har i snitt 56 % vinnersjanse, mot 64 % for Åsane.\n\nI simuleringene ender Moss i snitt på 31 poeng mot 26 for Åsane, og rykker ned direkte i 2 % av dem.",
+     "kamper": "Disse kampene påvirker Moss' nedrykksfare mest. Nå: 2 %\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nÅsane vinner: 12 % (+10 prosentpoeng)\nUavgjort: 5 % (+3 prosentpoeng)\nHaugesund vinner: <1 % (−2 prosentpoeng)\n\nSandnes Ulf mot Åsane, runde 30, søndag 8. nov\nSandnes Ulf vinner: <1 % (−2 prosentpoeng)\nUavgjort: 3 % (endrer lite)\nÅsane vinner: 8 % (+6 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nSeier: <1 % (−2 prosentpoeng)\nUavgjort: 1 % (endrer lite)\nTap: 6 % (+4 prosentpoeng)"
+    },
+    {
+     "lag": "Sandnes Ulf",
+     "sporsmal": "Hvorfor har Sandnes Ulf 2 % sjanse for nedrykk?",
+     "hvorfor": "Sandnes Ulf leder Åsane 29-25 i poeng, med 2 kamper igjen. Marginen er fire poeng (mer enn én seier), og Sandnes Ulf er også sterkest ifølge modellen (4,4 mot 3,4). Sandnes Ulf har også et lettere restprogram: motstanderne har i snitt 38 % vinnersjanse, mot 64 % for Åsane.\n\nI simuleringene ender Sandnes Ulf i snitt på 32 poeng mot 26 for Åsane, og rykker ned direkte i 2 % av dem.",
+     "kamper": "Disse kampene påvirker Sandnes Ulfs nedrykksfare mest. Nå: 2 %\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nÅsane vinner: 11 % (+9 prosentpoeng)\nUavgjort: 4 % (+2 prosentpoeng)\nHaugesund vinner: <1 % (−2 prosentpoeng)\n\nSandnes Ulf mot Åsane, runde 30, søndag 8. nov\nSeier: <1 % (−2 prosentpoeng)\nUavgjort: <1 % (−2 prosentpoeng)\nTap: 10 % (+8 prosentpoeng)\n\nOdd mot Sandnes Ulf, runde 29, søndag 1. nov\nSeier: <1 % (−2 prosentpoeng)\nUavgjort: 1 % (endrer lite)\nTap: 3 % (endrer lite)"
     }
    ]
   }
@@ -629,7 +629,7 @@
   "ligameny": "<a href=\"/eliteserien/\" data-league=\"eliteserien\" title=\"Gull, Europa og nedrykk\">Eliteserien</a><a href=\"/obos/\" aria-current=\"page\">OBOS-ligaen</a>",
   "stempel": "Alle kamper til og med søndag 25. oktober er lagt inn. Neste sjekk etter kampen Ranheim-Sogndal søndag 1. november kl. 14.30.",
   "forklaring": "<span class=\"cl\"><i></i>Direkte opprykk (1 og 2)</span><span class=\"eu\"><i></i>Opprykkskvalifisering (3 til 6)</span><span class=\"q\"><i></i>Kvalik (14)</span><span class=\"n\"><i></i>Nedrykk (15 og 16)</span><span class=\"jnote\">* Åsane <a href=\"https://www.fotball.no/lov-og-reglement/beslutninger-fra-utvalg/2026/poengtrekk-for-asane/\" target=\"_blank\" rel=\"noopener\" title=\"NFFs vedtak\">trukket et poeng</a>.</span>",
-  "nestekamp": "<section class=\"panel nextmatch\" id=\"nextMatch\" data-id=\"m29_0\">\n      <div class=\"panel-head\">\n        <h2><span class=\"h-ic\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"8.5\"></circle><path d=\"m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8Z\"></path></svg></span>Neste kamp</h2>\n        <button type=\"button\" class=\"head-link\" id=\"nmAll\">Se alle kamper →</button>\n      </div>\n      <div class=\"nm-body\">\n        <p class=\"nm-res\" id=\"nmRes\" hidden=\"\"></p>\n        <p class=\"nm-when\" id=\"nmWhen\">Søndag 1. november kl. 14:30 · runde 29</p>\n        <div class=\"nm-teams\"><span id=\"nmHome\">Ranheim</span><span class=\"nm-dash\">–</span><span id=\"nmAway\">Sogndal</span></div>\n        <div class=\"nm-hub\" id=\"nmHub\">\n          <button type=\"button\" data-q=\"H\">H 55 %</button><button type=\"button\" data-q=\"U\">U 19 %</button><button type=\"button\" data-q=\"B\">B 26 %</button>\n        </div>\n        <p class=\"nm-impact\" id=\"nmImpact\" hidden=\"\"></p>\n      </div>\n    </section>",
+  "nestekamp": "<section class=\"panel nextmatch\" id=\"nextMatch\" data-id=\"m29_0\">\n      <div class=\"panel-head\">\n        <h2><span class=\"h-ic\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"8.5\"></circle><path d=\"m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8Z\"></path></svg></span>Neste kamp</h2>\n        <button type=\"button\" class=\"head-link\" id=\"nmAll\">Se alle kamper →</button>\n      </div>\n      <div class=\"nm-body\">\n        <p class=\"nm-res\" id=\"nmRes\" hidden=\"\"></p>\n        <p class=\"nm-when\" id=\"nmWhen\">Søndag 1. november kl. 14:30 · runde 29</p>\n        <div class=\"nm-teams\"><span id=\"nmHome\">Ranheim</span><span class=\"nm-dash\">–</span><span id=\"nmAway\">Sogndal</span></div>\n        <div class=\"nm-hub\" id=\"nmHub\">\n          <button type=\"button\" data-q=\"H\">H 54 %</button><button type=\"button\" data-q=\"U\">U 20 %</button><button type=\"button\" data-q=\"B\">B 26 %</button>\n        </div>\n        <p class=\"nm-impact\" id=\"nmImpact\" hidden=\"\"></p>\n      </div>\n    </section>",
   "sporsmalsliste": "<div class=\"qa-item\"><button data-id=\"keyround\">Hva er rundens viktigste kamp i ligaen?</button></div><div class=\"qa-item\"><button data-id=\"runin\">Hvem har det tøffeste restprogrammet?</button></div><div class=\"qa-item\"><button data-id=\"luck\">Hvem har slått oddsene, og hvem har skuffet?</button></div>",
   "forrigerunde": "<div class=\"round\"><div class=\"match played\" data-home=\"Raufoss\" data-away=\"Ranheim\" title=\"Spilt lørdag 24. oktober, ligger i tabellen\"><span class=\"when\"><span class=\"t\">14:00</span></span><span class=\"home\">Raufoss</span><span class=\"score\">1</span><span class=\"colon\">-</span><span class=\"score\">3</span><span class=\"away\">Ranheim</span><span class=\"done\">24. okt</span></div><div class=\"match played\" data-home=\"Strømmen\" data-away=\"Strømsgodset\" title=\"Spilt søndag 25. oktober, ligger i tabellen\"><span class=\"when\"><span class=\"t\">13:00</span></span><span class=\"home\">Strømmen</span><span class=\"score\">1</span><span class=\"colon\">-</span><span class=\"score\">0</span><span class=\"away\">Godset</span><span class=\"done\">25. okt</span></div><div class=\"match played\" data-home=\"Haugesund\" data-away=\"Hødd\" title=\"Spilt søndag 25. oktober, ligger i tabellen\"><span class=\"when\"><span class=\"t\">14:30</span></span><span class=\"home\">FKH</span><span class=\"score\">3</span><span class=\"colon\">-</span><span class=\"score\">2</span><span class=\"away\">Hødd</span><span class=\"done\">25. okt</span></div><div class=\"match played\" data-home=\"Sandnes Ulf\" data-away=\"Lyn\" title=\"Spilt søndag 25. oktober, ligger i tabellen\"><span class=\"when\"><span class=\"t\">14:30</span></span><span class=\"home\">Sandnes</span><span class=\"score\">2</span><span class=\"colon\">-</span><span class=\"score\">1</span><span class=\"away\">Lyn</span><span class=\"done\">25. okt</span></div><div class=\"match played\" data-home=\"Bryne\" data-away=\"Egersund\" title=\"Spilt søndag 25. oktober, ligger i tabellen\"><span class=\"when\"><span class=\"t\">17:00</span></span><span class=\"home\">Bryne</span><span class=\"score\">3</span><span class=\"colon\">-</span><span class=\"score\">3</span><span class=\"away\">Egersund</span><span class=\"done\">25. okt</span></div><div class=\"match played\" data-home=\"Moss\" data-away=\"Åsane\" title=\"Spilt søndag 25. oktober, ligger i tabellen\"><span class=\"when\"><span class=\"t\">17:00</span></span><span class=\"home\">Moss</span><span class=\"score\">1</span><span class=\"colon\">-</span><span class=\"score\">3</span><span class=\"away\">Åsane</span><span class=\"done\">25. okt</span></div><div class=\"match played\" data-home=\"Sogndal\" data-away=\"Kongsvinger\" title=\"Spilt søndag 25. oktober, ligger i tabellen\"><span class=\"when\"><span class=\"t\">17:00</span></span><span class=\"home\">Sogndal</span><span class=\"score\">3</span><span class=\"colon\">-</span><span class=\"score\">1</span><span class=\"away\">KIL</span><span class=\"done\">25. okt</span></div><div class=\"match played\" data-home=\"Stabæk\" data-away=\"Odd\" title=\"Spilt søndag 25. oktober, ligger i tabellen\"><span class=\"when\"><span class=\"t\">17:00</span></span><span class=\"home\">Stabæk</span><span class=\"score\">2</span><span class=\"colon\">-</span><span class=\"score\">0</span><span class=\"away\">Odd</span><span class=\"done\">25. okt</span></div></div>",
   "banner": "<button class=\"qa-highlight plain\" id=\"qaHighlight\" title=\"Hopp til Spør om tabellen\" data-qid=\"keyround\">Hødd mot Bryne påvirker kampen om topp 6 mest denne runden.</button>",
@@ -639,11 +639,11 @@
    "forrigeinfo": "Runde 28",
    "kampinfo": "16 av 16 uten resultat"
   },
-  "runder": "<div class=\"round\" data-round=\"29\"><h3><span>Runde 29</span><span class=\"when-row\"><span class=\"when\">1. og 2. nov</span><button class=\"round-sim\" data-round=\"29\">Simuler runden</button></span></h3><div class=\"dayhead\">Søndag 1. november</div><div class=\"match\" data-id=\"m29_0\" data-home=\"Ranheim\" data-away=\"Sogndal\">\n        <span class=\"when\"><span class=\"t\">14:30</span></span>\n        <span class=\"home\">Ranheim</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Ranheim mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Sogndal mål\">\n        <span class=\"away\">Sogndal</span>\n        <span class=\"quick\" title=\"Ranheim seier 55 %, uavgjort 19 %, Sogndal seier 26 %. Forventede mål 2,6-1,8.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">55 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">19 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">26 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_1\" data-home=\"Egersund\" data-away=\"Strømmen\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Egersund</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Egersund mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Strømmen mål\">\n        <span class=\"away\">Strømmen</span>\n        <span class=\"quick\" title=\"Egersund seier 54 %, uavgjort 21 %, Strømmen seier 25 %. Forventede mål 2,2-1,5.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">54 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">21 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">25 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_2\" data-home=\"Hødd\" data-away=\"Bryne\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Hødd</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Hødd mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Bryne mål\">\n        <span class=\"away\">Bryne</span>\n        <span class=\"quick\" title=\"Hødd seier 29 %, uavgjort 23 %, Bryne seier 49 %. Forventede mål 1,5-1,9.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">29 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">23 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">49 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_3\" data-home=\"Lyn\" data-away=\"Raufoss\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Lyn</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Lyn mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Raufoss mål\">\n        <span class=\"away\">Raufoss</span>\n        <span class=\"quick\" title=\"Lyn seier 63 %, uavgjort 19 %, Raufoss seier 18 %. Forventede mål 2,4-1,3.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">63 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">19 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">18 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_4\" data-home=\"Odd\" data-away=\"Sandnes Ulf\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Odd</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Odd mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Sandnes Ulf mål\">\n        <span class=\"away\">Sandnes</span>\n        <span class=\"quick\" title=\"Odd seier 61 %, uavgjort 20 %, Sandnes Ulf seier 19 %. Forventede mål 2,2-1,2.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">61 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">20 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">19 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_5\" data-home=\"Strømsgodset\" data-away=\"Moss\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Godset</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Strømsgodset mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Moss mål\">\n        <span class=\"away\">Moss</span>\n        <span class=\"quick\" title=\"Strømsgodset seier 71 %, uavgjort 17 %, Moss seier 12 %. Forventede mål 2,5-0,9.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">71 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">17 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">12 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_6\" data-home=\"Åsane\" data-away=\"Haugesund\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Åsane</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Åsane mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Haugesund mål\">\n        <span class=\"away\">FKH</span>\n        <span class=\"quick\" title=\"Åsane seier 14 %, uavgjort 17 %, Haugesund seier 70 %. Forventede mål 1,2-2,7.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">14 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">17 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">70 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"dayhead\">Mandag 2. november</div><div class=\"match\" data-id=\"m29_7\" data-home=\"Kongsvinger\" data-away=\"Stabæk\">\n        <span class=\"when\"><span class=\"t\">19:00</span></span>\n        <span class=\"home\">KIL</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Kongsvinger mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Stabæk mål\">\n        <span class=\"away\">Stabæk</span>\n        <span class=\"quick\" title=\"Kongsvinger seier 45 %, uavgjort 21 %, Stabæk seier 33 %. Forventede mål 2,1-1,8.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">45 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">21 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">33 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div></div><div class=\"round\" data-round=\"30\"><h3><span>Runde 30</span><span class=\"when-row\"><span class=\"when\">8. nov</span><button class=\"round-sim\" data-round=\"30\">Simuler runden</button></span></h3><div class=\"dayhead\">Søndag 8. november</div><div class=\"match\" data-id=\"m30_0\" data-home=\"Bryne\" data-away=\"Kongsvinger\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Bryne</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Bryne mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Kongsvinger mål\">\n        <span class=\"away\">KIL</span>\n        <span class=\"quick\" title=\"Bryne seier 35 %, uavgjort 23 %, Kongsvinger seier 43 %. Forventede mål 1,7-1,9.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">35 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">23 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">43 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_1\" data-home=\"Haugesund\" data-away=\"Odd\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">FKH</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Haugesund mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Odd mål\">\n        <span class=\"away\">Odd</span>\n        <span class=\"quick\" title=\"Haugesund seier 58 %, uavgjort 20 %, Odd seier 22 %. Forventede mål 2,3-1,3.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">58 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">20 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">22 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_2\" data-home=\"Moss\" data-away=\"Ranheim\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Moss</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Moss mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Ranheim mål\">\n        <span class=\"away\">Ranheim</span>\n        <span class=\"quick\" title=\"Moss seier 43 %, uavgjort 23 %, Ranheim seier 35 %. Forventede mål 1,9-1,7.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">43 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">23 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">35 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_3\" data-home=\"Raufoss\" data-away=\"Egersund\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Raufoss</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Raufoss mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Egersund mål\">\n        <span class=\"away\">Egersund</span>\n        <span class=\"quick\" title=\"Raufoss seier 29 %, uavgjort 23 %, Egersund seier 48 %. Forventede mål 1,4-1,9.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">29 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">23 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">48 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_4\" data-home=\"Sandnes Ulf\" data-away=\"Åsane\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Sandnes</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Sandnes Ulf mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Åsane mål\">\n        <span class=\"away\">Åsane</span>\n        <span class=\"quick\" title=\"Sandnes Ulf seier 58 %, uavgjort 21 %, Åsane seier 21 %. Forventede mål 2,2-1,3.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">58 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">21 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">21 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_5\" data-home=\"Sogndal\" data-away=\"Hødd\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Sogndal</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Sogndal mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Hødd mål\">\n        <span class=\"away\">Hødd</span>\n        <span class=\"quick\" title=\"Sogndal seier 51 %, uavgjort 22 %, Hødd seier 28 %. Forventede mål 2,1-1,5.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">51 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">22 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">28 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_6\" data-home=\"Stabæk\" data-away=\"Strømsgodset\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Stabæk</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Stabæk mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Strømsgodset mål\">\n        <span class=\"away\">Godset</span>\n        <span class=\"quick\" title=\"Stabæk seier 36 %, uavgjort 24 %, Strømsgodset seier 40 %. Forventede mål 1,6-1,7.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">36 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">24 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">40 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_7\" data-home=\"Strømmen\" data-away=\"Lyn\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Strømmen</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Strømmen mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Lyn mål\">\n        <span class=\"away\">Lyn</span>\n        <span class=\"quick\" title=\"Strømmen seier 40 %, uavgjort 24 %, Lyn seier 36 %. Forventede mål 1,7-1,6.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">40 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">24 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">36 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div></div>",
+  "runder": "<div class=\"round\" data-round=\"29\"><h3><span>Runde 29</span><span class=\"when-row\"><span class=\"when\">1. og 2. nov</span><button class=\"round-sim\" data-round=\"29\">Simuler runden</button></span></h3><div class=\"dayhead\">Søndag 1. november</div><div class=\"match\" data-id=\"m29_0\" data-home=\"Ranheim\" data-away=\"Sogndal\">\n        <span class=\"when\"><span class=\"t\">14:30</span></span>\n        <span class=\"home\">Ranheim</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Ranheim mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Sogndal mål\">\n        <span class=\"away\">Sogndal</span>\n        <span class=\"quick\" title=\"Ranheim seier 54 %, uavgjort 20 %, Sogndal seier 26 %. Forventede mål 2,3-1,6. Blandet 70 % odds (OddsPapi: pinnacle, hentet mandag 26.10 kl. 05.14: 53/21/26) og 30 % modell (55/19/26).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">54 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">20 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">26 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Ranheim mot Sogndal\" data-mid=\"m29_0\">odds</i></span></span></div><div class=\"match\" data-id=\"m29_1\" data-home=\"Egersund\" data-away=\"Strømmen\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Egersund</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Egersund mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Strømmen mål\">\n        <span class=\"away\">Strømmen</span>\n        <span class=\"quick\" title=\"Egersund seier 56 %, uavgjort 22 %, Strømmen seier 23 %. Forventede mål 2,1-1,3. Blandet 70 % odds (OddsPapi: pinnacle, hentet tirsdag 27.10 kl. 07.29: 57/22/22) og 30 % modell (54/21/25).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">56 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">22 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">23 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Egersund mot Strømmen\" data-mid=\"m29_1\">odds</i></span></span></div><div class=\"match\" data-id=\"m29_2\" data-home=\"Hødd\" data-away=\"Bryne\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Hødd</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Hødd mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Bryne mål\">\n        <span class=\"away\">Bryne</span>\n        <span class=\"quick\" title=\"Hødd seier 27 %, uavgjort 23 %, Bryne seier 50 %. Forventede mål 1,4-1,9. Blandet 70 % odds (OddsPapi: pinnacle, hentet mandag 26.10 kl. 05.12: 26/23/51) og 30 % modell (29/23/49).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">27 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">23 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">50 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Hødd mot Bryne\" data-mid=\"m29_2\">odds</i></span></span></div><div class=\"match\" data-id=\"m29_3\" data-home=\"Lyn\" data-away=\"Raufoss\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Lyn</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Lyn mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Raufoss mål\">\n        <span class=\"away\">Raufoss</span>\n        <span class=\"quick\" title=\"Lyn seier 69 %, uavgjort 17 %, Raufoss seier 14 %. Forventede mål 2,6-1,1. Blandet 70 % odds (OddsPapi: pinnacle, hentet tirsdag 27.10 kl. 03.28: 71/17/12) og 30 % modell (63/19/18).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">69 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">17 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">14 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Lyn mot Raufoss\" data-mid=\"m29_3\">odds</i></span></span></div><div class=\"match\" data-id=\"m29_4\" data-home=\"Odd\" data-away=\"Sandnes Ulf\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Odd</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Odd mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Sandnes Ulf mål\">\n        <span class=\"away\">Sandnes</span>\n        <span class=\"quick\" title=\"Odd seier 54 %, uavgjort 19 %, Sandnes Ulf seier 26 %. Forventede mål 2,5-1,8. Blandet 70 % odds (OddsPapi: pinnacle, hentet tirsdag 27.10 kl. 04.09: 52/18/30) og 30 % modell (61/20/19).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">54 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">19 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">26 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Odd mot Sandnes Ulf\" data-mid=\"m29_4\">odds</i></span></span></div><div class=\"match\" data-id=\"m29_5\" data-home=\"Strømsgodset\" data-away=\"Moss\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Godset</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Strømsgodset mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Moss mål\">\n        <span class=\"away\">Moss</span>\n        <span class=\"quick\" title=\"Strømsgodset seier 77 %, uavgjort 13 %, Moss seier 10 %. Forventede mål 3,2-1,1. Blandet 70 % odds (OddsPapi: pinnacle, hentet tirsdag 27.10 kl. 09.10: 80/11/9) og 30 % modell (71/17/12).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">77 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">13 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">10 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Strømsgodset mot Moss\" data-mid=\"m29_5\">odds</i></span></span></div><div class=\"match\" data-id=\"m29_6\" data-home=\"Åsane\" data-away=\"Haugesund\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Åsane</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Åsane mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Haugesund mål\">\n        <span class=\"away\">FKH</span>\n        <span class=\"quick\" title=\"Åsane seier 14 %, uavgjort 16 %, Haugesund seier 70 %. Forventede mål 1,3-2,9. Blandet 70 % odds (OddsPapi: pinnacle, hentet mandag 26.10 kl. 05.12: 14/15/70) og 30 % modell (14/17/70).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">14 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">16 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">70 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Åsane mot Haugesund\" data-mid=\"m29_6\">odds</i></span></span></div><div class=\"dayhead\">Mandag 2. november</div><div class=\"match\" data-id=\"m29_7\" data-home=\"Kongsvinger\" data-away=\"Stabæk\">\n        <span class=\"when\"><span class=\"t\">19:00</span></span>\n        <span class=\"home\">KIL</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Kongsvinger mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Stabæk mål\">\n        <span class=\"away\">Stabæk</span>\n        <span class=\"quick\" title=\"Kongsvinger seier 47 %, uavgjort 21 %, Stabæk seier 33 %. Forventede mål 2,2-1,8. Blandet 70 % odds (OddsPapi: pinnacle, hentet tirsdag 27.10 kl. 07.14: 47/21/32) og 30 % modell (45/21/33).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">47 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">21 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">33 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Kongsvinger mot Stabæk\" data-mid=\"m29_7\">odds</i></span></span></div></div><div class=\"round\" data-round=\"30\"><h3><span>Runde 30</span><span class=\"when-row\"><span class=\"when\">8. nov</span><button class=\"round-sim\" data-round=\"30\">Simuler runden</button></span></h3><div class=\"dayhead\">Søndag 8. november</div><div class=\"match\" data-id=\"m30_0\" data-home=\"Bryne\" data-away=\"Kongsvinger\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Bryne</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Bryne mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Kongsvinger mål\">\n        <span class=\"away\">KIL</span>\n        <span class=\"quick\" title=\"Bryne seier 35 %, uavgjort 23 %, Kongsvinger seier 43 %. Forventede mål 1,7-1,9.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">35 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">23 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">43 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_1\" data-home=\"Haugesund\" data-away=\"Odd\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">FKH</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Haugesund mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Odd mål\">\n        <span class=\"away\">Odd</span>\n        <span class=\"quick\" title=\"Haugesund seier 58 %, uavgjort 20 %, Odd seier 22 %. Forventede mål 2,3-1,3.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">58 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">20 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">22 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_2\" data-home=\"Moss\" data-away=\"Ranheim\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Moss</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Moss mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Ranheim mål\">\n        <span class=\"away\">Ranheim</span>\n        <span class=\"quick\" title=\"Moss seier 43 %, uavgjort 23 %, Ranheim seier 35 %. Forventede mål 1,9-1,7.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">43 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">23 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">35 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_3\" data-home=\"Raufoss\" data-away=\"Egersund\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Raufoss</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Raufoss mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Egersund mål\">\n        <span class=\"away\">Egersund</span>\n        <span class=\"quick\" title=\"Raufoss seier 29 %, uavgjort 23 %, Egersund seier 48 %. Forventede mål 1,4-1,9.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">29 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">23 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">48 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_4\" data-home=\"Sandnes Ulf\" data-away=\"Åsane\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Sandnes</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Sandnes Ulf mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Åsane mål\">\n        <span class=\"away\">Åsane</span>\n        <span class=\"quick\" title=\"Sandnes Ulf seier 58 %, uavgjort 21 %, Åsane seier 21 %. Forventede mål 2,2-1,3.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">58 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">21 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">21 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_5\" data-home=\"Sogndal\" data-away=\"Hødd\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Sogndal</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Sogndal mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Hødd mål\">\n        <span class=\"away\">Hødd</span>\n        <span class=\"quick\" title=\"Sogndal seier 51 %, uavgjort 22 %, Hødd seier 28 %. Forventede mål 2,1-1,5.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">51 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">22 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">28 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_6\" data-home=\"Stabæk\" data-away=\"Strømsgodset\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Stabæk</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Stabæk mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Strømsgodset mål\">\n        <span class=\"away\">Godset</span>\n        <span class=\"quick\" title=\"Stabæk seier 36 %, uavgjort 24 %, Strømsgodset seier 40 %. Forventede mål 1,6-1,7.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">36 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">24 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">40 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m30_7\" data-home=\"Strømmen\" data-away=\"Lyn\">\n        <span class=\"when\"><span class=\"t\">13:00</span></span>\n        <span class=\"home\">Strømmen</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Strømmen mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Lyn mål\">\n        <span class=\"away\">Lyn</span>\n        <span class=\"quick\" title=\"Strømmen seier 40 %, uavgjort 24 %, Lyn seier 36 %. Forventede mål 1,7-1,6.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">40 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">24 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">36 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div></div>",
   "kort": {
-   "gull": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 4h8v5a4 4 0 0 1-8 0V4Z\"></path><path d=\"M8 6H5a2 2 0 0 0 2 4M16 6h3a2 2 0 0 1-2 4M12 13v4M8.5 20h7M10 17h4\"></path></svg><span class=\"card-title\">Direkte opprykk</span><a class=\"card-link\" data-side=\"gull\" href=\"/obos/hvem-rykker-opp/\">Se alle →</a></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Haugesund</span><b class=\"card-pct\">94 %</b></li><li><span class=\"card-team\">Strømsgodset</span><b class=\"card-pct\">79 %</b></li><li><span class=\"card-team\">Kongsvinger</span><b class=\"card-pct\">26 %</b></li></ul>",
-   "europa": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"8.5\"></circle><path d=\"m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8ZM12 3.5V8M20 10.2l-4.4.4M17 18.4l-2.8-3.6M7 18.4l2.8-3.6M4 10.2l4.4.4\"></path></svg><span class=\"card-title\">Topp 6</span><button type=\"button\" class=\"card-link\" data-sort=\"europa\">Se alle →</button></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Bryne</span><b class=\"card-pct\">61 %</b></li><li><span class=\"card-team\">Ranheim</span><b class=\"card-pct\">26 %</b></li><li><span class=\"card-team\">Hødd</span><b class=\"card-pct\">12 %</b></li></ul>",
-   "ned": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"8.5\"></circle><path d=\"M12 7.5v8M8.5 12.5 12 16l3.5-3.5\"></path></svg><span class=\"card-title\">Nedrykk</span><a class=\"card-link\" data-side=\"ned\" href=\"/obos/hvem-rykker-ned/\">Se alle →</a></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Raufoss</span><b class=\"card-pct\">100 %</b></li><li><span class=\"card-team\">Åsane</span><b class=\"card-pct\">95 %</b></li><li><span class=\"card-team\">Sandnes Ulf</span><b class=\"card-pct\">2 %</b></li></ul>",
+   "gull": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 4h8v5a4 4 0 0 1-8 0V4Z\"></path><path d=\"M8 6H5a2 2 0 0 0 2 4M16 6h3a2 2 0 0 1-2 4M12 13v4M8.5 20h7M10 17h4\"></path></svg><span class=\"card-title\">Direkte opprykk</span><a class=\"card-link\" data-side=\"gull\" href=\"/obos/hvem-rykker-opp/\">Se alle →</a></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Haugesund</span><b class=\"card-pct\">94 %</b></li><li><span class=\"card-team\">Strømsgodset</span><b class=\"card-pct\">81 %</b></li><li><span class=\"card-team\">Kongsvinger</span><b class=\"card-pct\">24 %</b></li></ul>",
+   "europa": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"8.5\"></circle><path d=\"m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8ZM12 3.5V8M20 10.2l-4.4.4M17 18.4l-2.8-3.6M7 18.4l2.8-3.6M4 10.2l4.4.4\"></path></svg><span class=\"card-title\">Topp 6</span><button type=\"button\" class=\"card-link\" data-sort=\"europa\">Se alle →</button></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Bryne</span><b class=\"card-pct\">62 %</b></li><li><span class=\"card-team\">Ranheim</span><b class=\"card-pct\">26 %</b></li><li><span class=\"card-team\">Hødd</span><b class=\"card-pct\">11 %</b></li></ul>",
+   "ned": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"8.5\"></circle><path d=\"M12 7.5v8M8.5 12.5 12 16l3.5-3.5\"></path></svg><span class=\"card-title\">Nedrykk</span><a class=\"card-link\" data-side=\"ned\" href=\"/obos/hvem-rykker-ned/\">Se alle →</a></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Raufoss</span><b class=\"card-pct\">100 %</b></li><li><span class=\"card-team\">Åsane</span><b class=\"card-pct\">95 %</b></li><li><span class=\"card-team\">Moss</span><b class=\"card-pct\">2 %</b></li></ul>",
    "form": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m3.5 16.5 5.5-5.5 3.5 3.5 7.5-8\"></path><path d=\"M15.5 6.5h5v5\"></path></svg><span class=\"card-title\">Styrke</span><button type=\"button\" class=\"card-link\" data-sort=\"form\">Se alle →</button></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Strømsgodset</span><b class=\"card-pct\">7,1</b></li><li><span class=\"card-team\">Haugesund</span><b class=\"card-pct\">6,6</b></li><li><span class=\"card-team\">Kongsvinger</span><b class=\"card-pct\">6,3</b></li></ul>"
   }
  },
@@ -714,8 +714,8 @@
    "topp": [
     {
      "id": "why",
-     "sporsmal": "Hvorfor har Bryne 61 % sjanse for topp 6?",
-     "svar": "Bryne ligger to poeng foran Ranheim på 7. plass og er litt sterkere ifølge modellen (5,4 mot 4,9). Hødd er også med i kampen om topp 6-plassene.\n\nI simuleringene ender Bryne i snitt på 43 poeng mot 41 for Ranheim, og havner i topp 6 i 61 % av dem."
+     "sporsmal": "Hvorfor har Bryne 62 % sjanse for topp 6?",
+     "svar": "Bryne ligger to poeng foran Ranheim på 7. plass og er litt sterkere ifølge modellen (5,4 mot 4,9). Hødd er også med i kampen om topp 6-plassene.\n\nI simuleringene ender Bryne i snitt på 43 poeng mot 41 for Ranheim, og havner i topp 6 i 62 % av dem."
     },
     {
      "id": "howto",
@@ -725,7 +725,7 @@
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Bryne?",
-     "svar": "Disse kampene påvirker Brynes topp 6-sjanse mest. Nå: 61 %\n\nHødd mot Bryne, runde 29, søndag 1. nov\nSeier: 88 % (+27 prosentpoeng)\nUavgjort: 50 % (−11 prosentpoeng)\nTap: 23 % (−38 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nSeier: 84 % (+23 prosentpoeng)\nUavgjort: 57 % (−4 prosentpoeng)\nTap: 44 % (−17 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nMoss vinner: 73 % (+12 prosentpoeng)\nUavgjort: 70 % (+9 prosentpoeng)\nRanheim vinner: 40 % (−21 prosentpoeng)"
+     "svar": "Disse kampene påvirker Brynes topp 6-sjanse mest. Nå: 62 %\n\nHødd mot Bryne, runde 29, søndag 1. nov\nSeier: 88 % (+26 prosentpoeng)\nUavgjort: 51 % (−11 prosentpoeng)\nTap: 23 % (−39 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nSeier: 85 % (+23 prosentpoeng)\nUavgjort: 59 % (−3 prosentpoeng)\nTap: 45 % (−17 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nMoss vinner: 74 % (+12 prosentpoeng)\nUavgjort: 71 % (+9 prosentpoeng)\nRanheim vinner: 41 % (−21 prosentpoeng)"
     }
    ],
    "plass": {
@@ -737,9 +737,9 @@
      "naar": "Runde 29, søndag 1. nov",
      "motstander": "Hødd",
      "hjemme": false,
-     "seier": "49 %",
+     "seier": "50 %",
      "uavgjort": "23 %",
-     "tap": "29 %"
+     "tap": "27 %"
     },
     {
      "naar": "Runde 30, søndag 8. nov",
@@ -761,8 +761,8 @@
     {
      "key": "europa",
      "navn": "topp 6",
-     "vist": "61 %",
-     "andel": 0.60652,
+     "vist": "62 %",
+     "andel": 0.61723,
      "avgjort": 0
     },
     {
@@ -783,8 +783,8 @@
    "restprogram": {
     "plass": 10,
     "av": 16,
-    "snitt": "36 %",
-    "andel": 0.355616,
+    "snitt": "35 %",
+    "andel": 0.347889,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Kongsvinger",
@@ -800,11 +800,11 @@
     0,
     0,
     0,
-    0.01841,
-    0.58811,
-    0.23313,
-    0.12232,
-    0.03803,
+    0.02675,
+    0.59048,
+    0.23069,
+    0.11667,
+    0.03541,
     0,
     0,
     0,
@@ -842,16 +842,16 @@
    ],
    "plass": {
     "sporsmal": "Hvilken plass ender Egersund på?",
-    "svar": "Egersund ligger på 10. plass med 35 poeng. Matematisk kan de ende fra 6. til 14. plass. Oftest blir det 10. plass (36 %), og i minst 90 % av simuleringene ender de mellom 7. og 11. plass."
+    "svar": "Egersund ligger på 10. plass med 35 poeng. Matematisk kan de ende fra 6. til 14. plass. Oftest blir det 10. plass (34 %), og i minst 90 % av simuleringene ender de mellom 7. og 11. plass."
    },
    "rest": [
     {
      "naar": "Runde 29, søndag 1. nov",
      "motstander": "Strømmen",
      "hjemme": true,
-     "seier": "54 %",
-     "uavgjort": "21 %",
-     "tap": "25 %"
+     "seier": "56 %",
+     "uavgjort": "22 %",
+     "tap": "23 %"
     },
     {
      "naar": "Runde 30, søndag 8. nov",
@@ -874,14 +874,14 @@
      "key": "europa",
      "navn": "topp 6",
      "vist": "<1 %",
-     "andel": 0.00284,
+     "andel": 0.00264,
      "avgjort": 0
     },
     {
      "key": "kvalik",
      "navn": "kvalik",
      "vist": "<1 %",
-     "andel": 0.00002,
+     "andel": 0.00001,
      "avgjort": 0
     },
     {
@@ -895,8 +895,8 @@
    "restprogram": {
     "plass": 14,
     "av": 16,
-    "snitt": "27 %",
-    "andel": 0.270946,
+    "snitt": "26 %",
+    "andel": 0.257976,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Raufoss",
@@ -913,15 +913,15 @@
     0,
     0,
     0,
-    0.00284,
-    0.06653,
-    0.22223,
-    0.27243,
-    0.36205,
-    0.06447,
-    0.00907,
-    0.00036,
-    0.00002,
+    0.00264,
+    0.07113,
+    0.23017,
+    0.28017,
+    0.34305,
+    0.06228,
+    0.00999,
+    0.00056,
+    0.00001,
     0,
     0
    ],
@@ -944,17 +944,17 @@
     {
      "id": "howto",
      "sporsmal": "Hva må Haugesund gjøre for å rykke direkte opp?",
-     "svar": "Haugesund må ta ett av de seks poengene som er igjen for å komme opp på 63. Ender de på 63 poeng, er sjansen for direkte opprykk rundt 68 %. Med 66 poeng er den over 99 %."
+     "svar": "Haugesund må ta ett av de seks poengene som er igjen for å komme opp på 63. Ender de på 63 poeng, er sjansen for direkte opprykk rundt 66 %. Med 66 poeng er den over 99 %."
     },
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Haugesund?",
-     "svar": "Disse kampene påvirker Haugesunds opprykkssjanse mest. Nå: 94 %\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nSeier: 99 % (+5 prosentpoeng)\nUavgjort: 91 % (−3 prosentpoeng)\nTap: 77 % (−17 prosentpoeng)\n\nHaugesund mot Odd, runde 30, søndag 8. nov\nSeier: 99 % (+5 prosentpoeng)\nUavgjort: 94 % (endrer lite)\nTap: 82 % (−12 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nBryne vinner: 99 % (+5 prosentpoeng)\nUavgjort: 96 % (+2 prosentpoeng)\nKongsvinger vinner: 90 % (−4 prosentpoeng)"
+     "svar": "Disse kampene påvirker Haugesunds opprykkssjanse mest. Nå: 94 %\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nSeier: 99 % (+5 prosentpoeng)\nUavgjort: 90 % (−4 prosentpoeng)\nTap: 76 % (−18 prosentpoeng)\n\nHaugesund mot Odd, runde 30, søndag 8. nov\nSeier: 99 % (+5 prosentpoeng)\nUavgjort: 94 % (endrer lite)\nTap: 82 % (−12 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nBryne vinner: 99 % (+5 prosentpoeng)\nUavgjort: 96 % (+2 prosentpoeng)\nKongsvinger vinner: 89 % (−5 prosentpoeng)"
     }
    ],
    "plass": {
     "sporsmal": "Hvilken plass ender Haugesund på?",
-    "svar": "Haugesund ligger på 1. plass med 62 poeng. Matematisk kan de ende fra 1. til 3. plass. Oftest blir det 1. plass (72 %), og i minst 90 % av simuleringene ender de mellom 1. og 3. plass."
+    "svar": "Haugesund ligger på 1. plass med 62 poeng. Matematisk kan de ende fra 1. til 3. plass. Oftest blir det 1. plass (71 %), og i minst 90 % av simuleringene ender de mellom 1. og 3. plass."
    },
    "rest": [
     {
@@ -962,7 +962,7 @@
      "motstander": "Åsane",
      "hjemme": false,
      "seier": "70 %",
-     "uavgjort": "17 %",
+     "uavgjort": "16 %",
      "tap": "14 %"
     },
     {
@@ -979,7 +979,7 @@
      "key": "gull",
      "navn": "direkte opprykk",
      "vist": "94 %",
-     "andel": 0.94411,
+     "andel": 0.94199,
      "avgjort": 0
     },
     {
@@ -1008,7 +1008,7 @@
     "plass": 16,
     "av": 16,
     "snitt": "18 %",
-    "andel": 0.177619,
+    "andel": 0.178419,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Odd",
@@ -1020,9 +1020,9 @@
     }
    },
    "fordeling": [
-    0.72397,
-    0.22014,
-    0.05589,
+    0.71315,
+    0.22884,
+    0.05801,
     0,
     0,
     0,
@@ -1050,18 +1050,18 @@
    "topp": [
     {
      "id": "why",
-     "sporsmal": "Hvorfor har Hødd 12 % sjanse for topp 6?",
-     "svar": "Hødd ligger to poeng bak Bryne på 6. plass og er litt svakere ifølge modellen (4,0 mot 5,4). Ranheim er også med i kampen om topp 6-plassene. Hødd har også et tøffere restprogram: motstanderne har i snitt 50 % vinnersjanse, mot 36 % for Bryne.\n\nI simuleringene ender Hødd i snitt på 40 poeng mot 43 for Bryne, og havner i topp 6 i 12 % av dem."
+     "sporsmal": "Hvorfor har Hødd 11 % sjanse for topp 6?",
+     "svar": "Hødd ligger to poeng bak Bryne på 6. plass og er litt svakere ifølge modellen (4,0 mot 5,4). Ranheim er også med i kampen om topp 6-plassene. Hødd har også et tøffere restprogram: motstanderne har i snitt 50 % vinnersjanse, mot 35 % for Bryne.\n\nI simuleringene ender Hødd i snitt på 40 poeng mot 43 for Bryne, og havner i topp 6 i 11 % av dem."
     },
     {
      "id": "howto",
      "sporsmal": "Hva må Hødd gjøre for å nå topp 6?",
-     "svar": "Det skal mye til: Hødd ender i topp 6 i rundt 12 % av simuleringene. De må ta alle de seks poengene som er igjen for å komme opp på 44. Ender de på 44 poeng, er sjansen omtrent 81 %."
+     "svar": "Det skal mye til: Hødd ender i topp 6 i rundt 11 % av simuleringene. De må ta alle de seks poengene som er igjen for å komme opp på 44. Ender de på 44 poeng, er sjansen omtrent 82 %."
     },
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Hødd?",
-     "svar": "Disse kampene påvirker Hødds topp 6-sjanse mest. Nå: 12 %\n\nHødd mot Bryne, runde 29, søndag 1. nov\nSeier: 36 % (+24 prosentpoeng)\nUavgjort: 7 % (−5 prosentpoeng)\nTap: <1 % (−12 prosentpoeng)\n\nSogndal mot Hødd, runde 30, søndag 8. nov\nSeier: 29 % (+17 prosentpoeng)\nUavgjort: 11 % (endrer lite)\nTap: 3 % (−9 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nMoss vinner: 17 % (+5 prosentpoeng)\nUavgjort: 13 % (endrer lite)\nRanheim vinner: 5 % (−7 prosentpoeng)"
+     "svar": "Disse kampene påvirker Hødds topp 6-sjanse mest. Nå: 11 %\n\nHødd mot Bryne, runde 29, søndag 1. nov\nSeier: 36 % (+25 prosentpoeng)\nUavgjort: 7 % (−4 prosentpoeng)\nTap: <1 % (−11 prosentpoeng)\n\nSogndal mot Hødd, runde 30, søndag 8. nov\nSeier: 28 % (+17 prosentpoeng)\nUavgjort: 11 % (endrer lite)\nTap: 3 % (−8 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nMoss vinner: 16 % (+5 prosentpoeng)\nUavgjort: 13 % (+2 prosentpoeng)\nRanheim vinner: 5 % (−6 prosentpoeng)"
     }
    ],
    "plass": {
@@ -1073,9 +1073,9 @@
      "naar": "Runde 29, søndag 1. nov",
      "motstander": "Bryne",
      "hjemme": true,
-     "seier": "29 %",
+     "seier": "27 %",
      "uavgjort": "23 %",
-     "tap": "49 %"
+     "tap": "50 %"
     },
     {
      "naar": "Runde 30, søndag 8. nov",
@@ -1097,8 +1097,8 @@
     {
      "key": "europa",
      "navn": "topp 6",
-     "vist": "12 %",
-     "andel": 0.11838,
+     "vist": "11 %",
+     "andel": 0.11445,
      "avgjort": 0
     },
     {
@@ -1120,15 +1120,15 @@
     "plass": 4,
     "av": 16,
     "snitt": "50 %",
-    "andel": 0.496922,
+    "andel": 0.503593,
     "kamper": 2,
     "vanskeligst": {
-     "motstander": "Sogndal",
-     "hjemme": false,
-     "dato": "2026-11-08",
-     "dato_tekst": "8. november",
-     "naar": "Runde 30, søndag 8. nov",
-     "seier": "28 %"
+     "motstander": "Bryne",
+     "hjemme": true,
+     "dato": "2026-11-01",
+     "dato_tekst": "1. november",
+     "naar": "Runde 29, søndag 1. nov",
+     "seier": "27 %"
     }
    },
    "fordeling": [
@@ -1137,11 +1137,11 @@
     0,
     0,
     0,
-    0.11838,
-    0.18105,
-    0.30337,
-    0.31472,
-    0.08248,
+    0.11445,
+    0.17696,
+    0.30779,
+    0.31427,
+    0.08653,
     0,
     0,
     0,
@@ -1162,30 +1162,30 @@
    "topp": [
     {
      "id": "why",
-     "sporsmal": "Hvorfor har Kongsvinger 26 % sjanse for direkte opprykk?",
-     "svar": "Kongsvinger ligger ett poeng bak Strømsgodset på andreplassen og er litt svakere ifølge modellen (6,3 mot 7,1). Kongsvinger har også et tøffere restprogram: motstanderne har i snitt 34 % vinnersjanse, mot 24 % for Strømsgodset.\n\nI simuleringene ender Kongsvinger i snitt på 62 poeng mot 64 for Strømsgodset, og rykker direkte opp i 26 % av dem."
+     "sporsmal": "Hvorfor har Kongsvinger 24 % sjanse for direkte opprykk?",
+     "svar": "Kongsvinger ligger ett poeng bak Strømsgodset på andreplassen og er litt svakere ifølge modellen (6,3 mot 7,1). Kongsvinger har også et tøffere restprogram: motstanderne har i snitt 34 % vinnersjanse, mot 23 % for Strømsgodset.\n\nI simuleringene ender Kongsvinger i snitt på 62 poeng mot 64 for Strømsgodset, og rykker direkte opp i 24 % av dem."
     },
     {
      "id": "howto",
      "sporsmal": "Hva må Kongsvinger gjøre for å rykke direkte opp?",
-     "svar": "Kongsvinger må ta alle de seks poengene som er igjen for å komme opp på 65. Ender de på 65 poeng, er sjansen for direkte opprykk rundt 81 %. Det er fordi Strømsgodset vanligvis ender på 64 poeng."
+     "svar": "Det skal mye til: Kongsvinger rykker direkte opp i rundt 24 % av simuleringene. De må ta alle de seks poengene som er igjen for å komme opp på 65. Ender de på 65 poeng, er sjansen omtrent 80 %."
     },
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Kongsvinger?",
-     "svar": "Disse kampene påvirker Kongsvingers opprykkssjanse mest. Nå: 26 %\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nStrømsgodset vinner: 17 % (−9 prosentpoeng)\nUavgjort: 43 % (+17 prosentpoeng)\nMoss vinner: 52 % (+26 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nSeier: 48 % (+22 prosentpoeng)\nUavgjort: 13 % (−13 prosentpoeng)\nTap: 7 % (−19 prosentpoeng)\n\nKongsvinger mot Stabæk, runde 29, mandag 2. nov\nSeier: 46 % (+20 prosentpoeng)\nUavgjort: 12 % (−14 prosentpoeng)\nTap: 7 % (−19 prosentpoeng)"
+     "svar": "Disse kampene påvirker Kongsvingers opprykkssjanse mest. Nå: 24 %\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nStrømsgodset vinner: 18 % (−6 prosentpoeng)\nUavgjort: 43 % (+19 prosentpoeng)\nMoss vinner: 53 % (+29 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nSeier: 46 % (+22 prosentpoeng)\nUavgjort: 12 % (−12 prosentpoeng)\nTap: 6 % (−18 prosentpoeng)\n\nKongsvinger mot Stabæk, runde 29, mandag 2. nov\nSeier: 44 % (+20 prosentpoeng)\nUavgjort: 11 % (−13 prosentpoeng)\nTap: 6 % (−18 prosentpoeng)"
     }
    ],
    "plass": {
     "sporsmal": "Hvilken plass ender Kongsvinger på?",
-    "svar": "Kongsvinger ligger på 3. plass med 59 poeng. Matematisk kan de ende fra 1. til 4. plass. Oftest blir det 3. plass (66 %), og i minst 90 % av simuleringene ender de mellom 1. og 4. plass."
+    "svar": "Kongsvinger ligger på 3. plass med 59 poeng. Matematisk kan de ende fra 1. til 4. plass. Oftest blir det 3. plass (68 %), og i minst 90 % av simuleringene ender de mellom 1. og 4. plass."
    },
    "rest": [
     {
      "naar": "Runde 29, mandag 2. nov",
      "motstander": "Stabæk",
      "hjemme": true,
-     "seier": "45 %",
+     "seier": "47 %",
      "uavgjort": "21 %",
      "tap": "33 %"
     },
@@ -1202,8 +1202,8 @@
     {
      "key": "gull",
      "navn": "direkte opprykk",
-     "vist": "26 %",
-     "andel": 0.25807,
+     "vist": "24 %",
+     "andel": 0.24367,
      "avgjort": 0
     },
     {
@@ -1232,7 +1232,7 @@
     "plass": 12,
     "av": 16,
     "snitt": "34 %",
-    "andel": 0.340658,
+    "andel": 0.336555,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Bryne",
@@ -1244,10 +1244,10 @@
     }
    },
    "fordeling": [
-    0.05378,
-    0.20429,
-    0.66354,
-    0.07839,
+    0.05239,
+    0.19128,
+    0.6799,
+    0.07643,
     0,
     0,
     0,
@@ -1274,8 +1274,8 @@
    "topp": [
     {
      "id": "why",
-     "sporsmal": "Hvorfor har Lyn 4 % sjanse for kvalik?",
-     "svar": "Lyn ligger to poeng foran Moss på 14. plass og er omtrent like sterke ifølge modellen (4,6 mot 4,6). Sogndal og Sandnes Ulf er også med i kampen om å unngå kvalik. Lyn har også et lettere restprogram: motstanderne har i snitt 29 % vinnersjanse, mot 53 % for Moss.\n\nI simuleringene ender Lyn i snitt på 34 poeng mot 31 for Moss, og havner i kvalik i 4 % av dem."
+     "sporsmal": "Hvorfor har Lyn 3 % sjanse for kvalik?",
+     "svar": "Lyn ligger to poeng foran Moss på 14. plass og er omtrent like sterke ifølge modellen (4,6 mot 4,6). Sogndal og Sandnes Ulf er også med i kampen om å unngå kvalik. Lyn har også et lettere restprogram: motstanderne har i snitt 27 % vinnersjanse, mot 56 % for Moss.\n\nI simuleringene ender Lyn i snitt på 35 poeng mot 31 for Moss, og havner i kvalik i 3 % av dem."
     },
     {
      "id": "howto",
@@ -1285,7 +1285,7 @@
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Lyn?",
-     "svar": "Disse kampene påvirker Lyns kvalikfare mest. Nå: 4 %\n\nLyn mot Raufoss, runde 29, søndag 1. nov\nSeier: <1 % (−4 prosentpoeng)\nUavgjort: 6 % (+2 prosentpoeng)\nTap: 16 % (+12 prosentpoeng)\n\nStrømmen mot Lyn, runde 30, søndag 8. nov\nSeier: <1 % (−4 prosentpoeng)\nUavgjort: 3 % (endrer lite)\nTap: 9 % (+5 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nMoss vinner: 8 % (+4 prosentpoeng)\nUavgjort: 2 % (−2 prosentpoeng)\nRanheim vinner: 1 % (−3 prosentpoeng)"
+     "svar": "Disse kampene påvirker Lyns kvalikfare mest. Nå: 3 %\n\nLyn mot Raufoss, runde 29, søndag 1. nov\nSeier: <1 % (−3 prosentpoeng)\nUavgjort: 6 % (+3 prosentpoeng)\nTap: 16 % (+13 prosentpoeng)\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nStrømsgodset vinner: 3 % (endrer lite)\nUavgjort: 5 % (+2 prosentpoeng)\nMoss vinner: 9 % (+6 prosentpoeng)\n\nStrømmen mot Lyn, runde 30, søndag 8. nov\nSeier: <1 % (−3 prosentpoeng)\nUavgjort: 2 % (endrer lite)\nTap: 7 % (+4 prosentpoeng)"
     }
    ],
    "plass": {
@@ -1297,9 +1297,9 @@
      "naar": "Runde 29, søndag 1. nov",
      "motstander": "Raufoss",
      "hjemme": true,
-     "seier": "63 %",
-     "uavgjort": "19 %",
-     "tap": "18 %"
+     "seier": "69 %",
+     "uavgjort": "17 %",
+     "tap": "14 %"
     },
     {
      "naar": "Runde 30, søndag 8. nov",
@@ -1328,23 +1328,23 @@
     {
      "key": "kvalik",
      "navn": "kvalik",
-     "vist": "4 %",
-     "andel": 0.0423,
+     "vist": "3 %",
+     "andel": 0.03405,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
      "vist": "<1 %",
-     "andel": 0.00015,
+     "andel": 0.00019,
      "avgjort": 0
     }
    ],
    "restprogram": {
     "plass": 13,
     "av": 16,
-    "snitt": "29 %",
-    "andel": 0.292494,
+    "snitt": "27 %",
+    "andel": 0.272625,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Strømmen",
@@ -1364,13 +1364,13 @@
     0,
     0,
     0,
-    0.00489,
-    0.1743,
-    0.43205,
-    0.23368,
-    0.11263,
-    0.0423,
-    0.00015,
+    0.00613,
+    0.19151,
+    0.42508,
+    0.23663,
+    0.10641,
+    0.03405,
+    0.00019,
     0
    ],
    "heldig": {
@@ -1386,32 +1386,32 @@
    "topp": [
     {
      "id": "why",
-     "sporsmal": "Hvorfor har Moss 56 % sjanse for kvalik?",
-     "svar": "Moss har like mange poeng som Sandnes Ulf på 13. plass og er omtrent like sterke ifølge modellen (4,6 mot 4,4). Moss har også et tøffere restprogram: motstanderne har i snitt 53 % vinnersjanse, mot 41 % for Sandnes Ulf.\n\nI simuleringene ender Moss i snitt på 31 poeng mot 32 for Sandnes Ulf, og havner i kvalik i 56 % av dem."
+     "sporsmal": "Hvorfor har Moss 60 % sjanse for kvalik?",
+     "svar": "Moss har like mange poeng som Sandnes Ulf på 13. plass og er omtrent like sterke ifølge modellen (4,6 mot 4,4). Moss har også et tøffere restprogram: motstanderne har i snitt 56 % vinnersjanse, mot 38 % for Sandnes Ulf.\n\nI simuleringene ender Moss i snitt på 31 poeng mot 32 for Sandnes Ulf, og havner i kvalik i 60 % av dem."
     },
     {
      "id": "howto",
      "sporsmal": "Hva må Moss gjøre for å unngå både nedrykk og kvalik?",
-     "svar": "Moss må ta tre av de seks poengene som er igjen for å komme opp på 32. Ender de på 32 poeng, er sjansen for å unngå både nedrykk og kvalik rundt 66 %. Med 35 poeng er den over 99 %."
+     "svar": "Moss må ta tre av de seks poengene som er igjen for å komme opp på 32. Ender de på 32 poeng, er sjansen for å unngå både nedrykk og kvalik rundt 62 %. Med 35 poeng er den 99 %."
     },
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Moss?",
-     "svar": "Disse kampene påvirker Moss' kvalikfare mest. Nå: 56 %\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nSeier: 15 % (−41 prosentpoeng)\nUavgjort: 47 % (−9 prosentpoeng)\nTap: 65 % (+9 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nSeier: 27 % (−29 prosentpoeng)\nUavgjort: 71 % (+15 prosentpoeng)\nTap: 83 % (+27 prosentpoeng)\n\nSandnes Ulf mot Åsane, runde 30, søndag 8. nov\nSandnes Ulf vinner: 69 % (+13 prosentpoeng)\nUavgjort: 47 % (−9 prosentpoeng)\nÅsane vinner: 29 % (−27 prosentpoeng)"
+     "svar": "Disse kampene påvirker Moss' kvalikfare mest. Nå: 60 %\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nSeier: 17 % (−43 prosentpoeng)\nUavgjort: 49 % (−11 prosentpoeng)\nTap: 68 % (+8 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nSeier: 32 % (−28 prosentpoeng)\nUavgjort: 76 % (+16 prosentpoeng)\nTap: 85 % (+25 prosentpoeng)\n\nSandnes Ulf mot Åsane, runde 30, søndag 8. nov\nSandnes Ulf vinner: 73 % (+13 prosentpoeng)\nUavgjort: 52 % (−8 prosentpoeng)\nÅsane vinner: 34 % (−26 prosentpoeng)"
     }
    ],
    "plass": {
     "sporsmal": "Hvilken plass ender Moss på?",
-    "svar": "Moss ligger på 14. plass med 29 poeng. Matematisk kan de ende fra 10. til 15. plass. Oftest blir det 14. plass (56 %), og i minst 90 % av simuleringene ender de mellom 12. og 14. plass."
+    "svar": "Moss ligger på 14. plass med 29 poeng. Matematisk kan de ende fra 10. til 15. plass. Oftest blir det 14. plass (60 %), og i minst 90 % av simuleringene ender de mellom 12. og 14. plass."
    },
    "rest": [
     {
      "naar": "Runde 29, søndag 1. nov",
      "motstander": "Strømsgodset",
      "hjemme": false,
-     "seier": "12 %",
-     "uavgjort": "17 %",
-     "tap": "71 %"
+     "seier": "10 %",
+     "uavgjort": "13 %",
+     "tap": "77 %"
     },
     {
      "naar": "Runde 30, søndag 8. nov",
@@ -1440,23 +1440,23 @@
     {
      "key": "kvalik",
      "navn": "kvalik",
-     "vist": "56 %",
-     "andel": 0.56333,
+     "vist": "60 %",
+     "andel": 0.6046,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
      "vist": "2 %",
-     "andel": 0.02257,
+     "andel": 0.02425,
      "avgjort": 0
     }
    ],
    "restprogram": {
     "plass": 3,
     "av": 16,
-    "snitt": "53 %",
-    "andel": 0.5308,
+    "snitt": "56 %",
+    "andel": 0.5609,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Strømsgodset",
@@ -1464,7 +1464,7 @@
      "dato": "2026-11-01",
      "dato_tekst": "1. november",
      "naar": "Runde 29, søndag 1. nov",
-     "seier": "12 %"
+     "seier": "10 %"
     }
    },
    "fordeling": [
@@ -1477,12 +1477,12 @@
     0,
     0,
     0,
-    0.00082,
-    0.03906,
-    0.11839,
-    0.25583,
-    0.56333,
-    0.02257,
+    0.00054,
+    0.02789,
+    0.09947,
+    0.24325,
+    0.6046,
+    0.02425,
     0
    ],
    "heldig": {
@@ -1499,7 +1499,7 @@
     {
      "id": "range",
      "sporsmal": "Hvilken plass ender Odd på?",
-     "svar": "Odd ligger på 5. plass med 45 poeng. Matematisk kan de ende fra 5. til 6. plass. Oftest blir det 5. plass (98 %)."
+     "svar": "Odd ligger på 5. plass med 45 poeng. Matematisk kan de ende fra 5. til 6. plass. Oftest blir det 5. plass (97 %)."
     },
     {
      "id": "rivals",
@@ -1509,21 +1509,21 @@
     {
      "id": "hardest",
      "sporsmal": "Hvilken kamp blir vanskeligst for Odd?",
-     "svar": "Vanskeligst blir borte mot Haugesund 8. november, der modellen gir 22 % sjanse for seier. Lettest blir hjemme mot Sandnes Ulf 1. november, med 61 %."
+     "svar": "Vanskeligst blir borte mot Haugesund 8. november, der modellen gir 22 % sjanse for seier. Lettest blir hjemme mot Sandnes Ulf 1. november, med 54 %."
     }
    ],
    "plass": {
     "sporsmal": "Hvilken plass ender Odd på?",
-    "svar": "Odd ligger på 5. plass med 45 poeng. Matematisk kan de ende fra 5. til 6. plass. Oftest blir det 5. plass (98 %)."
+    "svar": "Odd ligger på 5. plass med 45 poeng. Matematisk kan de ende fra 5. til 6. plass. Oftest blir det 5. plass (97 %)."
    },
    "rest": [
     {
      "naar": "Runde 29, søndag 1. nov",
      "motstander": "Sandnes Ulf",
      "hjemme": true,
-     "seier": "61 %",
-     "uavgjort": "20 %",
-     "tap": "19 %"
+     "seier": "54 %",
+     "uavgjort": "19 %",
+     "tap": "26 %"
     },
     {
      "naar": "Runde 30, søndag 8. nov",
@@ -1565,10 +1565,10 @@
     }
    ],
    "restprogram": {
-    "plass": 9,
+    "plass": 7,
     "av": 16,
-    "snitt": "38 %",
-    "andel": 0.383471,
+    "snitt": "42 %",
+    "andel": 0.421949,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Haugesund",
@@ -1584,8 +1584,8 @@
     0,
     0,
     0,
-    0.98159,
-    0.01841,
+    0.97325,
+    0.02675,
     0,
     0,
     0,
@@ -1621,20 +1621,20 @@
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Ranheim?",
-     "svar": "Disse kampene påvirker Ranheims topp 6-sjanse mest. Nå: 26 %\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nSeier: 55 % (+29 prosentpoeng)\nUavgjort: 16 % (−10 prosentpoeng)\nTap: 8 % (−18 prosentpoeng)\n\nRanheim mot Sogndal, runde 29, søndag 1. nov\nSeier: 42 % (+16 prosentpoeng)\nUavgjort: 10 % (−16 prosentpoeng)\nTap: 5 % (−21 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nBryne vinner: 10 % (−16 prosentpoeng)\nUavgjort: 32 % (+6 prosentpoeng)\nKongsvinger vinner: 36 % (+10 prosentpoeng)"
+     "svar": "Disse kampene påvirker Ranheims topp 6-sjanse mest. Nå: 26 %\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nSeier: 54 % (+28 prosentpoeng)\nUavgjort: 15 % (−11 prosentpoeng)\nTap: 8 % (−18 prosentpoeng)\n\nRanheim mot Sogndal, runde 29, søndag 1. nov\nSeier: 41 % (+15 prosentpoeng)\nUavgjort: 10 % (−16 prosentpoeng)\nTap: 5 % (−21 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nBryne vinner: 9 % (−17 prosentpoeng)\nUavgjort: 31 % (+5 prosentpoeng)\nKongsvinger vinner: 36 % (+10 prosentpoeng)"
     }
    ],
    "plass": {
     "sporsmal": "Hvilken plass ender Ranheim på?",
-    "svar": "Ranheim ligger på 7. plass med 38 poeng. Matematisk kan de ende fra 6. til 10. plass. Oftest blir det 7. plass (44 %), og i minst 90 % av simuleringene ender de mellom 6. og 9. plass."
+    "svar": "Ranheim ligger på 7. plass med 38 poeng. Matematisk kan de ende fra 6. til 10. plass. Oftest blir det 7. plass (45 %), og i minst 90 % av simuleringene ender de mellom 6. og 9. plass."
    },
    "rest": [
     {
      "naar": "Runde 29, søndag 1. nov",
      "motstander": "Sogndal",
      "hjemme": true,
-     "seier": "55 %",
-     "uavgjort": "19 %",
+     "seier": "54 %",
+     "uavgjort": "20 %",
      "tap": "26 %"
     },
     {
@@ -1658,7 +1658,7 @@
      "key": "europa",
      "navn": "topp 6",
      "vist": "26 %",
-     "andel": 0.2608,
+     "andel": 0.25572,
      "avgjort": 0
     },
     {
@@ -1680,7 +1680,7 @@
     "plass": 11,
     "av": 16,
     "snitt": "34 %",
-    "andel": 0.343454,
+    "andel": 0.342333,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Moss",
@@ -1697,11 +1697,11 @@
     0,
     0,
     0,
-    0.2608,
-    0.44197,
-    0.17691,
-    0.10369,
-    0.01663,
+    0.25572,
+    0.44892,
+    0.17581,
+    0.1027,
+    0.01685,
     0,
     0,
     0,
@@ -1733,7 +1733,7 @@
     {
      "id": "hardest",
      "sporsmal": "Hvilken kamp blir vanskeligst for Raufoss?",
-     "svar": "Vanskeligst blir borte mot Lyn 1. november, der modellen gir 18 % sjanse for seier. Lettest blir hjemme mot Egersund 8. november, med 29 %."
+     "svar": "Vanskeligst blir borte mot Lyn 1. november, der modellen gir 14 % sjanse for seier. Lettest blir hjemme mot Egersund 8. november, med 29 %."
     }
    ],
    "plass": {
@@ -1745,9 +1745,9 @@
      "naar": "Runde 29, søndag 1. nov",
      "motstander": "Lyn",
      "hjemme": false,
-     "seier": "18 %",
-     "uavgjort": "19 %",
-     "tap": "63 %"
+     "seier": "14 %",
+     "uavgjort": "17 %",
+     "tap": "69 %"
     },
     {
      "naar": "Runde 30, søndag 8. nov",
@@ -1791,8 +1791,8 @@
    "restprogram": {
     "plass": 2,
     "av": 16,
-    "snitt": "55 %",
-    "andel": 0.554073,
+    "snitt": "58 %",
+    "andel": 0.582147,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Lyn",
@@ -1800,7 +1800,7 @@
      "dato": "2026-11-01",
      "dato_tekst": "1. november",
      "naar": "Runde 29, søndag 1. nov",
-     "seier": "18 %"
+     "seier": "14 %"
     }
    },
    "fordeling": [
@@ -1818,8 +1818,8 @@
     0,
     0,
     0,
-    0.02166,
-    0.97834
+    0.01682,
+    0.98318
    ],
    "heldig": {
     "sporsmal": "Har Raufoss tatt flere eller færre poeng enn ventet?",
@@ -1834,8 +1834,8 @@
    "topp": [
     {
      "id": "why",
-     "sporsmal": "Hvorfor har Sandnes Ulf 24 % sjanse for kvalik?",
-     "svar": "Sandnes Ulf har like mange poeng som Moss på 14. plass og er omtrent like sterke ifølge modellen (4,4 mot 4,6). Sandnes Ulf har også et lettere restprogram: motstanderne har i snitt 41 % vinnersjanse, mot 53 % for Moss.\n\nI simuleringene ender Sandnes Ulf i snitt på 32 poeng mot 31 for Moss, og havner i kvalik i 24 % av dem."
+     "sporsmal": "Hvorfor har Sandnes Ulf 21 % sjanse for kvalik?",
+     "svar": "Sandnes Ulf har like mange poeng som Moss på 14. plass og er omtrent like sterke ifølge modellen (4,4 mot 4,6). Sandnes Ulf har også et lettere restprogram: motstanderne har i snitt 38 % vinnersjanse, mot 56 % for Moss.\n\nI simuleringene ender Sandnes Ulf i snitt på 32 poeng mot 31 for Moss, og havner i kvalik i 21 % av dem."
     },
     {
      "id": "howto",
@@ -1845,7 +1845,7 @@
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Sandnes Ulf?",
-     "svar": "Disse kampene påvirker Sandnes Ulfs kvalikfare mest. Nå: 24 %\n\nSandnes Ulf mot Åsane, runde 30, søndag 8. nov\nSeier: 8 % (−16 prosentpoeng)\nUavgjort: 41 % (+17 prosentpoeng)\nTap: 53 % (+29 prosentpoeng)\n\nOdd mot Sandnes Ulf, runde 29, søndag 1. nov\nSeier: 3 % (−21 prosentpoeng)\nUavgjort: 19 % (−5 prosentpoeng)\nTap: 32 % (+8 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nMoss vinner: 39 % (+15 prosentpoeng)\nUavgjort: 19 % (−5 prosentpoeng)\nRanheim vinner: 9 % (−15 prosentpoeng)"
+     "svar": "Disse kampene påvirker Sandnes Ulfs kvalikfare mest. Nå: 21 %\n\nSandnes Ulf mot Åsane, runde 30, søndag 8. nov\nSeier: 6 % (−15 prosentpoeng)\nUavgjort: 36 % (+15 prosentpoeng)\nTap: 47 % (+26 prosentpoeng)\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nStrømsgodset vinner: 17 % (−4 prosentpoeng)\nUavgjort: 30 % (+9 prosentpoeng)\nMoss vinner: 44 % (+23 prosentpoeng)\n\nOdd mot Sandnes Ulf, runde 29, søndag 1. nov\nSeier: 2 % (−19 prosentpoeng)\nUavgjort: 19 % (−2 prosentpoeng)\nTap: 31 % (+10 prosentpoeng)"
     }
    ],
    "plass": {
@@ -1857,9 +1857,9 @@
      "naar": "Runde 29, søndag 1. nov",
      "motstander": "Odd",
      "hjemme": false,
-     "seier": "19 %",
-     "uavgjort": "20 %",
-     "tap": "61 %"
+     "seier": "26 %",
+     "uavgjort": "19 %",
+     "tap": "54 %"
     },
     {
      "naar": "Runde 30, søndag 8. nov",
@@ -1888,23 +1888,23 @@
     {
      "key": "kvalik",
      "navn": "kvalik",
-     "vist": "24 %",
-     "andel": 0.24072,
+     "vist": "21 %",
+     "andel": 0.20918,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
      "vist": "2 %",
-     "andel": 0.0239,
+     "andel": 0.02027,
      "avgjort": 0
     }
    ],
    "restprogram": {
-    "plass": 8,
+    "plass": 9,
     "av": 16,
-    "snitt": "41 %",
-    "andel": 0.407994,
+    "snitt": "38 %",
+    "andel": 0.376036,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Odd",
@@ -1912,7 +1912,7 @@
      "dato": "2026-11-01",
      "dato_tekst": "1. november",
      "naar": "Runde 29, søndag 1. nov",
-     "seier": "19 %"
+     "seier": "26 %"
     }
    },
    "fordeling": [
@@ -1925,12 +1925,12 @@
     0,
     0,
     0,
-    0.00436,
-    0.10247,
-    0.24486,
-    0.38369,
-    0.24072,
-    0.0239,
+    0.00546,
+    0.12387,
+    0.2573,
+    0.38392,
+    0.20918,
+    0.02027,
     0
    ],
    "heldig": {
@@ -1947,17 +1947,17 @@
     {
      "id": "why",
      "sporsmal": "Hvorfor har Sogndal 12 % sjanse for kvalik?",
-     "svar": "Sogndal ligger ett poeng foran Moss på 14. plass og er omtrent like sterke ifølge modellen (4,4 mot 4,6). Sandnes Ulf er også med i kampen om å unngå kvalik. Sogndal har også et lettere restprogram: motstanderne har i snitt 41 % vinnersjanse, mot 53 % for Moss.\n\nI simuleringene ender Sogndal i snitt på 33 poeng mot 31 for Moss, og havner i kvalik i 12 % av dem."
+     "svar": "Sogndal ligger ett poeng foran Moss på 14. plass og er omtrent like sterke ifølge modellen (4,4 mot 4,6). Sandnes Ulf er også med i kampen om å unngå kvalik. Sogndal har også et lettere restprogram: motstanderne har i snitt 41 % vinnersjanse, mot 56 % for Moss.\n\nI simuleringene ender Sogndal i snitt på 33 poeng mot 31 for Moss, og havner i kvalik i 12 % av dem."
     },
     {
      "id": "howto",
      "sporsmal": "Hva må Sogndal gjøre for å unngå både nedrykk og kvalik?",
-     "svar": "Sogndal har allerede 30 poeng. Tar de ikke flere poeng, er sjansen for å unngå både nedrykk og kvalik rundt 56 %. Med 33 poeng er den 99 %."
+     "svar": "Sogndal har allerede 30 poeng. Tar de ikke flere poeng, er sjansen for å unngå både nedrykk og kvalik rundt 57 %. Med 33 poeng er den 99 %."
     },
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Sogndal?",
-     "svar": "Disse kampene påvirker Sogndals kvalikfare mest. Nå: 12 %\n\nSogndal mot Hødd, runde 30, søndag 8. nov\nSeier: 1 % (−11 prosentpoeng)\nUavgjort: 18 % (+6 prosentpoeng)\nTap: 30 % (+18 prosentpoeng)\n\nRanheim mot Sogndal, runde 29, søndag 1. nov\nSeier: <1 % (−12 prosentpoeng)\nUavgjort: 9 % (−3 prosentpoeng)\nTap: 19 % (+7 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nMoss vinner: 24 % (+12 prosentpoeng)\nUavgjort: 6 % (−6 prosentpoeng)\nRanheim vinner: 3 % (−9 prosentpoeng)"
+     "svar": "Disse kampene påvirker Sogndals kvalikfare mest. Nå: 12 %\n\nSogndal mot Hødd, runde 30, søndag 8. nov\nSeier: 1 % (−11 prosentpoeng)\nUavgjort: 18 % (+6 prosentpoeng)\nTap: 29 % (+17 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nMoss vinner: 24 % (+12 prosentpoeng)\nUavgjort: 5 % (−7 prosentpoeng)\nRanheim vinner: 3 % (−9 prosentpoeng)\n\nRanheim mot Sogndal, runde 29, søndag 1. nov\nSeier: <1 % (−12 prosentpoeng)\nUavgjort: 10 % (−2 prosentpoeng)\nTap: 19 % (+7 prosentpoeng)"
     }
    ],
    "plass": {
@@ -1970,8 +1970,8 @@
      "motstander": "Ranheim",
      "hjemme": false,
      "seier": "26 %",
-     "uavgjort": "19 %",
-     "tap": "55 %"
+     "uavgjort": "20 %",
+     "tap": "54 %"
     },
     {
      "naar": "Runde 30, søndag 8. nov",
@@ -2001,22 +2001,22 @@
      "key": "kvalik",
      "navn": "kvalik",
      "vist": "12 %",
-     "andel": 0.12285,
+     "andel": 0.12192,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
      "vist": "<1 %",
-     "andel": 0.00059,
+     "andel": 0.00083,
      "avgjort": 0
     }
    ],
    "restprogram": {
-    "plass": 7,
+    "plass": 8,
     "av": 16,
     "snitt": "41 %",
-    "andel": 0.4114,
+    "andel": 0.407099,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Ranheim",
@@ -2037,12 +2037,12 @@
     0,
     0,
     0,
-    0.02918,
-    0.23854,
-    0.37534,
-    0.2335,
-    0.12285,
-    0.00059,
+    0.02621,
+    0.22192,
+    0.37631,
+    0.25281,
+    0.12192,
+    0.00083,
     0
    ],
    "heldig": {
@@ -2064,7 +2064,7 @@
     {
      "id": "howto",
      "sporsmal": "Hva må Stabæk gjøre for å rykke direkte opp?",
-     "svar": "Det skal mye til: Stabæk rykker direkte opp i rundt 1 % av simuleringene. De kan ikke sikre direkte opprykk med egne resultater alene. Selv om de tar alle poengene som er igjen og ender på 61, er sjansen bare omtrent 7 %. Da må både Strømsgodset og Kongsvinger ende på 61 poeng eller færre."
+     "svar": "Det skal mye til: Stabæk rykker direkte opp i rundt 1 % av simuleringene. De kan ikke sikre direkte opprykk med egne resultater alene. Selv om de tar alle poengene som er igjen og ender på 61, er sjansen bare omtrent 5 %. Da må både Strømsgodset og Kongsvinger ende på 61 poeng eller færre."
     },
     {
      "id": "keymatches",
@@ -2074,7 +2074,7 @@
    ],
    "plass": {
     "sporsmal": "Hvilken plass ender Stabæk på?",
-    "svar": "Stabæk ligger på 4. plass med 55 poeng. Matematisk kan de ende fra 2. til 4. plass. Oftest blir det 4. plass (91 %), og i minst 90 % av simuleringene ender de mellom 3. og 4. plass."
+    "svar": "Stabæk ligger på 4. plass med 55 poeng. Matematisk kan de ende fra 2. til 4. plass. Oftest blir det 4. plass (92 %), og i minst 90 % av simuleringene ender de mellom 3. og 4. plass."
    },
    "rest": [
     {
@@ -2083,7 +2083,7 @@
      "hjemme": false,
      "seier": "33 %",
      "uavgjort": "21 %",
-     "tap": "45 %"
+     "tap": "47 %"
     },
     {
      "naar": "Runde 30, søndag 8. nov",
@@ -2099,7 +2099,7 @@
      "key": "gull",
      "navn": "direkte opprykk",
      "vist": "1 %",
-     "andel": 0.00803,
+     "andel": 0.00606,
      "avgjort": 0
     },
     {
@@ -2127,8 +2127,8 @@
    "restprogram": {
     "plass": 6,
     "av": 16,
-    "snitt": "43 %",
-    "andel": 0.429737,
+    "snitt": "44 %",
+    "andel": 0.435151,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Kongsvinger",
@@ -2141,9 +2141,9 @@
    },
    "fordeling": [
     0,
-    0.00803,
-    0.077,
-    0.91497,
+    0.00606,
+    0.07571,
+    0.91823,
     0,
     0,
     0,
@@ -2170,8 +2170,8 @@
    "topp": [
     {
      "id": "why",
-     "sporsmal": "Hvorfor har Strømmen 1 % sjanse for topp 6?",
-     "svar": "Strømmen ligger fire poeng bak Bryne på 6. plass og er litt svakere ifølge modellen (4,2 mot 5,4). Ranheim og Hødd er også med i kampen om topp 6-plassene. Strømmen har også et tøffere restprogram: motstanderne har i snitt 45 % vinnersjanse, mot 36 % for Bryne.\n\nI simuleringene ender Strømmen i snitt på 38 poeng mot 43 for Bryne, og havner i topp 6 i 1 % av dem."
+     "sporsmal": "Hvorfor har Strømmen så godt som ingen mulighet til å nå topp 6?",
+     "svar": "Strømmen ligger på 9. plass med 36 poeng, fire bak Bryne på 6. plass. Det gjenstår to kamper, men for at Strømmen skal nå topp 6, må de passere Bryne, Ranheim og Hødd. Det skjer i under 1 % av simuleringene."
     },
     {
      "id": "howto",
@@ -2181,7 +2181,7 @@
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Strømmen?",
-     "svar": "Disse kampene påvirker Strømmens topp 6-sjanse mest. Nå: 1 %\n\nEgersund mot Strømmen, runde 29, søndag 1. nov\nSeier: 5 % (+4 prosentpoeng)\nUavgjort: <1 % (endrer lite)\nTap: <1 % (endrer lite)\n\nStrømmen mot Lyn, runde 30, søndag 8. nov\nSeier: 3 % (+2 prosentpoeng)\nUavgjort: <1 % (endrer lite)\nTap: <1 % (endrer lite)"
+     "svar": "Strømmen har så godt som ingen mulighet til å nå topp 6 lenger. Strømmen ligger på 9. plass med 36 poeng, fire bak Bryne på 6. plass. Det gjenstår to kamper, men for at Strømmen skal nå topp 6, må de passere Bryne, Ranheim og Hødd. Det skjer i under 1 % av simuleringene."
     }
    ],
    "plass": {
@@ -2193,9 +2193,9 @@
      "naar": "Runde 29, søndag 1. nov",
      "motstander": "Egersund",
      "hjemme": false,
-     "seier": "25 %",
-     "uavgjort": "21 %",
-     "tap": "54 %"
+     "seier": "23 %",
+     "uavgjort": "22 %",
+     "tap": "56 %"
     },
     {
      "naar": "Runde 30, søndag 8. nov",
@@ -2218,7 +2218,7 @@
      "key": "europa",
      "navn": "topp 6",
      "vist": "1 %",
-     "andel": 0.01146,
+     "andel": 0.00996,
      "avgjort": 0
     },
     {
@@ -2239,8 +2239,8 @@
    "restprogram": {
     "plass": 5,
     "av": 16,
-    "snitt": "45 %",
-    "andel": 0.449063,
+    "snitt": "46 %",
+    "andel": 0.458999,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Egersund",
@@ -2248,7 +2248,7 @@
      "dato": "2026-11-01",
      "dato_tekst": "1. november",
      "naar": "Runde 29, søndag 1. nov",
-     "seier": "25 %"
+     "seier": "23 %"
     }
    },
    "fordeling": [
@@ -2257,13 +2257,13 @@
     0,
     0,
     0,
-    0.01146,
-    0.07732,
-    0.17517,
-    0.26624,
-    0.33018,
-    0.12331,
-    0.01632,
+    0.00996,
+    0.0723,
+    0.16956,
+    0.26132,
+    0.32985,
+    0.13891,
+    0.0181,
     0,
     0,
     0,
@@ -2282,8 +2282,8 @@
    "topp": [
     {
      "id": "why",
-     "sporsmal": "Hvorfor har Strømsgodset 79 % sjanse for direkte opprykk?",
-     "svar": "Strømsgodset ligger ett poeng foran Kongsvinger på tredjeplassen og er litt sterkere ifølge modellen (7,1 mot 6,3). Strømsgodset har også et lettere restprogram: motstanderne har i snitt 24 % vinnersjanse, mot 34 % for Kongsvinger.\n\nI simuleringene ender Strømsgodset i snitt på 64 poeng mot 62 for Kongsvinger, og rykker direkte opp i 79 % av dem."
+     "sporsmal": "Hvorfor har Strømsgodset 81 % sjanse for direkte opprykk?",
+     "svar": "Strømsgodset ligger ett poeng foran Kongsvinger på tredjeplassen og er litt sterkere ifølge modellen (7,1 mot 6,3). Strømsgodset har også et lettere restprogram: motstanderne har i snitt 23 % vinnersjanse, mot 34 % for Kongsvinger.\n\nI simuleringene ender Strømsgodset i snitt på 64 poeng mot 62 for Kongsvinger, og rykker direkte opp i 81 % av dem."
     },
     {
      "id": "howto",
@@ -2293,7 +2293,7 @@
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Strømsgodset?",
-     "svar": "Disse kampene påvirker Strømsgodsets opprykkssjanse mest. Nå: 79 %\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nSeier: 89 % (+10 prosentpoeng)\nUavgjort: 60 % (−19 prosentpoeng)\nTap: 43 % (−36 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nBryne vinner: 93 % (+14 prosentpoeng)\nUavgjort: 89 % (+10 prosentpoeng)\nKongsvinger vinner: 62 % (−17 prosentpoeng)\n\nStabæk mot Strømsgodset, runde 30, søndag 8. nov\nSeier: 95 % (+16 prosentpoeng)\nUavgjort: 73 % (−6 prosentpoeng)\nTap: 64 % (−15 prosentpoeng)"
+     "svar": "Disse kampene påvirker Strømsgodsets opprykkssjanse mest. Nå: 81 %\n\nStrømsgodset mot Moss, runde 29, søndag 1. nov\nSeier: 89 % (+8 prosentpoeng)\nUavgjort: 59 % (−22 prosentpoeng)\nTap: 43 % (−38 prosentpoeng)\n\nBryne mot Kongsvinger, runde 30, søndag 8. nov\nBryne vinner: 94 % (+13 prosentpoeng)\nUavgjort: 91 % (+10 prosentpoeng)\nKongsvinger vinner: 64 % (−17 prosentpoeng)\n\nStabæk mot Strømsgodset, runde 30, søndag 8. nov\nSeier: 96 % (+15 prosentpoeng)\nUavgjort: 75 % (−6 prosentpoeng)\nTap: 67 % (−14 prosentpoeng)"
     }
    ],
    "plass": {
@@ -2305,9 +2305,9 @@
      "naar": "Runde 29, søndag 1. nov",
      "motstander": "Moss",
      "hjemme": true,
-     "seier": "71 %",
-     "uavgjort": "17 %",
-     "tap": "12 %"
+     "seier": "77 %",
+     "uavgjort": "13 %",
+     "tap": "10 %"
     },
     {
      "naar": "Runde 30, søndag 8. nov",
@@ -2322,8 +2322,8 @@
     {
      "key": "gull",
      "navn": "direkte opprykk",
-     "vist": "79 %",
-     "andel": 0.78979,
+     "vist": "81 %",
+     "andel": 0.80828,
      "avgjort": 0
     },
     {
@@ -2351,8 +2351,8 @@
    "restprogram": {
     "plass": 15,
     "av": 16,
-    "snitt": "24 %",
-    "andel": 0.236784,
+    "snitt": "23 %",
+    "andel": 0.226466,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Stabæk",
@@ -2364,10 +2364,10 @@
     }
    },
    "fordeling": [
-    0.22225,
-    0.56754,
-    0.20357,
-    0.00664,
+    0.23446,
+    0.57382,
+    0.18638,
+    0.00534,
     0,
     0,
     0,
@@ -2395,22 +2395,22 @@
     {
      "id": "why",
      "sporsmal": "Hvorfor har Åsane 95 % sjanse for nedrykk?",
-     "svar": "Åsane leder Raufoss 25-20 i poeng, med 2 kamper igjen. Marginen er fem poeng (mer enn én seier), og styrken er lik (3,4 mot 3,3). Åsane har også et tøffere restprogram: motstanderne har i snitt 64 % vinnersjanse, mot 55 % for Raufoss.\n\nI simuleringene ender Åsane i snitt på 26 poeng mot 22 for Raufoss, og rykker ned direkte i 95 % av dem."
+     "svar": "Åsane leder Raufoss 25-20 i poeng, med 2 kamper igjen. Marginen er fem poeng (mer enn én seier), og styrken er lik (3,4 mot 3,3). Åsane har også et tøffere restprogram: motstanderne har i snitt 64 % vinnersjanse, mot 58 % for Raufoss.\n\nI simuleringene ender Åsane i snitt på 26 poeng mot 22 for Raufoss, og rykker ned direkte i 95 % av dem."
     },
     {
      "id": "howto",
      "sporsmal": "Hva må Åsane gjøre for å unngå både nedrykk og kvalik?",
-     "svar": "Det skal mye til: Åsane unngår både nedrykk og kvalik i rundt 2 % av simuleringene. De kan ikke sikre trygg plass med egne resultater alene. Selv om de tar alle poengene som er igjen og ender på 31, er sjansen omtrent 49 %.\n\nÅsane når minst kvalikplass i 5 % av simuleringene."
+     "svar": "Det skal mye til: Åsane unngår både nedrykk og kvalik i rundt 2 % av simuleringene. De kan ikke sikre trygg plass med egne resultater alene. Selv om de tar alle poengene som er igjen og ender på 31, er sjansen omtrent 46 %.\n\nÅsane når minst kvalikplass i 5 % av simuleringene."
     },
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Åsane?",
-     "svar": "Disse kampene påvirker Åsanes nedrykksfare mest. Nå: 95 %\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nSeier: 76 % (−19 prosentpoeng)\nUavgjort: 92 % (−3 prosentpoeng)\nTap: >99 % (+5 prosentpoeng)\n\nSandnes Ulf mot Åsane, runde 30, søndag 8. nov\nSeier: 80 % (−15 prosentpoeng)\nUavgjort: 97 % (+2 prosentpoeng)\nTap: >99 % (+5 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nMoss vinner: 97 % (+2 prosentpoeng)\nUavgjort: 96 % (endrer lite)\nRanheim vinner: 93 % (−2 prosentpoeng)"
+     "svar": "Disse kampene påvirker Åsanes nedrykksfare mest. Nå: 95 %\n\nÅsane mot Haugesund, runde 29, søndag 1. nov\nSeier: 76 % (−19 prosentpoeng)\nUavgjort: 92 % (−3 prosentpoeng)\nTap: >99 % (+5 prosentpoeng)\n\nSandnes Ulf mot Åsane, runde 30, søndag 8. nov\nSeier: 81 % (−14 prosentpoeng)\nUavgjort: 97 % (+2 prosentpoeng)\nTap: >99 % (+5 prosentpoeng)\n\nMoss mot Ranheim, runde 30, søndag 8. nov\nMoss vinner: 97 % (+2 prosentpoeng)\nUavgjort: 97 % (+2 prosentpoeng)\nRanheim vinner: 93 % (−2 prosentpoeng)"
     }
    ],
    "plass": {
     "sporsmal": "Hvilken plass ender Åsane på?",
-    "svar": "Åsane ligger på 15. plass med 25 poeng. Matematisk kan de ende fra 11. til 16. plass. Oftest blir det 15. plass (93 %)."
+    "svar": "Åsane ligger på 15. plass med 25 poeng. Matematisk kan de ende fra 11. til 16. plass. Oftest blir det 15. plass (94 %)."
    },
    "rest": [
     {
@@ -2418,7 +2418,7 @@
      "motstander": "Haugesund",
      "hjemme": true,
      "seier": "14 %",
-     "uavgjort": "17 %",
+     "uavgjort": "16 %",
      "tap": "70 %"
     },
     {
@@ -2449,14 +2449,14 @@
      "key": "kvalik",
      "navn": "kvalik",
      "vist": "3 %",
-     "andel": 0.03078,
+     "andel": 0.03024,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
      "vist": "95 %",
-     "andel": 0.95279,
+     "andel": 0.95446,
      "avgjort": 0
     }
    ],
@@ -2464,7 +2464,7 @@
     "plass": 1,
     "av": 16,
     "snitt": "64 %",
-    "andel": 0.639454,
+    "andel": 0.642505,
     "kamper": 2,
     "vanskeligst": {
      "motstander": "Haugesund",
@@ -2486,12 +2486,12 @@
     0,
     0,
     0,
-    0.0001,
-    0.00234,
-    0.01399,
-    0.03078,
-    0.93113,
-    0.02166
+    0.00005,
+    0.0022,
+    0.01305,
+    0.03024,
+    0.93764,
+    0.01682
    ],
    "heldig": {
     "sporsmal": "Har Åsane tatt flere eller færre poeng enn ventet?",
