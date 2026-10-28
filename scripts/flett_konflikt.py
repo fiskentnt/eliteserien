@@ -22,6 +22,9 @@ egne commiten som legges oppå; stadium 1 er felles utgangspunkt.
       så telleren ikke viser for lite. (Fila skrives ikke lenger etter
       24.09.2026, hver kjøring har sin egen fil i data/oddspapi-bruk/, men
       regelen står for sikkerhets skyld.)
+  data/indexnow.json
+      flettes (28.10.2026): for hver adresse den nyeste innmeldingen, og
+      antallet per dag summert som for telleren.
 
 Andre filer med konflikt løses ikke: skriptet avslutter med 1, og
 push_med_rebase.sh avbryter som før.
@@ -38,6 +41,7 @@ LIGAER = ("eliteserien", "obos")
 BEHOLD_MAIN = [f"{l}/data/{f}" for l in LIGAER for f in ("odds_upcoming.json", "oddspapi_fixtures*.json", "oddspapi_markets.json")]
 PREKICK = [f"{l}/data/prekick.json" for l in LIGAER]
 TELLER = ["data/oddspapi_usage.json"]
+INDEXNOW = ["data/indexnow.json"]
 
 
 def git(*a, check=True):
@@ -92,6 +96,20 @@ def flett_teller(base, main, egen):
     return tre(base or {}, main or {}, egen or {})
 
 
+def flett_indexnow(base, main, egen):
+    """data/indexnow.json (28.10.2026): for hver adresse den nyeste innmeldingen
+    (begge grunnlag-jobbene kan ha meldt), og antallet per dag som
+    utgangspunkt pluss begge sidenes økning."""
+    ut = dict(main)
+    ut["adresser"] = dict(main.get("adresser", {}))
+    for a, e in egen.get("adresser", {}).items():
+        m = ut["adresser"].get(a)
+        if m is None or (e.get("meldt") or "") > (m.get("meldt") or ""):
+            ut["adresser"][a] = e
+    ut["dager"] = flett_teller((base or {}).get("dager", {}), main.get("dager", {}), egen.get("dager", {}))
+    return ut
+
+
 def main():
     filer = [f for f in git("diff", "--name-only", "--diff-filter=U").splitlines() if f]
     if not filer:
@@ -117,6 +135,13 @@ def main():
                 continue
             skriv(f, flett_teller(base, main_, egen))
             print(f"Konflikt i {f}: tellerne flettet (utgangspunkt pluss begge sidenes økning).")
+        elif f in INDEXNOW:
+            base, main_, egen = stadium(1, f), stadium(2, f), stadium(3, f)
+            if main_ is None or egen is None:
+                uloste.append(f)
+                continue
+            skriv(f, flett_indexnow(base, main_, egen))
+            print(f"Konflikt i {f}: flettet (nyeste innmelding per adresse, antallet per dag summert).")
         else:
             uloste.append(f)
             continue

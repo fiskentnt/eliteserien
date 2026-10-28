@@ -885,7 +885,7 @@ def main():
           and 'git add "$UT/grunnlag.json"\n' in gst[i_lg] and '[ -f "$UT/keymatch.json" ] && git add "$UT/keymatch.json"' in gst[i_lg]
           and '[ -f "$UT/tekster.json" ] && git add "$UT/tekster.json"' in gst[i_lg] and 'git add "${{ matrix.liga }}/index.html"' in gst[i_lg]
           and "git add index.html" in gst[i_lg] and 'python3 scripts/lag_sider.py --filer "${{ matrix.liga }}" | xargs -r git add --' in gst[i_lg]
-          and gst[i_lg].count("git add") == 7 and '[ -f "$UT/sjansehistorikk.json" ] && git add "$UT/sjansehistorikk.json"' in gst[i_lg] and "bash scripts/push_med_rebase.sh" in gst[i_lg]
+          and gst[i_lg].count("git add") == 8 and '[ -f "$UT/sjansehistorikk.json" ] && git add "$UT/sjansehistorikk.json"' in gst[i_lg] and "bash scripts/push_med_rebase.sh" in gst[i_lg]
           and gst[i_lg].index("bash scripts/push_med_rebase.sh") < gst[i_lg].index("bash scripts/push_sitemap.sh"))
     # Google (20.10.2026): den statiske tabellen. lag_grunnlag.js skriver
     # regionene STATISK-* fra siden selv; porten ser bort fra dem, bygget
@@ -1295,9 +1295,33 @@ def main():
           and indexnow.adresser(["eliteserien/index.html", "index.html", "obos/index.html", "eliteserien/data/grunnlag.json", "sitemap.xml", "elo-test/index.html"])
           == ["https://tabellkalkulator.no/eliteserien/", "https://tabellkalkulator.no/", "https://tabellkalkulator.no/obos/"])
     lg_steg = gst[i_lg]
-    check("IndexNow: grunnlag.yml melder fra om sidene i grunnlag-commiten etter pushen, og indexnow.py avslutter alltid med 0",
-          lg_steg.index("bash scripts/push_med_rebase.sh") < lg_steg.index('FILER="$(git show --name-only --format= HEAD)"') < lg_steg.index("python3 scripts/indexnow.py $FILER")
+    # Bare med endret innhold, uten tidsgrense (28.10.2026):
+    # sidene velges før commiten (--planlegg, data/indexnow.json følger med) og
+    # sendes etter pushen (--send).
+    check("IndexNow: grunnlag.yml velger sidene før commiten (data/indexnow.json følger med) og melder fra etter pushen, og indexnow.py avslutter alltid med 0",
+          lg_steg.index('python3 scripts/indexnow.py --planlegg "$RUNNER_TEMP/indexnow.txt"') < lg_steg.index("[ -f data/indexnow.json ] && git add data/indexnow.json")
+          < lg_steg.index("git commit") < lg_steg.index("bash scripts/push_med_rebase.sh")
+          < lg_steg.index('python3 scripts/indexnow.py --send "$RUNNER_TEMP/indexnow.txt"') and "$FILER" not in lg_steg
           and "except Exception" in (ROOT / "scripts" / "indexnow.py").read_text(encoding="utf-8"))
+    from datetime import datetime as _dt_ix, timedelta as _td_ix, timezone as _tz_ix
+    _s1 = '<p class="dato">Oppdatert 27. oktober 2026 kl. 12.43.</p><td title="hentet tirsdag 27.10 kl. 10.00: 24/24/52">54 %</td>'
+    _s2 = '<p class="dato">Oppdatert 28. oktober 2026 kl. 09.15.</p><td title="hentet onsdag 28.10 kl. 08.00: 24/24/52">54 %</td>'
+    _s3 = _s2.replace("54 %", "55 %")
+    _ls = '<!-- STATISK-OPPDATERT -->Oppdatert 27. oktober kl. 10.07<!-- /STATISK-OPPDATERT --><span class="opps-dato">Oppdatert kl. 12.43.</span>X'
+    _ls2 = _ls.replace("10.07", "11.00").replace("12.43", "13.00")
+    check("IndexNow: innholdssummen ser bort fra tidsfeltene («Oppdatert ... kl.», STATISK-OPPDATERT, forsidens dato, «hentet ... kl.»), ikke fra tallene",
+          indexnow.innholdssum(_s1) == indexnow.innholdssum(_s2) != indexnow.innholdssum(_s3) and indexnow.innholdssum(_ls) == indexnow.innholdssum(_ls2))
+    _t = {"adresser": {}, "dager": {}}
+    _n0 = _dt_ix(2026, 10, 25, 10, 0, tzinfo=_tz_ix.utc)
+    _A, _B = "https://tabellkalkulator.no/obos/", "https://tabellkalkulator.no/obos/odd/"
+    _v = [indexnow.velg(_t, {_A: "a1", _B: "b1"}, _n0),                      # første gang: begge
+          indexnow.velg(_t, {_A: "a2", _B: "b1"}, _n0 + _td_ix(minutes=10)), # A endret 10 minutter etter: A med en gang
+          indexnow.velg(_t, {_A: "a2", _B: "b1"}, _n0 + _td_ix(hours=3)),    # ingenting endret siden sist meldt
+          indexnow.velg(_t, {_A: "a3", _B: "b2"}, _n0 + _td_ix(hours=13, minutes=30))]  # 23.30 UTC = 00.30 norsk tid 26.10.
+    check("IndexNow: en side meldes når innholdet er endret siden sist den ble meldt, uten tidsgrense; antallet per dag (norsk dato) lagres",
+          _v == [[_A, _B], [_A], [], [_A, _B]] and _t["dager"] == {"2026-10-25": 3, "2026-10-26": 2}
+          and _t["adresser"][_A]["meldt"] == "2026-10-25T23:30:00Z" and _t["adresser"][_A]["hash"] == "a3"
+          and not hasattr(indexnow, "GRENSE"), f"{_v} {_t}")
     for liga in ("eliteserien", "obos"):
         uten = re.findall(r'<span class="sm">(?! )[^<]{0,20}', (ROOT / liga / "index.html").read_text(encoding="utf-8"))
         check(f"søk: {liga}/index.html: fullt og kort navn har mellomrom først i det korte («Legg inn resultater Resultater», «Rosenborg RBK»), i markupen og i JS",

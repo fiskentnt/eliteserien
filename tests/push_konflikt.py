@@ -45,6 +45,8 @@ START = {
     "eliteserien/data/prekick.json": {"version": 1, "matches": {"2026|Brann|Molde": _rad("2026-10-25", "2026-10-25T14:00:00Z")}},
     "data/oddspapi_usage.json": {"note": "teller", "monthly_limit": 250, "months": {"2026-10": {"billable": 10, "endpoints": {"/v4/fixtures": 3}, "last": "2026-10-25T10:00:00+00:00"}}},
     "obos/data/matches.json": [{"home": "Lyn", "away": "Moss", "hg": None, "ag": None}],
+    "data/indexnow.json": {"note": "x", "adresser": {"https://tabellkalkulator.no/": {"meldt": "2026-10-24T10:00:00Z", "hash": "h0"}},
+                           "dager": {"2026-10-24": 20}},
 }
 
 
@@ -81,6 +83,12 @@ def _avspark_pusher(avs):
     u["months"]["2026-10"]["billable"] += 2; u["months"]["2026-10"]["endpoints"]["/v4/fixtures"] += 2
     u["months"]["2026-10"]["last"] = "2026-10-25T15:11:00+00:00"
     _skriv(avs, "data/oddspapi_usage.json", u)
+    # Den andre grunnlag-jobben har meldt sine sider (IndexNow, 28.10.2026).
+    ix = _les(avs, "data/indexnow.json")
+    ix["adresser"]["https://tabellkalkulator.no/obos/"] = {"meldt": "2026-10-25T15:11:00Z", "hash": "o1"}
+    ix["adresser"]["https://tabellkalkulator.no/"] = {"meldt": "2026-10-25T15:11:00Z", "hash": "f1"}
+    ix["dager"]["2026-10-25"] = 2
+    _skriv(avs, "data/indexnow.json", ix)
     _git(avs, "commit", "-q", "-am", "Odds nær avspark"); _git(avs, "push", "-q", "origin", "main")
 
 
@@ -101,6 +109,11 @@ def _resultater_committer(res, bare_odds=False, ekstra_konflikt=False):
         u["months"]["2026-10"]["last"] = "2026-10-25T15:12:00+00:00"
         _skriv(res, "data/oddspapi_usage.json", u)
         _skriv(res, "obos/data/matches.json", [{"home": "Lyn", "away": "Moss", "hg": 2, "ag": 1}])
+        ix = _les(res, "data/indexnow.json")
+        ix["adresser"]["https://tabellkalkulator.no/eliteserien/"] = {"meldt": "2026-10-25T15:12:00Z", "hash": "e1"}
+        ix["adresser"]["https://tabellkalkulator.no/"] = {"meldt": "2026-10-25T15:12:00Z", "hash": "f2"}
+        ix["dager"]["2026-10-25"] = 2
+        _skriv(res, "data/indexnow.json", ix)
     if ekstra_konflikt:
         _skriv(res, "obos/data/oddspapi_markets.json", {"hentet": "x", "n": 9})
         (Path(res) / "annen.txt").write_text("egen\n")
@@ -139,6 +152,10 @@ def tester():
         u = _les(sjekk, "data/oddspapi_usage.json")["months"]["2026-10"]
         ut.append(("push-konflikt: oddspapi_usage.json flettes: 10 + 2 + 1 tellende kall, endepunktene summeres, siste tidspunkt beholdes",
                    u["billable"] == 13 and u["endpoints"] == {"/v4/fixtures": 6, "/v4/scores": 1} and u["last"] == "2026-10-25T15:12:00+00:00", u))
+        ix = _les(sjekk, "data/indexnow.json")
+        ut.append(("push-konflikt: data/indexnow.json flettes: alle adressene med den nyeste innmeldingen, og antallet per dag summeres (2 + 2)",
+                   set(ix["adresser"]) == {"https://tabellkalkulator.no/", "https://tabellkalkulator.no/obos/", "https://tabellkalkulator.no/eliteserien/"}
+                   and ix["adresser"]["https://tabellkalkulator.no/"]["hash"] == "f2" and ix["dager"] == {"2026-10-24": 20, "2026-10-25": 4}, ix))
     with tempfile.TemporaryDirectory() as d:
         sentral, avs, res = _oppsett(d)
         _resultater_committer(res, bare_odds=True)

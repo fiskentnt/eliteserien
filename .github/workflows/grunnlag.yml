@@ -185,12 +185,15 @@ jobs:
           # som er endret, og bildene skrives bare når innholdet er endret.
           python3 scripts/lag_sider.py --filer "${{ matrix.liga }}" | xargs -r git add --
           if git diff --cached --quiet; then echo "Uendret."; exit 0; fi
+          # IndexNow (28.10.2026): sidene som skal meldes, velges før commiten,
+          # bare de med endret innhold siden sist meldt (ikke bare
+          # tidsstempelet). Siste innmelding per adresse står i
+          # data/indexnow.json, som følger med i commiten. Adressene sendes
+          # etter pushen, under. Feiler det, blir det bare en advarsel.
+          python3 scripts/indexnow.py --planlegg "$RUNNER_TEMP/indexnow.txt"
+          [ -f data/indexnow.json ] && git add data/indexnow.json
           git commit -q -m "Grunnlag (${{ matrix.liga }}) $(date -u +%Y-%m-%dT%H:%MZ)"
           bash scripts/push_med_rebase.sh
-          # Sidene i commiten, til IndexNow under (før sitemap-commiten).
-          FILER="$(git show --name-only --format= HEAD)"
           # lastmod i sitemap.xml: når tabellen sist ble regnet.
           bash scripts/push_sitemap.sh || echo "::warning::sitemap.xml ble ikke oppdatert"
-          # IndexNow (fase 1c, 20.10.2026): meld fra om de endrede sidene.
-          # Feiler det, blir det bare en advarsel.
-          python3 scripts/indexnow.py $FILER
+          python3 scripts/indexnow.py --send "$RUNNER_TEMP/indexnow.txt"
