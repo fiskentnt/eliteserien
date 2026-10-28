@@ -1277,6 +1277,23 @@ def main():
     for liga, navn in (("eliteserien", "Eliteserien"), ("obos", "OBOS-ligaen")):
         tit = re.search(r"<title>(.*?)</title>", (ROOT / liga / "index.html").read_text(encoding="utf-8")).group(1)
         check(f"søk: tittelen på {liga}/index.html begynner med «Tabellkalkulator {navn} 2026: sjanse for»", tit.startswith(f"Tabellkalkulator {navn} 2026: sjanse for"), tit)
+    # meta description høyst 155 tegn på alle sidene (Bing: høyst 160; /obos/
+    # hadde 170 og modellsjekk-sidene 185, 28.10.2026). Lag- og
+    # spørsmålssidene bruker svaret, kortet av lag_sider.kort_beskrivelse.
+    import html as _html_d
+    _lange = []
+    for _f in [ROOT / "index.html", *ROOT.glob("eliteserien/**/index.html"), *ROOT.glob("obos/**/index.html")]:
+        _m = re.search(r'<meta name="description" content="([^"]*)"', _f.read_text(encoding="utf-8"))
+        if not _m or len(_html_d.unescape(_m.group(1))) > lag_sider.BESKRIVELSE_MAKS:
+            _lange.append(f"{_f.relative_to(ROOT)}: {len(_html_d.unescape(_m.group(1))) if _m else 'mangler'}")
+    _fyll = "Laget har mange kamper igjen mot lag fra den øvre halvdelen av tabellen. " * 3
+    _lang = "Brann har 54 % sjanse for topp 4 og 1 % for gull. " + _fyll
+    # Ordenstall deler ikke setningen (28.10.2026): «3. plass» er ikke et setningsslutt.
+    _plass = "Brann ender på 3. plass i 41 % av sesongene og på 4. plass i 22 %."
+    _korte = [lag_sider.kort_beskrivelse(x) for x in (_lang, _plass + " " + _fyll)]
+    check("søk: meta description er høyst 155 tegn på forsiden, ligasidene, lag-, spørsmåls- og modellsjekk-sidene, og et for langt svar kortes til første setning (ikke ved «3. plass»)",
+          not _lange and all(len(x) <= 155 for x in _korte) and _korte[1] == _plass
+          and lag_sider.kort_beskrivelse("Kort svar.") == "Kort svar.", _lange[:5] + _korte)
     # Banneret (keymatch.json) har én skriver: lag_grunnlag.js, fra
     # grunnlagsfilen, i grunnlag.yml. To jobber som committer samme fil, kan
     # gi rebasekonflikt, og da kan en datajobb miste commiten sin.

@@ -74,9 +74,9 @@ def render(liga):
     innhold = (ROOT / "modellsjekk" / f"{liga}.html").read_text(encoding="utf-8").strip()
     js = (ROOT / "modellsjekk" / "treffsikkerhet.js").read_text(encoding="utf-8").strip()
     url = f"https://tabellkalkulator.no/{liga}/modellsjekk/"
-    beskrivelse = (f"Full dokumentasjon av testene bak sannsynlighetene for {navn}: Brier-score, "
-                   f"kontroll med faste kuttpunkter, hva hvert ledd tilfører, sluttoddsen og "
-                   f"treffsikkerheten denne sesongen.")
+    # Under 155 tegn (Bing: høyst 160, 28.10.2026).
+    beskrivelse = (f"Testene bak sannsynlighetene for {navn}: Brier-score, kontroll med faste "
+                   f"kuttpunkter, hva hvert ledd tilfører, sluttoddsen og årets treffsikkerhet.")
     return f"""<!DOCTYPE html>
 <html lang="nb">
 <head>

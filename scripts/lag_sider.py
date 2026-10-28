@@ -446,7 +446,7 @@ def sporsmal_side(liga, sti, sone, t):
     if forst:
         knapper += f' <a class="knapp lys" href="/{liga}/#team={quote(forst, safe="")}">Følg {html.escape(forst)}</a>'
     andre = " · ".join(f'<a href="/{liga}/{s2}/">{html.escape(sporsmal_tittel(t, s2))}</a>' for s2, _ in SPORSMAL.get(liga, []) if s2 != sti)
-    beskrivelse = html.escape(svar, quote=True)
+    beskrivelse = html.escape(kort_beskrivelse(svar), quote=True)
     return f"""<!DOCTYPE html>
 <html lang="nb">
 <head>
@@ -527,6 +527,23 @@ def _lagets_soner(d):
 
 def _rad(t, lag):
     return next(r for r in t["tabell"]["rader"] if r["lag"] == lag)
+
+
+BESKRIVELSE_MAKS = 155
+
+
+def kort_beskrivelse(tekst):
+    """meta description høyst 155 tegn (Bing: høyst 160, 28.10.2026). Svaret
+    brukes som det er når det er kort nok; ellers første setning, og er den
+    også for lang, kuttes den ved et ord med «…». Setningen deles bare ved
+    punktum som ikke står rett etter et tall, så ordenstall som «3. plass»
+    ikke deler den."""
+    if len(tekst) <= BESKRIVELSE_MAKS:
+        return tekst
+    forste = re.split(r"(?<!\d)\. ", tekst)[0].rstrip(".") + "."
+    if len(forste) <= BESKRIVELSE_MAKS:
+        return forste
+    return tekst[:BESKRIVELSE_MAKS - 1].rsplit(" ", 1)[0].rstrip(",;:") + "…"
 
 
 def lag_tittel(t, lag):
@@ -818,7 +835,7 @@ def lag_side(liga, lag, t):
     utsnitt = _lag_utsnitt_html(t, lag)
     om = (f"Sjansene for {liste([sone_navn(t, k['key']) for k in t['tabell']['kolonner']])} er de samme som i tabellen på "
           "ligasiden." + (" «–» betyr at det ikke lenger er mulig." if "<td>–</td>" in utsnitt else ""))
-    beskrivelse = html.escape(svar, quote=True)
+    beskrivelse = html.escape(kort_beskrivelse(svar), quote=True)
     return f"""<!DOCTYPE html>
 <html lang="nb">
 <head>
