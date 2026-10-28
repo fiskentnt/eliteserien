@@ -1243,14 +1243,15 @@ def main():
         # Fra 24.10.2026 også høyre kolonne uten lag (ingen hopp ved lasting):
         # «Neste kamp» (hele seksjonen, JS fyller den), spørsmålslista,
         # «Forrige runde» og de to første rundene i kamplista; banneret,
-        # «etter ...», rundetallet og tellerne.
+        # «etter ...», rundetallet og tellerne. Rundetallet er «Runde N av M»,
+        # eller «Etter 25. okt.» etter en hel flyttet runde (28.10.2026).
         check(f"statisk tabell: {liga}/index.html har regionene KOLONNER, TABELL, OPPDATERT, menyen, stempelet, fargeforklaringen, boksene, lagsidene, «Neste kamp», spørsmålslista, «Forrige runde», kamplista, banneret, «etter ...», rundetallet og tellerne, med overskriftscellene og rader",
               set(r) == {"KOLONNER", "OPPDATERT", "TABELL", "LIGAMENY", "STEMPEL", "FORKLARING", "KORTGULL", "KORTEUROPA", "KORTNED", "KORTFORM", "LAGSIDER",
                          "NESTEKAMP", "SPORSMALSLISTE", "FORRIGERUNDE", "RUNDER", "BANNER", "TABELLINFO", "RUNDE", "FORRIGEINFO", "KAMPINFO"} and all(f'id="{x}"' in r["KOLONNER"] for x in ("gullHeader", "europaHeader", "nedHeader"))
               and r["TABELL"].count("<tr ") == 16 and r["OPPDATERT"].startswith("Oppdatert ")
               and r["NESTEKAMP"].lstrip().startswith('<section class="panel nextmatch" id="nextMatch"') and all(f'id="{x}"' in r["NESTEKAMP"] for x in ("nmWhen", "nmHome", "nmAway", "nmHub", "nmImpact", "nmRes"))
               and 'class="qa-item' in r["SPORSMALSLISTE"] and 1 <= r["RUNDER"].count('<div class="round') <= 2 and "hiddenRounds" not in r["RUNDER"]
-              and 'id="qaHighlight"' in r["BANNER"] and re.fullmatch(r"Runde \d+.* av \d+", r["RUNDE"]) and r["TABELLINFO"].strip() and r["KAMPINFO"].strip(),
+              and 'id="qaHighlight"' in r["BANNER"] and re.fullmatch(r"Runde \d+ av \d+|Etter \d{1,2}\. [a-zæøå]{3}\.?", r["RUNDE"]) and r["TABELLINFO"].strip() and r["KAMPINFO"].strip(),
               {k: len(v) for k, v in r.items()})
         with tempfile.TemporaryDirectory() as tmp:
             c = grunnlag_port.SIDER[liga]
