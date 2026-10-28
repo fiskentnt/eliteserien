@@ -4949,9 +4949,16 @@ def _f3_kilde(svar, kall, navn="Highlightly"):
     return (navn, hent)
 
 
+# Fast klokke (28.10.2026): bekreft_datoer behandler en flyttet kamp med dato
+# før i dag som fortid. Uten fast klokke ble testene røde fra 27.10., da
+# flyttedatoen 26.10. var passert. 20.10. kl. 14 norsk tid er før alle datoene
+# her, slik testene er skrevet; fortid-regelen prøves for seg med naa=_f17n.
+_F3_NAA = _dt(2026, 10, 20, 12, 0, tzinfo=_tz.utc)
+
+
 def _f3_kjor(rader, hl, nye=(), overstyringer=None, forrige=_f3_forr):
     kall, logg = [], []
-    ut, utfall = _bd(rader, forrige, [_f3_kilde(hl, kall)], log=logg.append, nye=nye, overstyringer=overstyringer or {})
+    ut, utfall = _bd(rader, forrige, [_f3_kilde(hl, kall)], log=logg.append, nye=nye, overstyringer=overstyringer or {}, naa=_F3_NAA)
     return {(r["home"], r["away"]): (r["date"], r.get("time")) for r in ut}, utfall, kall, logg
 
 
