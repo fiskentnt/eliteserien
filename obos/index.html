@@ -1945,6 +1945,11 @@ function shortDateNo(iso){
   const d = new Date(iso+'T12:00:00Z');
   return `${d.getUTCDate()}. ${NO_MONTH[d.getUTCMonth()].slice(0,3)}`;
 }
+// "25. okt.", "3. mai": som shortDateNo, med punktum etter forkortet måned.
+function shortDateNoPkt(iso){
+  const d = new Date(iso+'T12:00:00Z'), m = NO_MONTH[d.getUTCMonth()];
+  return `${d.getUTCDate()}. ${m.length > 3 ? m.slice(0,3)+'.' : m}`;
+}
 function dateNoLong(iso){
   const d = new Date(iso+'T12:00:00Z');
   return `${d.getUTCDate()}. ${NO_MONTH[d.getUTCMonth()]}`;
@@ -4823,11 +4828,14 @@ function updateRoundNav(){
   if(!ROUND_SEQ.length) return;
   const idx = viewRoundIdx();
   const r = ROUND_SEQ[idx].round;
-  // Etiketten for en hel flyttet runde kommer fra LEAGUE.movedRounds; hvor
-  // runden står, kommer av datoene (buildRoundSeq). Før sto "(utsatt)"
-  // hardkodet på runde 12, også i OBOS, der runde 12 ikke er flyttet.
+  // En hel flyttet runde (LEAGUE.movedRounds) heter etter datoen den ble
+  // spilt ferdig, "Etter 25. okt.", med runden i title; hvor runden står,
+  // kommer av datoene (buildRoundSeq). Før sto "Runde 12 (utsatt) av 30" etter
+  // runde 24, som om tabellen var etter 12 runder (brukeren 28.10.2026).
   const mv = (LEAGUE.movedRounds || {})[r];
-  document.getElementById('roundLabel').textContent = `Runde ${r}${mv && mv.label ? ' '+mv.label : ''} av ${ROUND_SEQ.length}`;
+  const lbl = document.getElementById('roundLabel');
+  lbl.textContent = mv ? `Etter ${shortDateNoPkt(ROUND_SEQ[idx].end)}` : `Runde ${r} av ${ROUND_SEQ.length}`;
+  lbl.title = mv ? `Runde ${r}${mv.note ? ': '+mv.note : ''}` : '';
   document.getElementById('roundPrev').disabled = idx===0;
   document.getElementById('roundNext').disabled = idx===ROUND_SEQ.length-1;
   document.getElementById('roundReset').hidden = idx===currentRoundIdx();

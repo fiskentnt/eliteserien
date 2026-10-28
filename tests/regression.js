@@ -3125,7 +3125,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await pg.close();
       const tb = tabellBrudd(r, d.spilte);
       check(`Eliteserien ${navn}: runde 12 er en egen runde, ingen kamp i den merkes som flyttet; kamplisten i tidsrekkefølge`,
-        r.grupper.every(g => !g.flyttet) && kronologisk(r) && r.rv12 === 'Runde 12 (utsatt) av 30', JSON.stringify([r.grupper.map(g => g.tittel), r.rv12]));
+        // Rundevelgeren sier "Etter 25. okt." for runde 12, ikke "Runde 12 (utsatt) av 30" (28.10.2026).
+        r.grupper.every(g => !g.flyttet) && kronologisk(r) && r.rv12 === 'Etter 25. okt.', JSON.stringify([r.grupper.map(g => g.tittel), r.rv12]));
       check(`Eliteserien ${navn}: rundetabellene er tabellen på sluttdatoen`, tb.length === 0, tb.slice(0, 3).join('; '));
       if (navn === '19.10.') check('Eliteserien 19.10.: aktiv runde 24, neste runde 12 med alle åtte kampene, "Runde 12 (utsatt)" øverst i kamplisten',
         r.aktiv === 24 && r.neste.runde === 12 && r.neste.kamper.length === 8 && r.grupper[0].tittel === 'Runde 12 (utsatt)' && /· runde 12$/.test(r.kort.Viking),
@@ -4687,9 +4688,15 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         // sesongen ferdig) har lagsiden ingen historikk: samme regel som
         // _lagets_soner i scripts/lag_sider.py og failsafe-sjekken.
         const aapen = !tkHel.liga.ferdig && (d.soner || []).some(z => (z.avgjort === 0 && !['<1 %', '>99 %'].includes(z.vist)) || z.key === d.aapnest);
-        const hp = (JSON.parse(fs.readFileSync(path.join(ROOT, side, 'data', 'sjansehistorikk.json'), 'utf8')).runder || []).filter(x => x.lag[r.lag]).length;
+        const hRunder = (JSON.parse(fs.readFileSync(path.join(ROOT, side, 'data', 'sjansehistorikk.json'), 'utf8')).runder || []).filter(x => x.lag[r.lag]);
+        const hp = hRunder.length;
+        // En sone der alle de viste søylene (høyst åtte) er under 1 %, har ingen
+        // figur, og uten noen igjen ingen seksjon (28.10.2026).
+        const aapne = (d.soner || []).filter(z => z.avgjort === 0 && !['<1 %', '>99 %'].includes(z.vist));
+        const harGraf = (aapne.length ? aapne : (d.soner || []).filter(z => z.key === d.aapnest))
+          .some(z => hRunder.slice(-8).some(x => x.lag[r.lag][z.key] >= 0.005));
         if (!aapen ? (s.historikk || s.figurer.some(x => x.hist))
-            : hp >= 4 ? (s.historikk || !s.figurer.some(x => x.hist)) : !/^(Sjansen for .+ var .+ etter runde \d+|Etter runde \d+ var sjansen)/.test(s.historikk)) f.push(`historikk ${hp}${aapen ? '' : ' (ingen åpen sone)'}`);
+            : hp >= 4 ? (s.historikk || s.figurer.some(x => x.hist) !== harGraf) :!/^(Sjansen for .+ var .+ etter runde \d+|Etter runde \d+ var sjansen)/.test(s.historikk)) f.push(`historikk ${hp}${aapen ? '' : ' (ingen åpen sone)'}`);
         if (d.restprogram && (!s.restprogram.includes('motstanderne har i snitt') || s.vanskeligst !== 1)) f.push('restprogram');
         if (!s.figurer.length || !s.figurer.every(x => x.synlig && x.tekst)) f.push(`figurer ${JSON.stringify(s.figurer)}`);
         if (s.h1 !== s.tittel || !s.h1.startsWith(`${r.lag} ${tkHel.liga.sesong}: `)) f.push(`tittel «${s.h1}»`);

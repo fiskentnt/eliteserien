@@ -1034,14 +1034,21 @@ def main():
             punkter = [x for x in hist if lag in x["lag"]]
             if punkter and soner_lag:
                 figur = len(punkter) >= lag_sider.HIST_MIN_FIGUR
+                vist = punkter[-lag_sider.HIST_FIGUR_MAKS:]
+                # En sone der alle søylene er under 1 %, har ingen figur, og uten
+                # noen igjen er det ingen seksjon (28.10.2026).
+                med_figur = [s_ for s_ in soner_lag if any(p["lag"][lag][s_["key"]] >= 0.005 for p in vist)] if figur else []
                 # Figur: egen seksjon med overskrift. Ellers én linje rett under
                 # tabellen, uten overskrift.
-                if (("de siste rundene</h2>" in t_) != figur or "gjennom sesongen" in t_ or ('<p class="historikk">' in t_) == figur
+                if (("de siste rundene</h2>" in t_) != bool(med_figur) or "gjennom sesongen" in t_ or ('<p class="historikk">' in t_) == figur
                         or (not figur and t_.index('<p class="historikk">') < t_.index('<p class="om">'))):
                     lfeil.append(f"{lag}: A")
-                soyler = min(len(punkter), lag_sider.HIST_FIGUR_MAKS) * len(soner_lag)
-                if t_.count('<figure class="fig hist">') != (len(soner_lag) if figur else 0) or (figur and (
-                        t_.count(">Runde</text>") != soyler or "<polyline" in t_)):
+                # Under søylen «Runde» over nummeret; en hel utsatt runde «Utsatt»
+                # over datoen (28.10.2026).
+                utsatte = sum(1 for p in vist if p["merke"] != str(p["runde"]))
+                if t_.count('<figure class="fig hist">') != len(med_figur) or (figur and (
+                        t_.count(">Runde</text>") != (len(vist) - utsatte) * len(med_figur)
+                        or t_.count(">Utsatt</text>") != utsatte * len(med_figur) or "<polyline" in t_)):
                     lfeil.append(f"{lag}: A figurer")
             rp_ = dd.get("restprogram")
             if rp_ and dd["rest"]:
@@ -1072,6 +1079,27 @@ def main():
                 lfeil.append(f"{lag}: heldig")
         check(f"lagside: alle lagsidene i {liga} har historikken (tekst under {lag_sider.HIST_MIN_FIGUR} punkter, ellers søyler), restprogrammet med «Vanskeligst» som kalkulatoren, plassfordelingen i sonefargene med navnene og setningen om heldig/uheldig",
               not lfeil, lfeil[:4])
+        if liga == "eliteserien":
+            # Grafen på lagsiden (28.10.2026), med laget data: en sone der alle
+            # søylene er under 1 %, har ingen figur, og uten noen igjen ingen
+            # seksjon; 0,5 % vises som «1 %» og gir figur. Den utsatte runden
+            # står der den ble spilt, som «Utsatt» over datoen.
+            def _ht(kv, ned):
+                pk = [{"nr": i + 21, "runde": r, "merke": m, "dato": dt, "lag": {"X": {"kvalik": a, "ned": b}}}
+                      for i, (r, m, dt, a, b) in enumerate(zip((22, 23, 24, 12), ("22", "23", "24", "12 (utsatt)"),
+                                                                 ("2026-09-20", "2026-10-12", "2026-10-18", "2026-10-25"), kv, ned))]
+                t = {"liga": {"ferdig": False}, "laget": "x", "lag": {"X": {"aapnest": "kvalik", "soner": [
+                    {"key": "kvalik", "navn": "kvalik", "avgjort": 0, "vist": "3 %"}, {"key": "ned", "navn": "nedrykk", "avgjort": 0, "vist": "2 %"}]}}}
+                return lag_sider._historikk_html("eliteserien", t, "X", pk)
+            _tom = _ht([0.004, 0.001, 0, 0.0049], [0.003, 0, 0.001, 0.002])
+            _en = _ht([0.004, 0.001, 0, 0.0049], [0.28, 0.37, 0.14, 0.18])[1]
+            _grense = _ht([0, 0, 0.005, 0], [0, 0, 0, 0])[1]
+            check("lagside: grafen skjules når alle søylene er under 1 %, og den utsatte runden står som «Utsatt» over datoen den ble spilt",
+                  _tom == ("", "") and "<h2>Sjansen for nedrykk de siste rundene</h2>" in _en and _en.count('<figure class="fig hist">') == 1
+                  and _en.count(">Runde</text>") == 3 and _en.count(">Utsatt</text>") == 1 and ">25.10.</text>" in _en and "(utsatt)" not in _en
+                  and "Etter den utsatte runde 12 (25.10.): 18 %." in _en
+                  and "<h2>Sjansen for kvalik de siste rundene</h2>" in _grense and _grense.count('<figure class="fig hist">') == 1,
+                  {"tom": _tom, "en": _en[:240], "grense": _grense[:120]})
         # Heldig/uheldig fra sluttoddsen (23.10.2026): det lagsidene sier, regnet
         # på nytt her fra odds_closing.json (marginen fjernet proporsjonalt, som
         # CLOSING på siden) og football-data der den mangler.

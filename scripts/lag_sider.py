@@ -627,27 +627,43 @@ def _soyle(cx, bw, base, hh, klasse):
 
 
 HIST_FIGUR_MAKS = 8
+# Under dette vises andelen som «<1 %» (_pst). En sone der alle søylene er
+# under, har ingen figur (brukeren 28.10.2026): fire søyler på «<1 %» er tomme.
+HIST_FIGUR_MIN_ANDEL = 0.005
+
+
+def _hist_merke(p):
+    """(linje 1, linje 2, i teksten) for punktet: «Runde» over «23», og en hel
+    utsatt runde (merket «12 (utsatt)», spilt etter runde 24) som «Utsatt» over
+    datoen den ble spilt ferdig, «25.10.» (brukeren 28.10.2026). Kort nok til
+    at åtte merker står ved siden av hverandre på mobil."""
+    if p["merke"] == str(p["runde"]):
+        return "Runde", p["merke"], f"runde {p['merke']}"
+    dato = f"{int(p['dato'][8:10])}.{int(p['dato'][5:7])}."
+    return "Utsatt", dato, f"den utsatte runde {p['runde']} ({dato})"
 
 
 def _hist_svg(liga, sone, navn, punkter, tittel_id, bildetekst=True):
     """Én sone etter hver runde (de siste åtte): én søyle per runde, tallet over
-    søylen og «Runde 23» under. Ingen y-akse; tallene står på søylene."""
+    søylen og «Runde 23» under. Ingen y-akse; tallene står på søylene.
+    punkter: [(punktet, andel)]."""
     vis = punkter[-HIST_FIGUR_MAKS:]
     n, w, h, x0, x1, base, topp = len(vis), 640, 172, 8, 632, 112, 28
     slot = (x1 - x0) / n
     skala = _y_topp(max(a for _, a in vis))
     farge = _fig_farge(liga, sone)
     deler = [f'<line class="rutenett" x1="{x0}" x2="{x1}" y1="{base}" y2="{base}"/>']
-    for i, (merke, a) in enumerate(vis):
+    for i, (p, a) in enumerate(vis):
         cx = x0 + slot * (i + 0.5)
         hh = (base - topp) * min(1, a * 100 / skala)
+        linje1, linje2, _ = _hist_merke(p)
         if a > 0:
             hh = max(2, hh)
             deler.append(_soyle(cx, min(48, slot * 0.45), base, hh, farge))
         deler.append(f'<text class="verdi" x="{cx:.1f}" y="{base - hh - 8:.1f}" text-anchor="middle">{_nb(_pst(a))}</text>')
-        deler.append(f'<text class="akse" x="{cx:.1f}" y="{base + 24}" text-anchor="middle">Runde</text>')
-        deler.append(f'<text class="akse na" x="{cx:.1f}" y="{base + 50}" text-anchor="middle">{html.escape(merke)}</text>')
-    desc = " ".join(f"Etter runde {m}: {_pst(a)}." for m, a in vis)
+        deler.append(f'<text class="akse" x="{cx:.1f}" y="{base + 24}" text-anchor="middle">{linje1}</text>')
+        deler.append(f'<text class="akse na" x="{cx:.1f}" y="{base + 50}" text-anchor="middle">{html.escape(linje2)}</text>')
+    desc = " ".join(f"Etter {_hist_merke(p)[2]}: {_pst(a)}." for p, a in vis)
     tekst_ = f'<figcaption>{html.escape(navn[0].upper() + navn[1:])}</figcaption>' if bildetekst else ""
     return (f'<figure class="fig hist">{tekst_}'
             f'<svg viewBox="0 0 {w} {h}" role="img" aria-labelledby="{tittel_id}-t {tittel_id}-d">'
@@ -667,9 +683,13 @@ def _historikk_html(liga, t, lag, historikk):
     navn = {s["key"]: s["navn"] for s in d["soner"]}
     nokler = [s["key"] for s in soner]
     if len(punkter) >= HIST_MIN_FIGUR:
+        # Bare sonene med minst én søyle på 1 % eller mer; ingen igjen, ingen seksjon.
+        nokler = [k for k in nokler if any(p["lag"][lag][k] >= HIST_FIGUR_MIN_ANDEL for p in punkter[-HIST_FIGUR_MAKS:])]
+        if not nokler:
+            return "", ""
         overskrift = f"Sjansen for {liste([navn[k] for k in nokler])} de siste rundene"
         figurer = '<div class="figurer">' + "".join(
-            _hist_svg(liga, k, navn[k], [(p["merke"], p["lag"][lag][k]) for p in punkter], f"hist-{k}", len(nokler) > 1)
+            _hist_svg(liga, k, navn[k], [(p, p["lag"][lag][k]) for p in punkter], f"hist-{k}", len(nokler) > 1)
             for k in nokler) + "</div>"
         return "", f'<h2>{html.escape(overskrift)}</h2>\n  {figurer}'
     vist_naa = {s["key"]: s["vist"] for s in d["soner"]}
