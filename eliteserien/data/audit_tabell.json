@@ -1,21 +1,33 @@
 {
- "checked_at": "2026-10-30T19:51:01+00:00",
+ "checked_at": "2026-10-30T20:01:08+00:00",
  "checked_date": "2026-10-30",
- "kjoring": "41118556245-1",
+ "kjoring": "41119877095-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-10-30T19:51:01+00:00",
-  "kjoring": "41118556245-1",
-  "kilde": "https://www.eliteserien.no/resultater",
-  "avtrykk": "9b747d95778ffd4d94bb46440046674869c669791a215ad30f05be1ce0f33e50"
- }
+ "advarsler": [
+  "Tabell: Bodø/Glimt-Viking mangler i tabellen på eliteserien.no. Hos oss 3-2, bekreftet av espn og highlightly. Avspark 19:00, sjekkes på nytt i neste kjøring (frist 01:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Bodø/Glimt|Viking",
+   "resultat": [
+    3,
+    2
+   ],
+   "avspark": "2026-10-30T18:00:00+00:00",
+   "frist": "2026-10-31T00:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
