@@ -1,33 +1,21 @@
 {
- "checked_at": "2026-10-31T19:32:20+00:00",
+ "checked_at": "2026-10-31T19:41:08+00:00",
  "checked_date": "2026-10-31",
- "kjoring": "41234665422-1",
+ "kjoring": "41235343594-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 1,
- "alle_like": false,
+ "warnings": 0,
+ "alle_like": true,
  "nye": [],
  "avvik": [],
- "advarsler": [
-  "Tabell: Aalesund-Sandefjord mangler i tabellen på eliteserien.no. Hos oss 3-4, bekreftet av espn og highlightly. Avspark 18:00, sjekkes på nytt i neste kjøring (frist 00:00)."
- ],
- "venter": [
-  {
-   "kamp": "Aalesund|Sandefjord",
-   "resultat": [
-    3,
-    4
-   ],
-   "avspark": "2026-10-31T17:00:00+00:00",
-   "frist": "2026-10-31T23:00:00+00:00",
-   "kilder": [
-    "espn",
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  }
- ],
- "siste_like": null
+ "advarsler": [],
+ "venter": [],
+ "siste_like": {
+  "checked_at": "2026-10-31T19:41:08+00:00",
+  "kjoring": "41235343594-1",
+  "kilde": "https://www.eliteserien.no/resultater",
+  "avtrykk": "37a9bc99cfdb516236726b3f1286cf3b6cab842947a3ce70f4b4f7d7acc69401"
+ }
 }
