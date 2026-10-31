@@ -14,11 +14,11 @@
    "actual": "win",
    "zone": "gull",
    "chance": "gullsjansen",
-   "pp": 15,
+   "pp": 17,
    "good": true,
    "basis": "avspark",
    "foer": 0.4471,
-   "expected": 0.4561
+   "expected": 0.4649
   },
   "Brann": {
    "date": "2026-10-25",
@@ -36,7 +36,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0024,
-   "expected": 0.0015
+   "expected": 0.0017
   },
   "Fredrikstad": {
    "date": "2026-10-31",
@@ -54,7 +54,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0251,
-   "expected": 0.0282
+   "expected": 0.0257
   },
   "HamKam": {
    "date": "2026-10-24",
@@ -72,7 +72,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0637,
-   "expected": 0.0671
+   "expected": 0.0621
   },
   "KFUM Oslo": {
    "date": "2026-10-25",
@@ -86,11 +86,11 @@
    "actual": "draw",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": -2,
+   "pp": -3,
    "good": true,
    "basis": "avspark",
    "foer": 0.0467,
-   "expected": 0.0306
+   "expected": 0.0277
   },
   "Kristiansund": {
    "date": "2026-10-25",
@@ -104,11 +104,11 @@
    "actual": "draw",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 2,
+   "pp": 1,
    "good": false,
    "basis": "avspark",
    "foer": 0.7641,
-   "expected": 0.7373
+   "expected": 0.7151
   },
   "Lillestrøm": {
    "date": "2026-10-25",
@@ -126,7 +126,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.2343,
-   "expected": 0.1707
+   "expected": 0.1709
   },
   "Molde": {
    "date": "2026-10-25",
@@ -140,11 +140,11 @@
    "actual": "win",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": 2,
+   "pp": 3,
    "good": true,
    "basis": "avspark",
    "foer": 0.6473,
-   "expected": 0.5982
+   "expected": 0.6054
   },
   "Rosenborg": {
    "date": "2026-10-31",
@@ -162,25 +162,25 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.7249,
-   "expected": 0.7255
+   "expected": 0.7203
   },
   "Sandefjord": {
-   "date": "2026-10-25",
-   "home": "Start",
+   "date": "2026-10-31",
+   "home": "Aalesund",
    "away": "Sandefjord",
-   "hg": 1,
-   "ag": 0,
-   "opp": "Start",
-   "gf": 0,
-   "ga": 1,
-   "actual": "loss",
-   "zone": "nedrykk",
-   "chance": "nedrykkssjansen",
-   "pp": 2,
-   "good": false,
+   "hg": 3,
+   "ag": 4,
+   "opp": "Aalesund",
+   "gf": 4,
+   "ga": 3,
+   "actual": "win",
+   "zone": "kvalik",
+   "chance": "kvaliksjansen",
+   "pp": -11,
+   "good": true,
    "basis": "avspark",
-   "foer": 0.0866,
-   "expected": 0.0637
+   "foer": 0.1772,
+   "expected": 0.1727
   },
   "Sarpsborg 08": {
    "date": "2026-10-25",
@@ -198,7 +198,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0131,
-   "expected": 0.0098
+   "expected": 0.0091
   },
   "Start": {
    "date": "2026-10-25",
@@ -212,11 +212,11 @@
    "actual": "win",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": -7,
+   "pp": -10,
    "good": true,
    "basis": "avspark",
    "foer": 0.8958,
-   "expected": 0.8968
+   "expected": 0.8741
   },
   "Tromsø": {
    "date": "2026-10-25",
@@ -234,7 +234,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.3967,
-   "expected": 0.2858
+   "expected": 0.2831
   },
   "Viking": {
    "date": "2026-10-30",
@@ -248,11 +248,11 @@
    "actual": "loss",
    "zone": "gull",
    "chance": "gullsjansen",
-   "pp": -15,
+   "pp": -17,
    "good": false,
    "basis": "avspark",
    "foer": 0.5529,
-   "expected": 0.5439
+   "expected": 0.5351
   },
   "Vålerenga": {
    "date": "2026-10-24",
@@ -270,26 +270,26 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0673,
-   "expected": 0.0558
+   "expected": 0.054
   },
   "Aalesund": {
-   "date": "2026-10-25",
-   "home": "Sarpsborg 08",
-   "away": "Aalesund",
-   "hg": 2,
-   "ag": 1,
-   "opp": "Sarpsborg 08",
-   "gf": 1,
-   "ga": 2,
+   "date": "2026-10-31",
+   "home": "Aalesund",
+   "away": "Sandefjord",
+   "hg": 3,
+   "ag": 4,
+   "opp": "Sandefjord",
+   "gf": 3,
+   "ga": 4,
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 4,
+   "pp": 14,
    "good": false,
    "basis": "avspark",
-   "foer": 0.1353,
-   "expected": 0.1269
+   "foer": 0.1808,
+   "expected": 0.1796
   }
  },
- "updated": "2026-10-31T17:11:33Z"
+ "updated": "2026-10-31T19:01:23Z"
 }
