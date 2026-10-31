@@ -1,21 +1,33 @@
 {
- "checked_at": "2026-10-31T16:51:03+00:00",
+ "checked_at": "2026-10-31T17:00:59+00:00",
  "checked_date": "2026-10-31",
- "kjoring": "41221631367-1",
+ "kjoring": "41222409931-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-10-31T16:51:03+00:00",
-  "kjoring": "41221631367-1",
-  "kilde": "https://www.eliteserien.no/resultater",
-  "avtrykk": "fbe613d0bca3a9ed2d84e94bb2c3d3677ddda89e53b6aeeee1ad34352794375f"
- }
+ "advarsler": [
+  "Tabell: Fredrikstad-Rosenborg mangler i tabellen på eliteserien.no. Hos oss 0-3, bekreftet av espn og highlightly. Avspark 16:00, sjekkes på nytt i neste kjøring (frist 22:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Fredrikstad|Rosenborg",
+   "resultat": [
+    0,
+    3
+   ],
+   "avspark": "2026-10-31T15:00:00+00:00",
+   "frist": "2026-10-31T21:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
