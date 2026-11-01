@@ -1109,6 +1109,13 @@ if _pa:
 # regner hovedtråden ratingen etter utfallet og sender egne målrater for
 # oppgaven. Kravet: målratene for de andre åpne kampene er BIT-LIKE dem
 # scenarioet gir når samme resultat fylles inn.
+#
+# I tillegg skal låsingen virke. Ved seier eller tap: minst én målrate er
+# endret mot fast rating. Ved uavgjort: ratingen er flyttet (31.10.2026).
+# Målratene slås opp i en trappetabell, og når markedet og Elo er nesten
+# enige, flytter 1-1 ratingen bare en brøkdel av et poeng. Aalesund-Sandefjord
+# 1-1 flyttet den bare 0,1 til 0,2 poeng med oddsen nær avspark, ingen kamp
+# krysset en trinngrense, og byggingen var rød fra 17.31 til resultatet kom.
 print("\nU   låste utfall i svarene: samme målrater som scenarioet med samme resultat")
 if shutil.which("node") is None:
     krev("node finnes", False, "node mangler")
@@ -1145,7 +1152,8 @@ function scenario(forfylt, home, away, hg, ag){
   const ut={}; matches.filter(m=>m.hg==null).forEach(m=>{ ut[m.home+"|"+m.away]=oddsOverrideFor(m.home,m.away); });
   return ut;
 }
-// Svarveien: kampen står åpen, låses i oppgaven.
+// Svarveien: kampen står åpen, låses i oppgaven. flytt: hjemmelagets rating
+// med det låste resultatet minus den faste.
 function laast(forfylt, home, away, hg, ag){
   matches=INN.termin.map(m=>({...m}));
   forfylt.forEach(f=>{ const x=matches.find(m=>m.home===f[0]&&m.away===f[1]); x.hg=f[2]; x.ag=f[3]; });
@@ -1154,9 +1162,10 @@ function laast(forfylt, home, away, hg, ag){
   const idx=aapne.findIndex(m=>m.home===home&&m.away===away);
   const ov=eloTaskOver({open}, {idx, score:[hg,ag]}).oddsOverride;
   const fast=aapne.map(m=>oddsOverrideFor(m.home,m.away));
+  const flytt=eloRatingMedLaast(home, away, hg, ag)[home]-LIVE.R[home];
   const ut={}, utF={};
   aapne.forEach((m,j)=>{ if(j===idx) return; ut[m.home+"|"+m.away]=ov[j]; utF[m.home+"|"+m.away]=fast[j]; });
-  return {ut, utF};
+  return {ut, utF, flytt};
 }
 const saker=[];
 for(const [f, h, a, hg, ag] of INN.saker){
@@ -1164,7 +1173,8 @@ for(const [f, h, a, hg, ag] of INN.saker){
   let ulik=0, endret=0, n=0;
   for(const k in s){ n++; if(JSON.stringify(s[k])!==JSON.stringify(l.ut[k])) ulik++;
     if(JSON.stringify(s[k])!==JSON.stringify(l.utF[k])) endret++; }
-  saker.push({sak:`${h}-${a} ${hg}-${ag}${f.length?' (med '+f.map(x=>x[0]+'-'+x[1]+' '+x[2]+'-'+x[3]).join(', ')+' utfylt)':''}`, n, ulik, endret});
+  saker.push({sak:`${h}-${a} ${hg}-${ag}${f.length?' (med '+f.map(x=>x[0]+'-'+x[1]+' '+x[2]+'-'+x[3]).join(', ')+' utfylt)':''}`,
+              n, ulik, endret, flytt:l.flytt, uavgjort:hg===ag});
 }
 // Forrige kamp: sidens avspilling for alternativt resultat.
 matches=INN.termin.map(m=>({...m})); LIVE=computeLiveState();
@@ -1207,9 +1217,12 @@ console.log(JSON.stringify({saker, alt}));
     else:
         _du = json.loads(_ru.stdout)
         for s in _du["saker"]:
+            # Uavgjort: ratingen er flyttet. Seier eller tap: minst én målrate
+            # er endret (se over).
+            virker = abs(s["flytt"]) > 1e-9 if s["uavgjort"] else s["endret"] > 0
             krev(f"{s['sak']}: svarveien = scenarioet for {s['n']} åpne kamper "
-                 f"({s['endret']} endret mot fast rating)",
-                 s["ulik"] == 0 and s["endret"] > 0,
+                 f"({s['endret']} endret mot fast rating, ratingen flyttet {s['flytt']:+.2f})",
+                 s["ulik"] == 0 and virker,
                  f"eloTaskOver {s['ulik']} ulike (alle svarene med låste utfall går via den)")
         # Avspillingen i Python: fra dagen før kampen, over de ekte kampene med
         # normalisert sluttodds, med hva_mix_lap. Faktisk resultat skal gi
