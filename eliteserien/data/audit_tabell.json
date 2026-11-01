@@ -1,63 +1,21 @@
 {
- "checked_at": "2026-11-01T18:31:03+00:00",
+ "checked_at": "2026-11-01T18:41:05+00:00",
  "checked_date": "2026-11-01",
- "kjoring": "41336994812-1",
+ "kjoring": "41337844518-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 3,
- "alle_like": false,
+ "warnings": 0,
+ "alle_like": true,
  "nye": [],
  "avvik": [],
- "advarsler": [
-  "Tabell: KFUM Oslo-HamKam mangler i tabellen på eliteserien.no. Hos oss 2-2, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00).",
-  "Tabell: Sarpsborg 08-Kristiansund mangler i tabellen på eliteserien.no. Hos oss 2-4, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00).",
-  "Tabell: Start-Lillestrøm mangler i tabellen på eliteserien.no. Hos oss 0-1, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00)."
- ],
- "venter": [
-  {
-   "kamp": "KFUM Oslo|HamKam",
-   "resultat": [
-    2,
-    2
-   ],
-   "avspark": "2026-11-01T16:00:00+00:00",
-   "frist": "2026-11-01T22:00:00+00:00",
-   "kilder": [
-    "espn",
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  },
-  {
-   "kamp": "Sarpsborg 08|Kristiansund",
-   "resultat": [
-    2,
-    4
-   ],
-   "avspark": "2026-11-01T16:00:00+00:00",
-   "frist": "2026-11-01T22:00:00+00:00",
-   "kilder": [
-    "espn",
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  },
-  {
-   "kamp": "Start|Lillestrøm",
-   "resultat": [
-    0,
-    1
-   ],
-   "avspark": "2026-11-01T16:00:00+00:00",
-   "frist": "2026-11-01T22:00:00+00:00",
-   "kilder": [
-    "espn",
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  }
- ],
- "siste_like": null
+ "advarsler": [],
+ "venter": [],
+ "siste_like": {
+  "checked_at": "2026-11-01T18:41:05+00:00",
+  "kjoring": "41337844518-1",
+  "kilde": "https://www.eliteserien.no/resultater",
+  "avtrykk": "5a144c2226de9f99a37c7edb3a6642092b6ff2bd7129945315e4c52eeb1cdd03"
+ }
 }
