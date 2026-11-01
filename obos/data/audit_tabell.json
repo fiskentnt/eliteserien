@@ -1,21 +1,32 @@
 {
- "checked_at": "2026-11-01T15:22:26+00:00",
+ "checked_at": "2026-11-01T15:31:57+00:00",
  "checked_date": "2026-11-01",
- "kjoring": "41320756301-1",
+ "kjoring": "41321594020-1",
  "kilde": "https://www.obos-ligaen.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-11-01T15:22:26+00:00",
-  "kjoring": "41320756301-1",
-  "kilde": "https://www.obos-ligaen.no/resultater",
-  "avtrykk": "c5632535ea4af235917b015d51b78a4b4d2acb3410e177e24c60d0b5a69d37d6"
- }
+ "advarsler": [
+  "Tabell: Ranheim-Sogndal mangler i tabellen på obos-ligaen.no. Hos oss 2-1, bekreftet av highlightly. Avspark 14:30, sjekkes på nytt i neste kjøring (frist 20:30)."
+ ],
+ "venter": [
+  {
+   "kamp": "Ranheim|Sogndal",
+   "resultat": [
+    2,
+    1
+   ],
+   "avspark": "2026-11-01T13:30:00+00:00",
+   "frist": "2026-11-01T19:30:00+00:00",
+   "kilder": [
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }

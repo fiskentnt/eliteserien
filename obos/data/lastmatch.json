@@ -14,11 +14,11 @@
    "actual": "draw",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": -8,
+   "pp": -20,
    "good": false,
    "basis": "avspark",
    "foer": 0.7034,
-   "expected": 0.7261
+   "expected": 0.6519
   },
   "Egersund": {
    "date": "2026-10-25",
@@ -36,7 +36,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0274,
-   "expected": 0.0294
+   "expected": 0.0207
   },
   "Haugesund": {
    "date": "2026-10-25",
@@ -50,11 +50,11 @@
    "actual": "win",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": 22,
+   "pp": 21,
    "good": true,
    "basis": "avspark",
    "foer": 0.7329,
-   "expected": 0.908
+   "expected": 0.9049
   },
   "Hødd": {
    "date": "2026-10-25",
@@ -68,11 +68,11 @@
    "actual": "loss",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": 1,
-   "good": true,
+   "pp": -3,
+   "good": false,
    "basis": "avspark",
    "foer": 0.0957,
-   "expected": 0.1458
+   "expected": 0.1057
   },
   "Kongsvinger": {
    "date": "2026-10-25",
@@ -90,7 +90,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.5553,
-   "expected": 0.5109
+   "expected": 0.5027
   },
   "Lyn": {
    "date": "2026-10-25",
@@ -104,11 +104,11 @@
    "actual": "loss",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": 1,
+   "pp": 0,
    "good": false,
    "basis": "avspark",
    "foer": 0.0208,
-   "expected": 0.0129
+   "expected": 0.0085
   },
   "Moss": {
    "date": "2026-10-25",
@@ -122,11 +122,11 @@
    "actual": "loss",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": 51,
+   "pp": 47,
    "good": false,
    "basis": "avspark",
    "foer": 0.0956,
-   "expected": 0.2748
+   "expected": 0.2535
   },
   "Odd": {
    "date": "2026-10-25",
@@ -147,22 +147,22 @@
    "expected": 1.0001
   },
   "Ranheim": {
-   "date": "2026-10-24",
-   "home": "Raufoss",
-   "away": "Ranheim",
-   "hg": 1,
-   "ag": 3,
-   "opp": "Raufoss",
-   "gf": 3,
+   "date": "2026-11-01",
+   "home": "Ranheim",
+   "away": "Sogndal",
+   "hg": 2,
+   "ag": 1,
+   "opp": "Sogndal",
+   "gf": 2,
    "ga": 1,
    "actual": "win",
    "zone": "europa",
    "chance": "topp 6-sjansen",
-   "pp": 16,
+   "pp": 17,
    "good": true,
    "basis": "avspark",
-   "foer": 0.0936,
-   "expected": 0.1488
+   "foer": 0.2472,
+   "expected": 0.2544
   },
   "Raufoss": {
    "date": "2026-10-24",
@@ -194,29 +194,29 @@
    "actual": "win",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": -21,
+   "pp": -22,
    "good": true,
    "basis": "avspark",
    "foer": 0.4316,
-   "expected": 0.3581
+   "expected": 0.3475
   },
   "Sogndal": {
-   "date": "2026-10-25",
-   "home": "Sogndal",
-   "away": "Kongsvinger",
-   "hg": 3,
+   "date": "2026-11-01",
+   "home": "Ranheim",
+   "away": "Sogndal",
+   "hg": 2,
    "ag": 1,
-   "opp": "Kongsvinger",
-   "gf": 3,
-   "ga": 1,
-   "actual": "win",
+   "opp": "Ranheim",
+   "gf": 1,
+   "ga": 2,
+   "actual": "loss",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": -28,
-   "good": true,
+   "pp": 5,
+   "good": false,
    "basis": "avspark",
-   "foer": 0.4025,
-   "expected": 0.3834
+   "foer": 0.1158,
+   "expected": 0.1064
   },
   "Stabæk": {
    "date": "2026-10-25",
@@ -234,7 +234,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0024,
-   "expected": 0.0032
+   "expected": 0.0033
   },
   "Strømmen": {
    "date": "2026-10-25",
@@ -252,7 +252,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0005,
-   "expected": 0.0015
+   "expected": 0.0009
   },
   "Strømsgodset": {
    "date": "2026-10-25",
@@ -266,11 +266,11 @@
    "actual": "loss",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": -3,
+   "pp": -2,
    "good": false,
    "basis": "avspark",
    "foer": 0.8493,
-   "expected": 0.9508
+   "expected": 0.9503
   },
   "Åsane": {
    "date": "2026-10-25",
@@ -288,8 +288,8 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.9474,
-   "expected": 0.9904
+   "expected": 0.9897
   }
  },
- "updated": "2026-11-01T15:22:44Z"
+ "updated": "2026-11-01T15:32:13Z"
 }
