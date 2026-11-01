@@ -1,103 +1,108 @@
 {
-  "fetched_at": "2026-11-01T09:01:21+00:00",
-  "matches": [
-    {
-      "home": "Brann",
-      "away": "Molde",
-      "commence_time": "2026-11-01T13:30:00Z",
-      "H": 0.3575,
-      "D": 0.2203,
-      "A": 0.4221,
-      "n_bookmakers": 22,
-      "odds": {
-        "H": 2.619,
-        "U": 4.13,
-        "B": 2.234
-      }
-    },
-    {
-      "home": "KFUM Oslo",
-      "away": "HamKam",
-      "commence_time": "2026-11-01T16:00:00Z",
-      "H": 0.467,
-      "D": 0.2682,
-      "A": 0.2648,
-      "n_bookmakers": 22,
-      "odds": {
-        "H": 2.025,
-        "U": 3.433,
-        "B": 3.474
-      }
-    },
-    {
-      "home": "Start",
-      "away": "Lillestrøm",
-      "commence_time": "2026-11-01T16:00:00Z",
-      "H": 0.3412,
-      "D": 0.2501,
-      "A": 0.4088,
-      "n_bookmakers": 22,
-      "odds": {
-        "H": 2.734,
-        "U": 3.664,
-        "B": 2.301
-      }
-    },
-    {
-      "home": "Sarpsborg 08",
-      "away": "Kristiansund",
-      "commence_time": "2026-11-01T16:00:00Z",
-      "H": 0.6431,
-      "D": 0.2,
-      "A": 0.1568,
-      "n_bookmakers": 22,
-      "odds": {
-        "H": 1.485,
-        "U": 4.495,
-        "B": 5.607
-      }
-    },
-    {
-      "home": "Vålerenga",
-      "away": "Tromsø",
-      "commence_time": "2026-11-01T18:15:00Z",
-      "H": 0.3814,
-      "D": 0.2495,
-      "A": 0.3691,
-      "n_bookmakers": 22,
-      "odds": {
-        "H": 2.46,
-        "U": 3.676,
-        "B": 2.539
-      }
-    },
-    {
-      "home": "Kristiansund",
-      "away": "Vålerenga",
-      "commence_time": "2026-11-07T15:00:00Z",
-      "H": 0.3561,
-      "D": 0.2409,
-      "A": 0.403,
-      "n_bookmakers": 10,
-      "odds": {
-        "H": 2.552,
-        "U": 3.656,
-        "B": 2.273
-      }
-    },
-    {
-      "home": "Rosenborg",
-      "away": "Start",
-      "commence_time": "2026-11-07T17:00:00Z",
-      "H": 0.7135,
-      "D": 0.1655,
-      "A": 0.121,
-      "n_bookmakers": 10,
-      "odds": {
-        "H": 1.319,
-        "U": 5.091,
-        "B": 6.656
-      }
-    }
-  ]
+ "fetched_at": "2026-11-01T12:40:50+00:00",
+ "matches": [
+  {
+   "home": "Brann",
+   "away": "Molde",
+   "commence_time": "2026-11-01T13:30:00Z",
+   "H": 0.36,
+   "D": 0.2239,
+   "A": 0.4161,
+   "n_bookmakers": 1,
+   "odds": {
+    "H": 2.71,
+    "U": 4.31,
+    "B": 2.35
+   },
+   "bookmaker": "pinnacle",
+   "priced_at": "2026-11-01T12:33:49.410Z",
+   "prekick": true,
+   "minutter_for": 56.2
+  },
+  {
+   "home": "KFUM Oslo",
+   "away": "HamKam",
+   "commence_time": "2026-11-01T16:00:00Z",
+   "H": 0.467,
+   "D": 0.2682,
+   "A": 0.2648,
+   "n_bookmakers": 22,
+   "odds": {
+    "H": 2.025,
+    "U": 3.433,
+    "B": 3.474
+   }
+  },
+  {
+   "home": "Start",
+   "away": "Lillestrøm",
+   "commence_time": "2026-11-01T16:00:00Z",
+   "H": 0.3412,
+   "D": 0.2501,
+   "A": 0.4088,
+   "n_bookmakers": 22,
+   "odds": {
+    "H": 2.734,
+    "U": 3.664,
+    "B": 2.301
+   }
+  },
+  {
+   "home": "Sarpsborg 08",
+   "away": "Kristiansund",
+   "commence_time": "2026-11-01T16:00:00Z",
+   "H": 0.6431,
+   "D": 0.2,
+   "A": 0.1568,
+   "n_bookmakers": 22,
+   "odds": {
+    "H": 1.485,
+    "U": 4.495,
+    "B": 5.607
+   }
+  },
+  {
+   "home": "Vålerenga",
+   "away": "Tromsø",
+   "commence_time": "2026-11-01T18:15:00Z",
+   "H": 0.3814,
+   "D": 0.2495,
+   "A": 0.3691,
+   "n_bookmakers": 22,
+   "odds": {
+    "H": 2.46,
+    "U": 3.676,
+    "B": 2.539
+   }
+  },
+  {
+   "home": "Kristiansund",
+   "away": "Vålerenga",
+   "commence_time": "2026-11-07T15:00:00Z",
+   "H": 0.3561,
+   "D": 0.2409,
+   "A": 0.403,
+   "n_bookmakers": 10,
+   "odds": {
+    "H": 2.552,
+    "U": 3.656,
+    "B": 2.273
+   }
+  },
+  {
+   "home": "Rosenborg",
+   "away": "Start",
+   "commence_time": "2026-11-07T17:00:00Z",
+   "H": 0.7135,
+   "D": 0.1655,
+   "A": 0.121,
+   "n_bookmakers": 10,
+   "odds": {
+    "H": 1.319,
+    "U": 5.091,
+    "B": 6.656
+   }
+  }
+ ],
+ "prekick_at": "2026-11-01T12:40:50+00:00"
 }
