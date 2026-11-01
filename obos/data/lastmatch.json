@@ -18,7 +18,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.7034,
-   "expected": 0.643
+   "expected": 0.6385
   },
   "Egersund": {
    "date": "2026-10-25",
@@ -36,7 +36,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0274,
-   "expected": 0.0233
+   "expected": 0.023
   },
   "Haugesund": {
    "date": "2026-10-25",
@@ -54,7 +54,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.7329,
-   "expected": 0.9067
+   "expected": 0.9073
   },
   "Hødd": {
    "date": "2026-10-25",
@@ -72,7 +72,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0957,
-   "expected": 0.1142
+   "expected": 0.1129
   },
   "Kongsvinger": {
    "date": "2026-10-25",
@@ -90,25 +90,25 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.5553,
-   "expected": 0.5339
+   "expected": 0.5354
   },
   "Lyn": {
-   "date": "2026-10-25",
-   "home": "Sandnes Ulf",
-   "away": "Lyn",
-   "hg": 2,
-   "ag": 1,
-   "opp": "Sandnes Ulf",
-   "gf": 1,
-   "ga": 2,
-   "actual": "loss",
+   "date": "2026-11-01",
+   "home": "Lyn",
+   "away": "Raufoss",
+   "hg": 4,
+   "ag": 0,
+   "opp": "Raufoss",
+   "gf": 4,
+   "ga": 0,
+   "actual": "win",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": 1,
-   "good": false,
+   "pp": -2,
+   "good": true,
    "basis": "avspark",
-   "foer": 0.0208,
-   "expected": 0.0151
+   "foer": 0.0185,
+   "expected": 0.0243
   },
   "Moss": {
    "date": "2026-10-25",
@@ -122,11 +122,11 @@
    "actual": "loss",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": 43,
+   "pp": 44,
    "good": false,
    "basis": "avspark",
    "foer": 0.0956,
-   "expected": 0.2212
+   "expected": 0.2367
   },
   "Odd": {
    "date": "2026-10-25",
@@ -162,24 +162,24 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.2472,
-   "expected": 0.2498
+   "expected": 0.2517
   },
   "Raufoss": {
-   "date": "2026-10-24",
-   "home": "Raufoss",
-   "away": "Ranheim",
-   "hg": 1,
-   "ag": 3,
-   "opp": "Ranheim",
-   "gf": 1,
-   "ga": 3,
+   "date": "2026-11-01",
+   "home": "Lyn",
+   "away": "Raufoss",
+   "hg": 4,
+   "ag": 0,
+   "opp": "Lyn",
+   "gf": 0,
+   "ga": 4,
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 1,
+   "pp": 0,
    "good": false,
    "basis": "avspark",
-   "foer": 0.9937,
+   "foer": 1,
    "expected": 1
   },
   "Sandnes Ulf": {
@@ -194,11 +194,11 @@
    "actual": "win",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": -20,
+   "pp": -19,
    "good": true,
    "basis": "avspark",
    "foer": 0.4316,
-   "expected": 0.3692
+   "expected": 0.3749
   },
   "Sogndal": {
    "date": "2026-11-01",
@@ -212,11 +212,11 @@
    "actual": "loss",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": 6,
+   "pp": 7,
    "good": false,
    "basis": "avspark",
    "foer": 0.1158,
-   "expected": 0.1124
+   "expected": 0.1186
   },
   "Stabæk": {
    "date": "2026-10-25",
@@ -234,7 +234,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0024,
-   "expected": 0.0047
+   "expected": 0.0032
   },
   "Strømmen": {
    "date": "2026-10-25",
@@ -266,7 +266,7 @@
    "actual": "loss",
    "zone": "gull",
    "chance": "opprykkssjansen",
-   "pp": -6,
+   "pp": -5,
    "good": false,
    "basis": "avspark",
    "foer": 0.8493,
@@ -288,8 +288,8 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.9474,
-   "expected": 0.9897
+   "expected": 0.9902
   }
  },
- "updated": "2026-11-01T16:21:31Z"
+ "updated": "2026-11-01T17:51:30Z"
 }
