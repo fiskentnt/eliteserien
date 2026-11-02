@@ -1,23 +1,26 @@
 {
- "checked_date": "2026-11-01",
- "checked_at": "2026-11-01T21:51:34+00:00",
+ "checked_date": "2026-11-02",
+ "checked_at": "2026-11-02T18:02:02+00:00",
  "kilde": "kalenderfeeden",
  "ferskt": true,
  "turnering": "206093",
- "kjoring": "41354082310-1",
+ "kjoring": "41496443963-1",
  "errors": 0,
- "warnings": 0,
+ "warnings": 1,
  "avvik": [],
- "advarsler": [],
+ "advarsler": [
+  "kontrollen mot Highlightly kunne ikke kjøres (HighlightlyDataError: ukjent lag hos Highlightly (obos): 'Kjelsås')"
+ ],
  "bekreftet": {},
  "kontroller": {
-  "dato": "2026-11-01",
-  "hentet": "2026-11-01T09:02:12+00:00",
+  "dato": "2026-11-02",
+  "hentet": "2026-11-02T18:02:02+00:00",
   "kilder": [
-   "Highlightly",
    "OddsPapi"
   ],
   "funn": [],
-  "feilet": []
+  "feilet": [
+   "kontrollen mot Highlightly kunne ikke kjøres (HighlightlyDataError: ukjent lag hos Highlightly (obos): 'Kjelsås')"
+  ]
  }
 }
