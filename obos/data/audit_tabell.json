@@ -1,33 +1,21 @@
 {
- "checked_at": "2026-11-02T20:31:44+00:00",
+ "checked_at": "2026-11-02T20:41:39+00:00",
  "checked_date": "2026-11-02",
- "kjoring": "41519811148-1",
+ "kjoring": "41521356170-1",
  "kilde": "https://www.obos-ligaen.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 1,
- "alle_like": false,
+ "warnings": 0,
+ "alle_like": true,
  "nye": [],
  "avvik": [],
- "advarsler": [
-  "Tabell: Kongsvinger-Stabæk mangler i tabellen på obos-ligaen.no. Hos oss 1-2, bekreftet av highlightly og wikipedia. Avspark 19:00, sjekkes på nytt i neste kjøring (frist 01:00)."
- ],
- "venter": [
-  {
-   "kamp": "Kongsvinger|Stabæk",
-   "resultat": [
-    1,
-    2
-   ],
-   "avspark": "2026-11-02T18:00:00+00:00",
-   "frist": "2026-11-03T00:00:00+00:00",
-   "kilder": [
-    "highlightly",
-    "wikipedia"
-   ],
-   "grunn": "mangler i tabellen"
-  }
- ],
- "siste_like": null
+ "advarsler": [],
+ "venter": [],
+ "siste_like": {
+  "checked_at": "2026-11-02T20:41:39+00:00",
+  "kjoring": "41521356170-1",
+  "kilde": "https://www.obos-ligaen.no/resultater",
+  "avtrykk": "62be2064ddd2fb74e52a493b2cd12213f221643170f3ac0305f76da7e7200771"
+ }
 }
