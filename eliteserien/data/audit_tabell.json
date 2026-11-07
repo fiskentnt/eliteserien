@@ -1,21 +1,33 @@
 {
- "checked_at": "2026-11-07T18:50:33+00:00",
+ "checked_at": "2026-11-07T19:00:29+00:00",
  "checked_date": "2026-11-07",
- "kjoring": "42403251321-1",
+ "kjoring": "42404045075-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-11-07T18:50:33+00:00",
-  "kjoring": "42403251321-1",
-  "kilde": "https://www.eliteserien.no/resultater",
-  "avtrykk": "8157ecd4a015c9bc28679b56931221c9a38e1c4427e7658e8f4a371c787dc333"
- }
+ "advarsler": [
+  "Tabell: Rosenborg-Start mangler i tabellen på eliteserien.no. Hos oss 4-1, bekreftet av espn og highlightly. Avspark 18:00, sjekkes på nytt i neste kjøring (frist 00:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Rosenborg|Start",
+   "resultat": [
+    4,
+    1
+   ],
+   "avspark": "2026-11-07T17:00:00+00:00",
+   "frist": "2026-11-07T23:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
