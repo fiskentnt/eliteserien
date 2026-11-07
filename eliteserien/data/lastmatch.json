@@ -18,7 +18,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.4471,
-   "expected": 0.4874
+   "expected": 0.49
   },
   "Brann": {
    "date": "2026-11-01",
@@ -36,7 +36,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0004,
-   "expected": 0.0004
+   "expected": 0.0002
   },
   "Fredrikstad": {
    "date": "2026-10-31",
@@ -54,7 +54,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0251,
-   "expected": 0.0262
+   "expected": 0.0285
   },
   "HamKam": {
    "date": "2026-11-01",
@@ -68,11 +68,11 @@
    "actual": "draw",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 0,
+   "pp": 1,
    "good": false,
    "basis": "avspark",
    "foer": 0.0888,
-   "expected": 0.1116
+   "expected": 0.1148
   },
   "KFUM Oslo": {
    "date": "2026-11-01",
@@ -86,11 +86,11 @@
    "actual": "draw",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": 0,
+   "pp": 1,
    "good": false,
    "basis": "avspark",
    "foer": 0.0192,
-   "expected": 0.0269
+   "expected": 0.0291
   },
   "Kristiansund": {
    "date": "2026-11-01",
@@ -104,11 +104,11 @@
    "actual": "win",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": -23,
+   "pp": -26,
    "good": true,
    "basis": "avspark",
    "foer": 0.7599,
-   "expected": 0.7518
+   "expected": 0.7327
   },
   "Lillestrøm": {
    "date": "2026-11-01",
@@ -122,11 +122,11 @@
    "actual": "win",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": 22,
+   "pp": 23,
    "good": true,
    "basis": "avspark",
    "foer": 0.2651,
-   "expected": 0.3466
+   "expected": 0.3498
   },
   "Molde": {
    "date": "2026-11-01",
@@ -144,7 +144,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.669,
-   "expected": 0.6731
+   "expected": 0.6688
   },
   "Rosenborg": {
    "date": "2026-10-31",
@@ -162,7 +162,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.7249,
-   "expected": 0.746
+   "expected": 0.7472
   },
   "Sandefjord": {
    "date": "2026-10-31",
@@ -180,7 +180,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.1772,
-   "expected": 0.1738
+   "expected": 0.1708
   },
   "Sarpsborg 08": {
    "date": "2026-11-01",
@@ -194,11 +194,11 @@
    "actual": "loss",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": 1,
+   "pp": 0,
    "good": false,
    "basis": "avspark",
    "foer": 0.0007,
-   "expected": 0.0011
+   "expected": 0.001
   },
   "Start": {
    "date": "2026-11-01",
@@ -216,7 +216,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.7958,
-   "expected": 0.8541
+   "expected": 0.8591
   },
   "Tromsø": {
    "date": "2026-11-01",
@@ -234,7 +234,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.271,
-   "expected": 0.2005
+   "expected": 0.2012
   },
   "Viking": {
    "date": "2026-10-30",
@@ -252,7 +252,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.5529,
-   "expected": 0.5126
+   "expected": 0.51
   },
   "Vålerenga": {
    "date": "2026-11-01",
@@ -270,7 +270,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0095,
-   "expected": 0.0107
+   "expected": 0.0123
   },
   "Aalesund": {
    "date": "2026-10-31",
@@ -284,12 +284,12 @@
    "actual": "loss",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": 22,
+   "pp": 24,
    "good": false,
    "basis": "avspark",
    "foer": 0.1808,
-   "expected": 0.227
+   "expected": 0.2352
   }
  },
- "updated": "2026-11-07T08:40:35Z"
+ "updated": "2026-11-07T18:51:20Z"
 }
