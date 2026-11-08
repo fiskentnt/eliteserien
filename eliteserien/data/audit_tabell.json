@@ -1,33 +1,21 @@
 {
- "checked_at": "2026-11-08T17:30:32+00:00",
+ "checked_at": "2026-11-08T17:40:30+00:00",
  "checked_date": "2026-11-08",
- "kjoring": "42505275195-1",
+ "kjoring": "42506108776-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 1,
- "alle_like": false,
+ "warnings": 0,
+ "alle_like": true,
  "nye": [],
  "avvik": [],
- "advarsler": [
-  "Tabell: Tromsø-Bodø/Glimt mangler i tabellen på eliteserien.no. Hos oss 0-2, bekreftet av espn og highlightly. Avspark 14:30, sjekkes på nytt i neste kjøring (frist 20:30)."
- ],
- "venter": [
-  {
-   "kamp": "Tromsø|Bodø/Glimt",
-   "resultat": [
-    0,
-    2
-   ],
-   "avspark": "2026-11-08T13:30:00+00:00",
-   "frist": "2026-11-08T19:30:00+00:00",
-   "kilder": [
-    "espn",
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  }
- ],
- "siste_like": null
+ "advarsler": [],
+ "venter": [],
+ "siste_like": {
+  "checked_at": "2026-11-08T17:40:30+00:00",
+  "kjoring": "42506108776-1",
+  "kilde": "https://www.eliteserien.no/resultater",
+  "avtrykk": "9e0e38ffc3be41308a5d54a4f1b69072a0e2710051c12ff222c77e272f011bbd"
+ }
 }
