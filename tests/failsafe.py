@@ -1663,6 +1663,112 @@ def main():
     for _navn, _ok, _detalj in push_konflikt.tester():
         check(_navn, _ok, _detalj)
 
+    # 30. Én rad per kamp i odds_upcoming.json (8.11.2026). The Odds API ga
+    # Kristiansund-Vålerenga to ganger etter at kampen ble flyttet, og alt som
+    # leser filen tar den SISTE raden per kamp. fetch_odds_upcoming.main() med
+    # et falskt svar og alle stiene i en midlertidig mappe: raden med datoen i
+    # terminlisten (norsk tid) står igjen, ellers den med flest bookmakere, og
+    # det kommer en advarsel. Flyttet til senere (gammel rad først), flyttet
+    # til tidligere (gammel rad sist, og med flere bookmakere enn den riktige),
+    # flyttet til tidligere og i gang (ingen rad, den gamle står ikke igjen
+    # alene), og en dato som ingen av radene har (flest bookmakere).
+    import contextlib as _cl30
+    import io as _io30
+    import tempfile as _tf30
+    import fetch_odds_upcoming as FOU
+    from datetime import datetime as _dt30, timedelta as _td30, timezone as _tz30
+    _naa30 = _dt30.now(_tz30.utc).replace(microsecond=0)
+    def _kl12(dager):   # kl. 12 UTC om n dager: samme dato i UTC og norsk tid
+        return (_naa30 + _td30(days=dager)).replace(hour=12, minute=0, second=0)
+    def _ev30(h, b, tid, priser):   # én hendelse slik The Odds API gir den, én bookmaker per pris
+        return {"home_team": h, "away_team": b, "commence_time": tid.strftime("%Y-%m-%dT%H:%M:%SZ"),
+                "bookmakers": [{"key": f"bm{i}", "markets": [{"key": "h2h", "outcomes": [
+                    {"name": h, "price": p[0]}, {"name": "Draw", "price": p[1]}, {"name": b, "price": p[2]}]}]}
+                    for i, p in enumerate(priser)]}
+    _tidlig, _sent, _annen = _kl12(2), _kl12(5), _kl12(9)
+    _startet = _naa30 - _td30(minutes=30)
+    _dato30 = lambda t: t.astimezone(FOU.OSLO).date().isoformat()
+    # Sortert etter avspark, slik The Odds API gir svaret.
+    _svar30 = [
+        # Flyttet til tidligere og i gang: den gamle raden (sist) har avspark fram i tid.
+        _ev30("Sandefjord", "HamKam", _startet, [(2.20, 3.40, 3.10)] * 2),
+        # Flyttet til senere: den gamle datoen (én bookmaker) kommer først.
+        _ev30("Kristiansund BK", "Vålerenga", _tidlig, [(2.41, 4.19, 2.65)]),
+        # Flyttet til tidligere: riktig dato først, den gamle sist og med flere bookmakere.
+        _ev30("Molde", "SK Brann", _tidlig, [(1.90, 3.80, 3.90)]),
+        # Ingen av radene har datoen i terminlisten: flest bookmakere, her den første.
+        _ev30("Rosenborg", "Viking FK", _sent, [(2.50, 3.50, 2.70)] * 3),
+        _ev30("Kristiansund BK", "Vålerenga", _sent, [(2.30, 3.87, 2.53)] * 2),
+        _ev30("Bodø/Glimt", "Tromso", _sent, [(1.40, 4.80, 7.00)]),
+        _ev30("Molde", "SK Brann", _sent, [(2.10, 3.60, 3.30)] * 3),
+        _ev30("Rosenborg", "Viking FK", _annen, [(2.10, 3.60, 3.20)]),
+        _ev30("Sandefjord", "HamKam", _annen, [(2.60, 3.30, 2.70)] * 3),
+    ]
+    _fix30 = [{"round": 26, "matches": [
+        {"home": h, "away": b, "date": d, "time": "19:00", "played": False}
+        for h, b, d in (("Kristiansund", "Vålerenga", _dato30(_sent)), ("Molde", "Brann", _dato30(_tidlig)),
+                        ("Sandefjord", "HamKam", _dato30(_startet)), ("Bodø/Glimt", "Tromsø", _dato30(_sent)),
+                        ("Rosenborg", "Viking", _dato30(_kl12(12))))]}]
+    _stier30 = {a: getattr(FOU, a) for a in ("UPCOMING_PATH", "CAPTURED_PATH", "MATCHES_PATH",
+                                              "FIXTURES_PATH", "QUOTA_PATH", "fetch_odds")}
+    _nokkel30 = os.environ.get("ODDS_API_KEY")
+    with _tf30.TemporaryDirectory() as _d30:
+        _d30 = Path(_d30)
+        try:
+            FOU.UPCOMING_PATH, FOU.CAPTURED_PATH = _d30 / "odds_upcoming.json", _d30 / "odds_captured.json"
+            FOU.MATCHES_PATH, FOU.FIXTURES_PATH = _d30 / "matches.json", _d30 / "fixtures.json"
+            FOU.QUOTA_PATH = _d30 / "odds_quota.json"
+            FOU.MATCHES_PATH.write_text("[]", encoding="utf-8")
+            FOU.FIXTURES_PATH.write_text(json.dumps(_fix30, ensure_ascii=False), encoding="utf-8")
+            FOU.fetch_odds = lambda key, log: _svar30
+            os.environ["ODDS_API_KEY"] = "test"
+            _ut30, _feil30 = _io30.StringIO(), _io30.StringIO()
+            with _cl30.redirect_stdout(_ut30), _cl30.redirect_stderr(_feil30):
+                FOU.main()
+            _rader30 = json.loads(FOU.UPCOMING_PATH.read_text(encoding="utf-8"))["matches"]
+        finally:
+            for _a, _v in _stier30.items():
+                setattr(FOU, _a, _v)
+            if _nokkel30 is None:
+                os.environ.pop("ODDS_API_KEY", None)
+            else:
+                os.environ["ODDS_API_KEY"] = _nokkel30
+    _logg30 = _feil30.getvalue()
+    _per30 = {}
+    for _r in _rader30:
+        _per30.setdefault((_r["home"], _r["away"]), []).append(_r)
+    _iso30 = lambda t: t.strftime("%Y-%m-%dT%H:%M:%SZ")
+    def _bare30(h, b):   # den ene raden for kampen, eller None
+        r = _per30.get((h, b)) or []
+        return r[0] if len(r) == 1 else None
+    _kv = _bare30("Kristiansund", "Vålerenga")
+    check("én rad per kamp: kamp flyttet til senere (gammel rad først) -> raden med datoen i terminlisten",
+          _kv is not None and _kv["commence_time"] == _iso30(_sent) and _kv["n_bookmakers"] == 2,
+          str(_per30.get(("Kristiansund", "Vålerenga"))))
+    _mb = _bare30("Molde", "Brann")
+    check("én rad per kamp: kamp flyttet til tidligere (gammel rad sist, flere bookmakere) -> raden med datoen i "
+          "terminlisten, ikke den siste",
+          _mb is not None and _mb["commence_time"] == _iso30(_tidlig) and _mb["n_bookmakers"] == 1,
+          str(_per30.get(("Molde", "Brann"))))
+    check("én rad per kamp: kamp flyttet til tidligere og i gang -> ingen rad, den gamle står ikke igjen alene",
+          ("Sandefjord", "HamKam") not in _per30, str(_per30.get(("Sandefjord", "HamKam"))))
+    _rv = _bare30("Rosenborg", "Viking")
+    check("én rad per kamp: ingen rad har datoen i terminlisten -> flest bookmakere (her den første)",
+          _rv is not None and _rv["commence_time"] == _iso30(_sent) and _rv["n_bookmakers"] == 3,
+          str(_per30.get(("Rosenborg", "Viking"))))
+    check("én rad per kamp: en kamp som bare kommer én gang, står urørt",
+          _bare30("Bodø/Glimt", "Tromsø") is not None and len(_rader30) == 4,
+          f"{len(_rader30)} rader: {sorted(_per30)}")
+    check("én rad per kamp: radene står i rekkefølgen fra svaret (etter avspark)",
+          [r["commence_time"] for r in _rader30] == sorted(r["commence_time"] for r in _rader30))
+    _adv30 = [l for l in _logg30.splitlines() if l.startswith("ADVARSEL: The Odds API ga ")]
+    check("én rad per kamp: én advarsel per dobbel kamp i loggen og som ::warning, ingen for kampen som kom én gang",
+          len(_adv30) == 4 and _ut30.getvalue().count("::warning title=Samme kamp flere ganger") == 4
+          and not any("Bodø/Glimt-Tromsø" in l for l in _adv30)
+          and any("Kristiansund-Vålerenga 2 ganger" in l and "samme dato som i terminlisten" in l for l in _adv30)
+          and any("Rosenborg-Viking 2 ganger" in l and "ingen rad har datoen i terminlisten" in l for l in _adv30),
+          _logg30[-800:])
+
     # En testkjoring skal ikke etterlate seg noe i produksjonsdataene. Dette
     # gikk galt: hentelogget og OddsPapi-telleren fikk linjer og fakturerbare
     # kall som aldri skjedde, av selve testene.

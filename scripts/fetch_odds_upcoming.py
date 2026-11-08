@@ -16,6 +16,7 @@ import urllib.request
 import urllib.error
 from datetime import datetime, timezone
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 sys.path.insert(0, str(Path(__file__).parent))
 from oddslib import devig, UnmappedTeamError
@@ -28,7 +29,9 @@ LEAGUE = ROOT / "eliteserien"  # ligamappen (data/ ligger under den, så flere l
 UPCOMING_PATH = LEAGUE / "data" / "odds_upcoming.json"
 CAPTURED_PATH = LEAGUE / "data" / "odds_captured.json"
 MATCHES_PATH = LEAGUE / "data" / "matches.json"
+FIXTURES_PATH = LEAGUE / "data" / "fixtures.json"
 QUOTA_PATH = LEAGUE / "data" / "odds_quota.json"
+OSLO = ZoneInfo("Europe/Oslo")
 QUOTA_FLOOR = 100  # under denne mengden kreditter igjen: stopp til neste måned
 
 
@@ -121,6 +124,82 @@ def parse(raw):
         )
     return out
 
+
+def norsk_tid(commence_time):
+    """Avsparket fra The Odds API (UTC, slutter på Z) i norsk tid."""
+    return datetime.fromisoformat(commence_time.replace("Z", "+00:00")).astimezone(OSLO)
+
+
+def kampdatoer(fixtures):
+    """(hjemme, borte) -> datoen kampen har i terminlisten, for kampene som
+    ikke er spilt. fixtures.json har dato og klokkeslett i norsk tid."""
+    ut = {}
+    for runde in fixtures or []:
+        for k in runde.get("matches") or []:
+            if not k.get("played") and k.get("date"):
+                ut[(k["home"], k["away"])] = k["date"]
+    return ut
+
+
+def les_kampdatoer(log):
+    try:
+        return kampdatoer(json.loads(FIXTURES_PATH.read_text(encoding="utf-8")))
+    except (OSError, ValueError) as e:
+        log(f"ADVARSEL: kunne ikke lese terminlisten ({e}). En kamp som kommer flere "
+            "ganger, avgjøres da av antall bookmakere.")
+        return {}
+
+
+def en_rad_per_kamp(matches, datoer, log):
+    """Én rad per kamp (hjemme, borte), med en advarsel når svaret hadde flere.
+
+    7.11.2026 ga The Odds API Kristiansund-Vålerenga to ganger. Kampen var
+    flyttet fra 7.11. til 9.11., og én bookmaker sto fortsatt på den gamle
+    datoen. Alt som leser odds_upcoming.json slår opp kampen på lagnavnene og
+    tar den siste raden (siden, ELO-testen, prekick.json og odds_sources). Det gikk
+    bra fordi svaret er sortert etter avspark, så den nye datoen kom sist. En
+    kamp flyttet til TIDLIGERE gir den gamle raden sist, og da ville siden
+    brukt den. ELO-testens kontroll var rød hele dagen, og modellen ble ikke
+    lagret.
+
+    Regelen: raden med samme dato som i terminlisten (norsk tid). Har ingen
+    rad den datoen, eller flere, den med flest bookmakere. Står det likt,
+    den siste, som før. Radene beholder rekkefølgen fra svaret."""
+    grupper = {}
+    for m in matches:
+        grupper.setdefault((m["home"], m["away"]), []).append(m)
+    valgt = {}
+    for key, rader in grupper.items():
+        if len(rader) == 1:
+            valgt[key] = rader[0]
+            continue
+        dato = datoer.get(key)
+        paa_dato = [r for r in rader if dato and norsk_tid(r["commence_time"]).date().isoformat() == dato]
+        kandidater = paa_dato or rader
+        # reversed: ved likt antall vinner den siste raden.
+        best = max(reversed(kandidater), key=lambda r: r.get("n_bookmakers", 0))
+        valgt[key] = best
+
+        def beskriv(r):
+            t = norsk_tid(r["commence_time"])
+            n = r.get("n_bookmakers", 0)
+            return f"{t.day}.{t.month}. kl. {t:%H.%M} ({n} bookmaker{'' if n == 1 else 'e'})"
+        if len(paa_dato) == 1:
+            grunn = "samme dato som i terminlisten"
+        elif paa_dato:
+            grunn = "flest bookmakere av radene med datoen i terminlisten"
+        elif dato:
+            grunn = f"flest bookmakere, ingen rad har datoen i terminlisten ({dato})"
+        else:
+            grunn = "flest bookmakere, kampen står ikke i terminlisten"
+        tatt_ut = ", ".join(beskriv(r) for r in rader if r is not best)
+        tekst = (f"The Odds API ga {key[0]}-{key[1]} {len(rader)} ganger. Beholder "
+                 f"{beskriv(best)}: {grunn}. Tar ut {tatt_ut}.")
+        log(f"ADVARSEL: {tekst}")
+        print(f"::warning title=Samme kamp flere ganger fra The Odds API::{tekst}")
+    return [m for m in matches if valgt[(m["home"], m["away"])] is m]
+
+
 def main():
     log = lambda s: print(s, file=sys.stderr)
     api_key = os.environ.get("ODDS_API_KEY")
@@ -185,6 +264,11 @@ def main():
         return
 
     matches = parse(raw)
+    # Én rad per kamp, FØR kampene som har startet tas ut. Er kampen flyttet
+    # til tidligere og i gang, har den gamle raden fortsatt avspark fram i
+    # tid. Tas de startede ut først, står den gamle raden igjen alene og ser
+    # ut som en kommende kamp med gammel odds.
+    matches = en_rad_per_kamp(matches, les_kampdatoer(log), log)
     # Et svar kan inneholde en kamp som alt er spilt, eller en som PÅGÅR. Ingen
     # av dem hører hjemme her: oddsen under en kamp kjenner stillingen, og ville
     # både blitt blandet inn på siden og fanget opp som "sluttodds" etterpå.
