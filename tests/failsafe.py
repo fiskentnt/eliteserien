@@ -1234,8 +1234,13 @@ def main():
         andeler = [r["sjanser"]["gull"]["andel"] for _, r in i_ if r["sjanser"]["gull"]["avgjort"] == 0]
         check(f"rekkefølge: oppsummeringen for {liga} nevner lederne etter sjanse, høyest først", andeler == sorted(andeler, reverse=True), topp[:80])
     fs_ = statisk_region.statiske((ROOT / "index.html").read_text(encoding="utf-8"))
+    # Bunnsetningen: «ligger nærmest» mens nedrykket er åpent, «er rykket ned»
+    # når det er avgjort (lag_sider.bunn_setning). OBOS fikk det siste 1.11.2026,
+    # og testen ble rød, fordi den bare godtok «ligger nærmest».
     check("oppsummering: forsiden har den korte oppsummeringen for begge ligaene, laget fra tekster.json",
-          all(fs_.get(k, "").count("Oppdatert ") == 1 and "ligger nærmest" in fs_.get(k, "") for k in ("ELITESERIEN", "OBOS"))
+          all(fs_.get(k, "").count("Oppdatert ") == 1
+              and ("ligger nærmest" in fs_.get(k, "") or " er rykket ned." in fs_.get(k, ""))
+              for k in ("ELITESERIEN", "OBOS"))
           and lag_sider.forside() == (ROOT / "index.html").read_text(encoding="utf-8"), {k: len(fs_.get(k, "")) for k in ("ELITESERIEN", "OBOS")})
     for liga in ("eliteserien", "obos"):
         t = (ROOT / liga / "index.html").read_text(encoding="utf-8")
