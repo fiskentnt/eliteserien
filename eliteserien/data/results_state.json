@@ -1,10 +1,26 @@
 {
- "checked_at": "2026-11-08T17:50:30+00:00",
+ "checked_at": "2026-11-08T18:00:32+00:00",
  "conflicts": [],
- "waiting": [],
+ "waiting": [
+  "Lillestrøm-Aalesund: bare ligasiden har resultatet -- venter på en uavhengig kilde"
+ ],
  "ukontrollert": {},
  "ukontrollert_sjekket": null,
- "forst_sett": {},
+ "forst_sett": {
+  "Viking|KFUM Oslo": {
+   "ligasiden": "2026-11-08T18:00:32+00:00",
+   "espn": "2026-11-08T18:00:32+00:00",
+   "highlightly": "2026-11-08T18:00:32+00:00"
+  },
+  "HamKam|Sarpsborg 08": {
+   "ligasiden": "2026-11-08T18:00:32+00:00",
+   "espn": "2026-11-08T18:00:32+00:00",
+   "highlightly": "2026-11-08T18:00:32+00:00"
+  },
+  "Lillestrøm|Aalesund": {
+   "ligasiden": "2026-11-08T18:00:32+00:00"
+  }
+ },
  "bekreftet": {
   "Rosenborg|Start": {
    "resultat": [
@@ -27,6 +43,28 @@
     "highlightly"
    ],
    "publisert": "2026-11-08T16:30:33+00:00"
+  },
+  "HamKam|Sarpsborg 08": {
+   "resultat": [
+    3,
+    0
+   ],
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "publisert": "2026-11-08T18:00:32+00:00"
+  },
+  "Viking|KFUM Oslo": {
+   "resultat": [
+    5,
+    1
+   ],
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "publisert": "2026-11-08T18:00:32+00:00"
   }
  },
  "overstemt": {}
