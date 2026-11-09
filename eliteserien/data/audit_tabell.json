@@ -1,33 +1,21 @@
 {
- "checked_at": "2026-11-09T20:30:32+00:00",
+ "checked_at": "2026-11-09T20:40:33+00:00",
  "checked_date": "2026-11-09",
- "kjoring": "42693564680-1",
+ "kjoring": "42695167091-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 1,
- "alle_like": false,
+ "warnings": 0,
+ "alle_like": true,
  "nye": [],
  "avvik": [],
- "advarsler": [
-  "Tabell: Kristiansund-Vålerenga mangler i tabellen på eliteserien.no. Hos oss 1-0, bekreftet av espn og highlightly. Avspark 19:00, sjekkes på nytt i neste kjøring (frist 01:00)."
- ],
- "venter": [
-  {
-   "kamp": "Kristiansund|Vålerenga",
-   "resultat": [
-    1,
-    0
-   ],
-   "avspark": "2026-11-09T18:00:00+00:00",
-   "frist": "2026-11-10T00:00:00+00:00",
-   "kilder": [
-    "espn",
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  }
- ],
- "siste_like": null
+ "advarsler": [],
+ "venter": [],
+ "siste_like": {
+  "checked_at": "2026-11-09T20:40:33+00:00",
+  "kjoring": "42695167091-1",
+  "kilde": "https://www.eliteserien.no/resultater",
+  "avtrykk": "7303e0b696f088d5c59ac38f0d11bcb695d4f06773972bd3e0fd604fa08f8009"
+ }
 }
