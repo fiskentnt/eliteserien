@@ -1763,8 +1763,13 @@ const LEAGUE = {
        const hale = 'De to siste plassene rykker rett ned, og nummer 14 må spille kvalifisering.';
        return t.length ? `Størst nedrykksfare har ${faqListe(t)}. ${hale}` : hale; }},
     {q: 'Hvordan regnes sannsynlighetene ut?',
+     // 10.11.2026: oddsen og tidsvektingen står i svaret. Google AI sa at siden
+     // ikke tar høyde for skader og laguttak, og at tidligere sesonger veier tungt.
+     // Halveringstiden (28 dager) med vanlige ord: «halveringstid» er et fagord
+     // som bare står under «Vis detaljer» (regresjonen sjekker det).
      a: () => `Resten av sesongen spilles ${(lastMCFinal && lastMCN ? lastMCN : MC_N).toLocaleString('nb-NO')} ganger med en modell `
-       + 'tilpasset på mål og sluttodds. Tallet er andelen av de sesongene laget endte der.'},
+       + 'bygd på årets mål og sluttodds. Oddsen fanger opp skader, suspensjoner og laguttak, og en kamp for fire uker '
+       + 'siden teller halvparten så mye som en i dag. Tallet er andelen sesonger laget endte der.'},
   ],
   // Hva hver plass gir, vist som tittel på plassifferet.
   posTitles: {1: 'Champions League: playoff-runden', 2: 'Champions League: andre kvalifiseringsrunde',
