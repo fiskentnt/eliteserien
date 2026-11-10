@@ -1242,11 +1242,16 @@ def main():
     sk_ = {"index.html": skrifter.FORSIDE, "eliteserien/index.html": skrifter.LIGA, "obos/index.html": skrifter.LIGA,
            "eliteserien/brann/index.html": skrifter.LAGSIDE, "obos/odd/index.html": skrifter.LAGSIDE,
            "eliteserien/hvem-vinner/index.html": skrifter.SPORSMAL, "eliteserien/modellsjekk/index.html": skrifter.MODELLSJEKK}
-    sk_feil = [f for f, v in sk_.items() if skrifter.blokk(v) not in (ROOT / f).read_text(encoding="utf-8")]
+    # Ligasidene: swap og reserveskriften med Barlows mål (10.11.2026), de andre som før.
+    sk_feil = [f for f, v in sk_.items() if skrifter.blokk(v, **(skrifter.LIGA_VALG if v is skrifter.LIGA else {}))
+               not in (ROOT / f).read_text(encoding="utf-8")]
+    sk_feil += [f for f in ("eliteserien/index.html", "obos/index.html")
+                if '--body:"Barlow","Barlow reserve",' not in (ROOT / f).read_text(encoding="utf-8")
+                or '--cond:"Barlow Condensed","Barlow Condensed reserve",' not in (ROOT / f).read_text(encoding="utf-8")]
     sk_feil += [fil for fil in skrifter.FILER.values() if not (ROOT / "assets" / "fonts" / fil).is_file()]
     sk_feil += [str(f.relative_to(ROOT)) for f in [ROOT / "index.html", *ROOT.glob("eliteserien/**/index.html"), *ROOT.glob("obos/**/index.html")]
                 if "fonts.googleapis.com" in f.read_text(encoding="utf-8")]
-    check("skriftene: fra assets/fonts/ med preload og font-display: optional (scripts/skrifter.py) på forsiden, ligasidene, lagsidene, spørsmålssidene og modellsjekk, ingen fra Google Fonts",
+    check("skriftene: fra assets/fonts/ med preload (scripts/skrifter.py) på forsiden, ligasidene, lagsidene, spørsmålssidene og modellsjekk; ligasidene med swap og reserveskriften, de andre med optional; ingen fra Google Fonts",
           not sk_feil, sk_feil[:5])
     uw = (ROOT / ".github" / "workflows" / "update-data.yml").read_text(encoding="utf-8")
     ms = (ROOT / "scripts" / "make_sitemap.py").read_text(encoding="utf-8")
