@@ -36,7 +36,7 @@ import subprocess
 import sys
 from fnmatch import fnmatch
 
-# Bare ligaene; testsiden (elo-test) holdes utenfor.
+# Bare ligaene.
 LIGAER = ("eliteserien", "obos")
 BEHOLD_MAIN = [f"{l}/data/{f}" for l in LIGAER for f in ("odds_upcoming.json", "oddspapi_fixtures*.json", "oddspapi_markets.json")]
 PREKICK = [f"{l}/data/prekick.json" for l in LIGAER]

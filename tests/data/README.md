@@ -16,8 +16,6 @@ repoet:
   odds_upcoming, odds (Eliteserien), odds_quota (Eliteserien), keymatch,
   lastmatch, prekick, odds_closing, accuracy, justeringer, status, history og
   grunnlag.
-- `elo-test/emodell/`: model, accuracy, keymatch, lastmatch, prekick og
-  grunnlag. Testsiden leser kampene fra `eliteserien/data/`.
 
 `2026-10-16/` er Eliteserien-filene fra 16.10.2026 (før runde 24): matches,
 fixtures, model, justeringer, odds_upcoming og status. Viking og Bodø/Glimt
@@ -27,8 +25,7 @@ oppgjør i tabellen» bruker det til å sjekke at Viking står først (innbyrdes
 
 Slik brukes det (se `DATA_DAG` i `tests/regression.js`):
 
-- Testserveren svarer `/<liga>/data/<fil>.json` og `/elo-test/emodell/<fil>.json`
-  fra bildet, og 404 for filer som ikke er med.
+- Testserveren svarer `/<liga>/data/<fil>.json` fra bildet, og 404 for filer som ikke er med.
 - Repokopiene testene lager (grunnlagsfilen, prekick) får bildet lagt over
   dataene.
 - Gruppen "Dagens data" laster sidene med de ekte filene, så en endring i

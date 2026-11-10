@@ -705,12 +705,6 @@ def main():
         check(f"{navn}: snapshot-steget lar raden i vinduet være (--uten-prekick-vindu)",
               kall in t and t.count("snapshot_probs.js") == t.count("--uten-prekick-vindu") + t.count("se scripts/snapshot_probs.js")
               and "--bare-prekick" not in t)
-    elo = (wfd / "elo-test.yml").read_text(encoding="utf-8")
-    # 17.10.2026: ELO-testsiden er løs, og panelene (også prekick.json) regnes
-    # ikke lenger. Ingen workflow skriver testsidens prekick.json.
-    check("elo-test.yml: panelene regnes ikke lenger (ingen snapshot_probs), og ingen workflow skriver til elo-test/emodell med snapshot_probs",
-          "snapshot_probs" not in "\n".join(l for l in elo.splitlines() if not l.strip().startswith("#"))
-          and not any("--ut elo-test/emodell" in f.read_text(encoding="utf-8") for f in wfd.glob("*.yml")))
 
     # 22. Grunnlagsfilen (del 2, steg 2): porten slipper gjennom bare når det
     # siden regner med er endret, og workflowen kan ikke stoppe datajobbene.
@@ -769,38 +763,8 @@ def main():
         check("grunnlag-port: alt tilbake -> hopp over", v()[0] is False)
         (d / "grunnlag.json").write_text("{ødelagt", encoding="utf-8")
         check("grunnlag-port: filen kan ikke leses -> regn", v()[0] is True)
-    # Testsiden: egen side og ELO-modell, kampdata og odds fra Eliteserien,
-    # filen i elo-test/emodell.
-    with _tf.TemporaryDirectory() as _t:
-        rot = Path(_t)
-        (rot / "scripts").mkdir()
-        _sh.copy(ROOT / "scripts" / "lag_grunnlag.js", rot / "scripts")
-        (rot / "elo-test" / "emodell").mkdir(parents=True)
-        (rot / "eliteserien" / "data").mkdir(parents=True)
-        _sh.copy(ROOT / "elo-test" / "index.html", rot / "elo-test")
-        _sh.copy(BILDE22 / "elo-test" / "emodell" / "model.json", rot / "elo-test" / "emodell")
-        for f in ("matches.json", "fixtures.json", "odds_upcoming.json"):
-            _sh.copy(BILDE22 / "eliteserien" / "data" / f, rot / "eliteserien" / "data")
-        v = lambda: _gp.vurder("elo-test", root=rot)
-        (rot / "elo-test" / "emodell" / "grunnlag.json").write_text(json.dumps({"inndata": v()[1]}), encoding="utf-8")
-        check("grunnlag-port, testsiden: filen i elo-test/emodell er regnet av dagens inndata -> hopp over", v()[0] is False)
-        em = rot / "elo-test" / "emodell" / "model.json"
-        gml = em.read_text(encoding="utf-8")
-        m = json.loads(gml); m.update(built="2099-01-01T00:00:00+00:00", note="annen")
-        em.write_text(json.dumps(m), encoding="utf-8")
-        check("grunnlag-port, testsiden: built og note i ELO-modellen endret -> hopp over", v()[0] is False)
-        m["hjemmefordel_rating"] = m["hjemmefordel_rating"] + 1e-9
-        em.write_text(json.dumps(m), encoding="utf-8")
-        check("grunnlag-port, testsiden: ELO-modellen endret -> regn", v()[0] is True)
-        em.write_text(gml, encoding="utf-8")
-        ek = rot / "eliteserien" / "data" / "matches.json"
-        gml = ek.read_text(encoding="utf-8"); mm = json.loads(gml); mm[0]["hg"] += 1
-        ek.write_text(json.dumps(mm), encoding="utf-8")
-        check("grunnlag-port, testsiden: et resultat i eliteserien/data endret -> regn", v()[0] is True)
-        ek.write_text(gml, encoding="utf-8")
-        check("grunnlag-port, testsiden: alt tilbake -> hopp over", v()[0] is False)
-    ut_ = subprocess.run([sys.executable, str(ROOT / "scripts" / "grunnlag_port.py"), "elo-test"], capture_output=True, text=True).stdout
-    check("grunnlag-port: med én side skrives mappen filen ligger i (ut=elo-test/emodell)", "\nut=elo-test/emodell" in "\n" + ut_, ut_)
+    ut_ = subprocess.run([sys.executable, str(ROOT / "scripts" / "grunnlag_port.py"), "eliteserien"], capture_output=True, text=True).stdout
+    check("grunnlag-port: med én side skrives mappen filen ligger i (ut=eliteserien/data)", "\nut=eliteserien/data" in "\n" + ut_, ut_)
 
     # Porten tar med de datafilene siden faktisk regner med (boot()).
     side = (ROOT / "eliteserien" / "index.html").read_text(encoding="utf-8")
@@ -816,7 +780,7 @@ def main():
     # lag og soner: filens blokk når den gjelder, ellers siden selv med like
     # mange sesonger som tabellen. Den gamle kjøringen per spørsmål (1 500
     # sesonger, eget frø per lag og sone) finnes ikke lenger på noen av sidene.
-    for s_ in ("eliteserien", "obos", "elo-test"):
+    for s_ in ("eliteserien", "obos"):
         t = (ROOT / s_ / "index.html").read_text(encoding="utf-8")
         check(f"{s_}/index.html: innsiktssvarene fra runInsightsAlle, uten den gamle kjøringen per spørsmål",
               "function runInsightsAlle(d){" in t and "d.mode==='insightsAlle'){ runInsightsAlle(d); }" in t
@@ -860,14 +824,11 @@ def main():
                 break
     utlosere = gw.split("workflows:", 1)[1].split("types:", 1)[0]
     utlosere = [l.strip()[2:].strip().strip('"') for l in utlosere.splitlines() if l.strip().startswith("- ")]
-    # 17.10.2026: ELO-testsiden er løs, og testsidens grunnlagsfil regnes ikke
-    # lenger. ELO-byggingen utløser ikke grunnlag.yml.
-    check("grunnlag.yml: utløses etter datajobbene, oddsjobbene og byggingen av ligasidene (ikke ELO-modellen), med navn som finnes",
+    check("grunnlag.yml: utløses etter datajobbene, oddsjobbene og byggingen av ligasidene, med navn som finnes",
           sorted(navn_wf.get(n, "?") for n in utlosere) == ["build-leagues.yml", "obos-results.yml", "prekick-odds.yml", "update-data.yml", "update-odds.yml"],
           str(utlosere))
-    check("grunnlag.yml: bare de to ligaene, aldri testsiden",
-          'sider="eliteserien obos"' in gw and "python3 scripts/grunnlag_port.py $sider" in gw
-          and 'sider="elo-test"' not in gw and "eliteserien obos elo-test" not in gw)
+    check("grunnlag.yml: bare de to ligaene",
+          'sider="eliteserien obos"' in gw and "python3 scripts/grunnlag_port.py $sider" in gw)
     check("grunnlag.yml: bare kjøringer på main utløser den, og push av sidene og skriptene",
           "types: [completed]\n    branches: [main]\n" in gw and all(f"      - {p_}\n" in gw for p_ in
           ("eliteserien/index.html", "obos/index.html", "scripts/lag_grunnlag.js", "scripts/grunnlag_port.py",
@@ -1296,9 +1257,9 @@ def main():
     # i grunnlag.yml etter pushen, som aldri kan gjøre kjøringen rød.
     import indexnow
     k_ = indexnow.nokkel()
-    check("IndexNow: nøkkelfilen <nøkkel>.txt i roten har nøkkelen som innhold, og sidene i en commit blir adresser (ikke data, sitemap eller elo-test)",
+    check("IndexNow: nøkkelfilen <nøkkel>.txt i roten har nøkkelen som innhold, og sidene i en commit blir adresser (ikke data eller sitemap)",
           (ROOT / f"{k_}.txt").read_text(encoding="utf-8").strip() == k_
-          and indexnow.adresser(["eliteserien/index.html", "index.html", "obos/index.html", "eliteserien/data/grunnlag.json", "sitemap.xml", "elo-test/index.html"])
+          and indexnow.adresser(["eliteserien/index.html", "index.html", "obos/index.html", "eliteserien/data/grunnlag.json", "sitemap.xml"])
           == ["https://tabellkalkulator.no/eliteserien/", "https://tabellkalkulator.no/", "https://tabellkalkulator.no/obos/"])
     lg_steg = gst[i_lg]
     # Bare med endret innhold, uten tidsgrense (28.10.2026):
@@ -1362,9 +1323,9 @@ def main():
           and "if (v.status !== 'i bruk') throw" in lg)
     check("snapshot_probs.js regner og skriver ikke banneret lenger",
           "qaKeyRoundData" not in sp and "KEYMATCH" not in sp and "writeFileSync(path.join(UT, 'keymatch.json')" not in sp)
-    check("ingen andre jobber committer keymatch.json (datajobbene og elo-test.yml)",
+    check("ingen andre jobber committer keymatch.json (datajobbene)",
           not any("keymatch.json" in "\n".join(l for l in (wfd / f).read_text(encoding="utf-8").splitlines() if not l.lstrip().startswith("#"))
-                  for f in ("update-data.yml", "obos-results.yml", "elo-test.yml", "prekick-odds.yml", "update-odds.yml")))
+                  for f in ("update-data.yml", "obos-results.yml", "prekick-odds.yml", "update-odds.yml")))
     check("datajobbene nevner ikke grunnlagsfilen: regningen kan ikke stoppe eller forsinke dem",
           not any(n_ in (wfd / f).read_text(encoding="utf-8") for f in ("update-data.yml", "obos-results.yml", "update-odds.yml", "prekick-odds.yml")
                   for n_ in ("grunnlag.json", "lag_grunnlag", "grunnlag_port", "grunnlag.yml")))
@@ -1383,7 +1344,7 @@ def main():
         return _re.sub(r"(^|[ \t])//[^\n]*", r"\1", t, flags=_re.M)
     _gaase = _re.compile(r"[«»]|\\00a[bB]|\\00b[bB]|\\00A[bB]|\\00B[bB]|\\u00a[bB]|\\u00b[bB]|&laquo;|&raquo;|&#171;|&#187;")
     _funn = []
-    for f in ["eliteserien/index.html", "obos/index.html", "elo-test/index.html",
+    for f in ["eliteserien/index.html", "obos/index.html",
               *sorted(str(x.relative_to(ROOT)) for x in (ROOT / "obos" / "page").iterdir())]:
         for nr, linje in enumerate(_uten_kommentarer((ROOT / f).read_text(encoding="utf-8")).split("\n"), 1):
             if _gaase.search(linje):
@@ -1585,9 +1546,9 @@ def main():
     # ellers fra tabellens simulering (QA_N_BETINGET = MC_N, tabellens frø).
     # Ingen av dem har et eget antall sesonger (før: 2 500, 3 000 og 6 000,
     # og kortet og svaret viste ulike tall for samme kamp). Forrige kamp er i
-    # filen på Eliteserien og OBOS, ikke på testsiden (grunnlagMedForrige).
+    # filen på Eliteserien og OBOS (grunnlagMedForrige).
     import re as _re28
-    for s_ in ("eliteserien", "obos", "elo-test"):
+    for s_ in ("eliteserien", "obos"):
         _t28 = (ROOT / s_ / "index.html").read_text(encoding="utf-8")
         _konst28 = ("const QA_N_BETINGET = MC_N;", "const QA_CHEER_N = QA_N_BETINGET;", "const QA_LAST_N = QA_N_BETINGET;",
                     "const QA_KEY_N = QA_N_BETINGET;")
@@ -1596,14 +1557,12 @@ def main():
               all(k in _t28 for k in _konst28) and _t28.count("N:QA_N_BETINGET") >= 3 and not _faste28
               and "(res.sesonger >= QA_KEY_N_STRAM ? QA_KEY_CLOSE_CI : QA_KEY_CLOSE)" in _t28,
               f"faste N: {_faste28}" if _faste28 else "")
-        _med28 = s_ != "elo-test"
-        check(f"{s_}/index.html: " + ("forrige kamp i grunnlagsfilen, og linja i lagboksen fra filen når den er i bruk" if _med28
-              else "forrige kamp ikke i grunnlagsfilen (ratingen etter det alternative resultatet er ikke i avtrykket), linja fra lastmatch.json"),
+        check(f"{s_}/index.html: forrige kamp i grunnlagsfilen, og linja i lagboksen fra filen når den er i bruk",
               "forrigeOppgaver(m, P0, G0, F0).forEach(x=>tasks.push(x));" in _t28
               and "if(!grunnlagMedForrige()) return tasks;" in _t28
               and "(GRUNNLAG && GRUNNLAG_STATUS==='i bruk' && grunnlagMedForrige())) return null;" in _t28
               and "|| (t.over && !t.id.startsWith('f:'))) return null;" in _t28
-              and (_t28.rfind("function grunnlagMedForrige(){ return true; }") > _t28.rfind("function grunnlagMedForrige(){ return false; }")) == _med28)
+              and _t28.rfind("function grunnlagMedForrige(){ return true; }") > _t28.rfind("function grunnlagMedForrige(){ return false; }"))
 
     # 29. Modellsjekk-sidene (3.10.2026). "Vis detaljer" i "Hvordan vet vi at
     # modellen virker?" er kortet ned, og resten (Brier-tabellene, kontrollen
@@ -1652,7 +1611,7 @@ def main():
     # Alle går gjennom hentFersk (cache: 'no-cache') eller hentSporet, og
     # siden sjekker selv om nye resultater er publisert (sjekkNyeData).
     import re as _re30
-    for _side30 in ("eliteserien/index.html", "obos/index.html", "elo-test/index.html"):
+    for _side30 in ("eliteserien/index.html", "obos/index.html"):
         _t30 = (ROOT / _side30).read_text(encoding="utf-8")
         _rene30 = _re30.findall(r"(?<![\w.])fetch\((?:'[^']*\.json'|grunnlagFil\(\)|LEAGUE\.closingOddsFile)", _t30)
         check(f"{_side30}: datafilene hentes uten gammel kopi (hentFersk/hentSporet), og siden ser etter nye data",

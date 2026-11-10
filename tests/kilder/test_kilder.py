@@ -2146,55 +2146,6 @@ sjekk("Eliteserien (update_data.py): bekreft_datoer kjøres etter datovakten, me
       and "espn_source.fetch_season(_aktiv" in _ud and "ntf_source.parse_kalender(ntf_source.hent_kalender(LIGA" in _ud
       and _ud.index("rimelige_datoer(merged, _forrige_liste") < _ud.index("merged, _flytting = bekreft_datoer("))
 
-print("\n=== Testsidens prekick-kontroll bruker frysingens avsparkregel (10.10.2026) ===")
-# Rosenborg-Sandefjord pagikk da Glimt-Kristiansund kom inn: modellen ble ny,
-# raden for kampen som pagikk ble staaende fra avspark (frysregelen), og
-# kontroll W i kontroll_paneler.py var roed hvert tiende minutt.
-import json as _json_pk, subprocess as _sp_pk, tempfile as _tf_pk
-from datetime import datetime as _dt_pk, timezone as _tz_pk
-sys.path.insert(0, str(ROT / "elo-test" / "scripts"))
-import paneler as _pn_t
-_fx_pk = [{"round": 23, "matches": [
-    {"home": "Rosenborg", "away": "Sandefjord", "date": "2026-10-10", "time": "18:00", "played": False},
-    {"home": "Lillestrøm", "away": "Molde", "date": "2026-10-11", "time": "19:15", "played": False},
-    {"home": "Bodø/Glimt", "away": "Kristiansund", "date": "2026-10-10", "time": "16:00", "played": True}]},
-    {"round": 26, "matches": [{"home": "Rosenborg", "away": "Start", "date": "2026-11-07", "time": "18:00", "played": False}]}]
-with _tf_pk.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as _fh:
-    _json_pk.dump(_fx_pk, _fh, ensure_ascii=False); _fx_sti = _fh.name
-_avsp_pk, _naa_pk = _pn_t.avspark_fra_terminliste(_fx_sti)
-_ms = lambda *a: int(_dt_pk(*a, tzinfo=_tz_pk.utc).timestamp() * 1000)
-sjekk("avsparket regnes av prekick_frys.js: 10.10. 18:00 norsk tid = 16:00 UTC, 7.11. 18:00 = 17:00 UTC (vintertid)",
-      _avsp_pk["Rosenborg|Sandefjord"] == _ms(2026, 10, 10, 16, 0) and _avsp_pk["Rosenborg|Start"] == _ms(2026, 11, 7, 17, 0),
-      str(_avsp_pk))
-sjekk("og klokka kommer fra samme node-kall", abs(_naa_pk - _dt_pk.now(_tz_pk.utc).timestamp() * 1000) < 60000)
-_rader_pk = {
-    "2026|Rosenborg|Sandefjord": {"home": "Rosenborg", "away": "Sandefjord", "H": 0.5},   # pågår, uten resultat
-    "2026|Lillestrøm|Molde": {"home": "Lillestrøm", "away": "Molde", "H": 0.4},          # før avspark
-    "2026|Bodø/Glimt|Kristiansund": {"home": "Bodø/Glimt", "away": "Kristiansund", "H": 0.7, "frosset": True}}
-_naa_kamp = _ms(2026, 10, 10, 16, 42)          # 18:42 norsk tid, mens Rosenborg-Sandefjord pågår
-_sml, _etter, _fros = _pn_t.prekick_til_kontroll(_rader_pk, _avsp_pk, _naa_kamp)
-sjekk("en rad etter avspark uten resultat hoppes over", _etter == ["2026|Rosenborg|Sandefjord"], str(_etter))
-sjekk("en rad før avspark sammenlignes som før", _sml == ["2026|Lillestrøm|Molde"], str(_sml))
-sjekk("en frosset rad sammenlignes ikke her, som før (den har sin egen kontroll)", _fros == ["2026|Bodø/Glimt|Kristiansund"], str(_fros))
-_sml2, _etter2, _ = _pn_t.prekick_til_kontroll(_rader_pk, _avsp_pk, _ms(2026, 10, 10, 15, 59))
-sjekk("ett minutt før avspark sammenlignes raden", "2026|Rosenborg|Sandefjord" in _sml2 and not _etter2, f"{_sml2} {_etter2}")
-_sml3, _etter3, _ = _pn_t.prekick_til_kontroll(_rader_pk, _avsp_pk, _ms(2026, 10, 10, 16, 0))
-sjekk("i avsparksminuttet hoppes den over (>=, som i prekick_frys.js)", _etter3 == ["2026|Rosenborg|Sandefjord"], str(_etter3))
-# Samme deling som oppdaterPrekick() i JS: radene den skriver = de som sammenlignes.
-_js_pk = ("const f=require(process.argv[1]);const d=JSON.parse(process.argv[2]);"
-          "const g={matches:JSON.parse(JSON.stringify(d.rader))};"
-          "const pre=Object.fromEntries(Object.entries(d.rader).map(([k,v])=>[k,{...v}]));"
-          "f.oppdaterPrekick(g,pre,[],d.avspark,d.naa,'NY','alle');"
-          "process.stdout.write(JSON.stringify(Object.keys(g.matches).filter(k=>g.matches[k].stamp==='NY')))")
-_skrevet = _json_pk.loads(_sp_pk.run(["node", "-e", _js_pk, str(ROT / "scripts" / "prekick_frys.js"),
-                                      _json_pk.dumps({"rader": _rader_pk, "avspark": _avsp_pk, "naa": _naa_kamp})],
-                                     capture_output=True, text=True, check=True).stdout)
-sjekk("samme deling som oppdaterPrekick(): radene frysingen skriver, er nøyaktig de som sammenlignes",
-      sorted(_skrevet) == sorted(_sml), f"JS {_skrevet}, kontrollen {_sml}")
-_kp_src = (ROT / "elo-test" / "scripts" / "kontroll_paneler.py").read_text("utf-8")
-sjekk("kontroll_paneler.py deler prekick-radene med paneler.prekick_til_kontroll og avspark_fra_terminliste",
-      "_pn_w.prekick_til_kontroll(" in _kp_src and "_pn_w.avspark_fra_terminliste(" in _kp_src)
-
 print("\n=== Uten sesongautoritet står vakten over ===")
 _l8 = []
 _ut8, _utenfor8, _kode8 = _rd(_ny, _eks, None, log=_l8.append)
@@ -3745,10 +3696,10 @@ sjekk("planlegger/README.md har sjekken tabellkalkulator-pages og hemmeligheten"
       "`tabellkalkulator-pages`" in (ROT / "planlegger" / "README.md").read_text("utf-8")
       and "gh secret set HEALTHCHECK_PAGES" in (ROT / "planlegger" / "README.md").read_text("utf-8"))
 
-print("\n=== Porten for runder av utløsninger: ELO-test og grunnlag (scripts/puljeport.py, 8.10.2026) ===")
-# GitHub holder bare én ventende kjøring per concurrency-gruppe, så den
-# midterste av tre ELO-test-starter i en runde ble avbrutt (78 av 238 siste
-# døgn 7.10.). Porten lar bare den siste i runden bygge, og sier hvorfor.
+print("\n=== Porten for runder av utløsninger: grunnlag (scripts/puljeport.py, 8.10.2026) ===")
+# GitHub holder bare én ventende kjøring per concurrency-gruppe, så en kjøring
+# midt i en runde ble avbrutt. Porten lar bare den siste i runden regne, og
+# sier hvorfor.
 import puljeport as _pj
 def _pj_api(svar):
     def api(sti):
@@ -3762,27 +3713,7 @@ def _pj_api(svar):
 _ekte_pj = _pj.api
 def _kjor(wf, *rader):
     return {f"actions/workflows/{wf}/runs": {"workflow_runs": [dict(id=i, status=st, conclusion=c, created_at=t) for i, st, c, t in rader]}}
-_sov = []
 try:
-    _ingen = {**_kjor("update-data.yml", (1, "completed", "success", "2026-10-07T10:00:30Z")),
-              **_kjor("update-odds.yml", (2, "completed", "success", "2026-10-07T10:00:31Z")),
-              **_kjor("prekick-odds.yml", (3, "completed", "success", "2026-10-07T10:00:32Z"))}
-    _pj.api = _pj_api({**_ingen, **_kjor("elo-test.yml", (101, "in_progress", None, "2026-10-07T10:00:48Z"),
-                                          (102, "in_progress", None, "2026-10-07T10:00:55Z"))})
-    _b, _h = _pj.elo(101, "workflow_run", sov=_sov.append)
-    sjekk("ELO-test: en nyere kjøring finnes: bygg=false, og loggen sier «nyere kjøring» med nummer og tid",
-          _b is False and _h == "bygg=false: nyere kjøring -- ELO-test #102 (startet 10:00:55Z) er nyere og bygger i stedet" and _sov == [20], _h)
-    _b, _h = _pj.elo(102, "workflow_run", sov=lambda s: None)
-    sjekk("den nyeste, ingen utløser kjører: bygg=true", _b is True and "ingen nyere" in _h, _h)
-    _pj.api = _pj_api({**_ingen, **_kjor("update-odds.yml", (2, "in_progress", None, "2026-10-07T10:00:31Z")),
-                       **_kjor("elo-test.yml", (102, "in_progress", None, "2026-10-07T10:00:55Z"))})
-    _b, _h = _pj.elo(102, "workflow_run", sov=lambda s: None)
-    sjekk("en utløser kjører fortsatt: bygg=false, og loggen sier «aktiv utløser» med navnet",
-          _b is False and _h.startswith("bygg=false: aktiv utløser -- «Oppdater odds for kommende kamper» (#2) kjører fortsatt"), _h)
-    _sov.clear()
-    _b, _h = _pj.elo(100, "workflow_dispatch", sov=_sov.append)
-    sjekk("manuelt: bygger alltid, uten å vente", _b is True and _sov == [], _h)
-
     # Grunnlag: en nyere kjøring har "regn (obos)" i kø: obos tas bort.
     _jobb = lambda *j: {"jobs": [dict(name=n, status=st, conclusion=c) for n, st, c in j]}
     _pj.api = _pj_api({**_kjor("grunnlag.yml", (201, "in_progress", None, "t"), (202, "queued", None, "t"), (203, "completed", "cancelled", "t")),
@@ -3819,7 +3750,6 @@ try:
     try:
         _buf = _iou.StringIO()
         with _ctxu.redirect_stdout(_buf):
-            sys.argv = ["puljeport.py", "elo"]; _k1 = _pj.main()
             sys.argv = ["puljeport.py", "grunnlag"]; _k2 = _pj.main()
     finally:
         _pj.time.sleep = _ekte_sov
@@ -3830,33 +3760,14 @@ try:
             else:
                 _osu.environ[_k] = _v
     _o = _ut.read_text("utf-8")
-    sjekk("GitHub svarer ikke: ELO-test bygger og grunnlag regner alle, og loggen sier hvorfor",
-          _k1 == 0 and _k2 == 0 and _o == 'bygg=true\nligaer=["eliteserien", "obos"]\n' and "GitHub svarte ikke" in _buf.getvalue(), _o + _buf.getvalue())
+    sjekk("GitHub svarer ikke: grunnlag regner alle, og loggen sier hvorfor",
+          _k2 == 0 and _o == 'ligaer=["eliteserien", "obos"]\n' and "GitHub svarte ikke" in _buf.getvalue(), _o + _buf.getvalue())
 finally:
     _pj.api = _ekte_pj
 
-_ew = (ROT / ".github" / "workflows" / "elo-test.yml").read_text("utf-8")
-_ewk = "\n".join(l for l in _ew.splitlines() if not l.strip().startswith("#"))
 _gw = (ROT / ".github" / "workflows" / "grunnlag.yml").read_text("utf-8")
 _gwk = "\n".join(l for l in _gw.splitlines() if not l.strip().startswith("#"))
-sjekk("elo-test.yml: ingen kø på hele workflowen, byggejobben trenger porten og står i kø elo-test-bygg uten å avbryte",
-      "\nconcurrency:" not in _ewk and "    needs: port\n    if: needs.port.outputs.bygg == 'true'\n" in _ewk
-      and "    concurrency:\n      group: elo-test-bygg" in _ewk and "cancel-in-progress: false" in _ewk and "cancel-in-progress: true" not in _ewk)
-sjekk("elo-test.yml: porten kjører puljeport.py elo med GITHUB_TOKEN og har actions: read; ingen gammel betingelse på utløserens utfall",
-      "  port:\n" in _ewk and "python3 scripts/puljeport.py elo" in _ewk and "GITHUB_TOKEN: ${{ github.token }}" in _ewk
-      and "actions: read" in _ewk and "workflow_run.conclusion" not in _ewk and _ewk.index("  bygg:") < _ewk.index("  port:"))
-# ELO-testsiden løs (17.10.2026): bare modellen og prognoseloggen ut sesongen.
-_fp = (ROT / "tests" / "for_push.sh").read_text("utf-8")
-_fpk = "\n".join(l for l in _fp.splitlines() if not l.strip().startswith("#"))
-sjekk("ELO løs: for_push.sh kjører verken kontroll.py eller kontroll_paneler.py (de leser dagens data)",
-      "elo-test/scripts/kontroll.py" not in _fpk and "kontroll_paneler" not in _fpk
-      and 'steg "regression.js --bare del"' in _fpk and 'steg "hele regresjonen"' in _fpk, _fpk[-400:])
-sjekk("ELO løs: grunnlag.yml regner bare de to ligaene, utløses ikke av ELO-byggingen og ikke av elo-test/index.html",
-      'sider="eliteserien obos"' in _gwk and "elo-test" not in _gwk.split("jobs:")[0] and '"ELO-test: bygg modellen"' not in _gwk
-      and "elo-test/index.html" not in _gwk, _gwk[:600])
-sjekk("ELO løs: elo-test.yml har ingen panelsteg, og kontroll.py står før lagringen av modellen og prognoseloggen",
-      not any(x in _ewk for x in ("snapshot_probs", "accuracy_log", "paneler.py", "kontroll_paneler", "Lagre panelene"))
-      and _ewk.index("python3 elo-test/scripts/kontroll.py") < _ewk.index("git add elo-test/emodell/model.json"))
+sjekk("grunnlag.yml regner bare de to ligaene", 'sider="eliteserien obos"' in _gwk, _gwk[:600])
 sjekk("grunnlag.yml: steget puljen etter porten, ligaene fra det, med actions: read",
       "python3 scripts/grunnlag_port.py $sider" in _gwk and "LIGAER: ${{ steps.port.outputs.ligaer }}" in _gwk
       and "python3 scripts/puljeport.py grunnlag" in _gwk and "ligaer: ${{ steps.puljen.outputs.ligaer }}" in _gwk
@@ -3885,38 +3796,36 @@ sjekk("feiler begge forsøkene: feilen kastes (kjøringen blir rød som før); g
       _cr.get("feil") == "TimeoutError" and _cr.get("b") == "rett", str(_cr))
 sjekk("90 sekunder i hvert forsøk", _cr.get("kall") == [90000] * 5, str(_cr.get("kall")))
 _sp = (ROT / "scripts" / "snapshot_probs.js").read_text("utf-8")
-_kp = (ROT / "elo-test" / "scripts" / "kontroll_paneler.py").read_text("utf-8")
-sjekk("snapshot_probs.js og kontroll_paneler.py starter Chrome med startChrome, ikke puppeteer.launch",
-      "await startChrome(puppeteer, {executablePath: chromePath()" in _sp and "puppeteer.launch(" not in _sp
-      and "const {startChrome} = require(process.argv[3]);" in _kp and "await startChrome(puppeteer, {executablePath: process.argv[2]" in _kp
-      and 'str(ROT / "scripts" / "chrome_start.js")' in _kp and "puppeteer.launch(" not in _kp)
+sjekk("snapshot_probs.js starter Chrome med startChrome, ikke puppeteer.launch",
+      "await startChrome(puppeteer, {executablePath: chromePath()" in _sp and "puppeteer.launch(" not in _sp)
 
 print("\n=== Runnerne er låst, og actions kjører på Node 24 (8.10.2026) ===")
 # GitHub bytter ubuntu-latest til Ubuntu 26 fra 19.10.2026. Alle jobbene står
 # på ubuntu-24.04, så ingenting endrer seg midt i en runde; checkout,
-# setup-python og setup-node er versjonene laget for Node 24 (v7).
+# setup-python og setup-node er versjonene laget for Node 24 (v7). Gulvene
+# (17 jobber, 26 steder) er tallene etter at elo-test.yml ble fjernet 10.11.2026.
 import re as _re_r
 _wfs = sorted((ROT / ".github" / "workflows").glob("*.yml"))
 _runs = [(f.name, l.strip()) for f in _wfs for l in f.read_text("utf-8").splitlines() if l.strip().startswith("runs-on:")]
 sjekk(f"alle {len(_runs)} jobbene i {len(_wfs)} workflows kjører på ubuntu-24.04, ingen på ubuntu-latest",
-      len(_runs) >= 19 and all(_re_r.match(r"runs-on: ubuntu-24\.04(\s|$)", l) for _, l in _runs),
+      len(_runs) >= 17 and all(_re_r.match(r"runs-on: ubuntu-24\.04(\s|$)", l) for _, l in _runs),
       str([x for x in _runs if not x[1].startswith("runs-on: ubuntu-24.04")][:4]))
 _bruk = [(f.name, m) for f in _wfs for m in _re_r.findall(r"uses: (actions/(?:checkout|setup-python|setup-node)@\S+)", f.read_text("utf-8"))]
 sjekk(f"checkout, setup-python og setup-node er v7 (Node 24) alle {len(_bruk)} steder",
-      len(_bruk) >= 29 and all(m.endswith("@v7") for _, m in _bruk), str([x for x in _bruk if not x[1].endswith("@v7")][:4]))
+      len(_bruk) >= 26 and all(m.endswith("@v7") for _, m in _bruk), str([x for x in _bruk if not x[1].endswith("@v7")][:4]))
 
 print("\n=== Kort eller full kontroll før push (tests/for_push_valg.py, 4.10.2026) ===")
 # Kort kontroll bare når full for_push var grønn på samme kode før rebasen og
 # origin bare endret filer på den eksplisitte listen over genererte filer.
 sys.path.insert(0, str(ROT / "tests"))
 import for_push_valg as _fpv
-_gen = ["obos/data/grunnlag.json", "elo-test/emodell/lastmatch.json", "data/hentelogg/2026-10/x.jsonl", "data/highlightly-bruk/2026-10-04/1.json"]
-sjekk("listen: grunnlag, lastmatch, panelfilene og logg-/tellermappene er genererte",
-      all(_fpv.generert(f) for f in _gen + ["elo-test/emodell/prekick.json", "data/oddspapi-bruk/2026-10/x.json"]))
+_gen = ["obos/data/grunnlag.json", "eliteserien/data/lastmatch.json", "data/hentelogg/2026-10/x.jsonl", "data/highlightly-bruk/2026-10-04/1.json"]
+sjekk("listen: grunnlag, lastmatch og logg-/tellermappene er genererte",
+      all(_fpv.generert(f) for f in _gen + ["data/oddspapi-bruk/2026-10/x.json"]))
 sjekk("listen: matches.json, fixtures.json, prekick.json, odds, kode og nesten-like stier er ikke på den (ingen mønstre)",
       not any(_fpv.generert(f) for f in ["obos/data/matches.json", "eliteserien/data/fixtures.json", "obos/data/prekick.json",
               "obos/data/odds_upcoming.json", "scripts/update_data.py", "eliteserien/index.html", "data/hentelogg",
-              "eliteserien/data/grunnlag.json.bak", "x/eliteserien/data/grunnlag.json", "elo-test/emodell/model.json"]))
+              "eliteserien/data/grunnlag.json.bak", "x/eliteserien/data/grunnlag.json", "eliteserien/data/model.json"]))
 _B = _fpv.beslutt
 sjekk("bare genererte filer fra origin og ingen egne endringer: kort", _B(True, True, True, _gen[:2], _gen)[0] == "kort")
 sjekk("ingenting endret siden den grønne kjøringen: kort", _B(True, True, True, [], [])[0] == "kort")
@@ -5568,10 +5477,10 @@ _TI12 = {t: i for i, t in enumerate(_lag12)}
 _pos12 = _bz12.final_positions(*_bz12.standings(_m12, _TI12, len(_lag12)), _lag12, _m12)
 sjekk("backtest_zones.final_positions: Viking 1, Bodø/Glimt 2", (_pos12[_TI12["Viking"]], _pos12[_TI12["Bodø/Glimt"]]) == (1, 2), str((_pos12[_TI12["Viking"]], _pos12[_TI12["Bodø/Glimt"]])))
 
-# Samme regel på sidene: rangerTabell() er lik i eliteserien, obos og elo-test, og gir samme rekkefølge som Python.
+# Samme regel på sidene: rangerTabell() er lik i eliteserien og obos, og gir samme rekkefølge som Python.
 import re as _re12
 _fn12 = {}
-for _side12 in ("eliteserien/index.html", "obos/index.html", "elo-test/index.html"):
+for _side12 in ("eliteserien/index.html", "obos/index.html"):
     _src12 = (ROT / _side12).read_text("utf-8")
     _m = _re12.search(r"\nfunction rangerTabell\(rows, kamper, navn\)\{.*?\n\}\n", _src12, _re12.S)
     _fn12[_side12] = _m.group(0) if _m else None

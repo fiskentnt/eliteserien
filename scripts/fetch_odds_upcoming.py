@@ -156,7 +156,7 @@ def en_rad_per_kamp(matches, datoer, log):
     7.11.2026 ga The Odds API Kristiansund-Vålerenga to ganger. Kampen var
     flyttet fra 7.11. til 9.11., og én bookmaker sto fortsatt på den gamle
     datoen. Alt som leser odds_upcoming.json slår opp kampen på lagnavnene og
-    tar den siste raden (siden, ELO-testen, prekick.json og odds_sources). Det gikk
+    tar den siste raden (siden, prekick.json og odds_sources). Det gikk
     bra fordi svaret er sortert etter avspark, så den nye datoen kom sist. En
     kamp flyttet til TIDLIGERE gir den gamle raden sist, og da ville siden
     brukt den. ELO-testens kontroll var rød hele dagen, og modellen ble ikke

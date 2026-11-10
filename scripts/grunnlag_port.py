@@ -10,17 +10,13 @@ gjennom bare når noe av det er endret siden filen ble regnet:
   <side>/index.html          koden, med Worker-koden og konstantene
   modellen                   produksjonen: data/model.json, lagstyrkene
                              (teams, mu, H, att, con, ha, hc) uten fitted_at
-                             og meta; testsiden: emodell/model.json, alt
-                             unntatt tidsstempelet (built) og noten
+                             og meta
   data/matches.json          resultatene
   data/fixtures.json         kampene som gjenstår
   data/justeringer.json      poengjusteringene fra NFF (listen)
   data/odds_upcoming.json    prisene (hjemme, borte, H, D, A per kamp), uten
                              tidsstempler og kilde
   scripts/lag_grunnlag.js    skriptet som regner filen
-
-Testsiden (elo-test) leser kampdataene og oddsen fra eliteserien/data og
-har filen i elo-test/emodell.
 
 Hashen av dette (inndata) lagres i filen av lag_grunnlag.js. Porten er bare
 en billig forhåndssjekk uten nettleser. Siden bruker filen bare når SITT
@@ -56,8 +52,6 @@ SIDER = {
                     "modell": "eliteserien/data/model.json", "felt": PROD_FELT, "ut": "eliteserien/data"},
     "obos": {"side": "obos/index.html", "data": "obos/data",
              "modell": "obos/data/model.json", "felt": PROD_FELT, "ut": "obos/data"},
-    "elo-test": {"side": "elo-test/index.html", "data": "eliteserien/data",
-                 "modell": "elo-test/emodell/model.json", "felt": None, "ut": "elo-test/emodell"},
 }
 UTEN = ("built", "note", "fitted_at")
 

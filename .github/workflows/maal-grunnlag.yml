@@ -11,7 +11,7 @@ on:
         default: "100000"
       sider:
         description: "Hvilke sider (mellomrom mellom)"
-        default: "eliteserien obos elo-test"
+        default: "eliteserien obos"
 
 permissions:
   contents: read
@@ -38,4 +38,4 @@ jobs:
           nproc
           CHROME_PATH="$(command -v google-chrome || command -v chromium || true)" \
           NODE_PATH="$RUNNER_TEMP/pp/node_modules" \
-            node scripts/maal_grunnlag.js ${{ inputs.sesonger || '100000' }} ${{ inputs.sider || 'eliteserien obos elo-test' }}
+            node scripts/maal_grunnlag.js ${{ inputs.sesonger || '100000' }} ${{ inputs.sider || 'eliteserien obos' }}

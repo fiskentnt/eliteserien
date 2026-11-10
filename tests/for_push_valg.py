@@ -24,11 +24,9 @@ import sys
 
 # Filer automatjobbene lager av siden og dataene, og som testene ikke bygger på.
 GENERERTE = {
-    "eliteserien/data/grunnlag.json", "obos/data/grunnlag.json", "elo-test/emodell/grunnlag.json",
-    "eliteserien/data/lastmatch.json", "obos/data/lastmatch.json", "elo-test/emodell/lastmatch.json",
-    "eliteserien/data/keymatch.json", "obos/data/keymatch.json", "elo-test/emodell/keymatch.json",
-    # Panelfilene på testsiden (elo-test.yml).
-    "elo-test/emodell/prekick.json", "elo-test/emodell/accuracy.json",
+    "eliteserien/data/grunnlag.json", "obos/data/grunnlag.json",
+    "eliteserien/data/lastmatch.json", "obos/data/lastmatch.json",
+    "eliteserien/data/keymatch.json", "obos/data/keymatch.json",
 }
 GENERERTE_MAPPER = ("data/hentelogg/", "data/highlightly-bruk/", "data/oddspapi-bruk/")
 

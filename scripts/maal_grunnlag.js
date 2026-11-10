@@ -13,7 +13,7 @@
  * GITHUB_STEP_SUMMARY.
  *
  *   NODE_PATH=<puppeteer-core> node scripts/maal_grunnlag.js [N] [side ...]
- *   standard: N = 100000, sider eliteserien obos elo-test
+ *   standard: N = 100000, sider eliteserien obos
  */
 const http = require('http');
 const fs = require('fs');
@@ -24,7 +24,7 @@ const ROOT = path.join(__dirname, '..');
 const ARGS = process.argv.slice(2);
 const N = +(ARGS.find(a => /^\d+$/.test(a)) || 100000);
 const SIDER = ARGS.filter(a => !/^\d+$/.test(a));
-if (!SIDER.length) SIDER.push('eliteserien', 'obos', 'elo-test');
+if (!SIDER.length) SIDER.push('eliteserien', 'obos');
 const MIME = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.json': 'application/json', '.css': 'text/css', '.svg': 'image/svg+xml', '.png': 'image/png'};
 
 function chromePath() {

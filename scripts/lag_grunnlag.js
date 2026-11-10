@@ -31,9 +31,8 @@
  * filene urørt, og kjøringen avslutter med 1.
  *
  *   NODE_PATH=<puppeteer-core> node scripts/lag_grunnlag.js <side> [--ut <mappe>] [--inndata <hash>]
- *   side      eliteserien | obos | elo-test (sidens mappe)
- *   --ut      mappen filen skrives til (standard <side>/data; testsiden:
- *             elo-test/emodell)
+ *   side      eliteserien | obos (sidens mappe)
+ *   --ut      mappen filen skrives til (standard <side>/data)
  *   --inndata sha256 av inndatafilene fra scripts/grunnlag_port.py, lagres i
  *             filen så porten kan se om noe er endret siden
  *   --n       BARE for testene: annen N enn sidens GRUNNLAG_N. Avtrykket
@@ -50,8 +49,7 @@
  * (bannerteksten), med når filen ble regnet og antall sesonger. Chrome henter, Python lager sidene: scripts/lag_sider.py
  * skriver de statiske delene av sidene fra tekster.json, uten Chrome. Ingen
  * tall regnes utenfor siden. tekster.json teller ikke i grunnlag-porten.
- * Feiler dette, skrives grunnlagsfilen likevel, med en advarsel. Testsiden
- * (elo-test) har ingen statiske sider og får ingen tekster.json.
+ * Feiler dette, skrives grunnlagsfilen likevel, med en advarsel.
  */
 const http = require('http');
 const fs = require('fs');

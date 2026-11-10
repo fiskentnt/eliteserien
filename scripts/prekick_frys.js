@@ -29,8 +29,7 @@
  * "Odds nær avspark" kan skrive den (målt i CI: under ti sekunder fra
  * snapshot til push). Uten den kunne begge skrive samme rad rundt grensen,
  * og da ville datajobben få rebasekonflikt og miste commiten sin.
- *   'alle'        som før: alle uspilte rader før avspark (testsiden, der
- *                 elo-test.yml er eneste skriver)
+ *   'alle'        som før: alle uspilte rader før avspark
  *   'uten-vindu'  datajobbene: ikke rader med avspark innen 80 minutter
  *   'bare-vindu'  prekick-odds.yml: bare rader i vinduet, og ingen frysing
  *                 (den gjør datajobben når resultatet kommer)

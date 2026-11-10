@@ -10,9 +10,6 @@ name: "Grunnlag: tabellen og svarene regnet på forhånd"
 # jobbene som skriver det siden regner med, ved push av sidene eller
 # skriptet, og manuelt.
 #
-# Testsiden (elo-test/emodell/grunnlag.json) regnes ikke lenger (17.10.2026,
-# ELO-testsiden løs): filen og banneret står som de var.
-#
 # Porten (scripts/grunnlag_port.py) ser om inndataene er endret siden filen
 # ble regnet. Nesten alle kjøringene stopper der, etter noen sekunder, uten
 # nettleser. Fast N på én maskin per liga, i kø per liga: bare den nyeste
@@ -67,9 +64,7 @@ jobs:
         with:
           ref: main
 
-      # Bare de to ligaene. Testsidens grunnlagsfil regnes ikke lenger
-      # (17.10.2026, ELO-testsiden løs: bare modellen og prognoseloggen ut
-      # sesongen), og «ELO-test: bygg modellen» utløser ikke denne.
+      # Bare de to ligaene.
       - name: Er inndataene endret siden filen ble regnet?
         id: port
         env:

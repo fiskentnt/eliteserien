@@ -12,12 +12,6 @@
 #                                    med CLS under 0,1 (gruppen cls, 24.10.2026)
 # Til slutt: commitene som pushes (git log origin/main..HEAD).
 #
-# ELO-TESTSIDEN ER LØS (17.10.2026): elo-test/scripts/kontroll.py og
-# kontroll_paneler.py er ikke med lenger. Begge leser dagens data (modellen,
-# panelene og kampene), og 17.10. stoppet de pushen fordi ELO-modellen ikke var
-# bygget på nytt etter HamKam-Glimt. kontroll.py kjører fortsatt i
-# elo-test.yml, før modellen og prognoseloggen lagres.
-#
 # KORT KONTROLL (4.10.2026): failsafe, regression.js --bare del og --bare cls
 # (24.10.2026: de genererte filene er også den statiske HTML-en, så en side
 # som hopper stopper pushen her også), bare når full for_push var grønn på samme kode

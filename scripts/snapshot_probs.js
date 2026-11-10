@@ -42,11 +42,10 @@ const ROOT = path.join(__dirname, '..');
 //   node scripts/snapshot_probs.js obos       -- OBOS-ligaen
 //
 // Side og utmappe kan velges, med dagens verdier som standard:
-//   --side <mappe>     siden som åpnes (standard: ligaen), f.eks. elo-test
+//   --side <mappe>     siden som åpnes (standard: ligaen)
 //   --ut <mappe>       hvor filene skrives (standard: <liga>/data)
 //   --uten-historikk   ikke skriv history.json
 // Terminlisten (frysregelen) leses alltid fra <liga>/data/fixtures.json.
-//   node scripts/snapshot_probs.js eliteserien --side elo-test --ut elo-test/emodell --uten-historikk
 //
 // Prognosen før avspark (prekick.json) har to skrivere, delt etter tid (se
 // scripts/prekick_frys.js):
@@ -63,8 +62,7 @@ const ROOT = path.join(__dirname, '..');
 //                         tidspunktet blir stempelet. Standard: nå.
 //   --dry-run             (bare med --bare-prekick) skriv ingenting, vis hva
 //                         som ville blitt endret
-// Uten noen av dem: alle uspilte rader før avspark (testsiden, der
-// elo-test.yml er eneste skriver).
+// Uten noen av dem: alle uspilte rader før avspark.
 const ARGS = process.argv.slice(2);
 const flagg = navn => { const i = ARGS.indexOf(navn); return i >= 0 ? ARGS[i + 1] : null; };
 const LEAGUE_DIR = ARGS.filter((a, i) => !a.startsWith('--') && !(i > 0 && ['--side', '--ut', '--oddstid'].includes(ARGS[i - 1])))[0] || 'eliteserien';
@@ -122,13 +120,6 @@ function chromePath() {
     page.on('pageerror', e => errs.push(e.message));
     await page.goto(`http://127.0.0.1:${port}/${SIDE}/`, {waitUntil: 'domcontentloaded'});
     await page.waitForFunction('typeof lastMCFinal!=="undefined" && lastMCFinal===true && lastMC', {timeout: 180000});
-    // Testsiden (/elo-test/) regner "forrige kamp" med ratingen etter det
-    // alternative resultatet, og trenger da sluttoddsen for spilte kamper
-    // (ELO_ODDS_SPILT, hentes ved siden av i boot()). Uten den ville
-    // lastmatch.json blitt regnet med fast rating. Produksjonssidene har ikke
-    // variabelen, og da venter ikke dette. Lastes den aldri, feiler kjøringen
-    // heller enn å skrive feil tall.
-    await page.waitForFunction('typeof ELO_ODDS_SPILT === "undefined" || ELO_ODDS_SPILT !== null', {timeout: 60000});
     const snap = BARE_PREKICK ? null : await page.evaluate(() => {
       if (matches.some(m => m.sim || (m.hg != null && !m.played && m.sim))) throw new Error('Siden har simulerte resultater');
       const teams = {};

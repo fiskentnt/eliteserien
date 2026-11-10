@@ -28,7 +28,7 @@ Poengtrekk fra NFF (justeringer.json) ligger i poengene i (1), men ikke i
 minitabellen: den teller bare kampene.
 
 Samme regel på sidene: rangerTabell() i eliteserien/index.html (og dermed
-obos/index.html) og elo-test/index.html. Kildetestene sjekker at de gir samme
+obos/index.html). Kildetestene sjekker at de gir samme
 rekkefølge som denne.
 """
 

@@ -32,20 +32,20 @@ const MIME = {'.html': 'text/html; charset=utf-8', '.js': 'text/javascript', '.j
 
 // Grunnlagsfilen (<liga>/data/grunnlag.json) svarer 404 som standard, så
 // testene prøver sidens egen regning, som før filen fantes (den brukes fortsatt
-// med et scenario). Testsidens fil ligger i elo-test/emodell. Gruppen
+// med et scenario). Gruppen
 // «Grunnlagsfilen på siden» slår den på:
 //   {}                          filen fra repoet
 //   {innhold: {<liga>: tekst}}  dette innholdet i stedet
 //   {forsinkelse: ms}           svaret kommer så mye senere
 let GRUNNLAG_MODUS = null;
 // Frosne data (tests/data/README.md): lokalt svarer testserveren datafilene
-// sidene henter (/<liga>/data/*.json og /elo-test/emodell/*.json) fra
+// sidene henter (/<liga>/data/*.json) fra
 // øyeblikksbildet i tests/data/<DATA_DAG>/, ikke fra dagens filer, så testene
 // som er skrevet mot en bestemt tabellstilling, gir samme svar i morgen.
 // Filer som ikke er med i bildet, svarer 404. null: dagens filer (gruppen
 // «Dagens data», og alltid med --live).
 let DATA_DAG = '2026-10-01';
-const DATA_RE = /^\/(?:(?:eliteserien|obos)\/data|elo-test\/emodell)\/[^/]+\.json$/;
+const DATA_RE = /^\/(?:eliteserien|obos)\/data\/[^/]+\.json$/;
 // Stien til en datafil slik siden får den: i bildet, eller i repoet uten bilde.
 function dataFil(...deler) {
   return DATA_DAG ? path.join(ROOT, 'tests', 'data', DATA_DAG, ...deler) : path.join(ROOT, ...deler);
@@ -106,7 +106,7 @@ function serve(rot = ROOT) {
     const f = rot === ROOT && DATA_DAG && DATA_RE.test(p) ? path.join(ROOT, 'tests', 'data', DATA_DAG, p) : path.join(rot, p);
     const sm = SESONGSTART && /^\/([^/]+)\/data\/(matches|fixtures)\.json$/.exec(p);
     if (sm) { res.writeHead(200, {'Content-Type': 'application/json'}); res.end(sesongstartData(rot, sm[1], sm[2])); return; }
-    const gm = /^\/([^/]+)\/(?:data|emodell)\/grunnlag\.json$/.exec(p);
+    const gm = /^\/([^/]+)\/data\/grunnlag\.json$/.exec(p);
     if (gm) {
       const modus = GRUNNLAG_MODUS;
       const svar = () => {
@@ -253,7 +253,7 @@ async function main() {
   const grunnlagFilFor = async liga => {
     if (grunnlagFilMinne[liga]) return grunnlagFilMinne[liga];
     const {execFileSync, spawnSync} = require('child_process'), os = require('os');
-    const utMappe = liga === 'elo-test' ? 'elo-test/emodell' : `${liga}/data`;
+    const utMappe = `${liga}/data`;
     const forrige = GRUNNLAG_MODUS;
     let st;
     GRUNNLAG_MODUS = {};
@@ -317,7 +317,7 @@ async function main() {
     ];
     const data = c => { const kilde = {n: c.n, treff: 0.5, logloss: 1.01};
       return {n: c.n, fra: c.fra, til: c.til, kilder: c.n ? {side: kilde, modell: kilde, odds: kilde} : {}, kalibrering: []}; };
-    for (const sti of ['/eliteserien/', '/obos/', '/elo-test/']) {
+    for (const sti of ['/eliteserien/', '/obos/']) {
       const feil0 = errors.length;
       const pg = await open(1400, 900, base.replace('/eliteserien/', sti));
       const r = await pg.evaluate(t => t.map(c => {
@@ -339,12 +339,11 @@ async function main() {
       });
       await pg.close();
       const side = sti.replace(/\//g, '');
-      const nyForm = sti !== '/elo-test/';
       tilfeller.forEach((c, i) => check(`${side}: ${c.navn}: "${c.ventet}"`,
         r[i].tekst === c.ventet && !r[i].accuracyTall && !r[i].utfallet
-          && (nyForm ? r[i].tabeller === 0 : (c.n < 20 ? r[i].tabeller === 0 : r[i].kamper.length === 3 && r[i].kamper.every(k => k === String(c.n)))),
+          && r[i].tabeller === 0,
         JSON.stringify(r[i])));
-      if (nyForm) {
+      {
         check(`${side}: "Vis detaljer" har bare Hvordan testen er gjort, Med og uten odds, Sluttodds og Begrensninger, og lenken "Full dokumentasjon av testene" nederst`,
           !!vd && vd.h3.join('|') === 'Hvordan testen er gjort|Med og uten odds|Sluttodds|Begrensninger' && vd.h4 === 0 && vd.tabeller === 0
             && JSON.stringify(vd.lenke) === JSON.stringify(['Full dokumentasjon av testene', 'modellsjekk/']), JSON.stringify(vd));
@@ -484,7 +483,7 @@ async function main() {
       await pg.close();
       return r;
     };
-    for (const side of ['eliteserien', 'obos', 'elo-test']) {
+    for (const side of ['eliteserien', 'obos']) {
       const pc = await prov(side), tlf = await prov(side, {telefon: true});
       check(`${side}: én delingsknapp nederst ("Del scenario"), og "Del …" finnes ikke`,
         JSON.stringify(pc.knapper) === '["Del scenario"]' && !pc.finnesDelPrikker && JSON.stringify(tlf.knapper) === '["Del scenario"]', JSON.stringify([pc.knapper, tlf.knapper]));
@@ -511,7 +510,7 @@ async function main() {
     if (live) { console.log('  (hoppes over med --live: trenger den lokale serveren)'); return; }
     SESONGSTART = true;
     try {
-      for (const side of ['eliteserien', 'obos', 'elo-test']) {
+      for (const side of ['eliteserien', 'obos']) {
         const feil0 = errors.length, url = base.replace('/eliteserien/', `/${side}/`);
         const pg = await browser.newPage();
         pg.on('pageerror', e => errors.push(`${url} (uten spilte kamper): ${e.message}`));
@@ -884,7 +883,6 @@ async function main() {
     for (const [sti, korte, fulle] of [
       ['/eliteserien/', ['S08', 'Glimt', 'FFK', 'KBK'], ['Sandefjord']],
       ['/obos/', ['KIL', 'Godset', 'FKH'], ['Strømmen']],
-      ['/elo-test/', ['S08', 'Glimt', 'FFK', 'KBK'], ['Sandefjord']],
     ]) {
       const liga = sti.slice(1, -1);
       const pg = await open(800, 900, base.replace('/eliteserien/', sti));
@@ -1086,7 +1084,7 @@ async function main() {
       }
       return {feil, uavgjort, n: lagene.length};
     };
-    for (const [sti, lag, alle] of [['/eliteserien/', 'Vålerenga', true], ['/obos/', 'Moss', true], ['/elo-test/', 'Vålerenga', false]]) {
+    for (const [sti, lag, alle] of [['/eliteserien/', 'Vålerenga', true], ['/obos/', 'Moss', true]]) {
       const liga = sti.slice(1, -1);
       const pg = await open(1400, 900, base.replace('/eliteserien/', sti));
       // Grunnlagsfilen behandles etter at siden har regnet selv. Tallene (og
@@ -1106,7 +1104,7 @@ async function main() {
         vu.f.length === 0 && u.boks.includes(`mot ${k.forrige}.`), `${u.boks} | ${u.svar} | kortet ${u.kort} | ${vu.f.join('; ')}`);
       // Eliteserien og OBOS: svaret slutter med at alternativene er et anslag.
       // Testsiden har sin egen setning ("Ratingen er regnet om ...").
-      if (liga !== 'elo-test') check(`${liga}: svaret sier "Hva de andre resultatene ville gitt, er et anslag."`,
+      check(`${liga}: svaret sier "Hva de andre resultatene ville gitt, er et anslag."`,
         u.helt.trim().endsWith('Hva de andre resultatene ville gitt, er et anslag.') && !u.helt.includes('Lagstyrkene holdes'), u.helt.slice(-160));
       // 2) Runden simulert, laget vinner 4-0.
       await pg.evaluate(t => {
@@ -1394,7 +1392,7 @@ async function main() {
       }
       return {feil, tre, sjekket, n: lagene.length};
     };
-    for (const [sti, lag, alle] of [['/eliteserien/', 'Vålerenga', true], ['/obos/', 'Moss', true], ['/elo-test/', 'Vålerenga', false]]) {
+    for (const [sti, lag, alle] of [['/eliteserien/', 'Vålerenga', true], ['/obos/', 'Moss', true]]) {
       const liga = sti.slice(1, -1), url = base.replace('/eliteserien/', sti);
       const pg = await open(1400, 1000, url + '#team=' + encodeURIComponent(lag));
       await settle(pg);
@@ -2368,8 +2366,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
   //   node tests/regression.js --bare nyedata
   const nyedata = async () => {
     setGroup('Nye data mens siden står åpen: ferske filer, linja og omlastingen');
-    for (const [sti, liga, mappe, lag] of [['/obos/', 'OBOS', 'obos', 'Moss'], ['/eliteserien/', 'Eliteserien', 'eliteserien', 'Molde'],
-                                           ['/elo-test/', 'elo-test', 'eliteserien', 'Molde']]) {
+    for (const [sti, liga, mappe, lag] of [['/obos/', 'OBOS', 'obos', 'Moss'], ['/eliteserien/', 'Eliteserien', 'eliteserien', 'Molde']]) {
       const url = base.replace('/eliteserien/', sti);
       // De nye dataene: de to første uspilte kampene er spilt, 2-0 og 1-3.
       const M = JSON.parse(fs.readFileSync(dataFil(mappe, 'data', 'matches.json'), 'utf8'));
@@ -2400,7 +2397,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           return {n: d.length, uten: d.filter(x => x.cache !== 'no-cache' && x.cache !== 'no-store').map(x => x.u),
                   sporet: Object.keys(DATA_SPORET)}; });
         check(`${liga}: alle ${a.n} datafilene hentes uten gammel kopi (cache: 'no-cache'), og kampene og terminlisten huskes (${a.sporet.join(', ')})`,
-          a.n >= 8 && !a.uten.length && a.sporet.length === 2 && a.sporet.every(u => u.startsWith(sti === '/elo-test/' ? '../eliteserien/data/' : 'data/')), JSON.stringify(a));
+          a.n >= 8 && !a.uten.length && a.sporet.length === 2 && a.sporet.every(u => u.startsWith('data/')), JSON.stringify(a));
         // Ny publisering med samme innhold (ny ETag): innholdet hentes og sammenlignes, ingen linje.
         DATA_ETAG_SALT = 'ny publisering';
         let r = await pg.evaluate(async () => { sisteDataSjekk = 0; window.__hentet = []; const i = await sjekkNyeData(false);
@@ -4087,9 +4084,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     check('lagret rad målt mot sjansen ved avspark gjelder; en rad målt mot history.json gjelder ikke da', av.lagret && !av.lagretTabell, JSON.stringify(av));
     check('uten sjanser i prekick-raden: history.json som reserve', av.utenSjanser === 'tabell', JSON.stringify(av));
     await pg.close();
-    // Eliteserien henter også history.json; testsiden har ingen (historyFile
-    // null) og bruker forventningen.
-    for (const [url, navn, fil] of [[base, 'Eliteserien', 'data/history.json'], [base.replace('/eliteserien/', '/elo-test/'), 'Testsiden', null]]) {
+    // Eliteserien henter også history.json.
+    for (const [url, navn, fil] of [[base, 'Eliteserien', 'data/history.json']]) {
       const p2 = await open(1400, 900, url);
       await settle(p2);
       const x = await p2.evaluate(async () => {
@@ -4115,7 +4111,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
   // sjekk feilet" i rødt på alle tre sidene.
   const stempel = async () => {
     setGroup('Stempelet: en feilet sjekk vises aldri for besøkende');
-    for (const side of ['eliteserien', 'obos', 'elo-test']) {
+    for (const side of ['eliteserien', 'obos']) {
       const url = base.replace('/eliteserien/', `/${side}/`);
       for (const ok of [false, true]) {
         const status = {last_checked: '2026-10-10T16:00:29+00:00', ok,
@@ -4153,10 +4149,6 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
   //       og hver åpne sone («Heie på», «Hvilke kamper betyr mest»), med svar
   //       fra filen; (c) «Hva betydde forrige kamp»: de tre utfallene vektet,
   //       mot samme stilling med kampen åpen (regnet på siden, 100 000).
-  // Ikke på testsiden ut sesongen: den er løs (17.10.) og har den gamle
-  // koden. Når den får punkt 11 og 12, tas den med igjen uten (c): der regnes
-  // ratingen om for hvert alternativ (kontroll W), så de tre tallene vektet
-  // gir ikke tallet med kampen åpen (side !== 'elo-test' under).
   // Grensen er 3 standardfeil per tall (uavhengige trekk; frøet er felles, så
   // den er romslig). Og innbyrdes oppgjør i simuleringen: to lag helt likt
   // rangeres etter kampene mellom dem, ikke ved loddtrekning.
@@ -4234,7 +4226,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           const utenIB = await runZoneTasks(lik, [{id: 'base', idx: -1, score: null}], null, 'samsvar-ib2');
           ut.ib = {med: medIB.base.prob, uten: utenIB.base.prob};
           return ut;
-        }, side !== 'elo-test');
+        }, true);
         const verst = rader => rader.reduce((v, x) => Math.abs(x.bom) / x.se > Math.abs(v.bom) / v.se ? x : v, {bom: 0, se: 1});
         const vis = (rader, navn) => { const v = verst(rader), u = rader.filter(x => Math.abs(x.bom) > 3 * x.se);
           return [u.length === 0, `${navn}: ${rader.length} tall, største ${(100 * v.bom).toFixed(2)} pp (${(Math.abs(v.bom) / v.se).toFixed(1)} SE, ${v.lag || ''} ${v.kamp || ''})`,
@@ -4242,11 +4234,11 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         check(`${side}: grunnlagsfilen er i bruk og svarene kommer fra den`, r.status === 'i bruk' && r.fraFil, `${r.status} ${r.fraFil}`);
         if (r.status !== 'i bruk') { await pg.close(); continue; }
         for (const [rader, navn] of [[r.neste, 'neste kamp'], [r.runde, 'neste runde, alle lag og åpne soner'],
-                                     ...(side !== 'elo-test' ? [[r.forrige, 'forrige kamp']] : [])]) {
+                                     [r.forrige, 'forrige kamp']]) {
           const [ok, tekst, detalj] = vis(rader, navn);
           check(`${side}: ${tekst}, alle innenfor 3 SE`, ok && rader.length > 0, detalj);
         }
-        if (side !== 'elo-test') {
+        {
           const verstF = r.foer.reduce((v, x) => x.avvik > v.avvik ? x : v, {avvik: 0});
           const ulike = r.foer.filter(x => x.naa > 0.01).length;
           check(`${side}: forrige kamp regnes med målratene fra før avspark: ${r.foer.length} kamper med sjanser ved avspark gir dem tilbake innenfor 0,005 (største ${verstF.avvik.toFixed(4)}, ${verstF.kamp || ''}); ${ulike} av dem skiller seg over 1 prosentpoeng fra modellen nå`,
@@ -4825,7 +4817,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
   //   node tests/regression.js --bare innbyrdes
   const innbyrdes = async () => {
     setGroup('Innbyrdes oppgjør i tabellen (kampreglementet § 5-3)');
-    for (const side of ['eliteserien', 'obos', 'elo-test']) {
+    for (const side of ['eliteserien', 'obos']) {
       const url = base.replace('/eliteserien/', `/${side}/`);
       const pg = await browser.newPage();
       pg.on('pageerror', e => errors.push(`innbyrdes ${side}: ${e.message}`));
@@ -5091,7 +5083,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       const bilde = DATA_DAG;
       DATA_DAG = null;
       try {
-        for (const side of ['eliteserien', 'obos', 'elo-test']) {
+        for (const side of ['eliteserien', 'obos']) {
           const feil0 = errors.length;
           const pg = await open(1400, 900, base.replace('/eliteserien/', `/${side}/`));
           const d = await pg.evaluate(() => ({rader: document.querySelectorAll('#tbl tbody tr').length, lag: TEAMS.length,
@@ -7183,7 +7175,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     // dem går i tabellens Worker.
     // Kontrollert på de tre sidene: Eliteserien, OBOS og testsiden.
     setGroup('Tabellsimuleringen i egen Worker');
-    for (const [sti, liga] of [['/eliteserien/', 'Eliteserien'], ['/obos/', 'OBOS'], ['/elo-test/', 'ELO-test']]) {
+    for (const [sti, liga] of [['/eliteserien/', 'Eliteserien'], ['/obos/', 'OBOS']]) {
       const url = base.replace('/eliteserien/', sti);
       const probe = await open(1400, 900, url);
       const lag = await probe.evaluate(() => matches.find(m => m.hg == null).home);
@@ -8071,8 +8063,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     // når alt stemmer. Alle tre sidene; på testsiden går de låste utfallene
     // gjennom eloTaskOver, og ELO-modellen og -koden er med i avtrykket.
     setGroup('Grunnlagsfilen: fingeravtrykket, oppgavene og regningen');
-    for (const [url, liga] of [[base, 'eliteserien'], [base.replace('/eliteserien/', '/obos/'), 'obos'],
-                               [base.replace('/eliteserien/', '/elo-test/'), 'elo-test']]) {
+    for (const [url, liga] of [[base, 'eliteserien'], [base.replace('/eliteserien/', '/obos/'), 'obos']]) {
       const s1 = await open(1400, 900, url), s2 = await open(1400, 900, url);
       const a1 = await s1.evaluate(() => grunnlagAvtrykk()), a2 = await s2.evaluate(() => grunnlagAvtrykk());
       await s2.close();
@@ -8084,24 +8075,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         const prov = async (navn, gjor, angre) => { gjor(); ut[navn] = (await grunnlagAvtrykk()) !== f; angre(); };
         const m = matches.find(x => x.hg == null);
         await prov('et resultat fylt inn', () => { m.hg = 1; m.ag = 0; }, () => { m.hg = null; m.ag = null; });
-        if (typeof ELO !== 'undefined' && ELO) {
-          // Testsiden: ELO-modellen (emodell/model.json) og -koden.
-          const lag0 = Object.keys(ELO.rating_alle || ELO.rating)[0], R = ELO.rating_alle || ELO.rating, r0 = R[lag0];
-          await prov('ratingen i ELO-modellen', () => { R[lag0] = r0 + 1e-9; }, () => { R[lag0] = r0; });
-          const h0 = ELO.hjemmefordel_rating;
-          await prov('hjemmefordelen i ELO-modellen', () => { ELO.hjemmefordel_rating = h0 + 1e-9; }, () => { ELO.hjemmefordel_rating = h0; });
-          const l0 = ELO.lam_tabell.lh[0];
-          await prov('lambda-tabellen i ELO-modellen', () => { ELO.lam_tabell.lh[0] = l0 + 1e-9; }, () => { ELO.lam_tabell.lh[0] = l0; });
-          const e = grunnlagInndata(GRUNNLAG_N).ekstra;
-          ut['ELO-koden og ELO_HVA er med, ikke tidsstempelet og rating_historikk'] = !!e && /function eloMixLap/.test(e.kode)
-            && /function eloTaskOver/.test(e.kode) && JSON.stringify(e.ELO_HVA) === JSON.stringify(ELO_HVA)
-            && !('built' in e.modell) && !('rating_historikk' in e.modell) && 'lam_tabell' in e.modell;
-        } else {
-          const a0 = MODEL.att[0];
-          await prov('lagstyrke i modellen', () => { MODEL.att[0] = a0 + 1e-12; }, () => { MODEL.att[0] = a0; });
-          const mu0 = MODEL.mu;
-          await prov('mu i modellen', () => { MODEL.mu = mu0 + 1e-12; }, () => { MODEL.mu = mu0; });
-        }
+        const a0 = MODEL.att[0];
+        await prov('lagstyrke i modellen', () => { MODEL.att[0] = a0 + 1e-12; }, () => { MODEL.att[0] = a0; });
+        const mu0 = MODEL.mu;
+        await prov('mu i modellen', () => { MODEL.mu = mu0 + 1e-12; }, () => { MODEL.mu = mu0; });
         const k = Object.keys(ODDS_UP)[0], h0 = k && ODDS_UP[k].H;
         if (k) await prov('en oddspris', () => { ODDS_UP[k].H = h0 + 1e-6; }, () => { ODDS_UP[k].H = h0; });
         else ut['en oddspris'] = 'ingen odds';
@@ -8151,7 +8128,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       });
       check(`${liga}: filens ${dekn.oppgaver} oppgaver dekker alle ${dekn.antall} oppgavene svarene sender (${dekn.medOver} med egen utgangsstilling), med samme frø`,
         dekn.antall > 100 && dekn.nMangler === 0 && dekn.feilFro === 0 && ['heie', 'impact', 'runde'].every(g => dekn.grupper.includes(g))
-          && (dekn.medForrige ? dekn.medOver >= 2 * 16 && dekn.filForrige >= 2 * 8 && dekn.grupper.includes('forrige') : liga === 'elo-test' && dekn.filForrige === 0),
+          && dekn.medForrige && dekn.medOver >= 2 * 16 && dekn.filForrige >= 2 * 8 && dekn.grupper.includes('forrige'),
         JSON.stringify(dekn));
 
       // Regningen er poolens, bit for bit: samme oppgave med samme frø og N
@@ -8309,7 +8286,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       const lagMedSone = `TEAMS.find(t => { const z = qaTargetZone(t); return z && !qaSettled(t, z) && z.pct > 0.05 && z.pct < 0.95; }) || TEAMS[0]`;
       // Filen for hver side (grunnlagFilFor): den i repoet når siden godtar
       // den, ellers regnet på nytt med lag_grunnlag.js i en kopi.
-      const SIDENE = ['eliteserien', 'obos', 'elo-test'];
+      const SIDENE = ['eliteserien', 'obos'];
       const filer = {};
       for (const liga of SIDENE) filer[liga] = await grunnlagFilFor(liga);
 

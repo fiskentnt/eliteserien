@@ -18,10 +18,7 @@ Forrige kamp: det faktiske resultatet tas ut, og kampen legges tilbake som
 åpen med målratene fra før avspark (sjansene i prekick.json, sluttoddsen som
 reserve, tilpasset med fitRates). Sjansene står i grunnlagsfilens avtrykk.
 
-Bare Eliteserien og OBOS. Testsiden (elo-test) er løs ut sesongen (17.10.)
-og har fortsatt den gamle koden (én låst stilling, grunnlagsfil versjon 2).
-Etter sesongen: ta punkt 11 og 12 inn der også, med samsvarstesten og
-kontroll W (ratingen regnet om for hvert alternativ i forrige kamp).
+Bare Eliteserien og OBOS. Testsiden (elo-test) ble fjernet 10.11.2026.
 
 Simuleringene rangerer helt like lag med innbyrdes oppgjør (minitabell av de
 spilte og simulerte kampene mellom dem), så loddtrekning.

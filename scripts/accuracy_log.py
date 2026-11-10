@@ -16,7 +16,6 @@ modellen virker?".
 
   python3 scripts/accuracy_log.py eliteserien
   python3 scripts/accuracy_log.py obos
-  python3 scripts/accuracy_log.py eliteserien --data elo-test/emodell
 
 --data <mappe>: hvor prekick.json leses og accuracy.json skrives (standard
 <liga>/data). Resultatene (matches.json) leses alltid fra <liga>/data.

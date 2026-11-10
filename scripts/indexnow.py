@@ -4,8 +4,7 @@ som bruker IndexNow) om sider som er endret, så de leses på nytt.
 
 Nøkkelen står i en fil i roten, <nøkkel>.txt, med nøkkelen som innhold
 (protokollens krav). En side er <sti>/index.html og blir adressen
-https://tabellkalkulator.no/<sti>/ (forsiden: index.html -> /). elo-test
-meldes ikke. Feiler kallet, blir det bare en advarsel: skriptet avslutter
+https://tabellkalkulator.no/<sti>/ (forsiden: index.html -> /). Feiler kallet, blir det bare en advarsel: skriptet avslutter
 alltid med 0.
 
 BARE NÅR INNHOLDET ER ENDRET (28.10.2026). Før ble alle sidene i hver
@@ -64,11 +63,11 @@ def nokkel(root=ROOT):
 
 
 def adresser(filer):
-    """Sidene blant filene, som adresser, uten dubletter. elo-test meldes ikke."""
+    """Sidene blant filene, som adresser, uten dubletter."""
     ut = []
     for f in filer:
         f = f.strip()
-        if not f.endswith("index.html") or f.startswith("elo-test/"):
+        if not f.endswith("index.html"):
             continue
         sti = f[: -len("index.html")]
         a = f"https://{VERT}/{sti}"
