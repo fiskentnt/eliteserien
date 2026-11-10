@@ -402,7 +402,7 @@ async function main() {
             && /0,0124 ± 0,0057 høyere log loss enn sluttoddsen i Eliteserien \(2,2 standardfeil\)/.test(logloss)
             && /0,0020 ± 0,0062 i OBOS \(0,3 standardfeil/.test(logloss)
             && /Med alle 351 kampene sammen er forskjellen 0,0070 ± 0,0042 \(1,6 standardfeil\)/.test(logloss)
-            && /scripts\/odds_drift\.py/.test(logloss),
+            && /målt 22\. september 2026 \(Pinnacle\)/.test(logloss) && !/scripts\//.test(logloss),
           JSON.stringify(sl));
       }
       // Ingen « » i det brukeren ser: teksten på siden (også lukkede
