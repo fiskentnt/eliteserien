@@ -2860,8 +2860,8 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       const o = await les();
       const sum = await pg.evaluate(() => { const d = lastMC.Haugesund; let v = 0; for (let q = 0; q < 6; q++) v += d[q]; return v; });
       console.log(`      Haugesund, summen av plass 1 til 6 i simuleringen: ${sum} (${sum < 1 ? 'under 1' : 'nøyaktig 1'}); ytterpunkter ${JSON.stringify(o.y)}`);
-      check('OBOS 3.10.: Haugesund er sikret topp 6: merket «Sikret topp 6» og "100 %" i Topp 6 (ikke ">99 %")',
-        o.celler.Haugesund.europa === '100 %' && await pg.evaluate(() => (badgeFor('Haugesund') || {}).text) === 'Sikret topp 6', JSON.stringify(o.celler.Haugesund));
+      check('OBOS 3.10.: Haugesund er sikret topp 6: merket «Topp 6» og "100 %" i Topp 6 (ikke ">99 %")',
+        o.celler.Haugesund.europa === '100 %' && await pg.evaluate(() => (badgeFor('Haugesund') || {}).text) === 'Topp 6', JSON.stringify(o.celler.Haugesund));
       check('OBOS 3.10.: Strømsgodset og Kongsvinger er ikke sikret topp 6: ikke "100 %"',
         !['Strømsgodset', 'Kongsvinger'].some(t => o.celler[t].europa === '100 %')
         && await pg.evaluate(() => soneStatus('Strømsgodset', 'europa') === 0 && soneStatus('Kongsvinger', 'europa') === 0),

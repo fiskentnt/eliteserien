@@ -65,16 +65,22 @@ const LEAGUE = {
               verb: 'unngår både nedrykk og kvalik', strid: 'nedrykksstriden',
               da: 'unngår {team} både nedrykk og kvalik', boxLabel: 'Nedrykk', boxAlways: true},
   },
+  // Korte merker (10.11.2026): da sesongen var ferdig, hadde 15 av 16 lag merke,
+  // og «Strømsgodset» med «Vinner ligaen» gjorde lagkolonnen så bred at
+  // tabellen måtte rulles sidelengs. Forklaringen (note), som vises ved trykk,
+  // har fortsatt hele teksten.
   badges: [
-    {above: 1, cls: 'champ', text: 'Vinner ligaen', note: 'Vinner OBOS-ligaen: ingen kan ta dem igjen.'},
-    {above: 2, cls: 'champ', text: 'Sikret opprykk', note: 'Sikret direkte opprykk: kan ikke havne lavere enn 2. plass.'},
-    {above: 6, cls: 'europe', text: 'Sikret topp 6', note: 'Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.'},
+    {above: 1, cls: 'champ', text: 'Vinner', note: 'Vinner OBOS-ligaen: ingen kan ta dem igjen.'},
+    {above: 2, cls: 'champ', text: 'Opprykk', note: 'Sikret direkte opprykk: kan ikke havne lavere enn 2. plass.'},
+    {above: 6, cls: 'europe', text: 'Topp 6', note: 'Sikret topp 6: kan ikke havne lavere enn 6. plass, så laget får minst opprykkskvalifisering.'},
     // Vises ikke for lag som fortsatt kan nå topp 6: for dem er opprykkskvalifisering
     // saken, ikke at de har berget plassen.
-    {above: 13, cls: 'safe', text: 'Sikret plass', note: 'Sikret plass: kan verken rykke ned eller havne i kvalik.',
+    {above: 13, cls: 'safe', text: 'Berget', note: 'Berget plassen: kan verken rykke ned eller havne i kvalik.',
      hideIfChance: {zone: 'europa', over: 0.01}},
   ],
-  relegatedBadge: {cls: 'relegated', text: 'Rykket ned', note: 'Rykket ned: kan ikke berge plassen.'},
+  relegatedBadge: {cls: 'relegated', text: 'Ned', note: 'Rykket ned: kan ikke berge plassen.'},
+  // Laget kan bare ende på kvalikplassen (zones.kvalik).
+  kvalikBadge: {cls: 'kvalik', text: 'Kvalik', note: 'Kvalik: ender på 14. plass og må spille kvalifisering for å beholde plassen.'},
   shortNames: {
     'Kongsvinger': 'KIL', 'Strømsgodset': 'Godset', 'Sandnes Ulf': 'Sandnes',
     'Strømmen': 'Strømmen', 'Haugesund': 'FKH',

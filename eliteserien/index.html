@@ -641,6 +641,16 @@
   .badge.europe{background:var(--eu-soft);color:var(--eu-text)}
   .badge.safe{background:var(--line-soft);color:var(--muted)}
   .badge.relegated{background:var(--accent-soft);color:var(--accent-text)}
+  .badge.kvalik{background:var(--q-soft);color:var(--q-text);box-shadow:inset 0 0 0 1px var(--q-border)}
+  /* Merket går til ny linje under lagnavnet når det ikke er plass, i stedet
+     for at tabellen må rulles sidelengs (10.11.2026). Lagnavnet og plasspilen
+     brytes ikke. Målt hvert 5. px fra 300 til 1440 i begge ligaene: ingen
+     sidelengs rulling, og med de korte OBOS-merkene går rader over to linjer
+     bare mellom 1220 og 1270 px (høyst 6 i OBOS da sesongen var ferdig, 3 i
+     Eliteserien). Før rullet OBOS-tabellen ved 645-730, 765-820, 1100 og
+     1220-1310 px, og Eliteserien ved 645-700, 765-785 og 1220-1255 px. */
+  #tbl td.team{white-space:normal}
+  #tbl td.team .teamname,#tbl td.team .diff{white-space:nowrap}
   /* Mobil, og det smale tokolonnesområdet (1100 til 1219 px, iPad Air på
      tvers): bare ikonet, så lagkolonnen ikke spiser tallkolonnene. Målt ved
      1180 px: med «Sikret topp 6» som tekst var OBOS-tabellen 15 px for bred
@@ -653,6 +663,7 @@
     .badge.europe .bi::before{content:"✓"}
     .badge.safe .bi::before{content:"✓"}
     .badge.relegated .bi::before{content:"↓"}
+    .badge.kvalik .bi::before{content:"↕"}
   }
   /* Telefon: mindre pille og plasspil, så lagkolonnen ikke blir bredere enn
      kortnavnet trenger, og Gull får plass ved siden av Styrke (se .teamname
@@ -926,6 +937,11 @@
     td.pos{padding-left:9px;width:30px}
     .panel > h2,.qa > summary,.recent > summary{padding-left:12px;padding-right:12px}
   }
+  /* Form-kolonnen (91 px) skjules også mellom 641 og 840 px (10.11.2026): der
+     står hele lagnavnet (fra 761 px) eller merket med tekst, og tabellen var
+     opptil 90 px for bred i begge ligaene. Under 640 px skjules den med de
+     andre (hide-s over). */
+  @media (min-width:641px) and (max-width:840px){th.form5col,td.form5col{display:none}}
 
   /* Kamper */
   .autofill{display:flex;align-items:center;gap:7px;padding:0 16px 12px;font-size:13.5px;color:var(--muted);cursor:pointer;user-select:none}
@@ -1294,7 +1310,7 @@
           <th class="hide-s">V</th><th class="hide-s">U</th><th class="hide-s">T</th><th class="hide-s">Mål</th>
           <th class="hide-diff">Diff</th><th class="pts">P</th>
           <th class="sortable hh formcol" id="formHeader" title="Styrke: modellens vurdering av hvor sterkt laget er, over hele sesongen. 5 er et gjennomsnittslag. Klikk for å sortere.">Styrke</th>
-          <th class="sortable hide-s" id="form5Header" data-sort="form5" title="Formen nå: vanlige poeng i de fem siste seriekampene (3 for seier, 1 for uavgjort), regnet om til skalaen 0 til 10. Fem seirer gir 15 av 15 poeng, altså 10,0. Resultatene står til høyre, eldst først. Klikk for å sortere.">Form</th>
+          <th class="sortable hide-s form5col" id="form5Header" data-sort="form5" title="Formen nå: vanlige poeng i de fem siste seriekampene (3 for seier, 1 for uavgjort), regnet om til skalaen 0 til 10. Fem seirer gir 15 av 15 poeng, altså 10,0. Resultatene står til høyre, eldst først. Klikk for å sortere.">Form</th>
           <!-- STATISK-KOLONNER --><th class="sortable hide-xs hh" id="gullHeader" data-sort="gull" title="Sannsynlighet for å vinne serien. Klikk for å sortere.">Gull</th>
           <th class="sortable hh" id="europaHeader" data-sort="europa" title="Sannsynlighet for 1. til 4. plass, altså Champions League- eller Conference League-kvalifisering. Europa kan også nås gjennom cupen, og det er ikke med i tallet. Klikk for å sortere.">Topp 4</th>
           <th class="sortable hh" id="nedHeader" data-sort="ned" title="Sannsynlighet for 15. eller 16. plass. Kvalik på 14. plass er ikke regnet med. Klikk for å sortere."><span class="lg">Nedrykk</span><span class="sm"> Nedr.</span></th><!-- /STATISK-KOLONNER -->
@@ -1796,6 +1812,8 @@ const LEAGUE = {
     {above: 13, cls: 'safe', text: 'Sikret plass', note: 'Sikret plass: kan verken rykke ned eller havne i kvalik.'},
   ],
   relegatedBadge: {cls: 'relegated', text: 'Rykket ned', note: 'Rykket ned: kan ikke berge plassen.'},
+  // Laget kan bare ende på kvalikplassen (zones.kvalik).
+  kvalikBadge: {cls: 'kvalik', text: 'Kvalik', note: 'Kvalik: ender på 14. plass og må spille kvalifisering for å beholde plassen.'},
   shortNames: {
     'Kristiansund': 'KBK', 'Sarpsborg 08': 'S08', 'Bodø/Glimt': 'Glimt', 'Fredrikstad': 'FFK',
     'Rosenborg': 'RBK', 'Vålerenga': 'VIF', 'Lillestrøm': 'LSK', 'KFUM Oslo': 'KFUM',
@@ -4024,8 +4042,10 @@ function fillOdds(){
   const zoneVal = key => medStatus(sonesjanse(d, key), soneStatus(SELECTED_TEAM, key));
   const zoneTxt = key => pctTxt(zoneVal(key), soneStatus(SELECTED_TEAM, key));
   const shown = lagboksSoner(d);
+  // Etter siste runde sier setningen om simuleringene ingenting (10.11.2026).
   const row = (shown.every(k=>zoneVal(k)<0.01))
-    ? `<div class="odds-row flat" title="Sannsynlighet for sluttplassering, ut fra modellen">${ingentingISpill(SELECTED_TEAM, d)}</div>`
+    ? (!matches.some(isEmpty) ? ''
+      : `<div class="odds-row flat" title="Sannsynlighet for sluttplassering, ut fra modellen">${ingentingISpill(SELECTED_TEAM, d)}</div>`)
     : `<div class="odds-row" title="Sannsynlighet for sluttplassering, ut fra modellen. Klikk et tall for å se hvorfor.">
       ${shown.map(k=>`<button class="odds-jump${k==='nedrykk'?' n':''}" data-zone="${k}"><strong>${zoneTxt(k)}</strong>${LEAGUE.zones[k].boxLabel}</button>`).join('')}</div>`;
   // Fordelingsstripen over alle 16 plassene sier lite når Europa, kvalik og
@@ -5032,12 +5052,16 @@ function enkleYtterpunkter(byname, ferdig, name){
   }
   return {verst:1+over, best:1+foran};
 }
-// Merket fra ytterpunktene: det første i cfg.badges laget er sikret, ellers
-// «Rykket ned» når laget ikke kan ende over plass relegatedAt.
+// Merket fra ytterpunktene: det første i cfg.badges laget er sikret, så
+// «Kvalik» når laget bare kan ende på kvalikplassen (cfg.kvalik, 10.11.2026),
+// ellers «Rykket ned» når laget ikke kan ende over plass relegatedAt.
+// Kjører også i Workeren, som tar den med som tekst.
 function merkeFra(y, cfg){
   for(var bi=0; bi<cfg.badges.length; bi++){
     if(y.verst<=cfg.badges[bi].above) return {cls:cfg.badges[bi].cls, text:cfg.badges[bi].text};
   }
+  var kv=cfg.kvalik;
+  if(kv && y.best>=kv.lo && y.verst<=kv.hi) return {cls:kv.badge.cls, text:kv.badge.text};
   if(y.best>=cfg.relegatedAt) return {cls:cfg.relegatedBadge.cls, text:cfg.relegatedBadge.text};
   return null;
 }
@@ -5046,6 +5070,8 @@ function merkeFra(y, cfg){
 // nedrykk også "13. plass eller bedre", som svarene bruker (qaSettled).
 const MERKE_CFG = {badges:LEAGUE.badges, relegatedBadge:LEAGUE.relegatedBadge,
   relegatedAt:LEAGUE.zones.nedrykk.lo,
+  kvalik:LEAGUE.kvalikBadge && LEAGUE.zones.kvalik
+    ? {lo:LEAGUE.zones.kvalik.lo, hi:LEAGUE.zones.kvalik.hi, badge:LEAGUE.kvalikBadge} : null,
   soner:ZONE_KEYS.filter(k=>LEAGUE.zones[k]).flatMap(k=>{ const z=LEAGUE.zones[k];
     return [[z.lo, z.hi]].concat(z.boundary!=null ? [[1, z.boundary]] : []); })};
 // Workerens svar gjelder bare scenarioet det ble regnet for (lastYtterSig).
@@ -5083,8 +5109,11 @@ function soneStatus(team, key){
 // fordelingen.
 const medStatus = (v, s) => s===1 ? 1 : s===-1 ? 0 : v;
 // Hva merket betyr, vist når det trykkes på (på mobil er merket bare et ikon).
+// Slått opp på teksten, ikke klassen: i OBOS deler «Vinner» og «Opprykk»
+// klassen champ, og «Vinner ligaen» fikk forklaringen for «Sikret opprykk»
+// (rettet 10.11.2026).
 const BADGE_NOTE = Object.fromEntries(
-  LEAGUE.badges.concat([LEAGUE.relegatedBadge]).map(b => [b.cls, b.note]));
+  LEAGUE.badges.concat([LEAGUE.relegatedBadge, LEAGUE.kvalikBadge].filter(Boolean)).map(b => [b.text, b.note]));
 // Merket et lag skal vise. Worker-en regner ut hva som er MATEMATISK sikret;
 // her fjernes merker som er sanne, men ikke er lagets sak. Et lag midt i
 // kampen om topp 6 har for lengst berget plassen, og «Sikret plass» sier da
@@ -5113,8 +5142,8 @@ function applyBadgesToDom(){
     // Ikonet vises alene på mobil (.bt skjules), teksten på PC. Begge steder
     // gir et trykk forklaringen i en liten boble, se badgeTip.
     el.innerHTML = b ? `<span class="bi" aria-hidden="true"></span><span class="bt">${b.text}</span>` : '';
-    if(b){ el.title = BADGE_NOTE[b.cls] || b.text; el.setAttribute('role','button');
-      el.setAttribute('tabindex','0'); el.setAttribute('aria-label', BADGE_NOTE[b.cls] || b.text); }
+    if(b){ el.title = BADGE_NOTE[b.text] || b.text; el.setAttribute('role','button');
+      el.setAttribute('tabindex','0'); el.setAttribute('aria-label', BADGE_NOTE[b.text] || b.text); }
     else { el.removeAttribute('title'); el.removeAttribute('role'); el.removeAttribute('tabindex'); el.removeAttribute('aria-label'); }
   });
 }
@@ -5123,9 +5152,9 @@ function applyBadgesToDom(){
 function showBadgeTip(badge){
   const tip = document.getElementById('badgeTip'), panel = document.getElementById('tabell');
   if(!tip || !panel) return;
-  const cls = [...badge.classList].find(c=>BADGE_NOTE[c]);
-  if(!cls){ tip.hidden = true; return; }
-  tip.textContent = BADGE_NOTE[cls];
+  const note = BADGE_NOTE[(badge.querySelector('.bt') || {}).textContent];
+  if(!note){ tip.hidden = true; return; }
+  tip.textContent = note;
   tip.hidden = false;
   const r = badge.getBoundingClientRect(), c = panel.getBoundingClientRect();
   const w = tip.offsetWidth;
@@ -8060,13 +8089,18 @@ const QA_TOP_N = 3;
 // mest" (den mest åpne retningen) og "Hvorfor" (den andre) øverst. 3
 // (midtsone): "Hvilken plass ender X på?", "Hvem kjemper X mot om
 // plassene?" og "Hvilken kamp blir vanskeligst" øverst, og spørsmålene som bare kan svare med noe som er
-// avgjort, er borte. 2 og ferdig sesong: som før.
+// avgjort, er borte. 2: som før. Ferdig sesong (10.11.2026): bare
+// spørsmålene om det som har skjedd (QA_ETTER_SESONGEN); de andre svarte bare
+// «Sesongen er ferdig ...», «Alle kampene har resultat» eller «ingen kamper
+// igjen». Uten lag står bare «Hvem har slått oddsene» igjen.
 const qaMidtsone = team => { const r = team && qaRetninger(team); return !!r && r.tilstand===3; };
 const QA_BARE_SONE = new Set(['why','howto','keymatches','whyandre','nextmatch','lastmatch','cheer','decided']);
+const QA_ETTER_SESONGEN = ['why','lastmatch','teamluck','luck'];
 function qaSynligeSporsmal(team){
   const r = team && qaRetninger(team);
   // "Hvorfor" om den andre retningen bare i regel 1, der den er flyttet ned.
   const alle = QA_QUESTIONS.filter(q => (team ? true : !q.needsTeam) && (q.id!=='whyandre' || (r && r.regel===1)));
+  if(!matches.some(isEmpty)) return QA_ETTER_SESONGEN.map(id=>alle.find(q=>q.id===id)).filter(Boolean);
   if(!r || r.tilstand===0 || r.tilstand===2) return alle;
   const forst = r.regel===1 ? ['why','howto','keymatches','whyandre'] : r.tilstand===1 ? ['howto','why','keymatches'] : ['range','rivals','hardest'];
   return forst.map(id=>alle.find(q=>q.id===id))
@@ -8147,7 +8181,8 @@ function renderQaHighlight(){
   if(!el) return;
   if(!SELECTED_TEAM){
     // Rundens viktigste kamp når den er regnet ut og fersk, ellers hell/uhell.
-    if(!qaKeyBannerStale()){
+    // Etter siste runde vises ikke det spørsmålet (qaSynligeSporsmal).
+    if(!qaKeyBannerStale() && matches.some(isEmpty)){
       el.textContent = KEYMATCH.banner;
       el.dataset.qid = 'keyround';
       el.classList.add('plain'); // hel setning: ingen «...» rundt
@@ -8177,7 +8212,7 @@ function renderQaHighlight(){
   if(!zone){
     // lastMC ikke klar ennå (rett etter sideinnlasting) -- vis samme
     // fallback som uten lag til den er det, i stedet for en tom knapp.
-    if(!qaKeyBannerStale()){ el.textContent = KEYMATCH.banner; el.dataset.qid = 'keyround'; el.classList.add('plain'); }
+    if(!qaKeyBannerStale() && matches.some(isEmpty)){ el.textContent = KEYMATCH.banner; el.dataset.qid = 'keyround'; el.classList.add('plain'); }
     else { el.textContent = 'Hvem har slått oddsene, og hvem har skuffet?'; el.dataset.qid = 'luck'; }
     return;
   }
@@ -8500,7 +8535,7 @@ function render(){
       tr.innerHTML=`<td class="pos">${pos}</td><td class="team"><span class="teamname" data-team="${r.name}" role="button" tabindex="0" title="${r.name===SELECTED_TEAM?'Slutt å følge':'Følg'} ${r.name}"><span class="lg">${r.name}</span><span class="sm"> ${shortTeam(r.name)}</span></span><span class="badge"></span></td><td class="spilt">${r.p}</td>
         <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
         <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts"${r.just?` title="${justTittel(r.pts, r.just)}"`:''}>${poengMedMerke(r.pts, r.just)}</td>
-        <td class="formcol hh"></td><td class="hide-s">${femSisteHtml(somListe(r.results))}${form5Html(form5AvListe(somListe(r.results)), somListe(r.results))}</td><td class="odds gull hide-xs hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
+        <td class="formcol hh"></td><td class="hide-s form5col">${femSisteHtml(somListe(r.results))}${form5Html(form5AvListe(somListe(r.results)), somListe(r.results))}</td><td class="odds gull hide-xs hh"></td><td class="odds p3 hh"></td><td class="odds ned hh"></td>`;
       tb.appendChild(tr);
       return;
     }
@@ -8517,7 +8552,7 @@ function render(){
       <td class="hide-s">${r.w}</td><td class="hide-s">${r.d}</td><td class="hide-s">${r.l}</td><td class="hide-s">${r.gf}-${r.ga}</td>
       <td class="gd hide-diff">${r.gd>0?'+':''}${r.gd}</td><td class="pts" title="${r.just?justTittel(r.pts, r.just):`${r.pts} poeng nå.`} Maks mulig sluttsum: ${r.max}.">${poengMedMerke(r.pts, r.just)}</td>
       <td class="formcol"><button type="button" class="formbox ${formCls}" data-team="${r.name}" title="${f1(r.form)} av 10. ${changeTxt} Trykk for styrkegrafen." aria-label="Styrke ${f1(r.form)} av 10 for ${r.name}. Vis styrkegrafen.">${f1(r.form)}</button></td>
-      <td class="hide-s">${femSisteHtml(r.femSiste)}${form5Html(r.form5, r.femSiste)}</td><td class="odds gull hide-xs"></td><td class="odds p3"></td><td class="odds ned"></td>`;
+      <td class="hide-s form5col">${femSisteHtml(r.femSiste)}${form5Html(r.form5, r.femSiste)}</td><td class="odds gull hide-xs"></td><td class="odds p3"></td><td class="odds ned"></td>`;
     tb.appendChild(tr);
   });
   applyBadgesToDom(); // viser cachen (tom første gang) med en gang, uten å vente
@@ -8604,11 +8639,13 @@ function render(){
     const seasonDone = played===matches.length;
     let line2, line2Title;
     if(seasonDone){
-      const safePos = LEAGUE.zones.kvalik.boundary || 13;
-      line2 = pos<=LEAGUE.zones.europa.hi ? `Sesongen er ferdig i dette scenarioet: ${SELECTED_TEAM} ${LEAGUE.zones.europa.verb}.`
-        : pos<=safePos ? `Sesongen er ferdig i dette scenarioet: ${SELECTED_TEAM} har ny kontrakt.`
-        : pos===LEAGUE.zones.kvalik.lo ? `Sesongen er ferdig i dette scenarioet: ${SELECTED_TEAM} må spille kvalik.`
-        : `Sesongen er ferdig i dette scenarioet: ${SELECTED_TEAM} rykker ned.`;
+      // Etter siste runde (10.11.2026): poengene og at sesongen er ferdig.
+      // Hvordan den endte, står nederst i boksen. Før sto det «Sesongen er
+      // ferdig i dette scenarioet: Egersund har ny kontrakt.» også når den var
+      // ferdig på ekte, og «ender i topp 6» om alle fra 1. til 6. plass. «i
+      // dette scenarioet» bare når brukeren selv har fylt inn resten: på ekte
+      // er det ingen kamper igjen i lista.
+      line2 = `${followed.pts} poeng. Sesongen er ferdig${matches.length ? ' i dette scenarioet' : ''}.`;
       line2Title = '';
     } else {
       line2 = `${followed.pts} poeng, ${followed.left} kamper igjen`;
@@ -8929,7 +8966,7 @@ async function kopiTekstLagboks(team){
   const fare = soner.some(k=>LEAGUE.zones[k].boundary!=null && sonesjanse(d, k)>=0.005);
   const med = soner.filter(k=>sonesjanse(d, k)>=0.005 || (fare && LEAGUE.zones[k].boundary!=null));
   const sjanser = med.length ? med.map(k=>`${LEAGUE.zones[k].boxLabel} ${pctTxt(sonesjanse(d, k), soneStatus(team, k))}`).join(', ')
-    : ingentingISpill(team, d);
+    : !matches.some(isEmpty) ? null : ingentingISpill(team, d);
   const lm = qaLastMatchLine(team, lastMatchEntry(team));
   const tekst = html => { const el = document.createElement('div'); el.innerHTML = html; return el.textContent.trim(); };
   let hva = null;
