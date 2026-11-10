@@ -5218,7 +5218,23 @@ def _f3_ingen_kilde(navn):
         _f3_res_kall.append(navn)
         raise AssertionError(f"resultatkjeden skulle ha stoppet før {navn} ble hentet")
     return kalt
-_f3_naa_ekte = _dt.now(_tz.utc)
+# Fast klokke (10.11.2026): 1.10.2026 kl. 12 UTC, samme dag som terminlisten
+# testen bygger på. Med dagens dato ble flyttingen av Strømmen-Lyn (8.11. ->
+# 9.11.) avvist da 9.11. var passert («en dato som har vært ... flyttes
+# aldri»), og testene ble røde av seg selv. Byggingen bruker
+# datetime.now(timezone.utc) fra sin egen datetime, som byttes ut under
+# testen; listens alder regnes fra samme klokke.
+_F3_NAA = _dt(2026, 10, 1, 12, 0, tzinfo=_tz.utc)
+
+
+class _F3Klokke(_dt):
+    @classmethod
+    def now(cls, tz=None):
+        return _F3_NAA.astimezone(tz) if tz else _F3_NAA.replace(tzinfo=None)
+
+
+_f3_naa_ekte = _F3_NAA
+_f3_dt_ekte = _obd3.datetime
 
 
 def _f3_bygg(liste_dato=None, alder_timer=1, overstyring=None):
@@ -5238,6 +5254,7 @@ def _f3_bygg(liste_dato=None, alder_timer=1, overstyring=None):
 
 try:
     _obd3.DATA, _obr3.DATA = _f3_ob, _f3_ob
+    _obd3.datetime = _F3Klokke
     _obr3.MATCHES, _obr3.STATE = _f3_ob / "matches.json", _f3_ob / "results_state.json"
     for _n3 in ("ligasiden_og_reserve", "wikipedia_results", "highlightly_resultater", "oddspapi_fixtures"):
         setattr(_obr3, _n3, _f3_ingen_kilde(_n3))
@@ -5290,6 +5307,7 @@ try:
           and all((_f3_ob / f).read_bytes() == b for f, b in _f3_bytes.items()) and not (_f3_ob / "results_state.json").exists(), f"{_f3_kode} {_f3_st} {_f3_res_kall}")
 finally:
     (_obd3.DATA, _obr3.DATA, ntf_source.fetch_all, _hls3._http, _ses3.aktiv_sesong) = _f3_ekte
+    _obd3.datetime = _f3_dt_ekte
     for _n3, _v3 in _f3_ekte_res.items():
         setattr(_obr3, _n3, _v3)
 _f3_obk = (ROT / "scripts" / "obos_build_data.py").read_text("utf-8")

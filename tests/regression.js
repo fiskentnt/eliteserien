@@ -4584,8 +4584,11 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       // Ligasiden (20.10.2026): ingen oppsummeringssetning; boksene har tallene
       // fra tabellen i tekster.json, og «Se alle →» i toppsonen og nedrykk går
       // til spørsmålssidene.
+      // Etter sesongen (10.11.2026): en linje uten lag («Ingen kamp om
+      // plassene») er riktig, og 0 % i kortet er det samme som «–» i tabellen.
       const kortFeil = Object.entries(u.kort).flatMap(([k, li]) => !li.length ? [`${k} tom`]
-        : li.filter(([lag, pst]) => { const r = tkHel.tabell.rader.find(x => x.lag === lag); return !r || r.sjanser[k].vist !== (pst || '').replace(/\u00a0/g, ' '); })
+        : li.filter(([lag]) => lag != null).filter(([lag, pst]) => { const r = tkHel.tabell.rader.find(x => x.lag === lag), v = (pst || '').replace(/\u00a0/g, ' ');
+            return !r || (r.sjanser[k].vist !== v && !(r.sjanser[k].vist === '–' && v === '0 %')); })
           .map(([lag, pst]) => `${k}: ${lag} ${pst}`));
       const sider = ({eliteserien: ['hvem-vinner', 'hvem-rykker-ned'], obos: ['hvem-rykker-opp', 'hvem-rykker-ned']})[side];
       check(`${side}: uten JavaScript har ligasiden ingen oppsummering, boksene har tallene fra tekster.json, og «Se alle →» går til ${sider.join(' og ')}`,
@@ -4600,6 +4603,9 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       // tallene som tabellen i tekster.json, «Hvorfor» for hvert aktuelt lag,
       // tabellutsnittet og kampene; med JavaScript ingen JS-feil, og lenkene
       // fra ligasiden og forsiden finnes.
+      // Etter siste runde (terminlisten uten uspilte kamper) er det ingen kamper å vise.
+      const sesongFerdig = JSON.parse(fs.readFileSync(path.join(ROOT, side, 'data', 'fixtures.json'), 'utf8'))
+        .every(r => r.matches.every(m => m.played));
       for (const [sti, sone] of ({eliteserien: [['hvem-vinner', 'gull'], ['hvem-rykker-ned', 'nedrykk']], obos: [['hvem-rykker-opp', 'gull'], ['hvem-rykker-ned', 'nedrykk']]})[side] || []) {
         const sideUrl = base.replace('/eliteserien/', `/${side}/${sti}/`);
         const sp = tkHel.sporsmal[sone];
@@ -4616,7 +4622,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
         check(`${side}/${sti}: delingsbildet er sidens eget (og:image og twitter:image), 1200 x 630 og under 25 KB`, !bF, bF || '');
         check(`${side}/${sti}: uten JavaScript svarer siden med lag og prosent som i tekster.json («${s.svar.slice(0, 60)}...»), «Hvorfor» for ${sp.lag.length} lag, tabellutsnittet og ${s.kamper} kamper`,
           /^Hvem /.test(s.h1) && !sFeil.length && sp.lag.every(x => s.h3.includes(x.sporsmal)) && sp.lag.every(x => s.utsnitt.includes(x.lag))
-            && s.kamper > 0 && s.lenker.includes(`/${side}/`), JSON.stringify({sFeil, h1: s.h1, h3: s.h3.slice(0, 3)}));
+            && (s.kamper > 0 || sesongFerdig) && s.lenker.includes(`/${side}/`), JSON.stringify({sFeil, h1: s.h1, h3: s.h3.slice(0, 3)}));
         // Regelsvarene (20.10.2026): synlige uten JavaScript, med plassene fra
         // tekster.json «regler» (LEAGUE) i svaret.
         const regelSp = ({eliteserien: {'hvem-rykker-ned': ['Hvor mange rykker ned fra Eliteserien?', 'Når avsluttes Eliteserien?']},
