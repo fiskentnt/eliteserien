@@ -2053,6 +2053,21 @@ print("\n=== Ingen enkeltkilde flytter en uspilt kamp (bekreft_flytting, 10.10.2
 # 10.10., innenfor sesongvinduet. Kampen flyttes bare naar ESPN viser samme
 # nye dato og tid; svarer ikke ESPN, avgjoer kalenderfeeden.
 from reconcile_ny import bekreft_flytting as _bf
+# Fast klokke (19.11.2026): 10.10.2026 kl. 12 UTC, dagen scenarioet gjelder.
+# Med dagens dato ble flyttingen til 18.11. avvist da 18.11. var passert («en
+# dato som har vært ... flyttes aldri»), og ni tester ble røde av seg selv.
+import reconcile_ny as _rn_bf
+_bf_dt_ekte = _rn_bf.datetime
+
+
+class _BfKlokke(_bf_dt_ekte):
+    @classmethod
+    def now(cls, tz=None):
+        n = _bf_dt_ekte(2026, 10, 10, 12, 0, tzinfo=_tz.utc)
+        return n.astimezone(tz) if tz else n.replace(tzinfo=None)
+
+
+_rn_bf.datetime = _BfKlokke
 _forr = [{"home": "Rosenborg", "away": "Start", "round": 26, "date": "2026-11-07", "time": "18:00", "hg": None, "ag": None},
          {"home": "Molde", "away": "Brann", "round": 26, "date": "2026-11-08", "time": "17:00", "hg": None, "ag": None},
          {"home": "Brann", "away": "Viking", "round": 23, "date": "2026-10-09", "time": "19:00", "hg": 0, "ag": 2}]
@@ -2145,6 +2160,7 @@ sjekk("Eliteserien (update_data.py): bekreft_datoer kjøres etter datovakten, me
       'merged, _forrige_liste, [("ESPN", _espn_fasit), ("kalenderfeeden", _kalender_fasit)], log=log,' in _ud
       and "espn_source.fetch_season(_aktiv" in _ud and "ntf_source.parse_kalender(ntf_source.hent_kalender(LIGA" in _ud
       and _ud.index("rimelige_datoer(merged, _forrige_liste") < _ud.index("merged, _flytting = bekreft_datoer("))
+_rn_bf.datetime = _bf_dt_ekte
 
 print("\n=== Uten sesongautoritet står vakten over ===")
 _l8 = []
