@@ -1,21 +1,33 @@
 {
- "checked_at": "2026-11-20T20:01:11+00:00",
+ "checked_at": "2026-11-20T20:11:06+00:00",
  "checked_date": "2026-11-20",
- "kjoring": "44807441627-1",
+ "kjoring": "44808991506-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-11-20T20:01:11+00:00",
-  "kjoring": "44807441627-1",
-  "kilde": "https://www.eliteserien.no/resultater",
-  "avtrykk": "7303e0b696f088d5c59ac38f0d11bcb695d4f06773972bd3e0fd604fa08f8009"
- }
+ "advarsler": [
+  "Tabell: Molde-Bodø/Glimt mangler i tabellen på eliteserien.no. Hos oss 2-4, bekreftet av espn og highlightly. Avspark 19:00, sjekkes på nytt i neste kjøring (frist 01:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Molde|Bodø/Glimt",
+   "resultat": [
+    2,
+    4
+   ],
+   "avspark": "2026-11-20T18:00:00+00:00",
+   "frist": "2026-11-21T00:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
