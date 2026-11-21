@@ -2166,18 +2166,24 @@
      "hentet": "2026-11-19T13:28:54.925Z"
     }
    },
-   "kickoff": "2026-11-20T18:00:00"
+   "kickoff": "2026-11-20T18:00:00",
+   "resultat": {
+    "hg": 2,
+    "ag": 4,
+    "utfall": "B"
+   },
+   "frosset": true
   },
   "2026|Tromsø|Viking": {
    "home": "Tromsø",
    "away": "Viking",
    "kilder": {
     "oddsapi": {
-     "H": 0.2396,
-     "U": 0.2242,
-     "B": 0.5362,
-     "n_bookmakers": 17,
-     "hentet": "2026-11-19T23:02:04+00:00"
+     "H": 0.2474,
+     "U": 0.2311,
+     "B": 0.5215,
+     "n_bookmakers": 22,
+     "hentet": "2026-11-21T09:01:38+00:00"
     },
     "pinnacle": {
      "H": 0.2451,
@@ -2209,11 +2215,11 @@
    "away": "Fredrikstad",
    "kilder": {
     "oddsapi": {
-     "H": 0.3906,
-     "U": 0.277,
-     "B": 0.3324,
-     "n_bookmakers": 21,
-     "hentet": "2026-11-19T23:02:04+00:00"
+     "H": 0.3767,
+     "U": 0.2905,
+     "B": 0.3327,
+     "n_bookmakers": 22,
+     "hentet": "2026-11-21T09:01:38+00:00"
     },
     "pinnacle": {
      "H": 0.3761,
@@ -2256,11 +2262,11 @@
    "away": "Start",
    "kilder": {
     "oddsapi": {
-     "H": 0.6382,
-     "U": 0.187,
-     "B": 0.1748,
-     "n_bookmakers": 21,
-     "hentet": "2026-11-19T23:02:04+00:00"
+     "H": 0.6246,
+     "U": 0.1918,
+     "B": 0.1836,
+     "n_bookmakers": 22,
+     "hentet": "2026-11-21T09:01:38+00:00"
     },
     "pinnacle": {
      "H": 0.6427,
@@ -2303,11 +2309,11 @@
    "away": "Rosenborg",
    "kilder": {
     "oddsapi": {
-     "H": 0.2122,
-     "U": 0.2066,
-     "B": 0.5812,
-     "n_bookmakers": 20,
-     "hentet": "2026-11-19T23:02:04+00:00"
+     "H": 0.2119,
+     "U": 0.2067,
+     "B": 0.5815,
+     "n_bookmakers": 21,
+     "hentet": "2026-11-21T09:01:38+00:00"
     },
     "pinnacle": {
      "H": 0.2126,
@@ -2350,11 +2356,11 @@
    "away": "Brann",
    "kilder": {
     "oddsapi": {
-     "H": 0.3414,
-     "U": 0.2431,
-     "B": 0.4156,
-     "n_bookmakers": 20,
-     "hentet": "2026-11-19T23:02:04+00:00"
+     "H": 0.347,
+     "U": 0.2436,
+     "B": 0.4094,
+     "n_bookmakers": 21,
+     "hentet": "2026-11-21T09:01:38+00:00"
     },
     "pinnacle": {
      "H": 0.3435,
@@ -2397,11 +2403,11 @@
    "away": "Sandefjord",
    "kilder": {
     "oddsapi": {
-     "H": 0.3671,
-     "U": 0.243,
-     "B": 0.3899,
-     "n_bookmakers": 20,
-     "hentet": "2026-11-19T23:02:04+00:00"
+     "H": 0.3627,
+     "U": 0.2441,
+     "B": 0.3932,
+     "n_bookmakers": 21,
+     "hentet": "2026-11-21T09:01:38+00:00"
     },
     "pinnacle": {
      "H": 0.3539,
@@ -2444,11 +2450,11 @@
    "away": "Lillestrøm",
    "kilder": {
     "oddsapi": {
-     "H": 0.4312,
-     "U": 0.2334,
-     "B": 0.3355,
-     "n_bookmakers": 20,
-     "hentet": "2026-11-19T23:02:04+00:00"
+     "H": 0.4292,
+     "U": 0.234,
+     "B": 0.3368,
+     "n_bookmakers": 21,
+     "hentet": "2026-11-21T09:01:38+00:00"
     },
     "pinnacle": {
      "H": 0.4353,
@@ -2517,5 +2523,5 @@
   }
  },
  "note": "Kildene side om side for hver kamp, med margin fjernet. Modellen bruker fortsatt The Odds API; denne filen finnes for å sammenligne dem. Raden fryses når kampen er spilt.",
- "updated": "2026-11-19T23:05:46+00:00"
+ "updated": "2026-11-21T09:05:21+00:00"
 }
