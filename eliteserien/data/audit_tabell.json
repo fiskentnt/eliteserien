@@ -1,21 +1,33 @@
 {
- "checked_at": "2026-11-21T14:51:16+00:00",
+ "checked_at": "2026-11-21T15:01:08+00:00",
  "checked_date": "2026-11-21",
- "kjoring": "44916036193-1",
+ "kjoring": "44916879423-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-11-21T14:51:16+00:00",
-  "kjoring": "44916036193-1",
-  "kilde": "https://www.eliteserien.no/resultater",
-  "avtrykk": "187b4bb438d4c01816d153d63a13b98564bcd33536a3a9efe32002ef7d3b57ac"
- }
+ "advarsler": [
+  "Tabell: Tromsø-Viking mangler i tabellen på eliteserien.no. Hos oss 3-2, bekreftet av espn og highlightly. Avspark 14:00, sjekkes på nytt i neste kjøring (frist 20:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Tromsø|Viking",
+   "resultat": [
+    3,
+    2
+   ],
+   "avspark": "2026-11-21T13:00:00+00:00",
+   "frist": "2026-11-21T19:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
