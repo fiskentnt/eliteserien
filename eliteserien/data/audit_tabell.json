@@ -1,21 +1,33 @@
 {
- "checked_at": "2026-11-21T18:51:07+00:00",
+ "checked_at": "2026-11-21T19:01:16+00:00",
  "checked_date": "2026-11-21",
- "kjoring": "44937731534-1",
+ "kjoring": "44938607437-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-11-21T18:51:07+00:00",
-  "kjoring": "44937731534-1",
-  "kilde": "https://www.eliteserien.no/resultater",
-  "avtrykk": "cf395e6e2610edf6042c092c8001fa65d932a2b4c54866e32a99bfca0252346c"
- }
+ "advarsler": [
+  "Tabell: Vålerenga-Start mangler i tabellen på eliteserien.no. Hos oss 1-2, bekreftet av espn og highlightly. Avspark 18:00, sjekkes på nytt i neste kjøring (frist 00:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Vålerenga|Start",
+   "resultat": [
+    1,
+    2
+   ],
+   "avspark": "2026-11-21T17:00:00+00:00",
+   "frist": "2026-11-21T23:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
