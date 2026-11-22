@@ -1,33 +1,21 @@
 {
- "checked_at": "2026-11-22T21:30:59+00:00",
+ "checked_at": "2026-11-22T21:40:45+00:00",
  "checked_date": "2026-11-22",
- "kjoring": "45072478065-1",
+ "kjoring": "45073415616-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 1,
- "alle_like": false,
+ "warnings": 0,
+ "alle_like": true,
  "nye": [],
  "avvik": [],
- "advarsler": [
-  "Tabell: Sarpsborg 08-Lillestrøm mangler i tabellen på eliteserien.no. Hos oss 0-2, bekreftet av espn og highlightly. Avspark 19:15, sjekkes på nytt i neste kjøring (frist 01:15)."
- ],
- "venter": [
-  {
-   "kamp": "Sarpsborg 08|Lillestrøm",
-   "resultat": [
-    0,
-    2
-   ],
-   "avspark": "2026-11-22T18:15:00+00:00",
-   "frist": "2026-11-23T00:15:00+00:00",
-   "kilder": [
-    "espn",
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  }
- ],
- "siste_like": null
+ "advarsler": [],
+ "venter": [],
+ "siste_like": {
+  "checked_at": "2026-11-22T21:40:45+00:00",
+  "kjoring": "45073415616-1",
+  "kilde": "https://www.eliteserien.no/resultater",
+  "avtrykk": "800398f50f2f4253589142c906ba48fb38835028ab31302478355a39d0dc9a59"
+ }
 }
