@@ -18,7 +18,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.6611,
-   "expected": 0.8485
+   "expected": 0.8424
   },
   "Brann": {
    "date": "2026-11-22",
@@ -36,7 +36,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0001,
-   "expected": 0.0002
+   "expected": 0.0003
   },
   "Fredrikstad": {
    "date": "2026-11-21",
@@ -54,7 +54,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.0498,
-   "expected": 0.0452
+   "expected": 0.0455
   },
   "HamKam": {
    "date": "2026-11-21",
@@ -72,7 +72,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.1011,
-   "expected": 0.081
+   "expected": 0.0778
   },
   "KFUM Oslo": {
    "date": "2026-11-22",
@@ -86,11 +86,11 @@
    "actual": "loss",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
-   "pp": 3,
+   "pp": 2,
    "good": false,
    "basis": "avspark",
    "foer": 0.0533,
-   "expected": 0.0407
+   "expected": 0.0378
   },
   "Kristiansund": {
    "date": "2026-11-22",
@@ -108,25 +108,25 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.2966,
-   "expected": 0.2923
+   "expected": 0.2915
   },
   "Lillestrøm": {
-   "date": "2026-11-08",
-   "home": "Lillestrøm",
-   "away": "Aalesund",
-   "hg": 3,
+   "date": "2026-11-22",
+   "home": "Sarpsborg 08",
+   "away": "Lillestrøm",
+   "hg": 0,
    "ag": 2,
-   "opp": "Aalesund",
-   "gf": 3,
-   "ga": 2,
+   "opp": "Sarpsborg 08",
+   "gf": 2,
+   "ga": 0,
    "actual": "win",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": 21,
+   "pp": 17,
    "good": true,
    "basis": "avspark",
-   "foer": 0.4928,
-   "expected": 0.57
+   "foer": 0.6981,
+   "expected": 0.7029
   },
   "Molde": {
    "date": "2026-11-20",
@@ -140,11 +140,11 @@
    "actual": "loss",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": -10,
+   "pp": -17,
    "good": false,
    "basis": "avspark",
    "foer": 0.3196,
-   "expected": 0.3313
+   "expected": 0.2419
   },
   "Rosenborg": {
    "date": "2026-11-22",
@@ -158,11 +158,11 @@
    "actual": "draw",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": -3,
+   "pp": -5,
    "good": false,
    "basis": "avspark",
    "foer": 0.9259,
-   "expected": 0.9287
+   "expected": 0.9065
   },
   "Sandefjord": {
    "date": "2026-11-22",
@@ -180,25 +180,25 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.1118,
-   "expected": 0.1025
+   "expected": 0.1001
   },
   "Sarpsborg 08": {
-   "date": "2026-11-08",
-   "home": "HamKam",
-   "away": "Sarpsborg 08",
-   "hg": 3,
-   "ag": 0,
-   "opp": "HamKam",
+   "date": "2026-11-22",
+   "home": "Sarpsborg 08",
+   "away": "Lillestrøm",
+   "hg": 0,
+   "ag": 2,
+   "opp": "Lillestrøm",
    "gf": 0,
-   "ga": 3,
+   "ga": 2,
    "actual": "loss",
    "zone": "kvalik",
    "chance": "kvaliksjansen",
    "pp": 1,
    "good": false,
    "basis": "avspark",
-   "foer": 0.0044,
-   "expected": 0.0036
+   "foer": 0.0151,
+   "expected": 0.0102
   },
   "Start": {
    "date": "2026-11-21",
@@ -216,7 +216,7 @@
    "good": true,
    "basis": "avspark",
    "foer": 0.9733,
-   "expected": 0.9761
+   "expected": 0.977
   },
   "Tromsø": {
    "date": "2026-11-21",
@@ -230,11 +230,11 @@
    "actual": "win",
    "zone": "europa",
    "chance": "topp 4-sjansen",
-   "pp": 10,
+   "pp": 3,
    "good": true,
    "basis": "avspark",
    "foer": 0.0728,
-   "expected": 0.0744
+   "expected": 0.036
   },
   "Viking": {
    "date": "2026-11-21",
@@ -252,7 +252,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.2133,
-   "expected": 0.2075
+   "expected": 0.2152
   },
   "Vålerenga": {
    "date": "2026-11-21",
@@ -270,7 +270,7 @@
    "good": false,
    "basis": "avspark",
    "foer": 0.0029,
-   "expected": 0.0013
+   "expected": 0.0012
   },
   "Aalesund": {
    "date": "2026-11-22",
@@ -284,12 +284,12 @@
    "actual": "draw",
    "zone": "nedrykk",
    "chance": "nedrykkssjansen",
-   "pp": -2,
+   "pp": -1,
    "good": true,
    "basis": "avspark",
    "foer": 0.7389,
-   "expected": 0.7288
+   "expected": 0.7245
   }
  },
- "updated": "2026-11-22T20:11:39Z"
+ "updated": "2026-11-22T20:21:26Z"
 }
