@@ -1,48 +1,21 @@
 {
- "checked_at": "2026-11-22T18:30:48+00:00",
+ "checked_at": "2026-11-22T18:40:51+00:00",
  "checked_date": "2026-11-22",
- "kjoring": "45055471132-1",
+ "kjoring": "45056422533-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 2,
- "alle_like": false,
+ "warnings": 0,
+ "alle_like": true,
  "nye": [],
  "avvik": [],
- "advarsler": [
-  "Tabell: Aalesund-Rosenborg mangler i tabellen på eliteserien.no. Hos oss 2-2, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00).",
-  "Tabell: Kristiansund-Sandefjord mangler i tabellen på eliteserien.no. Hos oss 2-2, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00)."
- ],
- "venter": [
-  {
-   "kamp": "Aalesund|Rosenborg",
-   "resultat": [
-    2,
-    2
-   ],
-   "avspark": "2026-11-22T16:00:00+00:00",
-   "frist": "2026-11-22T22:00:00+00:00",
-   "kilder": [
-    "espn",
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  },
-  {
-   "kamp": "Kristiansund|Sandefjord",
-   "resultat": [
-    2,
-    2
-   ],
-   "avspark": "2026-11-22T16:00:00+00:00",
-   "frist": "2026-11-22T22:00:00+00:00",
-   "kilder": [
-    "espn",
-    "highlightly"
-   ],
-   "grunn": "mangler i tabellen"
-  }
- ],
- "siste_like": null
+ "advarsler": [],
+ "venter": [],
+ "siste_like": {
+  "checked_at": "2026-11-22T18:40:51+00:00",
+  "kjoring": "45056422533-1",
+  "kilde": "https://www.eliteserien.no/resultater",
+  "avtrykk": "1426e82d6ce21b602a2ea0e6c102a6a9891afce23457032e38e492b07ded53f9"
+ }
 }
