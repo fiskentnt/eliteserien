@@ -1,21 +1,33 @@
 {
- "checked_at": "2026-11-22T17:50:49+00:00",
+ "checked_at": "2026-11-22T18:00:49+00:00",
  "checked_date": "2026-11-22",
- "kjoring": "45051688501-1",
+ "kjoring": "45052591743-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-11-22T17:50:49+00:00",
-  "kjoring": "45051688501-1",
-  "kilde": "https://www.eliteserien.no/resultater",
-  "avtrykk": "d5a5363206624381038fa52d1f78e8272614fd69dd07d7e6cd46be8544185f8f"
- }
+ "advarsler": [
+  "Tabell: Kristiansund-Sandefjord mangler i tabellen på eliteserien.no. Hos oss 2-2, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "Kristiansund|Sandefjord",
+   "resultat": [
+    2,
+    2
+   ],
+   "avspark": "2026-11-22T16:00:00+00:00",
+   "frist": "2026-11-22T22:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
