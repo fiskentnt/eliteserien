@@ -1,21 +1,33 @@
 {
- "checked_at": "2026-11-22T19:50:58+00:00",
+ "checked_at": "2026-11-22T20:00:53+00:00",
  "checked_date": "2026-11-22",
- "kjoring": "45063026795-1",
+ "kjoring": "45063936564-1",
  "kilde": "https://www.eliteserien.no/resultater",
  "sesong": "2026",
  "sammenlignet": true,
  "errors": 0,
- "warnings": 0,
- "alle_like": true,
+ "warnings": 1,
+ "alle_like": false,
  "nye": [],
  "avvik": [],
- "advarsler": [],
- "venter": [],
- "siste_like": {
-  "checked_at": "2026-11-22T19:50:58+00:00",
-  "kjoring": "45063026795-1",
-  "kilde": "https://www.eliteserien.no/resultater",
-  "avtrykk": "1426e82d6ce21b602a2ea0e6c102a6a9891afce23457032e38e492b07ded53f9"
- }
+ "advarsler": [
+  "Tabell: KFUM Oslo-Brann mangler i tabellen på eliteserien.no. Hos oss 3-4, bekreftet av espn og highlightly. Avspark 17:00, sjekkes på nytt i neste kjøring (frist 23:00)."
+ ],
+ "venter": [
+  {
+   "kamp": "KFUM Oslo|Brann",
+   "resultat": [
+    3,
+    4
+   ],
+   "avspark": "2026-11-22T16:00:00+00:00",
+   "frist": "2026-11-22T22:00:00+00:00",
+   "kilder": [
+    "espn",
+    "highlightly"
+   ],
+   "grunn": "mangler i tabellen"
+  }
+ ],
+ "siste_like": null
 }
