@@ -1,7 +1,7 @@
 {
  "versjon": 1,
  "side": "eliteserien",
- "laget": "2026-11-22T20:24:12Z",
+ "laget": "2026-11-23T08:31:27Z",
  "sesonger": 100000,
  "note": "Hentet av scripts/lag_grunnlag.js fra siden selv med grunnlagsfilen i bruk. scripts/lag_sider.py lager de statiske sidene fra denne filen.",
  "liga": {
@@ -621,7 +621,7 @@
  },
  "statisk": {
   "ligameny": "<a href=\"/eliteserien/\" aria-current=\"page\">Eliteserien</a><a href=\"/obos/\" data-league=\"obos\" title=\"Opprykk, opprykkskvalifisering og nedrykk\">OBOS-ligaen</a>",
-  "stempel": "Alle kamper til og med søndag 22. november er lagt inn. Neste sjekk etter kampen Glimt-KFUM lørdag 28. november kl. 16.00.",
+  "stempel": "Alle kamper til og med søndag 22. november er lagt inn. <span class=\"stale\" title=\"Siste sjekk er noen timer gammel.\">Neste sjekk etter kampen Glimt-KFUM lørdag 28. november kl. 16.00.</span>",
   "forklaring": "<span class=\"cl\"><i></i>Champions League-kvalifisering (1 og 2)</span><span class=\"eu\"><i></i>Conference League-kvalifisering (3 og 4)</span><span class=\"q\"><i></i>Kvalik (14)</span><span class=\"n\"><i></i>Nedrykk (15 og 16)</span><span class=\"lnote\">Europa League-plassen går til cupvinneren, ikke til en tabellplassering.</span>",
   "nestekamp": "<section class=\"panel nextmatch\" id=\"nextMatch\" data-id=\"m28_0\">\n      <div class=\"panel-head\">\n        <h2><span class=\"h-ic\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"8.5\"></circle><path d=\"m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8Z\"></path></svg></span>Neste kamp</h2>\n        <button type=\"button\" class=\"head-link\" id=\"nmAll\">Se alle kamper →</button>\n      </div>\n      <div class=\"nm-body\">\n        <p class=\"nm-res\" id=\"nmRes\" hidden=\"\"></p>\n        <p class=\"nm-when\" id=\"nmWhen\">Lørdag 28. november kl. 16:00 · runde 28</p>\n        <div class=\"nm-teams\"><span id=\"nmHome\">Bodø/Glimt</span><span class=\"nm-dash\">–</span><span id=\"nmAway\">KFUM Oslo</span></div>\n        <div class=\"nm-hub\" id=\"nmHub\">\n          <button type=\"button\" data-q=\"H\">H 89 %</button><button type=\"button\" data-q=\"U\">U 8 %</button><button type=\"button\" data-q=\"B\">B 4 %</button>\n        </div>\n        <p class=\"nm-impact\" id=\"nmImpact\" hidden=\"\"></p>\n      </div>\n    </section>",
   "sporsmalsliste": "<div class=\"qa-item\"><button data-id=\"keyround\">Hva er rundens viktigste kamp i ligaen?</button></div><div class=\"qa-item\"><button data-id=\"runin\">Hvem har det tøffeste restprogrammet?</button></div><div class=\"qa-item\"><button data-id=\"luck\">Hvem har slått oddsene, og hvem har skuffet?</button></div>",
@@ -731,7 +731,7 @@
    ],
    "plass": {
     "sporsmal": "Hvilken plass ender Bodø/Glimt på?",
-    "svar": "Bodø/Glimt ligger på 1. plass med 65 poeng. Matematisk kan de ende fra 1. til 2. plass. Oftest blir det 1. plass (94 %), og i minst 90 % av simuleringene ender de mellom 1. og 2. plass."
+    "svar": "Bodø/Glimt ligger på 1. plass med 65 poeng. Matematisk kan de ende fra 1. til 2. plass. Oftest blir det 1. plass (94 %)."
    },
    "rest": [
     {
@@ -858,7 +858,7 @@
    ],
    "plass": {
     "sporsmal": "Hvilken plass ender Brann på?",
-    "svar": "Brann ligger på 7. plass med 36 poeng. Matematisk kan de ende fra 5. til 14. plass. Oftest blir det 7. plass (91 %), og i minst 90 % av simuleringene ender de mellom 7. og 8. plass."
+    "svar": "Brann ligger på 7. plass med 36 poeng. Matematisk kan de ende fra 5. til 14. plass. Oftest blir det 7. plass (91 %)."
    },
    "rest": [
     {
@@ -2382,7 +2382,7 @@
    ],
    "plass": {
     "sporsmal": "Hvilken plass ender Viking på?",
-    "svar": "Viking ligger på 2. plass med 62 poeng. Matematisk kan de ende fra 1. til 2. plass. Oftest blir det 2. plass (94 %), og i minst 90 % av simuleringene ender de mellom 1. og 2. plass."
+    "svar": "Viking ligger på 2. plass med 62 poeng. Matematisk kan de ende fra 1. til 2. plass. Oftest blir det 2. plass (94 %)."
    },
    "rest": [
     {
