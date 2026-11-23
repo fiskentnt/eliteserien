@@ -6872,9 +6872,13 @@ function qaRange(team){
   // Ingen kamper spilt: rekkefølgen i tabellen er tilfeldig, så plassen nå
   // nevnes ikke.
   const naa = qaIngenSpilt() ? '' : `${team} ligger på ${idx+1}. plass med ${poengTxt(me.pts)}. `;
+  // Spennet sies bare når det forteller noe nytt (22.11.2026): ikke når det er
+  // hele det matematiske spennet (Glimt: «1. plass (94 %)» og «mellom 1. og
+  // 2.» leste som en motsigelse), og ikke når én plass alene har 90 % eller mer.
+  const medSpenn = lo!==hi && !(lo===best && hi===worst) && d[mode]<0.9;
   return `${naa}Matematisk kan ${naa ? 'de' : team} ende fra ${best}. til ${worst}. plass. `
     + `Oftest blir det ${mode+1}. plass (${pctTxt(d[mode])})`
-    + (lo===hi ? '.' : `, og i minst 90 % av simuleringene ender de mellom ${lo}. og ${hi}. plass.`);
+    + (medSpenn ? `, og i minst 90 % av simuleringene ender de mellom ${lo}. og ${hi}. plass.` : '.');
 }
 // ---- Spørsmål 8: hell/uhell (23.10.2026: fra sluttoddsen, ikke modellen).
 // Sammenligner FAKTISKE poeng i FAKTISK spilte kamper (MATCHES, ikke

@@ -4452,6 +4452,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           const d = lastMC[t], mode = d.indexOf(Math.max(...d)) + 1, svar = qaRange(t);
           if (y[t].verst === y[t].best ? !svar.includes(`ender på ${y[t].best}. plass uansett`)
               : !(svar.includes(`ende fra ${y[t].best}. til ${y[t].verst}. plass`) && svar.includes(`Oftest blir det ${mode}. plass`))) f(`plassen: ${svar}`);
+          // Spennet (22.11.2026): ikke når det er hele det matematiske spennet,
+          // eller når én plass har 90 % eller mer.
+          const sp = svar.match(/ender de mellom (\d+)\. og (\d+)\. plass/);
+          if (sp && (+sp[1] === y[t].best && +sp[2] === y[t].verst || d[mode - 1] >= 0.9)) f(`plassen, spennet sier ikke noe nytt: ${svar}`);
           // Hvem den kjemper mot: lagene som fortsatt kan bytte plass (qaCanCross).
           const kan = rows.filter(x => x.name !== t && qaCanCross(row, x)), sv = await qaRivals(t);
           if (!sv.startsWith(`${t} ligger på ${i + 1}. plass med `)) f(`kjemper: ${sv}`);
