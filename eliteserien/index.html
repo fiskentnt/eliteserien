@@ -5429,6 +5429,25 @@ const QA_VERB = Object.fromEntries(ZONE_KEYS.filter(k=>LEAGUE.zones[k]).map(k=>[
 // poeng, og rekkefølgen i tabellen er tilfeldig. Da nevner svarene ikke
 // tabellplassen.
 const qaIngenSpilt = () => !MATCHES.length && !matches.some(m=>m.hg!=null && m.ag!=null);
+// NULL AV N (23.11.2026): skjedde noe i 0 av de simulerte sesongene, sier
+// svarene det, ikke "under 1 %" (Brann: kvalik "i under 1 % av
+// simuleringene" krevde at Kristiansund tok igjen 25 mål i målforskjell).
+// p er en andel av N sesonger (lastMC: telling/N). Gjelder bare det som ikke
+// er matematisk avgjort; det sier svarene som før.
+const qaSimN = () => lastMCN || MC_N;
+const qaIngenSim = (p, N=qaSimN()) => p!=null && p*N < 0.5;
+// Vanlig mellomrom i tallet: svarene kopieres som ren tekst («Kopier tekst»).
+const qaIngenSimTxt = (N=qaSimN()) => `i noen av de ${String(N).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} simuleringene`;
+// Det som ikke skjer, sett fra laget, i presens: "Brann havner ikke på
+// kvalikplass i noen av de 100 000 simuleringene" (etter=true: "havner Brann
+// ikke ...", etter et ledd foran). Sonene foran fra verb ("ender i topp 4" ->
+// "ender ikke i topp 4"); kvalik og nedrykk har egne ord.
+function qaIngenSimHendelse(team, zoneKey, etter=false){
+  const z = LEAGUE.zones[zoneKey] || {};
+  const [v, ...rest] = zoneKey==='kvalik' ? ['havner', 'på', 'kvalikplass'] : zoneKey==='nedrykk' ? ['rykker', 'ned']
+    : String(z.verb || 'skjer').split(' ');
+  return `${etter ? `${v} ${team}` : `${team} ${v}`} ikke ${rest.length ? rest.join(' ')+' ' : ''}${qaIngenSimTxt()}`;
+}
 function qaSettled(team, zone){
   const {rows} = compute();
   const idx = rows.findIndex(r=>r.name===team);
@@ -5445,8 +5464,10 @@ function qaSettled(team, zone){
   const d = lastMC && lastMC[team];
   if(d){
     let sp=0; for(let i=0;i<b;i++) sp+=d[i];
-    if(sp>0.99) return {kind:'safe~', pos:idx+1, pts:me.pts, b};
-    if(sp<0.01) return {kind:'out~', pos:idx+1, pts:me.pts, b};
+    // ingen: det motsatte skjedde ikke i én eneste av de lastMCN sesongene
+    // (23.11.2026), så svaret sier det i stedet for "under 1 %" (qaIngenSim).
+    if(sp>0.99) return {kind:'safe~', pos:idx+1, pts:me.pts, b, ingen:qaIngenSim(1-sp)};
+    if(sp<0.01) return {kind:'out~', pos:idx+1, pts:me.pts, b, ingen:qaIngenSim(sp)};
   }
   return null;
 }
@@ -5491,7 +5512,7 @@ function qaSettledText(team, zone, st, konklusjon=true, kjerne=false){
     const motsatt = st.kind==='safe~' || st.kind==='safe'
       ? (back ? `${team} havner på kvalikplass eller lavere` : `${team} når ikke ${z.label}`)
       : `${team} ${z.verb}`;
-    return `${hode}Ingen kamper er spilt ennå, så tabellen sier ingenting om styrkeforholdet. ${motsatt} i under 1 % av simuleringene.`;
+    return `${hode}Ingen kamper er spilt ennå, så tabellen sier ingenting om styrkeforholdet. ${st.ingen ? `Det skjer ikke ${qaIngenSimTxt()} at ${motsatt}` : `${motsatt} i under 1 % av simuleringene`}.`;
   }
   // Tall med ord til og med tolv ("sju av de ni lagene"), siffer fra 13.
   const tallN = n => n<=12 ? QA_NUM[n] : String(n);
@@ -5535,6 +5556,10 @@ function qaSettledText(team, zone, st, konklusjon=true, kjerne=false){
     : `i ${tallN(ms.length)} av kampene som gjenstår`;
   const y = ytterNaa()[team];
   let resten;
+  // Så godt som avgjort: "under 1 %", eller at det ikke skjedde i én eneste
+  // simulering (st.ingen, qaIngenSim).
+  const skjer = st.ingen ? `Det skjedde ikke ${qaIngenSimTxt()}.` : 'Det skjer i under 1 % av simuleringene.';
+  const slaarFeil = st.ingen ? `Det slo ikke feil ${qaIngenSimTxt()}.` : 'Det slår feil i under 1 % av simuleringene.';
   if(st.kind==='safe'){
     // Laget taper resten: lagene bak som kan nå like mange poeng, mot hvor
     // mange som må forbi for å skyve laget ut av sonen.
@@ -5579,12 +5604,12 @@ function qaSettledText(team, zone, st, konklusjon=true, kjerne=false){
         + `Men de tar poeng fra hverandre ${iKampene(mellom(naabare))}, så ${team} kan i beste fall ende på ${y ? y.best : b+1}. plass. Det er matematisk avgjort.`);
   } else if(st.kind==='safe~'){
     resten = pos<=b
-      ? `Det gjenstår ${kamperN(me.left)}, men for at ${team} skal ${falle}, må ${hvem(b-pos+1, jagere, jagere.length===bak.length ? 'bak' : null, `lagene som kan nå ${poengTxt(me.pts)},`)} passere dem. Det skjer i under 1 % av simuleringene.`
-      : `Det gjenstår ${kamperN(me.left)}, og ${team} må passere ${hvem(pos-b, naabare, naabare.length===foran.length ? 'foran' : null, 'lagene de kan nå').replace(/^hele /, '')} for å ${reach}. Det slår feil i under 1 % av simuleringene.`;
+      ? `Det gjenstår ${kamperN(me.left)}, men for at ${team} skal ${falle}, må ${hvem(b-pos+1, jagere, jagere.length===bak.length ? 'bak' : null, `lagene som kan nå ${poengTxt(me.pts)},`)} passere dem. ${skjer}`
+      : `Det gjenstår ${kamperN(me.left)}, og ${team} må passere ${hvem(pos-b, naabare, naabare.length===foran.length ? 'foran' : null, 'lagene de kan nå').replace(/^hele /, '')} for å ${reach}. ${slaarFeil}`;
   } else {
     resten = pos>b
-      ? `Det gjenstår ${kamperN(me.left)}, men for at ${team} skal ${reach}, må de passere ${hvem(pos-b, naabare, naabare.length===foran.length ? 'foran' : null, 'lagene de kan nå')}. Det skjer i under 1 % av simuleringene.`
-      : `Det gjenstår ${kamperN(me.left)}, og for at ${team} skal ${reach}, må ${b-pos===0 ? 'ingen' : `ikke flere enn ${lagN(b-pos)}`} av ${jagere.length<=3 ? `lagene ${navn(jagere)}` : `de ${tallN(jagere.length)} lagene som kan nå ${poengTxt(me.pts)},`} passere dem. Det skjer i under 1 % av simuleringene.`;
+      ? `Det gjenstår ${kamperN(me.left)}, men for at ${team} skal ${reach}, må de passere ${hvem(pos-b, naabare, naabare.length===foran.length ? 'foran' : null, 'lagene de kan nå')}. ${skjer}`
+      : `Det gjenstår ${kamperN(me.left)}, og for at ${team} skal ${reach}, må ${b-pos===0 ? 'ingen' : `ikke flere enn ${lagN(b-pos)}`} av ${jagere.length<=3 ? `lagene ${navn(jagere)}` : `de ${tallN(jagere.length)} lagene som kan nå ${poengTxt(me.pts)},`} passere dem. ${skjer}`;
   }
   return hode + start + resten;
 }
@@ -6108,8 +6133,14 @@ async function qaLastMatch(team){
   const hvem = lagSone(team, zone.key);
   // Uten sannsynligheter fra før kampen finnes ingen forventning å måle mot.
   // Da sies det, i stedet for å måle mot seier og overdrive tallet.
+  // Null av N sesonger (qaIngenSim, 23.11.2026): "null", og hva det betyr,
+  // ikke "<1 %". Tallet nå er tabellens (lastMC), en ren telling.
+  const avgjort = zone.mat===1 || zone.mat===-1;
+  const ingenNaa = !avgjort && qaIngenSim(e ? e.naa : tableP);
   if(!e){
-    return [`Etter ${headLiten} er ${hvem} nå ${pctTxt(tableP, zone.mat)}. Vi vet ikke hva den var før kampen, så vi kan ikke si hvor mye resultatet endret den.`,
+    return [ingenNaa
+      ? `Etter ${headLiten} ${qaIngenSimHendelse(team, zone.key, true)}. Vi vet ikke hva ${hvem} var før kampen, så vi kan ikke si hvor mye resultatet endret den.`
+      : `Etter ${headLiten} er ${hvem} nå ${pctTxt(tableP, zone.mat)}. Vi vet ikke hva den var før kampen, så vi kan ikke si hvor mye resultatet endret den.`,
             alt, anslag.trim()].filter(Boolean).join('\n\n');
   }
   // Endringen først, med tallet før kampen: "Seieren 2-1 mot Bodø/Glimt økte
@@ -6118,7 +6149,10 @@ async function qaLastMatch(team){
   // resultatet flyttet sjansen, ikke hvor viktig kampen var (en favoritt som
   // vinner som ventet, flytter lite). Odds og hva de andre utfallene ville
   // gitt står i avsnittet etter. .qa-answer har pre-line.
-  const first = e.lite
+  const ingenEtter = () => `før kampen var den ${pctTxt(e.foer)}, og nå ${qaIngenSimHendelse(team, zone.key, true)}.`;
+  const first = ingenNaa
+    ? (e.lite ? `${head} endret lite på ${hvem}: ` : `${head} ${e.verb} ${hvem} med ${Math.abs(e.n)} prosentpoeng: `)+ingenEtter()
+    : e.lite
     ? `${head} endret lite på ${hvem}. `+(e.n===0
         ? `Den er ${pctTxt(e.naa, e.mat)}, det samme som før kampen.`
         : `Den er ${pctTxt(e.naa, e.mat)}, og før kampen var den ${pctTxt(e.foer)}.`)

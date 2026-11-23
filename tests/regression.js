@@ -152,7 +152,7 @@ const PCT = String.raw`(?:\d+\s%|<1\s%|>99\s%|\d+ prosent)`;
 const PP = String.raw`(?:[+−±]\d+|\d+ prosentpoeng|to prosentpoeng)`;
 // Prosenttall med vanlig mellomrom, slik utfallslinjene i rundesvaret skriver dem.
 const PCTL = String.raw`(?:\d+ %|<1 %|>99 %)`;
-const SETTLED = /(sikret|kan ikke lenger|Sesongen er ferdig|så godt som|ingen gjenstående|Ingen kamper igjen|Ingen data|betydde lite|betyr lite|ingen spilte kamper|ingen runde|har ingen|Alle kampene|Ingen av de|Ingen kamp i|Ingenting er i spill|Det er matematisk avgjort|under 1 % av simuleringene)/i;
+const SETTLED = /(sikret|kan ikke lenger|Sesongen er ferdig|så godt som|ingen gjenstående|Ingen kamper igjen|Ingen data|betydde lite|betyr lite|ingen spilte kamper|ingen runde|har ingen|Alle kampene|Ingen av de|Ingen kamp i|Ingenting er i spill|Det er matematisk avgjort|under 1 % av simuleringene|i noen av de [\d ]+ simuleringene)/i;
 const QA_EXPECT = {
   why:        {what: 'prosent',       pat: new RegExp(PCT)},
   // "Hvorfor" om den andre retningen (regel 1, under Flere spørsmål, 20.10.2026).
@@ -1039,8 +1039,14 @@ async function main() {
         lag: t, spm: (b => b ? b.textContent.trim() : null)(document.querySelector('#qaButtons button[data-id="lastmatch"]'))};
     }, lag);
     // Feilene for ett lag (tom liste = alt stemmer), og hva boksen sa.
+    // 0 av N (23.11.2026): "...: før kampen var den 2 %, og nå havner X ikke på
+    // kvalikplass i noen av de 100 000 simuleringene." leses som "<1 %" nå, så
+    // resten av sjekkene gjelder som før.
+    const ingenRe = /: før kampen var den ((?:<1|>99|\d+) %), og nå .+ ikke .+ i noen av de [\d\s\u00a0\u202f]+ simuleringene\.$/;
+    const somFoer = svar => svar.replace(ingenRe, (_, fo) => / prosentpoeng: før kampen/.test(svar)
+      ? `, til <1 %. Før kampen var den ${fo}.` : `. Den er <1 %, og før kampen var den ${fo}.`);
     const vurder = (r, simulert) => {
-      const bm = r.boks.match(boksRe), sm = r.svar.match(svarRe), f = [];
+      const bm = r.boks.match(boksRe), sm = somFoer(r.svar).match(svarRe), f = [];
       if (!bm) return {f: [`boksen: "${r.boks}"`]};
       if (!sm) return {f: [`svaret: "${r.svar}"`]};
       const b = bm.groups, s = sm.groups;
@@ -4287,7 +4293,10 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
           qaWhyZoneOverride = key;
           let label, svar;
           try { label = qaWhyLabel(row.name); svar = await qaWhy(row.name); } finally { qaWhyZoneOverride = null; }
-          ut.push({lag: row.name, key, kind: st.kind, label, svar, pos: i + 1, b: st.b, pts: row.pts, max: row.max,
+          // Null av N (23.11.2026): det motsatte skjedde ikke i én eneste sesong.
+          const d = lastMC[row.name]; let sp = 0; for (let k = 0; k < st.b; k++) sp += d[k];
+          const null0 = (st.kind === 'safe~' ? 1 - sp : st.kind === 'out~' ? sp : 1) * lastMCN < 0.5;
+          ut.push({lag: row.name, key, kind: st.kind, label, svar, pos: i + 1, b: st.b, pts: row.pts, max: row.max, null0, N: lastMCN,
             antForan: i, antBak: rows.length - i - 1, verst: y[row.name].verst, best: y[row.name].best,
             jagere: rows.slice(i + 1).filter(x => x.max >= row.pts).map(x => x.name),
             naabare: rows.slice(0, i).filter(x => x.pts <= row.max).map(x => x.name),
@@ -4311,7 +4320,11 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       if (!x.medKonklusjon.endsWith(x.svar) || x.medKonklusjon === x.svar) feil.push('konklusjonen står ikke først i de andre svarene');
       const mat = x.kind === 'safe' || x.kind === 'out';
       if (mat && (!x.svar.endsWith('Det er matematisk avgjort.') || /%/.test(x.svar))) feil.push('matematisk: uten «Det er matematisk avgjort.» eller med prosent');
-      if (!mat && (!/(skjer|slår feil) i under 1 % av simuleringene\.$/.test(x.svar) || /matematisk/.test(x.svar))) feil.push('så godt som: uten «under 1 % av simuleringene»');
+      // Så godt som avgjort: "under 1 %", eller når det motsatte skjedde i 0 av
+      // N sesonger, at det ikke skjedde i noen av dem (23.11.2026).
+      const ingenTxt = `i noen av de ${String(x.N).replace(/\B(?=(\d{3})+(?!\d))/g, ' ')} simuleringene.`;
+      if (!mat && x.null0 && (!new RegExp(`(skjedde ikke|slo ikke feil) ${ingenTxt.replace(/\./g, '\\.')}$`).test(x.svar) || /under 1 %|matematisk/.test(x.svar))) feil.push('så godt som, 0 av N: uten «skjedde ikke i noen av de N simuleringene»');
+      if (!mat && !x.null0 && (!/(skjer|slår feil) i under 1 % av simuleringene\.$/.test(x.svar) || /matematisk/.test(x.svar))) feil.push('så godt som: uten «under 1 % av simuleringene»');
       const lab = {safe: `Hvorfor er ${x.lag} `, 'safe~': `Hvorfor er ${x.lag} så godt som `, out: `Hvorfor kan ${x.lag} ikke lenger `,
                    'out~': `Hvorfor har ${x.lag} så godt som ingen mulighet til å `}[x.kind];
       if (!x.label.startsWith(lab)) feil.push(`spørsmålet: ${x.label}`);
@@ -4338,10 +4351,11 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
     const vurder = (side, hvor, alle) => {
       const typer = ['safe', 'safe~', 'out', 'out~'].map(k => `${k} ${alle.filter(x => x.kind === k).length}`).join(', ');
       const gale = alle.map(x => ({x, feil: feilI(x)})).filter(r => r.feil.length);
+      alle.filter(x => x.kind.endsWith('~')).forEach(x => nullSett.add(x.null0 ? '0 av N' : 'under 1 %'));
       check(`${side}, ${hvor}: ${alle.length} avgjorte lag og soner (${typer}), alle begrunnet fra tabellen`, alle.length > 0 && !gale.length,
         gale.slice(0, 3).map(r => `${r.x.lag} ${r.x.key} ${r.x.kind}: ${r.feil.join('; ')}: ${r.x.svar}`).join(' | '));
     };
-    const sett = new Set();
+    const sett = new Set(), nullSett = new Set();
     for (const side of ['eliteserien', 'obos']) {
       const url = base.replace('/eliteserien/', `/${side}/`);
       // (a) bildet slik det er
@@ -4387,6 +4401,7 @@ print(json.dumps({'tabell': n.parse_tabell(side, 'obos'), 'justeringer': n.parse
       await pg.close();
     }
     check(`alle fire tilfellene er prøvd (${[...sett].sort().join(', ')})`, ['safe', 'safe~', 'out', 'out~'].every(k => sett.has(k)), '');
+    check(`så godt som avgjort: både «under 1 %» og 0 av N er prøvd (${[...nullSett].sort().join(', ')})`, nullSett.size === 2, '');
   };
   // TRE TILSTANDER I "SPØR OM TABELLEN" (19.10.2026). Før valgte qaTargetZone
   // første sone over 5 % og falt tilbake på kvalik, også når kvalik var
