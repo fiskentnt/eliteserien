@@ -1,7 +1,7 @@
 {
  "versjon": 1,
  "side": "eliteserien",
- "laget": "2026-11-25T00:47:29Z",
+ "laget": "2026-11-26T00:25:24Z",
  "sesonger": 100000,
  "note": "Hentet av scripts/lag_grunnlag.js fra siden selv med grunnlagsfilen i bruk. scripts/lag_sider.py lager de statiske sidene fra denne filen.",
  "liga": {
@@ -34,7 +34,7 @@
    }
   ],
   "kolonner_html": "<th class=\"sortable hide-xs hh\" id=\"gullHeader\" data-sort=\"gull\" title=\"Sannsynlighet for å vinne serien. Klikk for å sortere.\">Gull</th>\n          <th class=\"sortable hh\" id=\"europaHeader\" data-sort=\"europa\" title=\"Sannsynlighet for 1. til 4. plass, altså Champions League- eller Conference League-kvalifisering. Europa kan også nås gjennom cupen, og det er ikke med i tallet. Klikk for å sortere.\">Topp 4</th>\n          <th class=\"sortable hh\" id=\"nedHeader\" data-sort=\"ned\" title=\"Sannsynlighet for 15. eller 16. plass. Kvalik på 14. plass er ikke regnet med. Klikk for å sortere.\"><span class=\"lg\">Nedrykk</span><span class=\"sm\"> Nedr.</span></th>",
-  "rader_html": "<tr data-team=\"Bodø/Glimt\" class=\"cl\"><td class=\"pos\" title=\"Champions League: playoff-runden\">1</td><td class=\"team\"><span class=\"teamname\" data-team=\"Bodø/Glimt\" role=\"button\" tabindex=\"0\" title=\"Følg Bodø/Glimt\"><span class=\"lg\">Bodø/Glimt</span><span class=\"sm\"> Glimt</span></span><span class=\"badge europe\" title=\"Sikret topp 4: kan ikke havne lavere enn 4. plass.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 4: kan ikke havne lavere enn 4. plass.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 4</span></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">21</td><td class=\"hide-s\">2</td><td class=\"hide-s\">4</td><td class=\"hide-s\">67-25</td>\n      <td class=\"gd hide-diff\">+42</td><td class=\"pts\" title=\"65 poeng nå. Maks mulig sluttsum: 74.\">65</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox green\" data-team=\"Bodø/Glimt\" title=\"7,6 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 7,6 av 10 for Bodø/Glimt. Vis styrkegrafen.\">7,6</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"12 av 15 poeng i de fem siste\">8,0</b></td><td class=\"odds gull hide-xs pc-hi\">94 %</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Viking\" class=\"cl\"><td class=\"pos\" title=\"Champions League: andre kvalifiseringsrunde\">2</td><td class=\"team\"><span class=\"teamname\" data-team=\"Viking\" role=\"button\" tabindex=\"0\" title=\"Følg Viking\"><span class=\"lg\">Viking</span><span class=\"sm\"> Viking</span></span><span class=\"badge europe\" title=\"Sikret topp 4: kan ikke havne lavere enn 4. plass.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 4: kan ikke havne lavere enn 4. plass.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 4</span></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">20</td><td class=\"hide-s\">2</td><td class=\"hide-s\">5</td><td class=\"hide-s\">71-30</td>\n      <td class=\"gd hide-diff\">+41</td><td class=\"pts\" title=\"62 poeng nå. Maks mulig sluttsum: 71.\">62</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox green\" data-team=\"Viking\" title=\"6,6 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 6,6 av 10 for Viking. Vis styrkegrafen.\">6,6</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"9 av 15 poeng i de fem siste\">6,0</b></td><td class=\"odds gull hide-xs pc-mid\">6 %</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Lillestrøm\" class=\"eu\"><td class=\"pos\" title=\"Conference League: andre kvalifiseringsrunde\">3</td><td class=\"team\"><span class=\"teamname\" data-team=\"Lillestrøm\" role=\"button\" tabindex=\"0\" title=\"Følg Lillestrøm\"><span class=\"lg\">Lillestrøm</span><span class=\"sm\"> LSK</span></span><span class=\"badge safe\" title=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret plass</span></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">15</td><td class=\"hide-s\">3</td><td class=\"hide-s\">9</td><td class=\"hide-s\">41-35</td>\n      <td class=\"gd hide-diff\">+6</td><td class=\"pts\" title=\"48 poeng nå. Maks mulig sluttsum: 57.\">48</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Lillestrøm\" title=\"5,0 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,0 av 10 for Lillestrøm. Vis styrkegrafen.\">5,0</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"15 av 15 poeng i de fem siste\">10,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-hi\">88 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Rosenborg\" class=\"eu  cut\"><td class=\"pos\" title=\"Conference League: kvalifisering\">4</td><td class=\"team\"><span class=\"teamname\" data-team=\"Rosenborg\" role=\"button\" tabindex=\"0\" title=\"Følg Rosenborg\"><span class=\"lg\">Rosenborg</span><span class=\"sm\"> RBK</span></span><span class=\"badge safe\" title=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret plass</span></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">14</td><td class=\"hide-s\">5</td><td class=\"hide-s\">8</td><td class=\"hide-s\">55-34</td>\n      <td class=\"gd hide-diff\">+21</td><td class=\"pts\" title=\"47 poeng nå. Maks mulig sluttsum: 56.\">47</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox lightgreen\" data-team=\"Rosenborg\" title=\"6,2 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 6,2 av 10 for Rosenborg. Vis styrkegrafen.\">6,2</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"13 av 15 poeng i de fem siste\">8,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-hi\">87 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Molde\" class=\"\"><td class=\"pos\">5</td><td class=\"team\"><span class=\"teamname\" data-team=\"Molde\" role=\"button\" tabindex=\"0\" title=\"Følg Molde\"><span class=\"lg\">Molde</span><span class=\"sm\"> Molde</span></span><span class=\"badge safe\" title=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret plass</span></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">13</td><td class=\"hide-s\">5</td><td class=\"hide-s\">9</td><td class=\"hide-s\">66-48</td>\n      <td class=\"gd hide-diff\">+18</td><td class=\"pts\" title=\"44 poeng nå. Maks mulig sluttsum: 53.\">44</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox lightgreen\" data-team=\"Molde\" title=\"5,9 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,9 av 10 for Molde. Vis styrkegrafen.\">5,9</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"7 av 15 poeng i de fem siste\">4,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-mid\">16 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Tromsø\" class=\"\"><td class=\"pos\">6</td><td class=\"team\"><span class=\"teamname\" data-team=\"Tromsø\" role=\"button\" tabindex=\"0\" title=\"Følg Tromsø\"><span class=\"lg\">Tromsø</span><span class=\"sm\"> Tromsø</span></span><span class=\"badge safe\" title=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret plass</span></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">12</td><td class=\"hide-s\">7</td><td class=\"hide-s\">8</td><td class=\"hide-s\">46-42</td>\n      <td class=\"gd hide-diff\">+4</td><td class=\"pts\" title=\"43 poeng nå. Maks mulig sluttsum: 52.\">43</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Tromsø\" title=\"5,1 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,1 av 10 for Tromsø. Vis styrkegrafen.\">5,1</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"4 av 15 poeng i de fem siste\">2,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-mid\">9 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Brann\" class=\"\"><td class=\"pos\">7</td><td class=\"team\"><span class=\"teamname\" data-team=\"Brann\" role=\"button\" tabindex=\"0\" title=\"Følg Brann\"><span class=\"lg\">Brann</span><span class=\"sm\"> Brann</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">11</td><td class=\"hide-s\">3</td><td class=\"hide-s\">13</td><td class=\"hide-s\">51-47</td>\n      <td class=\"gd hide-diff\">+4</td><td class=\"pts\" title=\"36 poeng nå. Maks mulig sluttsum: 45.\">36</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Brann\" title=\"5,2 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,2 av 10 for Brann. Vis styrkegrafen.\">5,2</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"7 av 15 poeng i de fem siste\">4,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Vålerenga\" class=\"\"><td class=\"pos\">8</td><td class=\"team\"><span class=\"teamname\" data-team=\"Vålerenga\" role=\"button\" tabindex=\"0\" title=\"Følg Vålerenga\"><span class=\"lg\">Vålerenga</span><span class=\"sm\"> VIF</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">9</td><td class=\"hide-s\">5</td><td class=\"hide-s\">13</td><td class=\"hide-s\">44-49</td>\n      <td class=\"gd hide-diff\">-5</td><td class=\"pts\" title=\"32 poeng nå. Maks mulig sluttsum: 41.\">32</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Vålerenga\" title=\"4,7 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,7 av 10 for Vålerenga. Vis styrkegrafen.\">4,7</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"9 av 15 poeng i de fem siste\">6,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"Sarpsborg 08\" class=\"\"><td class=\"pos\">9</td><td class=\"team\"><span class=\"teamname\" data-team=\"Sarpsborg 08\" role=\"button\" tabindex=\"0\" title=\"Følg Sarpsborg 08\"><span class=\"lg\">Sarpsborg 08</span><span class=\"sm\"> S08</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">7</td><td class=\"hide-s\">12</td><td class=\"hide-s\">32-44</td>\n      <td class=\"gd hide-diff\">-12</td><td class=\"pts\" title=\"31 poeng nå. Maks mulig sluttsum: 40.\">31</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Sarpsborg 08\" title=\"4,8 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,8 av 10 for Sarpsborg 08. Vis styrkegrafen.\">4,8</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"3 av 15 poeng i de fem siste\">2,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"KFUM Oslo\" class=\"\"><td class=\"pos\">10</td><td class=\"team\"><span class=\"teamname\" data-team=\"KFUM Oslo\" role=\"button\" tabindex=\"0\" title=\"Følg KFUM Oslo\"><span class=\"lg\">KFUM Oslo</span><span class=\"sm\"> KFUM</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">7</td><td class=\"hide-s\">12</td><td class=\"hide-s\">36-50</td>\n      <td class=\"gd hide-diff\">-14</td><td class=\"pts\" title=\"31 poeng nå. Maks mulig sluttsum: 40.\">31</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"KFUM Oslo\" title=\"4,1 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,1 av 10 for KFUM Oslo. Vis styrkegrafen.\">4,1</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"3 av 15 poeng i de fem siste\">2,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-mid\">1 %</td></tr><tr data-team=\"HamKam\" class=\"\"><td class=\"pos\">11</td><td class=\"team\"><span class=\"teamname\" data-team=\"HamKam\" role=\"button\" tabindex=\"0\" title=\"Følg HamKam\"><span class=\"lg\">HamKam</span><span class=\"sm\"> HamKam</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">7</td><td class=\"hide-s\">12</td><td class=\"hide-s\">38-53</td>\n      <td class=\"gd hide-diff\">-15</td><td class=\"pts\" title=\"31 poeng nå. Maks mulig sluttsum: 40.\">31</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox red\" data-team=\"HamKam\" title=\"3,8 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 3,8 av 10 for HamKam. Vis styrkegrafen.\">3,8</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"5 av 15 poeng i de fem siste\">3,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-mid\">1 %</td></tr><tr data-team=\"Fredrikstad\" class=\"\"><td class=\"pos\">12</td><td class=\"team\"><span class=\"teamname\" data-team=\"Fredrikstad\" role=\"button\" tabindex=\"0\" title=\"Følg Fredrikstad\"><span class=\"lg\">Fredrikstad</span><span class=\"sm\"> FFK</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">7</td><td class=\"hide-s\">12</td><td class=\"hide-s\">31-46</td>\n      <td class=\"gd hide-diff\">-15</td><td class=\"pts\" title=\"31 poeng nå. Maks mulig sluttsum: 40.\">31</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Fredrikstad\" title=\"4,3 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,3 av 10 for Fredrikstad. Vis styrkegrafen.\">4,3</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"2 av 15 poeng i de fem siste\">1,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"Sandefjord\" class=\"cut\"><td class=\"pos\">13</td><td class=\"team\"><span class=\"teamname\" data-team=\"Sandefjord\" role=\"button\" tabindex=\"0\" title=\"Følg Sandefjord\"><span class=\"lg\">Sandefjord</span><span class=\"sm\"> Sandefjord</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">7</td><td class=\"hide-s\">8</td><td class=\"hide-s\">12</td><td class=\"hide-s\">33-41</td>\n      <td class=\"gd hide-diff\">-8</td><td class=\"pts\" title=\"29 poeng nå. Maks mulig sluttsum: 38.\">29</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Sandefjord\" title=\"4,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,4 av 10 for Sandefjord. Vis styrkegrafen.\">4,4</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"5 av 15 poeng i de fem siste\">3,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-mid\">1 %</td></tr><tr data-team=\"Kristiansund\" class=\"playoff\"><td class=\"pos\">14</td><td class=\"team\"><span class=\"teamname\" data-team=\"Kristiansund\" role=\"button\" tabindex=\"0\" title=\"Følg Kristiansund\"><span class=\"lg\">Kristiansund</span><span class=\"sm\"> KBK</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">7</td><td class=\"hide-s\">6</td><td class=\"hide-s\">14</td><td class=\"hide-s\">32-53</td>\n      <td class=\"gd hide-diff\">-21</td><td class=\"pts\" title=\"27 poeng nå. Maks mulig sluttsum: 36.\">27</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox red\" data-team=\"Kristiansund\" title=\"3,8 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 3,8 av 10 for Kristiansund. Vis styrkegrafen.\">3,8</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"8 av 15 poeng i de fem siste\">5,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-mid\">32 %</td></tr><tr data-team=\"Aalesund\" class=\"ned\"><td class=\"pos\">15</td><td class=\"team\"><span class=\"teamname\" data-team=\"Aalesund\" role=\"button\" tabindex=\"0\" title=\"Følg Aalesund\"><span class=\"lg\">Aalesund</span><span class=\"sm\"> Aalesund</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">5</td><td class=\"hide-s\">10</td><td class=\"hide-s\">12</td><td class=\"hide-s\">47-62</td>\n      <td class=\"gd hide-diff\">-15</td><td class=\"pts\" title=\"25 poeng nå. Maks mulig sluttsum: 34.\">25</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Aalesund\" title=\"4,3 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,3 av 10 for Aalesund. Vis styrkegrafen.\">4,3</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"4 av 15 poeng i de fem siste\">2,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-hi\">74 %</td></tr><tr data-team=\"Start\" class=\"ned\"><td class=\"pos\">16</td><td class=\"team\"><span class=\"teamname\" data-team=\"Start\" role=\"button\" tabindex=\"0\" title=\"Følg Start\"><span class=\"lg\">Start</span><span class=\"sm\"> Start</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">6</td><td class=\"hide-s\">4</td><td class=\"hide-s\">17</td><td class=\"hide-s\">29-60</td>\n      <td class=\"gd hide-diff\">-31</td><td class=\"pts\" title=\"22 poeng nå. Maks mulig sluttsum: 31.\">22</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Start\" title=\"4,1 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,1 av 10 for Start. Vis styrkegrafen.\">4,1</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"6 av 15 poeng i de fem siste\">4,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-hi\">91 %</td></tr>",
+  "rader_html": "<tr data-team=\"Bodø/Glimt\" class=\"cl\"><td class=\"pos\" title=\"Champions League: playoff-runden\">1</td><td class=\"team\"><span class=\"teamname\" data-team=\"Bodø/Glimt\" role=\"button\" tabindex=\"0\" title=\"Følg Bodø/Glimt\"><span class=\"lg\">Bodø/Glimt</span><span class=\"sm\"> Glimt</span></span><span class=\"badge europe\" title=\"Sikret topp 4: kan ikke havne lavere enn 4. plass.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 4: kan ikke havne lavere enn 4. plass.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 4</span></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">21</td><td class=\"hide-s\">2</td><td class=\"hide-s\">4</td><td class=\"hide-s\">67-25</td>\n      <td class=\"gd hide-diff\">+42</td><td class=\"pts\" title=\"65 poeng nå. Maks mulig sluttsum: 74.\">65</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox green\" data-team=\"Bodø/Glimt\" title=\"7,6 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 7,6 av 10 for Bodø/Glimt. Vis styrkegrafen.\">7,6</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"12 av 15 poeng i de fem siste\">8,0</b></td><td class=\"odds gull hide-xs pc-hi\">94 %</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Viking\" class=\"cl\"><td class=\"pos\" title=\"Champions League: andre kvalifiseringsrunde\">2</td><td class=\"team\"><span class=\"teamname\" data-team=\"Viking\" role=\"button\" tabindex=\"0\" title=\"Følg Viking\"><span class=\"lg\">Viking</span><span class=\"sm\"> Viking</span></span><span class=\"badge europe\" title=\"Sikret topp 4: kan ikke havne lavere enn 4. plass.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret topp 4: kan ikke havne lavere enn 4. plass.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret topp 4</span></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">20</td><td class=\"hide-s\">2</td><td class=\"hide-s\">5</td><td class=\"hide-s\">71-30</td>\n      <td class=\"gd hide-diff\">+41</td><td class=\"pts\" title=\"62 poeng nå. Maks mulig sluttsum: 71.\">62</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox green\" data-team=\"Viking\" title=\"6,6 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 6,6 av 10 for Viking. Vis styrkegrafen.\">6,6</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"9 av 15 poeng i de fem siste\">6,0</b></td><td class=\"odds gull hide-xs pc-mid\">6 %</td><td class=\"odds p3 pc-hi\">100 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Lillestrøm\" class=\"eu\"><td class=\"pos\" title=\"Conference League: andre kvalifiseringsrunde\">3</td><td class=\"team\"><span class=\"teamname\" data-team=\"Lillestrøm\" role=\"button\" tabindex=\"0\" title=\"Følg Lillestrøm\"><span class=\"lg\">Lillestrøm</span><span class=\"sm\"> LSK</span></span><span class=\"badge safe\" title=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret plass</span></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">15</td><td class=\"hide-s\">3</td><td class=\"hide-s\">9</td><td class=\"hide-s\">41-35</td>\n      <td class=\"gd hide-diff\">+6</td><td class=\"pts\" title=\"48 poeng nå. Maks mulig sluttsum: 57.\">48</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Lillestrøm\" title=\"5,0 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,0 av 10 for Lillestrøm. Vis styrkegrafen.\">5,0</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"15 av 15 poeng i de fem siste\">10,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-hi\">88 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Rosenborg\" class=\"eu  cut\"><td class=\"pos\" title=\"Conference League: kvalifisering\">4</td><td class=\"team\"><span class=\"teamname\" data-team=\"Rosenborg\" role=\"button\" tabindex=\"0\" title=\"Følg Rosenborg\"><span class=\"lg\">Rosenborg</span><span class=\"sm\"> RBK</span></span><span class=\"badge safe\" title=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret plass</span></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">14</td><td class=\"hide-s\">5</td><td class=\"hide-s\">8</td><td class=\"hide-s\">55-34</td>\n      <td class=\"gd hide-diff\">+21</td><td class=\"pts\" title=\"47 poeng nå. Maks mulig sluttsum: 56.\">47</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox lightgreen\" data-team=\"Rosenborg\" title=\"6,2 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 6,2 av 10 for Rosenborg. Vis styrkegrafen.\">6,2</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"13 av 15 poeng i de fem siste\">8,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-hi\">87 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Molde\" class=\"\"><td class=\"pos\">5</td><td class=\"team\"><span class=\"teamname\" data-team=\"Molde\" role=\"button\" tabindex=\"0\" title=\"Følg Molde\"><span class=\"lg\">Molde</span><span class=\"sm\"> Molde</span></span><span class=\"badge safe\" title=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret plass</span></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">13</td><td class=\"hide-s\">5</td><td class=\"hide-s\">9</td><td class=\"hide-s\">66-48</td>\n      <td class=\"gd hide-diff\">+18</td><td class=\"pts\" title=\"44 poeng nå. Maks mulig sluttsum: 53.\">44</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox lightgreen\" data-team=\"Molde\" title=\"5,9 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,9 av 10 for Molde. Vis styrkegrafen.\">5,9</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"7 av 15 poeng i de fem siste\">4,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-mid\">16 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Tromsø\" class=\"\"><td class=\"pos\">6</td><td class=\"team\"><span class=\"teamname\" data-team=\"Tromsø\" role=\"button\" tabindex=\"0\" title=\"Følg Tromsø\"><span class=\"lg\">Tromsø</span><span class=\"sm\"> Tromsø</span></span><span class=\"badge safe\" title=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\" role=\"button\" tabindex=\"0\" aria-label=\"Sikret plass: kan verken rykke ned eller havne i kvalik.\"><span class=\"bi\" aria-hidden=\"true\"></span><span class=\"bt\">Sikret plass</span></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">12</td><td class=\"hide-s\">7</td><td class=\"hide-s\">8</td><td class=\"hide-s\">46-42</td>\n      <td class=\"gd hide-diff\">+4</td><td class=\"pts\" title=\"43 poeng nå. Maks mulig sluttsum: 52.\">43</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Tromsø\" title=\"5,1 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,1 av 10 for Tromsø. Vis styrkegrafen.\">5,1</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"4 av 15 poeng i de fem siste\">2,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-mid\">10 %</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Brann\" class=\"\"><td class=\"pos\">7</td><td class=\"team\"><span class=\"teamname\" data-team=\"Brann\" role=\"button\" tabindex=\"0\" title=\"Følg Brann\"><span class=\"lg\">Brann</span><span class=\"sm\"> Brann</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">11</td><td class=\"hide-s\">3</td><td class=\"hide-s\">13</td><td class=\"hide-s\">51-47</td>\n      <td class=\"gd hide-diff\">+4</td><td class=\"pts\" title=\"36 poeng nå. Maks mulig sluttsum: 45.\">36</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Brann\" title=\"5,2 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 5,2 av 10 for Brann. Vis styrkegrafen.\">5,2</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"7 av 15 poeng i de fem siste\">4,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-zero\">–</td></tr><tr data-team=\"Vålerenga\" class=\"\"><td class=\"pos\">8</td><td class=\"team\"><span class=\"teamname\" data-team=\"Vålerenga\" role=\"button\" tabindex=\"0\" title=\"Følg Vålerenga\"><span class=\"lg\">Vålerenga</span><span class=\"sm\"> VIF</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">9</td><td class=\"hide-s\">5</td><td class=\"hide-s\">13</td><td class=\"hide-s\">44-49</td>\n      <td class=\"gd hide-diff\">-5</td><td class=\"pts\" title=\"32 poeng nå. Maks mulig sluttsum: 41.\">32</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Vålerenga\" title=\"4,7 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,7 av 10 for Vålerenga. Vis styrkegrafen.\">4,7</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"9 av 15 poeng i de fem siste\">6,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"Sarpsborg 08\" class=\"\"><td class=\"pos\">9</td><td class=\"team\"><span class=\"teamname\" data-team=\"Sarpsborg 08\" role=\"button\" tabindex=\"0\" title=\"Følg Sarpsborg 08\"><span class=\"lg\">Sarpsborg 08</span><span class=\"sm\"> S08</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">7</td><td class=\"hide-s\">12</td><td class=\"hide-s\">32-44</td>\n      <td class=\"gd hide-diff\">-12</td><td class=\"pts\" title=\"31 poeng nå. Maks mulig sluttsum: 40.\">31</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Sarpsborg 08\" title=\"4,8 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,8 av 10 for Sarpsborg 08. Vis styrkegrafen.\">4,8</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"3 av 15 poeng i de fem siste\">2,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-zero\">&lt;1 %</td></tr><tr data-team=\"KFUM Oslo\" class=\"\"><td class=\"pos\">10</td><td class=\"team\"><span class=\"teamname\" data-team=\"KFUM Oslo\" role=\"button\" tabindex=\"0\" title=\"Følg KFUM Oslo\"><span class=\"lg\">KFUM Oslo</span><span class=\"sm\"> KFUM</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">7</td><td class=\"hide-s\">12</td><td class=\"hide-s\">36-50</td>\n      <td class=\"gd hide-diff\">-14</td><td class=\"pts\" title=\"31 poeng nå. Maks mulig sluttsum: 40.\">31</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"KFUM Oslo\" title=\"4,1 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,1 av 10 for KFUM Oslo. Vis styrkegrafen.\">4,1</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b></span><b class=\"form5\" title=\"3 av 15 poeng i de fem siste\">2,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-mid\">1 %</td></tr><tr data-team=\"HamKam\" class=\"\"><td class=\"pos\">11</td><td class=\"team\"><span class=\"teamname\" data-team=\"HamKam\" role=\"button\" tabindex=\"0\" title=\"Følg HamKam\"><span class=\"lg\">HamKam</span><span class=\"sm\"> HamKam</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">7</td><td class=\"hide-s\">12</td><td class=\"hide-s\">38-53</td>\n      <td class=\"gd hide-diff\">-15</td><td class=\"pts\" title=\"31 poeng nå. Maks mulig sluttsum: 40.\">31</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox red\" data-team=\"HamKam\" title=\"3,8 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 3,8 av 10 for HamKam. Vis styrkegrafen.\">3,8</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"5 av 15 poeng i de fem siste\">3,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-mid\">1 %</td></tr><tr data-team=\"Fredrikstad\" class=\"\"><td class=\"pos\">12</td><td class=\"team\"><span class=\"teamname\" data-team=\"Fredrikstad\" role=\"button\" tabindex=\"0\" title=\"Følg Fredrikstad\"><span class=\"lg\">Fredrikstad</span><span class=\"sm\"> FFK</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">8</td><td class=\"hide-s\">7</td><td class=\"hide-s\">12</td><td class=\"hide-s\">31-46</td>\n      <td class=\"gd hide-diff\">-15</td><td class=\"pts\" title=\"31 poeng nå. Maks mulig sluttsum: 40.\">31</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Fredrikstad\" title=\"4,3 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,3 av 10 for Fredrikstad. Vis styrkegrafen.\">4,3</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"2 av 15 poeng i de fem siste\">1,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-mid\">1 %</td></tr><tr data-team=\"Sandefjord\" class=\"cut\"><td class=\"pos\">13</td><td class=\"team\"><span class=\"teamname\" data-team=\"Sandefjord\" role=\"button\" tabindex=\"0\" title=\"Følg Sandefjord\"><span class=\"lg\">Sandefjord</span><span class=\"sm\"> Sandefjord</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">7</td><td class=\"hide-s\">8</td><td class=\"hide-s\">12</td><td class=\"hide-s\">33-41</td>\n      <td class=\"gd hide-diff\">-8</td><td class=\"pts\" title=\"29 poeng nå. Maks mulig sluttsum: 38.\">29</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Sandefjord\" title=\"4,4 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,4 av 10 for Sandefjord. Vis styrkegrafen.\">4,4</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"5 av 15 poeng i de fem siste\">3,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-mid\">1 %</td></tr><tr data-team=\"Kristiansund\" class=\"playoff\"><td class=\"pos\">14</td><td class=\"team\"><span class=\"teamname\" data-team=\"Kristiansund\" role=\"button\" tabindex=\"0\" title=\"Følg Kristiansund\"><span class=\"lg\">Kristiansund</span><span class=\"sm\"> KBK</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">7</td><td class=\"hide-s\">6</td><td class=\"hide-s\">14</td><td class=\"hide-s\">32-53</td>\n      <td class=\"gd hide-diff\">-21</td><td class=\"pts\" title=\"27 poeng nå. Maks mulig sluttsum: 36.\">27</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox red\" data-team=\"Kristiansund\" title=\"3,8 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 3,8 av 10 for Kristiansund. Vis styrkegrafen.\">3,8</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"8 av 15 poeng i de fem siste\">5,3</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-mid\">31 %</td></tr><tr data-team=\"Aalesund\" class=\"ned\"><td class=\"pos\">15</td><td class=\"team\"><span class=\"teamname\" data-team=\"Aalesund\" role=\"button\" tabindex=\"0\" title=\"Følg Aalesund\"><span class=\"lg\">Aalesund</span><span class=\"sm\"> Aalesund</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">5</td><td class=\"hide-s\">10</td><td class=\"hide-s\">12</td><td class=\"hide-s\">47-62</td>\n      <td class=\"gd hide-diff\">-15</td><td class=\"pts\" title=\"25 poeng nå. Maks mulig sluttsum: 34.\">25</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Aalesund\" title=\"4,3 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,3 av 10 for Aalesund. Vis styrkegrafen.\">4,3</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"D\" title=\"Uavgjort\"></b></span><b class=\"form5\" title=\"4 av 15 poeng i de fem siste\">2,7</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-hi\">74 %</td></tr><tr data-team=\"Start\" class=\"ned\"><td class=\"pos\">16</td><td class=\"team\"><span class=\"teamname\" data-team=\"Start\" role=\"button\" tabindex=\"0\" title=\"Følg Start\"><span class=\"lg\">Start</span><span class=\"sm\"> Start</span></span><span class=\"badge\"></span></td><td class=\"spilt\">27</td>\n      <td class=\"hide-s\">6</td><td class=\"hide-s\">4</td><td class=\"hide-s\">17</td><td class=\"hide-s\">29-60</td>\n      <td class=\"gd hide-diff\">-31</td><td class=\"pts\" title=\"22 poeng nå. Maks mulig sluttsum: 31.\">22</td>\n      <td class=\"formcol\"><button type=\"button\" class=\"formbox yellow\" data-team=\"Start\" title=\"4,1 av 10. Uendret siden forrige modelloppdatering. Trykk for styrkegrafen.\" aria-label=\"Styrke 4,1 av 10 for Start. Vis styrkegrafen.\">4,1</button></td>\n      <td class=\"hide-s form5col\"><span class=\"form\"><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"L\" title=\"Tap\"></b><b class=\"W\" title=\"Seier\"></b></span><b class=\"form5\" title=\"6 av 15 poeng i de fem siste\">4,0</b></td><td class=\"odds gull hide-xs pc-zero\">–</td><td class=\"odds p3 pc-zero\">–</td><td class=\"odds ned pc-hi\">91 %</td></tr>",
   "rader": [
    {
     "plass": 1,
@@ -54,7 +54,7 @@
     "sjanser": {
      "gull": {
       "vist": "94 %",
-      "andel": 0.93786,
+      "andel": 0.93797,
       "avgjort": 0
      },
      "europa": {
@@ -87,7 +87,7 @@
     "sjanser": {
      "gull": {
       "vist": "6 %",
-      "andel": 0.06214,
+      "andel": 0.06203,
       "avgjort": 0
      },
      "europa": {
@@ -125,7 +125,7 @@
      },
      "europa": {
       "vist": "88 %",
-      "andel": 0.87518,
+      "andel": 0.8755,
       "avgjort": 0
      },
      "ned": {
@@ -158,7 +158,7 @@
      },
      "europa": {
       "vist": "87 %",
-      "andel": 0.87292,
+      "andel": 0.87326,
       "avgjort": 0
      },
      "ned": {
@@ -191,7 +191,7 @@
      },
      "europa": {
       "vist": "16 %",
-      "andel": 0.15703,
+      "andel": 0.15618,
       "avgjort": 0
      },
      "ned": {
@@ -223,8 +223,8 @@
       "avgjort": -1
      },
      "europa": {
-      "vist": "9 %",
-      "andel": 0.09487,
+      "vist": "10 %",
+      "andel": 0.09506,
       "avgjort": 0
      },
      "ned": {
@@ -295,7 +295,7 @@
      },
      "ned": {
       "vist": "<1 %",
-      "andel": 0.00005,
+      "andel": 0.00007,
       "avgjort": 0
      }
     }
@@ -328,7 +328,7 @@
      },
      "ned": {
       "vist": "<1 %",
-      "andel": 0.00172,
+      "andel": 0.00178,
       "avgjort": 0
      }
     }
@@ -361,7 +361,7 @@
      },
      "ned": {
       "vist": "1 %",
-      "andel": 0.00609,
+      "andel": 0.00658,
       "avgjort": 0
      }
     }
@@ -394,7 +394,7 @@
      },
      "ned": {
       "vist": "1 %",
-      "andel": 0.0057,
+      "andel": 0.00603,
       "avgjort": 0
      }
     }
@@ -426,8 +426,8 @@
       "avgjort": -1
      },
      "ned": {
-      "vist": "<1 %",
-      "andel": 0.00483,
+      "vist": "1 %",
+      "andel": 0.00501,
       "avgjort": 0
      }
     }
@@ -460,7 +460,7 @@
      },
      "ned": {
       "vist": "1 %",
-      "andel": 0.01093,
+      "andel": 0.01128,
       "avgjort": 0
      }
     }
@@ -492,8 +492,8 @@
       "avgjort": -1
      },
      "ned": {
-      "vist": "32 %",
-      "andel": 0.31761,
+      "vist": "31 %",
+      "andel": 0.31107,
       "avgjort": 0
      }
     }
@@ -526,7 +526,7 @@
      },
      "ned": {
       "vist": "74 %",
-      "andel": 0.74051,
+      "andel": 0.74391,
       "avgjort": 0
      }
     }
@@ -559,7 +559,7 @@
      },
      "ned": {
       "vist": "91 %",
-      "andel": 0.91256,
+      "andel": 0.91427,
       "avgjort": 0
      }
     }
@@ -602,19 +602,19 @@
      "lag": "Aalesund",
      "sporsmal": "Hvorfor har Aalesund 74 % sjanse for nedrykk?",
      "hvorfor": "Aalesund ligger fire poeng bak Sandefjord på 13. plass og er omtrent like sterke ifølge modellen (4,3 mot 4,4). Kristiansund er også med i kampen om å unngå nedrykk. Aalesund har også et tøffere restprogram: motstanderne har i snitt 59 % vinnersjanse, mot 35 % for Sandefjord.\n\nI simuleringene ender Aalesund i snitt på 28 poeng mot 33 for Sandefjord, og rykker ned direkte i 74 % av dem.",
-     "kamper": "Disse kampene påvirker Aalesunds nedrykksfare mest. Nå: 74 %\n\nAalesund mot Bodø/Glimt, runde 29, lørdag 5. des\nSeier: 36 % (−38 prosentpoeng)\nUavgjort: 71 % (−3 prosentpoeng)\nTap: 80 % (+6 prosentpoeng)\n\nBrann mot Aalesund, runde 30, søndag 13. des\nSeier: 43 % (−31 prosentpoeng)\nUavgjort: 79 % (+5 prosentpoeng)\nTap: 87 % (+13 prosentpoeng)\n\nFredrikstad mot Aalesund, runde 28, søndag 29. nov\nSeier: 45 % (−29 prosentpoeng)\nUavgjort: 81 % (+7 prosentpoeng)\nTap: 89 % (+15 prosentpoeng)"
+     "kamper": "Disse kampene påvirker Aalesunds nedrykksfare mest. Nå: 74 %\n\nAalesund mot Bodø/Glimt, runde 29, lørdag 5. des\nSeier: 36 % (−38 prosentpoeng)\nUavgjort: 71 % (−3 prosentpoeng)\nTap: 80 % (+6 prosentpoeng)\n\nBrann mot Aalesund, runde 30, søndag 13. des\nSeier: 44 % (−30 prosentpoeng)\nUavgjort: 80 % (+6 prosentpoeng)\nTap: 87 % (+13 prosentpoeng)\n\nFredrikstad mot Aalesund, runde 28, søndag 29. nov\nSeier: 45 % (−29 prosentpoeng)\nUavgjort: 82 % (+8 prosentpoeng)\nTap: 89 % (+15 prosentpoeng)"
     },
     {
      "lag": "Kristiansund",
-     "sporsmal": "Hvorfor har Kristiansund 32 % sjanse for nedrykk?",
-     "hvorfor": "Kristiansund leder Aalesund 27-25 i poeng, med 3 kamper igjen. Modellen gir Aalesund et lite overtak (styrke 3,8 mot 4,3). Formen nå er 5,3 mot 2,7 av 10. Kristiansund har også et lettere restprogram: motstanderne har i snitt 54 % vinnersjanse, mot 59 % for Aalesund.\n\nI simuleringene ender Kristiansund i snitt på 30 poeng mot 28 for Aalesund, og rykker ned direkte i 32 % av dem.",
-     "kamper": "Disse kampene påvirker Kristiansunds nedrykksfare mest. Nå: 32 %\n\nStart mot Kristiansund, runde 30, søndag 13. des\nSeier: 6 % (−26 prosentpoeng)\nUavgjort: 26 % (−6 prosentpoeng)\nTap: 46 % (+14 prosentpoeng)\n\nBrann mot Kristiansund, runde 28, søndag 29. nov\nSeier: 6 % (−26 prosentpoeng)\nUavgjort: 25 % (−7 prosentpoeng)\nTap: 40 % (+8 prosentpoeng)\n\nKristiansund mot Lillestrøm, runde 29, søndag 6. des\nSeier: 9 % (−23 prosentpoeng)\nUavgjort: 32 % (endrer lite)\nTap: 48 % (+16 prosentpoeng)"
+     "sporsmal": "Hvorfor har Kristiansund 31 % sjanse for nedrykk?",
+     "hvorfor": "Kristiansund leder Aalesund 27-25 i poeng, med 3 kamper igjen. Modellen gir Aalesund et lite overtak (styrke 3,8 mot 4,3). Formen nå er 5,3 mot 2,7 av 10. Kristiansund har også et lettere restprogram: motstanderne har i snitt 53 % vinnersjanse, mot 59 % for Aalesund.\n\nI simuleringene ender Kristiansund i snitt på 30 poeng mot 28 for Aalesund, og rykker ned direkte i 31 % av dem.",
+     "kamper": "Disse kampene påvirker Kristiansunds nedrykksfare mest. Nå: 31 %\n\nStart mot Kristiansund, runde 30, søndag 13. des\nSeier: 6 % (−25 prosentpoeng)\nUavgjort: 25 % (−6 prosentpoeng)\nTap: 46 % (+15 prosentpoeng)\n\nBrann mot Kristiansund, runde 28, søndag 29. nov\nSeier: 6 % (−25 prosentpoeng)\nUavgjort: 25 % (−6 prosentpoeng)\nTap: 40 % (+9 prosentpoeng)\n\nKristiansund mot Lillestrøm, runde 29, søndag 6. des\nSeier: 8 % (−23 prosentpoeng)\nUavgjort: 32 % (endrer lite)\nTap: 47 % (+16 prosentpoeng)"
     },
     {
      "lag": "Sandefjord",
      "sporsmal": "Hvorfor har Sandefjord 1 % sjanse for nedrykk?",
-     "hvorfor": "Sandefjord ligger to poeng foran Kristiansund på 14. plass og er litt sterkere ifølge modellen (4,4 mot 3,8). Aalesund og Start er også med i kampen om å unngå nedrykk. Sandefjord har også et lettere restprogram: motstanderne har i snitt 35 % vinnersjanse, mot 54 % for Kristiansund.\n\nI simuleringene ender Sandefjord i snitt på 33 poeng mot 30 for Kristiansund, og rykker ned direkte i 1 % av dem.",
-     "kamper": "Disse kampene påvirker Sandefjords nedrykksfare mest. Nå: 1 %\n\nAalesund mot Bodø/Glimt, runde 29, lørdag 5. des\nAalesund vinner: 4 % (+3 prosentpoeng)\nUavgjort: 1 % (endrer lite)\nBodø/Glimt vinner: 1 % (endrer lite)\n\nSandefjord mot Vålerenga, runde 30, søndag 13. des\nSeier: <1 % (endrer lite)\nUavgjort: 1 % (endrer lite)\nTap: 3 % (+2 prosentpoeng)"
+     "hvorfor": "Sandefjord ligger to poeng foran Kristiansund på 14. plass og er litt sterkere ifølge modellen (4,4 mot 3,8). Aalesund og Start er også med i kampen om å unngå nedrykk. Sandefjord har også et lettere restprogram: motstanderne har i snitt 35 % vinnersjanse, mot 53 % for Kristiansund.\n\nI simuleringene ender Sandefjord i snitt på 33 poeng mot 30 for Kristiansund, og rykker ned direkte i 1 % av dem.",
+     "kamper": "Disse kampene påvirker Sandefjords nedrykksfare mest. Nå: 1 %\n\nAalesund mot Bodø/Glimt, runde 29, lørdag 5. des\nAalesund vinner: 4 % (+3 prosentpoeng)\nUavgjort: 1 % (endrer lite)\nBodø/Glimt vinner: 1 % (endrer lite)\n\nSandefjord mot Vålerenga, runde 30, søndag 13. des\nSeier: <1 % (endrer lite)\nUavgjort: 1 % (endrer lite)\nTap: 3 % (+2 prosentpoeng)\n\nHamKam mot Sandefjord, runde 29, søndag 6. des\nSeier: <1 % (endrer lite)\nUavgjort: 1 % (endrer lite)\nTap: 3 % (+2 prosentpoeng)"
     }
    ]
   }
@@ -633,11 +633,11 @@
    "forrigeinfo": "Runde 27",
    "kampinfo": "24 av 24 uten resultat"
   },
-  "runder": "<div class=\"round\" data-round=\"28\"><h3><span>Runde 28</span><span class=\"when-row\"><span class=\"when\">28. til 30. nov</span><button class=\"round-sim\" data-round=\"28\">Simuler runden</button></span></h3><div class=\"dayhead\">Lørdag 28. november</div><div class=\"match\" data-id=\"m28_0\" data-home=\"Bodø/Glimt\" data-away=\"KFUM Oslo\">\n        <span class=\"when\"><span class=\"t\">16:00</span></span>\n        <span class=\"home\">Glimt</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Bodø/Glimt mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"KFUM Oslo mål\">\n        <span class=\"away\">KFUM</span>\n        <span class=\"quick\" title=\"Bodø/Glimt seier 89 %, uavgjort 7 %, KFUM Oslo seier 3 %. Forventede mål 3,9-0,8. Blandet 70 % odds (The Odds API, 19 bookmakere, hentet onsdag 25.11 kl. 01.41: 90/7/3) og 30 % modell (87/8/5).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">89 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">7 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">3 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Bodø/Glimt mot KFUM Oslo\" data-mid=\"m28_0\">odds</i></span></span></div><div class=\"match\" data-id=\"m28_1\" data-home=\"Rosenborg\" data-away=\"Molde\">\n        <span class=\"when\"><span class=\"t\">18:00</span></span>\n        <span class=\"home\">RBK</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Rosenborg mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Molde mål\">\n        <span class=\"away\">Molde</span>\n        <span class=\"quick\" title=\"Rosenborg seier 53 %, uavgjort 20 %, Molde seier 27 %. Forventede mål 2,4-1,8. Blandet 70 % odds (The Odds API, 20 bookmakere, hentet onsdag 25.11 kl. 01.41: 50/21/29) og 30 % modell (60/17/23).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">53 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">20 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">27 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Rosenborg mot Molde\" data-mid=\"m28_1\">odds</i></span></span></div><div class=\"dayhead\">Søndag 29. november</div><div class=\"match\" data-id=\"m28_2\" data-home=\"Fredrikstad\" data-away=\"Aalesund\">\n        <span class=\"when\"><span class=\"t\">14:30</span></span>\n        <span class=\"home\">FFK</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Fredrikstad mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Aalesund mål\">\n        <span class=\"away\">Aalesund</span>\n        <span class=\"quick\" title=\"Fredrikstad seier 47 %, uavgjort 24 %, Aalesund seier 29 %. Forventede mål 1,8-1,4. Blandet 70 % odds (The Odds API, 19 bookmakere, hentet onsdag 25.11 kl. 01.41: 49/24/27) og 30 % modell (42/24/34).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">47 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">24 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">29 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Fredrikstad mot Aalesund\" data-mid=\"m28_2\">odds</i></span></span></div><div class=\"match\" data-id=\"m28_3\" data-home=\"Brann\" data-away=\"Kristiansund\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Brann</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Brann mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Kristiansund mål\">\n        <span class=\"away\">KBK</span>\n        <span class=\"quick\" title=\"Brann seier 65 %, uavgjort 18 %, Kristiansund seier 17 %. Forventede mål 2,6-1,3. Blandet 70 % odds (The Odds API, 19 bookmakere, hentet onsdag 25.11 kl. 01.41: 66/18/16) og 30 % modell (64/18/18).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">65 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">18 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">17 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Brann mot Kristiansund\" data-mid=\"m28_3\">odds</i></span></span></div><div class=\"match\" data-id=\"m28_4\" data-home=\"Sandefjord\" data-away=\"Tromsø\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Sandefjord</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Sandefjord mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Tromsø mål\">\n        <span class=\"away\">Tromsø</span>\n        <span class=\"quick\" title=\"Sandefjord seier 38 %, uavgjort 25 %, Tromsø seier 37 %. Forventede mål 1,5-1,5. Blandet 70 % odds (The Odds API, 18 bookmakere, hentet onsdag 25.11 kl. 01.41: 38/26/36) og 30 % modell (37/23/40).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">38 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">25 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">37 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Sandefjord mot Tromsø\" data-mid=\"m28_4\">odds</i></span></span></div><div class=\"match\" data-id=\"m28_5\" data-home=\"Start\" data-away=\"Sarpsborg 08\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Start</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Start mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Sarpsborg 08 mål\">\n        <span class=\"away\">S08</span>\n        <span class=\"quick\" title=\"Start seier 39 %, uavgjort 25 %, Sarpsborg 08 seier 36 %. Forventede mål 1,6-1,5. Blandet 70 % odds (The Odds API, 19 bookmakere, hentet onsdag 25.11 kl. 01.41: 38/25/37) og 30 % modell (41/24/35).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">39 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">25 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">36 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Start mot Sarpsborg 08\" data-mid=\"m28_5\">odds</i></span></span></div><div class=\"match\" data-id=\"m28_6\" data-home=\"Viking\" data-away=\"Vålerenga\">\n        <span class=\"when\"><span class=\"t\">19:15</span></span>\n        <span class=\"home\">Viking</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Viking mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Vålerenga mål\">\n        <span class=\"away\">VIF</span>\n        <span class=\"quick\" title=\"Viking seier 73 %, uavgjort 15 %, Vålerenga seier 12 %. Forventede mål 2,9-1,1. Blandet 70 % odds (The Odds API, 18 bookmakere, hentet onsdag 25.11 kl. 01.41: 74/15/11) og 30 % modell (71/16/13).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">73 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">15 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">12 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Viking mot Vålerenga\" data-mid=\"m28_6\">odds</i></span></span></div><div class=\"dayhead\">Mandag 30. november</div><div class=\"match\" data-id=\"m28_7\" data-home=\"Lillestrøm\" data-away=\"HamKam\">\n        <span class=\"when\"><span class=\"t\">19:00</span></span>\n        <span class=\"home\">LSK</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Lillestrøm mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"HamKam mål\">\n        <span class=\"away\">HamKam</span>\n        <span class=\"quick\" title=\"Lillestrøm seier 59 %, uavgjort 21 %, HamKam seier 20 %. Forventede mål 2,2-1,2. Blandet 70 % odds (The Odds API, 18 bookmakere, hentet onsdag 25.11 kl. 01.41: 59/21/20) og 30 % modell (61/20/19).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">59 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">21 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">20 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Lillestrøm mot HamKam\" data-mid=\"m28_7\">odds</i></span></span></div></div><div class=\"round\" data-round=\"29\"><h3><span>Runde 29</span><span class=\"when-row\"><span class=\"when\">4. til 6. des</span><button class=\"round-sim\" data-round=\"29\">Simuler runden</button></span></h3><div class=\"dayhead\">Fredag 4. desember</div><div class=\"match\" data-id=\"m29_0\" data-home=\"Molde\" data-away=\"Viking\">\n        <span class=\"when\"><span class=\"t\">19:00</span></span>\n        <span class=\"home\">Molde</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Molde mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Viking mål\">\n        <span class=\"away\">Viking</span>\n        <span class=\"quick\" title=\"Molde seier 40 %, uavgjort 19 %, Viking seier 41 %. Forventede mål 2,5-2,5.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">40 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">19 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">41 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"dayhead\">Lørdag 5. desember</div><div class=\"match\" data-id=\"m29_1\" data-home=\"Aalesund\" data-away=\"Bodø/Glimt\">\n        <span class=\"when\"><span class=\"t\">16:00</span></span>\n        <span class=\"home\">Aalesund</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Aalesund mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Bodø/Glimt mål\">\n        <span class=\"away\">Glimt</span>\n        <span class=\"quick\" title=\"Aalesund seier 11 %, uavgjort 13 %, Bodø/Glimt seier 76 %. Forventede mål 1,3-3,3.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">11 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">13 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">76 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_2\" data-home=\"Vålerenga\" data-away=\"Rosenborg\">\n        <span class=\"when\"><span class=\"t\">18:00</span></span>\n        <span class=\"home\">VIF</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Vålerenga mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Rosenborg mål\">\n        <span class=\"away\">RBK</span>\n        <span class=\"quick\" title=\"Vålerenga seier 33 %, uavgjort 23 %, Rosenborg seier 44 %. Forventede mål 1,6-1,9.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">33 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">23 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">44 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"dayhead\">Søndag 6. desember</div><div class=\"match\" data-id=\"m29_3\" data-home=\"Sarpsborg 08\" data-away=\"Brann\">\n        <span class=\"when\"><span class=\"t\">14:30</span></span>\n        <span class=\"home\">S08</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Sarpsborg 08 mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Brann mål\">\n        <span class=\"away\">Brann</span>\n        <span class=\"quick\" title=\"Sarpsborg 08 seier 42 %, uavgjort 22 %, Brann seier 36 %. Forventede mål 2,0-1,8.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">42 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">22 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">36 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_4\" data-home=\"KFUM Oslo\" data-away=\"Fredrikstad\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">KFUM</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"KFUM Oslo mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Fredrikstad mål\">\n        <span class=\"away\">FFK</span>\n        <span class=\"quick\" title=\"KFUM Oslo seier 44 %, uavgjort 25 %, Fredrikstad seier 31 %. Forventede mål 1,7-1,4.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">44 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">25 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">31 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_5\" data-home=\"Kristiansund\" data-away=\"Lillestrøm\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">KBK</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Kristiansund mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Lillestrøm mål\">\n        <span class=\"away\">LSK</span>\n        <span class=\"quick\" title=\"Kristiansund seier 31 %, uavgjort 25 %, Lillestrøm seier 44 %. Forventede mål 1,3-1,6.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">31 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">25 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">44 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_6\" data-home=\"Tromsø\" data-away=\"Start\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Tromsø</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Tromsø mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Start mål\">\n        <span class=\"away\">Start</span>\n        <span class=\"quick\" title=\"Tromsø seier 61 %, uavgjort 20 %, Start seier 19 %. Forventede mål 2,4-1,3.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">61 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">20 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">19 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_7\" data-home=\"HamKam\" data-away=\"Sandefjord\">\n        <span class=\"when\"><span class=\"t\">19:15</span></span>\n        <span class=\"home\">HamKam</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"HamKam mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Sandefjord mål\">\n        <span class=\"away\">Sandefjord</span>\n        <span class=\"quick\" title=\"HamKam seier 37 %, uavgjort 25 %, Sandefjord seier 39 %. Forventede mål 1,5-1,5.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">37 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">25 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">39 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div></div>",
+  "runder": "<div class=\"round\" data-round=\"28\"><h3><span>Runde 28</span><span class=\"when-row\"><span class=\"when\">28. til 30. nov</span><button class=\"round-sim\" data-round=\"28\">Simuler runden</button></span></h3><div class=\"dayhead\">Lørdag 28. november</div><div class=\"match\" data-id=\"m28_0\" data-home=\"Bodø/Glimt\" data-away=\"KFUM Oslo\">\n        <span class=\"when\"><span class=\"t\">16:00</span></span>\n        <span class=\"home\">Glimt</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Bodø/Glimt mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"KFUM Oslo mål\">\n        <span class=\"away\">KFUM</span>\n        <span class=\"quick\" title=\"Bodø/Glimt seier 89 %, uavgjort 7 %, KFUM Oslo seier 3 %. Forventede mål 3,9-0,8. Blandet 70 % odds (The Odds API, 20 bookmakere, hentet torsdag 26.11 kl. 01.18: 90/7/3) og 30 % modell (87/8/5).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">89 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">7 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">3 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Bodø/Glimt mot KFUM Oslo\" data-mid=\"m28_0\">odds</i></span></span></div><div class=\"match\" data-id=\"m28_1\" data-home=\"Rosenborg\" data-away=\"Molde\">\n        <span class=\"when\"><span class=\"t\">18:00</span></span>\n        <span class=\"home\">RBK</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Rosenborg mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Molde mål\">\n        <span class=\"away\">Molde</span>\n        <span class=\"quick\" title=\"Rosenborg seier 53 %, uavgjort 20 %, Molde seier 27 %. Forventede mål 2,4-1,7. Blandet 70 % odds (The Odds API, 21 bookmakere, hentet torsdag 26.11 kl. 01.18: 50/21/29) og 30 % modell (60/17/23).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">53 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">20 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">27 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Rosenborg mot Molde\" data-mid=\"m28_1\">odds</i></span></span></div><div class=\"dayhead\">Søndag 29. november</div><div class=\"match\" data-id=\"m28_2\" data-home=\"Fredrikstad\" data-away=\"Aalesund\">\n        <span class=\"when\"><span class=\"t\">14:30</span></span>\n        <span class=\"home\">FFK</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Fredrikstad mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Aalesund mål\">\n        <span class=\"away\">Aalesund</span>\n        <span class=\"quick\" title=\"Fredrikstad seier 46 %, uavgjort 24 %, Aalesund seier 30 %. Forventede mål 1,8-1,4. Blandet 70 % odds (The Odds API, 20 bookmakere, hentet torsdag 26.11 kl. 01.18: 48/24/28) og 30 % modell (42/24/34).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">46 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">24 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">30 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Fredrikstad mot Aalesund\" data-mid=\"m28_2\">odds</i></span></span></div><div class=\"match\" data-id=\"m28_3\" data-home=\"Brann\" data-away=\"Kristiansund\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Brann</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Brann mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Kristiansund mål\">\n        <span class=\"away\">KBK</span>\n        <span class=\"quick\" title=\"Brann seier 63 %, uavgjort 19 %, Kristiansund seier 18 %. Forventede mål 2,5-1,3. Blandet 70 % odds (The Odds API, 20 bookmakere, hentet torsdag 26.11 kl. 01.18: 63/19/19) og 30 % modell (64/18/18).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">63 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">19 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">18 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Brann mot Kristiansund\" data-mid=\"m28_3\">odds</i></span></span></div><div class=\"match\" data-id=\"m28_4\" data-home=\"Sandefjord\" data-away=\"Tromsø\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Sandefjord</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Sandefjord mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Tromsø mål\">\n        <span class=\"away\">Tromsø</span>\n        <span class=\"quick\" title=\"Sandefjord seier 38 %, uavgjort 25 %, Tromsø seier 37 %. Forventede mål 1,5-1,5. Blandet 70 % odds (The Odds API, 19 bookmakere, hentet torsdag 26.11 kl. 01.18: 38/26/36) og 30 % modell (37/23/40).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">38 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">25 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">37 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Sandefjord mot Tromsø\" data-mid=\"m28_4\">odds</i></span></span></div><div class=\"match\" data-id=\"m28_5\" data-home=\"Start\" data-away=\"Sarpsborg 08\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Start</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Start mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Sarpsborg 08 mål\">\n        <span class=\"away\">S08</span>\n        <span class=\"quick\" title=\"Start seier 39 %, uavgjort 24 %, Sarpsborg 08 seier 37 %. Forventede mål 1,6-1,5. Blandet 70 % odds (The Odds API, 20 bookmakere, hentet torsdag 26.11 kl. 01.18: 38/24/37) og 30 % modell (41/24/35).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">39 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">24 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">37 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Start mot Sarpsborg 08\" data-mid=\"m28_5\">odds</i></span></span></div><div class=\"match\" data-id=\"m28_6\" data-home=\"Viking\" data-away=\"Vålerenga\">\n        <span class=\"when\"><span class=\"t\">19:15</span></span>\n        <span class=\"home\">Viking</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Viking mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Vålerenga mål\">\n        <span class=\"away\">VIF</span>\n        <span class=\"quick\" title=\"Viking seier 73 %, uavgjort 15 %, Vålerenga seier 12 %. Forventede mål 2,9-1,1. Blandet 70 % odds (The Odds API, 20 bookmakere, hentet torsdag 26.11 kl. 01.18: 74/15/12) og 30 % modell (71/16/13).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">73 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">15 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">12 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Viking mot Vålerenga\" data-mid=\"m28_6\">odds</i></span></span></div><div class=\"dayhead\">Mandag 30. november</div><div class=\"match\" data-id=\"m28_7\" data-home=\"Lillestrøm\" data-away=\"HamKam\">\n        <span class=\"when\"><span class=\"t\">19:00</span></span>\n        <span class=\"home\">LSK</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Lillestrøm mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"HamKam mål\">\n        <span class=\"away\">HamKam</span>\n        <span class=\"quick\" title=\"Lillestrøm seier 59 %, uavgjort 21 %, HamKam seier 20 %. Forventede mål 2,2-1,2. Blandet 70 % odds (The Odds API, 19 bookmakere, hentet torsdag 26.11 kl. 01.18: 59/21/20) og 30 % modell (61/20/19).\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">59 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">21 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">20 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src odds\" role=\"button\" tabindex=\"0\" aria-label=\"Vis oddsen for Lillestrøm mot HamKam\" data-mid=\"m28_7\">odds</i></span></span></div></div><div class=\"round\" data-round=\"29\"><h3><span>Runde 29</span><span class=\"when-row\"><span class=\"when\">4. til 6. des</span><button class=\"round-sim\" data-round=\"29\">Simuler runden</button></span></h3><div class=\"dayhead\">Fredag 4. desember</div><div class=\"match\" data-id=\"m29_0\" data-home=\"Molde\" data-away=\"Viking\">\n        <span class=\"when\"><span class=\"t\">19:00</span></span>\n        <span class=\"home\">Molde</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Molde mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Viking mål\">\n        <span class=\"away\">Viking</span>\n        <span class=\"quick\" title=\"Molde seier 40 %, uavgjort 19 %, Viking seier 41 %. Forventede mål 2,5-2,5.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">40 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">19 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">41 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"dayhead\">Lørdag 5. desember</div><div class=\"match\" data-id=\"m29_1\" data-home=\"Aalesund\" data-away=\"Bodø/Glimt\">\n        <span class=\"when\"><span class=\"t\">16:00</span></span>\n        <span class=\"home\">Aalesund</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Aalesund mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Bodø/Glimt mål\">\n        <span class=\"away\">Glimt</span>\n        <span class=\"quick\" title=\"Aalesund seier 11 %, uavgjort 13 %, Bodø/Glimt seier 76 %. Forventede mål 1,3-3,3.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">11 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">13 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">76 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_2\" data-home=\"Vålerenga\" data-away=\"Rosenborg\">\n        <span class=\"when\"><span class=\"t\">18:00</span></span>\n        <span class=\"home\">VIF</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Vålerenga mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Rosenborg mål\">\n        <span class=\"away\">RBK</span>\n        <span class=\"quick\" title=\"Vålerenga seier 33 %, uavgjort 23 %, Rosenborg seier 44 %. Forventede mål 1,6-1,9.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">33 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">23 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">44 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"dayhead\">Søndag 6. desember</div><div class=\"match\" data-id=\"m29_3\" data-home=\"Sarpsborg 08\" data-away=\"Brann\">\n        <span class=\"when\"><span class=\"t\">14:30</span></span>\n        <span class=\"home\">S08</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Sarpsborg 08 mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Brann mål\">\n        <span class=\"away\">Brann</span>\n        <span class=\"quick\" title=\"Sarpsborg 08 seier 42 %, uavgjort 22 %, Brann seier 36 %. Forventede mål 2,0-1,8.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">42 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">22 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">36 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_4\" data-home=\"KFUM Oslo\" data-away=\"Fredrikstad\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">KFUM</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"KFUM Oslo mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Fredrikstad mål\">\n        <span class=\"away\">FFK</span>\n        <span class=\"quick\" title=\"KFUM Oslo seier 44 %, uavgjort 25 %, Fredrikstad seier 31 %. Forventede mål 1,7-1,4.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">44 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">25 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">31 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_5\" data-home=\"Kristiansund\" data-away=\"Lillestrøm\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">KBK</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Kristiansund mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Lillestrøm mål\">\n        <span class=\"away\">LSK</span>\n        <span class=\"quick\" title=\"Kristiansund seier 31 %, uavgjort 25 %, Lillestrøm seier 44 %. Forventede mål 1,3-1,6.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">31 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">25 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">44 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_6\" data-home=\"Tromsø\" data-away=\"Start\">\n        <span class=\"when\"><span class=\"t\">17:00</span></span>\n        <span class=\"home\">Tromsø</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"Tromsø mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Start mål\">\n        <span class=\"away\">Start</span>\n        <span class=\"quick\" title=\"Tromsø seier 61 %, uavgjort 20 %, Start seier 19 %. Forventede mål 2,4-1,3.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct best\" data-o=\"H\">61 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">20 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct\" data-o=\"B\">19 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div><div class=\"match\" data-id=\"m29_7\" data-home=\"HamKam\" data-away=\"Sandefjord\">\n        <span class=\"when\"><span class=\"t\">19:15</span></span>\n        <span class=\"home\">HamKam</span>\n        <input inputmode=\"numeric\" data-side=\"h\" aria-label=\"HamKam mål\">\n        <span class=\"colon\">-</span>\n        <input inputmode=\"numeric\" data-side=\"a\" aria-label=\"Sandefjord mål\">\n        <span class=\"away\">Sandefjord</span>\n        <span class=\"quick\" title=\"HamKam seier 37 %, uavgjort 25 %, Sandefjord seier 39 %. Forventede mål 1,5-1,5.\"><span class=\"q\"><button data-q=\"H\" title=\"Hjemmeseier, simulert resultat\">H</button><i class=\"pct\" data-o=\"H\">37 %</i></span><span class=\"q\"><button data-q=\"U\" title=\"Uavgjort, simulert resultat\">U</button><i class=\"pct\" data-o=\"U\">25 %</i></span><span class=\"q\"><button data-q=\"B\" title=\"Borteseier, simulert resultat\">B</button><i class=\"pct best\" data-o=\"B\">39 %</i></span><span class=\"q\"><button data-q=\"X\" class=\"x\" title=\"Tøm\">×</button><i class=\"pct src\"></i></span></span></div></div>",
   "kort": {
    "gull": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M8 4h8v5a4 4 0 0 1-8 0V4Z\"></path><path d=\"M8 6H5a2 2 0 0 0 2 4M16 6h3a2 2 0 0 1-2 4M12 13v4M8.5 20h7M10 17h4\"></path></svg><span class=\"card-title\">Seriemester</span><a class=\"card-link\" data-side=\"gull\" href=\"/eliteserien/hvem-vinner/\">Se alle →</a></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Bodø/Glimt</span><b class=\"card-pct\">94 %</b></li><li><span class=\"card-team\">Viking</span><b class=\"card-pct\">6 %</b></li></ul>",
    "europa": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"8.5\"></circle><path d=\"m12 8 3.6 2.6-1.4 4.2H9.8l-1.4-4.2L12 8ZM12 3.5V8M20 10.2l-4.4.4M17 18.4l-2.8-3.6M7 18.4l2.8-3.6M4 10.2l4.4.4\"></path></svg><span class=\"card-title\">Topp 4</span><button type=\"button\" class=\"card-link\" data-sort=\"europa\">Se alle →</button></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Lillestrøm</span><b class=\"card-pct\">88 %</b></li><li><span class=\"card-team\">Rosenborg</span><b class=\"card-pct\">87 %</b></li><li><span class=\"card-team\">Molde</span><b class=\"card-pct\">16 %</b></li></ul>",
-   "ned": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"8.5\"></circle><path d=\"M12 7.5v8M8.5 12.5 12 16l3.5-3.5\"></path></svg><span class=\"card-title\">Nedrykk</span><a class=\"card-link\" data-side=\"ned\" href=\"/eliteserien/hvem-rykker-ned/\">Se alle →</a></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Start</span><b class=\"card-pct\">91 %</b></li><li><span class=\"card-team\">Aalesund</span><b class=\"card-pct\">74 %</b></li><li><span class=\"card-team\">Kristiansund</span><b class=\"card-pct\">32 %</b></li></ul>",
+   "ned": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><circle cx=\"12\" cy=\"12\" r=\"8.5\"></circle><path d=\"M12 7.5v8M8.5 12.5 12 16l3.5-3.5\"></path></svg><span class=\"card-title\">Nedrykk</span><a class=\"card-link\" data-side=\"ned\" href=\"/eliteserien/hvem-rykker-ned/\">Se alle →</a></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Start</span><b class=\"card-pct\">91 %</b></li><li><span class=\"card-team\">Aalesund</span><b class=\"card-pct\">74 %</b></li><li><span class=\"card-team\">Kristiansund</span><b class=\"card-pct\">31 %</b></li></ul>",
    "form": "<div class=\"card-h\"><svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.9\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"m3.5 16.5 5.5-5.5 3.5 3.5 7.5-8\"></path><path d=\"M15.5 6.5h5v5\"></path></svg><span class=\"card-title\">Styrke</span><button type=\"button\" class=\"card-link\" data-sort=\"form\">Se alle →</button></div>\n        <ul class=\"card-list\"><li><span class=\"card-team\">Bodø/Glimt</span><b class=\"card-pct\">7,6</b></li><li><span class=\"card-team\">Viking</span><b class=\"card-pct\">6,6</b></li><li><span class=\"card-team\">Rosenborg</span><b class=\"card-pct\">6,2</b></li></ul>"
   }
  },
@@ -764,7 +764,7 @@
      "key": "gull",
      "navn": "gull",
      "vist": "94 %",
-     "andel": 0.93786,
+     "andel": 0.93797,
      "avgjort": 0
     },
     {
@@ -800,7 +800,7 @@
     "plass": 16,
     "av": 16,
     "snitt": "7 %",
-    "andel": 0.071307,
+    "andel": 0.071383,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Aalesund",
@@ -812,8 +812,8 @@
     }
    },
    "fordeling": [
-    0.93786,
-    0.06214,
+    0.93797,
+    0.06203,
     0,
     0,
     0,
@@ -865,9 +865,9 @@
      "naar": "Runde 28, søndag 29. nov",
      "motstander": "Kristiansund",
      "hjemme": true,
-     "seier": "65 %",
-     "uavgjort": "18 %",
-     "tap": "17 %"
+     "seier": "63 %",
+     "uavgjort": "19 %",
+     "tap": "18 %"
     },
     {
      "naar": "Runde 29, søndag 6. des",
@@ -926,8 +926,8 @@
    "restprogram": {
     "plass": 12,
     "av": 16,
-    "snitt": "28 %",
-    "andel": 0.282069,
+    "snitt": "29 %",
+    "andel": 0.287277,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Sarpsborg 08",
@@ -943,13 +943,13 @@
     0,
     0,
     0,
-    0.00159,
-    0.03284,
-    0.91463,
-    0.04094,
-    0.00838,
-    0.00152,
-    0.00009,
+    0.00149,
+    0.03238,
+    0.91176,
+    0.04313,
+    0.00956,
+    0.00156,
+    0.00011,
     0.00001,
     0,
     0,
@@ -970,7 +970,7 @@
     {
      "id": "why",
      "sporsmal": "Hvorfor har Fredrikstad 3 % sjanse for kvalik?",
-     "svar": "Fredrikstad ligger fire poeng foran Kristiansund på 14. plass og er litt sterkere ifølge modellen (4,3 mot 3,8). Sandefjord, Aalesund og Start er også med i kampen om å unngå kvalik. Fredrikstad har også et lettere restprogram: motstanderne har i snitt 41 % vinnersjanse, mot 54 % for Kristiansund.\n\nI simuleringene ender Fredrikstad i snitt på 35 poeng mot 30 for Kristiansund, og havner i kvalik i 3 % av dem."
+     "svar": "Fredrikstad ligger fire poeng foran Kristiansund på 14. plass og er litt sterkere ifølge modellen (4,3 mot 3,8). Sandefjord, Aalesund og Start er også med i kampen om å unngå kvalik. Fredrikstad har også et lettere restprogram: motstanderne har i snitt 41 % vinnersjanse, mot 53 % for Kristiansund.\n\nI simuleringene ender Fredrikstad i snitt på 35 poeng mot 30 for Kristiansund, og havner i kvalik i 3 % av dem."
     },
     {
      "id": "howto",
@@ -980,7 +980,7 @@
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Fredrikstad?",
-     "svar": "Disse kampene påvirker Fredrikstads kvalikfare mest. Nå: 3 %\n\nFredrikstad mot Aalesund, runde 28, søndag 29. nov\nSeier: <1 % (−3 prosentpoeng)\nUavgjort: 2 % (endrer lite)\nTap: 9 % (+6 prosentpoeng)\n\nKFUM Oslo mot Fredrikstad, runde 29, søndag 6. des\nSeier: <1 % (−3 prosentpoeng)\nUavgjort: 1 % (−2 prosentpoeng)\nTap: 7 % (+4 prosentpoeng)\n\nFredrikstad mot Molde, runde 30, søndag 13. des\nSeier: <1 % (−3 prosentpoeng)\nUavgjort: 2 % (endrer lite)\nTap: 6 % (+3 prosentpoeng)"
+     "svar": "Disse kampene påvirker Fredrikstads kvalikfare mest. Nå: 3 %\n\nFredrikstad mot Aalesund, runde 28, søndag 29. nov\nSeier: <1 % (−3 prosentpoeng)\nUavgjort: 2 % (endrer lite)\nTap: 10 % (+7 prosentpoeng)\n\nKFUM Oslo mot Fredrikstad, runde 29, søndag 6. des\nSeier: <1 % (−3 prosentpoeng)\nUavgjort: 1 % (−2 prosentpoeng)\nTap: 7 % (+4 prosentpoeng)\n\nFredrikstad mot Molde, runde 30, søndag 13. des\nSeier: <1 % (−3 prosentpoeng)\nUavgjort: 2 % (endrer lite)\nTap: 6 % (+3 prosentpoeng)"
     }
    ],
    "plass": {
@@ -992,9 +992,9 @@
      "naar": "Runde 28, søndag 29. nov",
      "motstander": "Aalesund",
      "hjemme": true,
-     "seier": "47 %",
+     "seier": "46 %",
      "uavgjort": "24 %",
-     "tap": "29 %"
+     "tap": "30 %"
     },
     {
      "naar": "Runde 29, søndag 6. des",
@@ -1039,14 +1039,14 @@
      "key": "kvalik",
      "navn": "kvalik",
      "vist": "3 %",
-     "andel": 0.03241,
+     "andel": 0.03366,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
-     "vist": "<1 %",
-     "andel": 0.00483,
+     "vist": "1 %",
+     "andel": 0.00501,
      "avgjort": 0
     }
    ],
@@ -1054,7 +1054,7 @@
     "plass": 9,
     "av": 16,
     "snitt": "41 %",
-    "andel": 0.40919,
+    "andel": 0.410131,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Molde",
@@ -1072,15 +1072,15 @@
     0,
     0,
     0,
-    0.01542,
-    0.22683,
-    0.20871,
-    0.17448,
+    0.01617,
+    0.22542,
+    0.20768,
+    0.17452,
     0.13588,
-    0.11364,
-    0.0878,
-    0.03241,
-    0.00483,
+    0.11362,
+    0.08804,
+    0.03366,
+    0.00501,
     0
    ],
    "heldig": {
@@ -1097,12 +1097,12 @@
     {
      "id": "why",
      "sporsmal": "Hvorfor har HamKam 7 % sjanse for kvalik?",
-     "svar": "HamKam ligger fire poeng foran Kristiansund på 14. plass og er omtrent like sterke ifølge modellen (3,8 mot 3,8). Sandefjord, Aalesund og Start er også med i kampen om å unngå kvalik. HamKam har også et tøffere restprogram: motstanderne har i snitt 59 % vinnersjanse, mot 54 % for Kristiansund.\n\nI simuleringene ender HamKam i snitt på 34 poeng mot 30 for Kristiansund, og havner i kvalik i 7 % av dem."
+     "svar": "HamKam ligger fire poeng foran Kristiansund på 14. plass og er omtrent like sterke ifølge modellen (3,8 mot 3,8). Sandefjord, Aalesund og Start er også med i kampen om å unngå kvalik. HamKam har også et tøffere restprogram: motstanderne har i snitt 59 % vinnersjanse, mot 53 % for Kristiansund.\n\nI simuleringene ender HamKam i snitt på 34 poeng mot 30 for Kristiansund, og havner i kvalik i 7 % av dem."
     },
     {
      "id": "howto",
      "sporsmal": "Hva må HamKam gjøre for å unngå både nedrykk og kvalik?",
-     "svar": "HamKam har allerede 31 poeng. Tar de ikke flere poeng, er sjansen for å unngå både nedrykk og kvalik rundt 69 %. Med 34 poeng er den over 99 %."
+     "svar": "HamKam har allerede 31 poeng. Tar de ikke flere poeng, er sjansen for å unngå både nedrykk og kvalik rundt 68 %. Med 34 poeng er den over 99 %."
     },
     {
      "id": "keymatches",
@@ -1166,14 +1166,14 @@
      "key": "kvalik",
      "navn": "kvalik",
      "vist": "7 %",
-     "andel": 0.07028,
+     "andel": 0.07214,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
      "vist": "1 %",
-     "andel": 0.0057,
+     "andel": 0.00603,
      "avgjort": 0
     }
    ],
@@ -1181,7 +1181,7 @@
     "plass": 2,
     "av": 16,
     "snitt": "59 %",
-    "andel": 0.594347,
+    "andel": 0.594279,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Viking",
@@ -1199,16 +1199,16 @@
     0,
     0,
     0,
-    0.00301,
-    0.07852,
-    0.11706,
-    0.15984,
-    0.17741,
-    0.17435,
-    0.21383,
-    0.07028,
-    0.0057,
-    0
+    0.0033,
+    0.07838,
+    0.11597,
+    0.16075,
+    0.17735,
+    0.17463,
+    0.21145,
+    0.07214,
+    0.006,
+    0.00003
    ],
    "heldig": {
     "sporsmal": "Har HamKam tatt flere eller færre poeng enn ventet?",
@@ -1223,8 +1223,8 @@
    "topp": [
     {
      "id": "why",
-     "sporsmal": "Hvorfor har KFUM Oslo 7 % sjanse for kvalik?",
-     "svar": "KFUM Oslo ligger fire poeng foran Kristiansund på 14. plass og er litt sterkere ifølge modellen (4,1 mot 3,8). HamKam, Sandefjord, Aalesund og én annen er også med i kampen om å unngå kvalik. KFUM Oslo har også et tøffere restprogram: motstanderne har i snitt 65 % vinnersjanse, mot 54 % for Kristiansund.\n\nI simuleringene ender KFUM Oslo i snitt på 33 poeng mot 30 for Kristiansund, og havner i kvalik i 7 % av dem."
+     "sporsmal": "Hvorfor har KFUM Oslo 8 % sjanse for kvalik?",
+     "svar": "KFUM Oslo ligger fire poeng foran Kristiansund på 14. plass og er litt sterkere ifølge modellen (4,1 mot 3,8). HamKam, Sandefjord, Aalesund og én annen er også med i kampen om å unngå kvalik. KFUM Oslo har også et tøffere restprogram: motstanderne har i snitt 65 % vinnersjanse, mot 53 % for Kristiansund.\n\nI simuleringene ender KFUM Oslo i snitt på 33 poeng mot 30 for Kristiansund, og havner i kvalik i 8 % av dem."
     },
     {
      "id": "howto",
@@ -1234,7 +1234,7 @@
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for KFUM Oslo?",
-     "svar": "Disse kampene påvirker KFUM Oslos kvalikfare mest. Nå: 7 %\n\nKFUM Oslo mot Fredrikstad, runde 29, søndag 6. des\nSeier: <1 % (−7 prosentpoeng)\nUavgjort: 6 % (endrer lite)\nTap: 19 % (+12 prosentpoeng)\n\nBrann mot Kristiansund, runde 28, søndag 29. nov\nBrann vinner: 5 % (−2 prosentpoeng)\nUavgjort: 9 % (+2 prosentpoeng)\nKristiansund vinner: 16 % (+9 prosentpoeng)\n\nRosenborg mot KFUM Oslo, runde 30, søndag 13. des\nSeier: <1 % (−7 prosentpoeng)\nUavgjort: 3 % (−4 prosentpoeng)\nTap: 9 % (+2 prosentpoeng)"
+     "svar": "Disse kampene påvirker KFUM Oslos kvalikfare mest. Nå: 8 %\n\nKFUM Oslo mot Fredrikstad, runde 29, søndag 6. des\nSeier: <1 % (−8 prosentpoeng)\nUavgjort: 6 % (−2 prosentpoeng)\nTap: 19 % (+11 prosentpoeng)\n\nBrann mot Kristiansund, runde 28, søndag 29. nov\nBrann vinner: 5 % (−3 prosentpoeng)\nUavgjort: 9 % (endrer lite)\nKristiansund vinner: 16 % (+8 prosentpoeng)\n\nRosenborg mot KFUM Oslo, runde 30, søndag 13. des\nSeier: <1 % (−8 prosentpoeng)\nUavgjort: 3 % (−5 prosentpoeng)\nTap: 10 % (+2 prosentpoeng)"
     }
    ],
    "plass": {
@@ -1292,15 +1292,15 @@
     {
      "key": "kvalik",
      "navn": "kvalik",
-     "vist": "7 %",
-     "andel": 0.07378,
+     "vist": "8 %",
+     "andel": 0.07614,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
      "vist": "1 %",
-     "andel": 0.00609,
+     "andel": 0.00658,
      "avgjort": 0
     }
    ],
@@ -1308,7 +1308,7 @@
     "plass": 1,
     "av": 16,
     "snitt": "65 %",
-    "andel": 0.651279,
+    "andel": 0.65147,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Bodø/Glimt",
@@ -1326,16 +1326,16 @@
     0,
     0,
     0,
-    0.00115,
-    0.04912,
-    0.09442,
-    0.15617,
-    0.18192,
-    0.20722,
-    0.23013,
-    0.07378,
-    0.00609,
-    0
+    0.00148,
+    0.04859,
+    0.0945,
+    0.15525,
+    0.18199,
+    0.20553,
+    0.22994,
+    0.07614,
+    0.00657,
+    0.00001
    ],
    "heldig": {
     "sporsmal": "Har KFUM Oslo tatt flere eller færre poeng enn ventet?",
@@ -1350,18 +1350,18 @@
    "topp": [
     {
      "id": "why",
-     "sporsmal": "Hvorfor har Kristiansund 32 % sjanse for nedrykk?",
-     "svar": "Kristiansund leder Aalesund 27-25 i poeng, med 3 kamper igjen. Modellen gir Aalesund et lite overtak (styrke 3,8 mot 4,3). Formen nå er 5,3 mot 2,7 av 10. Kristiansund har også et lettere restprogram: motstanderne har i snitt 54 % vinnersjanse, mot 59 % for Aalesund.\n\nI simuleringene ender Kristiansund i snitt på 30 poeng mot 28 for Aalesund, og rykker ned direkte i 32 % av dem."
+     "sporsmal": "Hvorfor har Kristiansund 31 % sjanse for nedrykk?",
+     "svar": "Kristiansund leder Aalesund 27-25 i poeng, med 3 kamper igjen. Modellen gir Aalesund et lite overtak (styrke 3,8 mot 4,3). Formen nå er 5,3 mot 2,7 av 10. Kristiansund har også et lettere restprogram: motstanderne har i snitt 53 % vinnersjanse, mot 59 % for Aalesund.\n\nI simuleringene ender Kristiansund i snitt på 30 poeng mot 28 for Aalesund, og rykker ned direkte i 31 % av dem."
     },
     {
      "id": "howto",
      "sporsmal": "Hva må Kristiansund gjøre for å unngå både nedrykk og kvalik?",
-     "svar": "Det skal mye til: Kristiansund unngår både nedrykk og kvalik i rundt 23 % av simuleringene. De må ta fem av de ni poengene som er igjen for å komme opp på 32. Ender de på 32 poeng, er sjansen omtrent 73 %.\n\nKristiansund når minst kvalikplass i 68 % av simuleringene. De må ta to av de ni poengene som er igjen for å komme opp på 29. Ender de på 29 poeng, er sjansen for minst kvalikplass 68 %."
+     "svar": "Det skal mye til: Kristiansund unngår både nedrykk og kvalik i rundt 24 % av simuleringene. De må ta fem av de ni poengene som er igjen for å komme opp på 32. Ender de på 32 poeng, er sjansen omtrent 73 %.\n\nKristiansund når minst kvalikplass i 69 % av simuleringene. De må ta to av de ni poengene som er igjen for å komme opp på 29. Ender de på 29 poeng, er sjansen for minst kvalikplass 69 %."
     },
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Kristiansund?",
-     "svar": "Disse kampene påvirker Kristiansunds nedrykksfare mest. Nå: 32 %\n\nStart mot Kristiansund, runde 30, søndag 13. des\nSeier: 6 % (−26 prosentpoeng)\nUavgjort: 26 % (−6 prosentpoeng)\nTap: 46 % (+14 prosentpoeng)\n\nBrann mot Kristiansund, runde 28, søndag 29. nov\nSeier: 6 % (−26 prosentpoeng)\nUavgjort: 25 % (−7 prosentpoeng)\nTap: 40 % (+8 prosentpoeng)\n\nKristiansund mot Lillestrøm, runde 29, søndag 6. des\nSeier: 9 % (−23 prosentpoeng)\nUavgjort: 32 % (endrer lite)\nTap: 48 % (+16 prosentpoeng)"
+     "svar": "Disse kampene påvirker Kristiansunds nedrykksfare mest. Nå: 31 %\n\nStart mot Kristiansund, runde 30, søndag 13. des\nSeier: 6 % (−25 prosentpoeng)\nUavgjort: 25 % (−6 prosentpoeng)\nTap: 46 % (+15 prosentpoeng)\n\nBrann mot Kristiansund, runde 28, søndag 29. nov\nSeier: 6 % (−25 prosentpoeng)\nUavgjort: 25 % (−6 prosentpoeng)\nTap: 40 % (+9 prosentpoeng)\n\nKristiansund mot Lillestrøm, runde 29, søndag 6. des\nSeier: 8 % (−23 prosentpoeng)\nUavgjort: 32 % (endrer lite)\nTap: 47 % (+16 prosentpoeng)"
     }
    ],
    "plass": {
@@ -1373,9 +1373,9 @@
      "naar": "Runde 28, søndag 29. nov",
      "motstander": "Brann",
      "hjemme": false,
-     "seier": "17 %",
-     "uavgjort": "18 %",
-     "tap": "65 %"
+     "seier": "18 %",
+     "uavgjort": "19 %",
+     "tap": "63 %"
     },
     {
      "naar": "Runde 29, søndag 6. des",
@@ -1420,22 +1420,22 @@
      "key": "kvalik",
      "navn": "kvalik",
      "vist": "45 %",
-     "andel": 0.45242,
+     "andel": 0.44997,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
-     "vist": "32 %",
-     "andel": 0.31761,
+     "vist": "31 %",
+     "andel": 0.31107,
      "avgjort": 0
     }
    ],
    "restprogram": {
     "plass": 5,
     "av": 16,
-    "snitt": "54 %",
-    "andel": 0.536276,
+    "snitt": "53 %",
+    "andel": 0.529155,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Brann",
@@ -1443,7 +1443,7 @@
      "dato": "2026-11-29",
      "dato_tekst": "29. november",
      "naar": "Runde 28, søndag 29. nov",
-     "seier": "17 %"
+     "seier": "18 %"
     }
    },
    "fordeling": [
@@ -1454,15 +1454,15 @@
     0,
     0,
     0,
-    0.00298,
-    0.00824,
-    0.01574,
-    0.03491,
-    0.06414,
-    0.10396,
-    0.45242,
-    0.24881,
-    0.0688
+    0.00343,
+    0.00831,
+    0.0174,
+    0.03667,
+    0.06627,
+    0.10688,
+    0.44997,
+    0.24311,
+    0.06796
    ],
    "heldig": {
     "sporsmal": "Har Kristiansund tatt flere eller færre poeng enn ventet?",
@@ -1483,7 +1483,7 @@
     {
      "id": "howto",
      "sporsmal": "Hva må Lillestrøm gjøre for å nå topp 4?",
-     "svar": "Lillestrøm må ta to av de ni poengene som er igjen for å komme opp på 50. Ender de på 50 poeng, er sjansen for topp 4 rundt 51 %. Med 53 poeng er den 98 %."
+     "svar": "Lillestrøm må ta to av de ni poengene som er igjen for å komme opp på 50. Ender de på 50 poeng, er sjansen for topp 4 rundt 50 %. Med 53 poeng er den 98 %."
     },
     {
      "id": "keymatches",
@@ -1540,7 +1540,7 @@
      "key": "europa",
      "navn": "topp 4",
      "vist": "88 %",
-     "andel": 0.87518,
+     "andel": 0.8755,
      "avgjort": 0
     },
     {
@@ -1562,7 +1562,7 @@
     "plass": 13,
     "av": 16,
     "snitt": "28 %",
-    "andel": 0.27548,
+    "andel": 0.275744,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Kristiansund",
@@ -1576,10 +1576,10 @@
    "fordeling": [
     0,
     0,
-    0.47365,
-    0.40153,
-    0.09686,
-    0.02796,
+    0.4731,
+    0.4024,
+    0.09641,
+    0.02809,
     0,
     0,
     0,
@@ -1615,7 +1615,7 @@
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Molde?",
-     "svar": "Disse kampene påvirker Moldes topp 4-sjanse mest. Nå: 16 %\n\nRosenborg mot Molde, runde 28, lørdag 28. nov\nSeier: 44 % (+28 prosentpoeng)\nUavgjort: 12 % (−4 prosentpoeng)\nTap: 2 % (−14 prosentpoeng)\n\nMolde mot Viking, runde 29, fredag 4. des\nSeier: 28 % (+12 prosentpoeng)\nUavgjort: 12 % (−4 prosentpoeng)\nTap: 6 % (−10 prosentpoeng)\n\nFredrikstad mot Molde, runde 30, søndag 13. des\nSeier: 24 % (+8 prosentpoeng)\nUavgjort: 10 % (−6 prosentpoeng)\nTap: 5 % (−11 prosentpoeng)"
+     "svar": "Disse kampene påvirker Moldes topp 4-sjanse mest. Nå: 16 %\n\nRosenborg mot Molde, runde 28, lørdag 28. nov\nSeier: 44 % (+28 prosentpoeng)\nUavgjort: 12 % (−4 prosentpoeng)\nTap: 2 % (−14 prosentpoeng)\n\nMolde mot Viking, runde 29, fredag 4. des\nSeier: 27 % (+11 prosentpoeng)\nUavgjort: 12 % (−4 prosentpoeng)\nTap: 6 % (−10 prosentpoeng)\n\nFredrikstad mot Molde, runde 30, søndag 13. des\nSeier: 24 % (+8 prosentpoeng)\nUavgjort: 9 % (−7 prosentpoeng)\nTap: 5 % (−11 prosentpoeng)"
     }
    ],
    "plass": {
@@ -1667,7 +1667,7 @@
      "key": "europa",
      "navn": "topp 4",
      "vist": "16 %",
-     "andel": 0.15703,
+     "andel": 0.15618,
      "avgjort": 0
     },
     {
@@ -1689,7 +1689,7 @@
     "plass": 7,
     "av": 16,
     "snitt": "41 %",
-    "andel": 0.414577,
+    "andel": 0.414611,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Rosenborg",
@@ -1703,11 +1703,11 @@
    "fordeling": [
     0,
     0,
-    0.03715,
-    0.11988,
-    0.47753,
-    0.35627,
-    0.00917,
+    0.03635,
+    0.11983,
+    0.47776,
+    0.35703,
+    0.00903,
     0,
     0,
     0,
@@ -1794,7 +1794,7 @@
      "key": "europa",
      "navn": "topp 4",
      "vist": "87 %",
-     "andel": 0.87292,
+     "andel": 0.87326,
      "avgjort": 0
     },
     {
@@ -1816,7 +1816,7 @@
     "plass": 14,
     "av": 16,
     "snitt": "24 %",
-    "andel": 0.237568,
+    "andel": 0.236672,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Vålerenga",
@@ -1830,10 +1830,10 @@
    "fordeling": [
     0,
     0,
-    0.47194,
-    0.40098,
-    0.10891,
-    0.01817,
+    0.47305,
+    0.40021,
+    0.10858,
+    0.01816,
     0,
     0,
     0,
@@ -1859,17 +1859,17 @@
     {
      "id": "why",
      "sporsmal": "Hvorfor har Sandefjord 8 % sjanse for kvalik?",
-     "svar": "Sandefjord ligger to poeng foran Kristiansund på 14. plass og er litt sterkere ifølge modellen (4,4 mot 3,8). Aalesund og Start er også med i kampen om å unngå kvalik. Sandefjord har også et lettere restprogram: motstanderne har i snitt 35 % vinnersjanse, mot 54 % for Kristiansund.\n\nI simuleringene ender Sandefjord i snitt på 33 poeng mot 30 for Kristiansund, og havner i kvalik i 8 % av dem."
+     "svar": "Sandefjord ligger to poeng foran Kristiansund på 14. plass og er litt sterkere ifølge modellen (4,4 mot 3,8). Aalesund og Start er også med i kampen om å unngå kvalik. Sandefjord har også et lettere restprogram: motstanderne har i snitt 35 % vinnersjanse, mot 53 % for Kristiansund.\n\nI simuleringene ender Sandefjord i snitt på 33 poeng mot 30 for Kristiansund, og havner i kvalik i 8 % av dem."
     },
     {
      "id": "howto",
      "sporsmal": "Hva må Sandefjord gjøre for å unngå både nedrykk og kvalik?",
-     "svar": "Sandefjord må ta ett av de ni poengene som er igjen for å komme opp på 30. Ender de på 30 poeng, er sjansen for å unngå både nedrykk og kvalik rundt 53 %. Med 33 poeng er den 99 %."
+     "svar": "Sandefjord må ta ett av de ni poengene som er igjen for å komme opp på 30. Ender de på 30 poeng, er sjansen for å unngå både nedrykk og kvalik rundt 52 %. Med 33 poeng er den 99 %."
     },
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Sandefjord?",
-     "svar": "Disse kampene påvirker Sandefjords kvalikfare mest. Nå: 8 %\n\nSandefjord mot Vålerenga, runde 30, søndag 13. des\nSeier: 1 % (−7 prosentpoeng)\nUavgjort: 8 % (endrer lite)\nTap: 17 % (+9 prosentpoeng)\n\nHamKam mot Sandefjord, runde 29, søndag 6. des\nSeier: <1 % (−8 prosentpoeng)\nUavgjort: 8 % (endrer lite)\nTap: 16 % (+8 prosentpoeng)\n\nSandefjord mot Tromsø, runde 28, søndag 29. nov\nSeier: 1 % (−7 prosentpoeng)\nUavgjort: 7 % (endrer lite)\nTap: 16 % (+8 prosentpoeng)"
+     "svar": "Disse kampene påvirker Sandefjords kvalikfare mest. Nå: 8 %\n\nSandefjord mot Vålerenga, runde 30, søndag 13. des\nSeier: 1 % (−7 prosentpoeng)\nUavgjort: 9 % (endrer lite)\nTap: 17 % (+9 prosentpoeng)\n\nHamKam mot Sandefjord, runde 29, søndag 6. des\nSeier: <1 % (−8 prosentpoeng)\nUavgjort: 8 % (endrer lite)\nTap: 17 % (+9 prosentpoeng)\n\nSandefjord mot Tromsø, runde 28, søndag 29. nov\nSeier: 1 % (−7 prosentpoeng)\nUavgjort: 8 % (endrer lite)\nTap: 16 % (+8 prosentpoeng)"
     }
    ],
    "plass": {
@@ -1928,14 +1928,14 @@
      "key": "kvalik",
      "navn": "kvalik",
      "vist": "8 %",
-     "andel": 0.07914,
+     "andel": 0.08119,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
      "vist": "1 %",
-     "andel": 0.01093,
+     "andel": 0.01128,
      "avgjort": 0
     }
    ],
@@ -1961,16 +1961,16 @@
     0,
     0,
     0,
-    0.00406,
-    0.15886,
-    0.15384,
-    0.13155,
-    0.14579,
-    0.15374,
-    0.16209,
-    0.07914,
-    0.01074,
-    0.00019
+    0.00437,
+    0.15815,
+    0.15468,
+    0.13038,
+    0.14616,
+    0.15372,
+    0.16007,
+    0.08119,
+    0.01111,
+    0.00017
    ],
    "heldig": {
     "sporsmal": "Har Sandefjord tatt flere eller færre poeng enn ventet?",
@@ -1996,7 +1996,7 @@
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Sarpsborg 08?",
-     "svar": "Disse kampene påvirker Sarpsborg 08s kvalikfare mest. Nå: 3 %\n\nSarpsborg 08 mot Brann, runde 29, søndag 6. des\nSeier: <1 % (−3 prosentpoeng)\nUavgjort: 1 % (−2 prosentpoeng)\nTap: 6 % (+3 prosentpoeng)\n\nBrann mot Kristiansund, runde 28, søndag 29. nov\nBrann vinner: 2 % (endrer lite)\nUavgjort: 3 % (endrer lite)\nKristiansund vinner: 6 % (+3 prosentpoeng)\n\nStart mot Sarpsborg 08, runde 28, søndag 29. nov\nSeier: <1 % (−3 prosentpoeng)\nUavgjort: 1 % (−2 prosentpoeng)\nTap: 6 % (+3 prosentpoeng)"
+     "svar": "Disse kampene påvirker Sarpsborg 08s kvalikfare mest. Nå: 3 %\n\nSarpsborg 08 mot Brann, runde 29, søndag 6. des\nSeier: <1 % (−3 prosentpoeng)\nUavgjort: 1 % (−2 prosentpoeng)\nTap: 7 % (+4 prosentpoeng)\n\nBrann mot Kristiansund, runde 28, søndag 29. nov\nBrann vinner: 2 % (endrer lite)\nUavgjort: 3 % (endrer lite)\nKristiansund vinner: 6 % (+3 prosentpoeng)\n\nStart mot Sarpsborg 08, runde 28, søndag 29. nov\nSeier: <1 % (−3 prosentpoeng)\nUavgjort: 1 % (−2 prosentpoeng)\nTap: 6 % (+3 prosentpoeng)"
     }
    ],
    "plass": {
@@ -2008,8 +2008,8 @@
      "naar": "Runde 28, søndag 29. nov",
      "motstander": "Start",
      "hjemme": false,
-     "seier": "36 %",
-     "uavgjort": "25 %",
+     "seier": "37 %",
+     "uavgjort": "24 %",
      "tap": "39 %"
     },
     {
@@ -2055,14 +2055,14 @@
      "key": "kvalik",
      "navn": "kvalik",
      "vist": "3 %",
-     "andel": 0.02651,
+     "andel": 0.02654,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
      "vist": "<1 %",
-     "andel": 0.00172,
+     "andel": 0.00178,
      "avgjort": 0
     }
    ],
@@ -2070,7 +2070,7 @@
     "plass": 6,
     "av": 16,
     "snitt": "52 %",
-    "andel": 0.520903,
+    "andel": 0.521547,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Bodø/Glimt",
@@ -2088,15 +2088,15 @@
     0,
     0,
     0,
-    0.01152,
-    0.13906,
-    0.18525,
-    0.2044,
-    0.17562,
-    0.1489,
-    0.10702,
-    0.02651,
-    0.00171,
+    0.01203,
+    0.13972,
+    0.18529,
+    0.20405,
+    0.17437,
+    0.14797,
+    0.10825,
+    0.02654,
+    0.00177,
     0.00001
    ],
    "heldig": {
@@ -2128,7 +2128,7 @@
    ],
    "plass": {
     "sporsmal": "Hvilken plass ender Start på?",
-    "svar": "Start ligger på 16. plass med 22 poeng. Matematisk kan de ende fra 9. til 16. plass. Oftest blir det 16. plass (71 %), og i minst 90 % av simuleringene ender de mellom 14. og 16. plass."
+    "svar": "Start ligger på 16. plass med 22 poeng. Matematisk kan de ende fra 9. til 16. plass. Oftest blir det 16. plass (72 %), og i minst 90 % av simuleringene ender de mellom 14. og 16. plass."
    },
    "rest": [
     {
@@ -2136,8 +2136,8 @@
      "motstander": "Sarpsborg 08",
      "hjemme": true,
      "seier": "39 %",
-     "uavgjort": "25 %",
-     "tap": "36 %"
+     "uavgjort": "24 %",
+     "tap": "37 %"
     },
     {
      "naar": "Runde 29, søndag 6. des",
@@ -2182,14 +2182,14 @@
      "key": "kvalik",
      "navn": "kvalik",
      "vist": "8 %",
-     "andel": 0.08123,
+     "andel": 0.07942,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
      "vist": "91 %",
-     "andel": 0.91256,
+     "andel": 0.91427,
      "avgjort": 0
     }
    ],
@@ -2197,7 +2197,7 @@
     "plass": 8,
     "av": 16,
     "snitt": "41 %",
-    "andel": 0.411489,
+    "andel": 0.412237,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Tromsø",
@@ -2219,12 +2219,12 @@
     0,
     0,
     0,
-    0,
-    0.00035,
-    0.00586,
-    0.08123,
-    0.19957,
-    0.71299
+    0.00001,
+    0.00033,
+    0.00597,
+    0.07942,
+    0.19892,
+    0.71535
    ],
    "heldig": {
     "sporsmal": "Har Start tatt flere eller færre poeng enn ventet?",
@@ -2239,18 +2239,18 @@
    "topp": [
     {
      "id": "why",
-     "sporsmal": "Hvorfor har Tromsø 9 % sjanse for topp 4?",
-     "svar": "Tromsø ligger fire poeng bak Rosenborg på fjerdeplassen og er litt svakere ifølge modellen (5,1 mot 6,2). Molde er også med i kampen om topp 4-plassene. Tromsø har også et tøffere restprogram: motstanderne har i snitt 34 % vinnersjanse, mot 24 % for Rosenborg.\n\nI simuleringene ender Tromsø i snitt på 48 poeng mot 53 for Rosenborg, og havner i topp 4 i 9 % av dem."
+     "sporsmal": "Hvorfor har Tromsø 10 % sjanse for topp 4?",
+     "svar": "Tromsø ligger fire poeng bak Rosenborg på fjerdeplassen og er litt svakere ifølge modellen (5,1 mot 6,2). Molde er også med i kampen om topp 4-plassene. Tromsø har også et tøffere restprogram: motstanderne har i snitt 34 % vinnersjanse, mot 24 % for Rosenborg.\n\nI simuleringene ender Tromsø i snitt på 48 poeng mot 53 for Rosenborg, og havner i topp 4 i 10 % av dem."
     },
     {
      "id": "howto",
      "sporsmal": "Hva må Tromsø gjøre for å nå topp 4?",
-     "svar": "Det skal mye til: Tromsø ender i topp 4 i rundt 9 % av simuleringene. De må ta alle de ni poengene som er igjen for å komme opp på 52. Ender de på 52 poeng, er sjansen omtrent 79 %."
+     "svar": "Det skal mye til: Tromsø ender i topp 4 i rundt 10 % av simuleringene. De må ta alle de ni poengene som er igjen for å komme opp på 52. Ender de på 52 poeng, er sjansen omtrent 79 %."
     },
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Tromsø?",
-     "svar": "Disse kampene påvirker Tromsøs topp 4-sjanse mest. Nå: 9 %\n\nLillestrøm mot Tromsø, runde 30, søndag 13. des\nSeier: 26 % (+17 prosentpoeng)\nUavgjort: 3 % (−6 prosentpoeng)\nTap: <1 % (−9 prosentpoeng)\n\nSandefjord mot Tromsø, runde 28, søndag 29. nov\nSeier: 21 % (+12 prosentpoeng)\nUavgjort: 4 % (−5 prosentpoeng)\nTap: 2 % (−7 prosentpoeng)\n\nTromsø mot Start, runde 29, søndag 6. des\nSeier: 14 % (+5 prosentpoeng)\nUavgjort: 3 % (−6 prosentpoeng)\nTap: 2 % (−7 prosentpoeng)"
+     "svar": "Disse kampene påvirker Tromsøs topp 4-sjanse mest. Nå: 10 %\n\nLillestrøm mot Tromsø, runde 30, søndag 13. des\nSeier: 26 % (+16 prosentpoeng)\nUavgjort: 3 % (−7 prosentpoeng)\nTap: <1 % (−10 prosentpoeng)\n\nSandefjord mot Tromsø, runde 28, søndag 29. nov\nSeier: 21 % (+11 prosentpoeng)\nUavgjort: 4 % (−6 prosentpoeng)\nTap: 2 % (−8 prosentpoeng)\n\nTromsø mot Start, runde 29, søndag 6. des\nSeier: 14 % (+4 prosentpoeng)\nUavgjort: 3 % (−7 prosentpoeng)\nTap: 2 % (−8 prosentpoeng)"
     }
    ],
    "plass": {
@@ -2301,8 +2301,8 @@
     {
      "key": "europa",
      "navn": "topp 4",
-     "vist": "9 %",
-     "andel": 0.09487,
+     "vist": "10 %",
+     "andel": 0.09506,
      "avgjort": 0
     },
     {
@@ -2338,11 +2338,11 @@
    "fordeling": [
     0,
     0,
-    0.01726,
-    0.07761,
-    0.31511,
-    0.56476,
-    0.02526,
+    0.0175,
+    0.07756,
+    0.31576,
+    0.56434,
+    0.02484,
     0,
     0,
     0,
@@ -2415,7 +2415,7 @@
      "key": "gull",
      "navn": "gull",
      "vist": "6 %",
-     "andel": 0.06214,
+     "andel": 0.06203,
      "avgjort": 0
     },
     {
@@ -2451,7 +2451,7 @@
     "plass": 15,
     "av": 16,
     "snitt": "20 %",
-    "andel": 0.200837,
+    "andel": 0.201208,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Molde",
@@ -2463,8 +2463,8 @@
     }
    },
    "fordeling": [
-    0.06214,
-    0.93786,
+    0.06203,
+    0.93797,
     0,
     0,
     0,
@@ -2562,15 +2562,15 @@
     {
      "key": "kvalik",
      "navn": "kvalik",
-     "vist": "<1 %",
-     "andel": 0.00492,
+     "vist": "1 %",
+     "andel": 0.00518,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
      "vist": "<1 %",
-     "andel": 0.00005,
+     "andel": 0.00007,
      "avgjort": 0
     }
    ],
@@ -2578,7 +2578,7 @@
     "plass": 4,
     "av": 16,
     "snitt": "54 %",
-    "andel": 0.537357,
+    "andel": 0.536782,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Viking",
@@ -2596,15 +2596,15 @@
     0,
     0,
     0,
-    0.01578,
-    0.30335,
-    0.22243,
-    0.15223,
-    0.14145,
-    0.11478,
-    0.04501,
-    0.00492,
-    0.00005,
+    0.01702,
+    0.30285,
+    0.22228,
+    0.15191,
+    0.14062,
+    0.11545,
+    0.04462,
+    0.00518,
+    0.00007,
     0
    ],
    "heldig": {
@@ -2631,21 +2631,21 @@
     {
      "id": "keymatches",
      "sporsmal": "Hvilke kamper betyr mest for Aalesund?",
-     "svar": "Disse kampene påvirker Aalesunds nedrykksfare mest. Nå: 74 %\n\nAalesund mot Bodø/Glimt, runde 29, lørdag 5. des\nSeier: 36 % (−38 prosentpoeng)\nUavgjort: 71 % (−3 prosentpoeng)\nTap: 80 % (+6 prosentpoeng)\n\nBrann mot Aalesund, runde 30, søndag 13. des\nSeier: 43 % (−31 prosentpoeng)\nUavgjort: 79 % (+5 prosentpoeng)\nTap: 87 % (+13 prosentpoeng)\n\nFredrikstad mot Aalesund, runde 28, søndag 29. nov\nSeier: 45 % (−29 prosentpoeng)\nUavgjort: 81 % (+7 prosentpoeng)\nTap: 89 % (+15 prosentpoeng)"
+     "svar": "Disse kampene påvirker Aalesunds nedrykksfare mest. Nå: 74 %\n\nAalesund mot Bodø/Glimt, runde 29, lørdag 5. des\nSeier: 36 % (−38 prosentpoeng)\nUavgjort: 71 % (−3 prosentpoeng)\nTap: 80 % (+6 prosentpoeng)\n\nBrann mot Aalesund, runde 30, søndag 13. des\nSeier: 44 % (−30 prosentpoeng)\nUavgjort: 80 % (+6 prosentpoeng)\nTap: 87 % (+13 prosentpoeng)\n\nFredrikstad mot Aalesund, runde 28, søndag 29. nov\nSeier: 45 % (−29 prosentpoeng)\nUavgjort: 82 % (+8 prosentpoeng)\nTap: 89 % (+15 prosentpoeng)"
     }
    ],
    "plass": {
     "sporsmal": "Hvilken plass ender Aalesund på?",
-    "svar": "Aalesund ligger på 15. plass med 25 poeng. Matematisk kan de ende fra 8. til 16. plass. Oftest blir det 15. plass (52 %), og i minst 90 % av simuleringene ender de mellom 13. og 16. plass."
+    "svar": "Aalesund ligger på 15. plass med 25 poeng. Matematisk kan de ende fra 8. til 16. plass. Oftest blir det 15. plass (53 %), og i minst 90 % av simuleringene ender de mellom 13. og 16. plass."
    },
    "rest": [
     {
      "naar": "Runde 28, søndag 29. nov",
      "motstander": "Fredrikstad",
      "hjemme": false,
-     "seier": "29 %",
+     "seier": "30 %",
      "uavgjort": "24 %",
-     "tap": "47 %"
+     "tap": "46 %"
     },
     {
      "naar": "Runde 29, lørdag 5. des",
@@ -2690,14 +2690,14 @@
      "key": "kvalik",
      "navn": "kvalik",
      "vist": "18 %",
-     "andel": 0.17931,
+     "andel": 0.17576,
      "avgjort": 0
     },
     {
      "key": "nedrykk",
      "navn": "nedrykk",
      "vist": "74 %",
-     "andel": 0.74051,
+     "andel": 0.74391,
      "avgjort": 0
     }
    ],
@@ -2705,7 +2705,7 @@
     "plass": 3,
     "av": 16,
     "snitt": "59 %",
-    "andel": 0.588741,
+    "andel": 0.587602,
     "kamper": 3,
     "vanskeligst": {
      "motstander": "Bodø/Glimt",
@@ -2724,15 +2724,15 @@
     0,
     0,
     0,
-    0.00034,
-    0.00167,
-    0.00407,
-    0.00693,
-    0.02287,
-    0.0443,
-    0.17931,
-    0.5225,
-    0.21801
+    0.00033,
+    0.00173,
+    0.00418,
+    0.00684,
+    0.02247,
+    0.04478,
+    0.17576,
+    0.52744,
+    0.21647
    ],
    "heldig": {
     "sporsmal": "Har Aalesund tatt flere eller færre poeng enn ventet?",
